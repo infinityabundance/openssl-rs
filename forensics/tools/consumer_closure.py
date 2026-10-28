@@ -801,6 +801,16 @@ class PrecisionResolver:
         self.unknown_call_args = set()
         self.returns = collections.defaultdict(set)
         self.dlsym_evidence = {}
+        # Provenance mode (off by default; used only by the stored-value slot
+        # rule).  It seeds each function's entry arguments symbolically and
+        # records outgoing *stack* arguments at every call, so a writer's
+        # stored value can be followed to the caller's parameter list.
+        self.seed_entry_args = False
+        self.capture_stack_args = False
+        self.call_stack_args = {}
+        # Global store summaries are not needed (and are very large) when only
+        # call-argument provenance is wanted.
+        self.record_stores = True
 
     # ---- dlsym evidence -------------------------------------------------- #
 
@@ -935,13 +945,22 @@ class PrecisionResolver:
                 self.switch_bounds.setdefault(addr, bound if exclusive else bound + 1)
                 break
 
+    def summary_vals(self, f, k):
+        """The argument summary for index ``k`` (empty beyond the register set).
+
+        Provenance mode carries symbolic stack-argument values (indices 6 and
+        above); the summary table covers only the six register arguments, so an
+        out-of-range index has no summary rather than raising.
+        """
+        return self.summary[f][k] if 0 <= k < len(_ARGREGS) else set()
+
     def resolve_set(self, f, vals):
         if vals is None:
             return set(), True
         out = set()
         for b in vals:
             if isinstance(b, tuple) and b[0] == "arg":
-                out |= self.summary[f][b[1]]
+                out |= self.summary_vals(f, b[1])
             else:
                 out.add(b)
         return out, False
@@ -1198,7 +1217,7 @@ class PrecisionResolver:
                 arg_raw = set()
                 for x in sv.s:
                     if isinstance(x, tuple) and x[0] == "arg":
-                        vals = self.summary[fstart][x[1]]
+                        vals = self.summary_vals(fstart, x[1])
                         targets |= vals
                         arg_deps.add(x[1])
                         arg_raw |= vals
@@ -1235,7 +1254,7 @@ class PrecisionResolver:
                     seam = b[1]
                 elif isinstance(b, tuple) and b[0] == "arg":
                     targets |= self.field_bound(off)
-                    for tb in {x for x in self.summary[fstart][b[1]]
+                    for tb in {x for x in self.summary_vals(fstart, b[1])
                                if isinstance(x, int) and self.g.is_data(x)}:
                         v = self.slot_value(tb + off)
                         if v.is_top():
@@ -1287,7 +1306,7 @@ class PrecisionResolver:
             arg_raw = set()
             for b in v.s:
                 if isinstance(b, tuple) and b[0] == "arg":
-                    vals = self.summary[fstart][b[1]]
+                    vals = self.summary_vals(fstart, b[1])
                     resolved |= vals
                     arg_deps.add(b[1])
                     arg_raw |= vals
@@ -1373,6 +1392,8 @@ class PrecisionResolver:
         if key is not None:
             frame.stack[key] = v
             return
+        if not self.record_stores:
+            return
         m = re.fullmatch(r"(-?0x[0-9a-f]+)\(%rip\)", dst)
         if m:
             slot = frame.comment_addr
@@ -1433,7 +1454,7 @@ class PrecisionResolver:
         out = set()
         for b in v.s:
             if isinstance(b, tuple) and b[0] == "arg":
-                out |= self.summary[f][b[1]]
+                out |= self.summary_vals(f, b[1])
             elif isinstance(b, tuple) and b[0] == "field":
                 out |= self.field_bound(b[1])
             elif isinstance(b, tuple) and b[0] == "sym":
@@ -1450,6 +1471,24 @@ class PrecisionResolver:
         for b in v.s:
             if isinstance(b, tuple) and b[0] in ("rsp", "rbp"):
                 frame.escaped.add(b)
+
+    def _capture_call_stack_args(self, fstart, addr, frame, count=4):
+        """Record the outgoing stack arguments at this call.
+
+        Index 6 is at 0(%rsp) before the call; index 7 at 8(%rsp), and so on.
+        Only used in provenance mode.
+        """
+        vals = self.call_stack_args.get((fstart, addr))
+        if vals is None:
+            vals = [PValue() for _ in range(count)]
+            self.call_stack_args[(fstart, addr)] = vals
+        while len(vals) < count:
+            vals.append(PValue())
+        for k in range(count):
+            v = _as_value(frame.stack.get(("rsp", frame.rsp + 8 * k)))
+            if v.is_top():
+                continue
+            vals[k] = v if vals[k].is_top() else vals[k].union(v)
 
     def step(self, frame, fstart, insns, i):
         addr, text = insns[i]
@@ -1471,6 +1510,8 @@ class PrecisionResolver:
         if mn.startswith("call") and rest.startswith("*"):
             opnd = rest.lstrip("*").strip()
             args = [_as_value(frame.regs[r]) for r in _ARGREGS]
+            if self.capture_stack_args:
+                self._capture_call_stack_args(fstart, addr, frame)
             targets, _unres = self.analyze_transfer(
                 "call", frame, fstart, addr, text, opnd)
             retvals = set()
@@ -1505,6 +1546,8 @@ class PrecisionResolver:
             return
         if mn.startswith("call"):
             args = [_as_value(frame.regs[r]) for r in _ARGREGS]
+            if self.capture_stack_args:
+                self._capture_call_stack_args(fstart, addr, frame)
             m = re.match(r"^([0-9a-f]+)", rest)
             callee = None
             if m:
@@ -1549,7 +1592,10 @@ class PrecisionResolver:
             if mn == "push":
                 frame.rsp -= 8
                 if ops:
-                    self.escape(frame, self.eval(frame, ops[0]))
+                    v = self.eval(frame, ops[0])
+                    if self.capture_stack_args:
+                        frame.stack[("rsp", frame.rsp)] = v
+                    self.escape(frame, v)
             else:
                 frame.rsp += 8
                 if ops:
@@ -1692,6 +1738,14 @@ class PrecisionResolver:
                 succ[bi].append(bi + 1)
         entry = {0: _Frame()}
         entry[0].fstart = fstart
+        if self.seed_entry_args:
+            # Symbolic entry arguments.  Register arguments are indices 0-5;
+            # stack arguments start at entry rsp + 8 (the return address is at
+            # rsp) and are indices 6 and above.
+            for k, r in enumerate(_ARGREGS):
+                entry[0].regs[r] = PValue.one(("arg", k))
+            for k in range(8):
+                entry[0].stack[("rsp", 8 + 8 * k)] = PValue.one(("arg", 6 + k))
         work, iters = [0], 0
         while work:
             bi = work.pop()
@@ -1709,16 +1763,9 @@ class PrecisionResolver:
                 elif entry[s].merge(frame):
                     work.append(s)
 
-    def run(self):
-        for pass_no in (1, 2, 3):
-            if pass_no == 2:
-                self.build_summary()
-                self.sites = {}
-                self.store_slots = collections.defaultdict(set)
-                self.field_stores = collections.defaultdict(set)
-                self.field_open = set()
-                self.unknown_call_args = set()
-            elif pass_no == 3:
+    def run(self, passes=3):
+        for pass_no in range(1, passes + 1):
+            if pass_no >= 2:
                 self.build_summary()
                 self.sites = {}
                 self.store_slots = collections.defaultdict(set)
@@ -1726,6 +1773,7 @@ class PrecisionResolver:
                 self.field_open = set()
                 self.unknown_call_args = set()
             self.calls = []
+            self.call_stack_args = {}
             for fstart, insns in self.g.functions:
                 self.analyze_function(fstart, insns)
         return self.sites
@@ -2229,13 +2277,17 @@ EDGE_TARGET_SLOTS = (
                      "ossl_method_store_cache_set"),
         "slot_offset": 0x20,
         "slot": "Method.free (offset 0x20)",
-        "targets": METHOD_FREE_TARGETS,
+        # The declared names are a cross-check only.  The target set is derived
+        # from the values reachable code stores into the slot; an absent name
+        # can never void the spec.
+        "semantic_rule": "stored-value-provenance",
+        "declared_targets": METHOD_FREE_TARGETS,
         "writer_symbols": ("ossl_method_store_add", "ossl_method_store_cache_set"),
-        "writer": ("ossl_method_store_add stores method_destruct at 0x327d64 "
-                   "(mov %rax,0x20(%r15)); ossl_method_store_cache_set stores it at "
-                   "0x329319.  Reachable callers pass in-image constants: the EVP "
-                   "class free functions, OSSL_STORE_LOADER_free, free_decoder and "
-                   "OSSL_ENCODER_free (src/property/store.rs:692)"),
+        "writer": ("ossl_method_store_add stores method_destruct at 0x20 of the "
+                   "Implementation; ossl_method_store_cache_set stores it at 0x20 "
+                   "of the cache entry.  The stored values are derived from the "
+                   "reachable call sites, not from a name list "
+                   "(src/property/store.rs:692)"),
         "source": "src/property/store.rs:692",
     },
     {
@@ -2326,6 +2378,769 @@ def _static_initialiser_covers(g: "DsoGraph", targets: set, fragments) -> bool:
     return bool(targets) and targets <= found
 
 
+SEMANTIC_STORE_SCHEMA = (
+    "openssl-rs/consumer-closure/stored-value-slot-target/v1")
+MAX_PROVENANCE_DEPTH = 8
+MAX_PROVENANCE_SITES = 512
+
+
+def _insn_parts(text: str):
+    body = text.split("#", 1)[0].strip()
+    toks = body.split(None, 1)
+    mn = toks[0] if toks else ""
+    rest = toks[1].strip() if len(toks) > 1 else ""
+    return mn, rest, _split_ops(rest)
+
+
+def _insn_comment_addr(text: str):
+    if "#" not in text:
+        return None
+    c = text.split("#", 1)[1].strip()
+    m = re.match(r"^([0-9a-f]+)", c)
+    return int(m.group(1), 16) if m else None
+
+
+def _name_addrs(g: "DsoGraph", fragment: str) -> set:
+    """In-image function starts whose any name contains ``fragment``.
+
+    Unlike ``_fragment_addrs`` this never voids a spec: an absent name is an
+    empty set plus a ``declared_but_absent`` row for the cross-check.
+    """
+    names_at = getattr(g, "names_at", None)
+    if names_at:
+        return {a for a, names in names_at.items()
+                if a in g.start_set
+                and any(fragment in (n or "") for n in names)}
+    return {a for a, n in g.all_syms.items()
+            if fragment in (n or "") and a in g.start_set}
+
+
+def _semantic_frame_base(g: "DsoGraph", fstart: int):
+    cache = getattr(g, "_semantic_frame_base", None)
+    if cache is None:
+        cache = {}
+        g._semantic_frame_base = cache
+    if fstart in cache:
+        return cache[fstart]
+    base = None
+    for idx, (_a, text) in enumerate(g.precision.insns_by_func.get(fstart, ())):
+        mn, _rest, ops = _insn_parts(text)
+        if mn == "mov" and len(ops) == 2 and ops[0] == "%rsp" and ops[1] == "%rbp":
+            base = (idx, _semantic_rsp_deltas(g, fstart)[idx])
+            break
+    cache[fstart] = base
+    return base
+
+
+def _semantic_rsp_deltas(g: "DsoGraph", fstart: int):
+    """Entry-relative rsp delta at every instruction, from a CFG fixpoint.
+
+    A linear scan is wrong across epilogues: the addq that restores the frame
+    on an error path would otherwise reset the delta for a later block.
+    """
+    cache = getattr(g, "_semantic_deltas", None)
+    if cache is None:
+        cache = {}
+        g._semantic_deltas = cache
+    if fstart in cache:
+        return cache[fstart]
+    insns = g.precision.insns_by_func.get(fstart, ())
+    n = len(insns)
+    out = [None] * n
+    idx_of = {a: i for i, (a, _t) in enumerate(insns)}
+    leaders = {0}
+    for i, (_a, text) in enumerate(insns):
+        mn, _rest, _ops = _insn_parts(text)
+        m = re.match(r"^j\w+\s+([0-9a-f]+)", text)
+        if m and int(m.group(1), 16) in idx_of:
+            leaders.add(idx_of[int(m.group(1), 16)])
+        if m or mn.startswith(("jmp", "ret")):
+            if i + 1 < n:
+                leaders.add(i + 1)
+    leaders = sorted(leaders)
+    blocks, block_of = [], {}
+    for bi, lo in enumerate(leaders):
+        hi = leaders[bi + 1] if bi + 1 < len(leaders) else n
+        blocks.append((lo, hi))
+        for i in range(lo, hi):
+            block_of[i] = bi
+    succ = {}
+    for bi, (_lo, hi) in enumerate(blocks):
+        mn, _rest, _ops = _insn_parts(insns[hi - 1][1])
+        m = re.match(r"^j\w+\s+([0-9a-f]+)", insns[hi - 1][1])
+        s = []
+        if m and int(m.group(1), 16) in idx_of:
+            s.append(block_of[idx_of[int(m.group(1), 16)]])
+            if not mn.startswith("jmp") and hi < n:
+                s.append(bi + 1)
+        elif mn.startswith(("ret", "jmp")):
+            s = []
+        elif hi < n:
+            s = [bi + 1]
+        succ[bi] = s
+    entry = {0: 0}
+    work = [0]
+    while work:
+        bi = work.pop()
+        cur = entry[bi]
+        lo, hi = blocks[bi]
+        for i in range(lo, hi):
+            out[i] = cur
+            if cur is None:
+                continue
+            mn, _rest, ops = _insn_parts(insns[i][1])
+            if mn == "push":
+                cur -= 8
+            elif mn == "pop":
+                cur += 8
+            elif (mn in ("sub", "add") and len(ops) == 2
+                  and ops[1] == "%rsp" and ops[0].startswith("$")):
+                off = int(ops[0][1:], 16)
+                cur = cur - off if mn == "sub" else cur + off
+        for s in succ[bi]:
+            if s not in entry:
+                entry[s] = cur
+                work.append(s)
+            elif entry[s] != cur:
+                entry[s] = None
+                work.append(s)
+    cache[fstart] = out
+    return out
+
+
+def _semantic_last_write(g: "DsoGraph", fstart: int, idx: int, reg: str):
+    """Reaching write to ``reg`` before ``idx`` within the same function."""
+    insns = g.precision.insns_by_func.get(fstart, ())
+    r = _canon(reg)
+    for k in range(idx - 1, -1, -1):
+        mn, _rest, ops = _insn_parts(insns[k][1])
+        if mn.startswith("call"):
+            if r in _CALLER_SAVED:
+                return ("call", k, ops)
+            continue
+        if not ops or mn.startswith(("cmp", "test", "j", "nop", "ret", "push",
+                                     "call", "ud2")):
+            continue
+        dst = _canon(ops[-1]) if ops[-1] in _SUBREG else ops[-1]
+        if dst == r:
+            return ("insn", k, ops)
+    return ("entry", None, None)
+
+
+_ENTRY_ARG_REGS = {"%rdi": 0, "%rsi": 1, "%rdx": 2, "%rcx": 3, "%r8": 4,
+                   "%r9": 5}
+
+
+def _semantic_slot(g: "DsoGraph", slot: int) -> dict:
+    if slot in g.slot_syms:
+        rows = []
+        for raw in sorted(g.slot_syms[slot]):
+            base = raw.split("@")[0]
+            target = g.dynamic_defs.get(base)
+            rows.append({"symbol": base, "target": target,
+                         "image_bounded": target is not None})
+        return {"kind": "relocation", "slot": slot, "symbols": rows}
+    vals = g.slot_funcs.get(slot) or g.slot_data.get(slot)
+    if vals:
+        return {"kind": "static-slot", "slot": slot, "values": sorted(vals)}
+    return {"kind": "unknown", "slot": slot,
+            "why": "no relocation or static value at this slot"}
+
+
+def _semantic_classify(g: "DsoGraph", fstart: int, idx: int, opnd: str,
+                       depth: int = 0, witness=(), address_of=False) -> dict:
+    """Provenance of one operand at instruction ``idx``."""
+    insns = g.precision.insns_by_func.get(fstart, ())
+    deltas = _semantic_rsp_deltas(g, fstart)
+    opnd = opnd.strip()
+    w = list(witness)
+    if opnd.startswith("$"):
+        try:
+            return {"kind": "int", "value": int(opnd[1:], 16), "witness": w}
+        except ValueError:
+            return {"kind": "unknown", "why": "bad immediate", "witness": w}
+    if re.fullmatch(r"-?0x[0-9a-f]+\(%rip\)", opnd):
+        slot = _insn_comment_addr(insns[idx][1])
+        if slot is None:
+            return {"kind": "unknown", "why": "rip operand without address",
+                    "witness": w}
+        if address_of:
+            return {"kind": "int", "value": slot, "witness": w}
+        out = _semantic_slot(g, slot)
+        out["witness"] = w
+        return out
+    m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%rsp|%rbp)\)", opnd)
+    if m:
+        off = int(m.group(1), 16) if m.group(1) else 0
+        if m.group(2) == "%rsp":
+            abs_off = None if deltas[idx] is None else deltas[idx] + off
+        else:
+            frame = _semantic_frame_base(g, fstart)
+            abs_off = None if frame is None else frame[1] + off
+            if frame is None:
+                return _semantic_field_of_reg(g, fstart, idx, "%rbp", off,
+                                              depth, w)
+        if abs_off is None:
+            return {"kind": "unknown", "why": "stack offset after rsp change",
+                    "witness": w}
+        if abs_off >= 8 and (abs_off - 8) % 8 == 0:
+            return {"kind": "param", "index": 6 + (abs_off - 8) // 8,
+                    "stack_offset": abs_off, "witness": w}
+        return {"kind": "unknown", "why": f"stack local at {abs_off:#x}",
+                "witness": w}
+    m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", opnd)
+    if m:
+        off = int(m.group(1), 16) if m.group(1) else 0
+        return _semantic_field_of_reg(g, fstart, idx, m.group(2), off, depth, w)
+    if opnd in _REGS or opnd in _SUBREG:
+        r = _canon(opnd)
+        kind, k, ops = _semantic_last_write(g, fstart, idx, r)
+        if kind == "entry":
+            if r in _ENTRY_ARG_REGS:
+                return {"kind": "param", "index": _ENTRY_ARG_REGS[r],
+                        "witness": w}
+            return {"kind": "unknown", "why": f"entry value in {r}",
+                    "witness": w}
+        if kind == "call":
+            return {"kind": "unknown", "why": f"{r} is a call result",
+                    "witness": w}
+        if depth >= MAX_PROVENANCE_DEPTH:
+            return {"kind": "unknown", "why": "provenance depth bound",
+                    "witness": w}
+        mn_k, _rest_k, ops_k = _insn_parts(insns[k][1])
+        src = ops_k[0] if len(ops_k) >= 2 else ""
+        if mn_k in ("xor", "sub") and len(ops_k) == 2 and ops_k[0] == ops_k[1]:
+            return {"kind": "int", "value": 0,
+                    "witness": w + [insns[k][1]]}
+        return _semantic_classify(g, fstart, k, src, depth + 1,
+                                  w + [insns[k][1]],
+                                  address_of=(mn_k == "lea"))
+    return {"kind": "unknown", "why": "unsupported operand " + opnd,
+            "witness": w}
+
+
+def _semantic_field_of_reg(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                           off: int, depth: int, witness) -> dict:
+    base = _semantic_classify(g, fstart, idx, reg, depth + 1, witness)
+    if base.get("kind") == "param":
+        return {"kind": "field", "offset": off,
+                "base_param": base["index"], "witness": base.get("witness", [])}
+    if base.get("kind") == "int" and base.get("value"):
+        addr = base["value"]
+        if g.section_of(addr) is not None:
+            vals = g.static_slot(addr + off)
+            if vals:
+                ints = sorted(x for x in vals if isinstance(x, int))
+                return {"kind": "table", "base": addr, "offset": off,
+                        "values": ints, "witness": list(witness)}
+    return {"kind": "unknown",
+            "why": f"base of {off:#x} is neither a parameter nor a data pointer",
+            "witness": list(witness)}
+
+
+def _semantic_writer_sources(g: "DsoGraph", writer: int, offset: int) -> list:
+    """Every store to ``offset`` in this writer, with its source provenance."""
+    insns = g.precision.insns_by_func.get(writer, ())
+    out = []
+    for idx, (addr, text) in enumerate(insns):
+        mn, _rest, ops = _insn_parts(text)
+        if not mn.startswith("mov") or len(ops) != 2:
+            continue
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[1])
+        if not m:
+            continue
+        doff = int(m.group(1), 16) if m.group(1) else 0
+        if doff != offset:
+            continue
+        base = m.group(2)
+        if base == "%rsp":
+            out.append({"store": hex(addr), "instruction": text,
+                        "base": base, "argument_index": None,
+                        "reason": "frame-local object, not the method-store entry"})
+            continue
+        desc = _semantic_classify(g, writer, idx, ops[0], 0, (text,))
+        out.append({"store": hex(addr), "instruction": text, "base": base,
+                    "argument_index": (desc.get("index")
+                                       if desc.get("kind") == "param" else None),
+                    "descriptor": desc})
+    return out
+
+
+def _semantic_provenance_resolver(g: "DsoGraph") -> "PrecisionResolver":
+    r = getattr(g, "_semantic_precision", None)
+    if r is None:
+        r = PrecisionResolver(g)
+        r.seed_entry_args = True
+        r.capture_stack_args = True
+        r.record_stores = False
+        r.run(passes=1)
+        g._semantic_precision = r
+    return r
+
+
+def _semantic_call_index(g: "DsoGraph") -> dict:
+    idx = getattr(g, "_semantic_call_index", None)
+    if idx is not None:
+        return idx
+    r = _semantic_provenance_resolver(g)
+    idx = {}
+    try:
+        for caller, callee, args, addr in r.calls:
+            if callee is None:
+                continue
+            row = idx.setdefault(callee, {})
+            key = (caller, addr)
+            cur = row.get(key)
+            stack = r.call_stack_args.get(key, ())
+            if cur is None:
+                row[key] = {"caller": caller, "call_site": addr,
+                            "args": list(args), "stack": list(stack),
+                            "open": [bool(a is None or a.is_top()) for a in args]}
+            else:
+                for k, a in enumerate(args):
+                    if a is None or a.is_top():
+                        continue
+                    if k < len(cur["args"]):
+                        prev = cur["args"][k]
+                        cur["args"][k] = a if prev is None or prev.is_top() \
+                            else prev.union(a)
+                cur["open"] = [bool(a is None or a.is_top()) for a in args]
+                if len(stack) > len(cur["stack"]):
+                    cur["stack"] = list(stack)
+    finally:
+        # The index is the only state the rule needs.  Retaining the whole
+        # provenance interpreter (call log, sites, summaries) alongside the
+        # main resolver doubles peak memory for no benefit; the court container
+        # has a hard 8 GiB limit.
+        g._semantic_call_index = idx
+        g._semantic_precision = None
+        r.calls = []
+        r.call_stack_args = {}
+        r.sites = {}
+        r.store_slots.clear()
+        r.field_stores.clear()
+        r.field_open.clear()
+        r.summary.clear()
+        r.summary_open.clear()
+        r.returns.clear()
+        r.insns_by_func = {}
+    return idx
+
+
+def _semantic_value(g: "DsoGraph", site: dict, index: int):
+    if index < 6:
+        if site.get("open", [False] * 6)[index]:
+            return PValue()
+        return site["args"][index]
+    k = index - 6
+    stack = site.get("stack") or ()
+    return _as_value(stack[k]) if k < len(stack) else PValue()
+
+
+def _semantic_atom_rows(g: "DsoGraph", value: PValue) -> list:
+    if value is None or value.is_top():
+        return [{"kind": "unknown", "why": "unknown call argument"}]
+    rows = []
+    for atom in value.s:
+        if isinstance(atom, int):
+            rows.append({"kind": "int", "value": atom})
+        elif isinstance(atom, tuple) and atom[0] == "sym":
+            base = atom[1].split("@")[0]
+            target = g.dynamic_defs.get(base)
+            slots = sorted(s for s, names in g.slot_syms.items()
+                           if any(n.split("@")[0] == base for n in names))
+            rows.append({"kind": "relocation", "symbol": base,
+                         "slot": slots[0] if slots else None,
+                         "symbols": [{"symbol": base, "target": target,
+                                       "image_bounded": target is not None}]})
+        elif isinstance(atom, tuple) and atom[0] == "field":
+            rows.append({"kind": "field", "offset": atom[1]})
+        elif isinstance(atom, tuple) and atom[0] == "arg":
+            rows.append({"kind": "param", "index": atom[1]})
+        else:
+            rows.append({"kind": "unknown", "why": f"atom {atom!r}"})
+    return rows
+
+
+def _semantic_canonical_target(g: "DsoGraph", addr: int):
+    """Collapse a one-line thunk to its callee (a thunk is not a target)."""
+    chain = []
+    cur = addr
+    seen = set()
+    for _ in range(4):
+        if cur in seen or cur not in g.start_set:
+            break
+        seen.add(cur)
+        insns = g.precision.insns_by_func.get(cur, ())
+        body = [(a, t) for a, t in insns
+                if not _insn_parts(t)[0].startswith(("endbr64", "nop", "cs",
+                                                     "data16"))]
+        if len(body) != 1:
+            break
+        mn, rest, _ops = _insn_parts(body[0][1])
+        if not mn.startswith("jmp"):
+            break
+        nxt = None
+        m = re.match(r"\*0x[0-9a-f]+\(%rip\)", rest)
+        if m:
+            slot = _insn_comment_addr(body[0][1])
+            vals = set()
+            if slot is not None:
+                vals |= set(g.slot_funcs.get(slot, ()))
+                if not vals:
+                    sv = g.static_slot(slot) or ()
+                    vals |= {x for x in sv if isinstance(x, int)}
+            vals = {v for v in vals if v in g.start_set}
+            if len(vals) == 1:
+                nxt = next(iter(vals))
+        else:
+            m = re.match(r"([0-9a-f]+)\s*<", rest)
+            if m:
+                target = int(m.group(1), 16)
+                nxt = target if target in g.start_set else g.containing(target)
+        if nxt is None or nxt == cur:
+            break
+        chain.append({"from": hex(cur), "to": hex(nxt),
+                      "instruction": body[0][1]})
+        cur = nxt
+    return cur, chain
+
+
+def _semantic_param_targets(g: "DsoGraph", func: int, index: int, reachable: set,
+                            depth: int, seen: set, chain: list):
+    key = (func, index)
+    if key in seen:
+        return set(), f"recursive parameter provenance at {func:#x} arg {index}", chain
+    if depth <= 0:
+        return set(), "provenance depth bound", chain
+    if func in set(g.dynamic_defs.values()):
+        return set(), (f"parameter of dynamic export {func:#x} cannot be bounded "
+                       "outside the image"), chain
+    sites = _semantic_call_index(g).get(func) or {}
+    reachable_sites = [sites[k] for k in sorted(sites) if sites[k]["caller"] in reachable]
+    excluded = [sites[k] for k in sorted(sites) if sites[k]["caller"] not in reachable]
+    for row in excluded:
+        chain.append({"excluded_caller": g.funcs.get(row["caller"], "?"),
+                      "call_site": hex(row["call_site"]),
+                      "reason": "caller not in the family's reachable set"})
+    if not reachable_sites:
+        return set(), f"no reachable in-image caller of {func:#x}", chain
+    if len(reachable_sites) > MAX_PROVENANCE_SITES:
+        return set(), f"too many call sites for {func:#x}", chain
+    targets = set()
+    for site in reachable_sites:
+        value = _semantic_value(g, site, index)
+        for atom in _semantic_atom_rows(g, value):
+            atom["func"] = site["caller"]
+            got, why, sub = _semantic_resolve(g, atom, reachable, depth - 1,
+                                              seen | {key}, [])
+            row = {"caller": g.funcs.get(site["caller"], "?"),
+                   "call_site": hex(site["call_site"]),
+                   "argument_index": index, "value": atom,
+                   "targets": [hex(t) for t in sorted(got)],
+                   "failure": why, "chain": sub}
+            chain.append(row)
+            if why:
+                return set(), f"{why} (at {row['caller']} {row['call_site']})", chain
+            targets |= got
+    return targets, None, chain
+
+
+def _semantic_field_targets(g: "DsoGraph", off: int, reachable: set, depth: int,
+                            seen: set, chain: list):
+    """Follow one level: the object's field is filled by a known slot writer."""
+    if depth <= 0:
+        return set(), "provenance depth bound", chain
+    results = []
+    for spec in EDGE_TARGET_SLOTS:
+        if spec.get("slot_offset") != off or spec.get("semantic_rule"):
+            continue
+        if spec["id"] == "EVT-METHOD-FREE":
+            continue
+        writers = set()
+        for frag in spec.get("writer_symbols", ()):
+            writers |= _name_addrs(g, frag)
+        live = sorted(writers & reachable)
+        if not live:
+            continue
+        index = None
+        rows = []
+        for writer in live:
+            sources = _semantic_writer_sources(g, writer, off)
+            indices = sorted({r["argument_index"] for r in sources
+                              if r.get("argument_index") is not None})
+            rows.append({"writer": g.funcs.get(writer, "?"), "sources": sources,
+                         "argument_indices": indices})
+            if len(indices) != 1 or (index is not None and indices[0] != index):
+                index = None
+                break
+            index = indices[0]
+        if index is None:
+            continue
+        targets = set()
+        subchain = []
+        failure = None
+        for writer in live:
+            got, why, sub = _semantic_param_targets(g, writer, index, reachable,
+                                                    depth - 1, seen, [])
+            subchain.append({"field_slot": spec["id"],
+                             "writer": g.funcs.get(writer, "?"),
+                             "argument_index": index,
+                             "targets": [hex(t) for t in sorted(got)],
+                             "failure": why, "chain": sub})
+            if why:
+                failure = why
+                break
+            targets |= got
+        if failure:
+            chain.append({"field_slot": spec["id"], "failure": failure,
+                          "sources": rows, "chain": subchain})
+            continue
+        results.append((targets, spec, rows, subchain))
+    if not results:
+        return set(), f"field {off:#x} has no decidable slot writer", chain
+    first = results[0][0]
+    if any(r[0] != first for r in results[1:]):
+        return set(), f"field {off:#x} has conflicting slot writers", chain
+    targets, spec, rows, subchain = results[0]
+    chain.append({"field_slot": spec["id"], "field_offset": hex(off),
+                  "sources": rows, "targets": [hex(t) for t in sorted(targets)],
+                  "chain": subchain})
+    return targets, None, chain
+
+
+def _semantic_resolve(g: "DsoGraph", atom: dict, reachable: set, depth: int,
+                      seen: set, chain: list):
+    kind = atom.get("kind")
+    if kind == "int":
+        v = atom.get("value")
+        if v == 0:
+            return set(), None, chain
+        if v in g.start_set:
+            return {v}, None, chain
+        return set(), f"non-image immediate {v:#x}", chain
+    if kind == "relocation":
+        targets, bad = set(), []
+        for row in atom.get("symbols") or ():
+            if row.get("image_bounded") and row.get("target") in g.start_set:
+                targets.add(row["target"])
+            else:
+                bad.append(row.get("symbol"))
+        if bad:
+            return set(), ("relocation names a symbol not defined in this "
+                           "image: " + ", ".join(str(b) for b in bad)), chain
+        return targets, None, chain
+    if kind == "static-slot":
+        vals = {v for v in atom.get("values", ()) if v in g.start_set}
+        if not vals:
+            return set(), "static slot has no in-image function value", chain
+        return vals, None, chain
+    if kind == "table":
+        vals = {v for v in atom.get("values", ()) if v in g.start_set}
+        if not vals:
+            return set(), "table entry has no in-image function value", chain
+        return vals, None, chain
+    if kind == "field":
+        return _semantic_field_targets(g, atom["offset"], reachable, depth - 1,
+                                       seen, chain)
+    if kind == "param":
+        return _semantic_param_targets(g, atom["func"], atom["index"], reachable,
+                                       depth - 1, seen, chain)
+    return set(), "provenance is not image-bounded: " + str(atom.get("why")), chain
+
+
+def semantic_method_free_targets(g: "DsoGraph", site: dict, name: str,
+                                 reachable: set | None):
+    """Method.free (offset 0x20) targets from the values reachable code stores.
+
+    The declared target names are never the source of truth.  Each reachable
+    writer's stored value is followed to its provenance (lea, GLOB_DAT of an
+    in-image definition, a caller parameter chain, or one level of an object
+    field whose slot writer is known).  Any reachable store whose provenance is
+    not image-bounded keeps the site UNRESOLVED.
+
+    Returns None when the site is not this slot; otherwise a record with
+    ``resolved`` and, on success, ``targets``.  The derivation depends only on
+    the image and the reachable set, so it is computed once per graph and the
+    provenance interpreter is released immediately: the court container has a
+    hard 8 GiB limit and the main resolver's state must survive alongside it.
+    """
+    spec = next((s for s in EDGE_TARGET_SLOTS if s["id"] == "EVT-METHOD-FREE"),
+                None)
+    if spec is None or not any(f in (name or "") for f in spec["function"]):
+        return None
+    if 0x20 not in set(site.get("field_offsets") or ()):
+        return None
+    if reachable is None:
+        return {"schema": SEMANTIC_STORE_SCHEMA,
+                "rule": "stored-value provenance at reachable writer call sites",
+                "slot": "Method.free (offset 0x20)",
+                "declared_source_of_truth": False,
+                "site": hex(site["addr"]),
+                "containing_function": name,
+                "resolved": False,
+                "refusal": "no reachability evidence was supplied"}
+    shared = getattr(g, "_semantic_mf_cache", None)
+    if shared is None or shared[0] is not reachable:
+        record = _semantic_method_free_derivation(g, spec, reachable)
+        g._semantic_mf_cache = (reachable, record)
+        # The stored-value rule is done with the provenance interpreter.  Keep
+        # only its small derivation record: retaining the whole interpreter
+        # alongside the main resolver doubles peak memory for no benefit.
+        g._semantic_call_index = None
+        g._semantic_precision = None
+        g._semantic_deltas = {}
+        g._semantic_frame_base = {}
+        shared = g._semantic_mf_cache
+    record = dict(shared[1])
+    record["site"] = hex(site["addr"])
+    record["containing_function"] = name
+    return record
+
+
+def _semantic_method_free_derivation(g: "DsoGraph", spec: dict, reachable: set):
+    record = {"schema": SEMANTIC_STORE_SCHEMA,
+              "rule": "stored-value provenance at reachable writer call sites",
+              "slot": "Method.free (offset 0x20)",
+              "declared_source_of_truth": False}
+    writers = []
+    live_set = set()
+    for frag in spec["writer_symbols"]:
+        addrs = _name_addrs(g, frag)
+        if not addrs:
+            writers.append({"fragment": frag, "address": None, "symbol": None,
+                            "present": False, "reachable": False})
+        for a in sorted(addrs):
+            writers.append({"fragment": frag, "address": hex(a),
+                            "symbol": g.funcs.get(a, "?"), "present": True,
+                            "reachable": a in reachable})
+            if a in reachable:
+                live_set.add(a)
+    live = sorted(live_set)
+    record["writers"] = writers
+    record["excluded_writers"] = [
+        {"fragment": w["fragment"], "address": w["address"],
+         "symbol": w["symbol"],
+         "reason": "absent from the image" if not w["present"]
+         else "writer not in the family's reachable set"}
+        for w in writers if not w["reachable"]]
+    if not live:
+        record.update({"resolved": False,
+                       "refusal": "no reachable method-store writer"})
+        return record
+    rows, index = [], None
+    for writer in live:
+        sources = _semantic_writer_sources(g, writer, 0x20)
+        indices = sorted({r["argument_index"] for r in sources
+                          if r.get("argument_index") is not None})
+        rows.append({"writer": g.funcs.get(writer, "?"),
+                     "writer_address": hex(writer), "stores": sources,
+                     "argument_indices": indices})
+        if len(indices) != 1 or (index is not None and indices[0] != index):
+            index = None
+            record.update({"resolved": False,
+                           "refusal": ("a reachable writer's store into the slot "
+                                       "is not fed by exactly one parameter"),
+                           "writer_stores": rows})
+            return record
+        index = indices[0]
+    if index is None:
+        record.update({"resolved": False,
+                       "refusal": "no writer stores a function parameter",
+                       "writer_stores": rows})
+        return record
+    calls = []
+    targets = set()
+    failures = []
+    idx = _semantic_call_index(g)
+    for writer in live:
+        sites = idx.get(writer) or {}
+        for key in sorted(sites):
+            site_row = sites[key]
+            if site_row["caller"] not in reachable:
+                calls.append({"caller": g.funcs.get(site_row["caller"], "?"),
+                              "call_site": hex(site_row["call_site"]),
+                              "writer": g.funcs.get(writer, "?"),
+                              "included": False,
+                              "reason": "caller not in the family's reachable set"})
+                continue
+            value = _semantic_value(g, site_row, index)
+            row = {"caller": g.funcs.get(site_row["caller"], "?"),
+                   "call_site": hex(site_row["call_site"]),
+                   "writer": g.funcs.get(writer, "?"),
+                   "argument_index": index,
+                   "value": _semantic_atom_rows(g, value),
+                   "included": True, "targets": [], "failure": None,
+                   "chain": []}
+            got = set()
+            for atom in row["value"]:
+                atom["func"] = site_row["caller"]
+                t, why, sub = _semantic_resolve(g, atom, reachable,
+                                                MAX_PROVENANCE_DEPTH, set(), [])
+                row["chain"].append({"atom": atom, "targets": [hex(x) for x in sorted(t)],
+                                     "failure": why, "chain": sub})
+                if why:
+                    row["failure"] = why
+                    break
+                got |= t
+            row["targets"] = [hex(x) for x in sorted(got)]
+            calls.append(row)
+            if row["failure"]:
+                failures.append(row)
+            else:
+                targets |= got
+    record["writer_argument_index"] = index
+    record["writer_stores"] = rows
+    record["call_sites"] = calls
+    if failures:
+        record.update({"resolved": False,
+                       "refusal": ("a reachable writer call site stores a value "
+                                   "whose provenance is not image-bounded"),
+                       "offending_call_sites": [
+                           {"caller": f["caller"], "call_site": f["call_site"],
+                            "failure": f["failure"]} for f in failures]})
+        return record
+    if not targets:
+        record.update({"resolved": False,
+                       "refusal": "the reachable call sites contribute no target"})
+        return record
+    canonical = {}
+    collapses = []
+    for t in sorted(targets):
+        canon, chain = _semantic_canonical_target(g, t)
+        canonical[t] = canon
+        if canon != t:
+            collapses.append({"stored": hex(t), "semantic": hex(canon),
+                              "chain": chain})
+    derived = set(canonical.values())
+    declared_rows = {}
+    declared_addrs = set()
+    for frag in spec.get("declared_targets", ()):
+        addrs = _name_addrs(g, frag)
+        declared_rows[frag] = {"present": bool(addrs),
+                               "addresses": [hex(a) for a in sorted(addrs)]}
+        declared_addrs |= addrs
+    declared_canon = {_semantic_canonical_target(g, a)[0] for a in declared_addrs}
+    record.update({
+        "resolved": True,
+        "targets": [hex(a) for a in sorted(derived)],
+        "target_count": len(derived),
+        "stored_values": {hex(a): hex(b) for a, b in sorted(canonical.items())},
+        "thunk_collapses": collapses,
+        "declared_cross_check": {
+            "source_of_truth": "stored-value provenance, not this list",
+            "declared_targets": declared_rows,
+            "declared_but_absent": [f for f, r in declared_rows.items()
+                                    if not r["present"]],
+            "derived_but_undeclared": [hex(a) for a in sorted(
+                derived - declared_canon)],
+            "declared_but_not_derived": [hex(a) for a in sorted(
+                declared_canon - derived)],
+        },
+    })
+    return record
+
+
 def edge_target_witness(g: "DsoGraph", site: dict, name: str,
                         reachable: set | None):
     """The in-image slot's target set and record, or None.
@@ -2336,6 +3151,11 @@ def edge_target_witness(g: "DsoGraph", site: dict, name: str,
     offsets = set(site.get("field_offsets") or ())
     for spec in EDGE_TARGET_SLOTS:
         if not any(f in (name or "") for f in spec["function"]):
+            continue
+        if spec.get("semantic_rule"):
+            # The declared-name path must never run for a slot whose targets are
+            # derived from stored values; the semantic rule is the only source
+            # of truth and an absent name cannot void it.
             continue
         if spec["slot_offset"] is None:
             if offsets:
@@ -2883,6 +3703,29 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                 site["reason"] = ("allocator-seam-without-witness:"
                                   + str(site.get("seam") or ""))
                 stats["O1_witness_missing"] += 1
+            continue
+        # Stored-value slot targets: Method.free is written only by the in-image
+        # method-store writers, so its target set is derived from the values
+        # reachable code stores, never from declared symbol names.  A reachable
+        # store whose provenance is not image-bounded keeps the site unresolved.
+        sem = semantic_method_free_targets(g, site, name, reachable)
+        if sem is not None:
+            site["semantic_store_target"] = sem
+            if sem.get("resolved"):
+                site["targets"] = {int(t, 16) for t in sem["targets"]}
+                site["unresolved"] = False
+                site["class"] = "semantic-store-target"
+                site["reason"] = ("stored-value provenance:Method.free "
+                                  "(offset 0x20), "
+                                  f"{sem.get('target_count', 0)} target(s)")
+                stats["T_semantic_store_resolved"] += 1
+            else:
+                site["targets"] = set()
+                site["unresolved"] = True
+                site["class"] = "field"
+                site["reason"] = ("semantic-store-unresolved:"
+                                  + str(sem.get("refusal") or "unknown"))
+                stats["T_semantic_store_unresolved"] += 1
             continue
         if is_rust_runtime(name):
             if rust:
@@ -4225,6 +5068,58 @@ def build_receipt(args) -> dict:
             "unresolved_by_class": dict(collections.Counter(
                 s["class"] for g in graphs.values() for s in g.sites.values()
                 if s["unresolved"])),
+            "semantic_store_target_bounding": {
+                "rule": (
+                    "a slot written by reachable code is bounded by the values "
+                    "those writers actually store, resolved through their "
+                    "provenance: an in-image lea, a GLOB_DAT of a symbol defined "
+                    "in this image, a caller parameter chain, or one level of an "
+                    "object field whose slot writer is known.  Any reachable store "
+                    "whose provenance is not image-bounded keeps the site "
+                    "UNRESOLVED.  Declared symbol names are a cross-check, never "
+                    "the source of truth, and a declared-but-absent name cannot "
+                    "void the rule."),
+                "schema": SEMANTIC_STORE_SCHEMA,
+                "sites": [
+                    {"dso": name,
+                     "function": g.funcs.get(s["func"], "?"),
+                     "call_site": hex(s["addr"]),
+                     "resolved": s["semantic_store_target"].get("resolved"),
+                     "targets": s["semantic_store_target"].get("targets"),
+                     "writer_argument_index": s["semantic_store_target"].get(
+                         "writer_argument_index"),
+                     "writers": s["semantic_store_target"].get("writers"),
+                     "excluded_writers": s["semantic_store_target"].get(
+                         "excluded_writers"),
+                     "call_sites": s["semantic_store_target"].get("call_sites"),
+                     "declared_cross_check": s["semantic_store_target"].get(
+                         "declared_cross_check"),
+                     "refusal": s["semantic_store_target"].get("refusal"),
+                     "offending_call_sites": s["semantic_store_target"].get(
+                         "offending_call_sites")}
+                    for name, g in graphs.items() for s in g.sites.values()
+                    if s.get("semantic_store_target")],
+                "counts": {
+                    "resolved": sum(1 for g in graphs.values()
+                                    for s in g.sites.values()
+                                    if (s.get("semantic_store_target") or {}).get(
+                                        "resolved")),
+                    "unresolved": sum(1 for g in graphs.values()
+                                      for s in g.sites.values()
+                                      if s.get("semantic_store_target")
+                                      and not s["semantic_store_target"].get(
+                                          "resolved")),
+                },
+                "declared_but_absent": sorted({
+                    f for g in graphs.values() for s in g.sites.values()
+                    for f in ((s.get("semantic_store_target") or {}).get(
+                        "declared_cross_check") or {}).get("declared_but_absent", ())}),
+                "derived_but_undeclared": sorted({
+                    a for g in graphs.values() for s in g.sites.values()
+                    for a in ((s.get("semantic_store_target") or {}).get(
+                        "declared_cross_check") or {}).get(
+                            "derived_but_undeclared", ())}),
+            },
             "witness_rule": {
                 "requirement": (
                     "AGENTS.md section 22: a contract-bounded class is applied "
@@ -4883,6 +5778,235 @@ def self_test() -> int:
     apply_evidence_classes(g, set(), None)
     check("no reachability evidence keeps caller bounding off",
           s["unresolved"], True)
+
+    # ---- stored-value provenance for Method.free (offset 0x20) ------------- #
+    # The slot is bounded by the values reachable code stores, never by the
+    # declared symbol names.  Controls (a)-(e) are exercised here.
+    _insns = {
+        0x10: [(0x10, "ret")],
+        0x100: [
+            (0x100, "push   %rbx"),
+            (0x101, "sub    $0x8,%rsp"),
+            (0x102, "mov    0x18(%rsp),%rax"),
+            (0x103, "mov    %rax,0x20(%rbx)"),
+            (0x104, "ret")],
+        0x200: [
+            (0x200, "push   %rbx"),
+            (0x201, "sub    $0x8,%rsp"),
+            (0x202, "mov    0x18(%rsp),%rax"),
+            (0x203, "mov    %rax,0x20(%rbx)"),
+            (0x204, "ret")],
+        0x300: [(0x300, "ret")],
+        0x400: [(0x400, "ret")],
+        0x410: [(0x410, "jmp    *0x8bf0(%rip)        # 9000 <OSSL_ENCODER_free>")],
+        0x420: [(0x420, "ret")],
+        0x500: [
+            (0x500, "push   %rbx"),
+            (0x501, "sub    $0x8,%rsp"),
+            (0x502, "mov    0x18(%rsp),%rax"),
+            (0x503, "mov    %rax,0x20(%rbx)"),
+            (0x504, "ret")],
+        0x600: [(0x600, "ret")],
+    }
+
+    class _P2:
+        import_addrs = set()
+
+        def __init__(self, calls, insns):
+            self.calls = calls
+            self.insns_by_func = insns
+
+    class _MG:
+        name = "control.so"
+        funcs = {
+            0x10: "...property5store11alg_cleanup",
+            0x100: "...property5store21ossl_method_store_add",
+            0x200: "...property5store27ossl_method_store_cache_set",
+            0x300: "...decoder_meth20put_decoder_in_store",
+            0x400: "OSSL_DECODER_free",
+            0x410: "...decoder_meth12thunk_to_free",
+            0x420: "OSSL_ENCODER_free",
+            0x500: "...property5store21ossl_method_store_add.dead",
+            0x600: "dead_target",
+        }
+        start_set = set(funcs)
+        all_syms = dict(funcs)
+        names_at = {a: {n} for a, n in funcs.items()}
+        dynamic_defs = {"OSSL_DECODER_free": 0x400,
+                        "OSSL_ENCODER_free": 0x420}
+        slot_syms = {}
+        slot_funcs = {0x9000: {0x420}}
+        slot_data = {}
+        taken_code = set()
+        taken_data = set()
+        field_stores = {}
+        unknown_call_arg_targets = set()
+        evidence_classes = collections.Counter()
+        residual_sites = []
+        resolved_targets = set()
+        precision_counts = collections.Counter()
+
+        def section_of(self, a):
+            return ".text" if a < 0x9000 else ".data"
+
+        def static_slot(self, a):
+            return {0x9000: frozenset({0x420})}.get(a)
+
+        @property
+        def slot_func_targets(self):
+            return set()
+
+    def _row(call_site, stack, caller=0x300):
+        return {"caller": caller, "call_site": call_site,
+                "args": [PValue() for _ in range(6)],
+                "stack": list(stack), "open": [True] * 6}
+
+    def _mg_graph(bad=None):
+        g = _MG()
+        g.precision = _P2([], dict(_insns))
+        g._semantic_call_index = {
+            0x100: {(0x300, 0x301): _row(0x301, [PValue.one(0x410)]),
+                    (0x300, 0x303): _row(0x303, [PValue.one(0x400)])},
+            0x200: {(0x300, 0x305): _row(0x305, [PValue.one(0x410)])},
+            0x500: {(0x300, 0x307): _row(0x307, [PValue.one(0x600)])},
+        }
+        if bad is not None:
+            g._semantic_call_index[0x100][(0x300, 0x301)] = _row(
+                0x301, [bad])
+        g.sites = {(0x10, 0x11, "call"): {
+            "kind": "call", "func": 0x10, "addr": 0x11,
+            "text": "call   *0x20(%rbp)", "targets": set(),
+            "unresolved": True, "reason": "field-of-unknown-base",
+            "class": "field", "field_offsets": {0x20}, "seam": None,
+            "arg_deps": set()}}
+        return g, g.sites[(0x10, 0x11, "call")]
+
+    _reach = {0x10, 0x100, 0x200, 0x300, 0x400, 0x410, 0x420}
+    _name = "...property5store11alg_cleanup"
+    g, s = _mg_graph()
+    rec = semantic_method_free_targets(g, s, _name, _reach)
+    check("stored-value slot resolves from reachable stores",
+          rec.get("resolved"), True)
+    check("stored-value slot target set is derived, not declared",
+          rec.get("targets"), ["0x400", "0x420"])
+
+    # (b) the declared name is absent but the store provenance is finite.
+    check("declared-but-absent free_decoder is reported",
+          "free_decoder" in rec["declared_cross_check"]["declared_but_absent"],
+          True)
+    check("derived-but-undeclared OSSL_DECODER_free is reported",
+          "0x400" in rec["declared_cross_check"]["derived_but_undeclared"],
+          True)
+
+    # (c) the thunk and its callee collapse to one semantic target.
+    check("a thunk and its callee collapse to one target",
+          [c["stored"] for c in rec["thunk_collapses"]], ["0x410"])
+    check("the thunk address is not itself a target",
+          "0x410" in rec["targets"], False)
+
+    # (d) an unreachable writer does not contribute, and is recorded as excluded.
+    check("an unreachable writer's target is absent from the bound",
+          "0x600" in rec["targets"], False)
+    check("the unreachable writer is recorded as excluded",
+          any(w.get("address") == "0x500" for w in rec["excluded_writers"]),
+          True)
+    g2, s2 = _mg_graph()
+    rec2 = semantic_method_free_targets(
+        g2, s2, _name, _reach | {0x500})
+    check("marking the writer reachable makes its target appear (canary)",
+          "0x600" in rec2["targets"], True)
+
+    # (a) a reachable store whose value is an unbounded caller argument keeps
+    # the site unresolved.
+    g3, s3 = _mg_graph(bad=PValue.one(("arg", 3)))
+    rec3 = semantic_method_free_targets(g3, s3, _name, _reach)
+    check("argument-derived store keeps the slot unresolved",
+          rec3.get("resolved"), False)
+    check("the offending call site is named",
+          len(rec3.get("offending_call_sites") or ()), 1)
+
+    # (e) the old declared-name path cannot run for this slot: _fragment_addrs
+    # is made to raise and the rule must neither call it nor void the spec.
+    _orig_fragment_addrs = globals()["_fragment_addrs"]
+
+    def _boom(*_a, **_k):
+        raise AssertionError("_fragment_addrs must not be used here")
+
+    globals()["_fragment_addrs"] = _boom
+    try:
+        g4, s4 = _mg_graph()
+        rec4 = semantic_method_free_targets(g4, s4, _name, _reach)
+        apply_evidence_classes(g4, set(), _reach)
+    finally:
+        globals()["_fragment_addrs"] = _orig_fragment_addrs
+    check("the stored-value rule never calls _fragment_addrs",
+          rec4.get("resolved"), True)
+    check("the closure resolves the site without the declared-name helper",
+          (s4["unresolved"], s4["class"]),
+          (False, "semantic-store-target"))
+    check("stored-value targets are not an ABI contract class",
+          s4["class"] in ABI_CONTRACT_CLASSES, False)
+
+    # The provenance resolver seeds entry arguments and records outgoing stack
+    # arguments, which is what lets a writer's parameter be followed.
+    class _PG:
+        funcs = {0x100: "W", 0x500: "F", 0x600: "L", 0x700: "T"}
+        start_set = set(funcs)
+        all_syms = dict(funcs)
+        names_at = {a: {n} for a, n in funcs.items()}
+        dynamic_defs = {}
+        slot_syms = {}
+        slot_funcs = {}
+        slot_data = {}
+        taken_code = set()
+        taken_data = set()
+        field_stores = {}
+        unknown_call_arg_targets = set()
+        import_addrs = set()
+        direct = {}
+        functions = [
+            (0x100, [(0x100, "mov    0x8(%rsp),%rax"),
+                     (0x101, "mov    %rax,0x20(%rbx)"),
+                     (0x102, "ret")]),
+            (0x500, [(0x500, "mov    0x8(%rsp),%rax"),
+                     (0x501, "push   %rax"),
+                     (0x502, "call   100 <W>"),
+                     (0x503, "ret")]),
+            (0x600, [(0x600, "lea    0x100(%rip),%r10        # 400 <T>"),
+                     (0x601, "push   %r10"),
+                     (0x602, "call   100 <W>"),
+                     (0x603, "ret")]),
+        ]
+
+        def containing(self, a):
+            return max(x for x in self.funcs if x <= a)
+
+        def section_of(self, _a):
+            return ".text"
+
+        def static_slot(self, _a):
+            return None
+
+        def seam_symbol(self, _a):
+            return None
+
+        def cstring_at(self, _a):
+            return None
+
+        def is_data(self, _a):
+            return False
+
+    pg = _PG()
+    prov = PrecisionResolver(pg)
+    prov.seed_entry_args = True
+    prov.capture_stack_args = True
+    prov.run(passes=1)
+    fwd = prov.call_stack_args.get((0x500, 0x502)) or []
+    check("provenance mode forwards a caller stack argument symbolically",
+          fwd and not fwd[0].is_top() and ("arg", 6) in fwd[0].s, True)
+    lea = prov.call_stack_args.get((0x600, 0x602)) or []
+    check("provenance mode records an outgoing lea stack argument",
+          lea and not lea[0].is_top() and 0x400 in lea[0].s, True)
 
     # Negative control: an allocator seam with no global/setter in the image is
     # not evidence for CRYPTO_set_mem_functions.

@@ -18,16 +18,15 @@
 
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
-use core::sync::atomic::AtomicPtr;
 
 use crate::engine::eng_lib::{Engine, EngineCiphersPtr};
 use crate::engine::eng_list::{ENGINE_get_first, ENGINE_get_next};
 use crate::engine::eng_table::{
     engine_table_cleanup, engine_table_register, engine_table_unregister, ossl_engine_table_select,
+    EngineTableSlot,
 };
 use crate::runtime::err::err_sites::TB_CIPHER_78;
 use crate::runtime::err::raise_site;
-use crate::runtime::lhash::OpenSslLhash;
 
 /// `OPENSSL_FILE` for this unit, for the `ossl_engine_table_select` coordinate.
 const FILE: *const c_char = c"crypto/engine/tb_cipher.c".as_ptr();
@@ -35,11 +34,11 @@ const FILE: *const c_char = c"crypto/engine/tb_cipher.c".as_ptr();
 const LINE_SELECT: c_int = 68;
 
 /// `static ENGINE_TABLE *cipher_table = NULL` (`:15`).
-static CIPHER_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(ptr::null_mut());
+static CIPHER_TABLE: EngineTableSlot = EngineTableSlot::new();
 
-/// The `ENGINE_TABLE **` the table helpers take.
-pub(crate) fn cipher_table_slot() -> *mut *mut OpenSslLhash {
-    core::ptr::addr_of!(CIPHER_TABLE) as *mut *mut OpenSslLhash
+/// The typed `ENGINE_TABLE *` slot the table helpers take.
+pub(crate) fn cipher_table_slot() -> &'static EngineTableSlot {
+    &CIPHER_TABLE
 }
 
 /// `void ENGINE_unregister_ciphers(ENGINE *e)` — `crypto/engine/tb_cipher.c:17-20`.

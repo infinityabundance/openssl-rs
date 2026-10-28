@@ -1,0 +1,152 @@
+{
+  "schema": "safe-c33/atlas-refresh/engine-slot-repair/v1",
+  "kind": "representation-repair-and-lifetime-analysis",
+  "receipt": "ENGINE-SLOT-REPAIR",
+  "date": "2026-10-28",
+  "candidate": {
+    "branch": "stage/p25/semantic-targets",
+    "source_head": "5579c3fb5d62abd0d1d1132b3b7cd82c1548f5bc",
+    "source_head_short": "5579c3fb5",
+    "tree_state": "dirty; no commit or push (per subphase instruction)",
+    "files_changed": [
+      "src/engine/eng_table.rs",
+      "src/engine/tb_asnmth.rs",
+      "src/engine/tb_cipher.rs",
+      "src/engine/tb_dh.rs",
+      "src/engine/tb_digest.rs",
+      "src/engine/tb_dsa.rs",
+      "src/engine/tb_eckey.rs",
+      "src/engine/tb_pkmeth.rs",
+      "src/engine/tb_rand.rs",
+      "src/engine/tb_rsa.rs"
+    ],
+    "diff_stat": "10 files changed, 273 insertions(+), 159 deletions(-)"
+  },
+  "defect": {
+    "class": "an AtomicPtr<T> static exposed and used as an ordinary *mut *mut T slot",
+    "sites": "the nine ENGINE table statics in src/engine/tb_asnmth.rs, tb_cipher.rs, tb_dh.rs, tb_digest.rs, tb_dsa.rs, tb_eckey.rs, tb_pkmeth.rs, tb_rand.rs and tb_rsa.rs; each `*_table_slot()` returned `core::ptr::addr_of!(STATIC) as *mut *mut OpenSslLhash`",
+    "consumers": "src/engine/eng_table.rs: int_table_check, engine_table_register, engine_table_unregister, engine_table_unregister_locked, engine_table_cleanup, ossl_engine_table_select; the cleanup only read/wrote through `*table`, including the final null store",
+    "why_it_mattered": "The global ENGINE lock serialises the pointed-to lhash's lifetime, but a raw double-pointer view of an atomic's storage asserts an ordinary-pointer representation and an aliasing/access class the atomic does not have. In tb_asnmth the same static was written non-atomically through the cast (register/cleanup) and read atomically by `ENGINE_pkey_asn1_find_str` (`load(Acquire)`), so the representation was not merely stylistic."
+  },
+  "representation": {
+    "before": "static X: AtomicPtr<OpenSslLhash>; pub(crate) fn x_table_slot() -> *mut *mut OpenSslLhash { addr_of!(X) as *mut *mut OpenSslLhash }",
+    "after": "static X: EngineTableSlot; pub(crate) fn x_table_slot() -> &'static EngineTableSlot { &X }; the table helpers take &EngineTableSlot. EngineTableSlot is a pub(crate) newtype over AtomicPtr<OpenSslLhash> owned by src/engine/eng_table.rs.",
+    "interface_added": {
+      "type": "pub(crate) struct EngineTableSlot { table: AtomicPtr<OpenSslLhash> }",
+      "new": "pub(crate) const fn new() -> Self (empty slot)",
+      "load": "pub(crate) fn load(&self) -> *mut OpenSslLhash",
+      "store": "pub(crate) fn store(&self, value: *mut OpenSslLhash)",
+      "swap": "pub(crate) fn swap(&self, value: *mut OpenSslLhash) -> *mut OpenSslLhash",
+      "compare_exchange": "not added: every mutation is serialised by the engine write lock, and cleanup is the only take-site (swap); an unused CAS would be dead code under -D warnings"
+    },
+    "cast_removal": {
+      "grep": "grep -rn '\\*mut \\*mut OpenSslLhash' src/engine",
+      "worktree_matches": 0,
+      "pre_repair_scratch_matches": 27,
+      "pre_repair_scratch": "git archive 5579c3fb5 extracted outside the working tree at /work/court/negctl (forensics/ copied in because it is not in git)",
+      "addr_of_atomic_cast": "grep -rn 'addr_of!([A-Z_]*_TABLE) as \\*mut \\*mut OpenSslLhash' src/engine: 0 matches"
+    }
+  },
+  "ordering": {
+    "lock_discipline": "unchanged: the global ENGINE lock remains the only mechanism that protects the lhash's lifetime and every slot access. The slot methods do not introduce a lock, a lock order, or a second synchronisation mechanism.",
+    "load": "Acquire. Pairs with the Release in store and the AcqRel in swap, so a reader that observes a non-NULL table also observes the lhash initialisation that preceded publication. Current callers hold the engine lock (read lock in ENGINE_pkey_asn1_find_str; write lock in the table helpers), which already supplies this ordering.",
+    "store": "Release. Publishes the lhash pointer after int_table_check's OPENSSL_LH_new initialisation; called only with the engine write lock held.",
+    "swap": "AcqRel. Acquires the table being replaced before releasing it and publishes the replacement. engine_table_cleanup uses it to take the table out of the slot before OPENSSL_LH_doall/OPENSSL_LH_free, so a second cleanup observes NULL and frees nothing (double cleanup is a no-op, not a double free).",
+    "unlocked_misuse": "Because the slot is atomic, a hypothetical caller that bypassed the lock would cause a logical race, not the data race/UB that the non-atomic cast could produce. The lifetime obligation remains with the lock and is reported as retained, not discharged."
+  },
+  "abi_surface": {
+    "method": "git grep -c '^#\\[no_mangle\\]' and '^#\\[repr(C)\\]' over src, HEAD 5579c3fb5 vs the working tree",
+    "no_mangle_before": 6532,
+    "no_mangle_after": 6532,
+    "repr_c_before": 790,
+    "repr_c_after": 790,
+    "exported_symbols_signatures_layouts": "unchanged: all edited functions are internal Rust helpers; no #[no_mangle] item, extern \"C\" signature, #[repr(C)] type or allocator seam coordinate was edited. EngineTableSlot is a pub(crate) Rust-only type."
+  },
+  "tests": {
+    "added": [
+      "engine::eng_table::tests::slot_store_load_and_swap_round_trip",
+      "engine::eng_table::tests::cleanup_nulls_the_slot_and_a_second_cleanup_is_a_no_op",
+      "engine::eng_table::tests::register_select_and_cleanup_round_trip_through_the_slot"
+    ],
+    "updated": [
+      "engine::eng_table::tests::refused_init_returns_the_cached_default_without_a_reference (slot-local, no raw double pointer)",
+      "engine::eng_table::tests::refused_init_hook_returns_the_cached_default_without_a_reference",
+      "engine::eng_table::tests::concurrent_select_and_cleanup_serialise_on_the_engine_lock (function-local static EngineTableSlot; the heap raw-pointer slot and both casts are gone)"
+    ],
+    "coverage": {
+      "slot_store_load_swap": "store/load round trip; swap returns the replaced pointer and publishes NULL",
+      "cleanup_once": "cleanup leaves the slot NULL; a second cleanup observes NULL and returns without a second free",
+      "register_select_cleanup": "engine_table_register creates/stores the lhash, ossl_engine_table_select returns the registered engine, cleanup empties the slot; all functional and structural references are released before the engine is freed",
+      "existing_behaviour": "the two refused-init tests still pin the authority's cached-default arm"
+    }
+  },
+  "concurrency_control": {
+    "test": "engine::eng_table::tests::concurrent_select_and_cleanup_serialise_on_the_engine_lock",
+    "shape": "two threads, 2,000 select iterations and 2,000 int_table_check+cleanup iterations, sharing one EngineTableSlot; the test asserts the slot ends NULL",
+    "tsan": "NOT_RUN. The court has nightly-2026-10-01, but ThreadSanitizer was not run: the crate's CRYPTO_RWLOCK is std::sync::Mutex+Condvar (futex-based), and a TSan run without an instrumented std would not observe that lock's happens-before, so it could not establish the absence of a race in this test. No sanitized std build was produced in this subphase.",
+    "ordering_justification": "The engine write lock serialises every mutation and the read lock the one reader; the Acquire/Release/AcqRel orderings are conservative and make the slot correct independently of the lock."
+  },
+  "negative_control": {
+    "structural": {
+      "ran": true,
+      "result": "The pre-repair scratch tree contains 27 `*mut *mut OpenSslLhash` occurrences under src/engine; the working tree contains 0. Reintroducing the cast therefore fails the acceptance guard, so the guard is load-bearing.",
+      "limitation": "This is a source-structure guard, not a memory-safety instrument."
+    },
+    "miri_real_code": {
+      "ran": false,
+      "status": "NOT_RUN",
+      "attempt": "cargo +nightly miri test --lib -- a_refused_structural_reference_returns_no_method in the pre-repair scratch",
+      "observed": "Miri aborted before the table path with `unsupported operation: can't call foreign function pthread_once on OS linux` at src/runtime/thread.rs:606 (CRYPTO_THREAD_run_once). That is an instrument limitation, not a defect report.",
+      "consequence": "Miri cannot execute this crate's engine path, so it cannot provide the negative-control report for the real code in this subphase."
+    },
+    "miri_model": {
+      "ran": true,
+      "model": "court/miri-model: an AtomicPtr<u8> static, a `addr_of!(STATIC) as *mut *mut u8` write, then an atomic load of the same location",
+      "observed": "1 passed, 0 failed. Miri does not flag sequential mixed atomic/non-atomic access; the defect class needs a concurrent access (and therefore TSan or a reasoning proof), which the real crate cannot run under Miri.",
+      "conclusion": "The negative control for the memory-safety class is NOT_RUN; only the structural guard was exercised."
+    }
+  },
+  "engine_list_cleanup_analysis": {
+    "site": "src/engine/eng_list.rs:90-104 engine_list_cleanup: `let head = ENGINE_LIST_HEAD.load(Acquire); if head.is_null() { return; } let removed = ENGINE_remove(head);`",
+    "remove_site": "src/engine/eng_list.rs:536-556 ENGINE_remove takes the engine write lock (`lock()` at :543) and calls engine_list_remove, which unlinks `e` and drops the list's structural reference with engine_free_util(:249).",
+    "what_keeps_head_alive_in_the_window": "Nothing structural. The pointer value is a borrow whose only lifetime guarantee is the list's structural reference. That reference is dropped by any successful ENGINE_remove(head), and the function does not hold the lock between the load and ENGINE_remove's acquisition.",
+    "can_concurrent_removal_free_it": "Yes in principle: another thread that calls ENGINE_remove(head) after the load but before this thread's lock() can unlink and free `head`; the subsequent ENGINE_remove(head) then dereferences freed `(*e).next/prev` inside engine_list_remove. The window is real in the source; it is the authority's own window.",
+    "reachability": "engine_list_cleanup is only registered by engine_cleanup_add_last (eng_list.rs:161) as a cleanup-stack item. The cleanup stack is drained only by engine_cleanup_int, which is withheld: there is no `fn engine_cleanup_int` in src, and the landed OPENSSL_cleanup (src/runtime/init.rs:1074-1129) calls OPENSSL_thread_stop, run_atexit_handlers, the config-key release, async_deinit, ossl_config_modules_free, ossl_cleanup_thread, evp_cleanup_int and unload_strings -- not the ENGINE cleanup stack. The source's own module documentation records the same ('unreachable until engine_cleanup_int is named by OPENSSL_cleanup'). Therefore the window is not executed in the current candidate and no reachable use-after-free was found.",
+    "falsifier": "Landing engine_cleanup_int and wiring it into OPENSSL_cleanup, or adding any direct caller/test of engine_list_cleanup, while another thread can still call ENGINE_add/ENGINE_remove: then the load-to-lock window becomes a use-after-free and this site becomes a STOP. A second falsifier is a new caller that invokes engine_list_cleanup without the process-wide quiescence the authority assumes for OPENSSL_cleanup.",
+    "action": "No change to eng_list.rs in this subphase. Not discharged; recorded as RETAINED with the reachability argument above."
+  },
+  "discharges": {
+    "eliminated": [
+      "the `addr_of!(AtomicPtr static) as *mut *mut OpenSslLhash` representation and every non-atomic read/write through it; the pattern is inexpressible through the table modules' interface",
+      "the mixed atomic/non-atomic access pattern on the tb_asnmth table static (the one real double-access case)"
+    ],
+    "relocated": [
+      "the lhash lifetime obligation remains at the engine lock boundary: the slot does not protect the table, it only makes the pointer access typed and atomic"
+    ],
+    "retained": [
+      "the engine lock must still be held for every access; EngineTableSlot's store/swap are safe methods and a caller can still publish a value without the lock, which is a logical race rather than UB",
+      "the lhash remains an untyped *mut c_void container; its elements are EnginePile by construction in this module, not by type",
+      "the select's cached-default arm can return an engine without an acquired functional reference (authority contract hazard, unchanged)",
+      "engine_list_cleanup's load-to-lock window (RETAINED, unreachable today; see analysis)"
+    ],
+    "hidden": 0,
+    "not_discharged": [
+      "no BOUNDARY independent reviewer for this mechanism",
+      "no SAFE_COMPATIBLE graduation or dependency-closure claim for any consumer family",
+      "TSan and real-code Miri were not run (see concurrency_control and negative_control)"
+    ]
+  },
+  "gates": {
+    "fmt": "cargo fmt --all -- --check: PASS (FMT_OK)",
+    "clippy": "cargo clippy --all-targets -- -D warnings: PASS (Finished dev profile, no warnings)",
+    "full_library_test": "cargo test --lib -- --test-threads=4: 2216 passed; 0 failed; 52 ignored; 0 measured; 0 filtered out (2268 total)",
+    "test_floor": "floor 2265 total / 52 ignored -> +3 tests (the three added above); no test removed and no test newly ignored",
+    "abi_counts": "no_mangle 6532 -> 6532; repr(C) 790 -> 790"
+  },
+  "freeze_note": "This change alters build-relevant source (src/engine). The evidence in this receipt is bound to the working-tree candidate, not to a frozen source identity S. The dependency closure, atlases and downstream rows must be re-measured from a fresh build after the next freeze S' (AGENTS.md sec.22); nothing here should be carried forward as a measurement of the new artefacts.",
+  "unknowns": [
+    "The memory-safety negative control (a concurrency detector firing on the restored cast) is NOT_RUN: TSan was not run and Miri cannot execute the crate (pthread_once).",
+    "engine_list_cleanup reachability is an argument about the current candidate (engine_cleanup_int withheld), not a proof about a future init sequence.",
+    "No independent BOUNDARY reviewer examined the EngineTableSlot interface in this subphase."
+  ]
+}

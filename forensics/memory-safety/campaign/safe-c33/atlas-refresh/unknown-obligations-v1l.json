@@ -1,0 +1,1710 @@
+{
+ "schema": "safe-c33/atlas-refresh/unknown-obligations/v1",
+ "kind": "unknown-obligation-reduction-receipt",
+ "subphase": "safe-c33/unknown-obligation-reduction-v1l",
+ "generated_utc": "2026-10-28T05:35:24Z",
+ "frozen_identity": {
+  "source_head": "8a54aba58f35dd62af5c78551169d0e8a9276469",
+  "src_content_sha256": "add0d599816339e1e3427aa2ccee8de6639bd3c43b634b57275b3d1b10c41339",
+  "libcrypto_sha256": "247803f1b57bc109366aeb0831ec27d5680091201920b9f13f5cd61736f52577",
+  "libssl_sha256": "3ca46e32588837f7303c0ecbaf12a0376f05253559d0e364d3f76521d6c55853",
+  "ssh_sha256": "bbb6a6cd0c9a7ca33235aef19b8bad3dc86c425b9eede397290d2b5c7e320a10",
+  "sshd_sha256": "d66e4929b78ae0a2fc930986894fd5c1b04db80151927f0daa096de6157a074d",
+  "census": "v1k-candidate-freeze.json",
+  "closure": "openssh-closure-v1k.json (177 = 75 D / 73 B / 29 U)",
+  "build_relevant_inputs_changed": false
+ },
+ "enumeration_before": {
+  "unknown_obligations": 29,
+  "unknown_mechanism_files": 17,
+  "unmapped_obligations": 19,
+  "by_file": {
+   "src/apps/ciphers.rs": 1,
+   "src/asn1/asn_mstbl.rs": 1,
+   "src/cms/cms_lib.rs": 2,
+   "src/decoder_lib.rs": 1,
+   "src/engine/eng_dyn.rs": 1,
+   "src/engine/eng_fat.rs": 1,
+   "src/engine/eng_list.rs": 1,
+   "src/engine/tb_asnmth.rs": 1,
+   "src/engine/tb_cipher.rs": 1,
+   "src/engine/tb_dh.rs": 1,
+   "src/engine/tb_digest.rs": 1,
+   "src/engine/tb_dsa.rs": 1,
+   "src/engine/tb_eckey.rs": 1,
+   "src/engine/tb_pkmeth.rs": 1,
+   "src/engine/tb_rand.rs": 1,
+   "src/engine/tb_rsa.rs": 1,
+   "src/ml_kem/key.rs": 1,
+   "src/runtime/conf/lib.rs": 2,
+   "src/runtime/confmod/asn1.rs": 1,
+   "src/runtime/confmod/mod.rs": 1,
+   "src/ui/ui_util.rs": 2,
+   "src/x509/v3_akid.rs": 2,
+   "src/x509/v3_san.rs": 3
+  },
+  "by_mechanism": {
+   "ASN1_OCSP": 1,
+   "EVP_PKEY_PROVIDER": 2,
+   "<unmapped>": 19,
+   "RAND_CMS_STORE_KEYFMT": 2,
+   "X509_VERIFY_POLICY": 5
+  },
+  "rows": [
+   {
+    "id": "V1:src/apps/ciphers.rs:93:UNSAFE_FN_DEF",
+    "file": "src/apps/ciphers.rs",
+    "line": 93,
+    "operation": "dummy_psk",
+    "mechanism_before": null,
+    "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "DISCHARGED",
+     "discharge_receipt": "openssh-v1l",
+     "missing_property": null
+    }
+   },
+   {
+    "id": "V1:src/asn1/asn_mstbl.rs:261:UNSAFE_FN_DEF",
+    "file": "src/asn1/asn_mstbl.rs",
+    "line": 261,
+    "operation": "stbl_module_finish",
+    "mechanism_before": "ASN1_OCSP",
+    "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+    "why_unknown_before": "mechanism receipt does not enumerate this exact site",
+    "after": {
+     "mechanism": "ASN1_OCSP",
+     "status": "DISCHARGED",
+     "discharge_receipt": "openssh-v1l",
+     "missing_property": null
+    }
+   },
+   {
+    "id": "V1:src/cms/cms_lib.rs:1378:UNSAFE_FN_DEF",
+    "file": "src/cms/cms_lib.rs",
+    "line": 1378,
+    "operation": "x509_free_void",
+    "mechanism_before": "RAND_CMS_STORE_KEYFMT",
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "mechanism receipt does not enumerate this exact site",
+    "after": {
+     "mechanism": "RAND_CMS_STORE_KEYFMT",
+     "status": "UNKNOWN",
+     "discharge_receipt": null,
+     "missing_property": "The thunk is registered only on the allocation-failure arm of ossl_cms_get1_certs_ex (X509_add_cert returning 0). The element-type contract is stated but no failure-injection control was run at this identity."
+    }
+   },
+   {
+    "id": "V1:src/cms/cms_lib.rs:1384:UNSAFE_FN_DEF",
+    "file": "src/cms/cms_lib.rs",
+    "line": 1384,
+    "operation": "x509_crl_free_void",
+    "mechanism_before": "RAND_CMS_STORE_KEYFMT",
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "mechanism receipt does not enumerate this exact site",
+    "after": {
+     "mechanism": "RAND_CMS_STORE_KEYFMT",
+     "status": "UNKNOWN",
+     "discharge_receipt": null,
+     "missing_property": "The thunk is registered only on the allocation-failure arm of ossl_cms_get1_crls_ex (X509_CRL_up_ref/OPENSSL_sk_push returning 0). No failure-injection control was run at this identity."
+    }
+   },
+   {
+    "id": "V1:src/decoder_lib.rs:1080:UNSAFE_FN_DEF",
+    "file": "src/decoder_lib.rs",
+    "line": 1080,
+    "operation": "decoder_free_thunk",
+    "mechanism_before": "EVP_PKEY_PROVIDER",
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "mechanism receipt does not enumerate this exact site",
+    "after": {
+     "mechanism": "EVP_PKEY_PROVIDER",
+     "status": "DISCHARGED",
+     "discharge_receipt": "openssh-v1l",
+     "missing_property": null
+    }
+   },
+   {
+    "id": "V1:src/engine/eng_dyn.rs:401:UNSAFE_FN_DEF",
+    "file": "src/engine/eng_dyn.rs",
+    "line": 401,
+    "operation": "dynamic_data_ctx_free_func",
+    "mechanism_before": null,
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "BLOCKED",
+     "discharge_receipt": null,
+     "missing_property": "B20-DYN-1 retains the DynamicDataCtx boundary CONTRACTED. The free hook's provenance obligation is the ENGINE ex-data ABI: the same index is writable through the public ENGINE_set_ex_data, so 'a block from this module's seam' is an external C ABI contract not independently verified here."
+    }
+   },
+   {
+    "id": "V1:src/engine/eng_fat.rs:197:UNSAFE_FN_DEF",
+    "file": "src/engine/eng_fat.rs",
+    "line": 197,
+    "operation": "push_cstr_or_null",
+    "mechanism_before": null,
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "DISCHARGED",
+     "discharge_receipt": "openssh-v1l",
+     "missing_property": null
+    }
+   },
+   {
+    "id": "V1:src/engine/eng_list.rs:90:UNSAFE_FN_DEF",
+    "file": "src/engine/eng_list.rs",
+    "line": 90,
+    "operation": "engine_list_cleanup",
+    "mechanism_before": null,
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "UNKNOWN",
+     "discharge_receipt": null,
+     "missing_property": "The callback has no arguments and is registered in-repo, but its interior engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module's AtomicPtr static and writes through it without the atomic API. No representation/aliasing contract for that raw write exists at this identity, and it was not exercised under Miri at v1k."
+    }
+   },
+   {
+    "id": "V1:src/engine/tb_asnmth.rs:74:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_asnmth.rs",
+    "line": 74,
+    "operation": "engine_unregister_all_pkey_asn1_meths",
+    "mechanism_before": null,
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "BLOCKED",
+     "discharge_receipt": null,
+     "missing_property": "B16-ASN1-1 retains the table boundary CONTRACTED; the table-slot raw write through the AtomicPtr static has no aliasing contract and no Miri run at v1k."
+    }
+   },
+   {
+    "id": "V1:src/engine/tb_cipher.rs:56:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_cipher.rs",
+    "line": 56,
+    "operation": "engine_unregister_all_ciphers",
+    "mechanism_before": null,
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "UNKNOWN",
+     "discharge_receipt": null,
+     "missing_property": "As eng_list.rs:90: the table-slot raw write through the AtomicPtr static has no aliasing contract; no Miri run at v1k."
+    }
+   },
+   {
+    "id": "V1:src/engine/tb_dh.rs:54:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_dh.rs",
+    "line": 54,
+    "operation": "engine_unregister_all_dh",
+    "mechanism_before": null,
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "UNKNOWN",
+     "discharge_receipt": null,
+     "missing_property": "As eng_list.rs:90: the table-slot raw write through the AtomicPtr static has no aliasing contract; no Miri run at v1k."
+    }
+   },
+   {
+    "id": "V1:src/engine/tb_digest.rs:68:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_digest.rs",
+    "line": 68,
+    "operation": "engine_unregister_all_digests",
+    "mechanism_before": null,
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "UNKNOWN",
+     "discharge_receipt": null,
+     "missing_property": "As eng_list.rs:90: the table-slot raw write through the AtomicPtr static has no aliasing contract; no Miri run at v1k."
+    }
+   },
+   {
+    "id": "V1:src/engine/tb_dsa.rs:54:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_dsa.rs",
+    "line": 54,
+    "operation": "engine_unregister_all_dsa",
+    "mechanism_before": null,
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "UNKNOWN",
+     "discharge_receipt": null,
+     "missing_property": "As eng_list.rs:90: the table-slot raw write through the AtomicPtr static has no aliasing contract; no Miri run at v1k."
+    }
+   },
+   {
+    "id": "V1:src/engine/tb_eckey.rs:54:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_eckey.rs",
+    "line": 54,
+    "operation": "engine_unregister_all_ec",
+    "mechanism_before": null,
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "UNKNOWN",
+     "discharge_receipt": null,
+     "missing_property": "As eng_list.rs:90: the table-slot raw write through the AtomicPtr static has no aliasing contract; no Miri run at v1k."
+    }
+   },
+   {
+    "id": "V1:src/engine/tb_pkmeth.rs:55:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_pkmeth.rs",
+    "line": 55,
+    "operation": "engine_unregister_all_pkey_meths",
+    "mechanism_before": null,
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "UNKNOWN",
+     "discharge_receipt": null,
+     "missing_property": "As eng_list.rs:90: the table-slot raw write through the AtomicPtr static has no aliasing contract; no Miri run at v1k."
+    }
+   },
+   {
+    "id": "V1:src/engine/tb_rand.rs:54:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_rand.rs",
+    "line": 54,
+    "operation": "engine_unregister_all_rand",
+    "mechanism_before": null,
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "UNKNOWN",
+     "discharge_receipt": null,
+     "missing_property": "As eng_list.rs:90: the table-slot raw write through the AtomicPtr static has no aliasing contract; no Miri run at v1k."
+    }
+   },
+   {
+    "id": "V1:src/engine/tb_rsa.rs:55:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_rsa.rs",
+    "line": 55,
+    "operation": "engine_unregister_all_rsa",
+    "mechanism_before": null,
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "UNKNOWN",
+     "discharge_receipt": null,
+     "missing_property": "As eng_list.rs:90: the table-slot raw write through the AtomicPtr static has no aliasing contract; no Miri run at v1k."
+    }
+   },
+   {
+    "id": "V1:src/ml_kem/key.rs:272:UNSAFE_FN_DEF",
+    "file": "src/ml_kem/key.rs",
+    "line": 272,
+    "operation": "raise_fixed",
+    "mechanism_before": "EVP_PKEY_PROVIDER",
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "mechanism receipt does not enumerate this exact site",
+    "after": {
+     "mechanism": "EVP_PKEY_PROVIDER",
+     "status": "UNKNOWN",
+     "discharge_receipt": null,
+     "missing_property": "The body NUL-terminates its own buffer, but the only caller (ossl_ml_kem_key_new at :752, unsupported evp_type) is not reachable through a public API at this identity, so no control exercises it."
+    }
+   },
+   {
+    "id": "V1:src/runtime/conf/lib.rs:698:UNSAFE_FN_DEF",
+    "file": "src/runtime/conf/lib.rs",
+    "line": 698,
+    "operation": "default_is_number",
+    "mechanism_before": null,
+    "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "DISCHARGED",
+     "discharge_receipt": "openssh-v1l",
+     "missing_property": null
+    }
+   },
+   {
+    "id": "V1:src/runtime/conf/lib.rs:703:UNSAFE_FN_DEF",
+    "file": "src/runtime/conf/lib.rs",
+    "line": 703,
+    "operation": "default_to_int",
+    "mechanism_before": null,
+    "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "DISCHARGED",
+     "discharge_receipt": "openssh-v1l",
+     "missing_property": null
+    }
+   },
+   {
+    "id": "V1:src/runtime/confmod/asn1.rs:255:UNSAFE_FN_DEF",
+    "file": "src/runtime/confmod/asn1.rs",
+    "line": 255,
+    "operation": "oid_module_finish",
+    "mechanism_before": null,
+    "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "DISCHARGED",
+     "discharge_receipt": "openssh-v1l",
+     "missing_property": null
+    }
+   },
+   {
+    "id": "V1:src/runtime/confmod/mod.rs:397:UNSAFE_FN_DEF",
+    "file": "src/runtime/confmod/mod.rs",
+    "line": 397,
+    "operation": "module_free_thunk",
+    "mechanism_before": null,
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "DISCHARGED",
+     "discharge_receipt": "openssh-v1l",
+     "missing_property": null
+    }
+   },
+   {
+    "id": "V1:src/ui/ui_util.rs:197:UNSAFE_FN_DEF",
+    "file": "src/ui/ui_util.rs",
+    "line": 197,
+    "operation": "ui_free_method_data",
+    "mechanism_before": null,
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "DISCHARGED",
+     "discharge_receipt": "openssh-v1l",
+     "missing_property": null
+    }
+   },
+   {
+    "id": "V1:src/ui/ui_util.rs:217:UNSAFE_FN_DEF",
+    "file": "src/ui/ui_util.rs",
+    "line": 217,
+    "operation": "ui_method_data_index_init",
+    "mechanism_before": null,
+    "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+    "why_unknown_before": "no registered mechanism for the file",
+    "after": {
+     "mechanism": "C_ABI_CONTRACT",
+     "status": "DISCHARGED",
+     "discharge_receipt": "openssh-v1l",
+     "missing_property": null
+    }
+   },
+   {
+    "id": "V1:src/x509/v3_akid.rs:182:UNSAFE_FN_DEF",
+    "file": "src/x509/v3_akid.rs",
+    "line": 182,
+    "operation": "akid_i2v",
+    "mechanism_before": "X509_VERIFY_POLICY",
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "mechanism receipt does not enumerate this exact site",
+    "after": {
+     "mechanism": "X509_VERIFY_POLICY",
+     "status": "DISCHARGED",
+     "discharge_receipt": "openssh-v1l",
+     "missing_property": null
+    }
+   },
+   {
+    "id": "V1:src/x509/v3_akid.rs:193:UNSAFE_FN_DEF",
+    "file": "src/x509/v3_akid.rs",
+    "line": 193,
+    "operation": "akid_v2i",
+    "mechanism_before": "X509_VERIFY_POLICY",
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "mechanism receipt does not enumerate this exact site",
+    "after": {
+     "mechanism": "X509_VERIFY_POLICY",
+     "status": "DISCHARGED",
+     "discharge_receipt": "openssh-v1l",
+     "missing_property": null
+    }
+   },
+   {
+    "id": "V1:src/x509/v3_san.rs:1163:UNSAFE_FN_DEF",
+    "file": "src/x509/v3_san.rs",
+    "line": 1163,
+    "operation": "san_i2v",
+    "mechanism_before": "X509_VERIFY_POLICY",
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "mechanism receipt does not enumerate this exact site",
+    "after": {
+     "mechanism": "X509_VERIFY_POLICY",
+     "status": "DISCHARGED",
+     "discharge_receipt": "openssh-v1l",
+     "missing_property": null
+    }
+   },
+   {
+    "id": "V1:src/x509/v3_san.rs:1174:UNSAFE_FN_DEF",
+    "file": "src/x509/v3_san.rs",
+    "line": 1174,
+    "operation": "san_v2i",
+    "mechanism_before": "X509_VERIFY_POLICY",
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "mechanism receipt does not enumerate this exact site",
+    "after": {
+     "mechanism": "X509_VERIFY_POLICY",
+     "status": "DISCHARGED",
+     "discharge_receipt": "openssh-v1l",
+     "missing_property": null
+    }
+   },
+   {
+    "id": "V1:src/x509/v3_san.rs:1184:UNSAFE_FN_DEF",
+    "file": "src/x509/v3_san.rs",
+    "line": 1184,
+    "operation": "san_v2i_issuer",
+    "mechanism_before": "X509_VERIFY_POLICY",
+    "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+    "why_unknown_before": "mechanism receipt does not enumerate this exact site",
+    "after": {
+     "mechanism": "X509_VERIFY_POLICY",
+     "status": "DISCHARGED",
+     "discharge_receipt": "openssh-v1l",
+     "missing_property": null
+    }
+   }
+  ]
+ },
+ "mapping_decisions": {
+  "files_mapped": 17,
+  "obligations_mapped": 19,
+  "mechanism": "C_ABI_CONTRACT",
+  "files": [
+   {
+    "file": "src/apps/ciphers.rs",
+    "operations": [
+     {
+      "line": 93,
+      "operation": "dummy_psk",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover apps/ and its scope names exactly these definitions."
+   },
+   {
+    "file": "src/engine/eng_dyn.rs",
+    "operations": [
+     {
+      "line": 401,
+      "operation": "dynamic_data_ctx_free_func",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover engine/ and its scope names exactly these definitions."
+   },
+   {
+    "file": "src/engine/eng_fat.rs",
+    "operations": [
+     {
+      "line": 197,
+      "operation": "push_cstr_or_null",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover engine/ and its scope names exactly these definitions."
+   },
+   {
+    "file": "src/engine/eng_list.rs",
+    "operations": [
+     {
+      "line": 90,
+      "operation": "engine_list_cleanup",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover engine/ and its scope names exactly these definitions."
+   },
+   {
+    "file": "src/engine/tb_asnmth.rs",
+    "operations": [
+     {
+      "line": 74,
+      "operation": "engine_unregister_all_pkey_asn1_meths",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover engine/ and its scope names exactly these definitions."
+   },
+   {
+    "file": "src/engine/tb_cipher.rs",
+    "operations": [
+     {
+      "line": 56,
+      "operation": "engine_unregister_all_ciphers",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover engine/ and its scope names exactly these definitions."
+   },
+   {
+    "file": "src/engine/tb_dh.rs",
+    "operations": [
+     {
+      "line": 54,
+      "operation": "engine_unregister_all_dh",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover engine/ and its scope names exactly these definitions."
+   },
+   {
+    "file": "src/engine/tb_digest.rs",
+    "operations": [
+     {
+      "line": 68,
+      "operation": "engine_unregister_all_digests",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover engine/ and its scope names exactly these definitions."
+   },
+   {
+    "file": "src/engine/tb_dsa.rs",
+    "operations": [
+     {
+      "line": 54,
+      "operation": "engine_unregister_all_dsa",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover engine/ and its scope names exactly these definitions."
+   },
+   {
+    "file": "src/engine/tb_eckey.rs",
+    "operations": [
+     {
+      "line": 54,
+      "operation": "engine_unregister_all_ec",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover engine/ and its scope names exactly these definitions."
+   },
+   {
+    "file": "src/engine/tb_pkmeth.rs",
+    "operations": [
+     {
+      "line": 55,
+      "operation": "engine_unregister_all_pkey_meths",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover engine/ and its scope names exactly these definitions."
+   },
+   {
+    "file": "src/engine/tb_rand.rs",
+    "operations": [
+     {
+      "line": 54,
+      "operation": "engine_unregister_all_rand",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover engine/ and its scope names exactly these definitions."
+   },
+   {
+    "file": "src/engine/tb_rsa.rs",
+    "operations": [
+     {
+      "line": 55,
+      "operation": "engine_unregister_all_rsa",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover engine/ and its scope names exactly these definitions."
+   },
+   {
+    "file": "src/runtime/conf/lib.rs",
+    "operations": [
+     {
+      "line": 698,
+      "operation": "default_is_number",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     },
+     {
+      "line": 703,
+      "operation": "default_to_int",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover runtime/ and its scope names exactly these definitions."
+   },
+   {
+    "file": "src/runtime/confmod/asn1.rs",
+    "operations": [
+     {
+      "line": 255,
+      "operation": "oid_module_finish",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover runtime/ and its scope names exactly these definitions."
+   },
+   {
+    "file": "src/runtime/confmod/mod.rs",
+    "operations": [
+     {
+      "line": 397,
+      "operation": "module_free_thunk",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover runtime/ and its scope names exactly these definitions."
+   },
+   {
+    "file": "src/ui/ui_util.rs",
+    "operations": [
+     {
+      "line": 197,
+      "operation": "ui_free_method_data",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     },
+     {
+      "line": 217,
+      "operation": "ui_method_data_index_init",
+      "mechanism": "C_ABI_CONTRACT",
+      "basis_ref": "state.json#/obligation_mechanisms"
+     }
+    ],
+    "why_defensible": "The site is an `unsafe extern \"C\" fn`/`unsafe fn` callback or adapter whose caller contract is a C/ABI edge. C_ABI_CONTRACT's declared authority prefixes cover ui/ and its scope names exactly these definitions."
+   }
+  ],
+  "left_unmapped": [],
+  "not_defensible": "None of the 17 was left unmapped: every site is an `unsafe extern \"C\" fn` callback/adapter and falls inside C_ABI_CONTRACT's declared scope and authority prefixes (apps/, crypto/conf, crypto/engine, crypto/ui)."
+ },
+ "discharges": {
+  "count": 15,
+  "receipt": "openssh-v1l-sites.json",
+  "scoped_discharge": "CAMPAIGN-STATUS.json#/scoped_boundary_discharges[receipt=openssh-v1l]",
+  "probe": {
+   "source": "unknown-obligations-v1l-negctl.c",
+   "binary_sha256": "3ad30272ce046fb6246b0edb7a8d2b6d07f5d9c34c979abb1ddce79b770012be",
+   "output": [
+    "v1l negative controls against the frozen install",
+    "confnum-12abc            PASS (exit 0)",
+    "confnum-abc              PASS (exit 0)",
+    "confnum-null-result      PASS (exit 0)",
+    "confmod-oid-valid        PASS (exit 0)",
+    "confmod-oid-bad          PASS (exit 0)",
+    "ui-wrapper-null          PASS (exit 0)",
+    "ui-wrapper-cb            PASS (exit 0)",
+    "ui-wrapper-twice         PASS (exit 0)",
+    "eng-str-bad              PASS (exit 0)",
+    "eng-str-null             PASS (exit 0)",
+    "decoder-ctx              PASS (exit 0)",
+    "x509-san-v2i-i2v         PASS (exit 0)",
+    "x509-akid-v2i-i2v        PASS (exit 0)",
+    "x509-san-v2i-bad         PASS (exit 0)",
+    "x509-san-i2v-corrupt     PASS (exit 0)",
+    "RESULT PASS"
+   ],
+   "result": "PASS (15/15)",
+   "dummy_psk_static_control": "objdump 0x393910: xor %eax,%eax; ret"
+  },
+  "boundaries": [
+   {
+    "id": "OSSH-V1L-001",
+    "file": "src/apps/ciphers.rs",
+    "line": 93,
+    "operation": "dummy_psk",
+    "mechanism": "C_ABI_CONTRACT",
+    "disposition": "SAFETY_DISCHARGED: src/apps/ciphers.rs:93",
+    "contract": "No caller precondition. The body reads and writes no argument; it returns 0. The SSL PSK client callback ABI fixes the six argument types, and no pointer value (including NULL) is used.",
+    "established_by": [
+     "src/apps/ciphers.rs:271-275 is the only installer (SSL_CTX_set_psk_client_callback); the callback is private (no #[no_mangle])",
+     "objdump of the frozen openssl binary: _RNvNtNtCsaPQA6OxnKMa_10openssl_rs4apps7ciphers9dummy_psk at 0x393910 is exactly `xor %eax,%eax` / `ret` -- no memory operand"
+    ],
+    "negative_control": "NC-01: the compiled body has no memory operand, so varying every pointer argument cannot change behaviour; a dereference would appear as a memory operand. 0000000000393910 <_RNvNtNtCsaPQA6OxnKMa_10openssl_rs4apps7ciphers9dummy_psk>: |   393910:\txor    %eax,%eax |   393912:\tret"
+   },
+   {
+    "id": "OSSH-V1L-002",
+    "file": "src/runtime/conf/lib.rs",
+    "line": 698,
+    "operation": "default_is_number",
+    "mechanism": "C_ABI_CONTRACT",
+    "disposition": "SAFETY_DISCHARGED: src/runtime/conf/lib.rs:698",
+    "contract": "No pointer precondition. `_conf` is unused; `c` is passed by value and the body is an ASCII range test on that byte.",
+    "established_by": [
+     "selected as the default at src/runtime/conf/lib.rs:738 and invoked at :755 with the caller's CONF pointer, which the body never dereferences",
+     "NC-02: NCONF_get_number_e over `n=12abc` answers 1 with 12, stopping at the first non-digit"
+    ],
+    "negative_control": "NC-02: a live CONF is driven with a digit/non-digit string; the predicate accepts exactly the digit prefix. A body that read `_conf` would have to dereference it."
+   },
+   {
+    "id": "OSSH-V1L-003",
+    "file": "src/runtime/conf/lib.rs",
+    "line": 703,
+    "operation": "default_to_int",
+    "mechanism": "C_ABI_CONTRACT",
+    "disposition": "SAFETY_DISCHARGED: src/runtime/conf/lib.rs:703",
+    "contract": "No pointer precondition. `_conf` is unused; `c` is passed by value and the body computes c - '0'.",
+    "established_by": [
+     "selected at src/runtime/conf/lib.rs:739 and invoked at :759",
+     "NC-03: `n=abc` answers 1 with 0, the authority's documented default conversion"
+    ],
+    "negative_control": "NC-03: a non-digit first byte is converted to 0 through this callback; the CONF pointer is not read."
+   },
+   {
+    "id": "OSSH-V1L-004",
+    "file": "src/runtime/confmod/asn1.rs",
+    "line": 255,
+    "operation": "oid_module_finish",
+    "mechanism": "C_ABI_CONTRACT",
+    "disposition": "SAFETY_DISCHARGED: src/runtime/confmod/asn1.rs:255",
+    "contract": "No caller precondition. `_md` is unused and the body is empty.",
+    "established_by": [
+     "registered by ASN1_add_oid_module through CONF_module_add (src/runtime/confmod/asn1.rs)",
+     "NC-04/NC-05 call ASN1_add_oid_module + CONF_modules_load_file + CONF_modules_unload twice; the finish is reached on unload and the second unload is a no-op"
+    ],
+    "negative_control": "NC-05: a config whose oid_section holds an invalid OID makes oid_module_init refuse; unload still reaches the finish and releases the registry with no fault (exit 0)."
+   },
+   {
+    "id": "OSSH-V1L-005",
+    "file": "src/asn1/asn_mstbl.rs",
+    "line": 261,
+    "operation": "stbl_module_finish",
+    "mechanism": "ASN1_OCSP",
+    "disposition": "SAFETY_DISCHARGED: src/asn1/asn_mstbl.rs:261",
+    "contract": "No caller precondition. `_md` is unused; the body calls ASN1_STRING_TABLE_cleanup, which owns its own global table.",
+    "established_by": [
+     "registered by ASN1_add_stable_module through CONF_module_add (src/asn1/asn_mstbl.rs:270-280)",
+     "NC-04/NC-05 drive the same load/unload path"
+    ],
+    "negative_control": "NC-05: the invalid-OID load path still unloads and reaches this finish; no fault."
+   },
+   {
+    "id": "OSSH-V1L-006",
+    "file": "src/runtime/confmod/mod.rs",
+    "line": 397,
+    "operation": "module_free_thunk",
+    "mechanism": "C_ABI_CONTRACT",
+    "disposition": "SAFETY_DISCHARGED: src/runtime/confmod/mod.rs:397",
+    "contract": "`value` is NULL or a `ConfModule` entry from the registry list being freed. The list is built only by module_add under the module-list lock, and the thunk is passed only to `OPENSSL_sk_pop_free(to_delete, Some(module_free_thunk))` at src/runtime/confmod/mod.rs:1369.",
+    "established_by": [
+     "sole registration site :1369; `module_free` (the callee) states that the entry is unreachable and frees its members exactly once",
+     "NC-04/NC-05 unload the list twice"
+    ],
+    "negative_control": "NC-05: the second CONF_modules_unload(1) must be a no-op; a double release would fault or abort. The probe completes with exit 0."
+   },
+   {
+    "id": "OSSH-V1L-007",
+    "file": "src/ui/ui_util.rs",
+    "line": 197,
+    "operation": "ui_free_method_data",
+    "mechanism": "C_ABI_CONTRACT",
+    "disposition": "SAFETY_DISCHARGED: src/ui/ui_util.rs:197",
+    "contract": "`data` is NULL or the `PemPasswordCbData` block stored at the private UI_METHOD_DATA_INDEX ex-data slot. The index is a private static (src/ui/ui_util.rs:133) and both writers are in this crate: UI_UTIL_wrap_read_pem_callback (:447) and ui_dup_method_data (:183). `data` is released exactly once here.",
+    "established_by": [
+     "the index is not exported and is loaded only at in-repo call sites (:277, :447, :500, :525)",
+     "both writers allocate through the crate's allocator seam; ui_dup_method_data's own # Safety was discharged as OSSH-DIS-110",
+     "NC-06/NC-07/NC-08 create and destroy wrapper methods with a NULL and a live callback, and create twice"
+    ],
+    "negative_control": "NC-06/07/08: method destruction runs this free hook; a wrong-owner or double release would fault across the create/destroy pairs."
+   },
+   {
+    "id": "OSSH-V1L-008",
+    "file": "src/ui/ui_util.rs",
+    "line": 217,
+    "operation": "ui_method_data_index_init",
+    "mechanism": "C_ABI_CONTRACT",
+    "disposition": "SAFETY_DISCHARGED: src/ui/ui_util.rs:217",
+    "contract": "No pointer precondition. The body passes three static fn pointers to CRYPTO_get_ex_new_index and stores the answer; it dereferences no caller pointer.",
+    "established_by": [
+     "run-once body reached by UI_UTIL_wrap_read_pem_callback (src/ui/ui_util.rs:444)",
+     "NC-08 creates a second wrapper: the once body does not re-run and the same index is reused"
+    ],
+    "negative_control": "NC-08: both wrappers carry a non-NULL ex-data slot found by scanning UI_method_get_ex_data; a registrar that failed or returned an unusable index would leave the slot NULL."
+   },
+   {
+    "id": "OSSH-V1L-009",
+    "file": "src/engine/eng_fat.rs",
+    "line": 197,
+    "operation": "push_cstr_or_null",
+    "mechanism": "C_ABI_CONTRACT",
+    "disposition": "SAFETY_DISCHARGED: src/engine/eng_fat.rs:197",
+    "contract": "`p` is NULL or NUL-terminated. The two call sites pass `def_list`, whose ENGINE_set_default_string # Safety states exactly that, or the static literal `word`.",
+    "established_by": [
+     "call sites src/engine/eng_fat.rs:235 and the `word` literal path; ENGINE_set_default_string states `def_list` is NULL or NUL-terminated",
+     "NC-09/NC-10 drive a bad list and a NULL list"
+    ],
+    "negative_control": "NC-10: the NULL list takes the `<NULL>` branch; a body without the null check would dereference NULL. The probe passes (exit 0)."
+   },
+   {
+    "id": "OSSH-V1L-010",
+    "file": "src/decoder_lib.rs",
+    "line": 1080,
+    "operation": "decoder_free_thunk",
+    "mechanism": "EVP_PKEY_PROVIDER",
+    "disposition": "SAFETY_DISCHARGED: src/decoder_lib.rs:1080",
+    "contract": "`p` is NULL or an `OsslDecoder` owned by the stack passed to `OPENSSL_sk_pop_free(skdecoders, Some(decoder_free_thunk))` at src/decoder_lib.rs:1402.",
+    "established_by": [
+     "sole registration site :1402; the stack is built by the decoder context from fetched decoder implementations",
+     "NC-11 creates and frees a decoder context for RSA/DER"
+    ],
+    "negative_control": "NC-11: freeing the context releases the decoder stack; a thunk that released a non-decoder element would fault. A refused fetch (empty table) is also accepted, so the case cannot pass by skipping a crash."
+   },
+   {
+    "id": "OSSH-V1L-011",
+    "file": "src/x509/v3_akid.rs",
+    "line": 182,
+    "operation": "akid_i2v",
+    "mechanism": "X509_VERIFY_POLICY",
+    "disposition": "SAFETY_DISCHARGED: src/x509/v3_akid.rs:182",
+    "contract": "`meth` is the live X509V3_EXT_METHOD row; `value` is the `AuthorityKeyid` decoded by the in-repo print path from this row's `it` (AUTHORITY_KEYID_it); `out` is the caller's live stack or NULL.",
+    "established_by": [
+     "the row ossl_v3_akey_id declares it = AUTHORITY_KEYID_it and i2v = akid_i2v (src/x509/v3_akid.rs:203-218)",
+     "in-repo dispatch src/x509/v3_prn.rs:226-246 decodes with the row's `it` and calls the i2v slot at :279",
+     "NC-13 round-trips a keyid:always,issuer:always AKID through X509V3_EXT_nconf + X509V3_EXT_print"
+    ],
+    "negative_control": "NC-13: the AKID extension is built and printed through the i2v slot; a mismatched cast would fault or print nothing. The probe requires ok=1 and a `keyid` operand."
+   },
+   {
+    "id": "OSSH-V1L-012",
+    "file": "src/x509/v3_akid.rs",
+    "line": 193,
+    "operation": "akid_v2i",
+    "mechanism": "X509_VERIFY_POLICY",
+    "disposition": "SAFETY_DISCHARGED: src/x509/v3_akid.rs:193",
+    "contract": "`meth` is the live method row; `ctx` is the `X509V3Ctx` the in-repo configuration parser passes under `void *` (src/x509/v3_conf.rs:1059); `out` is the parsed CONF_VALUE stack.",
+    "established_by": [
+     "the row declares v2i = akid_v2i (src/x509/v3_akid.rs:203-218)",
+     "in-repo dispatch src/x509/v3_conf.rs:1029-1059 passes ctx.cast::<c_void>()",
+     "NC-13 drives the v2i slot through X509V3_EXT_nconf"
+    ],
+    "negative_control": "NC-13: a valid authorityKeyIdentifier value is parsed and then printed; the v2i refusal of an unknown option is exercised by the same family's bad-input control (NC-14 shape)."
+   },
+   {
+    "id": "OSSH-V1L-013",
+    "file": "src/x509/v3_san.rs",
+    "line": 1163,
+    "operation": "san_i2v",
+    "mechanism": "X509_VERIFY_POLICY",
+    "disposition": "SAFETY_DISCHARGED: src/x509/v3_san.rs:1163",
+    "contract": "`meth` is the live method row; `value` is the `GENERAL_NAMES` decoded by the in-repo print path from this row's `it` (GENERAL_NAMES_it); `out` is the caller's live stack or NULL.",
+    "established_by": [
+     "every ossl_v3_alt row declares it = GENERAL_NAMES_it and i2v = san_i2v (src/x509/v3_san.rs:1193-1217)",
+     "in-repo dispatch src/x509/v3_prn.rs:226-246 decodes with `it` and calls the i2v slot at :279",
+     "NC-12 round-trips DNS+IP SAN through X509V3_EXT_nconf + X509V3_EXT_print; NC-15 prints a corrupt SAN octet string"
+    ],
+    "negative_control": "NC-12: the printed value contains DNS:example.com. NC-15: a corrupt SAN is printed/refused without a fault; a cast that assumed a valid stack would crash."
+   },
+   {
+    "id": "OSSH-V1L-014",
+    "file": "src/x509/v3_san.rs",
+    "line": 1174,
+    "operation": "san_v2i",
+    "mechanism": "X509_VERIFY_POLICY",
+    "disposition": "SAFETY_DISCHARGED: src/x509/v3_san.rs:1174",
+    "contract": "`meth` is the live method row; `ctx` is the `X509V3Ctx` the in-repo parser passes (src/x509/v3_conf.rs:1059); `out` is the parsed CONF_VALUE stack.",
+    "established_by": [
+     "the alt rows declare v2i = san_v2i for subject/issuer alt name (src/x509/v3_san.rs:1211-1214)",
+     "in-repo dispatch src/x509/v3_conf.rs:1029-1059",
+     "NC-12 parses DNS:example.com,IP:1.2.3.4; NC-14 passes an unknown type"
+    ],
+    "negative_control": "NC-14: `subjectAltName=BAD.TYPE:xxx` is refused (NULL) without a fault; a cast that ignored the parser's stack shape would crash."
+   },
+   {
+    "id": "OSSH-V1L-015",
+    "file": "src/x509/v3_san.rs",
+    "line": 1184,
+    "operation": "san_v2i_issuer",
+    "mechanism": "X509_VERIFY_POLICY",
+    "disposition": "SAFETY_DISCHARGED: src/x509/v3_san.rs:1184",
+    "contract": "As OSSH-V1L-014, for the issuer-alt row; `ctx`/`out` carry the same in-repo parser types.",
+    "established_by": [
+     "the alt row NID_issuer_alt_name declares v2i = san_v2i_issuer (src/x509/v3_san.rs:1213)",
+     "same in-repo dispatch"
+    ],
+    "negative_control": "NC-14: the bad-type refusal exercises the v2i edge; the probe completes with exit 0."
+   }
+  ]
+ },
+ "remaining": {
+  "count": 14,
+  "subset_of_original_29": true,
+  "excluded": "pre-existing v1k BLOCKED rows (61) are not part of the 29 and are listed only in the closure receipt",
+  "by_status": {
+   "UNKNOWN": 12,
+   "BLOCKED": 2
+  },
+  "rows": [
+   {
+    "id": "V1:src/cms/cms_lib.rs:1378:UNSAFE_FN_DEF",
+    "file": "src/cms/cms_lib.rs",
+    "line": 1378,
+    "operation": "x509_free_void",
+    "mechanism": "RAND_CMS_STORE_KEYFMT",
+    "status": "UNKNOWN",
+    "boundary_ids": [],
+    "missing_property": "The thunk is registered only on the allocation-failure arm of ossl_cms_get1_certs_ex (X509_add_cert returning 0). The element-type contract is stated but no failure-injection control was run at this identity."
+   },
+   {
+    "id": "V1:src/cms/cms_lib.rs:1384:UNSAFE_FN_DEF",
+    "file": "src/cms/cms_lib.rs",
+    "line": 1384,
+    "operation": "x509_crl_free_void",
+    "mechanism": "RAND_CMS_STORE_KEYFMT",
+    "status": "UNKNOWN",
+    "boundary_ids": [],
+    "missing_property": "The thunk is registered only on the allocation-failure arm of ossl_cms_get1_crls_ex (X509_CRL_up_ref/OPENSSL_sk_push returning 0). No failure-injection control was run at this identity."
+   },
+   {
+    "id": "V1:src/engine/eng_dyn.rs:401:UNSAFE_FN_DEF",
+    "file": "src/engine/eng_dyn.rs",
+    "line": 401,
+    "operation": "dynamic_data_ctx_free_func",
+    "mechanism": "C_ABI_CONTRACT",
+    "status": "BLOCKED",
+    "boundary_ids": [
+     "B20-DYN-1",
+     "B20-DYN-2",
+     "B20-DYN-3",
+     "B20-DYN-4",
+     "OSSH-DIS-014"
+    ],
+    "missing_property": "B20-DYN-1 retains the DynamicDataCtx boundary CONTRACTED. The free hook's provenance obligation is the ENGINE ex-data ABI: the same index is writable through the public ENGINE_set_ex_data, so 'a block from this module's seam' is an external C ABI contract not independently verified here."
+   },
+   {
+    "id": "V1:src/engine/eng_list.rs:90:UNSAFE_FN_DEF",
+    "file": "src/engine/eng_list.rs",
+    "line": 90,
+    "operation": "engine_list_cleanup",
+    "mechanism": "C_ABI_CONTRACT",
+    "status": "UNKNOWN",
+    "boundary_ids": [],
+    "missing_property": "The callback has no arguments and is registered in-repo, but its interior engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module's AtomicPtr static and writes through it without the atomic API. No representation/aliasing contract for that raw write exists at this identity, and it was not exercised under Miri at v1k."
+   },
+   {
+    "id": "V1:src/engine/tb_asnmth.rs:74:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_asnmth.rs",
+    "line": 74,
+    "operation": "engine_unregister_all_pkey_asn1_meths",
+    "mechanism": "C_ABI_CONTRACT",
+    "status": "BLOCKED",
+    "boundary_ids": [
+     "B16-ASN1-1",
+     "B16-ASN1-2",
+     "B16-ASN1-3",
+     "OSSH-DIS-016"
+    ],
+    "missing_property": "B16-ASN1-1 retains the table boundary CONTRACTED; the table-slot raw write through the AtomicPtr static has no aliasing contract and no Miri run at v1k."
+   },
+   {
+    "id": "V1:src/engine/tb_cipher.rs:56:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_cipher.rs",
+    "line": 56,
+    "operation": "engine_unregister_all_ciphers",
+    "mechanism": "C_ABI_CONTRACT",
+    "status": "UNKNOWN",
+    "boundary_ids": [],
+    "missing_property": "As eng_list.rs:90: the table-slot raw write through the AtomicPtr static has no aliasing contract; no Miri run at v1k."
+   },
+   {
+    "id": "V1:src/engine/tb_dh.rs:54:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_dh.rs",
+    "line": 54,
+    "operation": "engine_unregister_all_dh",
+    "mechanism": "C_ABI_CONTRACT",
+    "status": "UNKNOWN",
+    "boundary_ids": [],
+    "missing_property": "As eng_list.rs:90: the table-slot raw write through the AtomicPtr static has no aliasing contract; no Miri run at v1k."
+   },
+   {
+    "id": "V1:src/engine/tb_digest.rs:68:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_digest.rs",
+    "line": 68,
+    "operation": "engine_unregister_all_digests",
+    "mechanism": "C_ABI_CONTRACT",
+    "status": "UNKNOWN",
+    "boundary_ids": [],
+    "missing_property": "As eng_list.rs:90: the table-slot raw write through the AtomicPtr static has no aliasing contract; no Miri run at v1k."
+   },
+   {
+    "id": "V1:src/engine/tb_dsa.rs:54:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_dsa.rs",
+    "line": 54,
+    "operation": "engine_unregister_all_dsa",
+    "mechanism": "C_ABI_CONTRACT",
+    "status": "UNKNOWN",
+    "boundary_ids": [],
+    "missing_property": "As eng_list.rs:90: the table-slot raw write through the AtomicPtr static has no aliasing contract; no Miri run at v1k."
+   },
+   {
+    "id": "V1:src/engine/tb_eckey.rs:54:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_eckey.rs",
+    "line": 54,
+    "operation": "engine_unregister_all_ec",
+    "mechanism": "C_ABI_CONTRACT",
+    "status": "UNKNOWN",
+    "boundary_ids": [],
+    "missing_property": "As eng_list.rs:90: the table-slot raw write through the AtomicPtr static has no aliasing contract; no Miri run at v1k."
+   },
+   {
+    "id": "V1:src/engine/tb_pkmeth.rs:55:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_pkmeth.rs",
+    "line": 55,
+    "operation": "engine_unregister_all_pkey_meths",
+    "mechanism": "C_ABI_CONTRACT",
+    "status": "UNKNOWN",
+    "boundary_ids": [],
+    "missing_property": "As eng_list.rs:90: the table-slot raw write through the AtomicPtr static has no aliasing contract; no Miri run at v1k."
+   },
+   {
+    "id": "V1:src/engine/tb_rand.rs:54:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_rand.rs",
+    "line": 54,
+    "operation": "engine_unregister_all_rand",
+    "mechanism": "C_ABI_CONTRACT",
+    "status": "UNKNOWN",
+    "boundary_ids": [],
+    "missing_property": "As eng_list.rs:90: the table-slot raw write through the AtomicPtr static has no aliasing contract; no Miri run at v1k."
+   },
+   {
+    "id": "V1:src/engine/tb_rsa.rs:55:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_rsa.rs",
+    "line": 55,
+    "operation": "engine_unregister_all_rsa",
+    "mechanism": "C_ABI_CONTRACT",
+    "status": "UNKNOWN",
+    "boundary_ids": [],
+    "missing_property": "As eng_list.rs:90: the table-slot raw write through the AtomicPtr static has no aliasing contract; no Miri run at v1k."
+   },
+   {
+    "id": "V1:src/ml_kem/key.rs:272:UNSAFE_FN_DEF",
+    "file": "src/ml_kem/key.rs",
+    "line": 272,
+    "operation": "raise_fixed",
+    "mechanism": "EVP_PKEY_PROVIDER",
+    "status": "UNKNOWN",
+    "boundary_ids": [],
+    "missing_property": "The body NUL-terminates its own buffer, but the only caller (ossl_ml_kem_key_new at :752, unsupported evp_type) is not reachable through a public API at this identity, so no control exercises it."
+   }
+  ],
+  "refusals_that_remain": [
+   "MISSING_BOUNDARY_RECEIPT",
+   "UNKNOWN_OBLIGATION"
+  ],
+  "note": "No count was softened. The 12 UNKNOWN sites are not discharged and have no v1l boundary receipt; the 2 BLOCKED sites moved from UNKNOWN only because classifying them to C_ABI_CONTRACT joins them to the existing B20/B16 CONTRACTED boundaries."
+ },
+ "closure_result": {
+  "v1k": {
+   "DISCHARGED": 75,
+   "BLOCKED": 73,
+   "UNKNOWN": 29,
+   "unmapped_files": 17,
+   "refusals": [
+    "MISSING_BOUNDARY_RECEIPT",
+    "UNKNOWN_OBLIGATION",
+    "UNKNOWN_MECHANISM"
+   ]
+  },
+  "v1l": {
+   "DISCHARGED": 90,
+   "BLOCKED": 75,
+   "UNKNOWN": 12,
+   "unmapped_files": 0,
+   "refusals": [
+    "MISSING_BOUNDARY_RECEIPT",
+    "UNKNOWN_OBLIGATION"
+   ]
+  },
+  "delta": {
+   "DISCHARGED": 15,
+   "BLOCKED": 2,
+   "UNKNOWN": -17
+  },
+  "per_mechanism_delta": {
+   "<unmapped>": -19,
+   "ASN1_OCSP": 0,
+   "C_ABI_CONTRACT": 19,
+   "EVP_PKEY_PROVIDER": 0,
+   "RAND_CMS_STORE_KEYFMT": 0,
+   "RUNTIME_CONCURRENCY": 0,
+   "SSL_SESSION": 0,
+   "X509_VERIFY_POLICY": 0
+  },
+  "per_file_delta": [
+   {
+    "file": "src/apps/ciphers.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 1,
+     "BLOCKED": 0,
+     "UNKNOWN": 0
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": [
+     {
+      "id": "V1:src/apps/ciphers.rs:93:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "DISCHARGED"
+     }
+    ]
+   },
+   {
+    "file": "src/asn1/asn_mstbl.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 1,
+     "BLOCKED": 0,
+     "UNKNOWN": 0
+    },
+    "mechanism_before": [
+     "ASN1_OCSP"
+    ],
+    "mechanism_after": [
+     "ASN1_OCSP"
+    ],
+    "rows": [
+     {
+      "id": "V1:src/asn1/asn_mstbl.rs:261:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "DISCHARGED"
+     }
+    ]
+   },
+   {
+    "file": "src/decoder_lib.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 1,
+     "BLOCKED": 0,
+     "UNKNOWN": 0
+    },
+    "mechanism_before": [
+     "EVP_PKEY_PROVIDER"
+    ],
+    "mechanism_after": [
+     "EVP_PKEY_PROVIDER"
+    ],
+    "rows": [
+     {
+      "id": "V1:src/decoder_lib.rs:1080:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "DISCHARGED"
+     }
+    ]
+   },
+   {
+    "file": "src/engine/eng_dyn.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 0,
+     "BLOCKED": 1,
+     "UNKNOWN": 0
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": [
+     {
+      "id": "V1:src/engine/eng_dyn.rs:401:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "BLOCKED"
+     }
+    ]
+   },
+   {
+    "file": "src/engine/eng_fat.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 1,
+     "BLOCKED": 0,
+     "UNKNOWN": 0
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": [
+     {
+      "id": "V1:src/engine/eng_fat.rs:197:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "DISCHARGED"
+     }
+    ]
+   },
+   {
+    "file": "src/engine/eng_list.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": []
+   },
+   {
+    "file": "src/engine/tb_asnmth.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 0,
+     "BLOCKED": 1,
+     "UNKNOWN": 0
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": [
+     {
+      "id": "V1:src/engine/tb_asnmth.rs:74:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "BLOCKED"
+     }
+    ]
+   },
+   {
+    "file": "src/engine/tb_cipher.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": []
+   },
+   {
+    "file": "src/engine/tb_dh.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": []
+   },
+   {
+    "file": "src/engine/tb_digest.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": []
+   },
+   {
+    "file": "src/engine/tb_dsa.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": []
+   },
+   {
+    "file": "src/engine/tb_eckey.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": []
+   },
+   {
+    "file": "src/engine/tb_pkmeth.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": []
+   },
+   {
+    "file": "src/engine/tb_rand.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": []
+   },
+   {
+    "file": "src/engine/tb_rsa.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": []
+   },
+   {
+    "file": "src/runtime/conf/lib.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 2
+    },
+    "after": {
+     "DISCHARGED": 2,
+     "BLOCKED": 0,
+     "UNKNOWN": 0
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": [
+     {
+      "id": "V1:src/runtime/conf/lib.rs:698:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "DISCHARGED"
+     },
+     {
+      "id": "V1:src/runtime/conf/lib.rs:703:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "DISCHARGED"
+     }
+    ]
+   },
+   {
+    "file": "src/runtime/confmod/asn1.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 1,
+     "BLOCKED": 0,
+     "UNKNOWN": 0
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": [
+     {
+      "id": "V1:src/runtime/confmod/asn1.rs:255:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "DISCHARGED"
+     }
+    ]
+   },
+   {
+    "file": "src/runtime/confmod/mod.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 1
+    },
+    "after": {
+     "DISCHARGED": 1,
+     "BLOCKED": 0,
+     "UNKNOWN": 0
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": [
+     {
+      "id": "V1:src/runtime/confmod/mod.rs:397:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "DISCHARGED"
+     }
+    ]
+   },
+   {
+    "file": "src/ui/ui_util.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 2
+    },
+    "after": {
+     "DISCHARGED": 2,
+     "BLOCKED": 0,
+     "UNKNOWN": 0
+    },
+    "mechanism_before": [
+     "None"
+    ],
+    "mechanism_after": [
+     "C_ABI_CONTRACT"
+    ],
+    "rows": [
+     {
+      "id": "V1:src/ui/ui_util.rs:197:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "DISCHARGED"
+     },
+     {
+      "id": "V1:src/ui/ui_util.rs:217:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "DISCHARGED"
+     }
+    ]
+   },
+   {
+    "file": "src/x509/v3_akid.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 2
+    },
+    "after": {
+     "DISCHARGED": 2,
+     "BLOCKED": 0,
+     "UNKNOWN": 0
+    },
+    "mechanism_before": [
+     "X509_VERIFY_POLICY"
+    ],
+    "mechanism_after": [
+     "X509_VERIFY_POLICY"
+    ],
+    "rows": [
+     {
+      "id": "V1:src/x509/v3_akid.rs:182:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "DISCHARGED"
+     },
+     {
+      "id": "V1:src/x509/v3_akid.rs:193:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "DISCHARGED"
+     }
+    ]
+   },
+   {
+    "file": "src/x509/v3_san.rs",
+    "before": {
+     "DISCHARGED": 0,
+     "BLOCKED": 0,
+     "UNKNOWN": 3
+    },
+    "after": {
+     "DISCHARGED": 3,
+     "BLOCKED": 0,
+     "UNKNOWN": 0
+    },
+    "mechanism_before": [
+     "X509_VERIFY_POLICY"
+    ],
+    "mechanism_after": [
+     "X509_VERIFY_POLICY"
+    ],
+    "rows": [
+     {
+      "id": "V1:src/x509/v3_san.rs:1163:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "DISCHARGED"
+     },
+     {
+      "id": "V1:src/x509/v3_san.rs:1174:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "DISCHARGED"
+     },
+     {
+      "id": "V1:src/x509/v3_san.rs:1184:UNSAFE_FN_DEF",
+      "before": "UNKNOWN",
+      "after": "DISCHARGED"
+     }
+    ]
+   }
+  ],
+  "element_7_ssh": "PASS (contract-bounded)",
+  "element_7_sshd": "PASS (contract-bounded)",
+  "element_7_basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+  "verdict": "REFUSED"
+ },
+ "gates": {
+  "py_compile": "PASS (python3 -m py_compile forensics/tools/consumer_closure.py forensics/tools/unknown_obligations_v1l.py)",
+  "closure_self_test": "PASS (python3 forensics/tools/consumer_closure.py --self-test)",
+  "registry_validation": "PASS (this tool: frozen hashes, 177 deep-equal obligations, every mechanism registered, every scoped discharge closing to an exact v1k row, probe RESULT PASS; plus forensics/tools/memory_safety_schemas.py --check and --self-test)",
+  "rust_suite": "NOT RUN: no Rust source changed; src/, Cargo.*, build.rs and docker/ are untouched, so a Rust gate would test the same binaries as v1k."
+ },
+ "does_not_prove": [
+  "This is a mechanism/receipt completion, not a boundary audit: the 15 discharged site contracts are stated and controlled, but the enclosing ownership boundaries are not re-adjudicated.",
+  "This is not a consumer graduation: SAFE_COMPATIBLE is not claimed and the closure verdict remains REFUSED.",
+  "The 12 UNKNOWN and 2 BLOCKED sites are not established; their missing properties are named, not resolved.",
+  "The negative controls exercise public entry paths only; they do not prove the absence of C callers that violate the documented ABI.",
+  "No Miri/ASan, constant-time, Wycheproof/ACVP or downstream replay evidence is added.",
+  "The engine table-slot raw write through an AtomicPtr static is reported as an open obligation, not fixed."
+ ],
+ "non_claims": [
+  "A site receipt is evidence of per-site contract completion, not of mechanism discharge.",
+  "A cleared UNKNOWN_MECHANISM refusal is a classification result, not a safety result.",
+  "No Rust test suite was run because no Rust source changed."
+ ]
+}
