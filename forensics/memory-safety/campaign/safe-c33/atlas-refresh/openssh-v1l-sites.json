@@ -1,0 +1,425 @@
+{
+ "schema": "safe-c33/atlas-refresh/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "openssh-v1l-sites",
+ "subphase": "safe-c33/unknown-obligation-reduction-v1l",
+ "date": "2026-10-28T04:41:35Z",
+ "candidate": {
+  "label": "S (v1k frozen)",
+  "source_head": "8a54aba58f35dd62af5c78551169d0e8a9276469",
+  "src_content_sha256": "add0d599816339e1e3427aa2ccee8de6639bd3c43b634b57275b3d1b10c41339",
+  "libcrypto_sha256": "247803f1b57bc109366aeb0831ec27d5680091201920b9f13f5cd61736f52577",
+  "libssl_sha256": "3ca46e32588837f7303c0ecbaf12a0376f05253559d0e364d3f76521d6c55853",
+  "install_prefix": "artifacts/phase2/install",
+  "note": "No build-relevant input changed in this subphase: src/, Cargo.*, build.rs and docker/ are untouched. The receipt is evidence about the v1k candidate binaries."
+ },
+ "scope": "The 15 UNKNOWN production obligations of openssh-closure-v1k.json whose precondition is established by this crate's own code and callers, enumerated at the v1k inventory coordinates. The other 14 UNKNOWN obligations are not covered: no boundary is emitted for them.",
+ "method": "The unsafe fn is read at the exact line; every registration/call site is located with grep; the contract is stated for the caller; a control is run against the frozen libcrypto/libssl (unknown-obligations-v1l-negctl.c), forking each case so a signal is an observed result.",
+ "probe": {
+  "source": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/unknown-obligations-v1l-negctl.c",
+  "source_sha256": "636f5fa69f0ad99a457e94ba4784c21437e0fcc6fbbe00c020f47aeccda7b5f0",
+  "binary_sha256": "3ad30272ce046fb6246b0edb7a8d2b6d07f5d9c34c979abb1ddce79b770012be",
+  "build": "gcc -O1 against artifacts/phase2/install/include and -lcrypto -lssl with rpath /work/artifacts/phase2/install/lib",
+  "output": [
+   "v1l negative controls against the frozen install",
+   "confnum-12abc            PASS (exit 0)",
+   "confnum-abc              PASS (exit 0)",
+   "confnum-null-result      PASS (exit 0)",
+   "confmod-oid-valid        PASS (exit 0)",
+   "confmod-oid-bad          PASS (exit 0)",
+   "ui-wrapper-null          PASS (exit 0)",
+   "ui-wrapper-cb            PASS (exit 0)",
+   "ui-wrapper-twice         PASS (exit 0)",
+   "eng-str-bad              PASS (exit 0)",
+   "eng-str-null             PASS (exit 0)",
+   "decoder-ctx              PASS (exit 0)",
+   "x509-san-v2i-i2v         PASS (exit 0)",
+   "x509-akid-v2i-i2v        PASS (exit 0)",
+   "x509-san-v2i-bad         PASS (exit 0)",
+   "x509-san-i2v-corrupt     PASS (exit 0)",
+   "RESULT PASS"
+  ],
+  "result": "PASS (15/15 cases)"
+ },
+ "boundaries": [
+  {
+   "id": "OSSH-V1L-001",
+   "file": "src/apps/ciphers.rs",
+   "line": 93,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dummy_psk",
+   "mechanism": "C_ABI_CONTRACT",
+   "category": "app-psk-callback",
+   "disposition": "SAFETY_DISCHARGED: src/apps/ciphers.rs:93",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true,
+   "contract": "No caller precondition. The body reads and writes no argument; it returns 0. The SSL PSK client callback ABI fixes the six argument types, and no pointer value (including NULL) is used.",
+   "established_by": [
+    "src/apps/ciphers.rs:271-275 is the only installer (SSL_CTX_set_psk_client_callback); the callback is private (no #[no_mangle])",
+    "objdump of the frozen openssl binary: _RNvNtNtCsaPQA6OxnKMa_10openssl_rs4apps7ciphers9dummy_psk at 0x393910 is exactly `xor %eax,%eax` / `ret` -- no memory operand"
+   ],
+   "negative_control": "NC-01: the compiled body has no memory operand, so varying every pointer argument cannot change behaviour; a dereference would appear as a memory operand. 0000000000393910 <_RNvNtNtCsaPQA6OxnKMa_10openssl_rs4apps7ciphers9dummy_psk>: |   393910:\txor    %eax,%eax |   393912:\tret"
+  },
+  {
+   "id": "OSSH-V1L-002",
+   "file": "src/runtime/conf/lib.rs",
+   "line": 698,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "default_is_number",
+   "mechanism": "C_ABI_CONTRACT",
+   "category": "conf-method-callback",
+   "disposition": "SAFETY_DISCHARGED: src/runtime/conf/lib.rs:698",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true,
+   "contract": "No pointer precondition. `_conf` is unused; `c` is passed by value and the body is an ASCII range test on that byte.",
+   "established_by": [
+    "selected as the default at src/runtime/conf/lib.rs:738 and invoked at :755 with the caller's CONF pointer, which the body never dereferences",
+    "NC-02: NCONF_get_number_e over `n=12abc` answers 1 with 12, stopping at the first non-digit"
+   ],
+   "negative_control": "NC-02: a live CONF is driven with a digit/non-digit string; the predicate accepts exactly the digit prefix. A body that read `_conf` would have to dereference it."
+  },
+  {
+   "id": "OSSH-V1L-003",
+   "file": "src/runtime/conf/lib.rs",
+   "line": 703,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "default_to_int",
+   "mechanism": "C_ABI_CONTRACT",
+   "category": "conf-method-callback",
+   "disposition": "SAFETY_DISCHARGED: src/runtime/conf/lib.rs:703",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true,
+   "contract": "No pointer precondition. `_conf` is unused; `c` is passed by value and the body computes c - '0'.",
+   "established_by": [
+    "selected at src/runtime/conf/lib.rs:739 and invoked at :759",
+    "NC-03: `n=abc` answers 1 with 0, the authority's documented default conversion"
+   ],
+   "negative_control": "NC-03: a non-digit first byte is converted to 0 through this callback; the CONF pointer is not read."
+  },
+  {
+   "id": "OSSH-V1L-004",
+   "file": "src/runtime/confmod/asn1.rs",
+   "line": 255,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "oid_module_finish",
+   "mechanism": "C_ABI_CONTRACT",
+   "category": "conf-module-finish",
+   "disposition": "SAFETY_DISCHARGED: src/runtime/confmod/asn1.rs:255",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true,
+   "contract": "No caller precondition. `_md` is unused and the body is empty.",
+   "established_by": [
+    "registered by ASN1_add_oid_module through CONF_module_add (src/runtime/confmod/asn1.rs)",
+    "NC-04/NC-05 call ASN1_add_oid_module + CONF_modules_load_file + CONF_modules_unload twice; the finish is reached on unload and the second unload is a no-op"
+   ],
+   "negative_control": "NC-05: a config whose oid_section holds an invalid OID makes oid_module_init refuse; unload still reaches the finish and releases the registry with no fault (exit 0)."
+  },
+  {
+   "id": "OSSH-V1L-005",
+   "file": "src/asn1/asn_mstbl.rs",
+   "line": 261,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "stbl_module_finish",
+   "mechanism": "ASN1_OCSP",
+   "category": "conf-module-finish",
+   "disposition": "SAFETY_DISCHARGED: src/asn1/asn_mstbl.rs:261",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true,
+   "contract": "No caller precondition. `_md` is unused; the body calls ASN1_STRING_TABLE_cleanup, which owns its own global table.",
+   "established_by": [
+    "registered by ASN1_add_stable_module through CONF_module_add (src/asn1/asn_mstbl.rs:270-280)",
+    "NC-04/NC-05 drive the same load/unload path"
+   ],
+   "negative_control": "NC-05: the invalid-OID load path still unloads and reaches this finish; no fault."
+  },
+  {
+   "id": "OSSH-V1L-006",
+   "file": "src/runtime/confmod/mod.rs",
+   "line": 397,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "module_free_thunk",
+   "mechanism": "C_ABI_CONTRACT",
+   "category": "sk-pop-free-freefunc",
+   "disposition": "SAFETY_DISCHARGED: src/runtime/confmod/mod.rs:397",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true,
+   "contract": "`value` is NULL or a `ConfModule` entry from the registry list being freed. The list is built only by module_add under the module-list lock, and the thunk is passed only to `OPENSSL_sk_pop_free(to_delete, Some(module_free_thunk))` at src/runtime/confmod/mod.rs:1369.",
+   "established_by": [
+    "sole registration site :1369; `module_free` (the callee) states that the entry is unreachable and frees its members exactly once",
+    "NC-04/NC-05 unload the list twice"
+   ],
+   "negative_control": "NC-05: the second CONF_modules_unload(1) must be a no-op; a double release would fault or abort. The probe completes with exit 0."
+  },
+  {
+   "id": "OSSH-V1L-007",
+   "file": "src/ui/ui_util.rs",
+   "line": 197,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ui_free_method_data",
+   "mechanism": "C_ABI_CONTRACT",
+   "category": "crypto-ex-data-free",
+   "disposition": "SAFETY_DISCHARGED: src/ui/ui_util.rs:197",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true,
+   "contract": "`data` is NULL or the `PemPasswordCbData` block stored at the private UI_METHOD_DATA_INDEX ex-data slot. The index is a private static (src/ui/ui_util.rs:133) and both writers are in this crate: UI_UTIL_wrap_read_pem_callback (:447) and ui_dup_method_data (:183). `data` is released exactly once here.",
+   "established_by": [
+    "the index is not exported and is loaded only at in-repo call sites (:277, :447, :500, :525)",
+    "both writers allocate through the crate's allocator seam; ui_dup_method_data's own # Safety was discharged as OSSH-DIS-110",
+    "NC-06/NC-07/NC-08 create and destroy wrapper methods with a NULL and a live callback, and create twice"
+   ],
+   "negative_control": "NC-06/07/08: method destruction runs this free hook; a wrong-owner or double release would fault across the create/destroy pairs."
+  },
+  {
+   "id": "OSSH-V1L-008",
+   "file": "src/ui/ui_util.rs",
+   "line": 217,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ui_method_data_index_init",
+   "mechanism": "C_ABI_CONTRACT",
+   "category": "conf-once-registrar",
+   "disposition": "SAFETY_DISCHARGED: src/ui/ui_util.rs:217",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true,
+   "contract": "No pointer precondition. The body passes three static fn pointers to CRYPTO_get_ex_new_index and stores the answer; it dereferences no caller pointer.",
+   "established_by": [
+    "run-once body reached by UI_UTIL_wrap_read_pem_callback (src/ui/ui_util.rs:444)",
+    "NC-08 creates a second wrapper: the once body does not re-run and the same index is reused"
+   ],
+   "negative_control": "NC-08: both wrappers carry a non-NULL ex-data slot found by scanning UI_method_get_ex_data; a registrar that failed or returned an unusable index would leave the slot NULL."
+  },
+  {
+   "id": "OSSH-V1L-009",
+   "file": "src/engine/eng_fat.rs",
+   "line": 197,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "push_cstr_or_null",
+   "mechanism": "C_ABI_CONTRACT",
+   "category": "internal-cstr-adapter",
+   "disposition": "SAFETY_DISCHARGED: src/engine/eng_fat.rs:197",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true,
+   "contract": "`p` is NULL or NUL-terminated. The two call sites pass `def_list`, whose ENGINE_set_default_string # Safety states exactly that, or the static literal `word`.",
+   "established_by": [
+    "call sites src/engine/eng_fat.rs:235 and the `word` literal path; ENGINE_set_default_string states `def_list` is NULL or NUL-terminated",
+    "NC-09/NC-10 drive a bad list and a NULL list"
+   ],
+   "negative_control": "NC-10: the NULL list takes the `<NULL>` branch; a body without the null check would dereference NULL. The probe passes (exit 0)."
+  },
+  {
+   "id": "OSSH-V1L-010",
+   "file": "src/decoder_lib.rs",
+   "line": 1080,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "decoder_free_thunk",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "category": "sk-pop-free-freefunc",
+   "disposition": "SAFETY_DISCHARGED: src/decoder_lib.rs:1080",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true,
+   "contract": "`p` is NULL or an `OsslDecoder` owned by the stack passed to `OPENSSL_sk_pop_free(skdecoders, Some(decoder_free_thunk))` at src/decoder_lib.rs:1402.",
+   "established_by": [
+    "sole registration site :1402; the stack is built by the decoder context from fetched decoder implementations",
+    "NC-11 creates and frees a decoder context for RSA/DER"
+   ],
+   "negative_control": "NC-11: freeing the context releases the decoder stack; a thunk that released a non-decoder element would fault. A refused fetch (empty table) is also accepted, so the case cannot pass by skipping a crash."
+  },
+  {
+   "id": "OSSH-V1L-011",
+   "file": "src/x509/v3_akid.rs",
+   "line": 182,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "akid_i2v",
+   "mechanism": "X509_VERIFY_POLICY",
+   "category": "x509-i2v-slot",
+   "disposition": "SAFETY_DISCHARGED: src/x509/v3_akid.rs:182",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true,
+   "contract": "`meth` is the live X509V3_EXT_METHOD row; `value` is the `AuthorityKeyid` decoded by the in-repo print path from this row's `it` (AUTHORITY_KEYID_it); `out` is the caller's live stack or NULL.",
+   "established_by": [
+    "the row ossl_v3_akey_id declares it = AUTHORITY_KEYID_it and i2v = akid_i2v (src/x509/v3_akid.rs:203-218)",
+    "in-repo dispatch src/x509/v3_prn.rs:226-246 decodes with the row's `it` and calls the i2v slot at :279",
+    "NC-13 round-trips a keyid:always,issuer:always AKID through X509V3_EXT_nconf + X509V3_EXT_print"
+   ],
+   "negative_control": "NC-13: the AKID extension is built and printed through the i2v slot; a mismatched cast would fault or print nothing. The probe requires ok=1 and a `keyid` operand."
+  },
+  {
+   "id": "OSSH-V1L-012",
+   "file": "src/x509/v3_akid.rs",
+   "line": 193,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "akid_v2i",
+   "mechanism": "X509_VERIFY_POLICY",
+   "category": "x509-v2i-slot",
+   "disposition": "SAFETY_DISCHARGED: src/x509/v3_akid.rs:193",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true,
+   "contract": "`meth` is the live method row; `ctx` is the `X509V3Ctx` the in-repo configuration parser passes under `void *` (src/x509/v3_conf.rs:1059); `out` is the parsed CONF_VALUE stack.",
+   "established_by": [
+    "the row declares v2i = akid_v2i (src/x509/v3_akid.rs:203-218)",
+    "in-repo dispatch src/x509/v3_conf.rs:1029-1059 passes ctx.cast::<c_void>()",
+    "NC-13 drives the v2i slot through X509V3_EXT_nconf"
+   ],
+   "negative_control": "NC-13: a valid authorityKeyIdentifier value is parsed and then printed; the v2i refusal of an unknown option is exercised by the same family's bad-input control (NC-14 shape)."
+  },
+  {
+   "id": "OSSH-V1L-013",
+   "file": "src/x509/v3_san.rs",
+   "line": 1163,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "san_i2v",
+   "mechanism": "X509_VERIFY_POLICY",
+   "category": "x509-i2v-slot",
+   "disposition": "SAFETY_DISCHARGED: src/x509/v3_san.rs:1163",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true,
+   "contract": "`meth` is the live method row; `value` is the `GENERAL_NAMES` decoded by the in-repo print path from this row's `it` (GENERAL_NAMES_it); `out` is the caller's live stack or NULL.",
+   "established_by": [
+    "every ossl_v3_alt row declares it = GENERAL_NAMES_it and i2v = san_i2v (src/x509/v3_san.rs:1193-1217)",
+    "in-repo dispatch src/x509/v3_prn.rs:226-246 decodes with `it` and calls the i2v slot at :279",
+    "NC-12 round-trips DNS+IP SAN through X509V3_EXT_nconf + X509V3_EXT_print; NC-15 prints a corrupt SAN octet string"
+   ],
+   "negative_control": "NC-12: the printed value contains DNS:example.com. NC-15: a corrupt SAN is printed/refused without a fault; a cast that assumed a valid stack would crash."
+  },
+  {
+   "id": "OSSH-V1L-014",
+   "file": "src/x509/v3_san.rs",
+   "line": 1174,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "san_v2i",
+   "mechanism": "X509_VERIFY_POLICY",
+   "category": "x509-v2i-slot",
+   "disposition": "SAFETY_DISCHARGED: src/x509/v3_san.rs:1174",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true,
+   "contract": "`meth` is the live method row; `ctx` is the `X509V3Ctx` the in-repo parser passes (src/x509/v3_conf.rs:1059); `out` is the parsed CONF_VALUE stack.",
+   "established_by": [
+    "the alt rows declare v2i = san_v2i for subject/issuer alt name (src/x509/v3_san.rs:1211-1214)",
+    "in-repo dispatch src/x509/v3_conf.rs:1029-1059",
+    "NC-12 parses DNS:example.com,IP:1.2.3.4; NC-14 passes an unknown type"
+   ],
+   "negative_control": "NC-14: `subjectAltName=BAD.TYPE:xxx` is refused (NULL) without a fault; a cast that ignored the parser's stack shape would crash."
+  },
+  {
+   "id": "OSSH-V1L-015",
+   "file": "src/x509/v3_san.rs",
+   "line": 1184,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "san_v2i_issuer",
+   "mechanism": "X509_VERIFY_POLICY",
+   "category": "x509-v2i-slot",
+   "disposition": "SAFETY_DISCHARGED: src/x509/v3_san.rs:1184",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true,
+   "contract": "As OSSH-V1L-014, for the issuer-alt row; `ctx`/`out` carry the same in-repo parser types.",
+   "established_by": [
+    "the alt row NID_issuer_alt_name declares v2i = san_v2i_issuer (src/x509/v3_san.rs:1213)",
+    "same in-repo dispatch"
+   ],
+   "negative_control": "NC-14: the bad-type refusal exercises the v2i edge; the probe completes with exit 0."
+  }
+ ],
+ "negative_controls": [
+  {
+   "id": "NC-01",
+   "claim": "dummy_psk has no pointer precondition",
+   "observed": "compiled body is `xor %eax,%eax; ret` at the symbol recorded in the receipt",
+   "would_fail_if": "the body contained a memory operand"
+  },
+  {
+   "id": "NC-02",
+   "claim": "default_is_number and default_to_int convert a digit prefix",
+   "observed": "confnum-12abc PASS; NCONF_get_number_e -> 1, 12",
+   "would_fail_if": "the callbacks refused or dereferenced _conf"
+  },
+  {
+   "id": "NC-03",
+   "claim": "a non-digit converts to 0",
+   "observed": "confnum-abc PASS; -> 1, 0",
+   "would_fail_if": "the callback refused or faulted"
+  },
+  {
+   "id": "NC-04",
+   "claim": "the CONF module registry loads, initialises and frees",
+   "observed": "confmod-oid-valid PASS",
+   "would_fail_if": "oid_module_finish/stbl_module_finish/module_free_thunk faulted"
+  },
+  {
+   "id": "NC-05",
+   "claim": "the bad-OID failure path still unloads and frees exactly once",
+   "observed": "confmod-oid-bad PASS; two unloads",
+   "would_fail_if": "the earlier failed init left a list that double-freed"
+  },
+  {
+   "id": "NC-06",
+   "claim": "a wrapper method with a NULL callback owns and frees its ex-data",
+   "observed": "ui-wrapper-null PASS",
+   "would_fail_if": "ui_free_method_data adopted a non-owned block"
+  },
+  {
+   "id": "NC-07",
+   "claim": "a wrapper method with a live callback owns and frees its ex-data",
+   "observed": "ui-wrapper-cb PASS",
+   "would_fail_if": "the free hook released the wrong block"
+  },
+  {
+   "id": "NC-08",
+   "claim": "the index registrar is a working once and the index is reusable",
+   "observed": "ui-wrapper-twice PASS; non-NULL ex-data on both",
+   "would_fail_if": "the registrar re-ran or returned an unusable index"
+  },
+  {
+   "id": "NC-09",
+   "claim": "a non-NULL non-NUL-terminated list is handled by the caller contract",
+   "observed": "eng-str-bad PASS; ENGINE_set_default_string -> 0",
+   "would_fail_if": "push_cstr_or_null over-read a literal"
+  },
+  {
+   "id": "NC-10",
+   "claim": "the NULL list takes the <NULL> branch",
+   "observed": "eng-str-null PASS; -> 0",
+   "would_fail_if": "the null check were removed (SIGSEGV)"
+  },
+  {
+   "id": "NC-11",
+   "claim": "a created decoder context frees its decoder stack",
+   "observed": "decoder-ctx PASS",
+   "would_fail_if": "decoder_free_thunk released a non-decoder element"
+  },
+  {
+   "id": "NC-12",
+   "claim": "SAN v2i and i2v round-trip",
+   "observed": "x509-san-v2i-i2v PASS; printed DNS:example.com",
+   "would_fail_if": "either trampoline cast a mismatched pointer"
+  },
+  {
+   "id": "NC-13",
+   "claim": "AKID v2i and i2v round-trip",
+   "observed": "x509-akid-v2i-i2v PASS; printed keyid",
+   "would_fail_if": "akid_v2i or akid_i2v faulted on the ctx/value"
+  },
+  {
+   "id": "NC-14",
+   "claim": "an unknown SAN type is refused",
+   "observed": "x509-san-v2i-bad PASS; NULL",
+   "would_fail_if": "san_v2i accepted a malformed value and crashed"
+  },
+  {
+   "id": "NC-15",
+   "claim": "a corrupt SAN octet string is printed or refused without a fault",
+   "observed": "x509-san-i2v-corrupt PASS",
+   "would_fail_if": "san_i2v assumed a valid GENERAL_NAMES"
+  }
+ ],
+ "does_not_prove": [
+  "Not a boundary audit: the 15 contracts are stated and controlled at the named coordinates, but the enclosing ownership boundaries (B6-CONF, B20-DYN, B16-ASN1, the X509 dispatcher) are not re-adjudicated.",
+  "Not a consumer graduation: SAFE_COMPATIBLE is not claimed; element 7 status comes from the closure run, not from this receipt.",
+  "Not a constant-time, cryptographic or compatibility result.",
+  "The negative controls exercise public entry paths; they do not prove the absence of other callers outside this crate (C callers of X509V3_EXT_nconf, UI_method_set_ex_data, ENGINE_set_ex_data). Those remain external ABI obligations where the authority has the same shape.",
+  "No Miri/ASan run; the 14 uncovered obligations and the engine table-slot raw write are not instrumented here."
+ ],
+ "non_claims": [
+  "A site receipt is evidence of per-site contract completion, not of mechanism discharge.",
+  "The 9 engine cleanup callbacks and the 2 CMS free thunks remain UNKNOWN; ml_kem raise_fixed remains UNKNOWN; eng_dyn and tb_asnmth remain BLOCKED under their existing CONTRACTED boundaries.",
+  "No Rust test suite was run: no Rust source changed."
+ ]
+}

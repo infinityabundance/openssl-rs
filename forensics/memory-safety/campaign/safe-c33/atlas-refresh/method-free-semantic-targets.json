@@ -1,0 +1,3485 @@
+{
+ "schema": "safe-c33/atlas-refresh/method-free-semantic-targets/v1",
+ "kind": "method-free-semantic-target-receipt",
+ "subphase": "safe-c33/method-free-semantic-targets",
+ "generated_utc": "2026-10-28T04:29:12Z",
+ "rule": {
+  "slot": "Method.free (offset 0x20) in the method store",
+  "source_of_truth": "the values reachable code stores into the slot, resolved through their provenance",
+  "writers": [
+   "ossl_method_store_add copies its 7th argument (index 6, the first stack argument) into Method.free at 0x20 of the Implementation",
+   "ossl_method_store_cache_set copies its 7th argument (index 6) into Method.free at 0x20 of the cache entry"
+  ],
+  "provenance_classes": [
+   "an in-image lea (a function start)",
+   "a GLOB_DAT/relocation naming a symbol defined in this image",
+   "a caller parameter chain, resolved at the reachable call sites",
+   "one level of an object field whose writer slot is known (EvpMethodData.destruct_method at 0x40, written by inner_evp_generic_fetch from its 8th argument, index 7)"
+  ],
+  "collapse": "a one-instruction thunk and its callee are one semantic target",
+  "unresolved_rule": "if any reachable writer call site stores a value whose provenance is not image-bounded, the site stays UNRESOLVED; there is no partial claim",
+  "declared_names": "METHOD_FREE_TARGETS is a cross-check only. An absent declared name is recorded and never voids the rule; a proven target missing from the list is recorded as derived_but_undeclared",
+  "old_path": "edge_target_witness skips any spec with semantic_rule set, so _fragment_addrs is never called for this slot"
+ },
+ "image": {
+  "libcrypto_sha256": "247803f1b57bc109366aeb0831ec27d5680091201920b9f13f5cd61736f52577",
+  "writers": [
+   {
+    "fragment": "ossl_method_store_add",
+    "address": "0x201bc0",
+    "symbol": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store21ossl_method_store_add",
+    "present": true,
+    "reachable": true
+   },
+   {
+    "fragment": "ossl_method_store_cache_set",
+    "address": "0x203000",
+    "symbol": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store27ossl_method_store_cache_set",
+    "present": true,
+    "reachable": true
+   }
+  ],
+  "excluded_writers": [],
+  "writer_argument_index": 6,
+  "writer_stores": [
+   {
+    "writer": "ossl_method_store_add",
+    "store": "0x201c44",
+    "instruction": "mov    %rax,0x20(%r15)",
+    "argument_index": 6,
+    "witness": [
+     "mov    %rax,0x20(%r15)",
+     "mov    0x40(%rsp),%rax"
+    ],
+    "provenance": "incoming stack argument 6; rsp delta -0x38, 0x40-0x38 = 8"
+   },
+   {
+    "writer": "ossl_method_store_cache_set",
+    "store": "0x2031f9",
+    "instruction": "mov    %rax,0x20(%r13)",
+    "argument_index": 6,
+    "witness": [
+     "mov    %rax,0x20(%r13)",
+     "mov    0xa0(%rsp),%rax"
+    ],
+    "provenance": "incoming stack argument 6; rsp delta -0x98, 0xa0-0x98 = 8"
+   },
+   {
+    "writer": "ossl_method_store_cache_set",
+    "store": "0x2030a3",
+    "instruction": "mov    %rax,0x20(%rbx)",
+    "argument_index": null,
+    "provenance": "frame-local value, not the Method.free slot"
+   },
+   {
+    "writer": "ossl_method_store_cache_set",
+    "store": "0x2032db",
+    "instruction": "mov    %rax,0x20(%rsp)",
+    "argument_index": null,
+    "provenance": "frame-local Query object (delete path), not the method-store entry"
+   },
+   {
+    "writer": "ossl_method_store_cache_set",
+    "store": "0x203337",
+    "instruction": "mov    %rax,0x20(%rbx)",
+    "argument_index": null,
+    "provenance": "arithmetic result, not a parameter"
+   },
+   {
+    "writer": "ossl_method_store_cache_set",
+    "store": "0x2033ab",
+    "instruction": "mov    %rcx,0x20(%rbx)",
+    "argument_index": null,
+    "provenance": "computed pointer, not a parameter"
+   },
+   {
+    "writer": "inner_evp_generic_fetch (EvpMethodData.destruct_method, field 0x40)",
+    "store": "0x317e2e",
+    "instruction": "mov    %rsi,0x40(%rbp)",
+    "argument_index": 7,
+    "witness": [
+     "mov    %rsi,0x40(%rbp)",
+     "mov    0x4d8(%rsp),%rsi"
+    ],
+    "provenance": "incoming stack argument 7 (free_method); rsp delta -0x4c8, 0x4d8-0x4c8 = 0x10"
+   }
+  ]
+ },
+ "derivation": {
+  "shared_for_all_nine_sites": true,
+  "call_sites": [
+   {
+    "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs5store10store_meth19put_loader_in_store",
+    "call_site": "0x24ab83",
+    "writer": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store21ossl_method_store_add",
+    "argument_index": 6,
+    "value": [
+     {
+      "kind": "relocation",
+      "symbol": "OSSL_STORE_LOADER_free",
+      "slot": 8994024,
+      "symbols": [
+       {
+        "symbol": "OSSL_STORE_LOADER_free",
+        "target": 2265824,
+        "image_bounded": true
+       }
+      ],
+      "func": 2403072
+     }
+    ],
+    "included": true,
+    "targets": [
+     "0x2292e0"
+    ],
+    "failure": null,
+    "chain": [
+     {
+      "atom": {
+       "kind": "relocation",
+       "symbol": "OSSL_STORE_LOADER_free",
+       "slot": 8994024,
+       "symbols": [
+        {
+         "symbol": "OSSL_STORE_LOADER_free",
+         "target": 2265824,
+         "image_bounded": true
+        }
+       ],
+       "func": 2403072
+      },
+      "targets": [
+       "0x2292e0"
+      ],
+      "failure": null,
+      "chain": []
+     }
+    ]
+   },
+   {
+    "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp5fetch23put_evp_method_in_store",
+    "call_site": "0x3182e5",
+    "writer": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store21ossl_method_store_add",
+    "argument_index": 6,
+    "value": [
+     {
+      "kind": "field",
+      "offset": 64,
+      "func": 3244528
+     }
+    ],
+    "included": true,
+    "targets": [
+     "0x16e320",
+     "0x35f280",
+     "0x3dd3f0",
+     "0x3def60",
+     "0x3e0c50",
+     "0x41ecb0",
+     "0x451e80",
+     "0x521aa0"
+    ],
+    "failure": null,
+    "chain": [
+     {
+      "atom": {
+       "kind": "field",
+       "offset": 64,
+       "func": 3244528
+      },
+      "targets": [
+       "0x16e320",
+       "0x35f280",
+       "0x3dd3f0",
+       "0x3def60",
+       "0x3e0c50",
+       "0x41ecb0",
+       "0x451e80",
+       "0x521aa0"
+      ],
+      "failure": null,
+      "chain": [
+       {
+        "field_slot": "EVT-EVPM-DESTRUCT",
+        "field_offset": "0x40",
+        "sources": [
+         {
+          "writer": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp5fetch23inner_evp_generic_fetch.llvm.10340190264372893147",
+          "sources": [
+           {
+            "store": "0x317d8f",
+            "instruction": "mov    %r15,0x40(%rsp)",
+            "base": "%rsp",
+            "argument_index": null,
+            "reason": "frame-local object, not the method-store entry"
+           },
+           {
+            "store": "0x317e2e",
+            "instruction": "mov    %rsi,0x40(%rbp)",
+            "base": "%rbp",
+            "argument_index": 7,
+            "descriptor": {
+             "kind": "param",
+             "index": 7,
+             "stack_offset": 16,
+             "witness": [
+              "mov    %rsi,0x40(%rbp)",
+              "mov    0x4d8(%rsp),%rsi"
+             ]
+            }
+           },
+           {
+            "store": "0x318026",
+            "instruction": "mov    %r15,0x40(%rsp)",
+            "base": "%rsp",
+            "argument_index": null,
+            "reason": "frame-local object, not the method-store entry"
+           }
+          ],
+          "argument_indices": [
+           7
+          ]
+         }
+        ],
+        "targets": [
+         "0x16e320",
+         "0x35f280",
+         "0x3dd3f0",
+         "0x3def60",
+         "0x3e0c50",
+         "0x41ecb0",
+         "0x451e80",
+         "0x521aa0"
+        ],
+        "chain": [
+         {
+          "field_slot": "EVT-EVPM-DESTRUCT",
+          "writer": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp5fetch23inner_evp_generic_fetch.llvm.10340190264372893147",
+          "argument_index": 7,
+          "targets": [
+           "0x16e320",
+           "0x35f280",
+           "0x3dd3f0",
+           "0x3def60",
+           "0x3e0c50",
+           "0x41ecb0",
+           "0x451e80",
+           "0x521aa0"
+          ],
+          "failure": null,
+          "chain": [
+           {
+            "excluded_caller": "EVP_KEM_fetch",
+            "call_site": "0x16dff8",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_KEYEXCH_fetch",
+            "call_site": "0x16e2e8",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_PKEY_derive_SKEY",
+            "call_site": "0x172712",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_PKEY_derive_SKEY",
+            "call_site": "0x172796",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_PKEY_derive_set_peer_ex",
+            "call_site": "0x172c82",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "PKCS12_newpass",
+            "call_site": "0x17a426",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "PKCS12_pack_p7encdata_ex",
+            "call_site": "0x17abc0",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp3kem12evp_kem_init.llvm.7897621441283406100",
+            "call_site": "0x186646",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp3kem12evp_kem_init.llvm.7897621441283406100",
+            "call_site": "0x186822",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp3kem12evp_kem_init.llvm.7897621441283406100",
+            "call_site": "0x1868b8",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ssl8ssl_ciph16ssl_load_ciphers",
+            "call_site": "0x192469",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ssl8ssl_ciph16ssl_load_ciphers",
+            "call_site": "0x1925eb",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ssl8ssl_ciph16ssl_load_ciphers",
+            "call_site": "0x19273f",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ssl8ssl_ciph16ssl_load_ciphers",
+            "call_site": "0x192874",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ssl8ssl_ciph16ssl_load_ciphers",
+            "call_site": "0x192936",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ssl8ssl_ciph16ssl_load_ciphers",
+            "call_site": "0x192a01",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs6pkcs128p12_mutl14pkcs12_gen_mac.llvm.7897621441283406100",
+            "call_site": "0x19d121",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs6pkcs128p12_mutl14pkcs12_gen_mac.llvm.7897621441283406100",
+            "call_site": "0x19d635",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "OSSL_CMP_CTX_new",
+            "call_site": "0x1a61d5",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "OSSL_CMP_CTX_new",
+            "call_site": "0x1a62d3",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs2ts13ts_rsp_verify24int_ts_RESP_verify_token",
+            "call_site": "0x1af473",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3cmp7cmp_ctx14cmp_ctx_set_md",
+            "call_site": "0x1b0c27",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3pem6pvkfmt14derive_pvk_key",
+            "call_site": "0x1b2b8d",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "i2b_PVK_bio_ex",
+            "call_site": "0x1dfe89",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "PKCS12_SAFEBAG_create_pkcs8_encrypt_ex",
+            "call_site": "0x1ed73c",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "SRP_Calc_x_ex",
+            "call_site": "0x1f1293",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3srp7srp_lib11srp_Calc_xy.llvm.13063279479168338793",
+            "call_site": "0x1f9777",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider4rand30drbg_ctr_set_ctx_params_locked",
+            "call_site": "0x20f7ec",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider4rand30drbg_ctr_set_ctx_params_locked",
+            "call_site": "0x20f860",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider4rand31drbg_hash_set_ctx_params_locked",
+            "call_site": "0x2103be",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider4rand31drbg_hmac_set_ctx_params_locked",
+            "call_site": "0x2107ad",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider4rand31drbg_hmac_set_ctx_params_locked",
+            "call_site": "0x21087b",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_PKEY_can_sign",
+            "call_site": "0x222071",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "SSL_get1_builtin_sigalgs",
+            "call_site": "0x22adbf",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtCsaPQA6OxnKMa_10openssl_rs4hpke14kdf_ctx_create",
+            "call_site": "0x2310a4",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs2dh3kdf22ossl_dh_kdf_X9_42_asn1",
+            "call_site": "0x232764",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider14mac_legacy_sig10mac_newctx",
+            "call_site": "0x24ce6d",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider14mac_legacy_sig28mac_cmac_settable_ctx_params.llvm.6365378159965695897",
+            "call_site": "0x24d518",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider14mac_legacy_sig28mac_hmac_settable_ctx_params.llvm.6365378159965695897",
+            "call_site": "0x24d698",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider14mac_legacy_sig31mac_siphash_settable_ctx_params.llvm.6365378159965695897",
+            "call_site": "0x24d818",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider14mac_legacy_sig32mac_poly1305_settable_ctx_params.llvm.6365378159965695897",
+            "call_site": "0x24d998",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs5modes6siv12816ossl_siv128_init",
+            "call_site": "0x28253c",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs6ml_dsa3key19ossl_ml_dsa_key_new",
+            "call_site": "0x2868fa",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs6ml_dsa3key19ossl_ml_dsa_key_new",
+            "call_site": "0x286961",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp10legacy_evp23evp_get_cipherbyname_ex",
+            "call_site": "0x2a5a05",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider3kdf11find_alg_id",
+            "call_site": "0x2b9c12",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider3kdf17kdf_argon2_derive.llvm.8054068668886922700",
+            "call_site": "0x2c4f03",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider3kdf17kdf_argon2_derive.llvm.8054068668886922700",
+            "call_site": "0x2c4f9b",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider3kdf17scrypt_set_digest",
+            "call_site": "0x2c5986",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider3kdf21kdf_scrypt_ctx_derive.llvm.8054068668886922700",
+            "call_site": "0x2cb197",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider4util21ossl_prov_cipher_load",
+            "call_site": "0x2d3d14",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider4util21ossl_prov_macctx_load",
+            "call_site": "0x2d3f49",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider7dsa_sig12dsa_setup_md",
+            "call_site": "0x2d497b",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider7sm2_sig17sm2sig_set_mdname",
+            "call_site": "0x2dbdb5",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange15kdf_hkdf_newctx.llvm.8054068668886922700",
+            "call_site": "0x2dd4b1",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange17dh_set_ctx_params.llvm.8054068668886922700",
+            "call_site": "0x2ddcd2",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange17kdf_scrypt_newctx.llvm.8054068668886922700",
+            "call_site": "0x2de031",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange19kdf_tls1_prf_newctx.llvm.8054068668886922700",
+            "call_site": "0x2de221",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange28kdf_hkdf_gettable_ctx_params.llvm.8054068668886922700",
+            "call_site": "0x2de3c8",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange28kdf_hkdf_settable_ctx_params.llvm.8054068668886922700",
+            "call_site": "0x2de548",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange30kdf_scrypt_gettable_ctx_params.llvm.8054068668886922700",
+            "call_site": "0x2de6c8",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange30kdf_scrypt_settable_ctx_params.llvm.8054068668886922700",
+            "call_site": "0x2de848",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange32kdf_tls1_prf_gettable_ctx_params.llvm.8054068668886922700",
+            "call_site": "0x2de9c8",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange32kdf_tls1_prf_settable_ctx_params.llvm.8054068668886922700",
+            "call_site": "0x2deb48",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider9ecdsa_sig14ecdsa_setup_md",
+            "call_site": "0x2dfaba",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider9eddsa_sig14ed448_shake256",
+            "call_site": "0x2e2248",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtNtCsaPQA6OxnKMa_10openssl_rs8provider4util11prov_digest21ossl_prov_digest_load",
+            "call_site": "0x2e78e5",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtNtCsaPQA6OxnKMa_10openssl_rs8provider4util11prov_digest22ossl_prov_digest_fetch",
+            "call_site": "0x2e7a9a",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs2ec3kdf19ossl_ecdh_kdf_X9_63",
+            "call_site": "0x3122d4",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3cmp7cmp_msg11enc_privkey",
+            "call_site": "0x3131bd",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp5fetch17evp_generic_fetch",
+            "call_site": "0x317b2b",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp5fetch18evp_generic_do_all",
+            "call_site": "0x317bad",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp5fetch27evp_generic_fetch_from_prov",
+            "call_site": "0x318509",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "ossl_ed25519_public_from_private",
+            "call_site": "0x32a039",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "ossl_ed25519_sign",
+            "call_site": "0x32a63d",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "ossl_ed25519_verify",
+            "call_site": "0x32b374",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "OSSL_CRMF_pbm_new",
+            "call_site": "0x32f85d",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "PKCS12_key_gen_uni_ex",
+            "call_site": "0x33178b",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "PKCS5_PBKDF2_HMAC_SHA1",
+            "call_site": "0x3321d7",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "PKCS5_v2_PBE_keyivgen_ex",
+            "call_site": "0x33244a",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "PKCS7_dataDecode",
+            "call_site": "0x332b66",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "PKCS7_dataDecode",
+            "call_site": "0x332cda",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "PKCS7_dataDecode",
+            "call_site": "0x332ef7",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ess7ess_lib4find.llvm.12545627464476785764",
+            "call_site": "0x34d453",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3rsa7backend31ossl_rsa_pss_params_30_fromdata",
+            "call_site": "0x3534ca",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3rsa7backend31ossl_rsa_pss_params_30_fromdata",
+            "call_site": "0x3535ae",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs4x5097v3_skid21ossl_x509_pubkey_hash",
+            "call_site": "0x356122",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs5pkcs78pk7_doit20pkcs7_bio_add_digest",
+            "call_site": "0x357234",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "CTLOG_new_ex",
+            "call_site": "0x35e1b4",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_RAND_fetch",
+            "call_site": "0x35f248",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "SRP_VBASE_get1_by_user",
+            "call_site": "0x370500",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_PBE_CipherInit_ex",
+            "call_site": "0x3a1d7a",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_PBE_CipherInit_ex",
+            "call_site": "0x3a1f01",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3cms7cms_lib33ossl_cms_DigestAlgorithm_init_bio",
+            "call_site": "0x3b7acf",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3cms9cms_kemri14cms_kek_cipher",
+            "call_site": "0x3b99cf",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ffc15params_generate36ossl_ffc_params_FIPS186_2_gen_verify",
+            "call_site": "0x3bd137",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ffc15params_generate36ossl_ffc_params_FIPS186_4_gen_verify",
+            "call_site": "0x3bdfd7",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_KDF_derive_SKEY",
+            "call_site": "0x3dcc56",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_KDF_derive_SKEY",
+            "call_site": "0x3dccdd",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_KDF_fetch",
+            "call_site": "0x3dd3b8",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_MD_fetch",
+            "call_site": "0x3def28",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_Q_digest",
+            "call_site": "0x3e0a64",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_SIGNATURE_fetch",
+            "call_site": "0x3e0c18",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_SKEYMGMT_fetch",
+            "call_site": "0x3e0eb8",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_SKEY_to_provider",
+            "call_site": "0x3e1632",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_SKEY_to_provider",
+            "call_site": "0x3e16d5",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "OCSP_RESPID_match_ex",
+            "call_site": "0x3e1b57",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "OCSP_RESPID_set_by_key_ex",
+            "call_site": "0x3e1ee4",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp8skeymgmt20evp_skey_alloc_fetch.llvm.10958488953519374325",
+            "call_site": "0x3f4ea7",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp8skeymgmt20evp_skey_alloc_fetch.llvm.10958488953519374325",
+            "call_site": "0x3f4f09",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp8skeymgmt28evp_skeymgmt_fetch_from_prov",
+            "call_site": "0x3f5496",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs4ocsp8ocsp_vfy19ocsp_find_signer_sk",
+            "call_site": "0x406d14",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs4ocsp8ocsp_vfy19ocsp_match_issuerid",
+            "call_site": "0x407093",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs7slh_dsa8hash_ctx21slh_dsa_key_hash_init",
+            "call_site": "0x40ab75",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs7slh_dsa8hash_ctx21slh_dsa_key_hash_init",
+            "call_site": "0x40ac18",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs7slh_dsa8hash_ctx21slh_dsa_key_hash_init",
+            "call_site": "0x40aca5",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_ASYM_CIPHER_fetch",
+            "call_site": "0x41ec78",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_PBE_scrypt_ex",
+            "call_site": "0x423495",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "X509_NAME_hash_ex",
+            "call_site": "0x42a292",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "X509_NAME_hash_old",
+            "call_site": "0x42a42c",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "X509_digest_sig",
+            "call_site": "0x42cba1",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "X509_digest_sig",
+            "call_site": "0x42cc7f",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "X509_issuer_and_serial_hash",
+            "call_site": "0x42d3dc",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "X509_issuer_name_hash",
+            "call_site": "0x42da56",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "X509_subject_name_hash",
+            "call_site": "0x42df16",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_CIPHER_fetch",
+            "call_site": "0x451e48",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_MAC_fetch",
+            "call_site": "0x452bb8",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_Q_mac",
+            "call_site": "0x45407d",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider7rsa_enc18rsa_set_ctx_params.llvm.2125101848069918825",
+            "call_site": "0x47a5e7",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider7rsa_enc18rsa_set_ctx_params.llvm.2125101848069918825",
+            "call_site": "0x47a8bd",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "X509_ocspid_print",
+            "call_site": "0x49083a",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "CMS_SignerInfo_verify",
+            "call_site": "0x4ba9b5",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "OSSL_CRMF_ENCRYPTEDVALUE_decrypt",
+            "call_site": "0x4c459d",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs2ct10ct_sct_ctx18ct_public_key_hash.llvm.389763631304321139",
+            "call_site": "0x4cb4d6",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3cms7cms_enc34ossl_cms_EncryptedContent_init_bio.llvm.389763631304321139",
+            "call_site": "0x4d2609",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3cms7cms_env32ossl_cms_RecipientInfo_wrap_init",
+            "call_site": "0x4d43a4",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3cms8cms_pwri33ossl_cms_RecipientInfo_pwri_crypt",
+            "call_site": "0x4d5081",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs6ml_kem3key19ossl_ml_kem_key_new",
+            "call_site": "0x4e20c3",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs6ml_kem3key19ossl_ml_kem_key_new",
+            "call_site": "0x4e212d",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs6ml_kem3key19ossl_ml_kem_key_new",
+            "call_site": "0x4e2197",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs6ml_kem3key19ossl_ml_kem_key_new",
+            "call_site": "0x4e2201",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider14encode_key2any22key2any_set_ctx_params.llvm.389763631304321139",
+            "call_site": "0x4f1bd0",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider9ecdh_exch19ecdh_set_ctx_params.llvm.389763631304321139",
+            "call_site": "0x51ca84",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "EVP_KEYMGMT_fetch",
+            "call_site": "0x521a68",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs2ec8curve44812oneshot_hash",
+            "call_site": "0x526864",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs2ec8curve44818hash_init_with_dom",
+            "call_site": "0x5291c9",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs4apps5speed7have_md",
+            "call_site": "0x537253",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider6cipher15aes_siv_initkey",
+            "call_site": "0x542330",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider6cipher15aes_siv_initkey",
+            "call_site": "0x542394",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider6cipher19aes_gcm_siv_initkey",
+            "call_site": "0x54686d",
+            "reason": "caller not in the family's reachable set"
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp8exchange20evp_pkey_derive_init.llvm.7897621441283406100",
+            "call_site": "0x189948",
+            "argument_index": 7,
+            "value": {
+             "kind": "relocation",
+             "symbol": "EVP_KEYEXCH_free",
+             "slot": 8986192,
+             "symbols": [
+              {
+               "symbol": "EVP_KEYEXCH_free",
+               "target": 1499936,
+               "image_bounded": true
+              }
+             ],
+             "func": 1611600
+            },
+            "targets": [
+             "0x16e320"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp8exchange20evp_pkey_derive_init.llvm.7897621441283406100",
+            "call_site": "0x189b26",
+            "argument_index": 7,
+            "value": {
+             "kind": "relocation",
+             "symbol": "EVP_KEYEXCH_free",
+             "slot": 8986192,
+             "symbols": [
+              {
+               "symbol": "EVP_KEYEXCH_free",
+               "target": 1499936,
+               "image_bounded": true
+              }
+             ],
+             "func": 1611600
+            },
+            "targets": [
+             "0x16e320"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp8exchange20evp_pkey_derive_init.llvm.7897621441283406100",
+            "call_site": "0x189bbf",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 5380768,
+             "func": 1611600
+            },
+            "targets": [
+             "0x521aa0"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp8pkey_ctx11int_ctx_new.llvm.7897621441283406100",
+            "call_site": "0x18abe8",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 5380768,
+             "func": 1615664
+            },
+            "targets": [
+             "0x521aa0"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ssl6t1_enc18tls12_setup_cipher",
+            "call_site": "0x1b6221",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 4529792,
+             "func": 1794368
+            },
+            "targets": [
+             "0x451e80"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ssl9tls13_enc18tls13_setup_cipher",
+            "call_site": "0x1b8a45",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 4529792,
+             "func": 1804704
+            },
+            "targets": [
+             "0x451e80"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp4pkey18evp_pkey_asn1_ctrl.llvm.6365378159965695897",
+            "call_site": "0x236b6e",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 4058976,
+             "func": 2320992
+            },
+            "targets": [
+             "0x3def60"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs4asn18a_digest24ossl_asn1_item_digest_ex",
+            "call_site": "0x248898",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 4058976,
+             "func": 2394000
+            },
+            "targets": [
+             "0x3def60"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp10legacy_evp23evp_get_digestbyname_ex",
+            "call_site": "0x2a5c05",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 4058976,
+             "func": 2775872
+            },
+            "targets": [
+             "0x3def60"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider7rsa_sig12rsa_setup_md",
+            "call_site": "0x2d6e35",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 4058976,
+             "func": 2977184
+            },
+            "targets": [
+             "0x3def60"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider7rsa_sig17rsa_setup_mgf1_md",
+            "call_site": "0x2d7551",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 4058976,
+             "func": 2979040
+            },
+            "targets": [
+             "0x3def60"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp8p5_crpt225ossl_pkcs5_pbkdf2_hmac_ex",
+            "call_site": "0x34e5bc",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 4051952,
+             "func": 3466288
+            },
+            "targets": [
+             "0x3dd3f0"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtCsaPQA6OxnKMa_10openssl_rs12decoder_pkey22decoder_construct_pkey",
+            "call_site": "0x376756",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 5380768,
+             "func": 3630272
+            },
+            "targets": [
+             "0x521aa0"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs2bn4rand31ossl_bn_gen_dsa_nonce_fixed_top",
+            "call_site": "0x378b5e",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 4058976,
+             "func": 3639696
+            },
+            "targets": [
+             "0x3def60"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs4rand8rand_lib13rand_new_drbg.llvm.4436617583947706140",
+            "call_site": "0x385527",
+            "argument_index": 7,
+            "value": {
+             "kind": "relocation",
+             "symbol": "EVP_RAND_free",
+             "slot": 8994648,
+             "symbols": [
+              {
+               "symbol": "EVP_RAND_free",
+               "target": 3535488,
+               "image_bounded": true
+              }
+             ],
+             "func": 3691584
+            },
+            "targets": [
+             "0x35f280"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs4rand8rand_lib22ossl_rand_get0_primary.llvm.4436617583947706140",
+            "call_site": "0x385dcc",
+            "argument_index": 7,
+            "value": {
+             "kind": "relocation",
+             "symbol": "EVP_RAND_free",
+             "slot": 8994648,
+             "symbols": [
+              {
+               "symbol": "EVP_RAND_free",
+               "target": 3535488,
+               "image_bounded": true
+              }
+             ],
+             "func": 3693744
+            },
+            "targets": [
+             "0x35f280"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtCsaPQA6OxnKMa_10openssl_rs3rsa12ossl_rsa_prf",
+            "call_site": "0x3b196b",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 4058976,
+             "func": 3872896
+            },
+            "targets": [
+             "0x3def60"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp6digest14do_sigver_init.llvm.10958488953519374325",
+            "call_site": "0x3f221c",
+            "argument_index": 7,
+            "value": {
+             "kind": "relocation",
+             "symbol": "EVP_SIGNATURE_free",
+             "slot": 8991744,
+             "symbols": [
+              {
+               "symbol": "EVP_SIGNATURE_free",
+               "target": 4066384,
+               "image_bounded": true
+              }
+             ],
+             "func": 4136400
+            },
+            "targets": [
+             "0x3e0c50"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp6digest14do_sigver_init.llvm.10958488953519374325",
+            "call_site": "0x3f235d",
+            "argument_index": 7,
+            "value": {
+             "kind": "relocation",
+             "symbol": "EVP_SIGNATURE_free",
+             "slot": 8991744,
+             "symbols": [
+              {
+               "symbol": "EVP_SIGNATURE_free",
+               "target": 4066384,
+               "image_bounded": true
+              }
+             ],
+             "func": 4136400
+            },
+            "targets": [
+             "0x3e0c50"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp6digest14do_sigver_init.llvm.10958488953519374325",
+            "call_site": "0x3f23e9",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 5380768,
+             "func": 4136400
+            },
+            "targets": [
+             "0x521aa0"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp6digest19sigver_reinitialize",
+            "call_site": "0x3f2efe",
+            "argument_index": 7,
+            "value": {
+             "kind": "relocation",
+             "symbol": "EVP_MD_free",
+             "slot": 8981016,
+             "symbols": [
+              {
+               "symbol": "EVP_MD_free",
+               "target": 4058976,
+               "image_bounded": true
+              }
+             ],
+             "func": 4139984
+            },
+            "targets": [
+             "0x3def60"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp6digest20evp_md_init_internal.llvm.10958488953519374325",
+            "call_site": "0x3f3a93",
+            "argument_index": 7,
+            "value": {
+             "kind": "relocation",
+             "symbol": "EVP_MD_free",
+             "slot": 8981016,
+             "symbols": [
+              {
+               "symbol": "EVP_MD_free",
+               "target": 4058976,
+               "image_bounded": true
+              }
+             ],
+             "func": 4142672
+            },
+            "targets": [
+             "0x3def60"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp9signature23evp_pkey_signature_init.llvm.10958488953519374325",
+            "call_site": "0x3f5935",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 5380768,
+             "func": 4151328
+            },
+            "targets": [
+             "0x521aa0"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp9signature23evp_pkey_signature_init.llvm.10958488953519374325",
+            "call_site": "0x3f5cac",
+            "argument_index": 7,
+            "value": {
+             "kind": "relocation",
+             "symbol": "EVP_SIGNATURE_free",
+             "slot": 8991744,
+             "symbols": [
+              {
+               "symbol": "EVP_SIGNATURE_free",
+               "target": 4066384,
+               "image_bounded": true
+              }
+             ],
+             "func": 4151328
+            },
+            "targets": [
+             "0x3e0c50"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp9signature23evp_pkey_signature_init.llvm.10958488953519374325",
+            "call_site": "0x3f5de5",
+            "argument_index": 7,
+            "value": {
+             "kind": "relocation",
+             "symbol": "EVP_SIGNATURE_free",
+             "slot": 8991744,
+             "symbols": [
+              {
+               "symbol": "EVP_SIGNATURE_free",
+               "target": 4066384,
+               "image_bounded": true
+              }
+             ],
+             "func": 4151328
+            },
+            "targets": [
+             "0x3e0c50"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp9signature23evp_pkey_signature_init.llvm.10958488953519374325",
+            "call_site": "0x3f5e84",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 5380768,
+             "func": 4151328
+            },
+            "targets": [
+             "0x521aa0"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp10asymcipher25evp_pkey_asym_cipher_init.llvm.17448994114794511843",
+            "call_site": "0x43368f",
+            "argument_index": 7,
+            "value": {
+             "kind": "relocation",
+             "symbol": "EVP_ASYM_CIPHER_free",
+             "slot": 8985984,
+             "symbols": [
+              {
+               "symbol": "EVP_ASYM_CIPHER_free",
+               "target": 4320432,
+               "image_bounded": true
+              }
+             ],
+             "func": 4404368
+            },
+            "targets": [
+             "0x41ecb0"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp10asymcipher25evp_pkey_asym_cipher_init.llvm.17448994114794511843",
+            "call_site": "0x43386b",
+            "argument_index": 7,
+            "value": {
+             "kind": "relocation",
+             "symbol": "EVP_ASYM_CIPHER_free",
+             "slot": 8985984,
+             "symbols": [
+              {
+               "symbol": "EVP_ASYM_CIPHER_free",
+               "target": 4320432,
+               "image_bounded": true
+              }
+             ],
+             "func": 4404368
+            },
+            "targets": [
+             "0x41ecb0"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp10asymcipher25evp_pkey_asym_cipher_init.llvm.17448994114794511843",
+            "call_site": "0x433901",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 5380768,
+             "func": 4404368
+            },
+            "targets": [
+             "0x521aa0"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp10cipher_ctx24evp_cipher_init_internal.llvm.17448994114794511843",
+            "call_site": "0x434c1a",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 4529792,
+             "func": 4409040
+            },
+            "targets": [
+             "0x451e80"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3rsa4ossl10derive_kdk",
+            "call_site": "0x46a6f9",
+            "argument_index": 7,
+            "value": {
+             "kind": "int",
+             "value": 4058976,
+             "func": 4630048
+            },
+            "targets": [
+             "0x3def60"
+            ],
+            "failure": null,
+            "chain": []
+           },
+           {
+            "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp7keymgmt27evp_keymgmt_fetch_from_prov",
+            "call_site": "0x534e16",
+            "argument_index": 7,
+            "value": {
+             "kind": "relocation",
+             "symbol": "EVP_KEYMGMT_free",
+             "slot": 8990544,
+             "symbols": [
+              {
+               "symbol": "EVP_KEYMGMT_free",
+               "target": 5380768,
+               "image_bounded": true
+              }
+             ],
+             "func": 5459376
+            },
+            "targets": [
+             "0x521aa0"
+            ],
+            "failure": null,
+            "chain": []
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "caller": "_RNvNtCsaPQA6OxnKMa_10openssl_rs12decoder_meth20put_decoder_in_store",
+    "call_site": "0x492339",
+    "writer": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store21ossl_method_store_add",
+    "argument_index": 6,
+    "value": [
+     {
+      "kind": "relocation",
+      "symbol": "OSSL_DECODER_free",
+      "slot": 8976360,
+      "symbols": [
+       {
+        "symbol": "OSSL_DECODER_free",
+        "target": 4738400,
+        "image_bounded": true
+       }
+      ],
+      "func": 4792944
+     }
+    ],
+    "included": true,
+    "targets": [
+     "0x484d60"
+    ],
+    "failure": null,
+    "chain": [
+     {
+      "atom": {
+       "kind": "relocation",
+       "symbol": "OSSL_DECODER_free",
+       "slot": 8976360,
+       "symbols": [
+        {
+         "symbol": "OSSL_DECODER_free",
+         "target": 4738400,
+         "image_bounded": true
+        }
+       ],
+       "func": 4792944
+      },
+      "targets": [
+       "0x484d60"
+      ],
+      "failure": null,
+      "chain": []
+     }
+    ]
+   },
+   {
+    "caller": "_RNvNtCsaPQA6OxnKMa_10openssl_rs12encoder_meth20put_encoder_in_store",
+    "call_site": "0x4936d9",
+    "writer": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store21ossl_method_store_add",
+    "argument_index": 6,
+    "value": [
+     {
+      "kind": "relocation",
+      "symbol": "OSSL_ENCODER_free",
+      "slot": 8989120,
+      "symbols": [
+       {
+        "symbol": "OSSL_ENCODER_free",
+        "target": 4739664,
+        "image_bounded": true
+       }
+      ],
+      "func": 4797968
+     }
+    ],
+    "included": true,
+    "targets": [
+     "0x485250"
+    ],
+    "failure": null,
+    "chain": [
+     {
+      "atom": {
+       "kind": "relocation",
+       "symbol": "OSSL_ENCODER_free",
+       "slot": 8989120,
+       "symbols": [
+        {
+         "symbol": "OSSL_ENCODER_free",
+         "target": 4739664,
+         "image_bounded": true
+        }
+       ],
+       "func": 4797968
+      },
+      "targets": [
+       "0x485250"
+      ],
+      "failure": null,
+      "chain": []
+     }
+    ]
+   },
+   {
+    "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs5store10store_meth18inner_loader_fetch.llvm.6365378159965695897",
+    "call_site": "0x24a9a6",
+    "writer": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store27ossl_method_store_cache_set",
+    "included": false,
+    "reason": "caller not in the family's reachable set"
+   },
+   {
+    "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp5fetch23inner_evp_generic_fetch.llvm.10340190264372893147",
+    "call_site": "0x317f8b",
+    "writer": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store27ossl_method_store_cache_set",
+    "argument_index": 6,
+    "value": [
+     {
+      "kind": "param",
+      "index": 7,
+      "func": 3243200
+     }
+    ],
+    "included": true,
+    "targets": [
+     "0x16e320",
+     "0x35f280",
+     "0x3dd3f0",
+     "0x3def60",
+     "0x3e0c50",
+     "0x41ecb0",
+     "0x451e80",
+     "0x521aa0"
+    ],
+    "failure": null,
+    "chain": [
+     {
+      "atom": {
+       "kind": "param",
+       "index": 7,
+       "func": 3243200
+      },
+      "targets": [
+       "0x16e320",
+       "0x35f280",
+       "0x3dd3f0",
+       "0x3def60",
+       "0x3e0c50",
+       "0x41ecb0",
+       "0x451e80",
+       "0x521aa0"
+      ],
+      "failure": null,
+      "chain": [
+       {
+        "excluded_caller": "EVP_KEM_fetch",
+        "call_site": "0x16dff8",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_KEYEXCH_fetch",
+        "call_site": "0x16e2e8",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_PKEY_derive_SKEY",
+        "call_site": "0x172712",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_PKEY_derive_SKEY",
+        "call_site": "0x172796",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_PKEY_derive_set_peer_ex",
+        "call_site": "0x172c82",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "PKCS12_newpass",
+        "call_site": "0x17a426",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "PKCS12_pack_p7encdata_ex",
+        "call_site": "0x17abc0",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp3kem12evp_kem_init.llvm.7897621441283406100",
+        "call_site": "0x186646",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp3kem12evp_kem_init.llvm.7897621441283406100",
+        "call_site": "0x186822",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp3kem12evp_kem_init.llvm.7897621441283406100",
+        "call_site": "0x1868b8",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ssl8ssl_ciph16ssl_load_ciphers",
+        "call_site": "0x192469",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ssl8ssl_ciph16ssl_load_ciphers",
+        "call_site": "0x1925eb",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ssl8ssl_ciph16ssl_load_ciphers",
+        "call_site": "0x19273f",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ssl8ssl_ciph16ssl_load_ciphers",
+        "call_site": "0x192874",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ssl8ssl_ciph16ssl_load_ciphers",
+        "call_site": "0x192936",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ssl8ssl_ciph16ssl_load_ciphers",
+        "call_site": "0x192a01",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs6pkcs128p12_mutl14pkcs12_gen_mac.llvm.7897621441283406100",
+        "call_site": "0x19d121",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs6pkcs128p12_mutl14pkcs12_gen_mac.llvm.7897621441283406100",
+        "call_site": "0x19d635",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "OSSL_CMP_CTX_new",
+        "call_site": "0x1a61d5",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "OSSL_CMP_CTX_new",
+        "call_site": "0x1a62d3",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs2ts13ts_rsp_verify24int_ts_RESP_verify_token",
+        "call_site": "0x1af473",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3cmp7cmp_ctx14cmp_ctx_set_md",
+        "call_site": "0x1b0c27",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3pem6pvkfmt14derive_pvk_key",
+        "call_site": "0x1b2b8d",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "i2b_PVK_bio_ex",
+        "call_site": "0x1dfe89",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "PKCS12_SAFEBAG_create_pkcs8_encrypt_ex",
+        "call_site": "0x1ed73c",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "SRP_Calc_x_ex",
+        "call_site": "0x1f1293",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3srp7srp_lib11srp_Calc_xy.llvm.13063279479168338793",
+        "call_site": "0x1f9777",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider4rand30drbg_ctr_set_ctx_params_locked",
+        "call_site": "0x20f7ec",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider4rand30drbg_ctr_set_ctx_params_locked",
+        "call_site": "0x20f860",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider4rand31drbg_hash_set_ctx_params_locked",
+        "call_site": "0x2103be",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider4rand31drbg_hmac_set_ctx_params_locked",
+        "call_site": "0x2107ad",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider4rand31drbg_hmac_set_ctx_params_locked",
+        "call_site": "0x21087b",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_PKEY_can_sign",
+        "call_site": "0x222071",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "SSL_get1_builtin_sigalgs",
+        "call_site": "0x22adbf",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtCsaPQA6OxnKMa_10openssl_rs4hpke14kdf_ctx_create",
+        "call_site": "0x2310a4",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs2dh3kdf22ossl_dh_kdf_X9_42_asn1",
+        "call_site": "0x232764",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider14mac_legacy_sig10mac_newctx",
+        "call_site": "0x24ce6d",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider14mac_legacy_sig28mac_cmac_settable_ctx_params.llvm.6365378159965695897",
+        "call_site": "0x24d518",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider14mac_legacy_sig28mac_hmac_settable_ctx_params.llvm.6365378159965695897",
+        "call_site": "0x24d698",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider14mac_legacy_sig31mac_siphash_settable_ctx_params.llvm.6365378159965695897",
+        "call_site": "0x24d818",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider14mac_legacy_sig32mac_poly1305_settable_ctx_params.llvm.6365378159965695897",
+        "call_site": "0x24d998",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs5modes6siv12816ossl_siv128_init",
+        "call_site": "0x28253c",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs6ml_dsa3key19ossl_ml_dsa_key_new",
+        "call_site": "0x2868fa",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs6ml_dsa3key19ossl_ml_dsa_key_new",
+        "call_site": "0x286961",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp10legacy_evp23evp_get_cipherbyname_ex",
+        "call_site": "0x2a5a05",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider3kdf11find_alg_id",
+        "call_site": "0x2b9c12",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider3kdf17kdf_argon2_derive.llvm.8054068668886922700",
+        "call_site": "0x2c4f03",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider3kdf17kdf_argon2_derive.llvm.8054068668886922700",
+        "call_site": "0x2c4f9b",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider3kdf17scrypt_set_digest",
+        "call_site": "0x2c5986",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider3kdf21kdf_scrypt_ctx_derive.llvm.8054068668886922700",
+        "call_site": "0x2cb197",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider4util21ossl_prov_cipher_load",
+        "call_site": "0x2d3d14",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider4util21ossl_prov_macctx_load",
+        "call_site": "0x2d3f49",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider7dsa_sig12dsa_setup_md",
+        "call_site": "0x2d497b",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider7sm2_sig17sm2sig_set_mdname",
+        "call_site": "0x2dbdb5",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange15kdf_hkdf_newctx.llvm.8054068668886922700",
+        "call_site": "0x2dd4b1",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange17dh_set_ctx_params.llvm.8054068668886922700",
+        "call_site": "0x2ddcd2",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange17kdf_scrypt_newctx.llvm.8054068668886922700",
+        "call_site": "0x2de031",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange19kdf_tls1_prf_newctx.llvm.8054068668886922700",
+        "call_site": "0x2de221",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange28kdf_hkdf_gettable_ctx_params.llvm.8054068668886922700",
+        "call_site": "0x2de3c8",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange28kdf_hkdf_settable_ctx_params.llvm.8054068668886922700",
+        "call_site": "0x2de548",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange30kdf_scrypt_gettable_ctx_params.llvm.8054068668886922700",
+        "call_site": "0x2de6c8",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange30kdf_scrypt_settable_ctx_params.llvm.8054068668886922700",
+        "call_site": "0x2de848",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange32kdf_tls1_prf_gettable_ctx_params.llvm.8054068668886922700",
+        "call_site": "0x2de9c8",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8exchange32kdf_tls1_prf_settable_ctx_params.llvm.8054068668886922700",
+        "call_site": "0x2deb48",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider9ecdsa_sig14ecdsa_setup_md",
+        "call_site": "0x2dfaba",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider9eddsa_sig14ed448_shake256",
+        "call_site": "0x2e2248",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtNtCsaPQA6OxnKMa_10openssl_rs8provider4util11prov_digest21ossl_prov_digest_load",
+        "call_site": "0x2e78e5",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtNtCsaPQA6OxnKMa_10openssl_rs8provider4util11prov_digest22ossl_prov_digest_fetch",
+        "call_site": "0x2e7a9a",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs2ec3kdf19ossl_ecdh_kdf_X9_63",
+        "call_site": "0x3122d4",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3cmp7cmp_msg11enc_privkey",
+        "call_site": "0x3131bd",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp5fetch17evp_generic_fetch",
+        "call_site": "0x317b2b",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp5fetch18evp_generic_do_all",
+        "call_site": "0x317bad",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp5fetch27evp_generic_fetch_from_prov",
+        "call_site": "0x318509",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "ossl_ed25519_public_from_private",
+        "call_site": "0x32a039",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "ossl_ed25519_sign",
+        "call_site": "0x32a63d",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "ossl_ed25519_verify",
+        "call_site": "0x32b374",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "OSSL_CRMF_pbm_new",
+        "call_site": "0x32f85d",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "PKCS12_key_gen_uni_ex",
+        "call_site": "0x33178b",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "PKCS5_PBKDF2_HMAC_SHA1",
+        "call_site": "0x3321d7",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "PKCS5_v2_PBE_keyivgen_ex",
+        "call_site": "0x33244a",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "PKCS7_dataDecode",
+        "call_site": "0x332b66",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "PKCS7_dataDecode",
+        "call_site": "0x332cda",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "PKCS7_dataDecode",
+        "call_site": "0x332ef7",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ess7ess_lib4find.llvm.12545627464476785764",
+        "call_site": "0x34d453",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3rsa7backend31ossl_rsa_pss_params_30_fromdata",
+        "call_site": "0x3534ca",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3rsa7backend31ossl_rsa_pss_params_30_fromdata",
+        "call_site": "0x3535ae",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs4x5097v3_skid21ossl_x509_pubkey_hash",
+        "call_site": "0x356122",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs5pkcs78pk7_doit20pkcs7_bio_add_digest",
+        "call_site": "0x357234",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "CTLOG_new_ex",
+        "call_site": "0x35e1b4",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_RAND_fetch",
+        "call_site": "0x35f248",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "SRP_VBASE_get1_by_user",
+        "call_site": "0x370500",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_PBE_CipherInit_ex",
+        "call_site": "0x3a1d7a",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_PBE_CipherInit_ex",
+        "call_site": "0x3a1f01",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3cms7cms_lib33ossl_cms_DigestAlgorithm_init_bio",
+        "call_site": "0x3b7acf",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3cms9cms_kemri14cms_kek_cipher",
+        "call_site": "0x3b99cf",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ffc15params_generate36ossl_ffc_params_FIPS186_2_gen_verify",
+        "call_site": "0x3bd137",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ffc15params_generate36ossl_ffc_params_FIPS186_4_gen_verify",
+        "call_site": "0x3bdfd7",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_KDF_derive_SKEY",
+        "call_site": "0x3dcc56",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_KDF_derive_SKEY",
+        "call_site": "0x3dccdd",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_KDF_fetch",
+        "call_site": "0x3dd3b8",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_MD_fetch",
+        "call_site": "0x3def28",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_Q_digest",
+        "call_site": "0x3e0a64",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_SIGNATURE_fetch",
+        "call_site": "0x3e0c18",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_SKEYMGMT_fetch",
+        "call_site": "0x3e0eb8",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_SKEY_to_provider",
+        "call_site": "0x3e1632",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_SKEY_to_provider",
+        "call_site": "0x3e16d5",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "OCSP_RESPID_match_ex",
+        "call_site": "0x3e1b57",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "OCSP_RESPID_set_by_key_ex",
+        "call_site": "0x3e1ee4",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp8skeymgmt20evp_skey_alloc_fetch.llvm.10958488953519374325",
+        "call_site": "0x3f4ea7",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp8skeymgmt20evp_skey_alloc_fetch.llvm.10958488953519374325",
+        "call_site": "0x3f4f09",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp8skeymgmt28evp_skeymgmt_fetch_from_prov",
+        "call_site": "0x3f5496",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs4ocsp8ocsp_vfy19ocsp_find_signer_sk",
+        "call_site": "0x406d14",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs4ocsp8ocsp_vfy19ocsp_match_issuerid",
+        "call_site": "0x407093",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs7slh_dsa8hash_ctx21slh_dsa_key_hash_init",
+        "call_site": "0x40ab75",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs7slh_dsa8hash_ctx21slh_dsa_key_hash_init",
+        "call_site": "0x40ac18",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs7slh_dsa8hash_ctx21slh_dsa_key_hash_init",
+        "call_site": "0x40aca5",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_ASYM_CIPHER_fetch",
+        "call_site": "0x41ec78",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_PBE_scrypt_ex",
+        "call_site": "0x423495",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "X509_NAME_hash_ex",
+        "call_site": "0x42a292",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "X509_NAME_hash_old",
+        "call_site": "0x42a42c",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "X509_digest_sig",
+        "call_site": "0x42cba1",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "X509_digest_sig",
+        "call_site": "0x42cc7f",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "X509_issuer_and_serial_hash",
+        "call_site": "0x42d3dc",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "X509_issuer_name_hash",
+        "call_site": "0x42da56",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "X509_subject_name_hash",
+        "call_site": "0x42df16",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_CIPHER_fetch",
+        "call_site": "0x451e48",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_MAC_fetch",
+        "call_site": "0x452bb8",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_Q_mac",
+        "call_site": "0x45407d",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider7rsa_enc18rsa_set_ctx_params.llvm.2125101848069918825",
+        "call_site": "0x47a5e7",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider7rsa_enc18rsa_set_ctx_params.llvm.2125101848069918825",
+        "call_site": "0x47a8bd",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "X509_ocspid_print",
+        "call_site": "0x49083a",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "CMS_SignerInfo_verify",
+        "call_site": "0x4ba9b5",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "OSSL_CRMF_ENCRYPTEDVALUE_decrypt",
+        "call_site": "0x4c459d",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs2ct10ct_sct_ctx18ct_public_key_hash.llvm.389763631304321139",
+        "call_site": "0x4cb4d6",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3cms7cms_enc34ossl_cms_EncryptedContent_init_bio.llvm.389763631304321139",
+        "call_site": "0x4d2609",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3cms7cms_env32ossl_cms_RecipientInfo_wrap_init",
+        "call_site": "0x4d43a4",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3cms8cms_pwri33ossl_cms_RecipientInfo_pwri_crypt",
+        "call_site": "0x4d5081",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs6ml_kem3key19ossl_ml_kem_key_new",
+        "call_site": "0x4e20c3",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs6ml_kem3key19ossl_ml_kem_key_new",
+        "call_site": "0x4e212d",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs6ml_kem3key19ossl_ml_kem_key_new",
+        "call_site": "0x4e2197",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs6ml_kem3key19ossl_ml_kem_key_new",
+        "call_site": "0x4e2201",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider14encode_key2any22key2any_set_ctx_params.llvm.389763631304321139",
+        "call_site": "0x4f1bd0",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider9ecdh_exch19ecdh_set_ctx_params.llvm.389763631304321139",
+        "call_site": "0x51ca84",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "EVP_KEYMGMT_fetch",
+        "call_site": "0x521a68",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs2ec8curve44812oneshot_hash",
+        "call_site": "0x526864",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs2ec8curve44818hash_init_with_dom",
+        "call_site": "0x5291c9",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs4apps5speed7have_md",
+        "call_site": "0x537253",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider6cipher15aes_siv_initkey",
+        "call_site": "0x542330",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider6cipher15aes_siv_initkey",
+        "call_site": "0x542394",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "excluded_caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider6cipher19aes_gcm_siv_initkey",
+        "call_site": "0x54686d",
+        "reason": "caller not in the family's reachable set"
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp8exchange20evp_pkey_derive_init.llvm.7897621441283406100",
+        "call_site": "0x189948",
+        "argument_index": 7,
+        "value": {
+         "kind": "relocation",
+         "symbol": "EVP_KEYEXCH_free",
+         "slot": 8986192,
+         "symbols": [
+          {
+           "symbol": "EVP_KEYEXCH_free",
+           "target": 1499936,
+           "image_bounded": true
+          }
+         ],
+         "func": 1611600
+        },
+        "targets": [
+         "0x16e320"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp8exchange20evp_pkey_derive_init.llvm.7897621441283406100",
+        "call_site": "0x189b26",
+        "argument_index": 7,
+        "value": {
+         "kind": "relocation",
+         "symbol": "EVP_KEYEXCH_free",
+         "slot": 8986192,
+         "symbols": [
+          {
+           "symbol": "EVP_KEYEXCH_free",
+           "target": 1499936,
+           "image_bounded": true
+          }
+         ],
+         "func": 1611600
+        },
+        "targets": [
+         "0x16e320"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp8exchange20evp_pkey_derive_init.llvm.7897621441283406100",
+        "call_site": "0x189bbf",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 5380768,
+         "func": 1611600
+        },
+        "targets": [
+         "0x521aa0"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp8pkey_ctx11int_ctx_new.llvm.7897621441283406100",
+        "call_site": "0x18abe8",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 5380768,
+         "func": 1615664
+        },
+        "targets": [
+         "0x521aa0"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ssl6t1_enc18tls12_setup_cipher",
+        "call_site": "0x1b6221",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 4529792,
+         "func": 1794368
+        },
+        "targets": [
+         "0x451e80"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3ssl9tls13_enc18tls13_setup_cipher",
+        "call_site": "0x1b8a45",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 4529792,
+         "func": 1804704
+        },
+        "targets": [
+         "0x451e80"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp4pkey18evp_pkey_asn1_ctrl.llvm.6365378159965695897",
+        "call_site": "0x236b6e",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 4058976,
+         "func": 2320992
+        },
+        "targets": [
+         "0x3def60"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs4asn18a_digest24ossl_asn1_item_digest_ex",
+        "call_site": "0x248898",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 4058976,
+         "func": 2394000
+        },
+        "targets": [
+         "0x3def60"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp10legacy_evp23evp_get_digestbyname_ex",
+        "call_site": "0x2a5c05",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 4058976,
+         "func": 2775872
+        },
+        "targets": [
+         "0x3def60"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider7rsa_sig12rsa_setup_md",
+        "call_site": "0x2d6e35",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 4058976,
+         "func": 2977184
+        },
+        "targets": [
+         "0x3def60"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider7rsa_sig17rsa_setup_mgf1_md",
+        "call_site": "0x2d7551",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 4058976,
+         "func": 2979040
+        },
+        "targets": [
+         "0x3def60"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp8p5_crpt225ossl_pkcs5_pbkdf2_hmac_ex",
+        "call_site": "0x34e5bc",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 4051952,
+         "func": 3466288
+        },
+        "targets": [
+         "0x3dd3f0"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtCsaPQA6OxnKMa_10openssl_rs12decoder_pkey22decoder_construct_pkey",
+        "call_site": "0x376756",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 5380768,
+         "func": 3630272
+        },
+        "targets": [
+         "0x521aa0"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs2bn4rand31ossl_bn_gen_dsa_nonce_fixed_top",
+        "call_site": "0x378b5e",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 4058976,
+         "func": 3639696
+        },
+        "targets": [
+         "0x3def60"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs4rand8rand_lib13rand_new_drbg.llvm.4436617583947706140",
+        "call_site": "0x385527",
+        "argument_index": 7,
+        "value": {
+         "kind": "relocation",
+         "symbol": "EVP_RAND_free",
+         "slot": 8994648,
+         "symbols": [
+          {
+           "symbol": "EVP_RAND_free",
+           "target": 3535488,
+           "image_bounded": true
+          }
+         ],
+         "func": 3691584
+        },
+        "targets": [
+         "0x35f280"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs4rand8rand_lib22ossl_rand_get0_primary.llvm.4436617583947706140",
+        "call_site": "0x385dcc",
+        "argument_index": 7,
+        "value": {
+         "kind": "relocation",
+         "symbol": "EVP_RAND_free",
+         "slot": 8994648,
+         "symbols": [
+          {
+           "symbol": "EVP_RAND_free",
+           "target": 3535488,
+           "image_bounded": true
+          }
+         ],
+         "func": 3693744
+        },
+        "targets": [
+         "0x35f280"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtCsaPQA6OxnKMa_10openssl_rs3rsa12ossl_rsa_prf",
+        "call_site": "0x3b196b",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 4058976,
+         "func": 3872896
+        },
+        "targets": [
+         "0x3def60"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp6digest14do_sigver_init.llvm.10958488953519374325",
+        "call_site": "0x3f221c",
+        "argument_index": 7,
+        "value": {
+         "kind": "relocation",
+         "symbol": "EVP_SIGNATURE_free",
+         "slot": 8991744,
+         "symbols": [
+          {
+           "symbol": "EVP_SIGNATURE_free",
+           "target": 4066384,
+           "image_bounded": true
+          }
+         ],
+         "func": 4136400
+        },
+        "targets": [
+         "0x3e0c50"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp6digest14do_sigver_init.llvm.10958488953519374325",
+        "call_site": "0x3f235d",
+        "argument_index": 7,
+        "value": {
+         "kind": "relocation",
+         "symbol": "EVP_SIGNATURE_free",
+         "slot": 8991744,
+         "symbols": [
+          {
+           "symbol": "EVP_SIGNATURE_free",
+           "target": 4066384,
+           "image_bounded": true
+          }
+         ],
+         "func": 4136400
+        },
+        "targets": [
+         "0x3e0c50"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp6digest14do_sigver_init.llvm.10958488953519374325",
+        "call_site": "0x3f23e9",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 5380768,
+         "func": 4136400
+        },
+        "targets": [
+         "0x521aa0"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp6digest19sigver_reinitialize",
+        "call_site": "0x3f2efe",
+        "argument_index": 7,
+        "value": {
+         "kind": "relocation",
+         "symbol": "EVP_MD_free",
+         "slot": 8981016,
+         "symbols": [
+          {
+           "symbol": "EVP_MD_free",
+           "target": 4058976,
+           "image_bounded": true
+          }
+         ],
+         "func": 4139984
+        },
+        "targets": [
+         "0x3def60"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp6digest20evp_md_init_internal.llvm.10958488953519374325",
+        "call_site": "0x3f3a93",
+        "argument_index": 7,
+        "value": {
+         "kind": "relocation",
+         "symbol": "EVP_MD_free",
+         "slot": 8981016,
+         "symbols": [
+          {
+           "symbol": "EVP_MD_free",
+           "target": 4058976,
+           "image_bounded": true
+          }
+         ],
+         "func": 4142672
+        },
+        "targets": [
+         "0x3def60"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp9signature23evp_pkey_signature_init.llvm.10958488953519374325",
+        "call_site": "0x3f5935",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 5380768,
+         "func": 4151328
+        },
+        "targets": [
+         "0x521aa0"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp9signature23evp_pkey_signature_init.llvm.10958488953519374325",
+        "call_site": "0x3f5cac",
+        "argument_index": 7,
+        "value": {
+         "kind": "relocation",
+         "symbol": "EVP_SIGNATURE_free",
+         "slot": 8991744,
+         "symbols": [
+          {
+           "symbol": "EVP_SIGNATURE_free",
+           "target": 4066384,
+           "image_bounded": true
+          }
+         ],
+         "func": 4151328
+        },
+        "targets": [
+         "0x3e0c50"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp9signature23evp_pkey_signature_init.llvm.10958488953519374325",
+        "call_site": "0x3f5de5",
+        "argument_index": 7,
+        "value": {
+         "kind": "relocation",
+         "symbol": "EVP_SIGNATURE_free",
+         "slot": 8991744,
+         "symbols": [
+          {
+           "symbol": "EVP_SIGNATURE_free",
+           "target": 4066384,
+           "image_bounded": true
+          }
+         ],
+         "func": 4151328
+        },
+        "targets": [
+         "0x3e0c50"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp9signature23evp_pkey_signature_init.llvm.10958488953519374325",
+        "call_site": "0x3f5e84",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 5380768,
+         "func": 4151328
+        },
+        "targets": [
+         "0x521aa0"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp10asymcipher25evp_pkey_asym_cipher_init.llvm.17448994114794511843",
+        "call_site": "0x43368f",
+        "argument_index": 7,
+        "value": {
+         "kind": "relocation",
+         "symbol": "EVP_ASYM_CIPHER_free",
+         "slot": 8985984,
+         "symbols": [
+          {
+           "symbol": "EVP_ASYM_CIPHER_free",
+           "target": 4320432,
+           "image_bounded": true
+          }
+         ],
+         "func": 4404368
+        },
+        "targets": [
+         "0x41ecb0"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp10asymcipher25evp_pkey_asym_cipher_init.llvm.17448994114794511843",
+        "call_site": "0x43386b",
+        "argument_index": 7,
+        "value": {
+         "kind": "relocation",
+         "symbol": "EVP_ASYM_CIPHER_free",
+         "slot": 8985984,
+         "symbols": [
+          {
+           "symbol": "EVP_ASYM_CIPHER_free",
+           "target": 4320432,
+           "image_bounded": true
+          }
+         ],
+         "func": 4404368
+        },
+        "targets": [
+         "0x41ecb0"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp10asymcipher25evp_pkey_asym_cipher_init.llvm.17448994114794511843",
+        "call_site": "0x433901",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 5380768,
+         "func": 4404368
+        },
+        "targets": [
+         "0x521aa0"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp10cipher_ctx24evp_cipher_init_internal.llvm.17448994114794511843",
+        "call_site": "0x434c1a",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 4529792,
+         "func": 4409040
+        },
+        "targets": [
+         "0x451e80"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3rsa4ossl10derive_kdk",
+        "call_site": "0x46a6f9",
+        "argument_index": 7,
+        "value": {
+         "kind": "int",
+         "value": 4058976,
+         "func": 4630048
+        },
+        "targets": [
+         "0x3def60"
+        ],
+        "failure": null,
+        "chain": []
+       },
+       {
+        "caller": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp7keymgmt27evp_keymgmt_fetch_from_prov",
+        "call_site": "0x534e16",
+        "argument_index": 7,
+        "value": {
+         "kind": "relocation",
+         "symbol": "EVP_KEYMGMT_free",
+         "slot": 8990544,
+         "symbols": [
+          {
+           "symbol": "EVP_KEYMGMT_free",
+           "target": 5380768,
+           "image_bounded": true
+          }
+         ],
+         "func": 5459376
+        },
+        "targets": [
+         "0x521aa0"
+        ],
+        "failure": null,
+        "chain": []
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "caller": "_RNvNtCsaPQA6OxnKMa_10openssl_rs12decoder_meth24inner_ossl_decoder_fetch.llvm.10737044638095093568",
+    "call_site": "0x492785",
+    "writer": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store27ossl_method_store_cache_set",
+    "included": false,
+    "reason": "caller not in the family's reachable set"
+   },
+   {
+    "caller": "_RNvNtCsaPQA6OxnKMa_10openssl_rs12encoder_meth24inner_ossl_encoder_fetch.llvm.10737044638095093568",
+    "call_site": "0x493a95",
+    "writer": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store27ossl_method_store_cache_set",
+    "included": false,
+    "reason": "caller not in the family's reachable set"
+   }
+  ],
+  "stored_values": {
+   "0x16e320": "0x16e320",
+   "0x2292e0": "0x2292e0",
+   "0x35f280": "0x35f280",
+   "0x3dd3f0": "0x3dd3f0",
+   "0x3def60": "0x3def60",
+   "0x3e0c50": "0x3e0c50",
+   "0x41ecb0": "0x41ecb0",
+   "0x451e80": "0x451e80",
+   "0x484d60": "0x484d60",
+   "0x485250": "0x485250",
+   "0x521aa0": "0x521aa0"
+  },
+  "thunk_collapses": [],
+  "thunk_note": "no thunk was stored into this slot in the 247803f1 image (the decoder value is the GLOB_DAT of OSSL_DECODER_free); the collapse rule is exercised by the self-test control (c)"
+ },
+ "per_site": [
+  {
+   "call_site": "0x201966",
+   "function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store11alg_cleanup.llvm.13063279479168338793",
+   "containing_function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store11alg_cleanup.llvm.13063279479168338793",
+   "resolved": true,
+   "target_count": 11,
+   "targets": [
+    "0x16e320",
+    "0x2292e0",
+    "0x35f280",
+    "0x3dd3f0",
+    "0x3def60",
+    "0x3e0c50",
+    "0x41ecb0",
+    "0x451e80",
+    "0x484d60",
+    "0x485250",
+    "0x521aa0"
+   ]
+  },
+  {
+   "call_site": "0x201ad0",
+   "function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store15impl_free_thunk",
+   "containing_function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store15impl_free_thunk",
+   "resolved": true,
+   "target_count": 11,
+   "targets": [
+    "0x16e320",
+    "0x2292e0",
+    "0x35f280",
+    "0x3dd3f0",
+    "0x3def60",
+    "0x3e0c50",
+    "0x41ecb0",
+    "0x451e80",
+    "0x484d60",
+    "0x485250",
+    "0x521aa0"
+   ]
+  },
+  {
+   "call_site": "0x201b90",
+   "function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store21impl_cache_free_thunk",
+   "containing_function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store21impl_cache_free_thunk",
+   "resolved": true,
+   "target_count": 11,
+   "targets": [
+    "0x16e320",
+    "0x2292e0",
+    "0x35f280",
+    "0x3dd3f0",
+    "0x3def60",
+    "0x3e0c50",
+    "0x41ecb0",
+    "0x451e80",
+    "0x484d60",
+    "0x485250",
+    "0x521aa0"
+   ]
+  },
+  {
+   "call_site": "0x201fe9",
+   "function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store21ossl_method_store_add",
+   "containing_function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store21ossl_method_store_add",
+   "resolved": true,
+   "target_count": 11,
+   "targets": [
+    "0x16e320",
+    "0x2292e0",
+    "0x35f280",
+    "0x3dd3f0",
+    "0x3def60",
+    "0x3e0c50",
+    "0x41ecb0",
+    "0x451e80",
+    "0x484d60",
+    "0x485250",
+    "0x521aa0"
+   ]
+  },
+  {
+   "call_site": "0x20228f",
+   "function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store22impl_cache_flush_cache",
+   "containing_function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store22impl_cache_flush_cache",
+   "resolved": true,
+   "target_count": 11,
+   "targets": [
+    "0x16e320",
+    "0x2292e0",
+    "0x35f280",
+    "0x3dd3f0",
+    "0x3def60",
+    "0x3e0c50",
+    "0x41ecb0",
+    "0x451e80",
+    "0x484d60",
+    "0x485250",
+    "0x521aa0"
+   ]
+  },
+  {
+   "call_site": "0x2024b6",
+   "function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store23alg_cleanup_by_provider.llvm.13063279479168338793",
+   "containing_function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store23alg_cleanup_by_provider.llvm.13063279479168338793",
+   "resolved": true,
+   "target_count": 11,
+   "targets": [
+    "0x16e320",
+    "0x2292e0",
+    "0x35f280",
+    "0x3dd3f0",
+    "0x3def60",
+    "0x3e0c50",
+    "0x41ecb0",
+    "0x451e80",
+    "0x484d60",
+    "0x485250",
+    "0x521aa0"
+   ]
+  },
+  {
+   "call_site": "0x203241",
+   "function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store27ossl_method_store_cache_set",
+   "containing_function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store27ossl_method_store_cache_set",
+   "resolved": true,
+   "target_count": 11,
+   "targets": [
+    "0x16e320",
+    "0x2292e0",
+    "0x35f280",
+    "0x3dd3f0",
+    "0x3def60",
+    "0x3e0c50",
+    "0x41ecb0",
+    "0x451e80",
+    "0x484d60",
+    "0x485250",
+    "0x521aa0"
+   ]
+  },
+  {
+   "call_site": "0x20338f",
+   "function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store27ossl_method_store_cache_set",
+   "containing_function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store27ossl_method_store_cache_set",
+   "resolved": true,
+   "target_count": 11,
+   "targets": [
+    "0x16e320",
+    "0x2292e0",
+    "0x35f280",
+    "0x3dd3f0",
+    "0x3def60",
+    "0x3e0c50",
+    "0x41ecb0",
+    "0x451e80",
+    "0x484d60",
+    "0x485250",
+    "0x521aa0"
+   ]
+  },
+  {
+   "call_site": "0x2032fe",
+   "function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store27ossl_method_store_cache_set",
+   "containing_function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8property5store27ossl_method_store_cache_set",
+   "resolved": true,
+   "target_count": 11,
+   "targets": [
+    "0x16e320",
+    "0x2292e0",
+    "0x35f280",
+    "0x3dd3f0",
+    "0x3def60",
+    "0x3e0c50",
+    "0x41ecb0",
+    "0x451e80",
+    "0x484d60",
+    "0x485250",
+    "0x521aa0"
+   ]
+  }
+ ],
+ "declared_delta": {
+  "declared_targets": {
+   "EVP_MD_free": {
+    "present": true,
+    "addresses": [
+     "0x3def60"
+    ]
+   },
+   "EVP_CIPHER_free": {
+    "present": true,
+    "addresses": [
+     "0x451e80"
+    ]
+   },
+   "EVP_KDF_free": {
+    "present": true,
+    "addresses": [
+     "0x3dd3f0"
+    ]
+   },
+   "EVP_KEYMGMT_free": {
+    "present": true,
+    "addresses": [
+     "0x521aa0"
+    ]
+   },
+   "EVP_SIGNATURE_free": {
+    "present": true,
+    "addresses": [
+     "0x3e0c50"
+    ]
+   },
+   "EVP_ASYM_CIPHER_free": {
+    "present": true,
+    "addresses": [
+     "0x41ecb0"
+    ]
+   },
+   "EVP_MAC_free": {
+    "present": true,
+    "addresses": [
+     "0x452c30"
+    ]
+   },
+   "EVP_SKEYMGMT_free": {
+    "present": true,
+    "addresses": [
+     "0x3e0ef0"
+    ]
+   },
+   "EVP_RAND_free": {
+    "present": true,
+    "addresses": [
+     "0x35f280"
+    ]
+   },
+   "EVP_KEYEXCH_free": {
+    "present": true,
+    "addresses": [
+     "0x16e320"
+    ]
+   },
+   "EVP_KEM_free": {
+    "present": true,
+    "addresses": [
+     "0x16e030"
+    ]
+   },
+   "OSSL_STORE_LOADER_free": {
+    "present": true,
+    "addresses": [
+     "0x2292e0"
+    ]
+   },
+   "free_decoder": {
+    "present": false,
+    "addresses": []
+   },
+   "OSSL_ENCODER_free": {
+    "present": true,
+    "addresses": [
+     "0x485250"
+    ]
+   }
+  },
+  "declared_but_absent": [
+   "free_decoder"
+  ],
+  "derived_but_undeclared": [
+   "0x484d60"
+  ],
+  "declared_but_not_derived": [
+   "0x16e030",
+   "0x3e0ef0",
+   "0x452c30"
+  ],
+  "interpretation": {
+   "free_decoder": "absent from the 247803f1 image; the store carries OSSL_DECODER_free directly",
+   "OSSL_DECODER_free": "proven by the store provenance but absent from the declared list",
+   "0x16e030 EVP_KEM_free": "declared, not reachable from the ssh consumer",
+   "0x3e0ef0 EVP_SKEYMGMT_free": "declared, not reachable from the ssh consumer",
+   "0x452c30 EVP_MAC_free": "declared, not reachable from the ssh consumer"
+  }
+ },
+ "negative_controls": {
+  "a_argument_derived": {
+   "control": "a reachable writer call site whose value is the caller's own unbounded argument",
+   "expected": "UNRESOLVED",
+   "observed": "UNRESOLVED; the offending call site is named",
+   "self_test": "argument-derived store keeps the slot unresolved"
+  },
+  "b_absent_declared_finite_store": {
+   "control": "the declared name free_decoder is absent; the stores are finite",
+   "expected": "RESOLVED with the derived set",
+   "observed": "RESOLVED; declared_but_absent=['free_decoder']; the absence did not void the spec",
+   "self_test": "stored-value slot resolves from reachable stores"
+  },
+  "c_thunk_and_callee": {
+   "control": "a store of a thunk and a store of its callee",
+   "expected": "one semantic target, not two",
+   "observed": "collapsed to the callee; thunk_collapses records the pair",
+   "self_test": "a thunk and its callee collapse to one target"
+  },
+  "d_unreachable_writer": {
+   "control": "a writer outside the reachable set",
+   "expected": "its target is absent; the closure refuses if it appears",
+   "observed": "absent; excluded_writers names it; marking the same writer reachable makes its target appear (canary)",
+   "self_test": "an unreachable writer's target is absent from the bound"
+  },
+  "e_old_path_gone": {
+   "control": "_fragment_addrs is made to raise",
+   "expected": "the rule neither calls it nor voids the spec",
+   "observed": "resolved; the old declared-name path cannot run",
+   "self_test": "the stored-value rule never calls _fragment_addrs"
+  }
+ },
+ "gates": {
+  "py_compile": "PASS (python3 -m py_compile forensics/tools/consumer_closure.py)",
+  "closure_self_test": "PASS (python3 forensics/tools/consumer_closure.py --self-test)",
+  "rust_suite": "NOT_RUN: no Rust source changed in this subphase",
+  "tool_sha256": "5761063e66229162df3df568761e7731c827c6e430c682920e68aec0d914f09f"
+ },
+ "stability": {
+  "receipt": "atlas-refresh/reachability-stability-v1k.json",
+  "verdict": "reachable sets identical across two same-revision rebuilds"
+ },
+ "closure_result": {
+  "receipt": "atlas-refresh/openssh-closure-v1k.json",
+  "ssh_element_7": "PASS (contract-bounded)",
+  "sshd_element_7": "PASS (contract-bounded)",
+  "target_count": 11,
+  "targets": [
+   "0x16e320",
+   "0x2292e0",
+   "0x35f280",
+   "0x3dd3f0",
+   "0x3def60",
+   "0x3e0c50",
+   "0x41ecb0",
+   "0x451e80",
+   "0x484d60",
+   "0x485250",
+   "0x521aa0"
+  ],
+  "note": "the 11-target set is consumer-reachable; the image-wide derivation over all callers also proves EVP_MAC_free, EVP_SKEYMGMT_free and EVP_KEM_free (14 targets)"
+ },
+ "non_claims": [
+  "Not an independent review; the author of the rule is the author of the self-test.",
+  "The 11-target set is a bound for the ssh/sshd reachable writers, not a link-time bound for all consumers.",
+  "No Miri/ASan/Loom run and no Rust test suite: no Rust source changed.",
+  "The declared names remain a human cross-check; they are not evidence.",
+  "The one-level field follow is by the audited slot offset (EvpMethodData.destruct_method, 0x40), not by object-identity tracking; the correspondence to that object is the audited slot's declaration plus the recorded provenance chain.",
+  "Site identification uses the audited EVT-METHOD-FREE function/offset scope; it does not independently type the object at every 0x20 displacement in those functions.",
+  "The provenance resolver seeds ABI argument registers symbolically; a function that reads a register it was not passed is treated as a symbolic argument rather than as unknown."
+ ]
+}
