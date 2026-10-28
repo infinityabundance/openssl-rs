@@ -1,0 +1,783 @@
+{
+  "schema": "safe-c33/atlas-refresh/openssh-closure-v1m/v1",
+  "kind": "consumer-closure-receipt",
+  "subphase": "safe-c33/freeze-post-merge-v1m",
+  "generated_utc": "2026-10-28T08:23:38Z",
+  "question": "At the post-merge frozen identity S=7b546f64c, what does the same closure instrument report for ssh and sshd, and is the v1l 90/75/12 set moved by the ENGINE repair or only by artefact identity?",
+  "candidate_identity": {
+    "source_head": "7b546f64cdce09d4d544cc77b3571f83c3df4821",
+    "source_tree": "78fb4d0ca6571d20735904ce1d8590a94a5474b2",
+    "src_content_sha256": "adc1c867559458fb83dc9ff043128ecc0a9395b4e72a172f29f4cadebf4faf4b",
+    "libcrypto_sha256": "b3cd799dd3370131cb5c2e785b820baa38e530385fa541b40c2c7db776b99f14",
+    "libssl_sha256": "5cfd5568536703a03d295d668b630ef0403a30b6b3562d128c8bb47ab20dc296",
+    "install_prefix": "artifacts/phase2/install",
+    "consumer_binaries": {
+      "ssh": "74c2414f2ecb90ca4f502baa067acfe94ac2e55b46841a80658bcf5e4b7ce0d0",
+      "sshd": "48e835e2c8c7d8220d80d96006913d54e54d11bb0b182267b969bbc6d6f30bfd"
+    },
+    "build_relevant_inputs_changed_vs_v1l": true,
+    "change": "10 src/engine files (EngineTableSlot); Cargo/build/tools unchanged vs v1l"
+  },
+  "tool_identity": {
+    "path": "forensics/tools/consumer_closure.py",
+    "sha256": "5761063e66229162df3df568761e7731c827c6e430c682920e68aec0d914f09f",
+    "change": "No analyzer change (same sha256 as v1l). The instrument is the same; the compiled graphs are not."
+  },
+  "consumers": {
+    "ssh": {
+      "counts": {
+        "reachable_files": 313,
+        "reachable_production_obligations": 155,
+        "DISCHARGED": 77,
+        "BLOCKED": 60,
+        "UNKNOWN": 18,
+        "by_mechanism": {
+          "<unmapped>": 9,
+          "ASN1_OCSP": 1,
+          "C_ABI_CONTRACT": 10,
+          "EVP_PKEY_PROVIDER": 62,
+          "RAND_CMS_STORE_KEYFMT": 38,
+          "RUNTIME_CONCURRENCY": 4,
+          "SSL_SESSION": 18,
+          "X509_VERIFY_POLICY": 13
+        },
+        "v1_production_operations_total": 320,
+        "v1_uncontracted_operations_total": 540
+      },
+      "by_status": {
+        "DISCHARGED": 77,
+        "BLOCKED": 60,
+        "UNKNOWN": 18
+      },
+      "by_mechanism": {
+        "<unmapped>": 9,
+        "ASN1_OCSP": 1,
+        "C_ABI_CONTRACT": 10,
+        "EVP_PKEY_PROVIDER": 62,
+        "RAND_CMS_STORE_KEYFMT": 38,
+        "RUNTIME_CONCURRENCY": 4,
+        "SSL_SESSION": 18,
+        "X509_VERIFY_POLICY": 13
+      },
+      "precision_totals": {
+        "indirect_sites": 52025,
+        "resolved_sites": 51780,
+        "unresolved_sites": 245,
+        "reachable_unresolved_sites": 4,
+        "reachable_target_bounded_unresolved_sites": 2,
+        "reachable_contract_bounded_sites": 2,
+        "unclassified_reachable_sites": 0,
+        "resolved_by_reachable_caller": 1
+      },
+      "element_7": {
+        "established": false,
+        "status": "FAIL",
+        "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+        "reachable_unresolved_sites": 4,
+        "target_bounded_unresolved_sites": 2,
+        "contract_bounded_sites": 2,
+        "contract_bounded_by_class": {
+          "ABI_CONTRACT_PROVIDER": 2
+        },
+        "unclassified_reachable_sites": 0,
+        "target_sets_remain_unbounded": true,
+        "why": "2 reachable unresolved site(s) are not contract-bounded, and/or an unclassified site is reachable"
+      },
+      "reachable_unresolved_sites": [
+        {
+          "dso": "libcrypto.so.3",
+          "function": "0x2ed4e0",
+          "reason": "provider ABI contract witness: OsslEncoder.import_object (offset 0x70)",
+          "class": "ABI_CONTRACT_PROVIDER",
+          "text": "call   *%rcx"
+        },
+        {
+          "dso": "libcrypto.so.3",
+          "function": "0x4a4d90",
+          "reason": "reg-value-partial[int]",
+          "class": "materialised",
+          "text": "call   *%r12"
+        },
+        {
+          "dso": "libcrypto.so.3",
+          "function": "0x4a4d90",
+          "reason": "reg-value-partial[int]",
+          "class": "materialised",
+          "text": "call   *%r12"
+        },
+        {
+          "dso": "libcrypto.so.3",
+          "function": "0x512c10",
+          "reason": "provider ABI contract witness: OsslProvider.init_function (offset 0x40)",
+          "class": "ABI_CONTRACT_PROVIDER",
+          "text": "call   *%rax"
+        }
+      ],
+      "evidence_classes": {
+        "libcrypto.so.3": {
+          "R2_resolved": 318,
+          "RCB_reachable_caller_unresolved": 78,
+          "unmatched": 243,
+          "T_in_image_slot_resolved": 14,
+          "RCB_reachable_caller_resolved": 1,
+          "A2_resolved": 13,
+          "R3_resolved": 6,
+          "A1_contract_bounded": 2,
+          "T_semantic_store_resolved": 9
+        }
+      },
+      "refusals": [
+        {
+          "code": "MISSING_BOUNDARY_RECEIPT",
+          "detail": "13 reachable file(s) carry production obligations but no boundary-sweep receipt owns them"
+        },
+        {
+          "code": "UNKNOWN_OBLIGATION",
+          "detail": "18 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED"
+        },
+        {
+          "code": "UNKNOWN_MECHANISM",
+          "detail": "9 reachable file(s) with production obligations map to no registered mechanism"
+        }
+      ],
+      "refusal_sites": {
+        "UNKNOWN_OBLIGATION": [
+          "V1:src/cms/cms_lib.rs:1378:UNSAFE_FN_DEF",
+          "V1:src/cms/cms_lib.rs:1384:UNSAFE_FN_DEF",
+          "V1:src/engine/eng_list.rs:90:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_asnmth.rs:72:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_cipher.rs:55:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_dh.rs:51:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_digest.rs:66:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_dsa.rs:51:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_eckey.rs:51:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_pkmeth.rs:53:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_rand.rs:51:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_rsa.rs:52:UNSAFE_FN_DEF",
+          "V1:src/evp/legacy_md4.rs:122:UNSAFE_FN_DEF",
+          "V1:src/evp/legacy_md4.rs:129:UNSAFE_FN_DEF",
+          "V1:src/evp/legacy_md4.rs:136:UNSAFE_FN_DEF",
+          "V1:src/ml_kem/key.rs:272:UNSAFE_FN_DEF",
+          "V1:src/x509/v3_extku.rs:184:UNSAFE_FN_DEF",
+          "V1:src/x509/v3_extku.rs:212:UNSAFE_FN_DEF"
+        ],
+        "UNKNOWN_MECHANISM": [
+          "src/engine/tb_asnmth.rs",
+          "src/engine/tb_cipher.rs",
+          "src/engine/tb_dh.rs",
+          "src/engine/tb_digest.rs",
+          "src/engine/tb_dsa.rs",
+          "src/engine/tb_eckey.rs",
+          "src/engine/tb_pkmeth.rs",
+          "src/engine/tb_rand.rs",
+          "src/engine/tb_rsa.rs"
+        ],
+        "MISSING_BOUNDARY_RECEIPT": [
+          "src/cms/cms_lib.rs",
+          "src/engine/eng_list.rs",
+          "src/engine/tb_cipher.rs",
+          "src/engine/tb_dh.rs",
+          "src/engine/tb_digest.rs",
+          "src/engine/tb_dsa.rs",
+          "src/engine/tb_eckey.rs",
+          "src/engine/tb_pkmeth.rs",
+          "src/engine/tb_rand.rs",
+          "src/engine/tb_rsa.rs",
+          "src/evp/legacy_md4.rs",
+          "src/ml_kem/key.rs",
+          "src/x509/v3_extku.rs"
+        ]
+      },
+      "verdict": {
+        "state": "REFUSED",
+        "safe_compatible": false,
+        "reason": "closure refused: MISSING_BOUNDARY_RECEIPT (13 reachable file(s) carry production obligations but no boundary-sweep receipt owns them); UNKNOWN_OBLIGATION (18 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED); UNKNOWN_MECHANISM (9 reachable file(s) with production obligations map to no registered mechanism)"
+      },
+      "boundary_coverage": {
+        "reachable_files_with_receipt": 35,
+        "reachable_files_without_receipt": 13
+      },
+      "reachable_files_sha256": "fc2fd31fc550d72e64833af5f745d9f2ff5871d75f27ab814077c12060f19253"
+    },
+    "sshd": {
+      "counts": {
+        "reachable_files": 303,
+        "reachable_production_obligations": 155,
+        "DISCHARGED": 77,
+        "BLOCKED": 60,
+        "UNKNOWN": 18,
+        "by_mechanism": {
+          "<unmapped>": 9,
+          "ASN1_OCSP": 1,
+          "C_ABI_CONTRACT": 10,
+          "EVP_PKEY_PROVIDER": 62,
+          "RAND_CMS_STORE_KEYFMT": 38,
+          "RUNTIME_CONCURRENCY": 4,
+          "SSL_SESSION": 18,
+          "X509_VERIFY_POLICY": 13
+        },
+        "v1_production_operations_total": 320,
+        "v1_uncontracted_operations_total": 540
+      },
+      "by_status": {
+        "DISCHARGED": 77,
+        "BLOCKED": 60,
+        "UNKNOWN": 18
+      },
+      "by_mechanism": {
+        "<unmapped>": 9,
+        "ASN1_OCSP": 1,
+        "C_ABI_CONTRACT": 10,
+        "EVP_PKEY_PROVIDER": 62,
+        "RAND_CMS_STORE_KEYFMT": 38,
+        "RUNTIME_CONCURRENCY": 4,
+        "SSL_SESSION": 18,
+        "X509_VERIFY_POLICY": 13
+      },
+      "precision_totals": {
+        "indirect_sites": 52025,
+        "resolved_sites": 51780,
+        "unresolved_sites": 245,
+        "reachable_unresolved_sites": 4,
+        "reachable_target_bounded_unresolved_sites": 2,
+        "reachable_contract_bounded_sites": 2,
+        "unclassified_reachable_sites": 0,
+        "resolved_by_reachable_caller": 1
+      },
+      "element_7": {
+        "established": false,
+        "status": "FAIL",
+        "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+        "reachable_unresolved_sites": 4,
+        "target_bounded_unresolved_sites": 2,
+        "contract_bounded_sites": 2,
+        "contract_bounded_by_class": {
+          "ABI_CONTRACT_PROVIDER": 2
+        },
+        "unclassified_reachable_sites": 0,
+        "target_sets_remain_unbounded": true,
+        "why": "2 reachable unresolved site(s) are not contract-bounded, and/or an unclassified site is reachable"
+      },
+      "reachable_unresolved_sites": [
+        {
+          "dso": "libcrypto.so.3",
+          "function": "0x4a4d90",
+          "reason": "reg-value-partial[int]",
+          "class": "materialised",
+          "text": "call   *%r12"
+        },
+        {
+          "dso": "libcrypto.so.3",
+          "function": "0x4a4d90",
+          "reason": "reg-value-partial[int]",
+          "class": "materialised",
+          "text": "call   *%r12"
+        },
+        {
+          "dso": "libcrypto.so.3",
+          "function": "0x512c10",
+          "reason": "provider ABI contract witness: OsslProvider.init_function (offset 0x40)",
+          "class": "ABI_CONTRACT_PROVIDER",
+          "text": "call   *%rax"
+        },
+        {
+          "dso": "libcrypto.so.3",
+          "function": "0x2ed4e0",
+          "reason": "provider ABI contract witness: OsslEncoder.import_object (offset 0x70)",
+          "class": "ABI_CONTRACT_PROVIDER",
+          "text": "call   *%rcx"
+        }
+      ],
+      "evidence_classes": {
+        "libcrypto.so.3": {
+          "R2_resolved": 318,
+          "RCB_reachable_caller_unresolved": 78,
+          "unmatched": 243,
+          "T_in_image_slot_resolved": 14,
+          "RCB_reachable_caller_resolved": 1,
+          "A2_resolved": 13,
+          "R3_resolved": 6,
+          "A1_contract_bounded": 2,
+          "T_semantic_store_resolved": 9
+        }
+      },
+      "refusals": [
+        {
+          "code": "MISSING_BOUNDARY_RECEIPT",
+          "detail": "13 reachable file(s) carry production obligations but no boundary-sweep receipt owns them"
+        },
+        {
+          "code": "UNKNOWN_OBLIGATION",
+          "detail": "18 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED"
+        },
+        {
+          "code": "UNKNOWN_MECHANISM",
+          "detail": "9 reachable file(s) with production obligations map to no registered mechanism"
+        }
+      ],
+      "refusal_sites": {
+        "UNKNOWN_OBLIGATION": [
+          "V1:src/cms/cms_lib.rs:1378:UNSAFE_FN_DEF",
+          "V1:src/cms/cms_lib.rs:1384:UNSAFE_FN_DEF",
+          "V1:src/engine/eng_list.rs:90:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_asnmth.rs:72:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_cipher.rs:55:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_dh.rs:51:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_digest.rs:66:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_dsa.rs:51:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_eckey.rs:51:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_pkmeth.rs:53:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_rand.rs:51:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_rsa.rs:52:UNSAFE_FN_DEF",
+          "V1:src/evp/legacy_md4.rs:122:UNSAFE_FN_DEF",
+          "V1:src/evp/legacy_md4.rs:129:UNSAFE_FN_DEF",
+          "V1:src/evp/legacy_md4.rs:136:UNSAFE_FN_DEF",
+          "V1:src/ml_kem/key.rs:272:UNSAFE_FN_DEF",
+          "V1:src/x509/v3_extku.rs:184:UNSAFE_FN_DEF",
+          "V1:src/x509/v3_extku.rs:212:UNSAFE_FN_DEF"
+        ],
+        "UNKNOWN_MECHANISM": [
+          "src/engine/tb_asnmth.rs",
+          "src/engine/tb_cipher.rs",
+          "src/engine/tb_dh.rs",
+          "src/engine/tb_digest.rs",
+          "src/engine/tb_dsa.rs",
+          "src/engine/tb_eckey.rs",
+          "src/engine/tb_pkmeth.rs",
+          "src/engine/tb_rand.rs",
+          "src/engine/tb_rsa.rs"
+        ],
+        "MISSING_BOUNDARY_RECEIPT": [
+          "src/cms/cms_lib.rs",
+          "src/engine/eng_list.rs",
+          "src/engine/tb_cipher.rs",
+          "src/engine/tb_dh.rs",
+          "src/engine/tb_digest.rs",
+          "src/engine/tb_dsa.rs",
+          "src/engine/tb_eckey.rs",
+          "src/engine/tb_pkmeth.rs",
+          "src/engine/tb_rand.rs",
+          "src/engine/tb_rsa.rs",
+          "src/evp/legacy_md4.rs",
+          "src/ml_kem/key.rs",
+          "src/x509/v3_extku.rs"
+        ]
+      },
+      "verdict": {
+        "state": "REFUSED",
+        "safe_compatible": false,
+        "reason": "closure refused: MISSING_BOUNDARY_RECEIPT (13 reachable file(s) carry production obligations but no boundary-sweep receipt owns them); UNKNOWN_OBLIGATION (18 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED); UNKNOWN_MECHANISM (9 reachable file(s) with production obligations map to no registered mechanism)"
+      },
+      "boundary_coverage": {
+        "reachable_files_with_receipt": 35,
+        "reachable_files_without_receipt": 13
+      },
+      "reachable_files_sha256": "72e93ee948033dcf3ffed9ec2795416a47e94a6b70c872d7701837cbeb4208db"
+    }
+  },
+  "obligations": {
+    "count": 155,
+    "deep_equal_between_consumers": true,
+    "by_status": {
+      "DISCHARGED": 77,
+      "BLOCKED": 60,
+      "UNKNOWN": 18
+    },
+    "by_mechanism": {
+      "<unmapped>": 9,
+      "ASN1_OCSP": 1,
+      "C_ABI_CONTRACT": 10,
+      "EVP_PKEY_PROVIDER": 62,
+      "RAND_CMS_STORE_KEYFMT": 38,
+      "RUNTIME_CONCURRENCY": 4,
+      "SSL_SESSION": 18,
+      "X509_VERIFY_POLICY": 13
+    },
+    "unknown_ids": [
+      "V1:src/cms/cms_lib.rs:1378:UNSAFE_FN_DEF",
+      "V1:src/cms/cms_lib.rs:1384:UNSAFE_FN_DEF",
+      "V1:src/engine/eng_list.rs:90:UNSAFE_FN_DEF",
+      "V1:src/engine/tb_asnmth.rs:72:UNSAFE_FN_DEF",
+      "V1:src/engine/tb_cipher.rs:55:UNSAFE_FN_DEF",
+      "V1:src/engine/tb_dh.rs:51:UNSAFE_FN_DEF",
+      "V1:src/engine/tb_digest.rs:66:UNSAFE_FN_DEF",
+      "V1:src/engine/tb_dsa.rs:51:UNSAFE_FN_DEF",
+      "V1:src/engine/tb_eckey.rs:51:UNSAFE_FN_DEF",
+      "V1:src/engine/tb_pkmeth.rs:53:UNSAFE_FN_DEF",
+      "V1:src/engine/tb_rand.rs:51:UNSAFE_FN_DEF",
+      "V1:src/engine/tb_rsa.rs:52:UNSAFE_FN_DEF",
+      "V1:src/evp/legacy_md4.rs:122:UNSAFE_FN_DEF",
+      "V1:src/evp/legacy_md4.rs:129:UNSAFE_FN_DEF",
+      "V1:src/evp/legacy_md4.rs:136:UNSAFE_FN_DEF",
+      "V1:src/ml_kem/key.rs:272:UNSAFE_FN_DEF",
+      "V1:src/x509/v3_extku.rs:184:UNSAFE_FN_DEF",
+      "V1:src/x509/v3_extku.rs:212:UNSAFE_FN_DEF"
+    ],
+    "rows_sha256": "98c4636fde03c52773c2611c68b0d02f85d162bd7a543b76b6004acc09cbfc7b"
+  },
+  "result": {
+    "element_7_ssh": "FAIL",
+    "element_7_sshd": "FAIL",
+    "discharged": 77,
+    "blocked": 60,
+    "unknown": 18,
+    "verdict": {
+      "state": "REFUSED",
+      "safe_compatible": false,
+      "reason": "closure refused: MISSING_BOUNDARY_RECEIPT (13 reachable file(s) carry production obligations but no boundary-sweep receipt owns them); UNKNOWN_OBLIGATION (18 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED); UNKNOWN_MECHANISM (9 reachable file(s) with production obligations map to no registered mechanism)"
+    }
+  },
+  "comparison_to_v1l": {
+    "like_for_like": false,
+    "why": "The src diff is 10 ENGINE files, but the compiled reachable set is not stable: ssh lost 18 and gained 10 files, sshd lost 22 and gained 10, and 0 of the changed files are edited by the src diff. The two new element-7 residual sites sit in CRYPTO_cbc128_encrypt, whose disassembly is byte-identical in the old and new DSOs. This is the known graph/target-set instability across rebuilds, not a like-for-like successor measurement.",
+    "v1l_counts": {
+      "ssh": {
+        "files": 321,
+        "obligations": 177,
+        "DISCHARGED": 90,
+        "BLOCKED": 75,
+        "UNKNOWN": 12
+      },
+      "sshd": {
+        "files": 315,
+        "obligations": 177,
+        "DISCHARGED": 90,
+        "BLOCKED": 75,
+        "UNKNOWN": 12
+      }
+    },
+    "v1m_counts": {
+      "ssh": {
+        "files": 313,
+        "obligations": 155,
+        "DISCHARGED": 77,
+        "BLOCKED": 60,
+        "UNKNOWN": 18
+      },
+      "sshd": {
+        "files": 303,
+        "obligations": 155,
+        "DISCHARGED": 77,
+        "BLOCKED": 60,
+        "UNKNOWN": 18
+      }
+    },
+    "delta": {
+      "ssh": {
+        "files": -8,
+        "obligations": -22,
+        "DISCHARGED": -13,
+        "BLOCKED": -15,
+        "UNKNOWN": 6
+      },
+      "sshd": {
+        "files": -12,
+        "obligations": -22,
+        "DISCHARGED": -13,
+        "BLOCKED": -15,
+        "UNKNOWN": 6
+      }
+    },
+    "reachable_set_changed_by_rebuild": {
+      "ssh": {
+        "v1m_files": 313,
+        "v1l_files": 321,
+        "v1m_direct_files": 301,
+        "v1l_direct_files": 310,
+        "v1m_direct_functions": 2583,
+        "v1l_direct_functions": 2616,
+        "added": [
+          {
+            "file": "src/bn/gf2m.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/evp/e_rc4.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/evp/legacy_md4.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/encode_key2blob.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/mac.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/ssl/t1_trce.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/x509/v3_extku.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/x509/v3_prn.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/x509/v3_tlsf.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/x509/x509_req.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          }
+        ],
+        "removed": [
+          {
+            "file": "src/apps/enc.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/asn1/x_algor.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/cmp/cmp_http.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/cms/cms_asn1.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/cms/cms_dd.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/cms/cms_rsa.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/dh/ameth.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/dsa/mod.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/evp/e_rc4_hmac_md5.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/ffc/params.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/ocsp/v3_ocsp.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/ec_kmgmt.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/encode_key2ms.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/legacyprov.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/securitycheck_default.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/rsa/ameth.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/runtime/bio/bss_null.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/sm3/legacy_sm3.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          }
+        ],
+        "added_explained": 0,
+        "removed_explained": 0
+      },
+      "sshd": {
+        "v1m_files": 303,
+        "v1l_files": 315,
+        "v1m_direct_files": 294,
+        "v1l_direct_files": 306,
+        "v1m_direct_functions": 2488,
+        "v1l_direct_functions": 2531,
+        "added": [
+          {
+            "file": "src/bn/gf2m.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/evp/e_rc4.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/evp/legacy_md4.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/encode_key2blob.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/mac.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/ssl/t1_trce.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/x509/v3_extku.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/x509/v3_prn.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/x509/v3_tlsf.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/x509/x509_req.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          }
+        ],
+        "removed": [
+          {
+            "file": "src/apps/enc.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/asn1/bitstr.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/asn1/d2i.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/asn1/prim.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/asn1/string.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/asn1/x_algor.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/cmp/cmp_http.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/cms/cms_asn1.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/cms/cms_dd.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/cms/cms_rsa.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/dh/ameth.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/dh/key.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/dsa/mod.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/ffc/params.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/ocsp/v3_ocsp.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/ec_kmgmt.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/encode_key2ms.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/legacyprov.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/securitycheck_default.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/rsa/ameth.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/runtime/bio/bss_null.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/sm3/legacy_sm3.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          }
+        ],
+        "added_explained": 0,
+        "removed_explained": 0
+      }
+    },
+    "delta_classification": {
+      "ssh": {
+        "explained_by_src_diff": 0,
+        "unexplained_by_src_diff": 28
+      },
+      "sshd": {
+        "explained_by_src_diff": 0,
+        "unexplained_by_src_diff": 32
+      },
+      "element_7": "UNEXPLAINED_BY_SRC_DIFF: the two new materialised residual sites are in CRYPTO_cbc128_encrypt (0x4a4d90), byte-identical old vs new; the site was not residual in v1l.",
+      "conclusion": "Do not attribute the v1m D/B/U or element-7 change to the ENGINE repair. The instrument's compiled graph and target-set classification moved with the rebuild; the v1l and v1m counts are not like-for-like."
+    },
+    "line_identity_note": "The nine engine callbacks moved from v1l ids tb_*:74/56/54/68/54/54/55/54/55 to v1m ids tb_*:72/55/51/66/51/51/53/51/52 because the typed slot declaration replaced the raw static. The status was UNKNOWN on both sides."
+  },
+  "refusals_remain": {
+    "ssh": [
+      "MISSING_BOUNDARY_RECEIPT",
+      "UNKNOWN_OBLIGATION",
+      "UNKNOWN_MECHANISM"
+    ],
+    "sshd": [
+      "MISSING_BOUNDARY_RECEIPT",
+      "UNKNOWN_OBLIGATION",
+      "UNKNOWN_MECHANISM"
+    ]
+  },
+  "non_claims": [
+    "This is a bounded post-merge checkpoint, not a SEAL and not a SAFE_COMPATIBLE graduation.",
+    "The v1m counts are REFUSED on three grounds: MISSING_BOUNDARY_RECEIPT, UNKNOWN_OBLIGATION, UNKNOWN_MECHANISM.",
+    "The nine ENGINE callbacks have a written discharge argument (engine-callback-discharge.json) but are not registered in state.json; the instrument still reports them UNKNOWN.",
+    "A green library suite is not a safety certificate for the consumers."
+  ]
+}

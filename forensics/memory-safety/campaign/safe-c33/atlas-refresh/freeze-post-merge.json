@@ -1,0 +1,679 @@
+{
+  "schema": "safe-c33/freeze/post-merge/v1",
+  "kind": "candidate-freeze-receipt",
+  "subphase": "safe-c33/freeze-post-merge-v1m",
+  "generated_utc": "2026-10-28T08:23:38Z",
+  "scope": "Bounded post-merge checkpoint. NOT a SEAL, NOT a graduation.",
+  "S": {
+    "candidate": "7b546f64cdce09d4d544cc77b3571f83c3df4821",
+    "tree": "78fb4d0ca6571d20735904ce1d8590a94a5474b2",
+    "branch": "main",
+    "tracked_working_tree_clean_at_freeze": true,
+    "crate_version": "0.0.42",
+    "src_rs_files": 877,
+    "src_content_sha256": "adc1c867559458fb83dc9ff043128ecc0a9395b4e72a172f29f4cadebf4faf4b",
+    "src_content_hash_rule": "sha256('openssl-rs/src-rs/v1\\0' + sorted relpath\\0bytes\\0)",
+    "build_inputs": {
+      "Cargo.toml": {
+        "sha256": "2dafeed41d5d6ea1282303f0a60099c09f8d0c3cb4b517ca4137bc098c4c0d30",
+        "size": 8714
+      },
+      "Cargo.lock": {
+        "sha256": "416d7a8a72d72f22ff4d830556759285855d50732f16849212fc83d26e81faa3",
+        "size": 6902
+      },
+      "build.rs": {
+        "sha256": "33d80345497d54478b1aa80355f08348395d8dbaaa30d7f346d79ef4c664b391",
+        "size": 21243
+      },
+      "rust-toolchain.toml": {
+        "sha256": "51b89aac2174179a4470434e6666f9f54d52309005332324154cdeeb1f66dd58",
+        "size": 263
+      },
+      "forensics/tools/build_phase2.sh": {
+        "sha256": "ebcad0e3a71d9b81927701019a0482fb881fa3c6f8cd7742263c3626552407e5",
+        "size": 12598
+      },
+      "forensics/tools/implemented_surface.py": {
+        "sha256": "f5df950e8f08b14777ef427e5ee5cca07e54880fd0599d17c9adb15e2d87401a",
+        "size": 11759
+      },
+      "forensics/tools/phase2_shell.py": {
+        "sha256": "dc9c72aa3ad298c7feb449b2de725a708feb5a035c85d6432be663e6c263f355",
+        "size": 23984
+      },
+      "forensics/tools/phase2_courts.py": {
+        "sha256": "9a0c7c450322dbf95f75525d8a7ad1768f3c9b3b56f9f99f593778d857867eda",
+        "size": 32110
+      },
+      "forensics/tools/require_court.sh": {
+        "sha256": "51077d2cfb3997a807e6aab051faa3d8ad4e020d21aa229758c0abdc6cf8907f",
+        "size": 1500
+      },
+      "forensics/tools/consumer_closure.py": {
+        "sha256": "5761063e66229162df3df568761e7731c827c6e430c682920e68aec0d914f09f",
+        "size": 280608
+      },
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1_census.py": {
+        "sha256": "b40c8a361f331e9efedd4f559d93f55f8da1d26ff7cd334df537c00a2c5f8712",
+        "size": 67292
+      },
+      "forensics/tools/unknown_obligations_v1l.py": {
+        "sha256": "556609a34efa262674654518173ae9415896eb2804e340bbb3c472d92afd8ce7",
+        "size": 28388
+      }
+    },
+    "combined_build_input_sha256": "fcc09694c8089969237d348f28ae0dbf591b6578539926d1f8643149b70d6f64",
+    "src_diff_vs_v1l": "10 files: src/engine/{eng_table,tb_asnmth,tb_cipher,tb_dh,tb_digest,tb_dsa,tb_eckey,tb_pkmeth,tb_rand,tb_rsa}.rs"
+  },
+  "build": {
+    "recipe": "forensics/tools/build_phase2.sh",
+    "recipe_sha256": "ebcad0e3a71d9b81927701019a0482fb881fa3c6f8cd7742263c3626552407e5",
+    "target_dir": "/work/target (hardwired; CARGO_TARGET_DIR unset)",
+    "build_log": "court/tmp/freeze-v1m/logs/build-phase2.log",
+    "build_log_sha256": "1046116eacf2241bfe971ffa4441e4a5a363abd775553c7b9bdc9e9cb2b821e9",
+    "exit_code": 0,
+    "completion_marker": "phase 2 shell built",
+    "abi_courts": {
+      "source": "artifacts/phase2/COURTS.json",
+      "all_pass": true,
+      "count": 11,
+      "names": [
+        "ABI-SYMBOL",
+        "ABI-VERSION",
+        "ABI-DYNAMIC",
+        "ABI-LAYOUT",
+        "ABI-LINK",
+        "ABI-LOAD",
+        "ABI-CONSTANTS",
+        "ABI-MATRIX",
+        "ABI-SUBSTITUTION",
+        "ABI-INSTALL-LAYOUT",
+        "libcrypto-contamination"
+      ]
+    },
+    "stray_outputs_removed_before_build": [
+      "artifacts/phase2/libcrypto.so.3",
+      "artifacts/phase2/libssl.so.3",
+      "artifacts/phase2/legacy.so",
+      "artifacts/phase2/openssl"
+    ],
+    "regenerated_build_outputs": {
+      "forensics/atlas/implemented-surface.json": "d26624cdfe9e266e700c86901735f0eec8aa61fe77c83d4a859b97e37c20cc22",
+      "artifacts/phase2/COURTS.json": "07ed4b78909ae394fc81ca3ddc321304e0c7219fb853da4e290cfbbfa137104e"
+    }
+  },
+  "artefacts": {
+    "libcrypto.so.3": {
+      "install_path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "top_level_path": "artifacts/phase2/libcrypto.so.3",
+      "install_sha256": "b3cd799dd3370131cb5c2e785b820baa38e530385fa541b40c2c7db776b99f14",
+      "top_level_sha256": "b3cd799dd3370131cb5c2e785b820baa38e530385fa541b40c2c7db776b99f14",
+      "size": 16861376,
+      "install_matches_top_level": true
+    },
+    "libssl.so.3": {
+      "install_path": "artifacts/phase2/install/lib/libssl.so.3",
+      "top_level_path": "artifacts/phase2/libssl.so.3",
+      "install_sha256": "5cfd5568536703a03d295d668b630ef0403a30b6b3562d128c8bb47ab20dc296",
+      "top_level_sha256": "5cfd5568536703a03d295d668b630ef0403a30b6b3562d128c8bb47ab20dc296",
+      "size": 16570352,
+      "install_matches_top_level": true
+    },
+    "ossl-modules/legacy.so": {
+      "install_path": "artifacts/phase2/install/lib/ossl-modules/legacy.so",
+      "top_level_path": "artifacts/phase2/legacy.so",
+      "install_sha256": "3915c99dfbb6769077ce9d1b522982718681f737a0ae72fb543e91fbadb8f5b8",
+      "top_level_sha256": "3915c99dfbb6769077ce9d1b522982718681f737a0ae72fb543e91fbadb8f5b8",
+      "size": 16537352,
+      "install_matches_top_level": true
+    },
+    "bin/openssl": {
+      "install_path": "artifacts/phase2/install/bin/openssl",
+      "top_level_path": "artifacts/phase2/openssl",
+      "install_sha256": "b4b0ad2c92936346aee5d485401fb0f692df5d5e9ccd7bb5c66708db68c94715",
+      "top_level_sha256": "b4b0ad2c92936346aee5d485401fb0f692df5d5e9ccd7bb5c66708db68c94715",
+      "size": 12373824,
+      "install_matches_top_level": true
+    }
+  },
+  "export_set_delta": {
+    "compared_against": {
+      "libcrypto.so.3": "247803f1b57bc109366aeb0831ec27d5680091201920b9f13f5cd61736f52577",
+      "libssl.so.3": "3ca46e32588837f7303c0ecbaf12a0376f05253559d0e364d3f76521d6c55853"
+    },
+    "libcrypto": {
+      "previous_exports": 5906,
+      "new_exports": 5906,
+      "added": 0,
+      "removed": 0,
+      "sets_identical": true,
+      "normalisation": "nm -D --defined-only | last field | sed 's/@.*//' | sort -u"
+    },
+    "libssl": {
+      "previous_exports": 608,
+      "new_exports": 608,
+      "added": 0,
+      "removed": 0,
+      "sets_identical": true,
+      "normalisation": "nm -D --defined-only | last field | sed 's/@.*//' | sort -u"
+    },
+    "required": "0 added and 0 removed",
+    "result": "PASS: 0 added, 0 removed for both libraries"
+  },
+  "consumers": {
+    "ssh": {
+      "artifact_path": "court/tmp/openssh-closure/client-v1m/openssh-9.9p1/ssh",
+      "artifact_sha256": "74c2414f2ecb90ca4f502baa067acfe94ac2e55b46841a80658bcf5e4b7ce0d0",
+      "artifact_size": 3401744,
+      "build_record_path": "court/tmp/openssh-closure/openssh-v1m-ssh-build-record.json",
+      "build_record_sha256": "e021a26373eaedf7a1bab2189bbc25c5b3cc2fcf135839ce9c7262f394092109",
+      "source_root_hash": "63046b625ef6d60491c36fc6780f788e810b3203b52bd01d5c9f192a93d3d7d3",
+      "candidate_libcrypto_sha256": "b3cd799dd3370131cb5c2e785b820baa38e530385fa541b40c2c7db776b99f14",
+      "needed": [
+        "libcrypto.so.3",
+        "libz.so.1",
+        "libc.so.6"
+      ],
+      "ldd_resolves_install_libcrypto": true,
+      "workload": "openssh: ssh-keygen Ed25519 sign/verify (libcrypto)",
+      "workload_steps": {
+        "keygen": {
+          "exit": 0,
+          "ok": true
+        },
+        "sign": {
+          "exit": 0,
+          "ok": true
+        },
+        "verify": {
+          "exit": 0,
+          "ok": true,
+          "stdout": "Good \"file\" signature for runtime with ED25519 key SHA256:/wdTHMDDmvYtPFvDBY5C2N31zK9skR1N/jvEUaT+wCs"
+        },
+        "negative_tampered_verify": {
+          "exit": 255,
+          "ok": false,
+          "stderr": "Signature verification failed: incorrect signature"
+        },
+        "ssh -V": {
+          "exit": 0,
+          "ok": true,
+          "stderr": "OpenSSH_9.9p1, OpenSSL 3.6.4 25 Aug 2026"
+        }
+      },
+      "positive_ok": true,
+      "negative_rejected": true,
+      "transcripts": {
+        "verify.out": {
+          "path": "court/tmp/openssh-closure/client-v1m/workload/verify.out",
+          "sha256": "5a3a72f79cfc4f236bc29fd50a0bbde709c979f096dc943820535e4ad1652145"
+        },
+        "tamper.err": {
+          "path": "court/tmp/openssh-closure/client-v1m/workload/tamper.err",
+          "sha256": "03349d381303cfcb422b5767cdc3a12dd55087f7533e3f42fd0b4f0d092aaf41"
+        }
+      }
+    },
+    "sshd": {
+      "artifact_path": "court/tmp/openssh-closure/server-v1m/openssh-9.9p1/sshd",
+      "artifact_sha256": "48e835e2c8c7d8220d80d96006913d54e54d11bb0b182267b969bbc6d6f30bfd",
+      "artifact_size": 1763248,
+      "build_record_path": "court/tmp/openssh-closure/openssh-v1m-server-build-record.json",
+      "build_record_sha256": "c8416a1d3783df86e4c627847853c13e889ce6cc60125ed98ed32a0070990f48",
+      "source_root_hash": "63046b625ef6d60491c36fc6780f788e810b3203b52bd01d5c9f192a93d3d7d3",
+      "candidate_libcrypto_sha256": "b3cd799dd3370131cb5c2e785b820baa38e530385fa541b40c2c7db776b99f14",
+      "needed": [
+        "libcrypt.so.1",
+        "libcrypto.so.3",
+        "libz.so.1",
+        "libc.so.6"
+      ],
+      "ldd_resolves_install_libcrypto": true,
+      "workload": "openssh-server: sshd -D, verified exec, host-key mismatch rejected",
+      "port": 35981,
+      "listening": true,
+      "workload_steps": {
+        "keygens": {
+          "exit": 0,
+          "ok": true
+        },
+        "positive_exec": {
+          "exit": 0,
+          "ok": true,
+          "stdout": "ok"
+        },
+        "negative_hostkey_mismatch": {
+          "exit": 255,
+          "ok": false,
+          "stderr_marker_count": 1,
+          "stderr": "Host key for [127.0.0.1]:35981 has changed and you have requested strict checking.\nHost key verification failed."
+        },
+        "sshd -V": {
+          "exit": 0,
+          "ok": true,
+          "stderr": "OpenSSH_9.9p1, OpenSSL 3.6.4 25 Aug 2026"
+        }
+      },
+      "positive_ok": true,
+      "negative_rejected": true,
+      "transcripts": {
+        "pos.out": {
+          "path": "court/tmp/openssh-closure/server-v1m/workload/pos.out",
+          "sha256": "dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22"
+        },
+        "neg.err": {
+          "path": "court/tmp/openssh-closure/server-v1m/workload/neg.err",
+          "sha256": "24cd7f266fa3fb7484d1bb8b8715b6c7d210d8dd0892c78bbd7db4eff7ee77aa"
+        }
+      }
+    },
+    "relink_contract": {
+      "source": "openssh-9.9p1.tar.gz",
+      "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+      "patches_applied": [],
+      "ldflags": "-Wl,--no-as-needed -Wl,-rpath,/work/artifacts/phase2/install/lib",
+      "install_used": "artifacts/phase2/install only"
+    }
+  },
+  "inventory": {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1m-candidate-freeze.json",
+    "sha256": "2722a38f5fd36fbddc16ade4a352f2f7b605feafdb1a17fd1dd067f7c40d8581",
+    "source_head": "7b546f64cdce09d4d544cc77b3571f83c3df4821",
+    "src_content_sha256": "adc1c867559458fb83dc9ff043128ecc0a9395b4e72a172f29f4cadebf4faf4b",
+    "compiler_sites": 61383,
+    "compiler_by_kind": {
+      "UNSAFE_BLOCK": 47266,
+      "UNSAFE_EXTERN_BLOCK": 10,
+      "UNSAFE_FN_DEF": 13762,
+      "UNSAFE_IMPL": 336,
+      "UNSAFE_TRAIT": 9
+    },
+    "production_blockers": 320,
+    "bound_artefacts": {
+      "libcrypto.so.3": "b3cd799dd3370131cb5c2e785b820baa38e530385fa541b40c2c7db776b99f14",
+      "libssl.so.3": "5cfd5568536703a03d295d668b630ef0403a30b6b3562d128c8bb47ab20dc296",
+      "legacy.so": "3915c99dfbb6769077ce9d1b522982718681f737a0ae72fb543e91fbadb8f5b8",
+      "openssl": "b4b0ad2c92936346aee5d485401fb0f692df5d5e9ccd7bb5c66708db68c94715"
+    },
+    "census_scope_note": "Inventory bound to S=7b546f64c and the rebuilt artefacts; it is not a discharge."
+  },
+  "closure": {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-closure-v1m.json",
+    "sha256": "e936a35fe4f6ce272d1b990c7610ab1a898c4bf8a4a2447e918a7d6d6d1ef891",
+    "raw": {
+      "ssh": "court/tmp/openssh-closure/closure-ssh-v1m.json",
+      "ssh_sha256": "d490a3088cef4b909ed78e1ec754c84c75cd247a41c3bfad2b7c75bdc47d4832",
+      "sshd": "court/tmp/openssh-closure/closure-sshd-v1m.json",
+      "sshd_sha256": "549b79bdcf39e18b3d298cda7f5e786500905b65f74384c44921b7a04904cbba"
+    },
+    "ssh": {
+      "reachable_files": 313,
+      "reachable_production_obligations": 155,
+      "DISCHARGED": 77,
+      "BLOCKED": 60,
+      "UNKNOWN": 18
+    },
+    "sshd": {
+      "reachable_files": 303,
+      "reachable_production_obligations": 155,
+      "DISCHARGED": 77,
+      "BLOCKED": 60,
+      "UNKNOWN": 18
+    },
+    "element_7": {
+      "ssh": "FAIL",
+      "sshd": "FAIL"
+    },
+    "refusals": {
+      "ssh": [
+        "MISSING_BOUNDARY_RECEIPT",
+        "UNKNOWN_OBLIGATION",
+        "UNKNOWN_MECHANISM"
+      ],
+      "sshd": [
+        "MISSING_BOUNDARY_RECEIPT",
+        "UNKNOWN_OBLIGATION",
+        "UNKNOWN_MECHANISM"
+      ]
+    },
+    "like_for_like_vs_v1l": false,
+    "reachable_set_changed": {
+      "ssh": {
+        "v1m_files": 313,
+        "v1l_files": 321,
+        "v1m_direct_files": 301,
+        "v1l_direct_files": 310,
+        "v1m_direct_functions": 2583,
+        "v1l_direct_functions": 2616,
+        "added": [
+          {
+            "file": "src/bn/gf2m.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/evp/e_rc4.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/evp/legacy_md4.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/encode_key2blob.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/mac.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/ssl/t1_trce.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/x509/v3_extku.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/x509/v3_prn.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/x509/v3_tlsf.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/x509/x509_req.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          }
+        ],
+        "removed": [
+          {
+            "file": "src/apps/enc.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/asn1/x_algor.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/cmp/cmp_http.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/cms/cms_asn1.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/cms/cms_dd.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/cms/cms_rsa.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/dh/ameth.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/dsa/mod.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/evp/e_rc4_hmac_md5.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/ffc/params.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/ocsp/v3_ocsp.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/ec_kmgmt.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/encode_key2ms.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/legacyprov.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/securitycheck_default.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/rsa/ameth.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/runtime/bio/bss_null.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/sm3/legacy_sm3.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          }
+        ],
+        "added_explained": 0,
+        "removed_explained": 0
+      },
+      "sshd": {
+        "v1m_files": 303,
+        "v1l_files": 315,
+        "v1m_direct_files": 294,
+        "v1l_direct_files": 306,
+        "v1m_direct_functions": 2488,
+        "v1l_direct_functions": 2531,
+        "added": [
+          {
+            "file": "src/bn/gf2m.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/evp/e_rc4.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/evp/legacy_md4.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/encode_key2blob.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/mac.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/ssl/t1_trce.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/x509/v3_extku.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/x509/v3_prn.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/x509/v3_tlsf.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/x509/x509_req.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          }
+        ],
+        "removed": [
+          {
+            "file": "src/apps/enc.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/asn1/bitstr.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/asn1/d2i.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/asn1/prim.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/asn1/string.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/asn1/x_algor.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/cmp/cmp_http.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/cms/cms_asn1.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/cms/cms_dd.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/cms/cms_rsa.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/dh/ameth.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/dh/key.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/dsa/mod.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/ffc/params.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/ocsp/v3_ocsp.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/ec_kmgmt.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/encode_key2ms.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/legacyprov.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/provider/securitycheck_default.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/rsa/ameth.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/runtime/bio/bss_null.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          },
+          {
+            "file": "src/sm3/legacy_sm3.rs",
+            "class": "UNEXPLAINED_BY_SRC_DIFF"
+          }
+        ],
+        "added_explained": 0,
+        "removed_explained": 0
+      }
+    }
+  },
+  "engine_callbacks": {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/engine-callback-discharge.json",
+    "sha256": "d7271baf375a933ff5cb078f02608943d964dd7ec217d57062867998f47b29c1",
+    "discharged": 9,
+    "left_blocked": 0,
+    "vestigial": 0,
+    "instrument_still_reports": "UNKNOWN x9 (not registered in state.json)",
+    "negative_control": "concurrent_select_and_cleanup_serialise_on_the_engine_lock PASS alone; cleanup_nulls... FAIL in isolation (test-isolation defect, recorded)"
+  },
+  "gates": {
+    "cargo_fmt": "exit 0",
+    "cargo_clippy_all_targets": "exit 0",
+    "rust_suite": "test result: ok. 2216 passed; 0 failed; 52 ignored; 0 measured; 0 filtered out; finished in 128.40s",
+    "rust_suite_floor": "2268 total / 52 ignored; observed 2216 passed / 0 failed / 52 ignored = 2268 total, nothing removed or newly ignored",
+    "census_self_test": "PASS (6 cases)",
+    "closure_self_test": "PASS",
+    "py_compile": "PASS",
+    "focused_engine_negative_controls": "7 passed / 1 failed in isolation (cleanup_nulls..., test-isolation defect; full suite 0 failed)",
+    "gates_log": "court/tmp/freeze-v1m/logs/gates-run.txt",
+    "gates_log_sha256": "d2fd03344c1e7c99150ff10d98509ada0a52d353c0ea6fe98aaa443da12a7481"
+  },
+  "true_number": {
+    "v1l_measured": {
+      "DISCHARGED": 90,
+      "BLOCKED": 75,
+      "UNKNOWN": 12,
+      "obligations": 177
+    },
+    "v1m_measured": {
+      "DISCHARGED": 77,
+      "BLOCKED": 60,
+      "UNKNOWN": 18,
+      "obligations": 155
+    },
+    "adjudicated_if_registered": {
+      "DISCHARGED": 86,
+      "BLOCKED": 60,
+      "UNKNOWN": 9
+    },
+    "did_the_engine_repair_move_an_obligation": "No obligation status moved. The nine callbacks were UNKNOWN in v1l and remain UNKNOWN in the instrument at v1m; the repair removed the raw *mut *mut static write that v1l named as their missing property, which makes a written discharge possible, and it changed every artefact hash. It did not itself reclassify anything. The v1l->v1m D/B/U delta is not attributable to the repair: the compiled reachable set changed (28 ssh / 32 sshd file changes, 0 explained by the src diff) and the two new element-7 materialised sites are in byte-identical CRYPTO_cbc128_encrypt."
+  },
+  "what_is_proven": [
+    "S=7b546f64c rebuilt once from a clean tree; the four artefacts are consistent top-level vs install.",
+    "The dynamic export set is unchanged: libcrypto 5906, libssl 608, 0 added, 0 removed.",
+    "All 11 ABI courts pass against the authority 3.6.4.",
+    "ssh and sshd relinked from pristine openssh-9.9p1 against only the new install, --no-as-needed, no patches; both L7 workloads pass and both negative controls are rejected.",
+    "cargo fmt, clippy -D warnings and the 2268-test library suite pass at the stated floor.",
+    "The nine engine callbacks have a site-specific discharge argument tied to EngineTableSlot and the engine-lock discipline."
+  ],
+  "what_remains_unproven": [
+    "SAFE_COMPATIBLE: the closure is REFUSED on MISSING_BOUNDARY_RECEIPT, UNKNOWN_OBLIGATION and UNKNOWN_MECHANISM.",
+    "element 7: FAIL for both consumers (two materialised residual sites at 0x4a4d90).",
+    "The v1l->v1m reachable-set change is unexplained by the src diff; it is recorded as instrument/graph instability, not a repair effect.",
+    "TSan/Miri for the engine slot and the engine cleanup callbacks: NOT_RUN at this level.",
+    "The cleanup_nulls... test isolation defect is recorded, not repaired (source frozen)."
+  ],
+  "unknowns": [
+    "Why the closure target-set precision changed for CRYPTO_cbc128_encrypt although its bytes did not change: UNKNOWN (suspected address/codegen-unit-sensitive target resolution).",
+    "Whether registering the nine discharge arguments in state.json would clear UNKNOWN_MECHANISM for the tb_* files without changing the structural attachment rule: NOT_TESTED.",
+    "TSan confirmation of the concurrency control: NOT_RUN.",
+    "The build-link atlas openssh rows carry source_root_hash=4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f, which the documented base-relative pristine rule does not reproduce (this freeze: 63046b625ef6d60491c36fc6780f788e810b3203b52bd01d5c9f192a93d3d7d3). The ledger's exact rule/location base is undocumented. Build records were therefore not passed to consumer_closure.py, avoiding a spurious STALE_HASH; the record's source_root_hash is scoped to the pristine extraction."
+  ],
+  "non_claims": [
+    "No SEAL, no graduation, no SAFE_COMPATIBLE, no new SELFMADE safety certificate.",
+    "The nine discharges are a written argument at one frozen identity, not an independently reviewed BOUNDARY discharge.",
+    "Nothing was committed or pushed; docker/ was not edited."
+  ]
+}
