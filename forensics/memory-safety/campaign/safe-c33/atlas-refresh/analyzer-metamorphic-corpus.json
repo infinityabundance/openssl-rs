@@ -1,0 +1,143 @@
+{
+  "cases": [
+    {
+      "evidence": {
+        "disposition": "PROVED_TARGET_SET",
+        "records": 1
+      },
+      "expected_property": "identical semantic graph and verdict",
+      "id": "a-identical-input-rebuild",
+      "input": "fixture graph (base=0, pad=0, thunk store)",
+      "observed_result": "identical",
+      "transformation": "build the same fixture twice",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "base_records": 1,
+        "shifted_records": 1
+      },
+      "expected_property": "no lost reachable targets; identical semantic graph",
+      "id": "b-layout-perturbation",
+      "input": "fixture graph (base=0, pad=0)",
+      "observed_result": "identical",
+      "transformation": "shift all function/instruction addresses by 0x1000 and insert 7 padding instructions per function",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "renamed_symbols": {
+          "impl_free_thunk": "impl_free_thunk__alias"
+        },
+        "target_set": [
+          "OSSL_DECODER_free",
+          "OSSL_ENCODER_free"
+        ]
+      },
+      "expected_property": "provenance preserved: the rename is the only difference",
+      "id": "c-symbol-rename-alias",
+      "input": "fixture graph with an in-image thunk wrapper",
+      "observed_result": "preserved",
+      "transformation": "rename impl_free_thunk to impl_free_thunk__alias; keep the body",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "direct_target_set": [
+          "OSSL_DECODER_free",
+          "OSSL_ENCODER_free"
+        ],
+        "thunk_target_set": [
+          "OSSL_DECODER_free",
+          "OSSL_ENCODER_free"
+        ]
+      },
+      "expected_property": "equivalent target set after thunk canonicalisation",
+      "id": "d-thunk-substitution",
+      "input": "fixture graph storing the thunk address",
+      "observed_result": "equivalent",
+      "transformation": "replace the stored thunk with the direct callee address",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "finite_target_set": [
+          "OSSL_DECODER_free",
+          "OSSL_ENCODER_free"
+        ],
+        "unbounded_missing_property": "a reachable writer call site stores a value whose provenance is not image-bounded"
+      },
+      "expected_property": "finite caller set -> bounded; unbounded caller set -> unresolved",
+      "id": "e-argument-derived-callback",
+      "input": "fixture graph whose writer slot is fed by a parameter",
+      "observed_result": "finite=PROVED_TARGET_SET, unbounded=UNRESOLVED",
+      "transformation": "finite caller set (one reachable caller passes an in-image callback) vs. an unbounded dynamic-export caller",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "...property5store11alg_cleanup::call::1: excluded target 'OSSL_ENCODER_free' has no checkable reason"
+        ],
+        "unknown_missing_property": "a reachable writer call site stores a value whose provenance is not image-bounded"
+      },
+      "expected_property": "the analyzer refuses the closure and never silently omits the target",
+      "id": "f-unknown-target-injection",
+      "input": "a valid fixture record plus an injected unknown exclusion",
+      "observed_result": "refusal=EDGE_RECORD_EXCLUSION_UNSOUND, unknown-disposition=UNRESOLVED",
+      "transformation": "add an exclusion with no reason; separately inject a non-image callback value",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "exclusions": [
+          {
+            "evidence": {
+              "reachable_set_member": false,
+              "symbol": "...property5store21ossl_method_store_add.dead",
+              "would_store": [
+                "0x600"
+              ],
+              "writer_address": "0x500"
+            },
+            "reason": "not-in-reachable-set",
+            "target": "dead_target"
+          }
+        ]
+      },
+      "expected_property": "excluded with a defensible reachability witness; removing the witness makes the analyzer refuse",
+      "id": "g-unreachable-target-insertion",
+      "input": "fixture graph with a writer outside the reachable set",
+      "observed_result": "witness=True, absent_from_target_set=True, accounted=True, omission_refused=True",
+      "transformation": "insert an unreachable writer that stores dead_target",
+      "verdict": "PASS"
+    }
+  ],
+  "claim": "stability and sensitivity evidence for the edge resolver: not a proof of soundness",
+  "fixture_model": "synthetic function/instruction/call-index fixtures fed to the production evidence pass and edge-record builder; no real object file or linker is exercised",
+  "non_claims": [
+    "A PASS is not a soundness result: the corpus shows that named transformations do not change the named properties, not that no transformation can.",
+    "The fixtures are synthetic and do not reproduce the real library's layout, linker behaviour, or runtime dispatch.",
+    "The refusal case establishes that an unaccounted exclusion is detected; it does not establish that every real derivation is complete."
+  ],
+  "not_covered": [
+    "real linker behaviour at scale (section GC, identical-code folding, symbol versioning)",
+    "link-time optimisation (LTO) and cross-language inlining",
+    "PLT/GOT tricks beyond the fixture's link-time constant thunk slot",
+    "dlopen-supplied and dlsym-resolved targets",
+    "provider dispatch tables selected at runtime",
+    "the full library's real instruction idioms; the fixtures use the instruction shapes the semantic rule recognises"
+  ],
+  "schema": "openssl-rs/campaign/safe-c33/analyzer-metamorphic-corpus/v1",
+  "summary": {
+    "failed": [],
+    "passed": 7,
+    "total": 7
+  },
+  "tool": {
+    "covered_tool": "forensics/tools/consumer_closure.py",
+    "covered_tool_sha256": "36f8c8312d07efedd9d769758fb965a296330f933e84b24ef5f48b635cad56a7",
+    "edge_record_schema": "openssl-rs/campaign/safe-c33/edge-record/v1",
+    "path": "forensics/tools/analyzer_metamorphic_corpus.py"
+  }
+}
