@@ -3018,12 +3018,52 @@ def _semantic_method_free_derivation(g: "DsoGraph", spec: dict, reachable: set):
                 live_set.add(a)
     live = sorted(live_set)
     record["writers"] = writers
-    record["excluded_writers"] = [
-        {"fragment": w["fragment"], "address": w["address"],
-         "symbol": w["symbol"],
-         "reason": "absent from the image" if not w["present"]
-         else "writer not in the family's reachable set"}
-        for w in writers if not w["reachable"]]
+    # An excluded writer still carries a checkable witness: whether it is absent
+    # from the image or present but outside the family's reachable set, and --
+    # when its stored value is itself derivable -- which target it would store.
+    # Without the would-store target an omitted exclusion would be invisible to
+    # the accounting check below.
+    idx = _semantic_call_index(g)
+    excluded = []
+    for w in writers:
+        if w["reachable"]:
+            continue
+        row = {"fragment": w["fragment"], "address": w["address"],
+               "symbol": w["symbol"],
+               "reason": ("absent from the image" if not w["present"]
+                          else "writer not in the family's reachable set"),
+               "would_store_targets": None,
+               "would_store_failure": None}
+        if w["present"]:
+            addr = int(w["address"], 16)
+            sources = _semantic_writer_sources(g, addr, 0x20)
+            indices = sorted({s["argument_index"] for s in sources
+                              if s.get("argument_index") is not None})
+            if len(indices) == 1:
+                got, why = set(), None
+                for key in sorted((idx.get(addr) or {})):
+                    site_row = (idx.get(addr) or {})[key]
+                    value = _semantic_value(g, site_row, indices[0])
+                    for atom in _semantic_atom_rows(g, value):
+                        atom["func"] = site_row["caller"]
+                        t, why, _sub = _semantic_resolve(
+                            g, atom, reachable, MAX_PROVENANCE_DEPTH, set(), [])
+                        if why:
+                            break
+                        got |= t
+                    if why:
+                        break
+                if why:
+                    row["would_store_failure"] = why
+                else:
+                    row["would_store_targets"] = [
+                        hex(_semantic_canonical_target(g, t)[0])
+                        for t in sorted(got)]
+            else:
+                row["would_store_failure"] = (
+                    "the store is not fed by exactly one parameter")
+        excluded.append(row)
+    record["excluded_writers"] = excluded
     if not live:
         record.update({"resolved": False,
                        "refusal": "no reachable method-store writer"})
@@ -3052,7 +3092,6 @@ def _semantic_method_free_derivation(g: "DsoGraph", spec: dict, reachable: set):
     calls = []
     targets = set()
     failures = []
-    idx = _semantic_call_index(g)
     for writer in live:
         sites = idx.get(writer) or {}
         for key in sorted(sites):
@@ -3836,6 +3875,439 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
     return dict(stats)
 
 
+# --------------------------------------------------------------------------- #
+# per-edge provenance records (AGENTS.md sections 7 and 22)
+# --------------------------------------------------------------------------- #
+#
+# Every indirect site the resolver classifies emits a record that separates what
+# the analysis proved from what it approximated.  The identity is semantic (the
+# source operation, defining function, call-site role and a per-target provenance
+# chain); a machine address is recorded only as an artifact-local witness.  A
+# target is only ever dropped with a reason that the record itself carries
+# evidence for; `validate_edge_records` refuses an unaccounted exclusion, and
+# `build_receipt` turns that refusal into a refusal of the whole closure.
+
+EDGE_RECORD_SCHEMA = "openssl-rs/campaign/safe-c33/edge-record/v1"
+DISPOSITION_PROVED = "PROVED_TARGET_SET"
+DISPOSITION_CONTRACT = "CONTRACT_BOUNDED"
+DISPOSITION_UNRESOLVED = "UNRESOLVED"
+DISPOSITIONS = (DISPOSITION_PROVED, DISPOSITION_CONTRACT,
+                DISPOSITION_UNRESOLVED)
+EXCLUSION_REASONS = frozenset({
+    "not-in-reachable-set",
+    "no-reachable-writer",
+    "provenance-unbounded",
+    "declared-name-absent",
+    "non-image-value",
+})
+# Each reason names the evidence that makes it checkable.  A free-text reason is
+# not a reason: the validator requires these fields to be present and non-null.
+EXCLUSION_EVIDENCE_KEYS = {
+    "not-in-reachable-set": ("reachable_set_member", "symbol"),
+    "no-reachable-writer": ("writer", "derived_targets"),
+    "provenance-unbounded": ("failure",),
+    "declared-name-absent": ("declared_name", "present"),
+    "non-image-value": ("value",),
+}
+
+
+def _edge_symbol(g, value) -> str:
+    """The semantic name of a target; an address is never the identity."""
+    if isinstance(value, tuple) and value and value[0] == "sym":
+        return str(value[1]).split("@")[0]
+    if isinstance(value, int):
+        sym = ((getattr(g, "funcs", {}) or {}).get(value)
+               or (getattr(g, "all_syms", {}) or {}).get(value))
+        return str(sym).split("@")[0] if sym else f"<{value:#x}>"
+    return str(value)
+
+
+def _edge_atom_step(g, atom: dict) -> dict:
+    kind = atom.get("kind")
+    if kind == "relocation":
+        return {"step": "relocation", "symbol": atom.get("symbol"),
+                "slot": atom.get("slot")}
+    if kind == "param":
+        return {"step": "argument", "index": atom.get("index")}
+    if kind == "int":
+        return {"step": "code-materialised",
+                "symbol": _edge_symbol(g, atom.get("value"))}
+    if kind == "field":
+        return {"step": "field", "offset": hex(atom.get("offset"))}
+    return {"step": "unbounded", "why": atom.get("why")}
+
+
+def _edge_chain_steps(g, node, out: list) -> None:
+    """Flatten a provenance record into store/argument/relocation/lea/thunk steps."""
+    if isinstance(node, list):
+        for item in node:
+            _edge_chain_steps(g, item, out)
+        return
+    if not isinstance(node, dict):
+        return
+    if isinstance(node.get("atom"), dict):
+        out.append(_edge_atom_step(g, node["atom"]))
+    if isinstance(node.get("value"), list):
+        for atom in node["value"]:
+            if isinstance(atom, dict) and "kind" in atom:
+                out.append(_edge_atom_step(g, atom))
+    if "field_slot" in node:
+        out.append({"step": "field-slot", "slot": node.get("field_slot"),
+                    "field_offset": node.get("field_offset"),
+                    "writer": node.get("writer"),
+                    "argument_index": node.get("argument_index")})
+    for key in ("chain", "chains"):
+        if isinstance(node.get(key), (list, dict)):
+            _edge_chain_steps(g, node[key], out)
+
+
+def _edge_role(site: dict) -> str:
+    if site.get("semantic_store_target") is not None:
+        return "method-store-slot"
+    if site.get("edge_target_witness"):
+        return "in-image-data-slot"
+    if site.get("reachable_caller_bound"):
+        return "argument-callback"
+    if site.get("class") in ABI_CONTRACT_CLASSES:
+        return "abi-contract-dispatch"
+    if site.get("unresolved"):
+        return "unresolved-dispatch"
+    return "value-flow"
+
+
+def _edge_disposition(site: dict) -> str:
+    if site.get("class") in ABI_CONTRACT_CLASSES:
+        return DISPOSITION_CONTRACT
+    if site.get("unresolved"):
+        return DISPOSITION_UNRESOLVED
+    return DISPOSITION_PROVED
+
+
+def _edge_record(g, site: dict, ordinal: int) -> dict:
+    fstart = site.get("func", 0)
+    name = (getattr(g, "funcs", {}) or {}).get(fstart, "?")
+    disposition = _edge_disposition(site)
+    role = _edge_role(site)
+    admitted = sorted(_edge_symbol(g, t) for t in (site.get("targets") or ()))
+    candidates = set(admitted)
+    enumeration = "resolver-admitted-set"
+    exclusions = []
+    extra = {}
+    chains = collections.defaultdict(list)
+
+    semantics = site.get("semantic_store_target")
+    edge_witness = site.get("edge_target_witness")
+    caller_bound = site.get("reachable_caller_bound")
+    if semantics is not None:
+        # Only a resolved derivation enumerates its candidates.  An unresolved
+        # row may contain a partial target set from rows that did not fail; it
+        # is not a candidate set and must not be reported as if it were.
+        enumeration = ("complete" if semantics.get("resolved")
+                       else "not-applicable")
+        candidates = set()
+        stored_values = semantics.get("stored_values") or {}
+        for row in semantics.get("call_sites") or ():
+            base = [
+                {"step": "store-writer", "writer": row.get("writer"),
+                 "argument_index": row.get("argument_index")},
+                {"step": "call-site", "caller": row.get("caller"),
+                 "call_site": row.get("call_site")},
+            ]
+            sub = []
+            _edge_chain_steps(g, row.get("chain") or (), sub)
+            if row.get("included") is False:
+                extra.setdefault("excluded_callers", []).append({
+                    "caller": row.get("caller"),
+                    "call_site": row.get("call_site"),
+                    "reason": "not-in-reachable-set",
+                    "evidence": {"reachable_set_member": False,
+                                 "symbol": row.get("caller")},
+                })
+                continue
+            if row.get("failure"):
+                extra.setdefault("unbounded_call_sites", []).append({
+                    "caller": row.get("caller"),
+                    "call_site": row.get("call_site"),
+                    "reason": "provenance-unbounded",
+                    "evidence": {"failure": row.get("failure")},
+                })
+                continue
+            for hx in row.get("targets") or ():
+                nm = _edge_symbol(g, int(stored_values.get(hx, hx), 16))
+                if semantics.get("resolved"):
+                    candidates.add(nm)
+                    chains[nm].extend(base + sub)
+        for collapse in semantics.get("thunk_collapses") or ():
+            nm = _edge_symbol(g, int(collapse["semantic"], 16))
+            chains[nm].append({
+                "step": "thunk",
+                "from_symbol": _edge_symbol(g, int(collapse["stored"], 16)),
+                "to_symbol": nm,
+            })
+        for w in semantics.get("excluded_writers") or ():
+            would = w.get("would_store_targets") or []
+            if not w.get("would_store_failure") and not would:
+                continue
+            reason = ("declared-name-absent" if w.get("reason") ==
+                      "absent from the image" else "not-in-reachable-set")
+            for hx in would:
+                nm = _edge_symbol(g, int(hx, 16))
+                if semantics.get("resolved"):
+                    candidates.add(nm)
+                exclusions.append({
+                    "target": nm,
+                    "reason": reason,
+                    "evidence": ({
+                        "declared_name": w.get("fragment"),
+                        "present": False,
+                        "fragment": w.get("fragment"),
+                    } if reason == "declared-name-absent" else {
+                        "reachable_set_member": False,
+                        "symbol": w.get("symbol"),
+                        "writer_address": w.get("address"),
+                        "would_store": list(would),
+                    }),
+                })
+            if w.get("would_store_failure"):
+                extra.setdefault("excluded_writers", []).append({
+                    "symbol": w.get("symbol"),
+                    "writer_address": w.get("address"),
+                    "reason": "provenance-unbounded",
+                    "evidence": {"failure": w["would_store_failure"]},
+                })
+        cross = semantics.get("declared_cross_check") or {}
+        if semantics.get("resolved"):
+            for frag in cross.get("declared_but_absent") or ():
+                exclusions.append({
+                    "target": frag,
+                    "reason": "declared-name-absent",
+                    "evidence": {"declared_name": frag, "present": False},
+                })
+            deref = set(admitted)
+            for frag, info in (cross.get("declared_targets") or {}).items():
+                if not info.get("present"):
+                    continue
+                for hx in info.get("addresses") or ():
+                    nm = _edge_symbol(g, int(hx, 16))
+                    candidates.add(nm)
+                    if nm not in deref:
+                        exclusions.append({
+                            "target": nm,
+                            "reason": "no-reachable-writer",
+                            "evidence": {
+                                "writer": "the reachable method-store writers",
+                                "derived_targets": sorted(deref),
+                                "declared_name": frag,
+                                "address": hx},
+                        })
+        else:
+            extra["semantic_refusal"] = semantics.get("refusal")
+        extra["source_of_truth"] = "stored-value provenance"
+        extra["slot"] = semantics.get("slot")
+    elif edge_witness is not None:
+        enumeration = "complete"
+        extra["witness_id"] = edge_witness.get("id")
+        for nm in admitted:
+            chains[nm] = [
+                {"step": "store-writer", "writer": edge_witness.get("writer")},
+                {"step": "linkage", "source": edge_witness.get("source"),
+                 "slot": edge_witness.get("slot")},
+            ]
+    elif caller_bound is not None:
+        candidates |= {_edge_symbol(g, t)
+                       for t in (site.get("arg_targets") or ())}
+        excluded_callers = caller_bound.get("excluded_callers") or []
+        for row in caller_bound.get("reachable_callers") or ():
+            steps = [{"step": "argument", "caller": row.get("symbol")}]
+            for cs in row.get("call_sites") or ():
+                for arg in cs.get("arguments") or ():
+                    for wi in arg.get("witness_instruction") or ():
+                        steps.append({"step": "code-materialised",
+                                      "instruction": wi.get("text")})
+            for hx in row.get("contributed_targets") or ():
+                chains[_edge_symbol(g, int(hx, 16))].extend(steps)
+        for dropped in sorted(candidates - set(admitted)):
+            exclusions.append({
+                "target": dropped,
+                "reason": "not-in-reachable-set",
+                "evidence": {
+                    "reachable_set_member": False,
+                    "symbol": dropped,
+                    "excluded_callers": [
+                        {"symbol": c.get("symbol"),
+                         "function": c.get("function"),
+                         "reference": c.get("reason")}
+                        for c in excluded_callers],
+                },
+            })
+        for c in excluded_callers:
+            extra.setdefault("excluded_callers", []).append({
+                "caller": c.get("symbol"),
+                "reason": "not-in-reachable-set",
+                "evidence": {"reachable_set_member": False,
+                             "symbol": c.get("symbol"),
+                             "in_image_references": c.get("in_image_references")},
+            })
+    elif site.get("class") in ABI_CONTRACT_CLASSES:
+        w = site.get("witness") or {}
+        extra["witness_id"] = (f"{site.get('class')}:{w.get('slot') or 'unknown'}")
+        extra["contract_bounded"] = True
+        for nm in admitted:
+            chains[nm] = [{"step": "abi-contract",
+                           "slot": w.get("slot"),
+                           "interface": w.get("interface")}]
+    else:
+        for nm in admitted:
+            chains[nm] = [{"step": "resolver", "class": site.get("class"),
+                           "reason": site.get("reason")}]
+
+    chain_rows = [{"target": nm, "derivation": chains[nm]}
+                  for nm in sorted(chains)]
+    admitted_set = set(admitted)
+    excluded_set = {e["target"] for e in exclusions if e.get("target")}
+    accounted = admitted_set | excluded_set
+    unaccounted = sorted(candidates - accounted) if enumeration == "complete" else []
+
+    missing = None
+    if disposition == DISPOSITION_UNRESOLVED:
+        missing = ((semantics or {}).get("refusal")
+                   or site.get("reason")
+                   or "the resolver recorded no target set and no reason")
+
+    return {
+        "schema": EDGE_RECORD_SCHEMA,
+        "edge_id": f"{name}::{site.get('kind')}::{ordinal}",
+        "semantic_identity": {
+            "source_operation": site.get("text"),
+            "operation_kind": site.get("kind"),
+            "defining_function": name,
+            "call_site_role": role,
+            "provenance_chain": chain_rows,
+            "artifact_local_witness": {
+                "module": getattr(g, "name", "?"),
+                "function_address": hex(fstart),
+                "site_address": hex(site.get("addr", 0)),
+                "identity_note": ("addresses are artifact-local witnesses; "
+                                  "they are not the identity of the edge"),
+            },
+        },
+        "disposition": disposition,
+        "target_set": admitted if disposition == DISPOSITION_PROVED else [],
+        "target_set_claim": disposition == DISPOSITION_PROVED,
+        "witness_id": extra.get("witness_id"),
+        "missing_property": missing,
+        "exclusions": exclusions,
+        **{k: v for k, v in extra.items() if k not in ("witness_id",)},
+        "exclusion_accounting": {
+            "candidate_enumeration": enumeration,
+            "candidate_targets": sorted(candidates),
+            "admitted_targets": sorted(admitted_set),
+            "excluded_targets": sorted(excluded_set),
+            "unaccounted_targets": unaccounted,
+        },
+    }
+
+
+def build_edge_records(graphs: dict) -> list:
+    """One provenance record for every indirect site in every closed DSO."""
+    records = []
+    for dso_name in sorted(graphs):
+        g = graphs[dso_name]
+        ordinals = collections.Counter()
+        keys = sorted(getattr(g, "sites", {}) or {},
+                      key=lambda k: (k[0], k[1], str(k[2])))
+        for key in keys:
+            site = g.sites[key]
+            seed = (site.get("func"), _edge_role(site))
+            ordinals[seed] += 1
+            records.append(_edge_record(g, site, ordinals[seed]))
+    return records
+
+
+def validate_edge_records(records: list) -> list:
+    """Every exclusion must be checkable; an unaccounted target is a defect."""
+    defects = []
+    for rec in records:
+        rid = rec.get("edge_id", "?")
+        disposition = rec.get("disposition")
+        ident = rec.get("semantic_identity") or {}
+        for field in ("source_operation", "defining_function", "call_site_role"):
+            if not ident.get(field):
+                defects.append(f"{rid}: semantic identity lacks {field}")
+        if disposition not in DISPOSITIONS:
+            defects.append(f"{rid}: unknown disposition {disposition!r}")
+            continue
+        if disposition == DISPOSITION_PROVED and not rec.get("target_set"):
+            defects.append(f"{rid}: PROVED_TARGET_SET with an empty target set")
+        if disposition == DISPOSITION_CONTRACT and not rec.get("witness_id"):
+            defects.append(f"{rid}: CONTRACT_BOUNDED without a witness id")
+        if disposition == DISPOSITION_UNRESOLVED and not rec.get("missing_property"):
+            defects.append(f"{rid}: UNRESOLVED without a missing property")
+        for ex in rec.get("exclusions") or ():
+            reason = ex.get("reason")
+            if reason not in EXCLUSION_REASONS:
+                defects.append(
+                    f"{rid}: excluded target {ex.get('target')!r} has no "
+                    "checkable reason")
+                continue
+            evidence = ex.get("evidence")
+            if not isinstance(evidence, dict) or not evidence:
+                defects.append(
+                    f"{rid}: exclusion {ex.get('target')!r} ({reason}) has no "
+                    "evidence")
+                continue
+            absent = [k for k in EXCLUSION_EVIDENCE_KEYS[reason]
+                      if evidence.get(k) is None]
+            if absent:
+                defects.append(
+                    f"{rid}: exclusion {ex.get('target')!r} ({reason}) lacks "
+                    "evidence fields " + ", ".join(absent))
+        accounting = rec.get("exclusion_accounting") or {}
+        if accounting.get("candidate_enumeration") == "complete":
+            # Recompute from the record itself rather than trusting the stored
+            # accounting block: a stale or edited block must not hide a dropped
+            # target.
+            candidates = set(accounting.get("candidate_targets") or ())
+            admitted = set(accounting.get("admitted_targets") or ())
+            excluded = {e.get("target") for e in (rec.get("exclusions") or ())}
+            unaccounted = sorted(candidates - admitted - excluded - {None})
+            if unaccounted:
+                defects.append(
+                    f"{rid}: excluded target(s) without a reason: "
+                    + ", ".join(unaccounted[:8]))
+    return defects
+
+
+def edge_refusal_for(defects: list):
+    """The closure-level refusal for an uncheckable edge record."""
+    if not defects:
+        return None
+    return {
+        "code": "EDGE_RECORD_EXCLUSION_UNSOUND",
+        "detail": ("the edge provenance record is not checkable: "
+                   + "; ".join(defects[:8])),
+    }
+
+
+def edge_closure_refusal(records: list):
+    """Validate a record set and return (defects, refusal).  A refusal here is
+    the object `build_receipt` appends before emitting the closure."""
+    defects = validate_edge_records(records)
+    return defects, edge_refusal_for(defects)
+
+
+def edge_record_summary(records: list) -> dict:
+    counts = collections.Counter(r.get("disposition") for r in records)
+    reasons = collections.Counter(
+        e.get("reason") for r in records for e in (r.get("exclusions") or ()))
+    return {
+        "schema": EDGE_RECORD_SCHEMA,
+        "count": len(records),
+        "dispositions": dict(sorted(counts.items())),
+        "exclusion_reasons": dict(sorted(reasons.items())),
+    }
+
+
 def build_graph(graphs: dict, roots: set, export_index: dict,
                 import_nodes: set | None = None) -> dict:
     """Union reachability over all candidate DSOs, with per-site targets.
@@ -4553,6 +5025,15 @@ def build_receipt(args) -> dict:
     direct_reach = closure["direct_reachable"]
     upper_reach = closure["upper_reachable"]
 
+    # ---- edge provenance records ----------------------------------------- #
+    # Every indirect site emits a semantic record.  An exclusion without a
+    # checkable reason is a defect, and the closure refuses rather than
+    # emitting a record that silently dropped a target.
+    edge_records = build_edge_records(graphs)
+    edge_defects, edge_refusal = edge_closure_refusal(edge_records)
+    if edge_refusal is not None:
+        refusals.append(edge_refusal)
+
     # Reachable-caller bounding uses the pre-closure reachable set, while the
     # final upper bound can admit a few additional targets from evidence
     # classes.  An "excluded" caller that the final upper bound admits would
@@ -5240,6 +5721,21 @@ def build_receipt(args) -> dict:
                  "has no per-call-site witness for a documented ABI contract (for "
                  "example an internal Rust callback), or the site has no evidence "
                  "class and admits the global address-taken union")),
+        },
+        "edge_provenance": {
+            **(edge_record_summary(edge_records)),
+            "rule": (
+                "every indirect site emits a semantic identity (source "
+                "operation, defining function, call-site role, per-target "
+                "provenance chain) plus a disposition; an address is recorded "
+                "only as an artifact-local witness; every excluded target "
+                "carries a checkable reason and the evidence used"),
+            "refusal_rule": (
+                "a target dropped without a checkable exclusion reason, or an "
+                "exclusion without evidence, refuses the closure with "
+                "EDGE_RECORD_EXCLUSION_UNSOUND"),
+            "defects": edge_defects,
+            "records": edge_records,
         },
         "obligations": obligations,
         "closure_scope": {
@@ -5947,6 +6443,58 @@ def self_test() -> int:
     check("stored-value targets are not an ABI contract class",
           s4["class"] in ABI_CONTRACT_CLASSES, False)
 
+    # ---- per-edge provenance records (section 7 / section 22) -------------- #
+    # A valid record separates what was proved from what was approximated, and
+    # every dropped target carries a checkable reason.
+    g5, _s5 = _mg_graph()
+    apply_evidence_classes(g5, set(), _reach)
+    records = build_edge_records({g5.name: g5})
+    check("the edge record set validates", validate_edge_records(records), [])
+    check("every classified site emits a record", len(records), len(g5.sites))
+    rec0 = records[0]
+    check("the edge record identity is semantic, not an address",
+          (rec0["semantic_identity"]["defining_function"],
+           rec0["semantic_identity"]["call_site_role"]),
+          (_name, "method-store-slot"))
+    check("the address is recorded only as an artifact-local witness",
+          "site_address" in rec0["semantic_identity"]["artifact_local_witness"],
+          True)
+    check("the edge record disposition is PROVED_TARGET_SET",
+          rec0["disposition"], DISPOSITION_PROVED)
+    check("each proved target carries a derivation",
+          sorted(c["target"] for c in rec0["semantic_identity"]["provenance_chain"]),
+          rec0["target_set"])
+    check("the unreachable writer's target is excluded with a witness",
+          any(e.get("target") == "dead_target"
+              and e.get("reason") == "not-in-reachable-set"
+              for e in rec0["exclusions"]), True)
+
+    # The refusal test required by this subphase: inject an exclusion with no
+    # reason and require the closure to refuse it.
+    bad = json.loads(json.dumps(rec0))
+    bad["exclusions"].append({"target": "OSSL_DECODER_free",
+                              "reason": None, "evidence": {}})
+    bad_defects, bad_refusal = edge_closure_refusal([bad])
+    check("an exclusion without a reason is a defect", bool(bad_defects), True)
+    check("the closure refuses an uncheckable exclusion",
+          bad_refusal["code"], "EDGE_RECORD_EXCLUSION_UNSOUND")
+
+    # A stale accounting block cannot hide a removed exclusion: the validator
+    # recomputes from the record.
+    omitted = json.loads(json.dumps(rec0))
+    omitted["exclusions"] = [e for e in omitted["exclusions"]
+                             if e.get("target") != "dead_target"]
+    check("dropping an exclusion is refused even with stale accounting",
+          bool(validate_edge_records([omitted])), True)
+
+    # An exclusion that names a reason but carries no evidence is also refused.
+    evidence_free = json.loads(json.dumps(rec0))
+    evidence_free["exclusions"].append({
+        "target": "OSSL_DECODER_free",
+        "reason": "not-in-reachable-set", "evidence": {}})
+    check("an exclusion without evidence is a defect",
+          bool(validate_edge_records([evidence_free])), True)
+
     # The provenance resolver seeds entry arguments and records outgoing stack
     # arguments, which is what lets a writer's parameter be followed.
     class _PG:
@@ -6088,8 +6636,10 @@ def self_test() -> int:
           f"narrowing, unclassified-site negative control, R1/R2/R3/A2/O1 "
           f"evidence-class controls, the per-call-site witness rule "
           f"(AGENTS.md section 22), the in-image slot target rule "
-          f"(reachable-writer and static-initialiser negative controls), and "
-          f"reachable-caller target bounding (fixed-vs-parameter caller controls)")
+          f"(reachable-writer and static-initialiser negative controls), "
+          f"reachable-caller target bounding (fixed-vs-parameter caller controls), "
+          f"and per-edge provenance records (unaccounted/unwitnessed exclusion "
+          f"refusal)")
     return 0
 
 
