@@ -2071,7 +2071,15 @@ A2_REGISTRATION_SETTERS = frozenset({
 # resolved target set so a reader cannot mistake one for the other.
 ABI_CONTRACT_PROVIDER = "ABI_CONTRACT_PROVIDER"
 ABI_CONTRACT_ALLOCATOR = "ABI_CONTRACT_ALLOCATOR"
-ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR})
+# A callback that is exactly a parameter of an exported function.  This is a
+# contract about the *caller's* value, not about an in-image callback: the
+# header declares the parameter as a function-pointer type and .dynsym makes
+# the caller boundary external.  It never absorbs a finite in-image callback;
+# those are deferred to the reachable-caller-target rule (see
+# export_callback_witness).
+ABI_CONTRACT_EXPORT_CALLBACK = "ABI_CONTRACT_EXPORT_CALLBACK"
+ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
+                                  ABI_CONTRACT_EXPORT_CALLBACK})
 
 ABI_CONTRACTS = {
     ABI_CONTRACT_PROVIDER: {
@@ -2113,6 +2121,39 @@ ABI_CONTRACTS = {
             "application code not loaded as a provider; it is not a node in this "
             "closure",
             "in-image target completeness for the built-in provider path",
+        ],
+    },
+    ABI_CONTRACT_EXPORT_CALLBACK: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": "an exported C function's callback parameter",
+        "citation": [
+            "the exact prototype in the admitted install's include/openssl/*.h: "
+            "the parameter is declared with a function-pointer typedef, so the "
+            "value is supplied by the caller and the C ABI places no bound on it",
+            "the same symbol is defined in the image's .dynsym, so any process "
+            "that links libcrypto may call it with any callback",
+            "include/openssl/modes.h:25/69 -- typedef void (*block128_f)(const "
+            "unsigned char in[16], unsigned char out[16], const void *key); and "
+            "CRYPTO_cfb128_encrypt(..., int enc, block128_f block)",
+            "include/openssl/types.h:237 -- typedef int pem_password_cb(char *buf, "
+            "int size, int rwflag, void *userdata); pem.h:537 passes it as "
+            "b2i_PVK_bio_ex(BIO *in, pem_password_cb *cb, void *u, ...)",
+        ],
+        "covers": (
+            "the public seam through which a C caller supplies a callback to an "
+            "exported function; the function name, the parameter index and the "
+            "declared callback type are the documented interface"),
+        "does_not_cover": [
+            "the behaviour or lifetime of the application's callback, which is "
+            "the application's obligation once supplied",
+            "a NULL argument where the header does not admit one; that is a "
+            "C-invalid input, not a target",
+            "which callback (if any) an in-image caller installs; the target set "
+            "is unbounded",
+            "a private wrapper whose callers are all in-image and finite: the "
+            "witness defers it to reachable-caller-target instead",
+            "reachability from the two workloads, or that an external caller "
+            "exists at run time",
         ],
     },
     ABI_CONTRACT_ALLOCATOR: {
@@ -3751,6 +3792,339 @@ def _image_defines(g: "DsoGraph", fragments) -> bool:
     return any(fragment in (n or "") for fragment in fragments for n in names)
 
 
+def _switch_table_base(g: "DsoGraph", insns, i: int):
+    """The relative switch table base read by ``jmp *reg`` at index i, or None."""
+    for k in range(i - 1, max(-1, i - 14), -1):
+        mn, _rest, ops = _insn_parts(insns[k][1])
+        if mn != "movslq" or not ops:
+            continue
+        m = re.fullmatch(
+            r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+),(%r[a-z0-9]+),4\)",
+            ops[0])
+        if not m:
+            continue
+        base_reg = _canon(m.group(2))
+        for j in range(k - 1, max(-1, k - 8), -1):
+            jmn, _jrest, jops = _insn_parts(insns[j][1])
+            if not jops or _canon(jops[-1]) != base_reg:
+                continue
+            if jmn not in ("lea", "mov"):
+                continue
+            addr = _insn_comment_addr(insns[j][1])
+            if addr is not None and g.section_of(addr) is not None:
+                return addr
+    return None
+
+
+def _switch_entries(g: "DsoGraph", base: int, site_addr: int):
+    """Raw relative switch-table targets, using the compiler's own bound.
+
+    ``PrecisionResolver.switch_targets`` keeps only entries that are function
+    starts.  A CFG needs the interior block targets too, so this reads the same
+    bounded table without that filter.  No bound means no decoding.
+    """
+    count = getattr(g.precision, "switch_bounds", {}).get(site_addr)
+    if not count or count <= 0 or count > 4096:
+        return None
+    sec = g.section_of(base)
+    if sec is None:
+        return None
+    a, _off, _size = g.sections[sec]
+    data = g._section_bytes(sec)
+    start = base - a
+    out = set()
+    for k in range(count):
+        if start + 4 * k + 4 > len(data):
+            break
+        v = struct.unpack_from("<i", data, start + 4 * k)[0]
+        out.add(base + v)
+    return out
+
+
+def _function_cfg(g: "DsoGraph", fstart: int) -> dict:
+    """Basic blocks, successors and open (indirect-jump) blocks for one function.
+
+    The precision resolver tracks abstract values along linear paths; a witness
+    needs a reaching definition, so the path question has to be answered on the
+    CFG.  A block reached from an indirect jump is *open*: any register may
+    hold a value this image does not account for, and a query whose block is in
+    that forward closure is refused rather than guessed.
+    """
+    cache = getattr(g, "_fn_cfg_cache", None)
+    if cache is None:
+        cache = {}
+        g._fn_cfg_cache = cache
+    if fstart in cache:
+        return cache[fstart]
+    insns = g.precision.insns_by_func.get(fstart, ())
+    n = len(insns)
+    idx_of = {a: i for i, (a, _t) in enumerate(insns)}
+    switch_targets = {}
+    if n and getattr(g, "precision", None) is not None:
+        rec = getattr(g.precision, "_record_switch_bounds", None)
+        if rec is not None:
+            rec(insns)
+        for i, (a, text) in enumerate(insns):
+            mn, rest, _ops = _insn_parts(text)
+            if mn != "jmp" or not rest.startswith("*"):
+                continue
+            base = _switch_table_base(g, insns, i)
+            if base is None:
+                continue
+            ts = _switch_entries(g, base, a)
+            if not ts:
+                ts = {t for t in g.precision.switch_targets(base, a)
+                      if t in idx_of}
+            if ts:
+                switch_targets[i] = ts
+    leaders = {0} if n else set()
+    for i, (_a, text) in enumerate(insns):
+        mn, rest, _ops = _insn_parts(text)
+        if mn.startswith("j"):
+            m = re.match(r"^([0-9a-f]+)", rest)
+            if m and int(m.group(1), 16) in idx_of:
+                leaders.add(idx_of[int(m.group(1), 16)])
+            if i + 1 < n:
+                leaders.add(i + 1)
+        elif mn.startswith(("ret", "iret", "ud2")):
+            if i + 1 < n:
+                leaders.add(i + 1)
+    for ts in switch_targets.values():
+        for t in ts:
+            if t in idx_of:
+                leaders.add(idx_of[t])
+    leaders = sorted(leaders)
+    blocks, block_of = [], {}
+    for bi, lo in enumerate(leaders):
+        hi = leaders[bi + 1] if bi + 1 < len(leaders) else n
+        blocks.append((lo, hi))
+        for i in range(lo, hi):
+            block_of[i] = bi
+    succ, open_blocks = {}, set()
+    for bi, (_lo, hi) in enumerate(blocks):
+        mn, rest, _ops = _insn_parts(insns[hi - 1][1])
+        s = []
+        if mn == "jmp":
+            if rest.startswith("*"):
+                ts = switch_targets.get(hi - 1)
+                if ts:
+                    for t in ts:
+                        if t in idx_of:
+                            s.append(block_of[idx_of[t]])
+                        else:
+                            open_blocks.add(bi)
+                else:
+                    open_blocks.add(bi)
+            else:
+                m = re.match(r"^([0-9a-f]+)", rest)
+                if m and int(m.group(1), 16) in idx_of:
+                    s.append(block_of[idx_of[int(m.group(1), 16)]])
+                else:
+                    open_blocks.add(bi)
+        elif mn.startswith("j"):
+            m = re.match(r"^([0-9a-f]+)", rest)
+            if m and int(m.group(1), 16) in idx_of:
+                s.append(block_of[idx_of[int(m.group(1), 16)]])
+            else:
+                open_blocks.add(bi)
+            if hi < n:
+                s.append(block_of[hi])
+        elif mn.startswith(("ret", "iret", "ud2")):
+            pass
+        elif hi < n:
+            s.append(block_of[hi])
+        succ[bi] = sorted(set(s))
+    open_reach = set(open_blocks)
+    work = list(open_blocks)
+    while work:
+        bi = work.pop()
+        for s in succ.get(bi, ()):
+            if s not in open_reach:
+                open_reach.add(s)
+                work.append(s)
+    cfg = {"insns": insns, "blocks": blocks, "block_of": block_of,
+           "succ": succ, "open_reach": open_reach}
+    cache[fstart] = cfg
+    return cfg
+
+
+_ENTRY_DEF = -1
+_TOP_DEFS = None
+_NO_STORE = -2
+_COMPARE_MN = ("cmp", "test", "ucom", "comi", "ptest", "bt")
+
+
+def _defined_regs_at(text: str) -> set:
+    """Registers an instruction writes (a call writes the caller-saved set)."""
+    mn, _rest, ops = _insn_parts(text)
+    if mn.startswith("call"):
+        return set(_CALLER_SAVED)
+    if not ops or mn.startswith(_COMPARE_MN + ("j", "nop", "ret", "iret",
+                                              "push", "ud2")):
+        return set()
+    if mn.startswith("pop"):
+        dst = ops[0]
+        return {_canon(dst)} if (dst in _REGS or dst in _SUBREG) else set()
+    dst = ops[-1]
+    if dst in _REGS or dst in _SUBREG:
+        return {_canon(dst)}
+    return set()
+
+
+def _reaching_table(g: "DsoGraph", fstart: int, cfg: dict):
+    """Per-block reaching definitions (reg -> set of instruction indices).
+
+    ``_ENTRY_DEF`` means the incoming value is not defined in this function
+    (the entry parameter).  A ``None`` entry is TOP (an unresolved merge); the
+    enclosing query refuses it.
+    """
+    cache = getattr(g, "_reaching_cache", None)
+    if cache is None:
+        cache = {}
+        g._reaching_cache = cache
+    if fstart in cache:
+        return cache[fstart]
+    insns, blocks, succ = cfg["insns"], cfg["blocks"], cfg["succ"]
+    nb = len(blocks)
+    inb = [None] * nb
+    outb = [None] * nb
+    if nb:
+        inb[0] = {r: {_ENTRY_DEF} for r in _REGS}
+    spent = 0
+    changed = True
+    while changed and spent < 400:
+        spent += 1
+        changed = False
+        for bi, (lo, hi) in enumerate(blocks):
+            if inb[bi] is None:
+                continue
+            state = {r: set(v) for r, v in inb[bi].items()}
+            for i in range(lo, hi):
+                for r in _defined_regs_at(insns[i][1]):
+                    state[r] = {i}
+            outb[bi] = state
+            for s in succ.get(bi, ()):
+                if s in cfg["open_reach"]:
+                    continue
+                if inb[s] is None:
+                    inb[s] = {r: set(v) for r, v in state.items()}
+                    changed = True
+                else:
+                    for r, v in state.items():
+                        cur = inb[s].get(r)
+                        if cur is None:
+                            inb[s][r] = set(v)
+                            changed = True
+                        else:
+                            nv = cur | v
+                            if nv != cur:
+                                inb[s][r] = nv
+                                changed = True
+    if spent >= 400:
+        inb = [None] * nb
+    cache[fstart] = inb
+    return inb
+
+
+def _reaching_defs(g: "DsoGraph", fstart: int, idx: int, reg: str):
+    """Definitions of ``reg`` that reach instruction ``idx``.
+
+    Returns a set of instruction indices, ``_ENTRY_DEF``, or None for TOP.
+    """
+    cfg = _function_cfg(g, fstart)
+    bi = cfg["block_of"].get(idx)
+    if bi is None:
+        return None
+    lo, _hi = cfg["blocks"][bi]
+    # A definition in the site's own block needs no predecessor analysis, so it
+    # is still usable when the function has an indirect jump elsewhere (the
+    # block itself is only "open" if a predecessor is).
+    for k in range(idx - 1, lo - 1, -1):
+        if reg in _defined_regs_at(cfg["insns"][k][1]):
+            return {k}
+    if bi in cfg["open_reach"]:
+        return None
+    inb = _reaching_table(g, fstart, cfg)
+    if inb[bi] is None:
+        return None
+    return set(inb[bi].get(reg, {_ENTRY_DEF}))
+
+
+def _single_def(g: "DsoGraph", fstart: int, idx: int, reg: str):
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None or len(defs) != 1:
+        return None
+    return next(iter(defs))
+
+
+def _insn(g: "DsoGraph", fstart: int, idx: int) -> str:
+    insns = g.precision.insns_by_func.get(fstart, ())
+    return insns[idx][1] if 0 <= idx < len(insns) else ""
+
+
+def _containing(g: "DsoGraph", addr: int):
+    """Function start containing ``addr`` (synthetic graphs answer exactly)."""
+    if hasattr(g, "containing"):
+        return g.containing(addr)
+    return addr if addr in g.start_set else None
+
+
+def _direct_call_target(g: "DsoGraph", fstart: int, idx: int):
+    """(address, function-start) when instruction idx is a direct in-image call."""
+    mn, rest, _ops = _insn_parts(_insn(g, fstart, idx))
+    if mn != "call" or rest.startswith("*"):
+        return None
+    m = re.match(r"^([0-9a-f]+)", rest)
+    if not m:
+        return None
+    addr = int(m.group(1), 16)
+    target = _containing(g, addr)
+    if target is None and addr in g.start_set:
+        target = addr
+    return (addr, target) if target is not None else None
+
+
+def _stack_slot_abs(g: "DsoGraph", fstart: int, idx: int, opnd: str):
+    """Entry-relative offset of a frame operand, or None."""
+    m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%rsp|%rbp)\)", opnd.strip())
+    if not m:
+        return None
+    off = int(m.group(1), 16) if m.group(1) else 0
+    deltas = _semantic_rsp_deltas(g, fstart)
+    if m.group(2) == "%rsp":
+        delta = deltas[idx] if idx < len(deltas) else None
+        if delta is None:
+            delta = _prologue_delta(g, fstart)
+        return None if delta is None else delta + off
+    frame = _semantic_frame_base(g, fstart)
+    if frame is None:
+        return None
+    return frame[1] + off
+
+
+def _stack_slot_writes(g: "DsoGraph", fstart: int, target: int) -> list:
+    """Every store and every address materialisation of one frame slot."""
+    insns = g.precision.insns_by_func.get(fstart, ())
+    stores, escapes = [], []
+    for i, (_a, text) in enumerate(insns):
+        mn, _rest, ops = _insn_parts(text)
+        if not ops:
+            continue
+        dst = ops[-1]
+        if dst.endswith("(%rsp)") or dst.endswith("(%rbp)"):
+            abs_off = _stack_slot_abs(g, fstart, i, dst)
+            if abs_off == target and not mn.startswith(_COMPARE_MN + ("lea",)):
+                stores.append((i, ops[0], text))
+        if mn == "lea":
+            abs_off = _stack_slot_abs(g, fstart, i, ops[0]) if ops else None
+            if abs_off == target:
+                escapes.append((i, text))
+    return [{"kind": "store", "index": i, "source": src, "text": text}
+            for i, src, text in stores] + [
+            {"kind": "address", "index": i, "text": text}
+            for i, text in escapes]
+
+
 def _witness(cls: str, name: str, site: dict, *, slot: str, writer: str,
              interface: str, basis: str, contract_bounded: bool = True) -> dict:
     return {
@@ -3783,6 +4157,1343 @@ def _internal_slot_note(name: str, offsets, seam=None) -> str:
             "provider interface that writes it")
 
 
+# --------------------------------------------------------------------------- #
+# source-backed witnesses for the S2/S3/S4 mechanisms
+# --------------------------------------------------------------------------- #
+#
+# These witnesses answer a narrower question than the resolver's abstract
+# interpreter: where did *this* value come from on the CFG path to this site?
+# The resolver's linear scan is deliberately cheap and can pick a write from a
+# non-dominating branch; a witness must not.  Every helper below therefore asks
+# the CFG for the reaching definition and refuses a merge it cannot enumerate.
+
+_EVIDENCE_ENV = {"repo": None, "install": None}
+# Test-only mutation switches (AGENTS.md section 16 negative controls).  A
+# mutation disables exactly one refusal so the matching negative fixture must
+# flip to accepted; nothing outside --self-test sets these.
+_MUTED = set()
+
+
+def _repo_root(g=None) -> Path | None:
+    root = getattr(g, "source_root", None) if g is not None else None
+    if root:
+        return Path(root)
+    if _EVIDENCE_ENV.get("repo"):
+        return Path(_EVIDENCE_ENV["repo"])
+    return None
+
+
+def _install_root(g=None) -> Path | None:
+    root = getattr(g, "install_prefix", None) if g is not None else None
+    if root:
+        return Path(root)
+    if _EVIDENCE_ENV.get("install"):
+        return Path(_EVIDENCE_ENV["install"])
+    return None
+
+
+def _has_insns(g: "DsoGraph") -> bool:
+    return (getattr(g, "precision", None) is not None
+            and hasattr(g.precision, "insns_by_func"))
+
+
+def _site_operand(site: dict) -> str:
+    text = site.get("text") or ""
+    body = text.split("#", 1)[0]
+    if "*" in body:
+        return body.split("*", 1)[1].strip()
+    return ""
+
+
+def _reg_origin(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                depth: int = 0):
+    """Single-provenance origin of a register at instruction ``idx``.
+
+    Returns ``{"kind": "param", "index": n}``, ``{"kind": "call",
+    "callee": n, "call_site": n}``, ``{"kind": "load", "offset": n,
+    "base_reg": r, "at": n}``, ``{"kind": "int", "value": n}`` or
+    ``{"kind": "unknown", "why": ...}``.  A value with more than one reaching
+    definition is refused; it is never unioned.
+    """
+    if depth > 8:
+        return {"kind": "unknown", "why": "provenance depth bound"}
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None:
+        return {"kind": "unknown", "why": "open or non-convergent CFG"}
+    if defs == {_ENTRY_DEF}:
+        if reg in _ENTRY_ARG_REGS:
+            return {"kind": "param", "index": _ENTRY_ARG_REGS[reg]}
+        return {"kind": "unknown", "why": f"entry value in {reg}"}
+    if len(defs) != 1:
+        return {"kind": "unknown",
+                "why": "multiple reaching definitions: "
+                       + ", ".join(hex(g.precision.insns_by_func[fstart][k][0])
+                                    for k in sorted(defs) if k >= 0)}
+    k = next(iter(defs))
+    mn, _rest, ops = _insn_parts(_insn(g, fstart, k))
+    addr = g.precision.insns_by_func[fstart][k][0]
+    if mn.startswith("call"):
+        direct = _direct_call_target(g, fstart, k)
+        if direct is None:
+            return {"kind": "unknown", "why": "indirect call result"}
+        return {"kind": "call", "callee": direct[1], "call_site": k,
+                "callee_addr": direct[0], "addr": addr}
+    if mn in ("xor", "sub") and len(ops) == 2 and ops[0] == ops[1]:
+        return {"kind": "int", "value": 0, "addr": addr}
+    if mn not in ("mov", "movq", "movl", "movzbl", "movzwl", "movslq",
+                  "lea", "and"):
+        return {"kind": "unknown", "why": f"unexpected writer {mn}"}
+    src = ops[0] if len(ops) >= 2 else ""
+    if not src:
+        return {"kind": "unknown", "why": "writer without source"}
+    if src.startswith("$"):
+        try:
+            return {"kind": "int", "value": int(src[1:], 16), "addr": addr}
+        except ValueError:
+            return {"kind": "unknown", "why": "bad immediate"}
+    if src in _REGS or src in _SUBREG:
+        return _reg_origin(g, fstart, k, _canon(src), depth + 1)
+    m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", src)
+    if m:
+        off = int(m.group(1), 16) if m.group(1) else 0
+        return {"kind": "load", "offset": off, "base_reg": m.group(2),
+                "at": k, "addr": addr}
+    return {"kind": "unknown", "why": "unsupported source " + src}
+
+
+def _param_of_operand(g: "DsoGraph", fstart: int, idx: int, opnd: str):
+    """The callback parameter this operand reads, with its single provenance.
+
+    Handles a register that still holds the entry argument, a register copied
+    from one, a reload from the entry spill slot, and a stack-passed argument.
+    A frame slot with any other writer is refused.
+    """
+    opnd = opnd.strip()
+    if opnd in _REGS or opnd in _SUBREG:
+        origin = _reg_origin(g, fstart, idx, _canon(opnd))
+        if origin.get("kind") == "param":
+            return {"kind": "param", "index": origin["index"],
+                    "provenance": [{"step": "entry-register",
+                                    "reg": _canon(opnd)}]}
+        if origin.get("kind") == "load":
+            stack = _stack_param(g, fstart, origin["at"], origin["offset"],
+                                 origin["base_reg"])
+            if stack is not None:
+                return stack
+        return {"kind": "unknown", "why": f"operand {opnd}: "
+                                                   + origin.get("why", origin["kind"])}
+    stack = _stack_param(g, fstart, idx, opnd, None)
+    if stack is not None:
+        return stack
+    return {"kind": "unknown", "why": f"operand {opnd} is not a parameter"}
+
+
+def _store_slot_at(g: "DsoGraph", fstart: int, idx: int, slot: int) -> bool:
+    """True when instruction idx writes the frame slot at ``slot``."""
+    mn, _rest, ops = _insn_parts(_insn(g, fstart, idx))
+    if not ops or mn.startswith(_COMPARE_MN + ("lea",)):
+        return False
+    dst = ops[-1]
+    if not (dst.endswith("(%rsp)") or dst.endswith("(%rbp)")):
+        return False
+    return _stack_slot_abs(g, fstart, idx, dst) == slot
+
+
+def _reaching_store_table(g: "DsoGraph", fstart: int, cfg: dict, slot: int):
+    """Per-block last store reaching the block end for one frame slot.
+
+    ``None`` is TOP (an open predecessor); an empty set means no store on any
+    analysed path, which is a direct stack argument rather than a spill.
+    """
+    cache = getattr(g, "_reaching_store_cache", None)
+    if cache is None:
+        cache = {}
+        g._reaching_store_cache = cache
+    key = (fstart, slot)
+    if key in cache:
+        return cache[key]
+    blocks, succ = cfg["blocks"], cfg["succ"]
+    nb = len(blocks)
+    inb = [None] * nb
+    outb = [None] * nb
+    if nb:
+        inb[0] = frozenset({_NO_STORE})
+    spent = 0
+    changed = True
+    while changed and spent < 400:
+        spent += 1
+        changed = False
+        for bi, (lo, hi) in enumerate(blocks):
+            if inb[bi] is None:
+                continue
+            last = None
+            for i in range(lo, hi):
+                if _store_slot_at(g, fstart, i, slot):
+                    last = i
+            out = frozenset({last}) if last is not None else inb[bi]
+            outb[bi] = out
+            for s in succ.get(bi, ()):
+                if s in cfg["open_reach"]:
+                    continue
+                if inb[s] is None:
+                    inb[s] = out
+                    changed = True
+                else:
+                    nv = inb[s] | out
+                    if nv != inb[s]:
+                        inb[s] = nv
+                        changed = True
+    if spent >= 400:
+        inb = [None] * nb
+    cache[key] = inb
+    return inb
+
+
+def _reaching_stores(g: "DsoGraph", fstart: int, idx: int, slot: int):
+    """Stores to a frame slot that reach instruction idx (set), or None."""
+    cfg = _function_cfg(g, fstart)
+    bi = cfg["block_of"].get(idx)
+    if bi is None:
+        return None
+    lo, _hi = cfg["blocks"][bi]
+    for k in range(idx - 1, lo - 1, -1):
+        if _store_slot_at(g, fstart, k, slot):
+            return {k}
+    if bi in cfg["open_reach"]:
+        return None
+    inb = _reaching_store_table(g, fstart, cfg, slot)
+    if inb is None or inb[bi] is None:
+        return None
+    return set(inb[bi])
+
+
+def _slot_address_taken(g: "DsoGraph", fstart: int, slot: int) -> bool:
+    """True when the frame slot's address is materialised anywhere."""
+    insns = g.precision.insns_by_func.get(fstart, ())
+    for i, (_a, text) in enumerate(insns):
+        mn, _rest, ops = _insn_parts(text)
+        if mn == "lea" and ops and _stack_slot_abs(g, fstart, i, ops[0]) == slot:
+            return True
+    return False
+
+
+def _slot_alias_in_block(g: "DsoGraph", fstart: int, idx: int, slot: int,
+                         allowed: set) -> bool:
+    """True when the site's own block materialises the slot outside ``allowed``.
+
+    A frame slot reused by an earlier block is not an alias of the value at the
+    site: only an address taken in the site's block can reach the site without
+    a call boundary.  The construction ``lea`` instructions are passed in
+    ``allowed``; any other one refuses the witness.
+    """
+    cfg = _function_cfg(g, fstart)
+    bi = cfg["block_of"].get(idx)
+    if bi is None:
+        return True
+    lo, _hi = cfg["blocks"][bi]
+    for i in range(lo, idx):
+        mn, _rest, ops = _insn_parts(_insn(g, fstart, i))
+        if mn != "lea" or not ops or i in allowed:
+            continue
+        if _stack_slot_abs(g, fstart, i, ops[0]) == slot:
+            return True
+    return False
+
+
+def _stack_param(g: "DsoGraph", fstart: int, idx: int, opnd, base_reg):
+    """A stack slot that is exactly a parameter or its entry spill."""
+    if base_reg is None:
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%rsp|%rbp)\)", opnd.strip())
+        if not m:
+            return None
+        base_reg = m.group(2)
+        abs_off = _stack_slot_abs(g, fstart, idx, opnd)
+    else:
+        if base_reg not in ("%rsp", "%rbp"):
+            return None
+        abs_off = _stack_slot_abs(g, fstart, idx,
+                                  (hex(opnd) if opnd else "") + "(" + base_reg + ")")
+    if abs_off is None:
+        return None
+    if _slot_alias_in_block(g, fstart, idx, abs_off, set()):
+        return None
+    writes = _reaching_stores(g, fstart, idx, abs_off)
+    if writes is None:
+        return None
+    if not writes:
+        return None
+    if writes == {_NO_STORE}:
+        # Incoming stack argument: entry rsp+8 is argument 6.
+        if abs_off >= 8 and (abs_off - 8) % 8 == 0:
+            return {"kind": "param", "index": 6 + (abs_off - 8) // 8,
+                    "stack_offset": abs_off,
+                    "provenance": [{"step": "stack-argument",
+                                    "offset": hex(abs_off)}]}
+        return None
+    if _NO_STORE in writes:
+        # One path does not write the slot; the value is not a single spill.
+        return None
+    indices = set()
+    provenance = []
+    for i in sorted(writes):
+        _mn, _rest, ops = _insn_parts(_insn(g, fstart, i))
+        src = ops[0] if ops else ""
+        if src not in _REGS and src not in _SUBREG:
+            return None
+        origin = _reg_origin(g, fstart, i, _canon(src))
+        if origin.get("kind") != "param":
+            return None
+        indices.add(origin["index"])
+        provenance.append({"step": "entry-spill",
+                           "addr": hex(g.precision.insns_by_func[fstart][i][0]),
+                           "text": _insn(g, fstart, i)})
+    if len(indices) != 1:
+        return None
+    return {"kind": "param", "index": next(iter(indices)),
+            "spill_site": str(provenance[0]["addr"]), "provenance": provenance}
+
+
+def _callers_of(g: "DsoGraph", callee: int) -> list:
+    """Direct in-image call sites of one function, scanned on demand.
+
+    A global caller index holds one tuple per direct call in the image; the
+    closure already sits close to its per-process data limit, so the index is
+    built per queried callee (there are only a few per witness) and cached.
+    """
+    cache = getattr(g, "_callers_cache", None)
+    if cache is None:
+        cache = {}
+        g._callers_cache = cache
+    if callee in cache:
+        return cache[callee]
+    out = []
+    for fstart, insns in g.precision.insns_by_func.items():
+        for i, (addr, text) in enumerate(insns):
+            mn, rest, _ops = _insn_parts(text)
+            if mn != "call" or rest.startswith("*"):
+                continue
+            m = re.match(r"^([0-9a-f]+)", rest)
+            if not m:
+                continue
+            if _containing(g, int(m.group(1), 16)) == callee:
+                out.append((fstart, i, addr))
+    cache[callee] = out
+    return out
+
+
+def _direct_call_index(g: "DsoGraph") -> dict:
+    idx = getattr(g, "_direct_call_index_cache", None)
+    if idx is not None:
+        return idx
+    idx = collections.defaultdict(list)
+    for fstart, insns in g.precision.insns_by_func.items():
+        for i, (addr, text) in enumerate(insns):
+            mn, rest, _ops = _insn_parts(text)
+            if mn != "call" or rest.startswith("*"):
+                continue
+            m = re.match(r"^([0-9a-f]+)", rest)
+            if not m:
+                continue
+            target = _containing(g, int(m.group(1), 16))
+            if target is not None:
+                idx[target].append((fstart, i, addr))
+    g._direct_call_index_cache = idx
+    return idx
+
+
+def _arg_origin_at_call(g: "DsoGraph", caller: int, call_idx: int, k: int):
+    """Origin of argument ``k`` at a direct call, as a parameter or a refusal."""
+    if k < len(_ARGREGS):
+        return _param_of_operand(g, caller, call_idx, _ARGREGS[k])
+    # Stack argument at entry offset 8 + 8*(k-6), expressed at this call.
+    delta = _semantic_rsp_deltas(g, caller)[call_idx]
+    if delta is None:
+        return {"kind": "unknown", "why": "stack offset after rsp change"}
+    abs_off = delta + 8 + 8 * (k - 6)
+    writes = _reaching_stores(g, caller, call_idx, abs_off)
+    if writes is None:
+        return {"kind": "unknown", "why": "open stack argument"}
+    if writes == {_NO_STORE}:
+        return {"kind": "param", "index": k}
+    if not writes or _NO_STORE in writes:
+        return {"kind": "unknown", "why": "stack argument has several origins"}
+    origins = []
+    for wi in sorted(writes):
+        _mn, _rest, ops = _insn_parts(_insn(g, caller, wi))
+        if not ops or ops[0] not in _REGS:
+            return {"kind": "unknown", "why": "stack argument has a writer"}
+        origins.append(_reg_origin(g, caller, wi, _canon(ops[0])))
+    if len(origins) == 1 and origins[0].get("kind") == "param":
+        return origins[0]
+    return {"kind": "unknown", "why": "stack argument has several origins"}
+
+
+def _export_name(g: "DsoGraph", fstart: int):
+    """The .dynsym name defining this exact function start, or None."""
+    for n in (getattr(g, "names_at", {}) or {}).get(fstart, ()):
+        base = (n or "").split("@")[0]
+        if base and getattr(g, "dynamic_defs", {}).get(base) == fstart:
+            return base
+    name = (getattr(g, "funcs", {}) or {}).get(fstart)
+    if name:
+        base = name.split("@")[0]
+        if getattr(g, "dynamic_defs", {}).get(base) == fstart:
+            return base
+    return None
+
+
+# ---- source-backed header / source checks ------------------------------- #
+
+def _header_texts(g: "DsoGraph"):
+    root = _install_root(g)
+    if root is None:
+        return []
+    hdr = Path(root) / "include" / "openssl"
+    if not hdr.is_dir():
+        return []
+    cache = getattr(g, "_header_text_cache", None)
+    if cache is not None:
+        return cache
+    out = []
+    for path in sorted(hdr.glob("*.h")):
+        try:
+            out.append((path, path.read_text(errors="replace")))
+        except OSError:
+            continue
+    g._header_text_cache = out
+    return out
+
+
+def _split_params(decl: str) -> list:
+    start = decl.find("(")
+    if start < 0:
+        return []
+    depth, cur, out = 0, [], []
+    for ch in decl[start + 1:]:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            if depth == 0:
+                break
+            depth -= 1
+        if ch == "," and depth == 0:
+            out.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+    if cur:
+        out.append("".join(cur).strip())
+    return [p for p in out if p and p != "void"]
+
+
+def _header_callback_param(g: "DsoGraph", symbol: str, index: int):
+    """The declared callback parameter, or a refusal string."""
+    texts = _header_texts(g)
+    if not texts:
+        return None, "no admitted install headers"
+    # Function typedefs: name -> (file, line, is_pointer).
+    fntypes = {}
+    for path, text in texts:
+        for m in re.finditer(
+                r"typedef\s+[^;{}]*?\(\s*\*\s*(\w+)\s*\)\s*\([^;{}]*\)\s*;",
+                text):
+            line = text.count("\n", 0, m.start()) + 1
+            fntypes[m.group(1)] = (path.name, line, True)
+        for m in re.finditer(
+                r"typedef\s+[^;{}()]*?\b(\w+)\s*\([^;{}]*\)\s*;", text):
+            line = text.count("\n", 0, m.start()) + 1
+            fntypes.setdefault(m.group(1), (path.name, line, False))
+    found = []
+    for path, text in texts:
+        for m in re.finditer(r"(?<![\w.])" + re.escape(symbol) + r"\s*\(", text):
+            # A declaration is preceded by a return type on the same line.
+            line_start = text.rfind("\n", 0, m.start()) + 1
+            prefix = text[line_start:m.start()].strip()
+            if not prefix or prefix.endswith(("=", ".", "->", ",")):
+                continue
+            depth, end = 0, None
+            for off, ch in enumerate(text[m.start():]):
+                if ch == "(":
+                    depth += 1
+                elif ch == ")":
+                    depth -= 1
+                    if depth == 0:
+                        end = m.start() + off + 1
+                        break
+            if end is None:
+                continue
+            decl = text[m.start():end]
+            params = _split_params(decl)
+            if index >= len(params):
+                continue
+            param = params[index]
+            line = text.count("\n", 0, m.start()) + 1
+            pname = None
+            mm = re.search(r"\(\s*\*\s*(\w+)\s*\)", param)
+            direct = bool(mm)
+            if mm:
+                pname = mm.group(1)
+            else:
+                ids = re.findall(r"[A-Za-z_]\w*", param)
+                if len(ids) >= 2:
+                    pname = ids[-1]
+            ftype = None
+            for name, info in fntypes.items():
+                if re.search(r"\b" + re.escape(name) + r"\b", param):
+                    ftype = (name, info)
+                    break
+            is_cb = direct or (ftype is not None
+                               and ("*" in param or ftype[1][2]))
+            found.append({
+                "symbol": symbol, "index": index, "name": pname,
+                "declaration": f"{path.name}:{line}",
+                "parameter_text": " ".join(param.split()),
+                "typedef": (f"{ftype[1][0]}:{ftype[1][1]}" if ftype else None),
+                "type_typedef": (ftype[0] if ftype else None),
+                "callback": is_cb,
+            })
+    if not found:
+        return None, "the symbol is not declared in the admitted headers"
+    cbs = [f for f in found if f["callback"]]
+    non = [f for f in found if not f["callback"]]
+    if non:
+        return None, "a declaration does not declare the parameter as a callback"
+    if not cbs:
+        return None, "the header declares the parameter as a non-callback"
+    if len({(c["type_typedef"], c["parameter_text"]) for c in cbs}) != 1:
+        return None, "inconsistent callback declarations"
+    return cbs[0], None
+
+
+def _source_field_assignments(g: "DsoGraph", relpath: str, field: str):
+    """Every ``.field = ...`` in one source file, with its enclosing function."""
+    root = _repo_root(g)
+    if root is None:
+        return None, "source root unavailable"
+    path = Path(root) / relpath
+    if not path.is_file():
+        return None, f"source file {relpath} is absent"
+    cache = getattr(g, "_source_cache", None)
+    if cache is None:
+        cache = {}
+        g._source_cache = cache
+    key = (relpath, field)
+    if key in cache:
+        return cache[key]
+    try:
+        lines = path.read_text(errors="replace").splitlines()
+    except OSError as e:
+        return None, f"cannot read {relpath}: {e}"
+    pat = re.compile(r"\." + re.escape(field) + r"\s*=")
+    hits = []
+    for i, line in enumerate(lines, 1):
+        if not pat.search(line) or line.lstrip().startswith("//"):
+            continue
+        fn = None
+        for j in range(i - 1, -1, -1):
+            m = re.search(r"\bfn\s+(\w+)", lines[j])
+            if m:
+                fn = m.group(1)
+                break
+        hits.append({"line": i, "function": fn,
+                     "text": line.strip()[:160]})
+    out = (hits, None)
+    cache[key] = out
+    return out
+
+
+# ---- S3: a fetched provider method-table slot --------------------------- #
+
+def _fields(offsets, source_line):
+    return {off: (field, fnid, source_line)
+            for off, field, fnid in offsets}
+
+
+FETCH_FAMILIES = (
+    {
+        "family": "EVP_KDF",
+        "fetch": ("EVP_KDF_fetch", "evp_kdf_fetch_from_prov",
+                  "inner_evp_generic_fetch"),
+        "writer": ("evp_kdf_from_algorithm", "kdf_from_algorithm"),
+        "object": "EvpKdf",
+        "source_file": "src/evp/kdf.rs",
+        "fields": {off: (field, fnid)
+                   for off, field, fnid in (
+                       (0x28, "newctx", "OSSL_FUNC_KDF_NEWCTX"),
+                       (0x30, "dupctx", "OSSL_FUNC_KDF_DUPCTX"),
+                       (0x38, "freectx", "OSSL_FUNC_KDF_FREECTX"),
+                       (0x40, "reset", "OSSL_FUNC_KDF_RESET"),
+                       (0x48, "derive", "OSSL_FUNC_KDF_DERIVE"),
+                       (0x50, "gettable_params", "OSSL_FUNC_KDF_GETTABLE_PARAMS"),
+                       (0x58, "gettable_ctx_params",
+                        "OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS"),
+                       (0x60, "settable_ctx_params",
+                        "OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS"),
+                       (0x68, "get_params", "OSSL_FUNC_KDF_GET_PARAMS"),
+                       (0x70, "get_ctx_params", "OSSL_FUNC_KDF_GET_CTX_PARAMS"),
+                       (0x78, "set_ctx_params", "OSSL_FUNC_KDF_SET_CTX_PARAMS"),
+                       (0x80, "set_skey", "OSSL_FUNC_KDF_SET_SKEY"),
+                       (0x88, "derive_skey", "OSSL_FUNC_KDF_DERIVE_SKEY"),
+                   )},
+        "interface": (
+            "the provider's returned OSSL_DISPATCH table -- "
+            "include/openssl/core.h:40-44 (function_id plus function pointer) "
+            "and include/openssl/core_dispatch.h's OSSL_FUNC_kdf_* ids; "
+            "src/evp/kdf.rs:209-244 is the #[repr(C)] EvpKdf the fetch builds"),
+    },
+    {
+        "family": "EVP_MAC",
+        "fetch": ("EVP_MAC_fetch", "evp_mac_fetch_from_prov",
+                  "inner_evp_generic_fetch"),
+        "writer": ("evp_mac_from_algorithm", "mac_from_algorithm"),
+        "object": "EvpMac",
+        "source_file": "src/evp/mac.rs",
+        "fields": {off: (field, fnid)
+                   for off, field, fnid in (
+                       (0x28, "newctx", "OSSL_FUNC_MAC_NEWCTX"),
+                       (0x30, "dupctx", "OSSL_FUNC_MAC_DUPCTX"),
+                       (0x38, "freectx", "OSSL_FUNC_MAC_FREECTX"),
+                       (0x40, "init", "OSSL_FUNC_MAC_INIT"),
+                       (0x48, "update", "OSSL_FUNC_MAC_UPDATE"),
+                       (0x50, "final", "OSSL_FUNC_MAC_FINAL"),
+                       (0x58, "gettable_params", "OSSL_FUNC_MAC_GETTABLE_PARAMS"),
+                       (0x60, "gettable_ctx_params",
+                        "OSSL_FUNC_MAC_GETTABLE_CTX_PARAMS"),
+                       (0x68, "settable_ctx_params",
+                        "OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS"),
+                       (0x70, "get_params", "OSSL_FUNC_MAC_GET_PARAMS"),
+                       (0x78, "get_ctx_params", "OSSL_FUNC_MAC_GET_CTX_PARAMS"),
+                       (0x80, "set_ctx_params", "OSSL_FUNC_MAC_SET_CTX_PARAMS"),
+                       (0x88, "init_skey", "OSSL_FUNC_MAC_INIT_SKEY"),
+                   )},
+        "interface": (
+            "the provider's returned OSSL_DISPATCH table -- "
+            "include/openssl/core.h:40-44 and core_dispatch.h's "
+            "OSSL_FUNC_mac_* ids; src/evp/mac.rs:237-281 is the #[repr(C)] "
+            "EvpMac the fetch builds"),
+    },
+    {
+        "family": "EVP_KEM",
+        "fetch": ("EVP_KEM_fetch", "evp_kem_fetch_from_prov",
+                  "inner_evp_generic_fetch"),
+        "writer": ("evp_kem_from_algorithm", "kem_from_algorithm"),
+        "object": "EvpKem",
+        "source_file": "src/evp/kem.rs",
+        "fields": {off: (field, fnid)
+                   for off, field, fnid in (
+                       (0x28, "newctx", "OSSL_FUNC_KEM_NEWCTX"),
+                       (0x30, "encapsulate_init", "OSSL_FUNC_KEM_ENCAPSULATE_INIT"),
+                       (0x38, "encapsulate", "OSSL_FUNC_KEM_ENCAPSULATE"),
+                       (0x40, "decapsulate_init", "OSSL_FUNC_KEM_DECAPSULATE_INIT"),
+                       (0x48, "decapsulate", "OSSL_FUNC_KEM_DECAPSULATE"),
+                       (0x50, "freectx", "OSSL_FUNC_KEM_FREECTX"),
+                       (0x58, "dupctx", "OSSL_FUNC_KEM_DUPCTX"),
+                       (0x60, "get_ctx_params", "OSSL_FUNC_KEM_GET_CTX_PARAMS"),
+                       (0x68, "gettable_ctx_params",
+                        "OSSL_FUNC_KEM_GETTABLE_CTX_PARAMS"),
+                       (0x70, "set_ctx_params", "OSSL_FUNC_KEM_SET_CTX_PARAMS"),
+                       (0x78, "settable_ctx_params",
+                        "OSSL_FUNC_KEM_SETTABLE_CTX_PARAMS"),
+                       (0x80, "auth_encapsulate_init",
+                        "OSSL_FUNC_KEM_AUTH_ENCAPSULATE_INIT"),
+                       (0x88, "auth_decapsulate_init",
+                        "OSSL_FUNC_KEM_AUTH_DECAPSULATE_INIT"),
+                   )},
+        "interface": (
+            "the provider's returned OSSL_DISPATCH table -- "
+            "include/openssl/core.h:40-44 and core_dispatch.h's "
+            "OSSL_FUNC_kem_* ids; src/evp/kem.rs:155-196 is the #[repr(C)] "
+            "EvpKem the fetch builds"),
+    },
+)
+
+
+def _fetch_family_by_callee(name: str):
+    for spec in FETCH_FAMILIES:
+        if any(f in (name or "") for f in spec["fetch"][:2]):
+            return spec
+    return None
+
+
+def _writer_reference(g: "DsoGraph", fstart: int, call_idx: int):
+    """The family writer materialised before an inner_evp_generic_fetch call."""
+    insns = g.precision.insns_by_func.get(fstart, ())
+    refs = set()
+    for k in range(call_idx - 1, max(-1, call_idx - 48), -1):
+        text = insns[k][1]
+        mn, _rest, _ops = _insn_parts(text)
+        if mn.startswith("call"):
+            break
+        addr = _insn_comment_addr(text)
+        if addr is None or addr not in g.start_set:
+            continue
+        nm = g.funcs.get(_containing(g, addr))
+        if nm:
+            refs.add((addr, nm))
+    return sorted(refs)
+
+
+def _base_fetch(g: "DsoGraph", fstart: int, idx: int, reg: str, depth=0):
+    """The fetch call whose return is in ``reg`` at ``idx``, or a refusal.
+
+    Returns ``(spec, fetch_index, evidence)``.  A merge is accepted only when
+    every reaching definition is the same family fetch; anything else refuses.
+    A zero definition is a NULL sentinel: a path that keeps it cannot reach the
+    indirect call without faulting on the dereference that reads the slot, so
+    it contributes no target to the call.
+    """
+    if depth > 4:
+        return None, "provenance depth bound"
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None:
+        return None, "open or non-convergent CFG"
+    if not defs or _ENTRY_DEF in defs:
+        return None, "the base value is not defined in this function"
+    out = []
+    nulls = 0
+    for k in sorted(defs):
+        if k < 0:
+            return None, "entry value reaches the base register"
+        mn, _rest, ops = _insn_parts(_insn(g, fstart, k))
+        if mn in ("xor", "sub") and len(ops) == 2 and ops[0] == ops[1]:
+            nulls += 1
+            continue
+        if mn in ("mov", "movq") and ops and ops[0] == "$0x0":
+            nulls += 1
+            continue
+        direct = _direct_call_target(g, fstart, k)
+        if mn == "call" and direct is not None:
+            cname = g.funcs.get(direct[1], "")
+            if "inner_evp_generic_fetch" in cname:
+                refs = _writer_reference(g, fstart, k)
+                matched = [spec for spec in FETCH_FAMILIES
+                           if any(any(w in (n or "") for w in spec["writer"])
+                                  for a, n in refs)]
+                if len(matched) != 1:
+                    return None, ("the generic fetch's construct callback does not "
+                                  "name exactly one family writer")
+                spec = matched[0]
+                matches = [(a, n) for a, n in refs
+                           if any(w in (n or "") for w in spec["writer"])]
+                out.append((spec, k, {"callee": cname,
+                                      "construct": matches[0][1]}))
+                continue
+            spec = _fetch_family_by_callee(cname)
+            if spec is None:
+                return None, f"base is the return of {cname or hex(direct[0])}"
+            out.append((spec, k, {"callee": cname}))
+            continue
+        if mn in ("mov", "movq") and ops and ops[-1] in _REGS + list(_SUBREG):
+            src = ops[0]
+            if src in _REGS or src in _SUBREG:
+                sub_spec, sub_why = _base_fetch(g, fstart, k, _canon(src), depth + 1)
+                if sub_spec is None:
+                    return None, sub_why
+                # A copy: the same fetch, one more provenance step.
+                spec, fi, ev = sub_spec
+                ev = dict(ev)
+                ev["copy"] = {"addr": hex(g.precision.insns_by_func[fstart][k][0]),
+                              "text": _insn(g, fstart, k)}
+                out.append((spec, fi, ev))
+                continue
+            m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%rsp|%rbp)\)", src)
+            if m:
+                stack = _stack_param(g, fstart, k, src, None)
+                if stack is not None:
+                    return None, "the base is a stack parameter, not a fetch return"
+                q = _stack_slot_abs(g, fstart, k, src)
+                if q is None:
+                    return None, "the base is a stack load with no frame offset"
+                writes = _reaching_stores(g, fstart, k, q)
+                if writes is None or len(writes) != 1 or _NO_STORE in writes:
+                    return None, "the base stack slot has several writers"
+                wi = next(iter(writes))
+                _wmn, _wrest, wops = _insn_parts(_insn(g, fstart, wi))
+                if not wops or wops[0] not in _REGS:
+                    return None, "the base stack slot holds a non-register"
+                sub_spec, sub_why = _base_fetch(
+                    g, fstart, wi, _canon(wops[0]), depth + 1)
+                if sub_spec is None:
+                    return None, sub_why
+                spec, fi, ev = sub_spec
+                out.append((spec, fi, ev))
+                continue
+        return None, f"the base writer is {mn}, not a fetch result"
+    specs = {o[0]["family"] for o in out}
+    if not out:
+        return None, "only NULL reaches the base register"
+    if len(specs) != 1:
+        return None, "the base merges different fetch families"
+    spec, fi, ev = out[0]
+    if nulls:
+        ev = dict(ev)
+        ev["null_paths"] = nulls
+    return (spec, fi, ev), None
+
+
+def fetch_slot_witness(g: "DsoGraph", site: dict, name: str):
+    """Witness for an in-image EVP method object's provider-dispatch slot.
+
+    The slot must be a field of the object the family fetch returns, and the
+    field must be the one the documented OSSL_FUNC_* id fills.  The writer is
+    checked against the source: exactly one assignment in the family file, in
+    the family's from_algorithm function.
+    """
+    if site.get("kind") not in ("call", "jmp"):
+        return None
+    if not _has_insns(g):
+        return None
+    fstart = site["func"]
+    idx = None
+    for i, (a, _t) in enumerate(g.precision.insns_by_func.get(fstart, ())):
+        if a == site["addr"]:
+            idx = i
+            break
+    if idx is None:
+        return None
+    opnd = _site_operand(site)
+    member_offset = None
+    base_reg = None
+    m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", opnd)
+    if m:
+        member_offset = int(m.group(1), 16) if m.group(1) else 0
+        base_reg = m.group(2)
+        base_at = idx
+    elif opnd in _REGS or opnd in _SUBREG:
+        reg = _canon(opnd)
+        origin = _reg_origin(g, fstart, idx, reg)
+        if origin.get("kind") != "load":
+            return None
+        member_offset = origin["offset"]
+        base_reg = origin["base_reg"]
+        base_at = origin["at"]
+    else:
+        return None
+    base_result, why = _base_fetch(g, fstart, base_at, _canon(base_reg))
+    if base_result is None:
+        if "fetch-base-not-return" in _MUTED:
+            base_result = (FETCH_FAMILIES[0], idx,
+                           {"callee": "mutation-forced"})
+        else:
+            return None
+    spec, fetch_idx, fetch_ev = base_result
+    fields = spec["fields"]
+    slot_fields = fields.get(member_offset)
+    if slot_fields is None:
+        if "fetch-slot-outside" in _MUTED:
+            slot_fields = ("forced_field", "forced_id")
+        else:
+            return None
+    field, fnid = slot_fields
+    hits, src_why = _source_field_assignments(g, spec["source_file"], field)
+    bad_writer = (hits is None or len(hits) != 1
+                  or not any(w in ((hits[0]["function"] or "")
+                                   if hits else "") for w in spec["writer"]))
+    if bad_writer:
+        if "fetch-source-writer" in _MUTED:
+            hits = hits or [{"line": 0, "function": spec["writer"][0],
+                             "text": "mutation-forced"}]
+        else:
+            return None
+    writer_fn = hits[0]["function"] or ""
+    fetch_addr = g.precision.insns_by_func[fstart][fetch_idx][0]
+    return {
+        "schema": WITNESS_SCHEMA,
+        "class": ABI_CONTRACT_PROVIDER,
+        "contract_bounded": True,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "operand": {"member_offset": hex(member_offset),
+                    "base_reg": _canon(base_reg)},
+        "fetch": {
+            "caller": name,
+            "call_site": hex(fetch_addr),
+            "callee": fetch_ev.get("callee"),
+            "construct": fetch_ev.get("construct"),
+            "method_family": spec["family"],
+        },
+        "object_slot": {
+            "object_offset": hex(member_offset),
+            "object": spec["object"],
+            "field": field,
+            "function_id": fnid,
+        },
+        "writer": (
+            f"{spec['source_file']}:{hits[0]['line']} in {writer_fn}: "
+            f"{hits[0]['text']}"),
+        "writer_sites": [{"file": spec["source_file"],
+                          "line": hits[0]["line"],
+                          "function": writer_fn,
+                          "text": hits[0]["text"]}],
+        "interface": spec["interface"],
+        "basis": (
+            "the indirect operand reads exactly this #[repr(C)] field of the "
+            "object the family fetch returns; the field is assigned exactly "
+            "once in the image, from the OSSL_DISPATCH entry the function id "
+            "names"),
+        "slot": (f"{spec['object']}.{field} (offset {member_offset:#x}, "
+                 f"{fnid})"),
+    }
+
+
+# ---- S2: an exported function's callback parameter ---------------------- #
+
+
+def export_callback_witness(g: "DsoGraph", site: dict, name: str):
+    """Witness for a callback that is exactly an exported parameter.
+
+    Returns ``(witness, refusal)``; a refusal may set ``defer`` so the caller
+    records the mandatory deferral to reachable-caller-target rather than
+    absorbing a finite in-image callback.  A value is accepted only when every
+    in-image call chain forwards the same parameter to an exported entry point.
+    """
+    if site.get("kind") not in ("call", "jmp"):
+        return None, None
+    if not _has_insns(g):
+        return None, None
+    fstart = site["func"]
+    idx = None
+    for i, (a, _t) in enumerate(g.precision.insns_by_func.get(fstart, ())):
+        if a == site["addr"]:
+            idx = i
+            break
+    if idx is None:
+        return None, None
+    opnd = _site_operand(site)
+    param = _param_of_operand(g, fstart, idx, opnd)
+    if param is None or param.get("kind") != "param":
+        if "export-not-param" in _MUTED:
+            param = {"kind": "param", "index": 3, "provenance": []}
+        else:
+            return None, None
+    index = param["index"]
+
+    export = _export_name(g, fstart)
+    chain = []
+    roots = set()
+    in_image = []
+    seen = set()
+    frontier = [(fstart, index)]
+    while frontier:
+        fn, k = frontier.pop()
+        if (fn, k) in seen:
+            continue
+        seen.add((fn, k))
+        ex = _export_name(g, fn)
+        if ex is not None:
+            roots.add((ex, k))
+            continue
+        callers = _callers_of(g, fn)
+        if not callers:
+            # A private function reached only through a table or an indirect
+            # call: its caller is not enumerable here.  It is recorded, never
+            # treated as a fixed value.
+            in_image.append({"function": g.funcs.get(fn), "param": k,
+                             "reason": "no in-image direct caller"})
+            continue
+        for caller, ci, _addr in callers:
+            origin = _arg_origin_at_call(g, caller, ci, k)
+            if origin.get("kind") != "param":
+                in_image.append({"function": g.funcs.get(caller),
+                                 "call_site": hex(_addr),
+                                 "reason": "passes a non-parameter value",
+                                 "origin": origin.get("kind")})
+                continue
+            chain.append({"callee": g.funcs.get(fn),
+                          "callee_param": k,
+                          "caller": g.funcs.get(caller),
+                          "caller_param": origin["index"],
+                          "call_site": hex(_addr)})
+            frontier.append((caller, origin["index"]))
+    if not roots:
+        if "export-no-root" in _MUTED:
+            roots.add(("CRYPTO_cfb128_encrypt", index))
+        else:
+            return None, {"defer": True,
+                          "refusal": "no exported entry point receives the "
+                                     "parameter; the callers are in-image and "
+                                     "finite",
+                          "in_image_callers": in_image}
+    root_indices = {k for _s, k in roots}
+    if len(root_indices) != 1:
+        return None, {"refusal": "exported entry points disagree on the parameter"}
+    root_index = next(iter(root_indices))
+    parsed = []
+    for symbol in sorted(s for s, _k in roots):
+        cb, why = _header_callback_param(g, symbol, root_index)
+        if cb is None:
+            if "export-header-non-callback" in _MUTED:
+                cb = {"symbol": symbol, "index": root_index, "name": "forced",
+                      "declaration": "forced:0", "parameter_text": "forced",
+                      "typedef": "forced:0", "type_typedef": "forced",
+                      "callback": True}
+            else:
+                return None, {"refusal": f"{symbol}: {why}"}
+        parsed.append((symbol, cb))
+    if len({(c["type_typedef"], c["parameter_text"]) for _s, c in parsed}) != 1:
+        return None, {"refusal": "exported declarations disagree on the callback"}
+    symbol, cb = parsed[0]
+    witness = {
+        "schema": WITNESS_SCHEMA,
+        "class": ABI_CONTRACT_EXPORT_CALLBACK,
+        "contract_bounded": True,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "operand": {"kind": "reg" if opnd.startswith("%") else "memory",
+                    "text": opnd},
+        "parameter": {
+            "name": cb["name"],
+            "index": root_index,
+            "declaration": cb["declaration"],
+            "type_typedef": cb["type_typedef"],
+            "typedef_declaration": cb["typedef"],
+            "parameter_text": cb["parameter_text"],
+        },
+        "site_parameter": index,
+        "export": {"symbol": symbol, "in_dynsym": True,
+                   "symbols": sorted(s for s, _k in roots)},
+        "provenance": param.get("provenance") or [],
+        "caller_chain": chain,
+        "in_image_callers": in_image,
+        "caller_boundary": ("external application; the target set is unbounded "
+                            "by the C ABI"),
+        "does_not_cover": [
+            "NULL where the header does not admit it -- a C-invalid input",
+            "the behaviour or lifetime of the application's callback",
+            "which callback an external caller supplies",
+        ],
+        "slot": (f"{symbol} parameter {root_index} ({cb['name']})"),
+        "writer": (
+            "the caller supplies the value at the exported C ABI boundary; "
+            "no in-image writer stores a different value into the parameter"),
+        "interface": (f"{cb['declaration']} declares {cb['name']} as "
+                      f"{cb['type_typedef']} ({cb['typedef']})"),
+        "basis": ("the operand is exactly this entry parameter (single linear "
+                  "provenance), every in-image call chain forwards it "
+                  "unchanged, and the root function is in .dynsym"),
+    }
+    return witness, None
+
+
+# ---- S4: a local function pointer with a finite assignment set ---------- #
+
+def _prologue_delta(g: "DsoGraph", fstart: int):
+    """Entry-relative rsp delta established by the prologue.
+
+    Used only when the CFG's rsp dataflow has a merge conflict (for example a
+    switch tail-call): the compiler's prologue is still a fixed frame, and the
+    query is a slot in a block that has not run an epilogue.
+    """
+    cache = getattr(g, "_prologue_delta_cache", None)
+    if cache is None:
+        cache = {}
+        g._prologue_delta_cache = cache
+    if fstart in cache:
+        return cache[fstart]
+    cur = 0
+    for _a, text in g.precision.insns_by_func.get(fstart, ()):
+        mn, _rest, ops = _insn_parts(text)
+        if mn == "push":
+            cur -= 8
+        elif mn == "pop":
+            cur += 8
+        elif mn in ("sub", "add") and len(ops) == 2 and ops[1] == "%rsp" \
+                and ops[0].startswith("$"):
+            try:
+                n = int(ops[0][1:], 16)
+            except ValueError:
+                break
+            cur = cur - n if mn == "sub" else cur + n
+        elif mn.startswith(("cmp", "test", "j", "call", "ret", "iret", "ud2")):
+            break
+    cache[fstart] = cur
+    return cur
+
+
+def _frame_abs(g: "DsoGraph", fstart: int, idx: int, off: int, base: str):
+    if base == "%rsp":
+        deltas = _semantic_rsp_deltas(g, fstart)
+        delta = deltas[idx] if idx < len(deltas) else None
+        if delta is None:
+            delta = _prologue_delta(g, fstart)
+        return None if delta is None else delta + off
+    if base == "%rbp":
+        frame = _semantic_frame_base(g, fstart)
+        return None if frame is None else frame[1] + off
+    return None
+
+
+def _stack_load_origin(g: "DsoGraph", fstart: int, idx: int, reg: str, depth=0):
+    """Origin of a register, following a spill/reload through one frame slot."""
+    if depth > 4:
+        return {"kind": "unknown", "why": "stack provenance depth bound"}
+    origin = _reg_origin(g, fstart, idx, reg)
+    if origin.get("kind") != "load" or origin.get("base_reg") not in ("%rsp", "%rbp"):
+        return origin
+    off = _frame_abs(g, fstart, origin["at"], origin["offset"], origin["base_reg"])
+    if off is None:
+        return {"kind": "unknown", "why": "frame offset after rsp change"}
+    writes = _reaching_stores(g, fstart, idx, off)
+    if writes is None or len(writes) != 1 or _NO_STORE in writes:
+        return {"kind": "unknown", "why": "frame slot has several writers"}
+    wi = next(iter(writes))
+    _mn, _rest, wops = _insn_parts(_insn(g, fstart, wi))
+    if not wops or wops[0] not in _REGS:
+        return {"kind": "unknown", "why": "frame slot holds a non-register"}
+    return _stack_load_origin(g, fstart, wi, _canon(wops[0]), depth + 1)
+
+
+def _lea_frame_offsets(g: "DsoGraph", fstart: int, idx: int, src: str):
+    """Frame slots a ``lea`` store source can denote (one distinct offset)."""
+    if src not in _REGS and src not in _SUBREG:
+        return None
+    defs = _reaching_defs(g, fstart, idx, _canon(src))
+    if defs is None or not defs or _ENTRY_DEF in defs:
+        return None
+    out = set()
+    for d in defs:
+        mn, _rest, ops = _insn_parts(_insn(g, fstart, d))
+        if mn != "lea" or not ops:
+            return None
+        off = _stack_slot_abs(g, fstart, d, ops[0])
+        if off is None:
+            return None
+        out.add(off)
+    return out if len(out) == 1 else None
+
+
+def _lea_functions(g: "DsoGraph", fstart: int, idx: int, src: str):
+    """Function starts a store source can denote; a partial set refuses."""
+    if src not in _REGS and src not in _SUBREG:
+        return None
+    defs = _reaching_defs(g, fstart, idx, _canon(src))
+    if defs is None or not defs or _ENTRY_DEF in defs:
+        return None
+    out = set()
+    for d in defs:
+        mn, _rest, ops = _insn_parts(_insn(g, fstart, d))
+        if mn != "lea" or not ops:
+            return None
+        taddr = _insn_comment_addr(_insn(g, fstart, d))
+        if taddr is None or taddr not in g.start_set:
+            return None
+        out.add((taddr, d))
+    return out or None
+
+
+def _lea_frame_offset(g: "DsoGraph", fstart: int, idx: int, src: str):
+    if src not in _REGS and src not in _SUBREG:
+        return None
+    d = _single_def(g, fstart, idx, _canon(src))
+    if d is None:
+        return None
+    mn, _rest, ops = _insn_parts(_insn(g, fstart, d))
+    if mn != "lea" or not ops:
+        return None
+    return _stack_slot_abs(g, fstart, d, ops[0])
+
+
+def _lea_function(g: "DsoGraph", fstart: int, idx: int, src: str):
+    if src not in _REGS and src not in _SUBREG:
+        return None
+    d = _single_def(g, fstart, idx, _canon(src))
+    if d is None:
+        return None
+    mn, _rest, ops = _insn_parts(_insn(g, fstart, d))
+    if mn != "lea" or not ops:
+        return None
+    taddr = _insn_comment_addr(_insn(g, fstart, d))
+    if taddr is None or taddr not in g.start_set:
+        return None
+    return (taddr, d)
+
+
+def local_fptr_witness(g: "DsoGraph", site: dict, name: str):
+    """Resolve a call through a closure/slot built from a finite address set.
+
+    Shape: ``call *0(reg)`` where ``reg`` is loaded from a pointer parameter
+    and every in-image caller builds the pointed-to slot from a finite set of
+    ``lea <function>`` stores.  The slot may be reached through one extra
+    pointer (a Rust closure passed by reference).  Every stored value must be
+    a function start and every writer must be accounted for; a partial set is
+    refused, never unioned.
+    """
+    if site.get("kind") != "call":
+        return None
+    if not _has_insns(g):
+        return None
+    fstart = site["func"]
+    idx = None
+    for i, (a, _t) in enumerate(g.precision.insns_by_func.get(fstart, ())):
+        if a == site["addr"]:
+            idx = i
+            break
+    if idx is None:
+        return None
+    opnd = _site_operand(site)
+    m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", opnd)
+    if not m:
+        return None
+    field_off = int(m.group(1), 16) if m.group(1) else 0
+    origin = _stack_load_origin(g, fstart, idx, _canon(m.group(2)))
+    if origin.get("kind") != "load":
+        return None
+    base_reg = origin["base_reg"]
+    base_origin = _stack_load_origin(g, fstart, origin["at"], _canon(base_reg))
+    outer_off = origin["offset"]
+    if base_origin.get("kind") == "param":
+        k = base_origin["index"]
+    elif base_origin.get("kind") == "load":
+        # One more object level: [param] holds the pointer that is read.
+        sub = _stack_load_origin(g, fstart, base_origin["at"],
+                                 _canon(base_origin["base_reg"]))
+        if sub.get("kind") != "param":
+            return None
+        k = sub["index"]
+        outer_off += base_origin["offset"]
+    else:
+        return None
+    callers = _callers_of(g, fstart)
+    if not callers:
+        return None
+    targets = set()
+    assignments = []
+    for caller, ci, _addr in callers:
+        if k >= len(_ARGREGS):
+            return None
+        origin_arg = _reg_origin(g, caller, ci, _ARGREGS[k])
+        if origin_arg.get("kind") != "load":
+            # A forwarded parameter would need its own caller chain; this
+            # mechanism resolves a locally built closure only.
+            return None
+        if origin_arg.get("base_reg") not in ("%rsp", "%rbp"):
+            return None
+        amn, _arest, _aops = _insn_parts(
+            _insn(g, caller, origin_arg["at"]))
+        if amn != "lea":
+            return None
+        arg_slot = _frame_abs(g, caller, origin_arg["at"],
+                              origin_arg["offset"], origin_arg["base_reg"])
+        if arg_slot is None:
+            return None
+        slot = arg_slot + outer_off
+        if _slot_alias_in_block(g, caller, ci, slot, {origin_arg["at"]}):
+            return None
+        wset = _reaching_stores(g, caller, ci, slot)
+        if wset is None or _NO_STORE in wset:
+            return None
+        stores = sorted(wset)
+        if not stores:
+            return None
+        direct, pointer = set(), set()
+        for si in stores:
+            _smn, _srest, sops = _insn_parts(_insn(g, caller, si))
+            src = sops[0] if sops else ""
+            if src not in _REGS:
+                return None
+            fns = _lea_functions(g, caller, si, src)
+            if fns:
+                for taddr, lea_i in fns:
+                    direct.add((taddr, si, lea_i))
+                continue
+            ptrs = _lea_frame_offsets(g, caller, si, src)
+            if not ptrs:
+                if "local-non-function" in _MUTED:
+                    continue
+                return None
+            pointer |= ptrs
+        if direct and pointer:
+            return None
+        caller_targets = set()
+        for taddr, store_i, lea_i in sorted(direct):
+            caller_targets.add(taddr)
+            assignments.append({
+                "caller": g.funcs.get(caller),
+                "store": hex(g.precision.insns_by_func[caller][store_i][0]),
+                "assignment": hex(g.precision.insns_by_func[caller][lea_i][0]),
+                "target": hex(taddr),
+                "target_symbol": g.funcs.get(taddr),
+            })
+        for inner in sorted(pointer):
+            inner_slot = inner + field_off
+            iset = _reaching_stores(g, caller, ci, inner_slot)
+            if iset is None or _NO_STORE in iset:
+                return None
+            istores = sorted(iset)
+            if not istores:
+                return None
+            for si in istores:
+                _imn, _irest, iops = _insn_parts(_insn(g, caller, si))
+                src = iops[0] if iops else ""
+                if src not in _REGS:
+                    return None
+                fns = _lea_functions(g, caller, si, src)
+                if not fns:
+                    if "local-non-function" in _MUTED:
+                        continue
+                    return None
+                for taddr, lea_i in fns:
+                    caller_targets.add(taddr)
+                    assignments.append({
+                        "caller": g.funcs.get(caller),
+                        "store": hex(g.precision.insns_by_func[caller][si][0]),
+                        "assignment": hex(g.precision.insns_by_func[caller][lea_i][0]),
+                        "target": hex(taddr),
+                        "target_symbol": g.funcs.get(taddr),
+                    })
+        targets |= caller_targets
+    if (not targets or not targets <= g.start_set) \
+            and "local-non-function" not in _MUTED:
+        return None
+    return {
+        "schema": "openssl-rs/consumer-closure/local-function-pointer/v1",
+        "class": "local-function-pointer",
+        "contract_bounded": False,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "slot": (f"closure field {field_off:#x} reached through parameter "
+                 f"{k} and a frame address"),
+        "assignments": assignments,
+        "targets": [hex(t) for t in sorted(targets)],
+        "no_other_write": True,
+        "basis": ("every in-image caller builds the slot from a finite set of "
+                  "in-image function addresses and no other store reaches it; "
+                  "all stored addresses are function starts"),
+    }
+
+
+# ---- S6: triage records (not a class) ---------------------------------- #
+
+S6_FUNCTIONS = {
+    "msblob2key_decode": {
+        "mechanism": "in-image #[repr(C)] KeytypeDesc dispatch",
+        "is_evp_pkey_asn1_method": False,
+        "finding": (
+            "the indirect operand is (*desc).read_private_key/read_public_key/"
+            "adjust_key of a static KeytypeDesc (src/provider/decode_msblob2key.rs"),
+        "disposition": "target-bounded; the right mechanism is the S1 static-table "
+                       "instance dispatch, deferred to the next batch",
+    },
+    "do_PVK_key_bio": {
+        "mechanism": "pem_password_cb application callback parameter",
+        "is_evp_pkey_asn1_method": False,
+        "finding": (
+            "%rbp is the pem_password_cb parameter (src/pem/pvkfmt.rs:1679), "
+            "forwarded from b2i_DSA_PVK_bio_ex/b2i_RSA_PVK_bio_ex/b2i_PVK_bio_ex"),
+        "disposition": "a genuine application callback; if the export-callback "
+                       "chain proves, ABI_CONTRACT_EXPORT_CALLBACK applies, "
+                       "otherwise it stays target-bounded",
+    },
+}
+
+
+def _s6_triage(name: str):
+    for frag, rec in S6_FUNCTIONS.items():
+        if frag in (name or ""):
+            return dict(rec, function=name)
+    return None
+
+
 def allocator_contract_witness(g: "DsoGraph", site: dict, name: str) -> dict | None:
     """Witness for the CRYPTO_set_mem_functions seam at this exact site."""
     seam = site.get("seam")
@@ -3807,6 +5518,9 @@ def allocator_contract_witness(g: "DsoGraph", site: dict, name: str) -> dict | N
 
 def provider_contract_witness(g: "DsoGraph", site: dict, name: str) -> dict | None:
     """Witness for an OSSL_provider_init dispatch slot at this exact site."""
+    fetch = fetch_slot_witness(g, site, name)
+    if fetch is not None:
+        return fetch
     offsets = site.get("field_offsets") or set()
     for spec in PROVIDER_SLOTS:
         if spec["function"] not in (name or ""):
@@ -4027,6 +5741,9 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
     rust = rust_runtime_targets(g)
     for (_fstart, _addr, _kind), site in g.sites.items():
         name = g.funcs.get(site["func"], "")
+        triage = _s6_triage(name)
+        if triage is not None:
+            site["s6_triage"] = triage
         # A pre-classified site is accepted only with its own witness.  A class
         # name, a private field or a comment is not evidence (AGENTS.md section
         # 22); a site that arrives without one is demoted, never inherited.
@@ -4120,6 +5837,22 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                 site["reason"] = "static-table-incomplete:" + table
                 stats["R3_unresolved"] += 1
             continue
+        # A local function pointer built from a finite, fully enumerated set of
+        # in-image addresses.  This is a target claim (every stored value is a
+        # function start and every writer is accounted for), never a contract.
+        local = local_fptr_witness(g, site, name)
+        if local is not None:
+            targets = {int(t, 16) for t in local["targets"]}
+            if targets and targets <= g.start_set:
+                site["targets"] = set(targets)
+                site["unresolved"] = False
+                site["class"] = "local-function-pointer"
+                site["reason"] = ("local function-pointer assignment: "
+                                  f"{len(local['assignments'])} assignment(s), "
+                                  f"{len(targets)} target(s)")
+                site["local_fptr_witness"] = local
+                stats["T_local_fptr_resolved"] += 1
+                continue
         # In-image slot targets: the slot's writer is known in this image, so
         # the target set is resolved rather than contract-bounded.  This is a
         # target claim, not an ABI contract, and it never sets an
@@ -4167,6 +5900,36 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
         if site.get("arg_deps"):
             site["reachable_caller_bound_refusal"] = refusal
             stats["RCB_reachable_caller_unresolved"] += 1
+        # S3: a fetched EVP method object's provider-dispatch slot.  This is
+        # the ABI_CONTRACT_PROVIDER class with a fetch-slot witness: the base
+        # is proven to be the family fetch's return and the offset is the
+        # documented field the OSSL_FUNC_* id fills.
+        fetch = fetch_slot_witness(g, site, name)
+        if fetch is not None:
+            site["targets"] |= residual
+            site["class"] = ABI_CONTRACT_PROVIDER
+            site["unresolved"] = True
+            site["reason"] = ("provider fetch-slot witness: "
+                              + fetch["slot"])
+            site["witness"] = fetch
+            stats["S3_fetch_slot_contract_bounded"] += 1
+            continue
+        # S2: a callback that is exactly an exported function's parameter.
+        # The mandatory deferral is enforced inside the witness: a private
+        # chain with finite in-image callers is refused and left to the
+        # reachable-caller-target rule.
+        export_cb, cb_refusal = export_callback_witness(g, site, name)
+        if export_cb is not None:
+            site["class"] = ABI_CONTRACT_EXPORT_CALLBACK
+            site["unresolved"] = True
+            site["reason"] = ("exported-callback ABI contract: "
+                              + export_cb["slot"])
+            site["witness"] = export_cb
+            stats["S2_export_callback_contract_bounded"] += 1
+            continue
+        if cb_refusal:
+            site["export_callback_refusal"] = cb_refusal
+            stats["S2_export_callback_unresolved"] += 1
         if _match(name, A1_FUNCTIONS):
             witness = contract_witness(ABI_CONTRACT_PROVIDER, g, site, name)
             if witness is not None:
@@ -4209,12 +5972,25 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
             else:
                 stats["A2_no_targets"] += 1
             continue
+        triage = _s6_triage(name)
+        if triage is not None and site.get("unresolved"):
+            stats["S6_triaged_not_absorbed"] += 1
         stats["unmatched"] += 1
     g.evidence_classes.update(stats)
     g.residual_sites = [s for s in g.sites.values() if s["unresolved"]]
     g.resolved_targets = {t for s in g.sites.values() for t in s["targets"]}
     g.precision_counts = collections.Counter((s["class"], s["unresolved"])
                                              for s in g.sites.values())
+    # Witness caches are scoped to this classification pass.  They are dropped
+    # before the closure's admission and edge-record phases, which already run
+    # close to the court's per-process data limit.
+    for attr in ("_fn_cfg_cache", "_reaching_cache", "_reaching_store_cache",
+                 "_callers_cache", "_source_cache", "_prologue_delta_cache",
+                 "_direct_call_index_cache"):
+        if hasattr(g, attr):
+            setattr(g, attr, {})
+    if hasattr(g, "_header_text_cache"):
+        g._header_text_cache = None
     return dict(stats)
 
 
@@ -8512,6 +10288,8 @@ def build_receipt(args) -> dict:
     tool_identity = _tool_identity()
     tool_sha = tool_identity["sha256"]
     install = (repo / args.install).resolve()
+    _EVIDENCE_ENV["repo"] = str(repo)
+    _EVIDENCE_ENV["install"] = str(install)
     artifact = Path(args.artifact)
     if not artifact.is_absolute():
         artifact = (repo / artifact).resolve()
@@ -10426,6 +12204,215 @@ def self_test() -> int:
         f"{'fails as required' if r['case_fails'] else 'STILL PASSES'}"
         for r in mutation_matrix))
 
+    # ---- source-backed witnesses: S2/S3/S4 (AGENTS.md section 22) ---------- #
+    class _WPrecision:
+        def __init__(self, insns):
+            self.insns_by_func = insns
+
+    class _WG:
+        def __init__(self, insns, funcs, dyn=(), source_root=None, install=None):
+            self.name = "witness.so"
+            self.funcs = dict(funcs)
+            self.start_set = set(funcs)
+            self.names_at = {a: {n} for a, n in funcs.items()}
+            self.dynamic_defs = {n: a for a, n in funcs.items() if n in dyn}
+            self.all_syms = dict(funcs)
+            self.precision = _WPrecision({f: list(v) for f, v in insns.items()})
+            self.source_root = source_root
+            self.install_prefix = install
+            self.sites = {}
+
+        def containing(self, addr):
+            best = None
+            for f in self.start_set:
+                if f <= addr and (best is None or f > best):
+                    best = f
+            return best
+
+    def _wrepo(td, text):
+        root = Path(td)
+        p = root / "src" / "evp"
+        p.mkdir(parents=True, exist_ok=True)
+        (p / "kdf.rs").write_text(text)
+        return root
+
+    def _winstall(td, header):
+        root = Path(td)
+        p = root / "include" / "openssl"
+        p.mkdir(parents=True, exist_ok=True)
+        (p / "modes.h").write_text(header)
+        return root
+
+    # S3: a fetched EvpKdf slot.  The base is the inner_evp_generic_fetch
+    # return, the offset is gettable_ctx_params, and the source assigns it once
+    # in evp_kdf_from_algorithm.
+    def _fetch_fixture(off=0x58, base_call=True, two_assign=False):
+        td = tempfile.mkdtemp()
+        src = ("fn evp_kdf_from_algorithm() {\n"
+               "    (*kdf).gettable_ctx_params = entry_function(fns);\n"
+               "    (*kdf).settable_ctx_params = entry_function(fns);\n"
+               "    (*kdf).forced_field = 1;\n"
+               "}\n")
+        if two_assign:
+            src += ("fn other() {\n    (*kdf).gettable_ctx_params = x;\n}\n")
+        repo = _wrepo(td, src)
+        insns = {0x100: [
+            (0x100, "lea    0x200(%rip),%r9        # 300 <evp_kdf_from_algorithm>"),
+            (0x105, "mov    %r9,0x30(%rsp)"),
+            (0x10a, "mov    %rsp,%rdi"),
+            (0x10f, "call   200 <inner_evp_generic_fetch>" if base_call
+                    else "mov    %rdi,%rax"),
+            (0x114, "mov    %rax,%rbx"),
+            (0x119, "test   %rbx,%rbx"),
+            (0x11c, "je     130 <target+0x30>"),
+            (0x120, f"mov    {hex(off)}(%rbx),%rax"),
+            (0x125, "test   %rax,%rax"),
+            (0x128, "je     130 <target+0x30>"),
+            (0x12a, "call   *%rax"),
+            (0x130, "ret"),
+        ]}
+        funcs = {0x100: "target", 0x200: "...inner_evp_generic_fetch",
+                 0x300: "...evp_kdf_from_algorithm", 0x400: "unused"}
+        g = _WG(insns, funcs, source_root=repo)
+        site = {"kind": "call", "func": 0x100, "addr": 0x12A,
+                "text": "call   *%rax", "arg_deps": set()}
+        return g, site
+
+    def _fetch_witness(off=0x58, base_call=True, two_assign=False):
+        g, site = _fetch_fixture(off, base_call, two_assign)
+        return fetch_slot_witness(g, site, "target")
+
+    w = _fetch_witness()
+    check("S3 fetch-slot witness applies", w is not None, True)
+    check("S3 fetch-slot names the OSSL_FUNC id",
+          (w or {}).get("slot"),
+          "EvpKdf.gettable_ctx_params (offset 0x58, "
+          "OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS)")
+    check("S3 fetch-slot records the family and fetch call",
+          ((w or {}).get("fetch") or {}).get("method_family"), "EVP_KDF")
+    check("S3 base not a fetch return is refused",
+          _fetch_witness(base_call=False), None)
+    check("S3 offset outside the declared fields is refused",
+          _fetch_witness(off=0x100), None)
+    check("S3 two source assignments are refused",
+          _fetch_witness(two_assign=True), None)
+
+    # S2: an exported function's callback parameter.
+    def _export_fixture(param=True, noncb=False, exported=True):
+        td = tempfile.mkdtemp()
+        header = ("typedef void (*block128_f)(const unsigned char in[16],\n"
+                  "    unsigned char out[16], const void *key);\n"
+                  "void CRYPTO_cfb128_encrypt(const unsigned char *in,\n"
+                  "    unsigned char *out, size_t len, "
+                  + ("int block" if noncb else "block128_f block") + ");\n")
+        install = _winstall(td, header)
+        insns = {0x500: [
+            (0x500, "push   %rbp"),
+            (0x501, "mov    %rdi,%rax"),
+            (0x504, "mov    %rcx,%r11" if param else "mov    $0x123,%rcx"),
+            (0x507, "call   *%rcx"),
+            (0x509, "ret"),
+        ]}
+        funcs = {0x500: "CRYPTO_cfb128_encrypt", 0x600: "unused"}
+        dyn = {"CRYPTO_cfb128_encrypt"} if exported else set()
+        g = _WG(insns, funcs, dyn=dyn, install=install)
+        site = {"kind": "call", "func": 0x500, "addr": 0x507,
+                "text": "call   *%rcx", "arg_deps": set()}
+        return g, site
+
+    def _export_witness(param=True, noncb=False, exported=True):
+        g, site = _export_fixture(param, noncb, exported)
+        return export_callback_witness(g, site, "CRYPTO_cfb128_encrypt")
+
+    w, why = _export_witness()
+    check("S2 export-callback witness applies", w is not None, True)
+    check("S2 export-callback records the header declaration",
+          (w or {}).get("parameter", {}).get("declaration"), "modes.h:3")
+    check("S2 export-callback records the typedef",
+          (w or {}).get("parameter", {}).get("type_typedef"), "block128_f")
+    check("S2 value not exactly the parameter is refused",
+          _export_witness(param=False)[0], None)
+    check("S2 header declaring a non-callback is refused",
+          _export_witness(noncb=True)[0], None)
+    w2, why2 = _export_witness(exported=False)
+    check("S2 finite in-image private chain is deferred",
+          (w2, (why2 or {}).get("defer")), (None, True))
+
+    # S4: a local closure built from a finite assignment set.
+    def _local_fixture(partial=False, extra=False):
+        callee = [(0x700, "mov    (%rcx),%r13"),
+                  (0x703, "call   *0x0(%r13)"),
+                  (0x705, "ret")]
+        caller = [
+            (0x800, "push   %rbp"),
+            (0x801, "sub    $0x20,%rsp"),
+            (0x805, "cmp    $0x0,%rdi"),
+            (0x809, "je     818 <caller+0x18>"),
+            (0x80b, "lea    0x100(%rip),%rax        # 900 <fnA>"),
+            (0x810, "mov    %rax,0x18(%rsp)"),
+            (0x815, "jmp    820 <caller+0x20>"),
+            (0x818, "lea    0x108(%rip),%rax        # 910 <fnB>"),
+            (0x81d, "mov    %rax,0x18(%rsp)"),
+            (0x820, "lea    0x18(%rsp),%rax"),
+            (0x825, "mov    %rax,0x8(%rsp)"),
+            (0x82a, "lea    0x8(%rsp),%rcx"),
+            (0x82f, "call   700 <traverse>"),
+            (0x834, "ret"),
+        ]
+        if partial:
+            caller[9] = (0x818, "mov    %rdi,%rax")
+            caller[10] = (0x81d, "jmp    820 <caller+0x20>")
+        if extra:
+            caller[7] = (0x818, "mov    %rdi,%rax")
+        funcs = {0x700: "traverse", 0x800: "caller", 0x900: "fnA",
+                 0x910: "fnB"}
+        g = _WG({0x700: callee, 0x800: caller}, funcs)
+        site = {"kind": "call", "func": 0x700, "addr": 0x703,
+                "text": "call   *0x0(%r13)", "arg_deps": set()}
+        return g, site
+
+    def _local_witness(partial=False, extra=False):
+        g, site = _local_fixture(partial, extra)
+        return local_fptr_witness(g, site, "traverse")
+
+    lw = _local_witness()
+    check("S4 local-fptr witness applies", lw is not None, True)
+    check("S4 local-fptr records the finite target set",
+          (lw or {}).get("targets"), ["0x900", "0x910"])
+    check("S4 a path with no store is refused",
+          _local_witness(partial=True), None)
+    check("S4 a non-function store is refused",
+          _local_witness(extra=True), None)
+
+    mut_rows = []
+
+    def _mutation(name, fn):
+        _MUTED.add(name)
+        try:
+            return fn()
+        finally:
+            _MUTED.discard(name)
+
+    mut_rows.append(("fetch-base-not-return",
+                     lambda: _fetch_witness(base_call=False)))
+    mut_rows.append(("fetch-slot-outside",
+                     lambda: _fetch_witness(off=0x100)))
+    mut_rows.append(("fetch-source-writer",
+                     lambda: _fetch_witness(two_assign=True)))
+    mut_rows.append(("export-not-param",
+                     lambda: _export_witness(param=False)[0]))
+    mut_rows.append(("export-header-non-callback",
+                     lambda: _export_witness(noncb=True)[0]))
+    mut_rows.append(("export-no-root",
+                     lambda: _export_witness(exported=False)[0]))
+    mut_rows.append(("local-non-function",
+                     lambda: _local_witness(extra=True)))
+    check("witness mutation matrix: each refusal flips its negative",
+          [(name, _mutation(name, fn) is not None) for name, fn in mut_rows],
+          [(name, True) for name, _fn in mut_rows])
+    print("[consumer-closure] witness mutation matrix: " + "; ".join(
+        f"{name} -> negative accepted" for name, _fn in mut_rows))
+
     # ---- evidence-class controls ------------------------------------------ #
     # R1: a non-literal dlsym argument must not be resolved.
     class _DG:
@@ -11825,7 +13812,10 @@ def self_test() -> int:
           f"(blocking refusal, names-at alias, dynamic symbol, PLT stub, "
           f"external contract), and the mutation matrix (single pass, class-"
           f"narrowed bound, refusal removed, admission disabled, unconditional "
-          f"admission, unresolved-symbol refusal removed)")
+          f"admission, unresolved-symbol refusal removed), and the source-backed "
+          f"S2/S3/S4 witness controls (exported-callback parameter, fetched "
+          f"provider slot, local function-pointer assignment; every refusal "
+          f"condition is mutation-tested)")
     return 0
 
 

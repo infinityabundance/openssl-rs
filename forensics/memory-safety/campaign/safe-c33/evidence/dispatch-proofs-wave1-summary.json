@@ -1,0 +1,89 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/dispatch-proofs/v1",
+  "recorded_utc": "2026-10-29",
+  "source_identity": {
+    "candidate_commit": "d650139fe",
+    "libcrypto_sha256": "199258d5dd0b75bda337e782bb7f2267c143c6f70dfb8913562e858d075b09e8",
+    "ssh_sha256": "f95c15ecdaa49d1a",
+    "tool_sha256": "17f7d189c2783c6e9b02f54e308fb509ec3a1ce1363daba29e0fd912c08e7414",
+    "analysis_identity": "628b1f76",
+    "closure_receipt_sha256": "371b3185b4c40c0c4016fda259f9eea057cc30e3a32a0b32f4c1bf241e93078e"
+  },
+  "mechanisms": [
+    {
+      "id": "S3",
+      "class": "ABI_CONTRACT_PROVIDER (fetch-slot witness)",
+      "rule": "The base value is the return of a family fetch and the operand offset is the declared dispatch slot named by an OSSL_FUNC_* id.",
+      "refusals": [
+        "base is not the family fetch return or has an unknown merge",
+        "offset is outside the declared dispatch stride",
+        "no OSSL_FUNC_* id names the slot",
+        "the source has more than one assignment or it is not the family from_algorithm",
+        "the object could be an in-image legacy method table"
+      ],
+      "newly_contract_bounded": 12
+    },
+    {
+      "id": "S2",
+      "class": "ABI_CONTRACT_EXPORT_CALLBACK",
+      "rule": "The operand is exactly entry parameter N of a symbol present in .dynsym, and the header declares that parameter as a callback typedef.",
+      "refusals": [
+        "the value is not a single linear provenance from the entry parameter",
+        "the root symbol is absent from .dynsym",
+        "the header declares a non-callback parameter",
+        "no exported root exists; the site defers to reachable-caller-target when the caller set is finite and in-image"
+      ],
+      "newly_contract_bounded": 46
+    },
+    {
+      "id": "S4",
+      "class": "local-function-pointer",
+      "rule": "A stack/closure slot is assigned only from lea-of-function-start at an enumerated set of sites on every path.",
+      "refusals": [
+        "any path leaves the slot unwritten",
+        "any store is not a function start",
+        "the reached set is empty or outside start_set"
+      ],
+      "resolved": 4
+    }
+  ],
+  "measured": {
+    "indirect_sites": 52022,
+    "reachable_unresolved_before": 196,
+    "reachable_unresolved_after": 194,
+    "reachable_target_bounded_before": 194,
+    "reachable_target_bounded_after": 134,
+    "reachable_contract_bounded_before": 2,
+    "reachable_contract_bounded_after": 60,
+    "reachable_files": 624,
+    "obligations": 312,
+    "discharged_blocked_unknown": [90, 107, 115],
+    "reachable_functions_sha256": "8487ed72",
+    "element_7": "FAIL",
+    "target_sets_remain_unbounded": true,
+    "reachability_movement": "none"
+  },
+  "s6_triage": {
+    "provider::decode_msblob2key::msblob2key_decode": "not an EVP_PKEY_ASN1_METHOD; a static repr(C) KeytypeDesc descriptor, so it belongs to the S1 static-table class and remains target-bounded",
+    "pem::pvkfmt::do_PVK_key_bio": "a genuine pem_password_cb parameter; contract-bounded by ABI_CONTRACT_EXPORT_CALLBACK (roots b2i_PVK_bio, b2i_PVK_bio_ex; pem.h:536, types.h:237)",
+    "provider::file_store::file_load": "an OSSL_CALLBACK parameter, not a fetched slot; remains target-bounded"
+  },
+  "residual": {
+    "target_bounded": 134,
+    "dominant_mechanism": "S1 static-table instance dispatch (field-sensitive store witness)",
+    "not_applied_examples": [
+      "PKCS12_gen_mac (symbol not declared in the admitted headers)",
+      "CRYPTO_ofb128_encrypt 0x171aa8 (reg-top, not a single parameter)",
+      "EVP_PBE_CipherInit_ex",
+      "OSSL_STORE_open_ex",
+      "CONF_modules_load"
+    ]
+  },
+  "non_claims": [
+    "Contract-bounded sites are not resolved; their target sets remain unbounded.",
+    "A partially enumerated set is never unioned; the site stays UNRESOLVED with an empty target set.",
+    "Element 7 remains FAIL until every reachable unresolved site is target-proved or soundly contract-bounded.",
+    "No obligation was adjudicated or discharged; SAFE_COMPATIBLE remains 0/33.",
+    "The new classes do not change the reachable bound; the measured reachable-function digest is identical."
+  ]
+}
