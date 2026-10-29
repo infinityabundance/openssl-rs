@@ -28,7 +28,7 @@ carry (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.8). This seal records
   from their committed planes: **18 pass, 3 fail**.
   The failing courts are `MS-SOURCE-CENSUS`, `MS-NON-RUST-TCB`, `MS-MIRI`.
   The runner's registry `artifacts/phase25/COURTS.json` records **22 court
-  rows, 22 pass and 0 fail**; it is not this seal's
+  rows, 19 pass and 3 fail**; it is not this seal's
   input (the runner deletes and rewrites it), so the two records disagree and this seal
   records the disagreement rather than adopting the registry's verdicts. **The seal therefore
   records `passed = false`.** No court is FRF-declarable: each reads

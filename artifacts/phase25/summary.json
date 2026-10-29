@@ -409,7 +409,7 @@
     "passed": false,
     "profile": "openssl-rs-court:1 · cargo-profile dev",
     "property_findings": [
-      "the seal re-derives 21 non-`MS-SEAL` Phase-25 court result(s) from their committed planes: 18 pass, 3 fail (MS-SOURCE-CENSUS, MS-NON-RUST-TCB, MS-MIRI); the runner's registry artifacts/phase25/COURTS.json records 22 court row(s), 22 pass and 0 fail, and is not this seal's input, so the two records disagree and the seal states the disagreement rather than adopting the registry's verdicts",
+      "the seal re-derives 21 non-`MS-SEAL` Phase-25 court result(s) from their committed planes: 18 pass, 3 fail (MS-SOURCE-CENSUS, MS-NON-RUST-TCB, MS-MIRI); the runner's registry artifacts/phase25/COURTS.json records 22 court row(s), 19 pass and 3 fail, and is not this seal's input, so the two records disagree and the seal states the disagreement rather than adopting the registry's verdicts",
       "the residual census classifies and disposes 698 residual record(s) plus 11 light cross-check leftover(s); 664 are open and 0 undisposed",
       "the seal records passed=false because 183 externally reachable site(s) carry tool state UNSUPPORTED; UNSUPPORTED is never PASS (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
       "the open items are named rather than smoothed to a zero: census-geiger-unavailable, census-unresolved-reachability, cve-replay-unknown, externally-reachable-fail, externally-reachable-unsupported, mechanism-reconciliation-open, rt-phase22-unwitnessed-external",
@@ -1221,7 +1221,7 @@
     },
     "what_this_is": "Phase 25.21's memory-safety seal: the courts (the twenty-one landed Phase-25 courts, each re-derived from the committed planes and joined to its committed artefact and digest), the residual census (every residual classified and disposed, the open ones named), the bounded claim (stated verbatim), the withheld parity claim and the non-claims. It is an instrument plus an observation record, and it records passed=false because externally reachable unsafe sites carry tool state UNSUPPORTED; it is never read as 'the candidate is memory safe'."
   },
-  "body_hash": "89618e2b3414ef3931e40d5c9ec96e1751a1c20f1ca8b0774fa6d33b676d3090",
+  "body_hash": "fc35d74d56a3ee2766b8178211f17c3cfa0ca651dd6936601e775ca75b3253d7",
   "generator": "forensics/tools/ms_seal.py",
   "inputs": [
     {
@@ -1317,7 +1317,7 @@
     {
       "name": "phase18-fuzz-crosswalk",
       "path": "artifacts/phase25/phase18-fuzz-crosswalk.json",
-      "sha256": "95abbea7bb9f793174c0a52e38157d551ba04f2407b8b5e4ca1ff678562ad746"
+      "sha256": "969dfb0a8706bfa1fce807cb1b14b5058cc2f18946d17206eb1bc8b8195db97e"
     },
     {
       "name": "phase24-safety-coverage",
@@ -1342,7 +1342,7 @@
     {
       "name": "red-team",
       "path": "artifacts/phase25/red-team.json",
-      "sha256": "649d2c171fbe3cad245856f4a98b4b04c3ed6ddd3a4309ce5f263a652de53f60"
+      "sha256": "998c6a64e487a3a808be1be51d8fb2fd0d374512488557587f742a5adc2f35fb"
     },
     {
       "name": "clean-regeneration",
@@ -1352,7 +1352,7 @@
     {
       "name": "frf-gemel-closure",
       "path": "forensics/atlas/phase25/frf-closure.json",
-      "sha256": "96352076c3f3f9426e06f2ba2ac1e1f745867fec6eecc9f745bf48b4a4e530ae"
+      "sha256": "3be135faf6d36ba92ca6a28c041d633508f7dfc6aa3f261d21fa6e75c9fe259e"
     }
   ],
   "kind": "phase25-summary",

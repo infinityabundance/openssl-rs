@@ -36,8 +36,8 @@
       },
       {
         "closure": "the `RT-DOWNSTREAM-CORPUS` court passes",
-        "observation": "RT-DOWNSTREAM-CORPUS is pass",
-        "state": "implemented",
+        "observation": "RT-DOWNSTREAM-CORPUS is fail",
+        "state": "open",
         "surface": "artifacts/phase17/COURTS.json",
         "unit": "downstream-corpus",
         "what": "the machine-owned per-program downstream records (build/link/start/functional/concurrency) the seal consumes, and their freshness"
@@ -48,8 +48,8 @@
       "contract_units": 5,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 5,
-      "open_in_this_stratum": 0,
+      "implemented": 4,
+      "open_in_this_stratum": 1,
       "owned": 5,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -90,7 +90,7 @@
     {
       "name": "phase-17-courts",
       "path": "artifacts/phase17/COURTS.json",
-      "sha256": "39566cb8dd56a2f748feb0aa4943a0b389b850d53e430a4e6a8d85183b65aefa"
+      "sha256": "1a535c65d01bb2a0cb6e68b11e803116463b62eea3c0ffde88ccebe9d216c3ac"
     }
   ],
   "kind": "phase17-obligations",
