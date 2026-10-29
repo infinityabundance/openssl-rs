@@ -684,6 +684,28 @@ class DsoGraph:
         i = bisect.bisect_right(self.starts, addr) - 1
         return self.starts[i] if i >= 0 else None
 
+    def read_u32(self, addr: int):
+        """Raw little-endian u32 in an image section, or None."""
+        sec = self.section_of(addr)
+        if sec is None:
+            return None
+        a, _off, size = self.sections[sec]
+        rel = addr - a
+        if rel < 0 or rel + 4 > size:
+            return None
+        return struct.unpack_from("<I", self._section_bytes(sec), rel)[0]
+
+    def read_u64(self, addr: int):
+        """Raw little-endian u64 in an image section, or None."""
+        sec = self.section_of(addr)
+        if sec is None:
+            return None
+        a, _off, size = self.sections[sec]
+        rel = addr - a
+        if rel < 0 or rel + 8 > size:
+            return None
+        return struct.unpack_from("<Q", self._section_bytes(sec), rel)[0]
+
     def static_slot(self, addr: int):
         """Values fixed by load time (relocation, raw pointer, or BSS zero)."""
         if addr in self.slot_funcs:
@@ -2923,9 +2945,25 @@ def _semantic_writer_sources(g: "DsoGraph", writer: int, offset: int) -> list:
     return out
 
 
+def _drop_s1_caches(g: "DsoGraph", *, all_caches: bool = True) -> None:
+    attrs = ["_s1_docs_cache", "_s1_module_index"]
+    if all_caches:
+        attrs += ["_s1_struct_cache", "_s1_layout_cache", "_s1_alias_cache",
+                  "_s1_fn_cache", "_s1_ctx_cache", "_s1_demangle_cache",
+                  "_s1_instance_cache", "_s1_dispatch_cache", "_s1_sym_index",
+                  "_s1_macro_static_cache"]
+    for attr in attrs:
+        if hasattr(g, attr):
+            setattr(g, attr, {} if attr not in
+                    ("_s1_docs_cache", "_s1_module_index") else None)
+
+
 def _semantic_provenance_resolver(g: "DsoGraph") -> "PrecisionResolver":
     r = getattr(g, "_semantic_precision", None)
     if r is None:
+        # The semantic pass is the largest single allocation in this phase.
+        # Release every S1 cache first; a later S1 site simply reloads them.
+        _drop_s1_caches(g, all_caches=True)
         r = PrecisionResolver(g)
         r.seed_entry_args = True
         r.capture_stack_args = True
@@ -5462,6 +5500,1216 @@ def local_fptr_witness(g: "DsoGraph", site: dict, name: str):
     }
 
 
+# ---- S1: field-sensitive static-table instance dispatch ----------------- #
+#
+# Design note (AGENTS.md sections 7, 8, 10 and 22).
+#
+# The residual this class addresses is an indirect call through a *table
+# member* selected from a *pointer field of an object* whose pointer field is
+# written from a finite set of static tables.  The existing resolver records
+# global stores keyed by displacement only (``field_stores``); in this DSO
+# offset 0x8 alone has thousands of stores, so an offset-keyed completeness
+# claim is impossible.  S1 therefore uses the field-sensitive points-to
+# discipline: a store belongs to the key
+#
+#       (object type T, pointer-slot offset o, member offset m)
+#
+# only when T is established from the source signature (or the source cast that
+# introduces the context), o is established from the load that produces the
+# call's base register, and m is the member read by the call.  Each key has its
+# own writer set, which is restricted by the static dispatch table that pairs
+# the consumer with its constructor.  This is the type-qualified partitioning
+# of Andersen-style constraints discussed by Diwan/McKinley/Moss ("Type-based
+# alias analysis", 1998); no stronger claim is made here.
+#
+# The dispatch table gives the constructor pairing without a whole-program
+# field store database: an ``OsslDispatch`` table is an immutable array of
+# (function_id, pointer) entries, and the provider ABI pairs
+# OSSL_FUNC_CIPHER_NEWCTX with the cipher entry that consumes the context.  The
+# site function must be a table entry target or in the direct-call closure of
+# one; the writer set is the NEWCTX entry's direct-call closure; every other
+# cohort entry is checked for a store to the same field and refuses the site if
+# it stores anything else.  A reachable direct caller outside the cohort also
+# refuses the site (the context could have come from another constructor).
+#
+# Refusals are conjunctions, never unions: any one failure leaves the site
+# target-bounded.  A partially enumerated instance set is never unioned.
+
+S1_WITNESS_SCHEMA = "openssl-rs/consumer-closure/static-table-instance/v1"
+S1_IMMUTABLE_SECTIONS = (".data.rel.ro", ".data.rel.ro.local", ".rodata")
+_S1_SOURCE_SUFFIX = ".rs"
+
+
+def _s1_docs(g: "DsoGraph"):
+    """Every tracked source file, read once per candidate image."""
+    cache = getattr(g, "_s1_docs_cache", None)
+    if cache is not None:
+        return cache
+    docs = {}
+    root = _repo_root(g)
+    if root is not None:
+        for path in sorted((root / "src").rglob("*" + _S1_SOURCE_SUFFIX)):
+            try:
+                docs[path.relative_to(root).as_posix()] = path.read_text(
+                    errors="replace")
+            except OSError:
+                continue
+    g._s1_docs_cache = docs
+    return docs
+
+
+def _s1_brace_span(text: str, open_at: int):
+    """End index of the ``{...}`` starting at ``open_at``, or None."""
+    if open_at < 0 or open_at >= len(text) or text[open_at] != "{":
+        return None
+    depth, i, n = 0, open_at, len(text)
+    while i < n:
+        ch = text[i]
+        if ch == "/" and i + 1 < n and text[i + 1] == "/":
+            j = text.find("\n", i)
+            i = n if j < 0 else j + 1
+            continue
+        if ch == "/" and i + 1 < n and text[i + 1] == "*":
+            j = text.find("*/", i + 2)
+            i = n if j < 0 else j + 2
+            continue
+        if ch == '"':
+            i += 1
+            while i < n:
+                if text[i] == "\\":
+                    i += 2
+                    continue
+                if text[i] == '"':
+                    i += 1
+                    break
+                i += 1
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return i + 1
+        i += 1
+    return None
+
+
+def _s1_struct_defs(g: "DsoGraph", type_name: str):
+    """All ``struct type_name`` definitions, with their repr(C) status."""
+    cache = getattr(g, "_s1_struct_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_struct_cache = cache
+    key = ("defs", type_name)
+    if key in cache:
+        return cache[key]
+    pat = re.compile(
+        r"(?m)^[ \t]*(?:pub(?:\s*\([^)]*\))?\s+)?struct\s+"
+        + re.escape(type_name) + r"\b")
+    out = []
+    for path, text in _s1_docs(g).items():
+        for m in pat.finditer(text):
+            brace = text.find("{", m.end())
+            if brace < 0:
+                continue
+            # A tuple/unit struct has ``;`` before the body brace.
+            semi = text.find(";", m.end(), brace)
+            if semi >= 0:
+                continue
+            end = _s1_brace_span(text, brace)
+            if end is None:
+                continue
+            prefix = text[max(0, m.start() - 600):m.start()]
+            out.append({
+                "file": path,
+                "line": text.count("\n", 0, m.start()) + 1,
+                "body": text[brace + 1:end - 1],
+                "repr_c": bool(re.search(r"#\[repr\s*\(\s*C\b", prefix)),
+            })
+    cache[key] = out
+    return out
+
+
+def _s1_strip_field(chunk: str):
+    chunk = re.sub(r"(?m)^\s*///.*$", "", chunk)
+    chunk = re.sub(r"(?m)^\s*//!.*$", "", chunk)
+    chunk = re.sub(r"/\*.*?\*/", "", chunk, flags=re.S)
+    chunk = re.sub(r"(?m)^\s*//.*$", "", chunk)
+    chunk = re.sub(r"#\[[^\]]*\]", "", chunk)
+    return chunk.strip()
+
+
+def _s1_split_fields(body: str):
+    """Top-level comma split of a repr(C) struct body."""
+    chunks, cur = [], []
+    depth = 0
+    i, n = 0, len(body)
+    while i < n:
+        ch = body[i]
+        if ch == "/" and i + 1 < n and body[i + 1] == "/":
+            j = body.find("\n", i)
+            i = n if j < 0 else j
+            continue
+        if ch == "/" and i + 1 < n and body[i + 1] == "*":
+            j = body.find("*/", i + 2)
+            i = n if j < 0 else j + 2
+            continue
+        if ch in "([{<":
+            depth += 1
+        elif ch in ")]}>":
+            depth = max(0, depth - 1)
+        if ch == "," and depth == 0:
+            chunks.append("".join(cur))
+            cur = []
+        else:
+            cur.append(ch)
+        i += 1
+    if cur:
+        chunks.append("".join(cur))
+    out = []
+    for chunk in chunks:
+        text = _s1_strip_field(chunk)
+        if not text:
+            continue
+        m = re.match(r"(?:pub(?:\s*\([^)]*\))?\s+)?"
+                     r"([A-Za-z_]\w*)\s*:\s*(.+)$", text, re.S)
+        if not m:
+            continue
+        out.append((m.group(1), " ".join(m.group(2).split())))
+    return out
+
+
+def _s1_struct_fields(g: "DsoGraph", type_name: str):
+    """Field list of the unique repr(C) definition, or None."""
+    defs = _s1_struct_defs(g, type_name)
+    repr_defs = [d for d in defs if d["repr_c"]]
+    if len(repr_defs) != 1:
+        return None
+    fields = _s1_split_fields(repr_defs[0]["body"])
+    return (fields, repr_defs[0]) if fields else None
+
+
+def _s1_type_alias(g: "DsoGraph", name: str):
+    cache = getattr(g, "_s1_alias_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_alias_cache = cache
+    if name in cache:
+        return cache[name]
+    pat = re.compile(r"\btype\s+" + re.escape(name) + r"\s*=\s*([^;]+);")
+    hits = set()
+    for _path, text in _s1_docs(g).items():
+        for m in pat.finditer(text):
+            hits.add(" ".join(m.group(1).split()))
+    cache[name] = hits.pop() if len(hits) == 1 else None
+    return cache[name]
+
+
+def _s1_type_size(g: "DsoGraph", type_text: str, seen=()):
+    """(size, alignment) of a repr(C) field type, or None if not decidable."""
+    t = " ".join((type_text or "").split())
+    if not t:
+        return None
+    if t.startswith("Option<") and t.endswith(">"):
+        inner = t[len("Option<"):-1].strip()
+        if "fn" in inner:
+            return (8, 8)
+        return None
+    if "fn" in t:
+        return (8, 8)
+    if t.startswith("*const") or t.startswith("*mut"):
+        return (8, 8)
+    prim = {
+        "usize": (8, 8), "isize": (8, 8), "size_t": (8, 8),
+        "ssize_t": (8, 8), "u64": (8, 8), "i64": (8, 8),
+        "uint64_t": (8, 8), "int64_t": (8, 8), "c_ulong": (8, 8),
+        "c_long": (8, 8), "c_uint": (4, 4), "c_int": (4, 4),
+        "u32": (4, 4), "i32": (4, 4), "uint32_t": (4, 4),
+        "int32_t": (4, 4), "c_ushort": (2, 2), "u16": (2, 2),
+        "c_short": (2, 2), "c_uchar": (1, 1), "u8": (1, 1),
+        "i8": (1, 1), "c_char": (1, 1),
+    }
+    if t in prim:
+        return prim[t]
+    m = re.fullmatch(r"\[(.+);\s*([^\]]+)\]", t)
+    if m:
+        inner = _s1_type_size(g, m.group(1), seen)
+        try:
+            count = int(m.group(2).strip(), 0)
+        except ValueError:
+            return None
+        if inner is None:
+            return None
+        return (inner[0] * count, inner[1])
+    alias = _s1_type_alias(g, t)
+    if alias is not None and alias != t:
+        return _s1_type_size(g, alias, seen + (t,))
+    nested = _s1_struct_layout(g, t, seen)
+    if nested is None:
+        return None
+    return (nested["size"], nested["align"])
+
+
+def _s1_struct_layout(g: "DsoGraph", type_name: str, seen=()):
+    """Repr(C) layout of a source struct, or None."""
+    if type_name in seen or len(seen) > 6:
+        return None
+    cache = getattr(g, "_s1_layout_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_layout_cache = cache
+    if type_name in cache:
+        return cache[type_name]
+    defs = _s1_struct_defs(g, type_name)
+    if len(defs) != 1:
+        cache[type_name] = None
+        return None
+    fields = _s1_split_fields(defs[0]["body"])
+    if not fields:
+        cache[type_name] = None
+        return None
+    infos = []
+    for name, ftype in fields:
+        info = _s1_type_size(g, ftype, seen + (type_name,))
+        if info is None:
+            cache[type_name] = None
+            return None
+        size, falign = info
+        if falign <= 0 or falign & (falign - 1):
+            cache[type_name] = None
+            return None
+        infos.append((name, ftype, size, falign))
+    # A table struct without repr(C) is still layout-stable when every field
+    # has the same size and alignment: the offset *set* is then independent of
+    # field order.  Member *names* are recorded only for repr(C) because the
+    # compiler may reorder other structs.
+    homogeneous = (len({(s, a) for _n, _t, s, a in infos}) == 1
+                   and infos[0][2] == infos[0][3])
+    if not defs[0]["repr_c"] and not homogeneous:
+        cache[type_name] = None
+        return None
+    off, align = 0, 1
+    rows = []
+    for name, ftype, size, falign in infos:
+        off = (off + falign - 1) // falign * falign
+        rows.append({
+            "offset": off, "name": name, "type": ftype,
+            "option": ftype.startswith("Option<"),
+            "named": defs[0]["repr_c"],
+        })
+        off += size
+        align = max(align, falign)
+    size = (off + align - 1) // align * align
+    out = {"name": type_name, "size": size, "align": align,
+           "fields": rows, "file": defs[0]["file"],
+           "line": defs[0]["line"],
+           "repr_c": defs[0]["repr_c"],
+           "homogeneous": homogeneous}
+    cache[type_name] = out
+    return out
+
+
+def _s1_src_fn(g: "DsoGraph", relpath: str, fn_name: str):
+    """Header/body span of one source function, or None."""
+    cache = getattr(g, "_s1_fn_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_fn_cache = cache
+    key = (relpath, fn_name)
+    if key in cache:
+        return cache[key]
+    text = _s1_docs(g).get(relpath)
+    if text is None:
+        cache[key] = None
+        return None
+    pat = re.compile(r"\bfn\s+" + re.escape(fn_name) + r"\s*\(")
+    hits = []
+    for m in pat.finditer(text):
+        line_start = text.rfind("\n", 0, m.start()) + 1
+        line = text[line_start:m.start()].strip()
+        if line.startswith("///") or line.startswith("//"):
+            continue
+        open_paren = text.find("(", m.end() - 1)
+        depth, i = 0, open_paren
+        close_paren = None
+        while i < len(text):
+            if text[i] == "(":
+                depth += 1
+            elif text[i] == ")":
+                depth -= 1
+                if depth == 0:
+                    close_paren = i
+                    break
+            i += 1
+        if close_paren is None:
+            continue
+        brace = text.find("{", close_paren)
+        if brace < 0:
+            continue
+        # A ``;`` before the brace means a declaration, not a definition.
+        if text.find(";", close_paren, brace) >= 0:
+            continue
+        end = _s1_brace_span(text, brace)
+        if end is None:
+            continue
+        hits.append({
+            "file": relpath,
+            "line": text.count("\n", 0, m.start()) + 1,
+            "header": text[m.start():brace + 1],
+            "body": text[brace + 1:end - 1],
+        })
+    out = hits[0] if len(hits) == 1 else None
+    cache[key] = out
+    return out
+
+
+def _s1_demangled(g: "DsoGraph", fstart: int):
+    cache = getattr(g, "_s1_demangle_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_demangle_cache = cache
+    if fstart in cache:
+        return cache[fstart]
+    mangled = (getattr(g, "funcs", {}) or {}).get(fstart)
+    dm = None
+    if mangled:
+        lines = demangle([mangled])
+        dm = lines[0] if lines else None
+    cache[fstart] = dm
+    return dm
+
+
+def _s1_site_context(g: "DsoGraph", fstart: int):
+    """(source file, function name, context type) for the site function."""
+    cache = getattr(g, "_s1_ctx_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_ctx_cache = cache
+    if fstart in cache:
+        return cache[fstart]
+    dm = _s1_demangled(g, fstart)
+    out = None
+    if dm:
+        m = CRATE_NS.match(dm)
+        if m:
+            segs = m.group(1).split("::")
+            if len(segs) >= 2:
+                root = _repo_root(g)
+                fn_name = segs[-1]
+                relpath = None
+                if root is not None:
+                    fallback = getattr(g, "_s1_module_index", None)
+                    if fallback is None:
+                        fallback = build_module_index(root / "src")
+                        g._s1_module_index = fallback
+                    relpath = module_to_file("::".join(segs[:-1]),
+                                             root / "src", fallback)
+                if relpath:
+                    span = _s1_src_fn(g, relpath, fn_name)
+                    if span is not None:
+                        ctx = _s1_fn_context(span, fn_name)
+                        if ctx is not None:
+                            out = {"file": relpath, "function": fn_name,
+                                   "line": span["line"], **ctx}
+    cache[fstart] = out
+    return out
+
+
+def _s1_fn_context(span: dict, fn_name: str):
+    """The context parameter of a source function and its declared type."""
+    header = span["header"]
+    m = re.search(r"\(", header)
+    if not m:
+        return None
+    depth, i = 0, m.start()
+    end = None
+    while i < len(header):
+        if header[i] == "(":
+            depth += 1
+        elif header[i] == ")":
+            depth -= 1
+            if depth == 0:
+                end = i
+                break
+        i += 1
+    if end is None:
+        return None
+    params, cur, depth = [], [], 0
+    for ch in header[m.start() + 1:end]:
+        if ch in "([<":
+            depth += 1
+        elif ch in ")]>:":
+            depth = max(0, depth - 1)
+        if ch == "," and depth == 0:
+            params.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+    if cur:
+        params.append("".join(cur).strip())
+    if not params:
+        return None
+    first = params[0]
+    mm = re.match(r"([A-Za-z_]\w*)\s*:\s*(.+)$", first, re.S)
+    if not mm:
+        return None
+    var, ptype = mm.group(1), " ".join(mm.group(2).split())
+    tm = re.search(r"(?:\*\s*(?:const|mut)\s*|&\s*(?:mut\s*)?)([A-Za-z_]\w*)",
+                   ptype)
+    if not tm:
+        return None
+    typ = tm.group(1)
+    if typ in ("c_void", "void"):
+        body = span["body"]
+        cast = re.search(
+            r"(?:let\s+)?([A-Za-z_]\w*)\s*(?::[^=]*)?=\s*([A-Za-z_]\w*)"
+            r"\s*\.\s*cast\s*::\s*<\s*([A-Za-z_]\w*)\s*>", body)
+        if cast is None:
+            return None
+        return {"var": cast.group(1), "type": cast.group(3),
+                "param": var, "param_index": 0,
+                "declared": " ".join(first.split())}
+    return {"var": var, "type": typ, "param": var, "param_index": 0,
+            "declared": " ".join(first.split())}
+
+
+def _s1_rust_last_segment(name: str):
+    """Last identifier of a legacy Rust mangled path, or None.
+
+    The path is a sequence of ``<decimal length><identifier>`` segments after
+    the crate disambiguator.  Parsing the declared lengths (rather than
+    guessing a suffix) keeps names such as ``SM4_GCM_HW`` and ``CAST5_CBC_HW``
+    intact: their internal digits are part of the identifier, not a length.
+    """
+    m = re.search(r"Cs[0-9A-Za-z]+_", name or "")
+    if not m:
+        return None
+    pos, last = m.end(), None
+    while pos < len(name):
+        n = re.match(r"\d+", name[pos:])
+        if not n:
+            return None
+        length = int(n.group(0))
+        ident_at = pos + len(n.group(0))
+        ident = name[ident_at:ident_at + length]
+        if len(ident) != length:
+            return None
+        last = ident
+        pos = ident_at + length
+    return last
+
+
+def _s1_symbol_index(g: "DsoGraph"):
+    cache = getattr(g, "_s1_sym_index", None)
+    if cache is not None:
+        return cache
+    exact, short = {}, {}
+    for addr, names in (getattr(g, "names_at", {}) or {}).items():
+        for raw in names:
+            name = (raw or "").split("@")[0]
+            if not name:
+                continue
+            exact[name] = addr
+            best = _s1_rust_last_segment(name)
+            if best:
+                short.setdefault(best, set()).add(addr)
+    cache = {"exact": exact, "short": short}
+    g._s1_sym_index = cache
+    return cache
+
+
+def _s1_symbol_address(g: "DsoGraph", name: str):
+    """Image address and mangled symbol name for a source static, or None."""
+    idx = _s1_symbol_index(g)
+    if name in idx["exact"]:
+        addr = idx["exact"][name]
+        return addr, name
+    cands = idx["short"].get(name) or set()
+    if len(cands) == 1:
+        addr = next(iter(cands))
+        for raw in (getattr(g, "names_at", {}) or {}).get(addr, ()):
+            sym = (raw or "").split("@")[0]
+            if sym.endswith(f"{len(name)}{name}"):
+                return addr, sym
+        return addr, name
+    return None
+
+
+def _s1_macro_static_names(g: "DsoGraph", table_type: str):
+    """Identifiers produced by ``macro_rules!`` bodies as ``static $x: T``."""
+    cache = getattr(g, "_s1_macro_static_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_macro_static_cache = cache
+    if table_type in cache:
+        return cache[table_type]
+    defs = {}
+    for _path, text in _s1_docs(g).items():
+        for m in re.finditer(r"macro_rules!\s*(\w+)\s*\{", text):
+            open_at = text.find("{", m.end() - 1)
+            end = _s1_brace_span(text, open_at)
+            if end is None:
+                continue
+            body = text[open_at:end]
+            names = set(re.findall(
+                r"\bstatic\s+\$(\w+)\s*:\s*" + re.escape(table_type) + r"\b",
+                body))
+            if not names:
+                continue
+            decl = re.search(r"\(([^()]*)\)\s*=>", body)
+            if decl is None:
+                continue
+            formal = [p.strip() for p in decl.group(1).split(",")]
+            defs[m.group(1)] = {"names": names, "formal": formal}
+    if not defs:
+        cache[table_type] = set()
+        return set()
+    out = set()
+    for _path, text in _s1_docs(g).items():
+        for macro, spec in defs.items():
+            pat = re.compile(r"\b" + re.escape(macro) + r"\s*!\s*([\(\[\{])")
+            for m in pat.finditer(text):
+                open_ch = m.group(1)
+                close_ch = {"(": ")", "[": "]", "{": "}"}[open_ch]
+                depth, i, close_at = 0, m.end() - 1, None
+                while i < len(text):
+                    if text[i] == open_ch:
+                        depth += 1
+                    elif text[i] == close_ch:
+                        depth -= 1
+                        if depth == 0:
+                            close_at = i
+                            break
+                    i += 1
+                if close_at is None:
+                    continue
+                raw = text[m.end():close_at]
+                args, cur, depth = [], [], 0
+                for ch in raw:
+                    if ch in "([{<":
+                        depth += 1
+                    elif ch in ")]}>":
+                        depth = max(0, depth - 1)
+                    if ch == "," and depth == 0:
+                        args.append("".join(cur).strip())
+                        cur = []
+                    else:
+                        cur.append(ch)
+                if cur:
+                    args.append("".join(cur).strip())
+                for formal, arg in zip(spec["formal"], args):
+                    pm = re.match(r"\$(\w+)\s*:", formal)
+                    am = re.fullmatch(r"(?:pub\s+)?([A-Za-z_]\w*)", arg)
+                    if pm and am and pm.group(1) in spec["names"]:
+                        out.add(am.group(1))
+    cache[table_type] = out
+    return out
+
+
+def _s1_declared_instances(g: "DsoGraph", table_type: str):
+    """Every source ``static NAME: table_type`` with an address in this image."""
+    cache = getattr(g, "_s1_instance_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_instance_cache = cache
+    if table_type in cache:
+        return cache[table_type]
+    pat = re.compile(r"\bstatic\s+([A-Za-z_]\w*)\s*:\s*"
+                     + re.escape(table_type) + r"\s*=")
+    found = []
+    for path, text in _s1_docs(g).items():
+        for m in pat.finditer(text):
+            found.append((m.group(1), path))
+    for name in sorted(_s1_macro_static_names(g, table_type)):
+        found.append((name, "macro_rules! (generated static)"))
+    out, absent = {}, []
+    for name, path in found:
+        hit = _s1_symbol_address(g, name)
+        if hit is None:
+            absent.append({"name": name, "file": path})
+            continue
+        addr, sym = hit
+        if addr in out:
+            continue
+        out[addr] = {"name": name, "symbol": sym, "addr": addr}
+    result = {"instances": out, "absent_from_image": absent}
+    cache[table_type] = result
+    return result
+
+
+def _s1_dispatch_tables(g: "DsoGraph"):
+    """Decode immutable ``OsslDispatch`` tables from the exact image."""
+    cache = getattr(g, "_s1_dispatch_cache", None)
+    if cache is not None:
+        return cache
+    sizes = getattr(g, "sym_sizes", {}) or {}
+    out, seen = [], set()
+    for addr, names in (getattr(g, "names_at", {}) or {}).items():
+        if addr in seen:
+            continue
+        sec = g.section_of(addr)
+        if sec not in S1_IMMUTABLE_SECTIONS:
+            continue
+        size = None
+        sym = None
+        for raw in names:
+            name = (raw or "").split("@")[0]
+            if name in sizes:
+                size, sym = sizes[name], name
+                break
+        if size is None or size < 32 or size > 0x1000 or size % 16:
+            continue
+        entries = []
+        valid = True
+        terminated = False
+        for k in range(size // 16):
+            fid = g.read_u32(addr + k * 16)
+            ptrs = g.static_slot(addr + k * 16 + 8)
+            ints = {x for x in (ptrs or ()) if isinstance(x, int)}
+            if fid is None or len(ints) != 1:
+                valid = False
+                break
+            ptr = next(iter(ints))
+            if fid == 0:
+                if ptr != 0:
+                    valid = False
+                terminated = True
+                break
+            if not (1 <= fid <= 14) or ptr == 0 or ptr not in g.start_set:
+                valid = False
+                break
+            entries.append({"id": fid, "target": ptr})
+        if not valid or not terminated or not entries:
+            continue
+        if not any(e["id"] == 1 for e in entries):
+            continue
+        seen.add(addr)
+        out.append({"addr": addr, "symbol": sym or g.all_syms.get(addr),
+                    "section": sec, "entries": entries})
+    g._s1_dispatch_cache = out
+    return out
+
+
+def _s1_closure(g: "DsoGraph", roots, depth: int = 2):
+    seen = set(roots)
+    frontier = set(roots)
+    for _ in range(depth):
+        nxt = set()
+        for f in frontier:
+            for callee in (getattr(g, "direct", {}) or {}).get(f, ()):
+                if callee not in seen:
+                    seen.add(callee)
+                    nxt.add(callee)
+        frontier = nxt
+    return seen
+
+
+def _s1_store_value(g: "DsoGraph", fstart: int, idx: int, src: str,
+                    slot_off: int):
+    """(value, kind) for a stored operand; kind ``identity`` means a reload."""
+    src = src.strip()
+    if src.startswith("$"):
+        try:
+            return int(src[1:], 16), "immediate"
+        except ValueError:
+            return None, "bad-immediate"
+    if src in _REGS or src in _SUBREG:
+        origin = _reg_origin(g, fstart, idx, _canon(src))
+        kind = origin.get("kind")
+        if kind == "int":
+            return origin.get("value"), "immediate"
+        if kind == "load":
+            if origin.get("offset") == slot_off:
+                return None, "identity"
+            insn = _insn(g, fstart, origin.get("at", -1))
+            addr = _insn_comment_addr(insn)
+            if addr is not None:
+                return addr, "static"
+            return None, "non-static-load"
+        return None, "origin:" + str(kind)
+    if re.fullmatch(r"-?0x[0-9a-f]+\(%rip\)", src):
+        # The objdump comment on the store carries the link address.
+        comment = _insn_comment_addr(_insn(g, fstart, idx))
+        return (comment, "static") if comment is not None else (None,
+                                                                "rip-slot")
+    return None, "unsupported-source"
+
+
+def _s1_scalar_stores(g: "DsoGraph", fstart: int, slot_off: int):
+    """Scalar 8-byte stores to ``slot_off(base)`` in one function."""
+    out = []
+    for i, (addr, text) in enumerate(
+            (getattr(g, "precision", None).insns_by_func.get(fstart, ())
+             if _has_insns(g) else ())):
+        body = text.split("#", 1)[0].strip()
+        m = re.fullmatch(
+            r"(mov|movq|movabs)\s+(.+),\s*(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)\s*",
+            body)
+        if not m:
+            continue
+        src = m.group(2).strip()
+        disp = m.group(3) or "0"
+        base = m.group(4)
+        try:
+            off = int(disp, 16)
+        except ValueError:
+            continue
+        if base in ("%rsp", "%rbp") or off != slot_off:
+            continue
+        out.append({"index": i, "addr": addr, "src": src, "base": base})
+    return out
+
+
+def _s1_null_guard(g: "DsoGraph", fstart: int, idx: int, member_off: int,
+                   base_reg: str):
+    """Guard address for a nullable member, or None."""
+    insns = g.precision.insns_by_func.get(fstart, ()) if _has_insns(g) else ()
+    lo = max(0, idx - 40)
+    member_reg = None
+    mem_pat = re.compile(r"(-?0x[0-9a-f]+)?\(%r[a-z0-9]+\)")
+    for k in range(idx - 1, lo - 1, -1):
+        text = insns[k][1].split("#", 1)[0].strip()
+        mm = re.fullmatch(r"mov(?:q)?\s+(%r[a-z0-9]+),\s*"
+                          r"(-?0x[0-9a-f]+)\((%r[a-z0-9]+)\)", text)
+        if mm and int(mm.group(2), 16) == member_off \
+                and mm.group(3) == base_reg:
+            member_reg = _canon(mm.group(1))
+            break
+        if mem_pat.search(text) and "test" in text:
+            return insns[k][0]
+    if member_reg is None and _canon(base_reg) not in _REGS:
+        return None
+    reg = member_reg or _canon(base_reg)
+    for k in range(idx - 1, lo - 1, -1):
+        text = insns[k][1].split("#", 1)[0].strip()
+        mn, rest, ops = _insn_parts(text)
+        if mn == "test" and len(ops) == 2 and _canon(ops[0]) == reg \
+                and _canon(ops[1]) == reg:
+            for j in range(k + 1, min(len(insns), k + 5)):
+                mn2, rest2, _o = _insn_parts(insns[j][1])
+                if mn2.startswith("j") and re.match(r"^[0-9a-f]+", rest2):
+                    return insns[k][0]
+                if mn2.startswith(("call", "ret")):
+                    break
+        if mn == "cmp" and len(ops) == 2 \
+                and ops[0] in ("$0x0", "$0") and _canon(ops[1]) == reg:
+            for j in range(k + 1, min(len(insns), k + 5)):
+                mn2, rest2, _o = _insn_parts(insns[j][1])
+                if mn2.startswith("j") and re.match(r"^[0-9a-f]+", rest2):
+                    return insns[k][0]
+                if mn2.startswith(("call", "ret")):
+                    break
+    return None
+
+
+def _s1_refusal(reason: str, **extra) -> dict:
+    rec = {"schema": S1_WITNESS_SCHEMA, "class": "static-table-instance",
+           "contract_bounded": False, "resolved": False,
+           "refusal": reason}
+    rec.update(extra)
+    return rec
+
+
+def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
+                                  reachable: set | None = None):
+    """Prove (or refuse) a field-sensitive static-table instance dispatch.
+
+    Returns None when this site is not a field-dispatch candidate at all; a
+    dict with ``resolved`` otherwise.  Every refusal is recorded and leaves the
+    site target-bounded -- callers must not fall through to a weaker class.
+    """
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    fstart = site.get("func")
+    insns = g.precision.insns_by_func.get(fstart, ())
+    idx = next((i for i, (a, _t) in enumerate(insns) if a == site.get("addr")),
+               None)
+    if idx is None:
+        return None
+    ctx_info = _s1_site_context(g, fstart)
+    if ctx_info is None:
+        return None
+    # Only the pointer fields of T are needed.  T itself need not have a
+    # fully decidable layout: the pointer-slot offset is read from the load
+    # that produces the call's base, and the table type U carries the layout
+    # that the member offsets are checked against.
+    tfields = _s1_struct_fields(g, ctx_info["type"])
+    if tfields is None:
+        return None
+    pointer_fields = []
+    for fname, ftype in tfields[0]:
+        m = re.match(r"\*\s*(?:const|mut)\s+([A-Za-z_]\w*)", ftype)
+        if not m:
+            continue
+        ulayout = _s1_struct_layout(g, m.group(1))
+        if ulayout is None:
+            continue
+        pointer_fields.append({"field": fname,
+                               "table_type": m.group(1), "layout": ulayout,
+                               "declaration": (f"{tfields[1]['file']}:"
+                                               f"{tfields[1]['line']}")})
+    if not pointer_fields:
+        return None
+
+    text = site.get("text") or ""
+    m = re.search(r"call\w*\s+\*(.+)$", text.split("#", 1)[0].strip())
+    if not m:
+        return None
+    operand = m.group(1).strip()
+    member_off = None
+    base_reg = None
+    chain = []
+    mo = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", operand)
+    if mo:
+        member_off = int(mo.group(1), 16) if mo.group(1) else 0
+        base_reg = mo.group(2)
+    elif operand in _REGS or operand in _SUBREG:
+        base_reg = _canon(operand)
+    else:
+        return None
+    origin = _reg_origin(g, fstart, idx, base_reg)
+    chain = []
+    if mo:
+        if origin.get("kind") != "load":
+            if "s1-base-not-table" not in _MUTED:
+                return None
+            # Mutation only: the call operand is not a field load.  Use the
+            # observed member offset so the rest of the checks still run.
+            slot_off = member_off
+            table_reg = base_reg
+            slot_load_idx = idx
+        else:
+            slot_off = origin["offset"]
+            table_reg = origin["base_reg"]
+            slot_load_idx = origin["at"]
+    else:
+        if origin.get("kind") != "load":
+            return None
+        member_off = origin["offset"]
+        table_reg = origin["base_reg"]
+        slot_load_idx = origin["at"]
+        slot_origin = _reg_origin(g, fstart, slot_load_idx, table_reg)
+        if slot_origin.get("kind") != "load":
+            if "s1-base-not-table" not in _MUTED:
+                return None
+            slot_off = member_off
+        else:
+            slot_off = slot_origin["offset"]
+            chain.append({"step": "load member",
+                          "addr": (hex(insns[slot_load_idx][0])
+                                   if slot_load_idx < len(insns) else None),
+                          "member_offset": hex(member_off)})
+            table_reg = slot_origin["base_reg"]
+            slot_load_idx = slot_origin["at"]
+    ctx_origin = _reg_origin(g, fstart, slot_load_idx,
+                             _canon(table_reg) if table_reg in _SUBREG else table_reg)
+    if ctx_origin.get("kind") != "param":
+        if "s1-base-not-table" not in _MUTED:
+            return None
+        ctx_origin = {"kind": "param", "index": ctx_info.get("param_index")}
+    if ctx_origin.get("index") != ctx_info.get("param_index"):
+        if "s1-base-not-table" not in _MUTED:
+            return None
+        ctx_origin = {"kind": "param", "index": ctx_info.get("param_index")}
+    slot_load_addr = (insns[slot_load_idx][0]
+                      if slot_load_idx < len(insns) else None)
+    chain.insert(0, {"step": "parameter ctx",
+                     "param": ctx_info.get("param"),
+                     "register": table_reg,
+                     "index": ctx_origin.get("index")})
+    chain.insert(1, {"step": "load pointer_slot",
+                     "addr": hex(slot_load_addr) if slot_load_addr else None,
+                     "offset": hex(slot_off)})
+
+    tables = [t for t in _s1_dispatch_tables(g)
+              if fstart in _s1_closure(g, [e["target"] for e in t["entries"]], 2)]
+    if not tables:
+        return None
+    cohort = set()
+    writers = set()
+    paired = []
+    for t in tables:
+        roots = [e["target"] for e in t["entries"] if e["id"] == 1]
+        if len(roots) != 1:
+            return _s1_refusal("dispatch-without-single-newctx", function=name,
+                               call_site=hex(site["addr"]),
+                               dispatch_tables=[hex(t["addr"])],
+                               chain=chain)
+        cohort |= _s1_closure(g, [e["target"] for e in t["entries"]], 2)
+        t_writers = _s1_closure(g, roots, 2)
+        writers |= t_writers
+        t["_writers"] = t_writers
+        paired.append({"table": t["symbol"], "addr": hex(t["addr"]),
+                       "newctx": g.funcs.get(roots[0], hex(roots[0]))})
+    if reachable is not None:
+        callers = _direct_call_index(g).get(fstart, [])
+        outside = sorted({c for c, _i, _a in callers
+                          if c in reachable and c not in cohort})
+        if outside and "s1-caller-outside-cohort" not in _MUTED:
+            return _s1_refusal("caller-outside-cohort", function=name,
+                               call_site=hex(site["addr"]),
+                               callers=[g.funcs.get(c, hex(c)) for c in outside],
+                               dispatch_tables=[hex(t["addr"]) for t in tables],
+                               chain=chain)
+
+    candidates = []
+    for cand in pointer_fields:
+        if member_off not in {r["offset"] for r in cand["layout"]["fields"]}:
+            continue
+        declared = _s1_declared_instances(g, cand["table_type"])
+        instances = declared["instances"]
+        if not instances:
+            continue
+        found = {}
+        unaccounted = []
+        partial = False
+        for wf in sorted(writers):
+            for store in _s1_scalar_stores(g, wf, slot_off):
+                value, kind = _s1_store_value(g, wf, store["index"],
+                                              store["src"], slot_off)
+                if kind == "identity":
+                    found.setdefault((wf, store["addr"]), {
+                        "function": g.funcs.get(wf, hex(wf)),
+                        "store_site": hex(store["addr"]),
+                        "value": "identity(reload of the same slot)",
+                        "kind": kind})
+                    continue
+                if value is None or kind not in ("immediate", "static"):
+                    unaccounted.append({"function": g.funcs.get(wf, hex(wf)),
+                                        "store_site": hex(store["addr"]),
+                                        "reason": kind})
+                    continue
+                if value not in instances:
+                    if "s1-undeclared-store" not in _MUTED:
+                        unaccounted.append({"function": g.funcs.get(wf, hex(wf)),
+                                            "store_site": hex(store["addr"]),
+                                            "value": hex(value),
+                                            "reason": "not a declared "
+                                                      + cand["table_type"]})
+                    continue
+                found[(wf, store["addr"])] = {
+                    "function": g.funcs.get(wf, hex(wf)),
+                    "store_site": hex(store["addr"]),
+                    "value": hex(value), "kind": kind}
+        outside_writers = []
+        for cf in sorted(cohort - writers):
+            for store in _s1_scalar_stores(g, cf, slot_off):
+                value, kind = _s1_store_value(g, cf, store["index"],
+                                              store["src"], slot_off)
+                if kind == "identity":
+                    continue
+                if value is None or kind not in ("immediate", "static") \
+                        or value not in instances:
+                    outside_writers.append({
+                        "function": g.funcs.get(cf, hex(cf)),
+                        "store_site": hex(store["addr"]),
+                        "value": (hex(value) if value is not None else kind)})
+                else:
+                    found[(cf, store["addr"])] = {
+                        "function": g.funcs.get(cf, hex(cf)),
+                        "store_site": hex(store["addr"]),
+                        "value": hex(value), "kind": kind}
+        if unaccounted or outside_writers:
+            candidates.append({"candidate": cand, "ok": False,
+                               "unaccounted": unaccounted,
+                               "outside": outside_writers,
+                               "found": found})
+            continue
+        if not found:
+            candidates.append({"candidate": cand, "ok": False,
+                               "unaccounted": [], "outside": [],
+                               "found": {},
+                               "reason": "no-writer"})
+            continue
+        # Each matched dispatch table must contribute at least one declared
+        # instance.  A table whose constructor contributed nothing leaves the
+        # instance set partial; that is refused, never unioned.
+        per_table = []
+        for t in tables:
+            tw = t["_writers"]
+            vals = [v for (wf, _sa), v in found.items()
+                    if wf in tw and v["value"].startswith("0x")]
+            per_table.append(bool(vals))
+        if not all(per_table) and "s1-partial-instances" not in _MUTED:
+            candidates.append({"candidate": cand, "ok": False,
+                               "unaccounted": [], "outside": [],
+                               "found": found,
+                               "reason": "partial-instance-set"})
+            continue
+        candidates.append({"candidate": cand, "ok": True,
+                           "unaccounted": [], "outside": [],
+                           "found": found})
+
+    good = [c for c in candidates if c["ok"]]
+    if len(good) != 1:
+        reason = "no-complete-instance-candidate" if not good else "ambiguous-field"
+        return _s1_refusal(reason, function=name, call_site=hex(site["addr"]),
+                           operand={"base_reg": base_reg,
+                                    "member_offset": hex(member_off)},
+                           chain=chain,
+                           dispatch_tables=[hex(t["addr"]) for t in tables],
+                           candidates=[{"object": ctx_info["type"],
+                                        "field": c["candidate"]["field"],
+                                        "table": c["candidate"]["table_type"],
+                                        "ok": c["ok"],
+                                        "unaccounted_table_pointers":
+                                            c.get("unaccounted", []),
+                                        "stores_outside_writers":
+                                            c.get("outside", []),
+                                        "reason": c.get("reason")}
+                                       for c in candidates])
+    chosen = good[0]
+    cand = chosen["candidate"]
+    ulayout = cand["layout"]
+    declared = _s1_declared_instances(g, cand["table_type"])
+    instances = declared["instances"]
+
+    instance_rows = []
+    targets = set()
+    unaccounted_tables = []
+    shape_failures = []
+    for addr in sorted({int(v["value"], 16) for v in chosen["found"].values()
+                        if v["value"].startswith("0x")}):
+        inst = instances.get(addr)
+        if inst is None:
+            continue
+        sec = g.section_of(addr)
+        if sec not in S1_IMMUTABLE_SECTIONS and "s1-mutable-table" not in _MUTED:
+            unaccounted_tables.append({"table": inst["name"],
+                                       "addr": hex(addr),
+                                       "section": sec})
+            continue
+        members = {}
+        derived_but_undeclared = []
+        declared_but_absent = []
+        for row in ulayout["fields"]:
+            members[hex(row["offset"])] = None
+        size = None
+        for raw in (getattr(g, "names_at", {}) or {}).get(addr, ()):
+            sym = (raw or "").split("@")[0]
+            if sym in (getattr(g, "sym_sizes", {}) or {}):
+                size = g.sym_sizes[sym]
+                break
+        if size is None:
+            shape_failures.append({"table": inst["name"],
+                                   "reason": "no symbol size"})
+            continue
+        derived = [o for o in range(0, size, 8)]
+        declared_offs = [r["offset"] for r in ulayout["fields"]]
+        if size != ulayout["size"]:
+            derived_but_undeclared = [o for o in derived if o not in declared_offs]
+            declared_but_absent = [o for o in declared_offs if o not in derived]
+            if "s1-shape-mismatch" not in _MUTED:
+                shape_failures.append({
+                    "table": inst["name"],
+                    "derived_size": hex(size),
+                    "declared_size": hex(ulayout["size"]),
+                    "derived_but_undeclared": [hex(o) for o in derived_but_undeclared],
+                    "declared_but_absent": [hex(o) for o in declared_but_absent]})
+                continue
+        member_ok = True
+        for row in ulayout["fields"]:
+            vals = g.static_slot(addr + row["offset"])
+            ints = {x for x in (vals or ()) if isinstance(x, int)}
+            if len(ints) != 1:
+                if "s1-shape-mismatch" not in _MUTED:
+                    member_ok = False
+                members[hex(row["offset"])] = None
+                continue
+            value = next(iter(ints))
+            if value == 0:
+                if not row["option"]:
+                    if "s1-member-not-function" not in _MUTED:
+                        member_ok = False
+                else:
+                    guard = _s1_null_guard(g, fstart, idx, row["offset"],
+                                           base_reg)
+                    if guard is None and "s1-null-no-guard" not in _MUTED:
+                        member_ok = False
+                    else:
+                        members[hex(row["offset"])] = {
+                            "value": None, "guard": hex(guard) if guard else None}
+                continue
+            if value not in g.start_set:
+                if "s1-member-not-function" not in _MUTED:
+                    member_ok = False
+                members[hex(row["offset"])] = {"value": hex(value),
+                                                "not_function": True}
+                continue
+            members[hex(row["offset"])] = {"value": hex(value),
+                                            "symbol": g.funcs.get(value)}
+            if row["offset"] == member_off:
+                targets.add(value)
+        if not member_ok:
+            shape_failures.append({"table": inst["name"],
+                                   "reason": "member not an in-image function start"})
+            continue
+        instance_rows.append({
+            "addr": hex(addr), "symbol": inst["symbol"],
+            "section": sec, "members": members,
+            "shape_ok": (not derived_but_undeclared and not declared_but_absent),
+        })
+    if unaccounted_tables or shape_failures:
+        return _s1_refusal("table-shape-or-section", function=name,
+                           call_site=hex(site["addr"]),
+                           pointer_slot={"object": ctx_info["type"],
+                                         "offset": hex(slot_off),
+                                         "field": cand["field"]},
+                           unaccounted_table_pointers=unaccounted_tables,
+                           shape_failures=shape_failures,
+                           chain=chain)
+    if not instance_rows or not targets:
+        return _s1_refusal("no-target-at-member", function=name,
+                           call_site=hex(site["addr"]),
+                           pointer_slot={"object": ctx_info["type"],
+                                         "offset": hex(slot_off),
+                                         "field": cand["field"]},
+                           member_offset=hex(member_off), chain=chain)
+    if len(instance_rows) != len({int(v["value"], 16)
+                                  for v in chosen["found"].values()
+                                  if v["value"].startswith("0x")}) \
+            and "s1-partial-instances" not in _MUTED:
+        return _s1_refusal("partial-instance-set", function=name,
+                           call_site=hex(site["addr"]),
+                           pointer_slot={"object": ctx_info["type"],
+                                         "offset": hex(slot_off),
+                                         "field": cand["field"]},
+                           instances=[r["addr"] for r in instance_rows],
+                           chain=chain)
+    if member_off == 0 and "s1-mutable-table" in _MUTED:
+        pass
+    return {
+        "schema": S1_WITNESS_SCHEMA,
+        "class": "static-table-instance",
+        "contract_bounded": False,
+        "resolved": True,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "operand": {"base_reg": base_reg, "member_offset": hex(member_off)},
+        "pointer_slot": {"object": ctx_info["type"],
+                         "offset": hex(slot_off),
+                         "field": cand["field"],
+                         "declaration": cand["declaration"]},
+        "member": next(({"offset": hex(r["offset"]), "name": r["name"],
+                          "type": r["type"]}
+                         for r in ulayout["fields"]
+                         if r["offset"] == member_off), None),
+        "instances": instance_rows,
+        "stored_by": sorted(chosen["found"].values(),
+                            key=lambda r: (r["function"], r["store_site"])),
+        "chain": chain,
+        "dispatch_tables": paired,
+        "completeness": {"unaccounted_table_pointers": [],
+                         "unscanned_writers": []},
+        "targets": [hex(t) for t in sorted(targets)],
+        "basis": ("field-sensitive static-table instance dispatch: the base "
+                  "register is loaded from one pointer field of the documented "
+                  "context type, the dispatch table pairs its constructor, every "
+                  "scalar store to that field in the cohort writes a declared "
+                  "table, and every table member is an in-image function start"),
+    }
+
+
 # ---- S6: triage records (not a class) ---------------------------------- #
 
 S6_FUNCTIONS = {
@@ -5837,6 +7085,33 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                 site["reason"] = "static-table-incomplete:" + table
                 stats["R3_unresolved"] += 1
             continue
+        # S1: a field-sensitive static-table instance dispatch.  The witness
+        # keys on (object type, pointer-slot offset, member offset), restricts
+        # the writer set by the static dispatch table that pairs the consumer
+        # with its constructor, and refuses the whole site on any failed
+        # condition.  A refused site never falls through to a weaker class.
+        s1 = static_table_instance_witness(g, site, name, reachable)
+        if getattr(g, "_semantic_precision", None) is not None:
+            # Once the semantic resolver exists the process is close to its
+            # data limit; do not retain the S1 source corpus across sites.
+            _drop_s1_caches(g, all_caches=False)
+        if s1 is not None:
+            if s1.get("resolved"):
+                targets = {int(t, 16) for t in s1["targets"]}
+                _resolve(g, site, targets | residual, "static-table-instance",
+                         ("field-sensitive static-table instance dispatch: "
+                          + s1["pointer_slot"]["object"] + "."
+                          + s1["pointer_slot"]["field"] + " at "
+                          + s1["pointer_slot"]["offset"] + " -> "
+                          + str(len(s1["instances"])) + " declared table(s)"))
+                site["static_instance_witness"] = s1
+                stats["S1_static_instance_resolved"] += 1
+            else:
+                site["static_instance_refusal"] = s1
+                site["reason"] = ("static-instance-refused:"
+                                  + str(s1.get("refusal")))
+                stats["S1_static_instance_refused"] += 1
+            continue
         # A local function pointer built from a finite, fully enumerated set of
         # in-image addresses.  This is a target claim (every stored value is a
         # function start and every writer is accounted for), never a contract.
@@ -5989,6 +7264,10 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                  "_direct_call_index_cache"):
         if hasattr(g, attr):
             setattr(g, attr, {})
+    # The source corpus and every S1 index are the largest allocations here;
+    # drop them as soon as the classification pass is over (the edge-record
+    # phase has its own budget).
+    _drop_s1_caches(g, all_caches=True)
     if hasattr(g, "_header_text_cache"):
         g._header_text_cache = None
     return dict(stats)
@@ -12384,6 +13663,233 @@ def self_test() -> int:
     check("S4 a non-function store is refused",
           _local_witness(extra=True), None)
 
+    # S1: field-sensitive static-table instance dispatch.
+    def _s1_source(nullable=False):
+        cipher = ("unsafe extern \"C\" fn(*mut Wctx) -> c_int"
+                  if not nullable else
+                  "Option<unsafe extern \"C\" fn(*mut Wctx) -> c_int>")
+        return (
+            "#[repr(C)]\n"
+            "pub(crate) struct WTable {\n"
+            "    pub init: unsafe extern \"C\" fn(*mut Wctx) -> c_int,\n"
+            f"    pub cipher: {cipher},\n"
+            "    pub fini: unsafe extern \"C\" fn(*mut Wctx) -> c_int,\n"
+            "}\n"
+            "#[repr(C)]\n"
+            "pub(crate) struct Wctx {\n"
+            "    pub flags: c_uint,\n"
+            "    pub hw: *const WTable,\n"
+            "}\n"
+            "static TBL_A: WTable = WTable { init: f0, cipher: f1, fini: f2 };\n"
+            "static TBL_B: WTable = WTable { init: g0, cipher: g1, fini: g2 };\n"
+            "static TBL_C: WTable = WTable { init: h0, cipher: h1, fini: h2 };\n"
+            "unsafe fn site(ctx: *mut Wctx, out: *mut c_uchar) -> c_int {\n"
+            "    let hw = (*ctx).hw;\n"
+            "    ((*hw).cipher)(ctx, out)\n"
+            "}\n"
+        )
+
+    class _S1G:
+        def __init__(self, insns, funcs, data_syms, sizes, static_values,
+                     u32, sections, direct=None, source_root=None):
+            self.name = "s1.so"
+            self.funcs = dict(funcs)
+            self.start_set = set(funcs)
+            self.names_at = collections.defaultdict(set)
+            for a, n in funcs.items():
+                self.names_at[a].add(n)
+            for a, n in data_syms.items():
+                self.names_at[a].add(n)
+            self.all_syms = {a: sorted(ns)[0]
+                             for a, ns in self.names_at.items()}
+            self.sym_sizes = dict(sizes)
+            self.sections = dict(sections)
+            self.precision = _WPrecision({f: list(v) for f, v in insns.items()})
+            self.source_root = source_root
+            self.install_prefix = None
+            self.direct = collections.defaultdict(set, direct or {})
+            self._static_values = dict(static_values)
+            self._u32 = dict(u32)
+            self.sites = {}
+
+        def section_of(self, a):
+            for name, (base, _off, size) in self.sections.items():
+                if base <= a < base + size:
+                    return name
+            return None
+
+        def is_data(self, a):
+            sec = self.section_of(a)
+            return sec is not None and sec not in (".text", ".plt", ".plt.got")
+
+        def containing(self, a):
+            best = None
+            for f in self.start_set:
+                if f <= a and (best is None or f > best):
+                    best = f
+            return best
+
+        def static_slot(self, a):
+            return frozenset(self._static_values.get(a, {0}))
+
+        def read_u32(self, a):
+            return self._u32.get(a)
+
+    S1_SITE, S1_NEW_A, S1_NEW_B, S1_NEW_C = 0x1000, 0x1100, 0x1200, 0x1240
+    S1_ZALLOC, S1_ROGUE = 0x1500, 0x1300
+    S1_TBL = {0x3000: "A", 0x3100: "B", 0x3200: "C"}
+    S1_MEM = {0x3000: (0x2000, 0x2010, 0x2020),
+              0x3100: (0x2100, 0x2110, 0x2120),
+              0x3200: (0x2200, 0x2210, 0x2220)}
+    S1_FUNCS = {0x3400: "FUNCS_A", 0x3440: "FUNCS_B", 0x3480: "FUNCS_C"}
+
+    def _s1_sym(letter):
+        return ("_RNvNtNtCs3iYjyFzWfzV_10openssl_rs8provider10cipher_gcm5TBL_"
+                + letter)
+
+    def _s1_fixture(nullable=False, shape="memory", undeclared=False,
+                    bad_member=False, mutable=False, shape_extra=False,
+                    rogue=False, third_store=True, guard=True,
+                    null_member=False):
+        td = tempfile.mkdtemp()
+        repo = Path(td)
+        path = repo / "src" / "provider" / "cipher_gcm.rs"
+        path.parent.mkdir(parents=True)
+        path.write_text(_s1_source(nullable))
+        funcs = {
+            S1_SITE: "_RNvNtNtCs3iYjyFzWfzV_10openssl_rs8provider10cipher_gcm4site",
+            S1_NEW_A: "newctx_a", S1_NEW_B: "newctx_b",
+            S1_NEW_C: "newctx_c", S1_ZALLOC: "zalloc",
+        }
+        for base in (0x2000, 0x2100, 0x2200):
+            for k in range(3):
+                funcs[base + k * 0x10] = f"member_{base:x}_{k}"
+        if rogue:
+            funcs[S1_ROGUE] = "rogue"
+        insns = {}
+        if shape == "memory":
+            insns[S1_SITE] = [(0x1000, "mov    0x8(%rdi),%r8"),
+                              (0x1004, "call   *0x8(%r8)"),
+                              (0x1008, "ret")]
+        elif shape == "register":
+            insns[S1_SITE] = [(0x1000, "mov    0x8(%rdi),%r8"),
+                              (0x1004, "mov    0x8(%r8),%rax")]
+            if guard:
+                insns[S1_SITE] += [(0x1008, "test   %rax,%rax"),
+                                   (0x100a, "je     1010 <site+0x10>")]
+            insns[S1_SITE] += [(0x100c if guard else 0x1008,
+                                "call   *%rax"),
+                               (0x1010 if guard else 0x100c, "ret")]
+        else:
+            insns[S1_SITE] = [(0x1000, "call   *0x8(%rdi)"),
+                              (0x1004, "ret")]
+        site_addr = next(a for a, t in insns[S1_SITE] if "call" in t)
+
+        def newctx(addr, table_addr, extra=None):
+            rows = [(addr, "mov    $0x40,%edi"),
+                    (addr + 5, "call   1500 <zalloc>"),
+                    (addr + 10, "mov    %rax,%rbx"),
+                    (addr + 15,
+                     f"lea    0x0(%rip),%rcx        # {table_addr:x} <table>"),
+                    (addr + 22, "mov    %rcx,0x8(%rbx)")]
+            if extra is not None:
+                rows += [(addr + 26,
+                          f"lea    0x0(%rip),%rdx        # {extra:x} <anon>"),
+                         (addr + 33, "mov    %rdx,0x8(%rbx)")]
+            rows += [(addr + 40, "ret")]
+            return rows
+
+        tbl_a = 0x5000 if mutable else 0x3000
+        insns[S1_NEW_A] = newctx(S1_NEW_A, tbl_a,
+                                 0x3f00 if undeclared else None)
+        insns[S1_NEW_B] = newctx(S1_NEW_B, 0x3100)
+        insns[S1_NEW_C] = (newctx(S1_NEW_C, 0x3200) if third_store
+                           else [(S1_NEW_C, "ret")])
+        if rogue:
+            insns[S1_ROGUE] = [(0x1300, "call   1000 <site>"),
+                               (0x1305, "ret")]
+        static_values, u32, sizes = {}, {}, {}
+        data_syms = {}
+        for base, letter in S1_TBL.items():
+            addr = tbl_a if base == 0x3000 else base
+            data_syms[addr] = _s1_sym(letter)
+            sizes[_s1_sym(letter)] = (0x20 if (shape_extra and base == 0x3000)
+                                      else 0x18)
+            for k, member in enumerate(S1_MEM[base]):
+                value = member
+                if bad_member and base == 0x3000 and k == 1:
+                    value = 0x9999
+                if null_member and base == 0x3000 and k == 1:
+                    value = 0
+                static_values[addr + k * 8] = {value}
+        if shape_extra:
+            static_values[tbl_a + 0x18] = {0x2030}
+            funcs[0x2030] = "extra_member"
+        for i, (addr, name) in enumerate(sorted(
+                S1_FUNCS.items(), key=lambda kv: kv[0])):
+            sizes[name] = 0x30
+            data_syms[addr] = name
+            newctx_addr = (S1_NEW_A, S1_NEW_B, S1_NEW_C)[i]
+            u32[addr] = 1
+            static_values[addr + 8] = {newctx_addr}
+            u32[addr + 0x10] = 6
+            static_values[addr + 0x18] = {S1_SITE}
+            u32[addr + 0x20] = 0
+            static_values[addr + 0x28] = {0}
+        sections = {".text": (0x1000, 0, 0x1000),
+                    ".data.rel.ro": (0x3000, 0, 0x1000),
+                    ".data": (0x5000, 0, 0x1000)}
+        direct = {S1_ROGUE: {S1_SITE}} if rogue else {}
+        g = _S1G(insns, funcs, data_syms, sizes, static_values, u32,
+                 sections, direct=direct, source_root=repo)
+        site = {"kind": "call", "func": S1_SITE, "addr": site_addr,
+                "text": next(t for a, t in insns[S1_SITE]
+                             if a == site_addr), "arg_deps": set()}
+        return g, site, funcs
+
+    def _s1_witness(**kw):
+        g, site, funcs = _s1_fixture(**kw)
+        reachable = set(funcs)
+        if not kw.get("rogue"):
+            reachable.discard(S1_ROGUE)
+        return static_table_instance_witness(g, site, "site", reachable)
+
+    sw = _s1_witness()
+    check("S1 field-sensitive witness applies", bool(sw and sw.get("resolved")),
+          True)
+    check("S1 witness records the pointer slot",
+          (sw or {}).get("pointer_slot", {}).get("object"), "Wctx")
+    check("S1 witness records three instances",
+          len((sw or {}).get("instances", [])), 3)
+    check("S1 witness unions only the requested member",
+          (sw or {}).get("targets"), ["0x2010", "0x2110", "0x2210"])
+    check("S1 witness records each writer",
+          sorted(r["function"] for r in (sw or {}).get("stored_by", [])),
+          ["newctx_a", "newctx_b", "newctx_c"])
+    sw2 = _s1_witness(shape="register", nullable=True, null_member=True,
+                      guard=True)
+    check("S1 Option<fn> NULL with a recorded guard resolves",
+          bool(sw2 and sw2.get("resolved")), True)
+    check("S1 Option<fn> NULL accepts only the other tables",
+          (sw2 or {}).get("targets"), ["0x2110", "0x2210"])
+    check("S1 undeclared stored value is refused",
+          (_s1_witness(undeclared=True) or {}).get("resolved", False), False)
+    check("S1 non-function member is refused",
+          (_s1_witness(bad_member=True) or {}).get("resolved", False), False)
+    check("S1 mutable table section is refused",
+          (_s1_witness(mutable=True) or {}).get("resolved", False), False)
+    check("S1 unproven base register is refused",
+          (_s1_witness(shape="direct") or {}).get("resolved", False), False)
+    check("S1 reachable caller outside the cohort is refused",
+          (_s1_witness(rogue=True) or {}).get("resolved", False), False)
+    check("S1 derived/declared member mismatch is refused",
+          (_s1_witness(shape_extra=True) or {}).get("resolved", False), False)
+    check("S1 partial instance set is refused",
+          (_s1_witness(third_store=False) or {}).get("resolved", False), False)
+    check("S1 Option<fn> NULL without a guard is refused",
+          (_s1_witness(shape="register", nullable=True, null_member=True,
+                       guard=False) or {}).get("resolved", False), False)
+
     mut_rows = []
 
     def _mutation(name, fn):
@@ -12407,6 +13913,23 @@ def self_test() -> int:
                      lambda: _export_witness(exported=False)[0]))
     mut_rows.append(("local-non-function",
                      lambda: _local_witness(extra=True)))
+
+    def _s1_accept(**kw):
+        w = _s1_witness(**kw)
+        return w if (w and w.get("resolved")) else None
+
+    mut_rows += [
+        ("s1-undeclared-store", lambda: _s1_accept(undeclared=True)),
+        ("s1-member-not-function", lambda: _s1_accept(bad_member=True)),
+        ("s1-mutable-table", lambda: _s1_accept(mutable=True)),
+        ("s1-base-not-table", lambda: _s1_accept(shape="direct")),
+        ("s1-caller-outside-cohort", lambda: _s1_accept(rogue=True)),
+        ("s1-shape-mismatch", lambda: _s1_accept(shape_extra=True)),
+        ("s1-partial-instances", lambda: _s1_accept(third_store=False)),
+        ("s1-null-no-guard",
+         lambda: _s1_accept(shape="register", nullable=True,
+                            null_member=True, guard=False)),
+    ]
     check("witness mutation matrix: each refusal flips its negative",
           [(name, _mutation(name, fn) is not None) for name, fn in mut_rows],
           [(name, True) for name, _fn in mut_rows])
