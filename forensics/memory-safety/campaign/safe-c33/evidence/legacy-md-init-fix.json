@@ -1,0 +1,97 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/evidence/legacy-md-init-fix/v1",
+  "generated_utc": "2026-10-29T13:40:17Z",
+  "decision": "D-LEGACY-MD-INIT-MD-DATA-1",
+  "source_identity": {
+    "repository_head": "a01f623f7",
+    "branch": "stage/p25/analyzer-corpus",
+    "tracked_tree_dirty": true,
+    "note": "the conversion is uncommitted by instruction; the three converted files below are the exact inputs to the rebuilt install",
+    "converted_files": {
+      "src/evp/legacy_md4.rs": "9538afecd069b9ef304a02aec05fd573d8fcc2c859e360e69d24d0da2b4e834b",
+      "src/evp/legacy_ripemd.rs": "3dc97db849a5f4b15fed67fb87fba76bcf9681a9b3946207fefd251a1de214b8",
+      "src/evp/legacy_wp.rs": "eec0d7eee4712c687fe90511dce71c1faef03a20eddd843f5bfb771d56bb9c0e"
+    },
+    "unchanged_sibling_shape": {
+      "src/evp/legacy_md5.rs": "039fe731ba1d4c2228783aab1f60ec4a07644af10857aeb7eeafed8ac6c2973b"
+    }
+  },
+  "defect": {
+    "sites": [
+      "src/evp/legacy_md4.rs:122 md4_init",
+      "src/evp/legacy_ripemd.rs:123 ripe_init",
+      "src/evp/legacy_wp.rs:125 wp_init"
+    ],
+    "shape": "the callbacks called *_Init(md_data(ctx)) with no test on ctx->md_data; a fresh EVP_MD_CTX_new() is zero-filled, so the exported EVP_MD_meth_get_init hands a C caller a NULL write",
+    "measured_before": "court/triage/probe.candidate exited 139 for md4, ripemd160 and whirlpool"
+  },
+  "fix": {
+    "shape": "a private unsafe fn init_md_data(ctx, owner: *const EvpMd, size: usize) -> Option<*mut c_void> per file: NULL ctx -> None; NULL md_data or digest -> None; ptr::eq(digest, owner) -> Some; else ctx_size >= size -> Some, else None. The initialiser returns 0 on None and only casts a block init_md_data established.",
+    "files": [
+      "src/evp/legacy_md4.rs (init_md_data + md4_init)",
+      "src/evp/legacy_ripemd.rs (init_md_data + ripe_init)",
+      "src/evp/legacy_wp.rs (init_md_data + wp_init)"
+    ],
+    "unchanged": "*_update and *_final are not guarded: the established sibling fix guards only the initialiser, and the caller contract requires a successful init before update/final. No different contract is claimed.",
+    "tests": [
+      "evp::legacy_md4::tests::legacy_md4_init_refuses_context_without_md_data_and_inits_bound_context",
+      "evp::legacy_ripemd::tests::legacy_ripemd160_init_refuses_context_without_md_data_and_inits_bound_context",
+      "evp::legacy_wp::tests::legacy_whirlpool_init_refuses_context_without_md_data_and_inits_bound_context"
+    ]
+  },
+  "probe": {
+    "source": "court/triage/legacy_init_probe.c",
+    "source_sha256": "2a0197eecfc4c1e51b4a88c1779df09338d16e2e56a49d5a075ec014b0d7457e",
+    "shape": "one digest per process: init = EVP_MD_meth_get_init(EVP_mdX()); ctx = EVP_MD_CTX_new(); init(ctx)",
+    "candidate_binary": "court/triage/probe.candidate",
+    "candidate_binary_sha256": "9fd1d509818d5fed1ea11b335b838b65a65e05d8b204490130eb24017fb6f3f5",
+    "candidate_compile": "cc -O1 -o court/triage/probe.candidate court/triage/legacy_init_probe.c -I artifacts/phase2/install/include -L artifacts/phase2/install/lib -lcrypto -Wl,-rpath,/work/artifacts/phase2/install/lib",
+    "authority_binary": "court/triage/probe.authority",
+    "authority_binary_sha256": "50c33cf35042dc3849d200e8f7e1798b6366eeaa3aca65d38ab841f57e4a955d",
+    "authority_compile": "cc -O1 -o court/triage/probe.authority court/triage/legacy_init_probe.c -I forensics/authorities/prefix/openssl-3.6.4-production/include -L forensics/authorities/prefix/openssl-3.6.4-production/lib -lcrypto -Wl,-rpath,/work/forensics/authorities/prefix/openssl-3.6.4-production/lib",
+    "results": {
+      "md4": {"candidate_exit": 0, "candidate_output": "md4: init(ctx) returned 0 (no crash)", "authority_exit": 139, "authority_output": "Segmentation fault (core dumped)"},
+      "ripemd160": {"candidate_exit": 0, "candidate_output": "ripemd160: init(ctx) returned 0 (no crash)", "authority_exit": 139, "authority_output": "Segmentation fault (core dumped)"},
+      "whirlpool": {"candidate_exit": 0, "candidate_output": "whirlpool: init(ctx) returned 0 (no crash)", "authority_exit": 139, "authority_output": "Segmentation fault (core dumped)"},
+      "md5_control": {"candidate_exit": 0, "candidate_output": "md5: init(ctx) returned 0 (no crash)"},
+      "sha1_control": {"candidate_exit": 0, "candidate_output": "sha1: init(ctx) returned 0 (no crash)"}
+    }
+  },
+  "install_identity": {
+    "build_command": "CARGO_BUILD_JOBS=4 bash forensics/tools/build_phase2.sh",
+    "build": "cargo build --release (dev-profile host artifacts purged by the court, D62)",
+    "install_prefix": "artifacts/phase2/install",
+    "libcrypto_so_3_sha256": "199258d5dd0b75bda337e782bb7f2267c143c6f70dfb8913562e858d075b09e8",
+    "libssl_so_3_sha256": "f584cca37ba78c74dea9a4ede43fb07dc37ea3d398a66727f63a2f3c325956d6",
+    "legacy_module_sha256": "d80dcb3aa043d4467a5bdb724e235ffdeeb9c2f0eb16600ee163905886e288b7",
+    "phase2_courts_all_pass": true,
+    "previous_libcrypto_so_3_sha256": "dadb0263f1eab453dc8717a9c1851772ffed7660eeeced29d79d7b206cec7fb3"
+  },
+  "gate": {
+    "cargo_fmt_all_check": "pass",
+    "cargo_clippy_all_targets_deny_warnings": "pass",
+    "cargo_test_lib_test_threads_4": "2225 passed; 0 failed; 52 ignored; 0 measured; 0 filtered out",
+    "floor": "at or above the observed 1962 floor; no test removed and none newly ignored"
+  },
+  "mechanism_coordinate_repair": {
+    "file": "forensics/memory-safety/campaign/safe-c33/state.json",
+    "scope": "nine src/engine/tb_*.rs records under obligation_mechanisms",
+    "before": {"tb_asnmth": 74, "tb_cipher": 56, "tb_dh": 54, "tb_digest": 68, "tb_dsa": 54, "tb_eckey": 54, "tb_pkmeth": 55, "tb_rand": 54, "tb_rsa": 55},
+    "after": {"tb_asnmth": 72, "tb_cipher": 55, "tb_dh": 51, "tb_digest": 66, "tb_dsa": 51, "tb_eckey": 51, "tb_pkmeth": 53, "tb_rand": 51, "tb_rsa": 52},
+    "lookup": {
+      "file": "src/engine/tb_digest.rs",
+      "before": ["UNKNOWN_MECHANISM", "mechanism_for -> (None, 'unmapped')"],
+      "after": ["BLOCKED", "mechanism_for -> ('C_ABI_CONTRACT', 'obligation-override:state.json#/obligation_mechanisms')"]
+    },
+    "discharges": "nothing: a coordinate repair only converts UNKNOWN_MECHANISM to BLOCKED"
+  },
+  "non_claims": [
+    "no mechanism was discharged; the nine ENGINE callbacks stay BLOCKED (evidence registered off-instrument is not re-adjudicated here)",
+    "the three new refusal tests establish the refusal and the table-bound path only; they do not prove digest correctness beyond the existing digest-maths courts",
+    "authority NULL-context behaviour for MD4/RIPEMD-160/Whirlpool was not measured in this batch (only the fresh-context probe was run)",
+    "*_update and *_final were not changed and their contract is not re-characterised",
+    "the closure was not re-run; no SAFE_COMPATIBLE or SEAL claim is made",
+    "libssl_so_3_sha256 records the rebuilt artifact; it is not an L7 result",
+    "the source conversion is uncommitted, so this evidence is bound to the file hashes above and to HEAD a01f623f7, not to a freeze commit"
+  ]
+}
