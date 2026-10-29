@@ -124,6 +124,22 @@ def parse_nm_line(line: str):
     return addr, typ, name
 
 
+_LLVM_HASH_SUFFIX = re.compile(r"\.llvm\.[0-9A-Za-z_]+$")
+
+
+def canonical_symbol_name(name: str) -> str:
+    """Drop the compiler-generated content hash from a symbol name.
+
+    LLVM appends a hash of the module identity to private globals
+    (``.llvm.<hash>``).  The hash changes when an unrelated source line moves,
+    so it names no distinct analysis subject; the address, size and kind in
+    the same row keep two distinct symbols distinct.  The version suffix that
+    ``nm -D`` prints (``name@@OPENSSL_3.0.0``) is also dropped, matching
+    :func:`defined_symbols`.
+    """
+    return _LLVM_HASH_SUFFIX.sub(".llvm.<hash>", name.split("@")[0])
+
+
 # --------------------------------------------------------------------------- #
 # ELF / loader evidence
 # --------------------------------------------------------------------------- #
@@ -414,6 +430,38 @@ class DsoGraph:
         with open(self.path, "rb") as fh:
             fh.seek(off)
             return fh.read(size)
+
+    def text_digest(self) -> tuple[str, int]:
+        """sha256 and size of the executable ``.text`` bytes.
+
+        This is the code half of the analysis identity (AGENTS.md section 22):
+        a comment-only or documentation-only source edit produces a different
+        DSO file digest while ``.text`` stays byte-identical.
+        """
+        blob = self._section_bytes(".text")
+        return hashlib.sha256(blob).hexdigest(), len(blob)
+
+    def symbol_table_rows(self) -> list:
+        """Defined symbols as ``[name, addr, size, kind]``, sorted.
+
+        The symbol table is the second half of the analysis identity.  Names
+        carry no address information, so a compiler-generated content hash
+        suffix is canonicalised (``.llvm.<hex>`` -> ``.llvm.<hash>``); the
+        address, size and kind keep two distinct subjects distinct.
+        """
+        rows = []
+        for line in run(["nm", "-S", "--defined-only", str(self.path)]).stdout.splitlines():
+            toks = line.split()
+            if len(toks) < 4:
+                continue
+            try:
+                addr = int(toks[0], 16)
+                size = int(toks[1], 16)
+            except ValueError:
+                continue
+            rows.append([canonical_symbol_name(toks[3]), addr, size, toks[2]])
+        rows.sort()
+        return rows
 
     def _elf_sections(self) -> dict:
         out = {}
@@ -1791,8 +1839,32 @@ class PrecisionResolver:
         g.resolved_targets = {t for s in self.sites.values()
                               for t in s["targets"]}
         g.residual_sites = [s for s in self.sites.values() if s["unresolved"]]
+        # Dynamic-relocation targets: a ``R_X86_64_GLOB_DAT``/``JUMP_SLOT``
+        # slot whose symbol is *defined in this image* fixes a function address
+        # exactly as a ``R_X86_64_RELATIVE`` run does.  ``slot_funcs`` only
+        # holds the RELATIVE form, so without this widening a function reached
+        # through a GOT slot (for example CRYPTO_cbc128_encrypt, referenced by
+        # 25 slots from 21 callers) is absent from the module's
+        # materialised-address evidence and a sound residual bound cannot
+        # contain it.  Only symbol-defined addresses inside ``start_set`` are
+        # admitted; imported symbols resolve in another DSO and are reached
+        # through the export index instead.
+        by_name = {}
+        for addr, names in g.names_at.items():
+            for name in names:
+                by_name.setdefault(name.split("@")[0], addr)
+        g.dynamic_reloc_targets = set()
+        for names in g.slot_syms.values():
+            for name in names:
+                base = name.split("@")[0]
+                addr = g.dynamic_defs.get(base)
+                if addr is None:
+                    addr = by_name.get(base)
+                if addr in g.start_set:
+                    g.dynamic_reloc_targets.add(addr)
         g.address_taken_union = (set(g.taken_code) | set(g.taken_data)
-                                 | {v for vs in g.slot_funcs.values() for v in vs})
+                                 | {v for vs in g.slot_funcs.values() for v in vs}
+                                 | set(g.dynamic_reloc_targets))
         return g.sites
 
 
@@ -4098,6 +4170,10 @@ EDGE_CHAIN_STEPS = frozenset({
     # is admitted conservatively instead of being dropped.  This is a widening
     # of the upper bound, never a proof that the target is reachable.
     "unattributed-admission",
+    # The sound bound reaches a subject the derivation excluded.  The exclusion
+    # was false, so the subject's contribution is admitted; this step names the
+    # refuting bound and never claims the target is reachable by itself.
+    "refutation-admission",
 })
 # A step that says the value could not be bounded.  A target claimed as proved
 # must never rest on one: "unbounded" records the absence of a derivation.
@@ -4440,6 +4516,18 @@ def _edge_record(g, site: dict, ordinal: int, oracle=None, seen_ids=None) -> dic
     exclusions = []
     extra = {}
     chains = collections.defaultdict(list)
+    refutation = site.get("refutation_admission") or {}
+    refutation_targets = set(refutation.get("targets") or ())
+    refutation_chains = {}
+    for row in refutation.get("admitted") or ():
+        if not isinstance(row, dict):
+            continue
+        step = {"step": "refutation-admission",
+                "subject": row.get("subject"),
+                "role": row.get("role"),
+                "basis": row.get("basis") or "final-upper-bound"}
+        for nm in row.get("targets") or ():
+            refutation_chains.setdefault(nm, []).append(step)
     # Set only by the round-4 zero-attribution fallback: the record cannot emit
     # a bounded set, so it becomes UNRESOLVED and names the incomplete property.
     fallback_missing = None
@@ -4645,6 +4733,8 @@ def _edge_record(g, site: dict, ordinal: int, oracle=None, seen_ids=None) -> dic
             "collapsed": sorted(collapsed),
             "declared": declared,
         }
+        if refutation_targets:
+            candidate_source["refutation_targets"] = sorted(refutation_targets)
     elif edge_witness is not None:
         enumeration = "complete"
         extra["witness_id"] = edge_witness.get("id")
@@ -4666,7 +4756,13 @@ def _edge_record(g, site: dict, ordinal: int, oracle=None, seen_ids=None) -> dic
         reachable_rows = []
         reachable_contrib = set()
         for row in caller_bound.get("reachable_callers") or ():
-            steps = [{"step": "argument", "caller": row.get("symbol")}]
+            steps = []
+            if row.get("admitted_by_refutation"):
+                steps.append({"step": "refutation-admission",
+                              "subject": row.get("symbol"),
+                              "role": ADMISSION_ROLE_CALLER,
+                              "basis": "final-upper-bound"})
+            steps.append({"step": "argument", "caller": row.get("symbol")})
             for cs in row.get("call_sites") or ():
                 for arg in cs.get("arguments") or ():
                     for wi in arg.get("witness_instruction") or ():
@@ -4678,14 +4774,17 @@ def _edge_record(g, site: dict, ordinal: int, oracle=None, seen_ids=None) -> dic
                 names.add(nm)
                 chains[nm].extend(steps)
             reachable_contrib |= names
-            reachable_rows.append({
+            rec_row = {
                 "symbol": row.get("symbol") or "?",
                 "address": row.get("function"),
                 "reachable": True,
                 "reason": None,
                 "call_sites": _record_call_sites(g, row.get("call_sites")),
                 "contributed_targets": sorted(names),
-            })
+            }
+            if row.get("admitted_by_refutation"):
+                rec_row["admitted_by_refutation"] = True
+            reachable_rows.append(rec_row)
         excluded_callers = caller_bound.get("excluded_callers") or []
         excluded_rows = []
         excluded_addresses = {}
@@ -4793,6 +4892,11 @@ def _edge_record(g, site: dict, ordinal: int, oracle=None, seen_ids=None) -> dic
             "targets": sorted(candidates),
             "unattributed_targets": sorted(unattributed),
         }
+        refuted_callers = sorted(
+            r["symbol"] for r in reachable_rows
+            if r.get("admitted_by_refutation"))
+        if refuted_callers:
+            candidate_source["refutation_admitted_callers"] = refuted_callers
     elif site.get("class") in ABI_CONTRACT_CLASSES:
         w = site.get("witness") or {}
         extra["witness_id"] = (f"{site.get('class')}:{w.get('slot') or 'unknown'}")
@@ -4805,6 +4909,23 @@ def _edge_record(g, site: dict, ordinal: int, oracle=None, seen_ids=None) -> dic
         for nm in admitted:
             chains[nm] = [{"step": "resolver", "class": site.get("class"),
                            "reason": site.get("reason")}]
+
+    # A refuted exclusion's contribution is admitted with its witness.  The
+    # target is added to the candidate enumeration (it is a real candidate the
+    # derivation would have produced) and carries its own derivation step; a
+    # target that already has a chain from the widened derivation keeps it.
+    for nm in sorted(refutation_targets):
+        candidates.add(nm)
+        if nm not in chains:
+            chains[nm] = list(refutation_chains.get(nm) or [{
+                "step": "refutation-admission",
+                "role": "stored-value-provenance",
+                "basis": "final-upper-bound"}])
+    if refutation:
+        extra["refutation_admissions"] = refutation.get("admitted") or []
+        extra["refuted_exclusions"] = refutation.get("refuted") or []
+        if refutation.get("missing_property"):
+            extra["refutation_missing_property"] = refutation["missing_property"]
 
     chain_rows = [{"target": nm, "derivation": chains[nm]}
                   for nm in sorted(chains)]
@@ -5347,6 +5468,17 @@ def _candidate_source_defects(rid, rec, oracle, module):
                                "has no target list")
                 continue
             names.update(targets)
+        # A refuted exclusion's contribution is a candidate the widened
+        # derivation produced (or the retained old targets it would have
+        # stored).  It is enumerated separately so the candidate set stays a
+        # separate source rather than being read back from the admitted set.
+        refuted_targets = source.get("refutation_targets") or []
+        if not isinstance(refuted_targets, list) or not all(
+                isinstance(t, str) and t for t in refuted_targets):
+            defects.append(f"{rid}: candidate_source refutation_targets is not "
+                           "a target-name list")
+        else:
+            names.update(refuted_targets)
         return names, defects, {}
     if kind == "argument-targets":
         targets = source.get("targets")
@@ -5362,8 +5494,21 @@ def _candidate_source_defects(rid, rec, oracle, module):
                   "targets": candidates}
         callers = source.get("callers")
         excluded = source.get("excluded_callers")
+        refuted_callers = source.get("refutation_admitted_callers") or []
+        if not isinstance(refuted_callers, list) or not all(
+                isinstance(s, str) and s for s in refuted_callers):
+            defects.append(f"{rid}: argument-targets "
+                           "refutation_admitted_callers is not a name list")
+            refuted_callers = []
         callers_ok = isinstance(callers, list) and bool(callers)
-        excluded_ok = isinstance(excluded, list) and bool(excluded)
+        # A caller-bound narrowing used to require at least one excluded caller.
+        # After admission by refutation there may be none: every excluded caller
+        # was reached by the sound bound.  The empty set is not a negative claim
+        # when the record names the admitted callers and the validator confirms
+        # each of them is in the final upper bound; without that witness the
+        # shape is still refused.
+        excluded_ok = (isinstance(excluded, list)
+                       and (bool(excluded) or bool(refuted_callers)))
         if not callers_ok:
             # v1.2 let the claim's self-asserted `contributed_targets` stand in
             # for the caller mapping.  Without an embedded mapping the drop is
@@ -5376,7 +5521,7 @@ def _candidate_source_defects(rid, rec, oracle, module):
                            "no excluded-caller mapping "
                            "(symbol -> contributed_targets)")
         if not (callers_ok and excluded_ok):
-            return candidates, defects, detail
+            return candidates, defects, {}
         for label, rows in (("caller", callers),
                             ("excluded caller", excluded)):
             for entry in rows:
@@ -5456,6 +5601,16 @@ def _candidate_source_defects(rid, rec, oracle, module):
             *detail["callers"].values()) if detail["callers"] else set()
         detail["union_excluded"] = set().union(
             *detail["excluded"].values()) if detail["excluded"] else set()
+        # The refutation-admitted callers are ordinary reachable caller rows.
+        # The list is evidence about *why* the excluded mapping may be empty, so
+        # every name must name such a row (it is then oracle-checked below with
+        # every other reachable caller).
+        for symbol in refuted_callers:
+            if symbol not in detail["callers"]:
+                defects.append(
+                    f"{rid}: refutation-admitted caller {symbol!r} has no "
+                    "reachable caller row")
+        detail["refuted_callers"] = set(refuted_callers)
         argued_by = source.get("argued_by")
         if not isinstance(argued_by, list) or not argued_by or not all(
                 isinstance(s, str) and s for s in argued_by):
@@ -6219,6 +6374,8 @@ class EdgeRecordStream:
         self.violation_rows = []
         self.unattributed_total = 0
         self.unattributed_rows = []
+        self.refutation_admissions = 0
+        self.refuted_exclusions = collections.Counter()
         self.path = Path(path) if path is not None else None
         self.records_sha256 = None
         self._hash = hashlib.sha256()
@@ -6257,6 +6414,14 @@ class EdgeRecordStream:
             for entry in admissions:
                 if len(self.unattributed_rows) < EDGE_AUDIT_RENDER_LIMIT:
                     self.unattributed_rows.append(entry)
+        refuted = record.get("refuted_exclusions") or ()
+        if isinstance(refuted, list):
+            for entry in refuted:
+                if isinstance(entry, dict):
+                    self.refuted_exclusions[entry.get("role") or "?"] += 1
+        admitted = record.get("refutation_admissions") or ()
+        if isinstance(admitted, list):
+            self.refutation_admissions += len(admitted)
         for row in _audit_record(record, self.oracle):
             self.audit_total += 1
             if row.get("violation"):
@@ -6329,6 +6494,15 @@ class EdgeRecordStream:
                          "list is the receipt's account of those admissions"),
                 "admissions": self.unattributed_rows,
             },
+            "refutation_admissions": {
+                "count": self.refutation_admissions,
+                "refuted_exclusions_by_role": dict(
+                    sorted(self.refuted_exclusions.items())),
+                "rule": ("an exclusion the final upper bound refutes is "
+                         "admitted with its witness on the record that carries "
+                         "it; the subject and the admitted targets are named in "
+                         "the record's refutation_admissions"),
+            },
         }
 
 
@@ -6375,24 +6549,194 @@ def _admissibility(tool_sha256: str, artifact_sha256: str,
     }
 
 
+ANALYSIS_IDENTITY_SCHEMA = "openssl-rs/campaign/safe-c33/analysis-identity/v1"
+UNRESOLVED_BOUND_SCHEMA = "openssl-rs/campaign/safe-c33/unresolved-site-bound/v1"
+
+
+def reachable_function_entries(graphs: dict, upper_reach,
+                                *, canonical: bool = True) -> list:
+    """The sorted ``module:hex_address:name`` entries of the reachable set.
+
+    ``canonical`` applies the same name canonicalisation as
+    :func:`analysis_identity` (drop the compiler ``.llvm.<hash>`` suffix and the
+    symbol-version suffix).  Those suffixes are a function of the build
+    directory and source bytes, not of the analysis subject: a comment-only
+    edit changes every affected name hash while the address, size and kind do
+    not move.  A movement digest built from the raw names would therefore
+    report movement for a neutral rebuild.  The raw form is still available as
+    an explicitly non-identity observation.
+    """
+    entries = []
+    for dso_name, addr in upper_reach:
+        name = (getattr(graphs[dso_name], "funcs", {}) or {}).get(addr)
+        if name is None:
+            continue
+        if canonical:
+            name = canonical_symbol_name(name)
+        entries.append(f"{dso_name}:{addr:#x}:{name}")
+    return sorted(entries)
+
+
+def reachable_functions_digest(entries) -> str:
+    """sha256 over the newline-terminated sorted reachable-function entries."""
+    digest = hashlib.sha256()
+    for entry in entries:
+        digest.update(entry.encode() + b"\n")
+    return digest.hexdigest()
+
+
+def analysis_identity(graphs: dict) -> dict:
+    """A canonical identity for the *analysis input* (AGENTS.md section 22).
+
+    The DSO file digest is **not** an analysis identity: a comment-only source
+    edit changes the file digest (build paths, debug strings, the
+    ``.llvm.<hash>`` names) while the executable bytes and the symbol
+    addresses are unchanged.  The identity therefore hashes each module's
+    ``.text`` bytes and its ``(name, addr, size, kind)`` symbol rows, in module
+    name order, with a domain separator.  Two runs with the same identity but
+    different DSO digests are a neutral rebuild; two runs with different
+    identities are different analysis inputs.
+    """
+    outer = hashlib.sha256()
+    outer.update(ANALYSIS_IDENTITY_SCHEMA.encode() + b"\0")
+    modules = {}
+    for name in sorted(graphs):
+        g = graphs[name]
+        text_sha, text_size = g.text_digest()
+        rows = g.symbol_table_rows()
+        rows_blob = json.dumps(rows, separators=(",", ":")).encode()
+        sym_sha = hashlib.sha256(rows_blob).hexdigest()
+        modules[name] = {
+            "text_sha256": text_sha,
+            "text_size": text_size,
+            "symbol_rows": len(rows),
+            "symbol_table_sha256": sym_sha,
+            "dso_sha256": getattr(g, "sha256", None),
+            "dso_sha256_is_analysis_identity": False,
+        }
+        outer.update(name.encode() + b"\0" + text_sha.encode() + b"\0"
+                     + sym_sha.encode() + b"\0")
+    return {
+        "schema": ANALYSIS_IDENTITY_SCHEMA,
+        "basis": (
+            "sha256 over, in module-name order, each module name, the sha256 of "
+            "its .text bytes, and the sha256 of its sorted [name, addr, size, "
+            "kind] defined-symbol rows (``.llvm.<hash>`` and symbol-version "
+            "suffixes canonicalised)"),
+        "digest": outer.hexdigest(),
+        "modules": modules,
+        "note": (
+            "the DSO file digest is recorded as a non-identity: it changes with "
+            "build paths and debug strings when the executable bytes do not"),
+    }
+
+
+def unresolved_site_bound(g: "DsoGraph", site: dict) -> set:
+    """Every value a residual site may target -- **independent of its class**.
+
+    Soundness rule (why this is not the class-specific set): the reachable set
+    is a may-analysis, so it must be monotone under precision loss.  A site
+    that is re-classified from ``PROVED_TARGET_SET`` to ``UNRESOLVED`` must not
+    admit *fewer* targets than it did before.  The only way to guarantee that
+    against an arbitrary re-classification is to bound every residual site by
+    the union of *all* materialised-address evidence in the module:
+
+      * ``address_taken_union`` (code and data materialisations, relocated
+        function slots, and in-image dynamic-relocation targets),
+      * ``taken_code`` (kept explicitly so the source is named in the record),
+      * every integer stored into a field by reachable code,
+      * values passed at unresolved call sites,
+      * the site's own resolver ``targets`` and ``arg_targets``.
+
+    A class-specific set may still be reported as precision metadata (it is,
+    in ``precision.unresolved_by_class`` and the per-site class), but it is
+    never the sole bound.  A bound may be **widened** for soundness; it is
+    never narrowed by classification.
+    """
+    values = set()
+    values |= set(getattr(g, "address_taken_union", ()) or ())
+    values |= set(getattr(g, "taken_code", ()) or ())
+    for stored in (getattr(g, "field_stores", None) or {}).values():
+        values |= set(stored)
+    values |= set(getattr(g, "unknown_call_arg_targets", ()) or ())
+    values |= set(site.get("targets") or ())
+    values |= set(site.get("arg_targets") or ())
+    return values
+
+
+def _bound_nodes(g, dso_name: str, values, export_index: dict) -> tuple[set, int, int]:
+    """Map bound values to reachable nodes, widening rather than narrowing.
+
+    An integer that is a defined function start is its own node.  An integer
+    that lies inside executable code is mapped to its enclosing function start
+    (a widening: a transfer into the middle of a function still reaches that
+    function).  Any other integer is not an executable address and cannot be a
+    function entry; it is counted, not silently discarded.  A symbolic target
+    is resolved through the export index of the resolved OpenSSL DSOs; one that
+    does not resolve is counted as an unresolved symbol target.
+    """
+    nodes = set()
+    non_code = 0
+    unresolved_syms = 0
+    start_set = getattr(g, "start_set", set()) or set()
+    section_of = getattr(g, "section_of", None)
+    containing = getattr(g, "containing", None)
+    for value in values:
+        if isinstance(value, tuple):
+            if len(value) == 2 and value[0] == "sym":
+                node = export_index.get(value[1])
+                if node is None:
+                    unresolved_syms += 1
+                else:
+                    nodes.add(node)
+            continue
+        if not isinstance(value, int) or isinstance(value, bool):
+            continue
+        if value in start_set:
+            nodes.add((dso_name, value))
+            continue
+        section = section_of(value) if callable(section_of) else None
+        if section in (".text", ".plt", ".plt.got") and callable(containing):
+            base = containing(value)
+            if base is not None:
+                nodes.add((dso_name, base))
+                continue
+        non_code += 1
+    return nodes, non_code, unresolved_syms
+
+
 def build_graph(graphs: dict, roots: set, export_index: dict,
-                import_nodes: set | None = None) -> dict:
-    """Union reachability over all candidate DSOs, with per-site targets.
+                import_nodes: set | None = None,
+                max_rounds: int | None = None) -> dict:
+    """Union reachability over all candidate DSOs, as a least fixed point.
 
     Direct call edges come from the linked machine code.  Indirect sites carry
     the target set the precision resolver established.  A site whose value is
     genuinely data-dependent is admitted at its **evidence class** (a field
-    offset, an argument summary, or a code-materialised address), never from a
-    trace.  Only a site whose operand cannot be classified at all admits the
-    global address-taken union; the receipt records every such site.
+    offset, an argument summary, or a code-materialised address) for reporting,
+    but its reachability bound is the class-independent union in
+    :func:`unresolved_site_bound`.
+
+    Residual admission is iterated to convergence (chaotic/worklist iteration,
+    Kildall 1973; Cousot & Cousot 1977):
+
+        reach = walk(roots)
+        repeat: bound = union of unresolved_site_bound over every unresolved
+                site whose containing function is in reach;
+                reach' = walk(reach | bound);
+        until reach' == reach
+
+    Each round is monotone (the bound never shrinks and ``walk`` is a graph
+    closure), so the sequence is increasing in a finite lattice of function
+    nodes and terminates; ``max_rounds`` bounds the iteration and a failure to
+    converge is reported, never silently accepted.
     """
-    import_nodes = import_nodes or set()
+    import_nodes = {n for n in (import_nodes or ()) if n and n[0] in graphs}
     site_edges = collections.defaultdict(set)
-    sites_by_func = collections.defaultdict(list)
+    resolved_targets = set()
     for g in graphs.values():
         for key, s in getattr(g, "sites", {}).items():
             fstart = key[0]
-            sites_by_func[g.name].append((fstart, s))
             for t in s["targets"]:
                 node = None
                 if isinstance(t, int):
@@ -6401,15 +6745,23 @@ def build_graph(graphs: dict, roots: set, export_index: dict,
                     node = export_index.get(t[1])
                 if node is not None:
                     site_edges[(g.name, fstart)].add(node)
+                    resolved_targets.add(node)
 
-    def walk(initial, extra_for):
+    unresolved_by_func = collections.defaultdict(list)
+    for g in graphs.values():
+        for key, s in getattr(g, "sites", {}).items():
+            if s["unresolved"]:
+                unresolved_by_func[(g.name, key[0])].append(s)
+
+    def walk(initial):
         reach = set(initial)
         frontier = list(initial)
         while frontier:
             nxt = []
             for dso_name, addr in frontier:
-                g = graphs[dso_name]
-                targets = set(g.direct.get(addr, ()))
+                g = graphs.get(dso_name)
+                if g is None:
+                    continue
                 for t in g.direct.get(addr, ()):
                     node = (dso_name, t)
                     if node not in reach:
@@ -6428,44 +6780,638 @@ def build_graph(graphs: dict, roots: set, export_index: dict,
             frontier = nxt
         return reach
 
-    direct_reach = walk(roots, None)
+    # Module-global half of the bound.  Computed once: it does not depend on
+    # the site, only on the module's materialised-address evidence.  It is the
+    # production bound helper applied to an empty site, so the mutation control
+    # ("narrow the bound by class") exercises this exact code path.
+    module_values = {}
+    module_bound = {}
+    bound_sources = {}
+    for dso_name, g in graphs.items():
+        values = unresolved_site_bound(g, {})
+        module_values[dso_name] = values
+        nodes, non_code, unresolved_syms = _bound_nodes(
+            g, dso_name, values, export_index)
+        module_bound[dso_name] = nodes
+        field_values = {v for stored in (getattr(g, "field_stores", None)
+                                         or {}).values() for v in stored}
+        bound_sources[dso_name] = {
+            "module": dso_name,
+            "taken_code": len(getattr(g, "taken_code", ()) or ()),
+            "taken_data": len(getattr(g, "taken_data", ()) or ()),
+            "slot_func_targets": len(getattr(g, "slot_func_targets", ()) or ()),
+            "dynamic_reloc_targets": len(
+                getattr(g, "dynamic_reloc_targets", ()) or ()),
+            "address_taken_union": len(
+                getattr(g, "address_taken_union", ()) or ()),
+            "field_store_values": len(field_values),
+            "unknown_call_arg_targets": len(
+                getattr(g, "unknown_call_arg_targets", ()) or ()),
+            "bound_values": len(values),
+            "bound_nodes": len(nodes),
+            "non_code_values": non_code,
+            "unresolved_symbol_values": unresolved_syms,
+        }
 
-    # residual bounds, computed per DSO from evidence classes
-    residual_bound = set()
-    unclassified = set()
-    reachable_residual_sites = []
-    for dso_name, addr in direct_reach:
-        g = graphs[dso_name]
-        for fstart, s in sites_by_func.get(dso_name, ()):
-            if fstart != addr or not s["unresolved"]:
+    # Site-specific half: the site's own resolver targets, on top of the same
+    # module union.  Computed once.
+    site_extra = {}
+    for dso_name, sites in unresolved_by_func.items():
+        g = graphs.get(dso_name[0])
+        for s in sites:
+            if g is None:
+                site_extra[id(s)] = set()
                 continue
-            reachable_residual_sites.append((dso_name, addr, s))
-            if s["class"] == "unclassified":
-                unclassified.add((dso_name, addr, s["reason"]))
-                residual_bound |= {(dso_name, a) for a in g.address_taken_union}
-            else:
-                residual_bound |= {(dso_name, a) for a in g.taken_code}
-                for vals in getattr(g, "field_stores", {}).values():
-                    residual_bound |= {(dso_name, v) for v in vals
-                                      if isinstance(v, int) and v in g.start_set}
-                residual_bound |= {(dso_name, v) for v in
-                                   getattr(g, "unknown_call_arg_targets", ())
-                                   if v in g.start_set}
-    residual_bound |= {n for n in import_nodes if n[0] in graphs}
+            extra = unresolved_site_bound(g, s) - module_values[dso_name[0]]
+            if not extra:
+                site_extra[id(s)] = set()
+                continue
+            nodes, _non_code, _syms = _bound_nodes(g, dso_name[0], extra,
+                                                   export_index)
+            site_extra[id(s)] = nodes
 
-    upper = walk(set(direct_reach) | residual_bound, None)
+    total_functions = sum(len(getattr(g, "funcs", {})) for g in graphs.values())
+    if max_rounds is None:
+        max_rounds = 4 * total_functions + 8
+    max_rounds = max(1, int(max_rounds))
+
+    direct_reach = walk(set(roots) | import_nodes)
+    reach = set(direct_reach)
+    round_sizes = [len(reach)]
+    sites_scanned_per_round = [0]
+    converged = False
+    rounds = 0
+    bound = set()
+    last_growth = None
+    for rnd in range(1, max_rounds + 1):
+        rounds = rnd
+        bound = set()
+        scanned = 0
+        for (dso_name, fstart), sites in unresolved_by_func.items():
+            if (dso_name, fstart) not in reach:
+                continue
+            bound |= module_bound[dso_name]
+            for s in sites:
+                scanned += 1
+                bound |= site_extra[id(s)]
+        nxt = walk(reach | bound | import_nodes)
+        round_sizes.append(len(nxt))
+        sites_scanned_per_round.append(scanned)
+        if nxt == reach:
+            converged = True
+            break
+        last_growth = len(nxt) - len(reach)
+        reach = nxt
+    if not converged:
+        reach = nxt
+
+    reachable_residual_sites = []
+    unclassified = set()
+    for (dso_name, fstart), sites in unresolved_by_func.items():
+        if (dso_name, fstart) not in reach:
+            continue
+        for s in sites:
+            reachable_residual_sites.append((dso_name, fstart, s))
+            if s["class"] == "unclassified":
+                unclassified.add((dso_name, fstart, s["reason"]))
+    reachable_residual_sites.sort(key=lambda r: (r[0], r[1], r[2].get("addr", 0)))
+
     return {
         "direct_reachable": direct_reach,
-        "upper_reachable": upper,
+        "upper_reachable": reach,
+        "converged": converged,
+        "closure_rounds": rounds,
+        "round_sizes": round_sizes,
+        "sites_scanned_per_round": sites_scanned_per_round,
+        "max_rounds": max_rounds,
+        "nonconvergent_detail": (None if converged else {
+            "round_cap": max_rounds,
+            "last_growth": last_growth,
+            "reach_size": len(reach),
+        }),
         "address_taken_union": {(g.name, a) for g in graphs.values()
-                                for a in g.address_taken_union},
-        "resolved_site_targets": {n for edges in site_edges.values() for n in edges},
-        "residual_bound": residual_bound,
+                                for a in getattr(g, "address_taken_union", ())},
+        "resolved_site_targets": resolved_targets,
+        "residual_bound": bound,
+        "residual_bound_nodes": len(bound),
+        "bound_evidence_sources": {
+            "schema": UNRESOLVED_BOUND_SCHEMA,
+            "rule": (
+                "a residual site's bound is address_taken_union plus taken_code "
+                "plus every field-store value plus every unresolved-call argument "
+                "target plus the site's own resolver targets and arg_targets; "
+                "it is independent of the site's class, so a precision loss can "
+                "only widen it"),
+            "modules": bound_sources,
+            "unresolved_sites": sum(len(v) for v in unresolved_by_func.values()),
+            "sites_with_site_targets": sum(
+                1 for sites in unresolved_by_func.values() for s in sites
+                if site_extra.get(id(s))),
+        },
         "reachable_residual_sites": reachable_residual_sites,
         "unclassified_sites": sorted(unclassified, key=lambda x: (x[0], x[1])),
-        "indirect_reachable_functions": len({f for dso_name, f, _s in
+        "indirect_reachable_functions": len({f for _d, f, _s in
                                              reachable_residual_sites}),
     }
+
+
+def closure_refusals(closure: dict) -> list:
+    """A non-convergent least fixed point is a refusal, never a partial bound."""
+    if closure.get("converged", True):
+        return []
+    detail = closure.get("nonconvergent_detail") or {}
+    return [{
+        "code": "CLOSURE_NONCONVERGENT",
+        "detail": (
+            "the residual-admission least fixed point did not converge within "
+            f"{detail.get('round_cap')} round(s); the last round added "
+            f"{detail.get('last_growth')} node(s) and the reachable set is "
+            f"{detail.get('reach_size')} node(s). The bound is partial and no "
+            "reachability claim may be drawn from it"),
+    }]
+
+
+# --------------------------------------------------------------------------- #
+# admission by refutation (AGENTS.md sections 7 and 22)
+# --------------------------------------------------------------------------- #
+#
+# Every exclusion in this analyzer was derived against the *pre-closure direct*
+# reachable set, which is an under-approximation.  The sound bound (the final
+# upper bound) reaches callers and writers that derivation excluded.  Refusing
+# every such site is honest but leaves the closure unusable; the sound
+# disposition is the opposite of the refusal: if the bound reaches an excluded
+# subject, the exclusion is false, so the targets it would have contributed are
+# admitted and the closure is recomputed.  Admission may only add targets; the
+# exclusions that survive the bound stay exclusions and remain validated.
+ADMISSION_SCHEMA = "openssl-rs/campaign/safe-c33/refutation-admission/v1"
+MAX_ADMISSION_PASSES = 4
+ADMISSION_SITE_RENDER_LIMIT = 200
+ADMISSION_ROW_RENDER_LIMIT = 2000
+ADMISSION_ROLE_CALLER = "reachable-caller"
+ADMISSION_ROLE_WRITER = "method-store-writer"
+ADMISSION_ROLE_CALLSITE = "method-store-callsite-caller"
+ADMISSION_ROLES = (ADMISSION_ROLE_CALLER, ADMISSION_ROLE_WRITER,
+                   ADMISSION_ROLE_CALLSITE)
+
+
+def _hex_addr(value):
+    """An artifact-local address from an int or a hex string, else None."""
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if isinstance(value, str) and value:
+        try:
+            return int(value, 16)
+        except ValueError:
+            return None
+    return None
+
+
+def _oracle_reaches(oracle, module, symbol, address=None) -> bool:
+    """True only when the sound bound positively reaches the subject.
+
+    ``checkable`` false (an unmodelled module) is not a refutation: an
+    unavailable oracle can never turn an exclusion into an admission.
+    """
+    if oracle is None:
+        return False
+    reachable, _basis, checkable = oracle.is_reachable(
+        module, symbol, _hex_addr(address))
+    return bool(checkable and reachable)
+
+
+def _oracle_module_addresses(oracle, g) -> set:
+    """Every address of ``g`` whose name the upper bound reaches.
+
+    The oracle answers by address *or* by name (an identical-code-folding
+    alias at another address contributes the name).  A re-derivation that used
+    only the reached node addresses could keep an exclusion the oracle
+    refutes, so the set is the union of the reached nodes and every address the
+    image records under a reached name.
+    """
+    module = getattr(g, "name", None)
+    nodes = oracle.upper_nodes(module) if oracle is not None else None
+    if nodes is None:
+        return set()
+    reach = set(oracle.reachable_symbols(module) or ())
+    addrs = {a for _m, a in nodes}
+    for table in ("funcs", "all_syms"):
+        for addr, name in (getattr(g, table, {}) or {}).items():
+            if name and str(name).split("@")[0] in reach:
+                addrs.add(addr)
+    for addr, names in (getattr(g, "names_at", {}) or {}).items():
+        if any(str(n).split("@")[0] in reach for n in (names or ())):
+            addrs.add(addr)
+    return addrs
+
+
+def _admission_targets(g, values) -> tuple[set, list]:
+    """(function-start addresses, rejected values) from hex/int targets."""
+    starts = getattr(g, "start_set", set()) or set()
+    accepted, rejected = set(), []
+    for value in values or ():
+        addr = _hex_addr(value)
+        if addr is None or addr not in starts:
+            rejected.append(str(value))
+            continue
+        accepted.add(addr)
+    return accepted, rejected
+
+
+def _caller_row_is_bounded(row) -> bool:
+    """True when an excluded caller's recorded contribution is finite.
+
+    A row with no recorded call site, an open (top) argument, or a non-image
+    value does not establish a finite target set.  The subject is still
+    reachable -- it is admitted as a reachable caller -- but the site cannot
+    keep a finite target set and must become UNRESOLVED.
+    """
+    call_sites = row.get("call_sites")
+    if not isinstance(call_sites, list) or not call_sites:
+        return False
+    for cs in call_sites:
+        args = cs.get("arguments") if isinstance(cs, dict) else None
+        if not isinstance(args, list) or not args:
+            return False
+        for arg in args:
+            if not isinstance(arg, dict):
+                return False
+            if arg.get("unresolved") or arg.get("non_image_values"):
+                return False
+    return True
+
+
+def _recompute_caller_bound(bound: dict, site: dict) -> None:
+    """Keep the bound's derived target lists equal to its caller rows.
+
+    Admission moves a caller from ``excluded_callers`` to
+    ``reachable_callers``; the reported ``bounded``/``attributed``/
+    ``unattributed`` sets are recomputed from the rows so the receipt does not
+    describe the pre-admission narrowing.
+    """
+    def union(rows):
+        out = set()
+        for row in rows or ():
+            for value in (row or {}).get("contributed_targets") or ():
+                addr = _hex_addr(value)
+                if addr is not None:
+                    out.add(addr)
+        return out
+
+    bounded = union(bound.get("reachable_callers"))
+    excluded = union(bound.get("excluded_callers"))
+    arg_targets = {a for a in (_hex_addr(t) for t in site.get("arg_targets") or ())
+                   if a is not None}
+    bound["bounded_targets"] = [hex(a) for a in sorted(bounded)]
+    bound["attributed_targets"] = [hex(a) for a in sorted(bounded | excluded)]
+    bound["unattributed_targets"] = [
+        hex(a) for a in sorted(arg_targets - bounded - excluded)]
+
+
+def _merge_refutation(site: dict, refuted: list, admitted: list,
+                      targets, unresolved: bool, missing_property) -> None:
+    """Accumulate one site's refutation record (admission is monotone)."""
+    current = site.get("refutation_admission")
+    if not isinstance(current, dict):
+        current = {"schema": ADMISSION_SCHEMA, "refuted": [], "admitted": [],
+                   "targets": [], "unresolved": False,
+                   "missing_property": None}
+    current["refuted"].extend(refuted)
+    current["admitted"].extend(admitted)
+    current["targets"] = sorted(set(current.get("targets") or ())
+                                | set(targets))
+    current["unresolved"] = bool(current.get("unresolved") or unresolved)
+    if missing_property:
+        current["missing_property"] = missing_property
+    site["refutation_admission"] = current
+
+
+def _admit_caller_bound(g, site: dict, bound: dict, oracle,
+                        module: str) -> tuple[bool, list, list]:
+    """Admit the excluded callers the sound bound reaches.
+
+    Returns (changed, admitted rows, refuted rows).  A moved caller becomes a
+    reachable caller (that is what the refutation establishes) and its recorded
+    ``contributed_targets`` are added to the site's target set.  A caller whose
+    contribution is not finite keeps its place as a reachable caller but makes
+    the site UNRESOLVED with a named property: the target set is no longer
+    finite, so a finite claim would be unsound.
+    """
+    excluded = list(bound.get("excluded_callers") or ())
+    moved, kept = [], []
+    for row in excluded:
+        if isinstance(row, dict) and _oracle_reaches(
+                oracle, module, row.get("symbol"), row.get("function")):
+            moved.append(row)
+        else:
+            kept.append(row)
+    if not moved:
+        return False, [], []
+    reachable_rows = bound.setdefault("reachable_callers", [])
+    was_unresolved = bool(site.get("unresolved"))
+    admitted, refuted = [], []
+    added_targets = set()
+    unbounded = []
+    for row in moved:
+        rec = dict(row)
+        rec["reachable"] = True
+        rec["reason"] = None
+        rec["admitted_by_refutation"] = True
+        reachable_rows.append(rec)
+        targets, rejected = _admission_targets(
+            g, rec.get("contributed_targets") or ())
+        bounded = _caller_row_is_bounded(rec)
+        if not bounded or rejected:
+            unbounded.append(rec.get("symbol") or "?")
+        added_targets |= targets
+        admitted.append({
+            "role": ADMISSION_ROLE_CALLER,
+            "subject": rec.get("symbol") or "?",
+            "address": rec.get("function"),
+            "targets": [_edge_symbol(g, t) for t in sorted(targets)],
+            "bounded": bool(bounded and not rejected),
+            "basis": "final-upper-bound",
+        })
+        refuted.append({
+            "role": ADMISSION_ROLE_CALLER,
+            "subject": rec.get("symbol") or "?",
+            "address": rec.get("function"),
+        })
+    site["targets"] = set(site.get("targets") or ()) | added_targets
+    bound["excluded_callers"] = kept
+    _recompute_caller_bound(bound, site)
+    if unbounded:
+        missing = ("refutation-unbounded: caller(s) reached by the final upper "
+                   "bound have no finite recorded image target set: "
+                   + ", ".join(sorted(unbounded)))
+        # A previously unresolved site stays unresolved: re-resolving it would
+        # remove the class-independent bound and could lose reachability.
+        site["unresolved"] = True
+        site["class"] = "reachable-caller-target (refutation-unbounded)"
+        site["reason"] = missing
+        _merge_refutation(site, refuted, admitted,
+                          [_edge_symbol(g, t) for t in sorted(added_targets)],
+                          True, missing)
+    else:
+        note = ("reachable-caller target bounding (refutation-widened): "
+                + ", ".join(r["subject"] for r in admitted)
+                + " are reached by the final upper bound")
+        site["class"] = "reachable-caller-target (refutation-widened)"
+        site["reason"] = note
+        site["unresolved"] = was_unresolved
+        _merge_refutation(site, refuted, admitted,
+                          [_edge_symbol(g, t) for t in sorted(added_targets)],
+                          False, note)
+    return True, admitted, refuted
+
+
+def _fresh_callsite_targets(fresh: dict, call_site, g):
+    """Targets the widened derivation now records for one call site."""
+    targets = set()
+    bounded = False
+    for row in fresh.get("call_sites") or ():
+        if not isinstance(row, dict) or row.get("included") is not True:
+            continue
+        if row.get("call_site") != call_site:
+            continue
+        if row.get("failure"):
+            continue
+        got, _rejected = _admission_targets(g, row.get("targets") or ())
+        targets |= got
+        bounded = True
+    return targets, bounded
+
+
+def _admit_semantic_store(g, site: dict, sem: dict, oracle, module: str,
+                          name: str, reachable_fn) -> tuple[bool, list, list]:
+    """Re-derive a stored-value site when the sound bound refutes an exclusion.
+
+    The derivation's exclusions were computed against the pre-closure direct
+    set.  Rather than guess what a refuted writer or writer-caller would have
+    stored, the derivation is recomputed with the sound bound's function set:
+    the refuted subject becomes an ordinary included row with its real
+    provenance chain, and every exclusion that survives is one the bound still
+    does not reach.  The old targets are retained (admission is monotone), and
+    a derivation that is no longer finite makes the site UNRESOLVED.
+    """
+    refuted = []
+    for row in sem.get("excluded_writers") or ():
+        if isinstance(row, dict) and _oracle_reaches(
+                oracle, module, row.get("symbol"), row.get("address")):
+            refuted.append({"role": ADMISSION_ROLE_WRITER,
+                            "subject": row.get("symbol") or "?",
+                            "address": row.get("address"),
+                            "_row": row})
+    for row in sem.get("call_sites") or ():
+        if isinstance(row, dict) and row.get("included") is False and \
+                _oracle_reaches(oracle, module, row.get("caller")):
+            refuted.append({"role": ADMISSION_ROLE_CALLSITE,
+                            "subject": row.get("caller") or "?",
+                            "address": row.get("call_site"),
+                            "_row": row})
+    if not refuted:
+        return False, [], []
+    fresh = semantic_method_free_targets(g, site, name, reachable_fn())
+    if fresh is None:
+        return False, [], []
+    old_targets = set(site.get("targets") or ())
+    was_unresolved = bool(site.get("unresolved"))
+    fresh_targets, fresh_rejected = _admission_targets(
+        g, fresh.get("targets") or ())
+    admitted, public_refuted = [], []
+    added = set()
+    unbounded = []
+    for entry in refuted:
+        row = entry.pop("_row")
+        public_refuted.append(dict(entry))
+        targets, bounded = set(), False
+        if entry["role"] == ADMISSION_ROLE_WRITER:
+            if row.get("would_store_failure"):
+                unbounded.append(entry["subject"])
+            elif row.get("would_store_targets") is not None:
+                targets, rejected = _admission_targets(
+                    g, row.get("would_store_targets") or ())
+                bounded = not rejected
+                if rejected:
+                    unbounded.append(entry["subject"])
+        else:
+            targets, bounded = _fresh_callsite_targets(
+                fresh, entry["address"], g)
+            if not bounded:
+                unbounded.append(entry["subject"])
+        added |= targets
+        admitted.append({
+            "role": entry["role"],
+            "subject": entry["subject"],
+            "address": entry["address"],
+            "targets": [_edge_symbol(g, t) for t in sorted(targets)],
+            "bounded": bool(bounded),
+            "basis": "final-upper-bound",
+        })
+    fresh_resolved = bool(fresh.get("resolved"))
+    if fresh_resolved:
+        added |= fresh_targets
+    else:
+        unbounded.append("the widened derivation")
+    if fresh_rejected:
+        unbounded.append("a widened target that is not a function start")
+    site["semantic_store_target"] = fresh
+    site["targets"] = old_targets | added
+    names = [_edge_symbol(g, t) for t in sorted(added)]
+    if unbounded or not fresh_resolved:
+        missing = ("refutation-unbounded: "
+                   + str(fresh.get("refusal") or ", ".join(sorted(unbounded)))
+                   + "; a subject reached by the final upper bound leaves the "
+                   "stored-value target set not finite")
+        site["unresolved"] = True
+        site["class"] = "semantic-store-target (refutation-unbounded)"
+        site["reason"] = missing
+        # An unresolved record enumerates no complete target set, so the
+        # retained targets must be named in candidate_source or the record's
+        # own accounting cannot bind them.  They are the stored-value targets
+        # the pre-widening derivation already produced.
+        names = [_edge_symbol(g, t) for t in sorted(site["targets"])]
+        _merge_refutation(site, public_refuted, admitted, names, True, missing)
+    else:
+        note = ("stored-value provenance:Method.free (offset 0x20), "
+                f"{len(fresh_targets)} target(s), refutation-widened")
+        site["class"] = "semantic-store-target (refutation-widened)"
+        site["reason"] = note
+        # Never narrow: a previously unresolved site stays unresolved.
+        site["unresolved"] = was_unresolved
+        _merge_refutation(site, public_refuted, admitted, names, False, note)
+    return True, admitted, public_refuted
+
+
+def admit_refuted_exclusions(graphs: dict, oracle) -> dict:
+    """One admission sweep: turn every bound-refuted exclusion into admission.
+
+    The pass is monotone by construction.  It only adds targets to a site and
+    removes a refuted row from an exclusion list; it never removes a target and
+    never turns an unresolved site into a resolved one.  The caller owns closure
+    recomputation (:func:`admission_fixpoint`) because grown target sets can
+    grow the reachable set and refute further exclusions.
+    """
+    report = {
+        "schema": ADMISSION_SCHEMA,
+        "changed": False,
+        "refuted_exclusions": {role: 0 for role in ADMISSION_ROLES},
+        "admitted_by_refutation": {"count": 0, "targets": [], "rows": []},
+        "sites": [],
+    }
+    for module in sorted(graphs):
+        g = graphs[module]
+        reachable_cache = []
+
+        def module_reachable():
+            if not reachable_cache:
+                reachable_cache.append(_oracle_module_addresses(oracle, g))
+            return reachable_cache[0]
+
+        for key in sorted(getattr(g, "sites", {}) or {},
+                          key=lambda k: (k[0], k[1], str(k[2]))):
+            site = g.sites[key]
+            name = (getattr(g, "funcs", {}) or {}).get(site.get("func", 0), "?")
+            site_admitted, site_refuted = [], []
+            changed = False
+            bound = site.get("reachable_caller_bound")
+            if isinstance(bound, dict):
+                step, admitted, refuted = _admit_caller_bound(
+                    g, site, bound, oracle, module)
+                changed |= step
+                site_admitted += admitted
+                site_refuted += refuted
+            sem = site.get("semantic_store_target")
+            if isinstance(sem, dict):
+                step, admitted, refuted = _admit_semantic_store(
+                    g, site, sem, oracle, module, name, module_reachable)
+                changed |= step
+                site_admitted += admitted
+                site_refuted += refuted
+            if not changed:
+                continue
+            report["changed"] = True
+            for entry in site_refuted:
+                report["refuted_exclusions"][entry["role"]] += 1
+            report["admitted_by_refutation"]["rows"].extend(
+                dict(entry, dso=module, function=name,
+                     call_site=hex(site.get("addr", 0)))
+                for entry in site_admitted)
+            report["sites"].append({
+                "dso": module,
+                "function": name,
+                "call_site": hex(site.get("addr", 0)),
+                "roles": sorted({e["role"] for e in site_admitted}),
+                "refuted": site_refuted,
+                "admitted": site_admitted,
+                "class": site.get("class"),
+                "unresolved": bool(site.get("unresolved")),
+                "reason": site.get("reason"),
+            })
+    rows = report["admitted_by_refutation"]["rows"]
+    report["admitted_by_refutation"]["count"] = len(rows)
+    report["admitted_by_refutation"]["targets"] = sorted({
+        target for row in rows for target in row.get("targets") or ()})
+    return report
+
+
+def admission_fixpoint(graphs: dict, close, *,
+                       max_passes: int = MAX_ADMISSION_PASSES) -> tuple[dict, dict]:
+    """Iterate admission and closure recomputation to a least fixed point.
+
+    ``close()`` returns a :func:`build_graph` result for the current site state.
+    Each admission sweep can only add targets, and the closure is a monotone
+    graph closure, so the sequence is increasing in a finite lattice and
+    terminates.  The cap is a safety property, not the termination argument: a
+    cap exhaustion is reported as ``ADMISSION_NONCONVERGENT`` by the caller and
+    no reachability claim may rest on it.
+    """
+    closure = close()
+    summary = {
+        "schema": ADMISSION_SCHEMA,
+        "passes": 0,
+        "max_passes": int(max_passes),
+        "converged": True,
+        "refuted_exclusions": {role: 0 for role in ADMISSION_ROLES},
+        "admitted_by_refutation": {"count": 0, "targets": [], "rows": []},
+        "sites": [],
+        "nonconvergent_detail": None,
+    }
+    rows: list = []
+    targets = set()
+    row_total = 0
+    while True:
+        oracle = ReachabilityOracle(graphs, closure["upper_reachable"])
+        step = admit_refuted_exclusions(graphs, oracle)
+        if not step["changed"]:
+            break
+        summary["passes"] += 1
+        for role, count in step["refuted_exclusions"].items():
+            summary["refuted_exclusions"][role] += count
+        for row in step["admitted_by_refutation"]["rows"]:
+            row_total += 1
+            rows.append(dict(row, pass_index=summary["passes"]))
+        targets |= set(step["admitted_by_refutation"]["targets"])
+        summary["sites"].extend(step["sites"])
+        if summary["passes"] > summary["max_passes"]:
+            summary["converged"] = False
+            summary["nonconvergent_detail"] = {
+                "pass_cap": summary["max_passes"],
+                "passes": summary["passes"],
+                "last_site_count": len(step["sites"]),
+                "reach_size": len(closure["upper_reachable"]),
+            }
+            break
+        closure = close()
+    if len(rows) > ADMISSION_ROW_RENDER_LIMIT:
+        summary["admitted_by_refutation"]["truncated"] = True
+        rows = rows[:ADMISSION_ROW_RENDER_LIMIT]
+    if len(summary["sites"]) > ADMISSION_SITE_RENDER_LIMIT:
+        summary["sites_truncated"] = True
+        summary["sites"] = summary["sites"][:ADMISSION_SITE_RENDER_LIMIT]
+    summary["admitted_by_refutation"]["count"] = row_total
+    summary["admitted_by_refutation"]["rows"] = rows
+    summary["admitted_by_refutation"]["targets"] = sorted(targets)
+    return closure, summary
 
 
 def direct_only_closure(graphs: dict, root_nodes: set, export_index: dict) -> set:
@@ -6897,6 +7843,100 @@ def git_blob_hashes(repo: Path, commit: str, files: list[str]) -> tuple[dict, st
 # engine
 # --------------------------------------------------------------------------- #
 
+SOURCE_ROOT_HASH_RULE_CANONICAL = (
+    "sha256(canonical_json(sorted [[relpath, size, sha256], ...])) over the "
+    "pristine source tree")
+SOURCE_ROOT_HASH_RULE_DOMAIN = (
+    "sha256('openssl-rs/source-tree/v1\\0' + for each sorted path under the "
+    "extracted tree: path + '\\0' + bytes + '\\0')")
+
+
+def hash_rule_class(rule) -> str | None:
+    """Classify a recorded source-tree hash rule by the digest it produces.
+
+    Two rules are in circulation under the field name ``source_root_hash``.
+    The build/link atlas (``downstream_build_link._source_root_hash``) emits the
+    canonical-JSON ``[[relpath, size, sha256]]`` digest; a rebuilt-downstream
+    build record emits the domain-separated ``openssl-rs/source-tree/v1``
+    digest.  They can never be equal, so comparing them is a rule collision,
+    not staleness.
+    """
+    if not rule:
+        return None
+    text = str(rule).lower()
+    if "canonical_json" in text or "canonical json" in text:
+        return "canonical-json-tree"
+    if "source-tree/v1" in text:
+        return "domain-separated-tree"
+    return "unrecognised"
+
+
+def source_root_hash_checks(record: dict, ledger: dict | None) -> tuple[dict, list]:
+    """Compare like with like, and never delete either digest check.
+
+    * equal rule classes -> compare ``source_root_hash``; a difference is
+      ``STALE_HASH``;
+    * different rule classes -> ``HASH_RULE_MISMATCH`` naming both rules (the
+      two values are not comparable, so neither is a staleness verdict);
+    * ``source_tree_domain_hash`` on both sides -> compare it directly.
+    """
+    checks = {}
+    refusals = []
+    record_rule = record.get("source_root_hash_rule")
+    ledger_rule = (ledger or {}).get("source_root_hash_rule")
+    record_class = hash_rule_class(record_rule)
+    ledger_class = hash_rule_class(ledger_rule)
+    if ledger_class is None and (ledger or {}).get("source_root_hash"):
+        # The atlas field is produced by downstream_build_link._source_root_hash,
+        # which hashes canonical JSON; the atlas carries no separate rule field.
+        ledger_class = "canonical-json-tree"
+        ledger_rule = ledger_rule or SOURCE_ROOT_HASH_RULE_CANONICAL
+    checks["source_root_hash_rule"] = {
+        "build_record": record_rule,
+        "build_record_class": record_class,
+        "atlas": ledger_rule,
+        "atlas_class": ledger_class,
+    }
+
+    record_hash = record.get("source_root_hash")
+    ledger_hash = (ledger or {}).get("source_root_hash")
+    if record_hash and ledger_hash:
+        if record_class and ledger_class and record_class != ledger_class:
+            checks["source_root_hash_matches_atlas"] = None
+            checks["hash_rule_matches"] = False
+            refusals.append({
+                "code": "HASH_RULE_MISMATCH",
+                "detail": (
+                    f"build record source_root_hash uses {record_rule!r} "
+                    f"({record_class}) but the atlas uses {ledger_rule!r} "
+                    f"({ledger_class}); the two digests are not comparable"),
+                "build_record_rule": record_rule,
+                "atlas_rule": ledger_rule,
+            })
+        else:
+            checks["hash_rule_matches"] = True
+            checks["source_root_hash_matches_atlas"] = record_hash == ledger_hash
+            if not checks["source_root_hash_matches_atlas"]:
+                refusals.append({
+                    "code": "STALE_HASH",
+                    "detail": "build record pristine source tree hash does not "
+                              "match the atlas row for the same recipe",
+                })
+
+    record_domain = record.get("source_tree_domain_hash")
+    ledger_domain = (ledger or {}).get("source_tree_domain_hash")
+    if record_domain and ledger_domain:
+        checks["source_tree_domain_hash_matches_atlas"] = (
+            record_domain == ledger_domain)
+        if not checks["source_tree_domain_hash_matches_atlas"]:
+            refusals.append({
+                "code": "STALE_HASH",
+                "detail": "build record domain-separated source tree hash does "
+                          "not match the atlas row for the same recipe",
+            })
+    return checks, refusals
+
+
 def build_receipt(args) -> dict:
     repo = Path(args.repo).resolve()
     tool_identity = _tool_identity()
@@ -7091,8 +8131,48 @@ def build_receipt(args) -> dict:
             g, workload_imports, pre_reachable.get(g.name, set()))
 
     closure = build_graph(graphs, root_nodes, export_index, import_nodes)
+    # Admission by refutation (AGENTS.md section 22).  Inductive exclusions were
+    # derived against the pre-closure direct set; the sound upper bound may
+    # reach the callers/writers they excluded.  Refusing those sites leaves the
+    # closure unusable, so each refuted exclusion is admitted with its witness
+    # and the closure is recomputed until no admission grows the bound.  The
+    # pass is monotone and may only add targets.
+    closure, admission = admission_fixpoint(
+        graphs,
+        lambda: build_graph(graphs, root_nodes, export_index, import_nodes))
     direct_reach = closure["direct_reachable"]
     upper_reach = closure["upper_reachable"]
+    refusals.extend(closure_refusals(closure))
+    if not admission["converged"]:
+        detail = admission.get("nonconvergent_detail") or {}
+        refusals.append({
+            "code": "ADMISSION_NONCONVERGENT",
+            "detail": (
+                "refutation admission did not reach a fixed point within "
+                f"{detail.get('pass_cap')} pass(es); the last pass admitted "
+                f"{detail.get('last_site_count')} site(s) and the reachable set "
+                f"is {detail.get('reach_size')} node(s).  The target sets are "
+                "partial and no reachability claim may be drawn from them"),
+        })
+
+    # The reachable function set is persisted with the receipt, so a movement
+    # between candidates can be adjudicated from the receipt instead of the
+    # multi-gigabyte record sidecar (AGENTS.md section 22).  The entries and the
+    # digest use the analysis identity's name canonicalisation: the raw
+    # `.llvm.<hash>` suffix changes with the build directory and source bytes
+    # while the address set is identical, so hashing it would report movement
+    # for a neutral rebuild.  The raw digest is retained as a non-identity.
+    reachable_functions = reachable_function_entries(graphs, upper_reach)
+    _raw_functions = reachable_function_entries(graphs, upper_reach,
+                                                canonical=False)
+    reachable_functions_sha256 = reachable_functions_digest(reachable_functions)
+    reachable_functions_raw_sha256 = reachable_functions_digest(_raw_functions)
+    reachable_functions_canonicalised = sum(
+        1 for entry in _raw_functions
+        if canonical_symbol_name(entry.split(":", 2)[2]) != entry.split(":", 2)[2])
+    reachable_functions_per_module = collections.Counter(
+        entry.split(":", 1)[0] for entry in reachable_functions)
+    analysis_ident = analysis_identity(graphs)
 
     # ---- edge provenance records ----------------------------------------- #
     # Every indirect site emits a semantic record.  The *final upper bound* is
@@ -7361,6 +8441,8 @@ def build_receipt(args) -> dict:
                     "recipe_id": row.get("recipe_id"),
                     "source_sha256": row.get("source_sha256"),
                     "source_root_hash": row.get("source_root_hash"),
+                    "source_root_hash_rule": row.get("source_root_hash_rule"),
+                    "source_tree_domain_hash": row.get("source_tree_domain_hash"),
                     "artifact_rel": (row.get("linkage") or {}).get("artifact_rel"),
                     "artifact_sha256_recorded": (row.get("linkage") or {}).get("artifact_sha256"),
                     "recorded_candidate_install": (body.get("candidate_identity") or {}).get(
@@ -7390,9 +8472,9 @@ def build_receipt(args) -> dict:
                 rec.get("artifact_sha256") in (None, artifact_sha))
             checks["install_prefix_matches"] = (
                 rec.get("install_prefix") in (None, rel(install, repo)))
-            if ledger and ledger.get("source_root_hash") and rec.get("source_root_hash"):
-                checks["source_root_hash_matches_atlas"] = (
-                    rec["source_root_hash"] == ledger["source_root_hash"])
+            source_checks, source_refusals = source_root_hash_checks(rec, ledger)
+            checks.update(source_checks)
+            refusals.extend(source_refusals)
             if not checks.get("artifact_sha256_matches", True):
                 refusals.append({"code": "STALE_HASH",
                                  "detail": "build record artefact digest does not match the "
@@ -7401,10 +8483,6 @@ def build_receipt(args) -> dict:
                 refusals.append({"code": "STALE_HASH",
                                  "detail": "build record install prefix does not match the "
                                            "admitted install"})
-            if checks.get("source_root_hash_matches_atlas") is False:
-                refusals.append({"code": "STALE_HASH",
-                                 "detail": "build record pristine source tree hash does not "
-                                           "match the atlas row for the same recipe"})
             build_record = {"path": rel(bp, repo), "record": rec, "checks": checks}
 
     # ---- 9. receipt ------------------------------------------------------- #
@@ -7470,12 +8548,74 @@ def build_receipt(args) -> dict:
                 "its evidence class; only a site with no class admits the global "
                 "address-taken union"),
             "upper_bound_rule": (
-                "direct edges + the resolver's per-site target sets + the residual class "
-                "(functions address-materialised in reachable code, consumer-imported "
-                "symbols, values stored into object fields by reachable code, and values "
-                "passed at unresolved call sites); the global address-taken union is "
-                "admitted only for an unclassified site, and any such site is listed "
-                "in precision.unclassified_reachable_sites"),
+                "least fixed point of a monotone transfer function (Kildall 1973; "
+                "Cousot & Cousot 1977): direct edges + the resolver's per-site "
+                "target sets +, for every unresolved site whose containing "
+                "function is reachable, the class-independent evidence union "
+                "(materialised addresses, relocated function slots including "
+                "in-image GLOB_DAT/JUMP_SLOT targets, field-store values and "
+                "unresolved-call argument targets) plus the site's own targets. "
+                "The union iterates until the reachable set stops growing; a "
+                "class-specific set is precision reporting only and can never "
+                "narrow the bound, so losing precision cannot lose reachability"),
+            "closure": {
+                "schema": UNRESOLVED_BOUND_SCHEMA,
+                "analysis_identity": analysis_ident,
+                "analysis_identity_basis": (
+                    "the DSO file digest is not an analysis identity: a "
+                    "comment-only edit changes it with byte-identical .text and "
+                    "symbol addresses; the identity hashes .text and the symbol "
+                    "table"),
+                "closure_rounds": closure["closure_rounds"],
+                "max_rounds": closure["max_rounds"],
+                "round_sizes": closure["round_sizes"],
+                "sites_scanned_per_round": closure["sites_scanned_per_round"],
+                "converged": closure["converged"],
+                "nonconvergent_detail": closure["nonconvergent_detail"],
+                "refutation_admission": {
+                    "schema": admission["schema"],
+                    "passes": admission["passes"],
+                    "max_passes": admission["max_passes"],
+                    "converged": admission["converged"],
+                    "nonconvergent_detail": admission["nonconvergent_detail"],
+                    "refuted_exclusions": admission["refuted_exclusions"],
+                    "admitted_by_refutation": {
+                        "count": admission["admitted_by_refutation"]["count"],
+                        "targets": admission["admitted_by_refutation"]["targets"],
+                    },
+                    "rule": (
+                        "an exclusion derived against the pre-closure direct set "
+                        "that the sound upper bound reaches is false: the "
+                        "subject's contribution is admitted with a witness and "
+                        "the closure is recomputed, until no admission grows "
+                        "the bound (cap 4 passes; exhaustion is "
+                        "ADMISSION_NONCONVERGENT).  Admission may only add "
+                        "targets; exclusions the bound does not reach survive "
+                        "and remain validated"),
+                },
+                "residual_bound_nodes": closure["residual_bound_nodes"],
+                "bound_evidence_sources": closure["bound_evidence_sources"],
+                "reachable_functions_count": len(reachable_functions),
+                "reachable_functions_sha256": reachable_functions_sha256,
+                "reachable_functions_sha256_rule": (
+                    "sha256 over the newline-terminated sorted "
+                    "'module:hex_address:canonical_name' entries; the name is "
+                    "canonicalised (compiler .llvm.<hash> and symbol-version "
+                    "suffix removed) exactly as the analysis identity "
+                    "canonicalises its symbol rows, so a comment-only rebuild "
+                    "cannot move the digest"),
+                "reachable_functions_raw_name_sha256": (
+                    reachable_functions_raw_sha256),
+                "reachable_functions_raw_name_sha256_rule": (
+                    "sha256 over the same entries with the raw nm name; it "
+                    "embeds the build-dependent .llvm.<hash> and is recorded "
+                    "as a non-identity, not as movement evidence"),
+                "reachable_functions_canonicalised_entries": (
+                    reachable_functions_canonicalised),
+                "reachable_functions_per_module": dict(
+                    sorted(reachable_functions_per_module.items())),
+                "reachable_functions": reachable_functions,
+            },
             "direct_reachable_functions": len(direct_reach),
             "upper_bound_reachable_functions": len(upper_reach),
             "address_taken_functions": len(closure["address_taken_union"]),
@@ -7523,6 +8663,12 @@ def build_receipt(args) -> dict:
                 "the resolver is an over-approximation: an unresolved site is admitted "
                 "at its evidence class, and every unclassified site is listed rather "
                 "than silently dropped",
+                "the residual bound is class-independent and therefore monotone, but "
+                "it is still a may-bound: a function that no materialised-address "
+                "source names is not admitted, so monotonicity is not completeness",
+                "the analysis identity covers .text and the defined-symbol table, not "
+                "data-section contents; two candidates with different data but "
+                "identical code and symbols share an identity",
                 "a dynamic trace proves execution, not unreachability, and never "
                 "narrowed this graph",
                 "function-level reachability is not a proof that a site is safe; it "
@@ -7803,6 +8949,23 @@ def build_receipt(args) -> dict:
             },
             "predicate_element_7": evaluate_predicate_element_7(
                 closure["reachable_residual_sites"], closure["unclassified_sites"]),
+            "refutation_admission": {
+                "schema": admission["schema"],
+                "rule": (
+                    "each row names the exclusion subject the final upper bound "
+                    "reaches, the targets admitted with it, and whether the "
+                    "admission left the site's target set finite.  A site whose "
+                    "admitted caller/writer has no finite recorded contribution "
+                    "becomes UNRESOLVED with a named refutation-unbounded "
+                    "property rather than keeping an unsound finite claim"),
+                "admission_passes": admission["passes"],
+                "max_passes": admission["max_passes"],
+                "converged": admission["converged"],
+                "refuted_exclusions": admission["refuted_exclusions"],
+                "admitted_by_refutation": admission["admitted_by_refutation"],
+                "sites": admission["sites"],
+                "sites_truncated": admission.get("sites_truncated", False),
+            },
             "settled": (
                 ("every reachable unresolved site is contract-bounded (section 7 "
                  "criterion 2); no target-bounded unresolved site and no "
@@ -7959,6 +9122,13 @@ def build_receipt(args) -> dict:
             "record schema, artefact sha256, sidecar digest and line count) and a "
             "re-run of the pinned validator over the pinned sidecar.",
             "No crate build, test, Miri, ASan or cryptographic court was run by this tool.",
+            "The residual bound is a monotone may-bound, not a completeness proof: it "
+            "cannot admit a target that no materialised-address evidence names, and "
+            "the fixpoint is over the linked image plus the resolved OpenSSL DSOs, not "
+            "a whole-program call graph.",
+            "The analysis identity is over .text and the symbol table.  It is not a "
+            "byte-for-byte reproducibility claim across toolchains and it does not "
+            "cover data-section contents.",
             "The dynamic-trace axis is absent unless a trace is supplied; its absence is "
             "recorded, not treated as evidence.",
         ],
@@ -8092,8 +9262,413 @@ def self_test() -> int:
     narrow = build_graph({g.name: g}, {(g.name, 0x10)}, {})
     check("materialised class admits address-of set",
           (g.name, 0x20) in narrow["upper_reachable"], True)
-    check("materialised class does not admit global table entry",
-          (g.name, 0x30) in narrow["upper_reachable"], False)
+    # The monotone rule: a classified site is bounded by the class-independent
+    # union, never by its class set alone.  v1.4 admitted only taken_code for a
+    # non-unclassified site, so dropping from PROVED to UNRESOLVED could shrink
+    # the reachable set.  The class is still recorded as precision metadata.
+    check("a classified site is bounded by the class-independent union (monotone)",
+          (g.name, 0x30) in narrow["upper_reachable"], True)
+    check("the class remains available as precision metadata",
+          g.sites[(0x10, 0x11, "call")]["class"], "materialised")
+
+    # ---- least-fixed-point residual admission ----------------------------- #
+    # root -> dispatch A (unresolved) -> B -> dispatch B (unresolved) -> C.
+    # B has no direct predecessor: it is reached only through A's residual
+    # admission, so a single pass never scans B's own unresolved site.
+    class _NestedG:
+        name = "nested.so"
+        funcs = {0x10: "root", 0x20: "dispatch_a", 0x30: "b",
+                 0x40: "dispatch_b", 0x50: "c"}
+        start_set = set(funcs)
+        direct = {0x10: {0x20}, 0x20: set(), 0x30: {0x40}, 0x40: set(),
+                  0x50: set()}
+        taken_code = set()
+        taken_data = set()
+        address_taken_union = set()
+        field_stores = {}
+        unknown_call_arg_targets = set()
+        sites = {}
+
+    def _nested_graph():
+        g = _NestedG()
+        g.sites = {
+            (0x20, 0x21, "call"): {
+                "kind": "call", "func": 0x20, "addr": 0x21,
+                "text": "call *%rax", "targets": set(), "unresolved": True,
+                "reason": "reg-top", "class": "materialised",
+                "arg_targets": {0x30}},
+            (0x40, 0x41, "call"): {
+                "kind": "call", "func": 0x40, "addr": 0x41,
+                "text": "call *%rax", "targets": set(), "unresolved": True,
+                "reason": "reg-top", "class": "materialised",
+                "arg_targets": {0x50}},
+        }
+        return g
+
+    g = _nested_graph()
+    one_pass = build_graph({g.name: g}, {(g.name, 0x10)}, {}, max_rounds=1)
+    g = _nested_graph()
+    fixpoint = build_graph({g.name: g}, {(g.name, 0x10)}, {})
+    check("nested dispatch: B is not directly reachable",
+          (g.name, 0x30) in fixpoint["direct_reachable"], False)
+    check("nested dispatch: a one-pass closure omits C",
+          (g.name, 0x50) in one_pass["upper_reachable"], False)
+    check("nested dispatch: a one-pass closure does not converge",
+          one_pass["converged"], False)
+    check("nested dispatch: the fixpoint includes C",
+          (g.name, 0x50) in fixpoint["upper_reachable"], True)
+    check("nested dispatch: the fixpoint converges in three rounds",
+          (fixpoint["converged"], fixpoint["closure_rounds"]), (True, 3))
+    check("nested dispatch: round sizes record the growth",
+          fixpoint["round_sizes"], [2, 4, 5, 5])
+    check("nested dispatch: sites are scanned per round",
+          fixpoint["sites_scanned_per_round"], [0, 1, 2, 2])
+
+    nonconv = closure_refusals(one_pass)
+    check("non-convergence produces CLOSURE_NONCONVERGENT",
+          [r["code"] for r in nonconv], ["CLOSURE_NONCONVERGENT"])
+    check("the non-convergence refusal names the round cap and growth",
+          ("1 round" in nonconv[0]["detail"],
+           "added 2 node" in nonconv[0]["detail"],
+           one_pass["nonconvergent_detail"]["round_cap"]),
+          (True, True, 1))
+    check("a converged closure emits no refusal", closure_refusals(fixpoint), [])
+
+    # ---- monotone per-site bound ------------------------------------------ #
+    class _MonoG:
+        name = "monotone.so"
+        funcs = {0x10: "root", 0x20: "materialised_target",
+                 0x30: "field_target", 0x40: "argument_target",
+                 0x50: "got_target"}
+        start_set = set(funcs)
+        taken_code = {0x20}
+        taken_data = {0x30}
+        # 0x50 is admitted only by the dynamic-relocation widening (the real
+        # CRYPTO_cbc128_encrypt shape): the old class-specific bound could not
+        # contain it, so a PROVED->UNRESOLVED reclassification lost it.
+        address_taken_union = {0x20, 0x30, 0x50}
+        dynamic_reloc_targets = {0x50}
+        field_stores = {0x20: {0x30}}
+        unknown_call_arg_targets = {0x40}
+
+    mono = _MonoG()
+    proved_site = {"kind": "call", "func": 0x10, "addr": 0x11,
+                   "text": "call *%rax", "targets": {0x20, 0x50},
+                   "unresolved": False, "class": "PROVED_TARGET_SET",
+                   "arg_targets": set()}
+    proved_set = set(proved_site["targets"])
+    residual_site = {**proved_site, "unresolved": True,
+                     "class": "materialised", "targets": set()}
+    bound = unresolved_site_bound(mono, residual_site)
+    check("monotone bound contains the previously proved target set",
+          proved_set <= bound, True)
+    class_sets = {
+        "taken_code": set(mono.taken_code),
+        "taken_data": set(mono.taken_data),
+        "address_taken_union": set(mono.address_taken_union),
+        "dynamic_reloc_targets": set(mono.dynamic_reloc_targets),
+        "field_stores": {v for vs in mono.field_stores.values() for v in vs},
+        "unknown_call_arg_targets": set(mono.unknown_call_arg_targets),
+        "site_targets": set(proved_site["targets"])
+                        | set(proved_site["arg_targets"]),
+    }
+    check("monotone bound contains every class-specific set",
+          {k: v <= bound for k, v in class_sets.items()},
+          {k: True for k in class_sets})
+    # The residual site's own targets are empty (the resolver lost them), so
+    # the union -- not the site -- is what keeps 0x50 reachable.
+    check("the residual bound survives losing the site's own targets",
+          (residual_site["targets"], 0x50 in bound), (set(), True))
+
+    # ---- admission by refutation ----------------------------------------- #
+    # The exclusion was derived against the pre-closure direct set.  When the
+    # sound bound reaches the excluded caller, the exclusion is false: the
+    # caller's contribution is admitted and the closure recomputed.  A caller
+    # the bound does not reach keeps its exclusion, and an admitted caller
+    # whose contribution is not finite turns the site UNRESOLVED.
+    class _AdmissionG:
+        name = "admission-fixture.so"
+        funcs = {0x10: "site_func", 0x20: "target_ok",
+                 0x30: "excluded_caller", 0x40: "target_dropped",
+                 0x50: "reachable_caller"}
+        start_set = set(funcs)
+        all_syms = dict(funcs)
+        names_at = {a: {n} for a, n in funcs.items()}
+        taken_code = set()
+        taken_data = set()
+        address_taken_union = set()
+        dynamic_reloc_targets = set()
+        field_stores = {}
+        unknown_call_arg_targets = set()
+        slot_func_targets = set()
+        sites = {}
+
+        def __init__(self):
+            self.direct = {0x10: {0x50}}
+
+        def section_of(self, _a):
+            return ".text"
+
+        def containing(self, a):
+            return max(x for x in self.funcs if x <= a)
+
+        def static_slot(self, _a):
+            return None
+
+        def seam_symbol(self, _a):
+            return None
+
+        def cstring_at(self, _a):
+            return None
+
+        def is_data(self, _a):
+            return False
+
+    def _admission_fixture(*, reach_excluded, unbounded=False):
+        g = _AdmissionG()
+        if reach_excluded:
+            g.direct = {0x10: {0x50, 0x30}}
+        excluded_targets = [] if unbounded else ["0x40"]
+        excluded_args = [{
+            "argument_index": 0, "targets": list(excluded_targets),
+            "non_image_values": ["<top>"] if unbounded else [],
+            "unresolved": bool(unbounded), "witness_instruction": []}]
+        arg_targets = {0x20} | ({0x40} if not unbounded else set())
+        g.sites = {(0x10, 0x11, "call"): {
+            "kind": "call", "func": 0x10, "addr": 0x11,
+            "text": "call *%rax", "targets": {0x20},
+            "unresolved": False, "class": "reachable-caller-target",
+            "reason": "reachable-caller target bounding",
+            "field_offsets": set(), "arg_deps": {0}, "arg_targets": arg_targets,
+            "reachable_caller_bound": {
+                "reachable_callers": [{
+                    "function": "0x50", "symbol": "reachable_caller",
+                    "reachable": True, "reason": None,
+                    "call_sites": [{"call_site": "0x51", "arguments": [{
+                        "argument": 0, "argument_index": 0,
+                        "targets": ["0x20"], "non_image_values": [],
+                        "unresolved": False, "witness_instruction": []}]}],
+                    "contributed_targets": ["0x20"]}],
+                "excluded_callers": [{
+                    "function": "0x30", "symbol": "excluded_caller",
+                    "reachable": False, "reason": "not in this family's "
+                    "reachable set", "in_image_references": [],
+                    "call_sites": [{"call_site": "0x31",
+                                    "arguments": excluded_args}],
+                    "contributed_targets": excluded_targets}],
+                "bounded_targets": ["0x20"],
+                "attributed_targets": [hex(a) for a in sorted(arg_targets)],
+                "unattributed_targets": []}}}
+        return g
+
+    def _admission_run(g, *, admit=True):
+        close = lambda: build_graph({g.name: g}, {(g.name, 0x10)}, {})
+        if not admit:
+            return close(), None
+        return admission_fixpoint({g.name: g}, close)
+
+    g1 = _admission_fixture(reach_excluded=True)
+    closure1, report1 = _admission_run(g1)
+    site1 = g1.sites[(0x10, 0x11, "call")]
+    bound1 = site1["reachable_caller_bound"]
+    oracle1 = ReachabilityOracle({g1.name: g1}, closure1["upper_reachable"])
+    records1 = build_edge_records({g1.name: g1}, oracle1)
+    check("a refuted exclusion admits the caller's target",
+          (0x40 in site1["targets"],
+           (g1.name, 0x40) in closure1["upper_reachable"]), (True, True))
+    check("a refuted exclusion is removed and its caller is marked",
+          (bound1["excluded_callers"],
+           [r.get("admitted_by_refutation") for r in bound1["reachable_callers"]]),
+          ([], [None, True]))
+    check("admission reports its pass, role and targets",
+          (report1["passes"],
+           report1["refuted_exclusions"][ADMISSION_ROLE_CALLER],
+           report1["admitted_by_refutation"]["count"],
+           report1["admitted_by_refutation"]["targets"]),
+          (1, 1, 1, ["target_dropped"]))
+    check("the refutation-widened record validates against the sound bound",
+          validate_edge_records(records1, oracle1), [])
+    check("the refutation-widened record has no audit violation",
+          [r for r in reachability_exclusion_audit(
+              {g1.name: g1}, oracle1, records1) if r["violation"]], [])
+
+    g2 = _admission_fixture(reach_excluded=False)
+    closure2, report2 = _admission_run(g2)
+    site2 = g2.sites[(0x10, 0x11, "call")]
+    oracle2 = ReachabilityOracle({g2.name: g2}, closure2["upper_reachable"])
+    records2 = build_edge_records({g2.name: g2}, oracle2)
+    check("a caller the sound bound does not reach keeps its exclusion",
+          (site2["targets"],
+           len(site2["reachable_caller_bound"]["excluded_callers"]),
+           report2["passes"]), ({0x20}, 1, 0))
+    check("the surviving exclusion validates",
+          validate_edge_records(records2, oracle2), [])
+
+    g3 = _admission_fixture(reach_excluded=True, unbounded=True)
+    closure3, report3 = _admission_run(g3)
+    site3 = g3.sites[(0x10, 0x11, "call")]
+    oracle3 = ReachabilityOracle({g3.name: g3}, closure3["upper_reachable"])
+    records3 = build_edge_records({g3.name: g3}, oracle3)
+    check("an admitted caller with no finite contribution is UNRESOLVED",
+          (site3["unresolved"], "refutation-unbounded" in site3["reason"],
+           site3["reachable_caller_bound"]["excluded_callers"]),
+          (True, True, []))
+    check("the refutation-unbounded record names its missing property",
+          [(r["disposition"], bool(r["missing_property"]))
+           for r in records3], [(DISPOSITION_UNRESOLVED, True)])
+    check("the refutation-unbounded record validates",
+          validate_edge_records(records3, oracle3), [])
+
+    # ---- analysis identity is not the DSO digest --------------------------- #
+    class _IdG:
+        name = "identity.so"
+
+        def __init__(self, dso_sha, rows=None):
+            self.sha256 = dso_sha
+            self._rows = rows or [["f", 0x10, 8, "T"], ["g", 0x20, 16, "T"]]
+
+        def text_digest(self):
+            return "a" * 64, 4096
+
+        def symbol_table_rows(self):
+            return list(self._rows)
+
+    id_a = analysis_identity({"identity.so": _IdG("0" * 64)})
+    id_b = analysis_identity({"identity.so": _IdG("f" * 64)})
+    id_c = analysis_identity({"identity.so": _IdG(
+        "0" * 64, [["f", 0x10, 8, "T"], ["g", 0x20, 24, "T"]])})
+    check("analysis identity is unchanged by a DSO digest change",
+          (id_a["digest"] == id_b["digest"],
+           id_a["modules"]["identity.so"]["dso_sha256"]
+           != id_b["modules"]["identity.so"]["dso_sha256"]), (True, True))
+    check("analysis identity changes with a symbol-table change",
+          id_a["digest"] == id_c["digest"], False)
+    check("the DSO digest is recorded as a non-identity",
+          id_a["modules"]["identity.so"]["dso_sha256_is_analysis_identity"],
+          False)
+    check("compiler-generated hash suffixes are canonicalised",
+          [canonical_symbol_name(n) for n in (
+              "_RNvCs123_4core3fmt8_$LT$T$u20$as$u20$X$GT$.llvm.1a2b3c4d",
+              "CRYPTO_cbc128_encrypt@@OPENSSL_3.0.0",
+              "plain_symbol")],
+          ["_RNvCs123_4core3fmt8_$LT$T$u20$as$u20$X$GT$.llvm.<hash>",
+           "CRYPTO_cbc128_encrypt", "plain_symbol"])
+
+    # The movement digest must be a function of the analysis identity, not of
+    # the build directory: two neutral builds differ only in the .llvm.<hash>
+    # suffix values, and the raw-name digest would report movement for a
+    # comment-only edit.
+    class _NameG:
+        name = "names.so"
+
+        def __init__(self, suffix):
+            self.funcs = {0x10: f"local_fn.llvm.{suffix}",
+                          0x20: "CRYPTO_export@@OPENSSL_3.0.0"}
+
+    reach_a = {("names.so", 0x10), ("names.so", 0x20)}
+    names_a = reachable_function_entries({"names.so": _NameG("111")}, reach_a)
+    names_b = reachable_function_entries({"names.so": _NameG("222")}, reach_a)
+    raw_a = reachable_function_entries({"names.so": _NameG("111")}, reach_a,
+                                       canonical=False)
+    raw_b = reachable_function_entries({"names.so": _NameG("222")}, reach_a,
+                                       canonical=False)
+    check("the reachable-function digest canonicalises build-dependent names",
+          (names_a == names_b,
+           reachable_functions_digest(names_a)
+           == reachable_functions_digest(names_b),
+           reachable_functions_digest(raw_a)
+           != reachable_functions_digest(raw_b)),
+          (True, True, True))
+
+    # ---- mutation controls ------------------------------------------------- #
+    # Each mutation disables exactly one mechanism; the named case must then
+    # fail.  A PASS here is evidence that the case is sensitive to the
+    # mechanism, not that the mechanism is complete.
+    def _nested_reaches_c(max_rounds=None):
+        g = _nested_graph()
+        res = build_graph({g.name: g}, {(g.name, 0x10)}, {},
+                          max_rounds=max_rounds)
+        return (g.name, 0x50) in res["upper_reachable"]
+
+    def _narrow_bound_by_class(g, site):
+        if site.get("class") == "unclassified":
+            return set(getattr(g, "address_taken_union", ()) or ())
+        return (set(getattr(g, "taken_code", ()) or ())
+                | set(site.get("targets") or ()))
+
+    _orig_bound = globals()["unresolved_site_bound"]
+    globals()["unresolved_site_bound"] = _narrow_bound_by_class
+    try:
+        narrowed = unresolved_site_bound(mono, residual_site)
+    finally:
+        globals()["unresolved_site_bound"] = _orig_bound
+
+    _orig_refusals = globals()["closure_refusals"]
+    globals()["closure_refusals"] = lambda _closure: []
+    try:
+        no_refusal = closure_refusals(one_pass)
+    finally:
+        globals()["closure_refusals"] = _orig_refusals
+
+    # Admission mutations.  Disabling admission must make the refuted case
+    # fail (the target is not admitted and the record refuses); admitting
+    # unconditionally must make the surviving-exclusion case fail (the caller
+    # is moved even though the bound does not reach it, and the validator
+    # refuses the false positive claim).
+    g4 = _admission_fixture(reach_excluded=True)
+    closure4, _report4 = _admission_run(g4, admit=False)
+    site4 = g4.sites[(0x10, 0x11, "call")]
+    oracle4 = ReachabilityOracle({g4.name: g4}, closure4["upper_reachable"])
+    records4 = build_edge_records({g4.name: g4}, oracle4)
+    admission_disabled_fails = (
+        0x40 not in site4["targets"]
+        and bool(site4["reachable_caller_bound"]["excluded_callers"])
+        and bool(validate_edge_records(records4, oracle4)))
+
+    g5 = _admission_fixture(reach_excluded=False)
+    site5 = g5.sites[(0x10, 0x11, "call")]
+    bound5 = site5["reachable_caller_bound"]
+    moved = bound5["excluded_callers"].pop()
+    moved["admitted_by_refutation"] = True
+    bound5["reachable_callers"].append(moved)
+    site5["targets"] |= {0x40}
+    closure5 = build_graph({g5.name: g5}, {(g5.name, 0x10)}, {})
+    oracle5 = ReachabilityOracle({g5.name: g5}, closure5["upper_reachable"])
+    records5 = build_edge_records({g5.name: g5}, oracle5)
+    unconditional_admission_fails = (
+        not bound5["excluded_callers"]
+        and bool(validate_edge_records(records5, oracle5)))
+
+    mutation_matrix = [
+        {"mutation": "single-pass closure (no iteration)",
+         "case": "fixpoint-reaches-nested-unresolved",
+         "case_fails": not _nested_reaches_c(max_rounds=1),
+         "expected": True},
+        {"mutation": "class-narrowed bound",
+         "case": "monotone-bound-under-classification-loss",
+         "case_fails": not (proved_set <= narrowed),
+         "expected": True},
+        {"mutation": "non-convergence refusal removed",
+         "case": "closure-nonconvergent-refusal",
+         "case_fails": no_refusal == [],
+         "expected": True},
+        {"mutation": "refutation admission disabled",
+         "case": "admission-refuted-caller",
+         "case_fails": admission_disabled_fails,
+         "expected": True},
+        {"mutation": "unconditional admission (no bound check)",
+         "case": "admission-surviving-caller",
+         "case_fails": unconditional_admission_fails,
+         "expected": True},
+    ]
+    check("mutation matrix: every mutation flips its named case",
+          [(row["case"], row["case_fails"] == row["expected"])
+           for row in mutation_matrix],
+          [(row["case"], True) for row in mutation_matrix])
+    print("[consumer-closure] mutation matrix: " + "; ".join(
+        f"{r['mutation']} -> {r['case']} "
+        f"{'fails as required' if r['case_fails'] else 'STILL PASSES'}"
+        for r in mutation_matrix))
 
     # ---- evidence-class controls ------------------------------------------ #
     # R1: a non-literal dlsym argument must not be resolved.
@@ -9427,6 +11002,38 @@ def self_test() -> int:
           (len(tool_identity.get("sha256") or "") == 64,
            tool_identity.get("schema") == EDGE_RECORD_SCHEMA), (True, True))
 
+    # ---- source-root hash rule collision (AGENTS.md section 22) ----------- #
+    # The build record and the build/link atlas both name a "source_root_hash"
+    # but hash different things.  Comparing them is a rule collision, not
+    # staleness.  The atlas has no rule field because its producer
+    # (downstream_build_link._source_root_hash) is canonical-JSON by
+    # construction.
+    atlas_h = {"source_root_hash": "a" * 64}
+    rec_domain = {"source_root_hash": "b" * 64,
+                  "source_root_hash_rule": SOURCE_ROOT_HASH_RULE_DOMAIN}
+    c1, r1 = source_root_hash_checks(rec_domain, atlas_h)
+    check("different source-root hash rules are HASH_RULE_MISMATCH, not STALE_HASH",
+          [r["code"] for r in r1], ["HASH_RULE_MISMATCH"])
+    check("the mismatch names both rules and their classes",
+          (c1["source_root_hash_rule"]["build_record_class"],
+           c1["source_root_hash_rule"]["atlas_class"]),
+          ("domain-separated-tree", "canonical-json-tree"))
+    rec_same = {"source_root_hash": "a" * 64,
+                "source_root_hash_rule": SOURCE_ROOT_HASH_RULE_CANONICAL}
+    c2, r2 = source_root_hash_checks(rec_same, atlas_h)
+    check("equal rules and equal digests pass",
+          (r2, c2["source_root_hash_matches_atlas"], c2["hash_rule_matches"]),
+          ([], True, True))
+    c3, r3 = source_root_hash_checks(
+        dict(rec_same, source_root_hash="c" * 64), atlas_h)
+    check("equal rules with different digests stay STALE_HASH",
+          [r["code"] for r in r3], ["STALE_HASH"])
+    c4, r4 = source_root_hash_checks(
+        dict(rec_domain, source_tree_domain_hash="e" * 64),
+        {"source_root_hash": "a" * 64, "source_tree_domain_hash": "d" * 64})
+    check("a domain-hash difference is STALE_HASH",
+          sorted(r["code"] for r in r4), ["HASH_RULE_MISMATCH", "STALE_HASH"])
+
     if failures:
         print("[consumer-closure] SELF-TEST FAILED")
         for f in failures:
@@ -9447,11 +11054,19 @@ def self_test() -> int:
           f"binding, H3 ICF aliases, H4 caller-count exemption removal, H5 "
           f"self-contradicting evidence, H6 audit coverage, H7 candidate deletion, "
           f"H8 vacuous-set demotion, H9 duplicate identities, H10 v1m "
-          f"caller-scoped positive control), and the v1.3 row-kind and "
+          f"caller-scoped positive control), the v1.3 row-kind and "
           f"target-binding controls (row kind, reason vocabulary, structured "
           f"declared targets, target attribution, recomputed caller "
           f"contributions, candidate equality, writer would_store_targets, "
-          f"derived target_reachability, sidecar default and tool identity)")
+          f"derived target_reachability, sidecar default and tool identity), the "
+          f"least-fixed-point residual admission (nested unresolved dispatch, "
+          f"non-convergence refusal), the monotone class-independent site bound, "
+          f"the analysis identity (DSO digest is not an identity), admission by "
+          f"refutation (refuted caller admitted and closure recomputed, "
+          f"surviving exclusion validated, infinite contribution demoted to "
+          f"UNRESOLVED), and the mutation matrix (single pass, class-narrowed "
+          f"bound, refusal removed, admission disabled, unconditional "
+          f"admission)")
     return 0
 
 
@@ -9527,6 +11142,12 @@ def main(argv=None) -> int:
         e7 = receipt["precision"]["predicate_element_7"]
         print(f"  element-7={e7['status']} "
               f"contract_bounded_by_class={e7['contract_bounded_by_class']}")
+        cl = receipt["graph"]["closure"]
+        print(f"  closure: rounds={cl['closure_rounds']} "
+              f"converged={cl['converged']} "
+              f"reachable_functions={cl['reachable_functions_count']} "
+              f"sha256={cl['reachable_functions_sha256']} "
+              f"analysis_identity={cl['analysis_identity']['digest']}")
         for r in receipt["refusals"]:
             print(f"  REFUSAL {r['code']}: {r['detail']}")
     return 0 if receipt["verdict"]["state"] == "ACCEPTED" else 1

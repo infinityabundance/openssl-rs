@@ -1,0 +1,261 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/closure-fixpoint-repair/v1",
+  "recorded_utc": "2026-10-29",
+  "state": "IMPLEMENTED_AND_MEASURED; CROSS-BUILD STABILITY NOT ESTABLISHED",
+  "supersedes_state_of": "closure-monotonicity-finding.json (state OPEN at recording time)",
+  "authority": [
+    "AGENTS.md section 7: a dependency closure is an over-approximation; a mechanism is SAFETY_DISCHARGED only when no safe caller can cause UB and every obligation is enumerated",
+    "AGENTS.md section 8: compatibility, safety and cryptography are separate evidence axes; a green differential court is not a safety result",
+    "AGENTS.md section 22: evidence is bound to a frozen candidate; a build-relevant input change (Cargo.toml) creates a new candidate S', and the DSO digest is not an analysis identity"
+  ],
+  "one_sentence": "The residual bound is now class-independent and monotone, residual admission is iterated to a least fixed point with an explicit non-convergence refusal, and the reachable set is persisted with an analysis identity that is not the DSO digest; on the exact v1p candidate the repair restores CRYPTO_cbc128_encrypt and is a strict superset of the v1.4 reachable file set, but the requested v1p-vs-neutral stability control is not a neutral rebuild because the two installs have different .text.",
+
+  "candidate": {
+    "repository_head": "6ed2e507af5140c2fa36f7bc1c6c6eb87bebb3d2",
+    "branch": "stage/p25/analyzer-corpus",
+    "tool": {
+      "path": "forensics/tools/consumer_closure.py",
+      "version": 4,
+      "sha256_at_measurement": "a241f0d2a85017d86265712a40e5372ce7e2a753bf76e2ef8a0f118429f22b51",
+      "previous_sha256": "40cc1c64207e2a036b64aa142c9053d6d453369fe148197a457e8cd8072456dd",
+      "note": "a working-tree change; the verification engineer does not commit or push"
+    },
+    "corpus_tool": {
+      "path": "forensics/tools/analyzer_metamorphic_corpus.py",
+      "sha256": "08350465b638cf496b3a58ae93210cbae64dd963be4dcae9ee2bf8e4be17fff0"
+    }
+  },
+
+  "defects": [
+    {
+      "id": "DEFECT-NONMONOTONE-BOUND",
+      "statement": "For a classified unresolved site the admission was the class-specific set (taken_code union field-store values union unknown-call-argument targets), which is not a superset of what the same site admitted as PROVED_TARGET_SET. Losing precision therefore narrowed the reachable set.",
+      "v14_mechanism": "consumer_closure.py build_graph residual loop: `if class == unclassified: address_taken_union else: taken_code | field stores in start_set | unknown args in start_set`",
+      "repaired_at": "forensics/tools/consumer_closure.py:6500 unresolved_site_bound; :6533 _bound_nodes; :1829 DsoGraph.publish (dynamic_reloc_targets)",
+      "measured_before": "v1n-v1p: 59 sites PROVED->UNRESOLVED, whole unions lost (923->0, ...), CRYPTO_cbc128_encrypt left the reachable set with the consumer .text/.data/.data.rel.ro byte-identical",
+      "measured_after": "on the exact v1p candidate (libcrypto c335ac3c) the repaired closure is a strict superset of the v1.4 file set: 321 -> 627 reachable files, 0 files present only before, CRYPTO_cbc128_encrypt reachable"
+    },
+    {
+      "id": "DEFECT-ONE-PASS-CLOSURE",
+      "statement": "Residual admission ran once over the direct reachable set, so a function reached only through residual admission was never scanned for its own unresolved sites: root -> dispatch A (unresolved) -> B -> dispatch B (unresolved) -> C omitted C.",
+      "v14_mechanism": "`upper = walk(set(direct_reach) | residual_bound, None)`, one pass, no convergence test",
+      "repaired_at": "forensics/tools/consumer_closure.py:6574 build_graph (:6712 round loop); :6784 closure_refusals (:6790 CLOSURE_NONCONVERGENT)",
+      "measured_after": "synthetic nested fixture: single pass omits C and reports non-convergence; the fixpoint includes C after 3 rounds (self-test; corpus case ag-fixpoint-reaches-nested-unresolved)"
+    },
+    {
+      "id": "DEFECT-ORACLE-INHERITANCE",
+      "statement": "The final upper bound is the oracle for every negative reachability exclusion, so the non-monotone bound made the oracle necessary but not sufficient. The repaired, wider bound now refuses the v1.4 method-store caller exclusions (EDGE_RECORD_EXCLUSION_UNSOUND, REACHABILITY_EXCLUSION_UNSOUND) instead of accepting a narrowed set.",
+      "repaired_at": "no new code: the refusal is the existing oracle check applied to the sound bound",
+      "consequence": "all three real runs are REFUSED by the record/oracle checks; obligation counts are therefore not carriable"
+    }
+  ],
+
+  "repair": {
+    "monotone_bound": {
+      "rule": "a residual site's bound is the union of address_taken_union, taken_code, every integer in field_stores, unknown_call_arg_targets, the site's own targets and arg_targets; it is independent of the site's class",
+      "one_direction": "a bound may be widened for soundness; it is never narrowed by classification",
+      "class_role": "a class-specific set survives only as precision reporting (per-site class, precision.unresolved_by_class)",
+      "node_mapping": "defined function start -> itself; integer inside .text/.plt/.plt.got -> enclosing function start (widening); non-executable integer -> counted in bound_evidence_sources.*.non_code_values, never used as a function node; symbolic target -> export index, unresolved ones counted; no start-set filter is applied to the evidence union",
+      "schema": "openssl-rs/campaign/safe-c33/unresolved-site-bound/v1"
+    },
+    "dynamic_relocation_widening": {
+      "why": "R_X86_64_GLOB_DAT/R_X86_64_JUMP_SLOT slots whose symbol is defined in the same image fix a function address exactly as R_X86_64_RELATIVE slots do; slot_funcs held only the RELATIVE form",
+      "where": "DsoGraph.publish -> g.dynamic_reloc_targets, folded into g.address_taken_union",
+      "critical_check": {
+        "function": "CRYPTO_cbc128_encrypt",
+        "v1p_install_dadb0263": {"address": "0x350d30", "got_slot": "0x894228 R_X86_64_GLOB_DAT", "pre_widening_union": 5238, "cbc_in_pre_widening_union": false, "dynamic_reloc_targets": 1349, "address_taken_union": 6587, "cbc_in_address_taken_union": true},
+        "neutral_c335ac3c": {"address": "0x3c13a0", "pre_widening_union": 5244, "cbc_in_pre_widening_union": false, "dynamic_reloc_targets": 1346, "address_taken_union": 6590, "cbc_in_address_taken_union": true},
+        "v1n_3901731a": {"address": "0x4a4d90", "got_slot": "0x894228 R_X86_64_GLOB_DAT", "pre_widening_union": 5248, "cbc_in_pre_widening_union": false, "dynamic_reloc_targets": 1347, "address_taken_union": 6595, "cbc_in_address_taken_union": true},
+        "conclusion": "in every measured build CBC is absent from the pre-widening union and present only after the dynamic-relocation widening; the widened bound contains it and every closure reaches it"
+      }
+    },
+    "least_fixed_point": {
+      "iteration": "reach = walk(roots); repeat { bound = union of unresolved_site_bound over every unresolved site whose containing function is in reach; nxt = walk(reach | bound | imports) } until nxt == reach",
+      "termination": "the node set is the finite set of function addresses in the linked DSOs; walk is a monotone graph closure and the transfer only unions evidence, so reach increases and the iteration needs at most |V| non-final rounds; the cap is 4 * total_functions + 8 (65424 / 65552 in the measured runs)",
+      "non_convergence": "return converged=false and append CLOSURE_NONCONVERGENT naming the round cap, the last growth and the reachable size; a partial bound is never accepted",
+      "standard_concepts": ["Kildall 1973", "Cousot & Cousot 1977", "chaotic/worklist iteration (no quotation implied)"],
+      "returned": ["direct_reachable", "upper_reachable (fixpoint)", "closure_rounds", "round_sizes", "sites_scanned_per_round", "converged", "nonconvergent_detail", "residual_bound_nodes", "bound_evidence_sources"]
+    },
+    "analysis_identity": {
+      "schema": "openssl-rs/campaign/safe-c33/analysis-identity/v1",
+      "rule": "sha256 over, in module-name order, each module name, the sha256 of its .text bytes, and the sha256 of its sorted [name, addr, size, kind] defined-symbol rows",
+      "canonicalisation": ".llvm.<hash> content-hash suffixes and @@VERSION suffixes are normalised; the address/size/kind keep distinct symbols distinct",
+      "dso_digest": "recorded as a non-identity (dso_sha256_is_analysis_identity = false): a comment-only edit changes it while .text and symbol addresses do not"
+    },
+    "retention": {
+      "fields": ["graph.closure.reachable_functions (sorted module:hex:name)", "reachable_functions_sha256 (sha256 over the newline-terminated entries)", "reachable_functions_per_module", "closure_rounds", "round_sizes", "converged", "bound_evidence_sources"],
+      "reason": "a movement between candidates can be adjudicated from the receipt instead of the ~1.3 GB record sidecar"
+    },
+    "hash_rule": {
+      "collision": "the build record emits sha256('openssl-rs/source-tree/v1\\0' + path\\0bytes\\0); the build/link atlas emits sha256(canonical_json(sorted [[relpath, size, sha256]])); both were stored as source_root_hash and compared directly",
+      "fix": "source_root_hash_checks classifies both rules; equal rules compare source_root_hash (STALE_HASH on difference), different rules emit HASH_RULE_MISMATCH naming both, and source_tree_domain_hash is compared when both sides provide it",
+      "where": "forensics/tools/consumer_closure.py:7237 hash_rule_class; :7257 source_root_hash_checks; :7834 call site"
+    }
+  },
+
+  "tests": {
+    "self_test": {
+      "command": "python3 forensics/tools/consumer_closure.py --self-test",
+      "rc": 0,
+      "coverage_added": [
+        "nested unresolved dispatch: single pass omits C and does not converge; the fixpoint includes C and converges in 3 rounds; round sizes [2, 4, 5, 5], sites scanned [0, 1, 2, 2]",
+        "non-convergence refusal: CLOSURE_NONCONVERGENT names the round cap (1) and the last growth (2 nodes)",
+        "monotone bound: the previously proved set and every class-specific set are subsets of the residual bound with the site's own targets dropped",
+        "analysis identity: unchanged by a DSO digest change, changed by a symbol-table change, .llvm/@@version canonicalisation",
+        "source-root hash rules: HASH_RULE_MISMATCH, equal-rule STALE_HASH, domain-hash STALE_HASH"
+      ]
+    },
+    "corpus": {
+      "command": "python3 forensics/tools/analyzer_metamorphic_corpus.py --out forensics/memory-safety/campaign/safe-c33/atlas-refresh/analyzer-metamorphic-corpus.json",
+      "total": 56,
+      "passed": 56,
+      "failed": [],
+      "new_cases": [
+        "ag-fixpoint-reaches-nested-unresolved",
+        "ah-monotone-bound-under-classification-loss",
+        "ai-neutral-rebuild"
+      ]
+    },
+    "mutation_matrix": [
+      {"mutation": "single-pass closure (no iteration)", "case": "fixpoint-reaches-nested-unresolved", "expected": "case fails", "observed": "case fails as required", "passed": true},
+      {"mutation": "class-narrowed bound", "case": "monotone-bound-under-classification-loss", "expected": "case fails", "observed": "case fails as required", "passed": true},
+      {"mutation": "non-convergence refusal removed", "case": "closure-nonconvergent-refusal", "expected": "case fails", "observed": "case fails as required", "passed": true}
+    ]
+  },
+
+  "real_measurements": {
+    "method": "consumer_closure.py at sha256 a241f0d2..., 4 GiB RLIMIT_DATA, court container, one run at a time; scratch inventories under court/closure/ whose artefact hashes were re-derived from the install that the loader actually resolved",
+    "runs": [
+      {
+        "label": "v1p (committed 0.0.43 rebuild)",
+        "artifact": "court/tmp/openssh-closure/client-v1p/openssh-9.9p1/ssh",
+        "artifact_sha256": "0cab1198609b53a38737febbb0bea3a02d470b3c35b83764d25156e40ff9c5db",
+        "install": "artifacts/phase2/install",
+        "libcrypto_sha256": "dadb0263f1eab453dc8717a9c1851772ffed7660eeeced29d79d7b206cec7fb3",
+        "inventory": "court/closure/v1p-rebuild-candidate-freeze.json",
+        "receipt": "court/closure/closure-ssh-fixpoint-v1p.json",
+        "rc": 1,
+        "verdict": "REFUSED",
+        "refusal_codes": ["EDGE_RECORD_EXCLUSION_UNSOUND", "REACHABILITY_EXCLUSION_UNSOUND", "MISSING_BOUNDARY_RECEIPT", "UNKNOWN_OBLIGATION", "UNKNOWN_MECHANISM", "HASH_RULE_MISMATCH"],
+        "closure_rounds": 2,
+        "converged": true,
+        "round_sizes": [2606, 8764, 8764],
+        "sites_scanned_per_round": [0, 9, 202],
+        "reachable_files": 626,
+        "reachable_production_obligations": 315,
+        "discharged_blocked_unknown": [90, 106, 119],
+        "reachable_functions": 8672,
+        "reachable_functions_sha256": "ea2095d234cd93085e651d8518171042fbbb74eb04f24d8620f1494d05b3839a",
+        "analysis_identity": "b8f0b873391288d170be421170e2037c7f56c551d1ceb0fb25a1810e531dfa4b",
+        "crypto_cbc128_encrypt_reachable": true,
+        "element_7": {"established": false, "reachable_unresolved": 202, "target_bounded_unresolved": 200, "contract_bounded": 2, "unclassified_reachable": 0},
+        "bound_evidence_sources": {"address_taken_union": 6587, "taken_code": 739, "taken_data": 3706, "slot_func_targets": 4596, "dynamic_reloc_targets": 1384, "field_store_values": 2287, "unknown_call_arg_targets": 1117, "bound_nodes": 6690, "non_code_values": 1789, "unresolved_symbol_values": 5}
+      },
+      {
+        "label": "v1n",
+        "artifact": "court/tmp/openssh-closure/client-v1n/openssh-9.9p1/ssh",
+        "artifact_sha256": "d2fe8357a83d0cd7c4214ad1498929ca3b264cadf3856507609d80f5e8d10c1f",
+        "install": "court/freeze-v1n/install-built",
+        "libcrypto_sha256": "3901731a7731fbc7c23306a249b85d1a29908784c38b007116315748a73d304d",
+        "inventory": "court/closure/v1n-install-candidate-freeze.json",
+        "receipt": "court/closure/closure-ssh-fixpoint-v1n.json",
+        "rc": 1,
+        "verdict": "REFUSED",
+        "refusal_codes": ["EDGE_RECORD_EXCLUSION_UNSOUND", "REACHABILITY_EXCLUSION_UNSOUND", "MISSING_BOUNDARY_RECEIPT", "UNKNOWN_OBLIGATION", "UNKNOWN_MECHANISM", "HASH_RULE_MISMATCH", "STALE_HASH"],
+        "stale_hash_note": "the build record names install_prefix artifacts/phase2/install; this run admits the archived court/freeze-v1n/install-built install. The check fired truthfully and was not removed.",
+        "closure_rounds": 2,
+        "converged": true,
+        "round_sizes": [2583, 8809, 8809],
+        "sites_scanned_per_round": [0, 4, 200],
+        "reachable_files": 627,
+        "reachable_production_obligations": 317,
+        "discharged_blocked_unknown": [90, 108, 119],
+        "reachable_functions": 8715,
+        "reachable_functions_sha256": "d66151c436c426c0c3bbfa96464f2811b4317ff284d450c03159099c426bfc96",
+        "analysis_identity": "46ad1aaf98aa893bda06eed39e63733c25d7c33aba8259496aa851df277fde13",
+        "crypto_cbc128_encrypt_reachable": true,
+        "element_7": {"established": false, "reachable_unresolved": 200, "target_bounded_unresolved": 198, "contract_bounded": 2, "unclassified_reachable": 0},
+        "bound_evidence_sources": {"address_taken_union": 6595, "taken_code": 742, "taken_data": 3712, "slot_func_targets": 4604, "dynamic_reloc_targets": 1382, "field_store_values": 2247, "unknown_call_arg_targets": 1101, "bound_nodes": 6699, "non_code_values": 1771, "unresolved_symbol_values": 5}
+      },
+      {
+        "label": "neutral (v1p source, independent build)",
+        "artifact": "court/tmp/openssh-closure/client-v1p/openssh-9.9p1/ssh",
+        "artifact_sha256": "0cab1198609b53a38737febbb0bea3a02d470b3c35b83764d25156e40ff9c5db",
+        "install": "court/freeze-v1p/wt-head/artifacts/phase2/install",
+        "libcrypto_sha256": "c335ac3c7f04b694f62ec27906a094cfbea319eb4b6efbeb4cc661d76e6aa36b",
+        "inventory": "court/closure/neutral-candidate-freeze.json",
+        "receipt": "court/closure/closure-ssh-fixpoint-neutral.json",
+        "rc": 1,
+        "verdict": "REFUSED",
+        "refusal_codes": ["EDGE_RECORD_EXCLUSION_UNSOUND", "REACHABILITY_EXCLUSION_UNSOUND", "MISSING_BOUNDARY_RECEIPT", "UNKNOWN_OBLIGATION", "UNKNOWN_MECHANISM", "HASH_RULE_MISMATCH", "STALE_HASH"],
+        "closure_rounds": 2,
+        "converged": true,
+        "round_sizes": [2599, 8782, 8782],
+        "sites_scanned_per_round": [0, 3, 200],
+        "reachable_files": 627,
+        "reachable_production_obligations": 315,
+        "discharged_blocked_unknown": [90, 106, 119],
+        "reachable_functions": 8690,
+        "reachable_functions_sha256": "65fc22f950bdb3d761f6f5cb5b2022b41ee527c63b4dc762a5a8153e49ea4efb",
+        "analysis_identity": "60829d7ea51eeec1801e5cad6fb2804c9e4104ed61a1e8091255280a1e209cad",
+        "crypto_cbc128_encrypt_reachable": true,
+        "element_7": {"established": false, "reachable_unresolved": 200, "target_bounded_unresolved": 198, "contract_bounded": 2, "unclassified_reachable": 0},
+        "bound_evidence_sources": {"address_taken_union": 6590, "taken_code": 741, "taken_data": 3709, "slot_func_targets": 4601, "dynamic_reloc_targets": 1381, "field_store_values": 2316, "unknown_call_arg_targets": 1118, "bound_nodes": 6694, "non_code_values": 1793, "unresolved_symbol_values": 5}
+      }
+    ],
+    "determinism_rerun": {
+      "receipt": "court/closure/closure-ssh-fixpoint-neutral-rerun.json",
+      "result": "identical closure_rounds, round_sizes, sites_scanned_per_round, reachable_functions_count, reachable_functions_sha256, residual_bound_nodes, reachable_files set, counts, analysis identity, refusal codes and records_sha256"
+    },
+    "before_after_same_candidate": {
+      "candidate": "libcrypto c335ac3c (v1p source), consumer ssh 0cab1198",
+      "before": {"tool_sha256": "40cc1c64207e2a036b64aa142c9053d6d453369fe148197a457e8cd8072456dd", "receipt": "court/freeze-v1p/closure-ssh-v1p.json", "reachable_files": 321, "reachable_unresolved_sites": 3, "crypto_cbc128_encrypt_reachable": false},
+      "after": {"tool_sha256": "a241f0d2a85017d86265712a40e5372ce7e2a753bf76e2ef8a0f118429f22b51", "receipt": "court/closure/closure-ssh-fixpoint-neutral.json", "reachable_files": 627, "reachable_unresolved_sites": 200, "crypto_cbc128_encrypt_reachable": true},
+      "file_set_relation": "before is a subset of after (306 new files, 0 files lost)",
+      "interpretation": "the repair restores reachability that the non-monotone bound lost on the exact candidate where the loss was measured; the large growth is the intended cost of a class-independent sound bound"
+    }
+  },
+
+  "stability_verdict": {
+    "criterion": "v1p and the neutral rebuild (same source, independent build, byte-identical .text) must produce the same reachable-file set and reachable-functions digest",
+    "result": "NOT ESTABLISHED",
+    "measured": {
+      "v1p_install_dadb0263": {"text_sha256": "812e078b856793fc654ec4bb6638466ea0a0818a19d96c2b2d2628d3852b9d75", "text_size": 4962638, "symbol_rows": 30239, "symbol_table_sha256": "690ab530a9d6aeda7eb10caa6d7aa21e35b948fc93d84859c93c85dd8936d4e7"},
+      "neutral_c335ac3c": {"text_sha256": "0510d6619cd932044941bae20c29deca0b5d54fa1c7b467481b8950285ad939c", "text_size": 4950510, "symbol_rows": 30291, "symbol_table_sha256": "2639882ff6c08be45880af45794bb99a09119bf23f8824cdc5281f3e8dcc25c2"},
+      "text_identical": false,
+      "reachable_files": {"v1p": 626, "neutral": 627, "v1p_only": ["src/bn/dh.rs", "src/x509/x509_ext.rs"], "neutral_only": ["src/asn1/x_info.rs", "src/asn1/x_pkey.rs", "src/provider/der_ecx_key.rs"]},
+      "reachable_functions_sha256_equal": false
+    },
+    "reason": "the two installs are not a neutral rebuild. src/ is byte-identical between v1p (ad5913099) and HEAD, but Cargo.toml moved version 0.0.42 -> 0.0.43, a build-relevant input under AGENTS.md section 22; the resulting DSOs differ in .text size, symbol count and the Rust crate-disambiguator hash embedded in every symbol name. The v1p source is byte-reproducible: three independent builds (court/freeze-v1p/{rebuild,cold-rebuild,wt-head}) all produce libcrypto c335ac3c, so there is no second byte-identical v1p-source artifact to compare against.",
+    "movement_attribution": "each moved file has one owning function present in both symbol tables but reached in only one build (e.g. x509_ext::free_x509_extension reached in v1p only; asn1::x_info::X509Info::CtxDestroy::destroy_body reached in neutral only; provider::der_ecx_key::write_identifier absent from the v1p symbol table). The movement is candidate-induced (different codegen/GOT/direct-edge sets), not run-to-run variance: the determinism rerun on identical bytes reproduces every closure core field and the sidecar digest.",
+    "consequence": "do not call the repair's cross-build stability complete. A true neutral control requires two independent builds of the same candidate (0.0.43) with byte-identical .text, which does not exist in this tree."
+  },
+
+  "residuals": {
+    "hidden_unsafe_obligations": 0,
+    "note_on_hidden": "this batch changes no Rust code and introduces no unsafe operation; the hidden count is about the analysis contract, not memory safety",
+    "open": [
+      "the widened, sound bound makes almost the whole module reachable (626/627 files, 8.7k of 16.4k functions) and keeps 198-200 unresolved target-bounded sites reachable; element 7 remains FAIL",
+      "the v1.4 method-store caller exclusions are refuted by the sound bound, so EDGE_RECORD_EXCLUSION_UNSOUND and REACHABILITY_EXCLUSION_UNSOUND fire in all three runs; the clause-level exclusion rule needs re-derivation under the new reachable set before any obligation is adjudicated",
+      "cross-build stability of the fixpoint is NOT ESTABLISHED (see stability_verdict)",
+      "the reachable-functions digest is over raw symbol names; two builds of the same source with a different crate disambiguator produce different digests. A name-normalised digest is needed before it can carry a cross-build claim",
+      "obligation counts (315/317, 90/106/119) are not carriable to another candidate (AGENTS.md section 22)"
+    ]
+  },
+
+  "changed_files": [
+    {"path": "forensics/tools/consumer_closure.py", "sha256": "a241f0d2a85017d86265712a40e5372ce7e2a753bf76e2ef8a0f118429f22b51"},
+    {"path": "forensics/tools/analyzer_metamorphic_corpus.py", "sha256": "08350465b638cf496b3a58ae93210cbae64dd963be4dcae9ee2bf8e4be17fff0"},
+    {"path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/analyzer-metamorphic-corpus.json", "sha256": "de67fa98a823cefaeae5ee225e783da922f73969a4be5b46a0fe3a9fb6d93930"},
+    {"path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/edge-record-schema.md", "sha256": "f27cab5dfba3d28a85053a3414a5d3045a669030883b9a4838477a155648fd49"}
+  ],
+
+  "non_claims": [
+    "No widening-based proof: a class-independent bound is sound and monotone, not complete. A function no materialised-address source names is not admitted.",
+    "No cross-toolchain byte reproducibility: the only byte-reproducibility observed is within the pinned court image for the v1p source (three builds, one digest).",
+    "No obligation adjudication: every run is REFUSED; no discharge is carried, and no SAFE_COMPATIBLE claim is made (0/33 remains).",
+    "No memory-safety result: this tool measures reachability, not whether a site is safe; the hidden-obligation count above is an analysis-contract statement, not a memory-safety one.",
+    "No cryptographic result and no timing claim.",
+    "No cross-candidate carriage: the receipts are bound to the exact install digests named here."
+  ]
+}

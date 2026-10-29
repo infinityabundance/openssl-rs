@@ -1,0 +1,61 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/neutral-rebuild-control/v1",
+  "claim": "Two builds of the same source (a: unmodified; b: one comment-only line appended) with different DSO digests must have identical analysis identity and identical reachable sets. Equality is the stability criterion.",
+  "artifacts": {
+    "a_dso_libcrypto_sha256": "dadb0263f1eab453dc8717a9c1851772ffed7660eeeced29d79d7b206cec7fb3",
+    "b_dso_libcrypto_sha256": "6a01b49c (see build log; differs from a)",
+    "a_receipt_sha256": "16f9eccfbd074214c12adaffaa85ed059a4c3a030a9cd480c661d34a6e18322e",
+    "b_receipt_sha256": "ba80c0bc1d5cd356dba5ea80912404c40163d1273f13dff4989ed944a24c31a5",
+    "receipts_retention": "digest_only_not_in_repository (court/neutral, gitignored)"
+  },
+  "a": {
+    "analysis_identity": "b8f0b873391288d170be421170e2037c7f56c551d1ceb0fb25a1810e531dfa4b",
+    "closure_rounds": 2,
+    "converged": true,
+    "reachable_functions_count": 8672,
+    "reachable_functions_sha256": "bef874a515bcb41011bf011fd350d62f2d05d2db13288ae8ec26928581c286c9",
+    "reachable_functions_raw_name_sha256": "ea2095d234cd93085e651d8518171042fbbb74eb04f24d8620f1494d05b3839a",
+    "reachable_files": 626,
+    "obligations": 315,
+    "discharged": 90,
+    "blocked": 106,
+    "unknown": 119,
+    "refusals": [
+      "MISSING_BOUNDARY_RECEIPT",
+      "UNKNOWN_OBLIGATION",
+      "UNKNOWN_MECHANISM"
+    ],
+    "cbc_reachable": true
+  },
+  "b": {
+    "analysis_identity": "b8f0b873391288d170be421170e2037c7f56c551d1ceb0fb25a1810e531dfa4b",
+    "closure_rounds": 2,
+    "converged": true,
+    "reachable_functions_count": 8672,
+    "reachable_functions_sha256": "bef874a515bcb41011bf011fd350d62f2d05d2db13288ae8ec26928581c286c9",
+    "reachable_functions_raw_name_sha256": "f0c38ad100d6e88faa66d3e75d00e04964f3da21e5cd97ea504bf608be75d9c7",
+    "reachable_files": 626,
+    "obligations": 315,
+    "discharged": 90,
+    "blocked": 106,
+    "unknown": 119,
+    "refusals": [
+      "MISSING_BOUNDARY_RECEIPT",
+      "UNKNOWN_OBLIGATION",
+      "UNKNOWN_MECHANISM"
+    ],
+    "cbc_reachable": true
+  },
+  "equal": {
+    "analysis_identity": true,
+    "reachable_functions_count": true,
+    "reachable_functions_sha256": true,
+    "reachable_files": true,
+    "obligations": true,
+    "discharged": true,
+    "blocked": true,
+    "unknown": true
+  },
+  "verdict": "PASS",
+  "note": "The raw-name digest differs only by build-dependent .llvm.<hash> suffixes on otherwise identical addresses and canonical names; the canonical digest is the identity."
+}
