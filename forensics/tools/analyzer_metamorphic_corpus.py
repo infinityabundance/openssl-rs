@@ -1749,18 +1749,42 @@ class _IdentityFixture:
     """A module whose .text and symbol rows are decoupled from its DSO digest."""
 
     def __init__(self, dso_sha, *, text_sha="a" * 64, size=4096,
-                 rows=None):
+                 rows=None, data_sha="d" * 64, reloc_add=0x10):
         self.name = "identity-fixture.so"
         self.sha256 = dso_sha
         self._text = text_sha
         self._size = size
         self._rows = rows or [["f", 0x10, 8, "T"], ["g", 0x20, 16, "T"]]
+        self._data_sha = data_sha
+        self._reloc_add = reloc_add
 
     def text_digest(self):
         return self._text, self._size
 
     def symbol_table_rows(self):
         return list(self._rows)
+
+    def analysis_section_descriptors(self):
+        return [
+            {"name": ".text", "type": "PROGBITS", "addr": 0x1000,
+             "size": self._size, "sha256": self._text},
+            {"name": ".data.rel.ro", "type": "PROGBITS", "addr": 0x3000,
+             "size": 64, "sha256": self._data_sha},
+        ]
+
+    def analysis_excluded_sections(self):
+        return [".comment", ".debug_info"]
+
+    def canonical_relocations(self):
+        return [[".data.rel.ro", 0x0, "R_X86_64_RELATIVE", None,
+                 self._reloc_add]]
+
+    def dynamic_symbol_rows(self):
+        return [["f", 0x10, "T"], ["g", 0x20, "T"]]
+
+    def dynamic_entries(self):
+        return {"soname": self.name, "needed": ["libc.so.6"],
+                "runpath": [], "rpath": []}
 
 
 def case_neutral_rebuild():
@@ -1792,6 +1816,176 @@ def case_neutral_rebuild():
          "basis": i_original["basis"],
          "dso_digest_is_analysis_identity": i_original["modules"][
              original.name]["dso_sha256_is_analysis_identity"]})
+
+
+def case_identity_covers_data_inputs():
+    """The identity must change when .text and symbols stay identical but a
+    data section or a relocation addend changes.
+
+    This is the positive half of P0-A: the old identity hashed only .text and
+    the symbol table, so a dispatch-table edit in .data.rel.ro was invisible.
+    """
+    original = _IdentityFixture("0" * 64)
+    data_edit = _IdentityFixture("0" * 64, data_sha="e" * 64)
+    reloc_edit = _IdentityFixture("0" * 64, reloc_add=0x20)
+    i0 = cc.analysis_identity({original.name: original})
+    idata = cc.analysis_identity({data_edit.name: data_edit})
+    ireloc = cc.analysis_identity({reloc_edit.name: reloc_edit})
+    m0, mdata = i0["modules"][original.name], idata["modules"][data_edit.name]
+    ok = (m0["text_sha256"] == mdata["text_sha256"]
+          and m0["symbol_table_sha256"] == mdata["symbol_table_sha256"]
+          and m0["sections"] != mdata["sections"]
+          and i0["digest"] != idata["digest"]
+          and m0["relocation_table_sha256"]
+          != ireloc["modules"][reloc_edit.name]["relocation_table_sha256"]
+          and i0["digest"] != ireloc["digest"]
+          and ".data.rel.ro" in i0["included_sections"]
+          and ".debug_*" in i0["excluded_classes"])
+    return _case(
+        "aj-identity-covers-data-inputs",
+        "one module with identical .text and symbol rows but a changed "
+        ".data.rel.ro digest or relocation addend",
+        "compute the analysis identity for the original, the data-section edit "
+        "and the relocation edit",
+        "the .text and symbol digests are unchanged, the data/relocation inputs "
+        "and the full identity change",
+        (f"text_unchanged={m0['text_sha256'] == mdata['text_sha256']}, "
+         f"symbols_unchanged={m0['symbol_table_sha256'] == mdata['symbol_table_sha256']}, "
+         f"data_identity_changes={i0['digest'] != idata['digest']}, "
+         f"relocation_identity_changes={i0['digest'] != ireloc['digest']}"),
+        ok,
+        {"analysis_identity": i0["digest"],
+         "basis": i0["basis"],
+         "included_sections": i0["included_sections"]})
+
+
+class _SymbolFixture:
+    """A minimal module with one unresolved site at a reachable root."""
+
+    name = "symbol-fixture.so"
+    funcs = {0x10: "root", 0x20: "alias_target", 0x30: "dyn_target",
+             0x40: "plt_stub"}
+    start_set = set(funcs)
+    direct = {}
+    taken_code = set()
+    taken_data = set()
+    field_stores = {}
+    unknown_call_arg_targets = set()
+    dynamic_reloc_targets = set()
+    slot_syms = {0x2000: {"plt_target"}}
+    names_at = {0x20: {"alias_target"}}
+    dynamic_defs = {"dyn_target": 0x30}
+    functions = [(0x40, [(0x40, "jmp *0x1000(%rip) # 2000 <plt_target@plt>")])]
+    sections = {".text": (0x0, 0, 0x100), ".plt": (0x40, 0, 0x10)}
+
+    def __init__(self, symbol):
+        self.address_taken_union = {("sym", symbol)}
+        self.sites = {(0x10, 0x11, "call"): {
+            "kind": "call", "func": 0x10, "addr": 0x11,
+            "text": "call *%rax", "targets": set(), "unresolved": True,
+            "reason": "test", "class": "unclassified",
+            "arg_targets": set()}}
+
+    def section_of(self, addr):
+        if addr == 0x40:
+            return ".plt"
+        return ".text" if 0 <= addr < 0x100 else None
+
+    def containing(self, addr):
+        base = [a for a in sorted(self.start_set) if a <= addr]
+        return base[-1] if base else None
+
+
+def _symbol_closure(symbol, export_index=None):
+    g = _SymbolFixture(symbol)
+    return cc.build_graph({g.name: g}, {(g.name, 0x10)}, export_index or {}), g
+
+
+def case_symbol_unresolved_refusal():
+    closure, _g = _symbol_closure("no_such_symbol")
+    rows = [r for r in closure["symbol_dispositions"]
+            if r["symbol"] == "no_such_symbol"]
+    refusals = cc.closure_refusals(closure)
+    symbol_refusals = [r for r in refusals
+                       if r["code"] == "CLOSURE_UNRESOLVED_SYMBOL"]
+    ok = (len(rows) == 1 and rows[0]["disposition"] == "blocking"
+          and len(symbol_refusals) == 1
+          and [s["symbol"] for s in symbol_refusals[0]["symbols"]]
+          == ["no_such_symbol"])
+    return _case(
+        "ak-unresolved-symbol-refusal",
+        "a module whose residual bound names a symbol that no path resolves",
+        "build the closure and evaluate closure_refusals",
+        "the symbol has a blocking disposition and the closure refuses with "
+        "CLOSURE_UNRESOLVED_SYMBOL naming it",
+        (f"dispositions={[r['disposition'] for r in rows]}, "
+         f"refusal_codes={[r['code'] for r in refusals]}"),
+        ok,
+        {"symbol_dispositions": rows,
+         "summary": closure["symbol_disposition_summary"]})
+
+
+def case_symbol_alias_resolved():
+    closure, _g = _symbol_closure("alias_target")
+    rows = [r for r in closure["symbol_dispositions"]
+            if r["symbol"] == "alias_target"]
+    ok = (len(rows) == 1 and rows[0]["disposition"] == "resolved"
+          and rows[0]["path"] == "names-at"
+          and ["symbol-fixture.so", 0x20] in rows[0]["targets"]
+          and cc.closure_refusals(closure) == [])
+    return _case(
+        "al-alias-symbol-resolved",
+        "a symbolic bound value whose defined-symbol-table alias is a "
+        "function start in the same module",
+        "resolve the symbolic value and evaluate closure_refusals",
+        "the symbol resolves through names-at and the closure does not refuse",
+        (f"dispositions={[(r['disposition'], r['path']) for r in rows]}, "
+         f"refusals={[r['code'] for r in cc.closure_refusals(closure)]}"),
+        ok,
+        {"symbol_dispositions": rows})
+
+
+def case_symbol_external_contract():
+    closure, _g = _symbol_closure("malloc")
+    rows = [r for r in closure["symbol_dispositions"] if r["symbol"] == "malloc"]
+    ok = (len(rows) == 1 and rows[0]["disposition"] == "external-contract"
+          and bool(rows[0]["external_interface"])
+          and bool(rows[0]["external_justification"])
+          and cc.closure_refusals(closure) == [])
+    return _case(
+        "am-external-contract-symbol",
+        "a symbolic bound value naming a documented libc interface (malloc)",
+        "resolve the symbolic value and evaluate closure_refusals",
+        "the symbol is recorded as external-contract with its interface and "
+        "the closure does not refuse",
+        (f"dispositions={[(r['disposition'], r['external_interface']) for r in rows]}, "
+         f"refusals={[r['code'] for r in cc.closure_refusals(closure)]}"),
+        ok,
+        {"symbol_dispositions": rows})
+
+
+def case_symbol_refusal_mutation_control():
+    """Disabling CLOSURE_UNRESOLVED_SYMBOL must make the first case fail."""
+    closure, _g = _symbol_closure("no_such_symbol")
+    original = cc.closure_refusals
+
+    def without_symbol_refusal(c):
+        return [r for r in original(c) if r["code"] != "CLOSURE_UNRESOLVED_SYMBOL"]
+
+    cc.closure_refusals = without_symbol_refusal
+    try:
+        mutated = cc.closure_refusals(closure)
+    finally:
+        cc.closure_refusals = original
+    ok = not any(r["code"] == "CLOSURE_UNRESOLVED_SYMBOL" for r in mutated)
+    return _case(
+        "an-unresolved-symbol-refusal-removed",
+        "the blocking-symbol closure from ak-unresolved-symbol-refusal",
+        "disable the CLOSURE_UNRESOLVED_SYMBOL branch and re-evaluate",
+        "the refusal disappears, so the first case would fail",
+        f"mutated_refusal_codes={[r['code'] for r in mutated]}",
+        ok,
+        {"mutated_refusals": mutated})
 
 
 # --------------------------------------------------------------------------- #
@@ -2116,6 +2310,11 @@ CASES = (
     case_fixpoint_reaches_nested_unresolved,
     case_monotone_bound_under_classification_loss,
     case_neutral_rebuild,
+    case_identity_covers_data_inputs,
+    case_symbol_unresolved_refusal,
+    case_symbol_alias_resolved,
+    case_symbol_external_contract,
+    case_symbol_refusal_mutation_control,
     case_reachable_digest_canonicalisation,
     # v1.6: admission by refutation of unsound exclusions
     case_admission_refuted_caller,
@@ -2180,6 +2379,10 @@ def main(argv=None):
             "The neutral-rebuild case is a metamorphic relation on the identity "
             "function.  Byte-identical .text across independent real builds is a "
             "separate measurement, not something this fixture establishes.",
+            "The identity cases bind the enumerated analysis inputs (sections, "
+            "relocations, symbol tables, loader entries).  They do not prove "
+            "that no other input exists, and the fixtures are not real ELF "
+            "section tables.",
             "The fixtures are synthetic and do not reproduce the real "
             "library's layout, linker behaviour, or runtime dispatch.",
             "The refusal cases establish that the named disagreements are "

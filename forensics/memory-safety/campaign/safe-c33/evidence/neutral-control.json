@@ -1,15 +1,15 @@
 {
-  "schema": "openssl-rs/campaign/safe-c33/neutral-rebuild-control/v1",
+  "schema": "openssl-rs/campaign/safe-c33/neutral-rebuild-control/v2",
   "claim": "Two builds of the same source (a: unmodified; b: one comment-only line appended) with different DSO digests must have identical analysis identity and identical reachable sets. Equality is the stability criterion.",
   "artifacts": {
     "a_dso_libcrypto_sha256": "dadb0263f1eab453dc8717a9c1851772ffed7660eeeced29d79d7b206cec7fb3",
-    "b_dso_libcrypto_sha256": "6a01b49c (see build log; differs from a)",
+    "b_dso_libcrypto_sha256": "6a01b49cc5fdb0a9017d1cac589a328455da61754c9ff8dda8c18b6b86331d5b",
     "a_receipt_sha256": "16f9eccfbd074214c12adaffaa85ed059a4c3a030a9cd480c661d34a6e18322e",
     "b_receipt_sha256": "ba80c0bc1d5cd356dba5ea80912404c40163d1273f13dff4989ed944a24c31a5",
     "receipts_retention": "digest_only_not_in_repository (court/neutral, gitignored)"
   },
   "a": {
-    "analysis_identity": "b8f0b873391288d170be421170e2037c7f56c551d1ceb0fb25a1810e531dfa4b",
+    "analysis_identity": "3bdf2a60a6a37be1224386fde20f9c5340669caa6dcd3064aaed57a6d5798b7f",
     "closure_rounds": 2,
     "converged": true,
     "reachable_functions_count": 8672,
@@ -28,7 +28,7 @@
     "cbc_reachable": true
   },
   "b": {
-    "analysis_identity": "b8f0b873391288d170be421170e2037c7f56c551d1ceb0fb25a1810e531dfa4b",
+    "analysis_identity": "3bdf2a60a6a37be1224386fde20f9c5340669caa6dcd3064aaed57a6d5798b7f",
     "closure_rounds": 2,
     "converged": true,
     "reachable_functions_count": 8672,
@@ -55,6 +55,59 @@
     "discharged": true,
     "blocked": true,
     "unknown": true
+  },
+  "identity_recomputation": {
+    "schema": "openssl-rs/campaign/safe-c33/analysis-identity/v2",
+    "when": "2026-10-29, after P0-A extended the identity; the closures were NOT re-run",
+    "method": "construct each module's DsoGraph and call analysis_identity; only libcrypto.so.3 is the candidate module in both closures",
+    "basis": "sha256 over, in module-name order, each module name and a canonical JSON input record: every allocated (SHF_ALLOC) section's (name, ELF type, virtual address, size, sha256 of its bytes), the sorted relocation table (section, section-relative offset, type, canonical symbol, addend), the sorted [name, addr, size, kind] defined-symbol rows, the sorted dynamic-symbol rows, and the loader entries (SONAME/NEEDED/RUNPATH/RPATH). Required minimum sections: .text, .plt, .plt.got, .init, .fini, .rodata, .data, .data.rel.ro, .data.rel.ro.local, .got, .got.plt, .init_array, .fini_array; NOBITS sections (address/size only): .bss. Excluded: .debug_*, .zdebug_*, .comment, .note*, .gnu_debuglink, .gnu_debugaltlink, .gnu.build.attributes, every non-allocated section (SHF_ALLOC is absent). ``.llvm.<hash>`` and ``@@VERSION`` suffixes are canonicalised as in the symbol table; the DSO file digest is recorded as a non-identity.",
+    "included_sections": [".bss", ".data", ".data.rel.ro", ".dynamic", ".dynstr", ".dynsym", ".eh_frame", ".eh_frame_hdr", ".fini", ".fini_array", ".gcc_except_table", ".gnu.hash", ".gnu.version", ".gnu.version_d", ".gnu.version_r", ".got", ".got.plt", ".init", ".init_array", ".plt", ".plt.got", ".rela.dyn", ".rela.plt", ".rodata", ".tbss", ".tdata", ".text"],
+    "a": {
+      "text_sha256": "812e078b856793fc654ec4bb6638466ea0a0818a19d96c2b2d2628d3852b9d75",
+      "text_size": 4962638,
+      "symbol_table_sha256": "690ab530a9d6aeda7eb10caa6d7aa21e35b948fc93d84859c93c85dd8936d4e7",
+      "relocation_table_sha256": "c07461f1cbfd385b58c22220c0583061a5eb066c8bede61f97d9b62de7ae9252",
+      "dynamic_symbol_table_sha256": "155edd471ac0ef89e37b4333bdef84ed404d1677e889ac3e2cbc5b3b078f81bc",
+      "sections": {
+        ".text": "812e078b856793fc654ec4bb6638466ea0a0818a19d96c2b2d2628d3852b9d75",
+        ".rodata": "f17096dd505072b12315707c03d218f963c7e92fcd362334df71477c96fa9246",
+        ".data.rel.ro": "7346ea6a574a7d59ee40f5f442ddd8c360c9ecfcd85d9c6d28f9489b5f42825f",
+        ".got": "337ceaa6d087dd9ad135e65b4f360106d4e85550e7936c612d201dec5215955f",
+        ".got.plt": "afaf23db848d9635632dd73f95f7b988dd47cb6d0102ee0ec97d8dd5ffb3f7b8"
+      },
+      "identity": "3bdf2a60a6a37be1224386fde20f9c5340669caa6dcd3064aaed57a6d5798b7f"
+    },
+    "b": {
+      "text_sha256": "812e078b856793fc654ec4bb6638466ea0a0818a19d96c2b2d2628d3852b9d75",
+      "text_size": 4962638,
+      "symbol_table_sha256": "690ab530a9d6aeda7eb10caa6d7aa21e35b948fc93d84859c93c85dd8936d4e7",
+      "relocation_table_sha256": "c07461f1cbfd385b58c22220c0583061a5eb066c8bede61f97d9b62de7ae9252",
+      "dynamic_symbol_table_sha256": "155edd471ac0ef89e37b4333bdef84ed404d1677e889ac3e2cbc5b3b078f81bc",
+      "sections": {
+        ".text": "812e078b856793fc654ec4bb6638466ea0a0818a19d96c2b2d2628d3852b9d75",
+        ".rodata": "f17096dd505072b12315707c03d218f963c7e92fcd362334df71477c96fa9246",
+        ".data.rel.ro": "7346ea6a574a7d59ee40f5f442ddd8c360c9ecfcd85d9c6d28f9489b5f42825f",
+        ".got": "337ceaa6d087dd9ad135e65b4f360106d4e85550e7936c612d201dec5215955f",
+        ".got.plt": "afaf23db848d9635632dd73f95f7b988dd47cb6d0102ee0ec97d8dd5ffb3f7b8"
+      },
+      "identity": "3bdf2a60a6a37be1224386fde20f9c5340669caa6dcd3064aaed57a6d5798b7f"
+    },
+    "equal": {
+      "analysis_identity": true,
+      "text": true,
+      "symbol_table": true,
+      "relocation_table": true,
+      "dynamic_symbol_table": true,
+      "sections": true,
+      "dso_digest_differs": true
+    },
+    "verdict": "PASS",
+    "note": "the reachable-set fields in a/b are the original closures and are retained unchanged: the reachability algorithm did not change in P0-A or P0-B, and the new identity was computed without re-running those closures"
+  },
+  "negative_control": {
+    "where": "court/closure/negative-control-result.json (gitignored)",
+    "summary": "a scratch copy of the v1p libcrypto with one .data.rel.ro dispatch-slot relocation addend patched 0x493990 -> 0x160c80 keeps .text and the defined-symbol table byte-identical, changes the analysis identity, and adds 0x160c80 to the targeted build_graph upper bound",
+    "verdict": "PASS"
   },
   "verdict": "PASS",
   "note": "The raw-name digest differs only by build-dependent .llvm.<hash> suffixes on otherwise identical addresses and canonical names; the canonical digest is the identity."

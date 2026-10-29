@@ -403,14 +403,74 @@ and adds `closure_rounds`, `round_sizes`, `sites_scanned_per_round`,
 
 ### Analysis identity and retention
 
-`analysis_identity(graphs)` hashes, per module in name order, the sha256 of the
-`.text` bytes and the sha256 of the sorted `[name, addr, size, kind]`
-defined-symbol rows, under the domain `openssl-rs/campaign/safe-c33/analysis-identity/v1`.
+`analysis_identity(graphs)` is the canonical identity of the **analysis input**
+(domain `openssl-rs/campaign/safe-c33/analysis-identity/v2`). Per module it binds:
+
+- every allocated (SHF_ALLOC) section's name, ELF type, virtual address, size
+  and byte digest. The selection is "allocated minus metadata", not a
+  hand-maintained allowlist: `section_of` is unconstrained in `cstring_at` and
+  `switch_targets`, so a new allocated section is bound automatically. The
+  required minimum is `.text`, `.plt`, `.plt.got`, `.init`, `.fini`, `.rodata`,
+  `.data`, `.data.rel.ro`, `.data.rel.ro.local`, `.got`, `.got.plt`,
+  `.init_array`, `.fini_array`; `.bss` and other SHT_NOBITS sections contribute
+  their address and size only;
+- the sorted relocation table `(section, section-relative offset, type,
+  canonical symbol, addend)` read by `_build_slots` for
+  `R_X86_64_RELATIVE`, `GLOB_DAT`, `JUMP_SLOT` and `R_X86_64_64`;
+- the sorted `[name, addr, size, kind]` defined-symbol rows (the v1 input);
+- the sorted dynamic-symbol rows (the export set used by `export_index`, the
+  resolver and the dynamic-reloc widening);
+- the loader entries (SONAME/NEEDED/RUNPATH/RPATH) that select the modules.
+
 The symbol names are canonicalised for the compiler-generated `.llvm.<hash>`
 suffix and the `@@VERSION` suffix (both name no distinct analysis subject; the
-address, size and kind keep distinct symbols distinct). The DSO file digest is
-recorded as a **non-identity**: a comment-only edit changes it while `.text`
-and the symbol addresses are unchanged.
+address, size and kind keep distinct symbols distinct). Analysis-irrelevant
+metadata is excluded and named in the basis: `.debug_*`, `.comment`, `.note*`,
+`.gnu_debuglink`, the build-id note, `.gnu.build.attributes`, and every
+non-allocated section (for example `.symtab`, `.strtab`, `.shstrtab`). The DSO
+file digest is recorded as a **non-identity**: a comment-only edit changes it
+while the analysis sections and symbol addresses are unchanged.
+
+This closes the v1 limitation that two candidates with different data but
+identical `.text` and symbols shared an identity. It is **not** a proof of input
+completeness: it binds the enumerated inputs of this derivation, and a new read
+of another section requires extending the enumeration. The negative control
+(`court/closure/negative-control-result.json`) patches one `.data.rel.ro`
+dispatch-slot relocation addend with `.text` and the symbol table byte-identical:
+the identity changes and the targeted build_graph upper bound gains the patched
+function. The positive control (`court/neutral/a` vs `b`) keeps the identity
+equal across a comment-only rebuild.
+
+### Symbolic-target dispositions (P0-B)
+
+A symbolic value in the module residual bound or in a site's own bound is never
+counted and discarded. It is resolved through this fixed order and recorded in
+`graph.closure.symbol_dispositions`:
+
+1. `exact-export` (the name as written in `export_index`);
+2. `version-stripped-export` (`name.split('@')[0]`);
+3. `names-at` (every defined-symbol-table alias address for the base name);
+4. `dynamic-symbol-table` (the module's `.dynsym` definition);
+5. `soname-qualified-import` (`libcrypto.so.3:NAME` whose target module
+   matches);
+6. `plt-stub` (a `.plt`/`.plt.got` stub jumping through the symbol's GOT slot).
+
+Every row carries `symbol`, `module`, `slot_offsets`, `sites`, `disposition`,
+`path` and either `targets`, an `external_interface` with its justification, or a
+`reason`. `external-contract` is available only for an exact name in the cited
+`EXTERNAL_SYMBOL_CONTRACTS` table; it is not a wildcard and not a way to clear a
+refusal. Any remaining `blocking` row produces the refusal
+`CLOSURE_UNRESOLVED_SYMBOL`, which names **every** blocking symbol, module, slot
+and site. The summary counts (`resolved` / `external-contract` / `blocking`) are
+descriptive; the rows are the evidence.
+
+On the v1p candidate the five values the v1 receipt counted as unresolved
+(`CRYPTO_128_unwrap`, `CRYPTO_128_unwrap_pad`, `CRYPTO_128_wrap`,
+`CRYPTO_128_wrap_pad`, `PEM_def_callback`, each carrying
+`@@OPENSSL_3.0.0`) resolve by `version-stripped-export`: the bound value carries
+the version suffix from `readelf -rW`, while `export_index` is keyed by the
+version-stripped name. No symbol is marked external and no blocking symbol
+remains.
 
 The receipt persists `graph.closure.reachable_functions` (sorted
 `module:hex:name`), `reachable_functions_sha256` (sha256 over the
@@ -438,8 +498,12 @@ difference), different rules emit `HASH_RULE_MISMATCH` naming both, and
   neutral control: their `.text` differs (4,962,638 vs 4,950,510 bytes) because
   `Cargo.toml` moved 0.0.42 → 0.0.43, a build-relevant input. Cross-build
   stability of the fixpoint is therefore not established by that pair.
-- The analysis identity does not cover data-section contents and is not a
-  cross-toolchain byte-reproducibility claim.
+- The extended analysis identity binds the enumerated inputs (sections,
+  relocations, defined and dynamic symbol tables, loader entries); it is not a
+  proof that no other input exists, and it is not a cross-toolchain
+  byte-reproducibility claim.
+- A symbol disposition is a record of a resolution path, not a proof that the
+  resolved target is the only target the site can select.
 
 ## Sidecar and receipt identity
 

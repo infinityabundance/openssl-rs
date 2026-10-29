@@ -716,8 +716,8 @@
         "tool": {
           "path": "forensics/tools/consumer_closure.py",
           "schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
-          "sha256": "f26f212bd59de7fb7b77610e2cb3b72138e9e0e3a9bb4a1a9793d4b3f6623d58",
-          "version": 4
+          "sha256": "d1d80b43a0579c1d3e3334752e9f99aa4d3725b616606d2288e65fc92ab7c0de",
+          "version": 5
         }
       },
       "expected_property": "the receipt tool block carries a 64-hex sha256 and the record schema",
@@ -934,8 +934,8 @@
     },
     {
       "evidence": {
-        "analysis_identity": "0d1c8d0f3a8035feb5b7f8eda9592ccdeac1c0eeb03d7cc85eb5bf197cbe3f95",
-        "basis": "sha256 over, in module-name order, each module name, the sha256 of its .text bytes, and the sha256 of its sorted [name, addr, size, kind] defined-symbol rows (``.llvm.<hash>`` and symbol-version suffixes canonicalised)",
+        "analysis_identity": "38e5ef34b2e918d0bfe2850d6b340bf82c22e93b6fe4d0053a6da8989977c24c",
+        "basis": "sha256 over, in module-name order, each module name and a canonical JSON input record: every allocated (SHF_ALLOC) section's (name, ELF type, virtual address, size, sha256 of its bytes), the sorted relocation table (section, section-relative offset, type, canonical symbol, addend), the sorted [name, addr, size, kind] defined-symbol rows, the sorted dynamic-symbol rows, and the loader entries (SONAME/NEEDED/RUNPATH/RPATH). Required minimum sections: .text, .plt, .plt.got, .init, .fini, .rodata, .data, .data.rel.ro, .data.rel.ro.local, .got, .got.plt, .init_array, .fini_array; NOBITS sections (address/size only): .bss. Excluded: .debug_*, .zdebug_*, .comment, .note*, .gnu_debuglink, .gnu_debugaltlink, .gnu.build.attributes, every non-allocated section (SHF_ALLOC is absent). ``.llvm.<hash>`` and ``@@VERSION`` suffixes are canonicalised as in the symbol table; the DSO file digest is recorded as a non-identity.",
         "dso_digest_is_analysis_identity": false
       },
       "expected_property": "the comment-only rebuild shares the analysis identity while its DSO digest differs, and the code edit changes the identity",
@@ -943,6 +943,128 @@
       "input": "one module, two builds: a comment-only source edit (identical .text and symbol rows, different DSO digest) and a code edit",
       "observed_result": "comment_only_same_identity=True, dso_digest_differs=True, code_edit_changes_identity=True",
       "transformation": "compute the analysis identity for both builds",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "analysis_identity": "38e5ef34b2e918d0bfe2850d6b340bf82c22e93b6fe4d0053a6da8989977c24c",
+        "basis": "sha256 over, in module-name order, each module name and a canonical JSON input record: every allocated (SHF_ALLOC) section's (name, ELF type, virtual address, size, sha256 of its bytes), the sorted relocation table (section, section-relative offset, type, canonical symbol, addend), the sorted [name, addr, size, kind] defined-symbol rows, the sorted dynamic-symbol rows, and the loader entries (SONAME/NEEDED/RUNPATH/RPATH). Required minimum sections: .text, .plt, .plt.got, .init, .fini, .rodata, .data, .data.rel.ro, .data.rel.ro.local, .got, .got.plt, .init_array, .fini_array; NOBITS sections (address/size only): .bss. Excluded: .debug_*, .zdebug_*, .comment, .note*, .gnu_debuglink, .gnu_debugaltlink, .gnu.build.attributes, every non-allocated section (SHF_ALLOC is absent). ``.llvm.<hash>`` and ``@@VERSION`` suffixes are canonicalised as in the symbol table; the DSO file digest is recorded as a non-identity.",
+        "included_sections": [
+          ".data.rel.ro",
+          ".text"
+        ]
+      },
+      "expected_property": "the .text and symbol digests are unchanged, the data/relocation inputs and the full identity change",
+      "id": "aj-identity-covers-data-inputs",
+      "input": "one module with identical .text and symbol rows but a changed .data.rel.ro digest or relocation addend",
+      "observed_result": "text_unchanged=True, symbols_unchanged=True, data_identity_changes=True, relocation_identity_changes=True",
+      "transformation": "compute the analysis identity for the original, the data-section edit and the relocation edit",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "summary": {
+          "blocking": 1,
+          "external-contract": 0,
+          "resolution_order": [
+            "exact-export",
+            "version-stripped-export",
+            "names-at",
+            "dynamic-symbol-table",
+            "soname-qualified-import",
+            "plt-stub"
+          ],
+          "resolved": 0,
+          "rule": "every symbolic value in the module residual bound and in a residual site's own bound is resolved through the fixed order exact-export, version-stripped-export, names-at, dynamic-symbol-table, soname-qualified-import, plt-stub; a symbol covered by a cited documented external interface is external-contract; every other symbol is blocking and is refused, never counted and discarded",
+          "schema": "openssl-rs/campaign/safe-c33/symbol-disposition/v1"
+        },
+        "symbol_dispositions": [
+          {
+            "base": "no_such_symbol",
+            "disposition": "blocking",
+            "external_interface": null,
+            "external_justification": null,
+            "module": "symbol-fixture.so",
+            "path": null,
+            "reason": "no exact or version-stripped export, names-at alias, dynamic symbol, SONAME-qualified import or PLT stub resolves this symbol, and no documented external interface covers it",
+            "sites": [],
+            "slot_offsets": [],
+            "symbol": "no_such_symbol",
+            "targets": []
+          }
+        ]
+      },
+      "expected_property": "the symbol has a blocking disposition and the closure refuses with CLOSURE_UNRESOLVED_SYMBOL naming it",
+      "id": "ak-unresolved-symbol-refusal",
+      "input": "a module whose residual bound names a symbol that no path resolves",
+      "observed_result": "dispositions=['blocking'], refusal_codes=['CLOSURE_UNRESOLVED_SYMBOL']",
+      "transformation": "build the closure and evaluate closure_refusals",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "symbol_dispositions": [
+          {
+            "base": "alias_target",
+            "disposition": "resolved",
+            "external_interface": null,
+            "external_justification": null,
+            "module": "symbol-fixture.so",
+            "path": "names-at",
+            "reason": null,
+            "sites": [],
+            "slot_offsets": [],
+            "symbol": "alias_target",
+            "targets": [
+              [
+                "symbol-fixture.so",
+                32
+              ]
+            ]
+          }
+        ]
+      },
+      "expected_property": "the symbol resolves through names-at and the closure does not refuse",
+      "id": "al-alias-symbol-resolved",
+      "input": "a symbolic bound value whose defined-symbol-table alias is a function start in the same module",
+      "observed_result": "dispositions=[('resolved', 'names-at')], refusals=[]",
+      "transformation": "resolve the symbolic value and evaluate closure_refusals",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "symbol_dispositions": [
+          {
+            "base": "malloc",
+            "disposition": "external-contract",
+            "external_interface": "ISO/IEC 9899:2018 7.22.3 malloc",
+            "external_justification": "the C library allocator is resolved by the process loader, not by any candidate OpenSSL DSO; the consumer owns the allocator contract",
+            "module": "symbol-fixture.so",
+            "path": "external-contract",
+            "reason": null,
+            "sites": [],
+            "slot_offsets": [],
+            "symbol": "malloc",
+            "targets": []
+          }
+        ]
+      },
+      "expected_property": "the symbol is recorded as external-contract with its interface and the closure does not refuse",
+      "id": "am-external-contract-symbol",
+      "input": "a symbolic bound value naming a documented libc interface (malloc)",
+      "observed_result": "dispositions=[('external-contract', 'ISO/IEC 9899:2018 7.22.3 malloc')], refusals=[]",
+      "transformation": "resolve the symbolic value and evaluate closure_refusals",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "mutated_refusals": []
+      },
+      "expected_property": "the refusal disappears, so the first case would fail",
+      "id": "an-unresolved-symbol-refusal-removed",
+      "input": "the blocking-symbol closure from ak-unresolved-symbol-refusal",
+      "observed_result": "mutated_refusal_codes=[]",
+      "transformation": "disable the CLOSURE_UNRESOLVED_SYMBOL branch and re-evaluate",
       "verdict": "PASS"
     },
     {
@@ -1055,6 +1177,7 @@
     "A PASS is not a soundness result: the corpus shows that named transformations do not change the named properties, not that no transformation can.",
     "A monotone residual bound is not a completeness result: the fixpoint cannot admit a function that no materialised-address evidence names, and the closure cases use synthetic evidence, not a real image.",
     "The neutral-rebuild case is a metamorphic relation on the identity function.  Byte-identical .text across independent real builds is a separate measurement, not something this fixture establishes.",
+    "The identity cases bind the enumerated analysis inputs (sections, relocations, symbol tables, loader entries).  They do not prove that no other input exists, and the fixtures are not real ELF section tables.",
     "The fixtures are synthetic and do not reproduce the real library's layout, linker behaviour, or runtime dispatch.",
     "The refusal cases establish that the named disagreements are detected; they do not establish that every real derivation is complete.",
     "The validator compares a record's own ledgers (target_set, admitted_targets, provenance chain) and the final upper-bound oracle.  The ledgers are mutually redundant within the record, not independent derivations.  It does not re-derive the target set to a fixpoint, so a record that is internally consistent and consistent with the upper bound is not thereby proved complete, and it cannot distinguish an analyzer-produced record from a forged one that is internally consistent.  Admissibility needs the identity chain (tool sha256, artefact sha256, sidecar digest) and a re-run of the pinned validator over the pinned sidecar."
@@ -1071,12 +1194,12 @@
   "schema": "openssl-rs/campaign/safe-c33/analyzer-metamorphic-corpus/v1",
   "summary": {
     "failed": [],
-    "passed": 62,
-    "total": 62
+    "passed": 67,
+    "total": 67
   },
   "tool": {
     "covered_tool": "forensics/tools/consumer_closure.py",
-    "covered_tool_sha256": "f26f212bd59de7fb7b77610e2cb3b72138e9e0e3a9bb4a1a9793d4b3f6623d58",
+    "covered_tool_sha256": "d1d80b43a0579c1d3e3334752e9f99aa4d3725b616606d2288e65fc92ab7c0de",
     "edge_record_schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
     "path": "forensics/tools/analyzer_metamorphic_corpus.py"
   }
