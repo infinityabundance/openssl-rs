@@ -716,7 +716,7 @@
         "tool": {
           "path": "forensics/tools/consumer_closure.py",
           "schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
-          "sha256": "40cc1c64207e2a036b64aa142c9053d6d453369fe148197a457e8cd8072456dd",
+          "sha256": "f26f212bd59de7fb7b77610e2cb3b72138e9e0e3a9bb4a1a9793d4b3f6623d58",
           "version": 4
         }
       },
@@ -884,12 +884,177 @@
       "observed_result": "refused: metamorphic-attribution-fixture.so::site_func::call::argument-callback::1: a caller-bound record with no attributable candidate claims 'PROVED_TARGET_SET'",
       "transformation": "a record with zero attribution is forced to claim PROVED_TARGET_SET",
       "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "fixpoint_round_sizes": [
+          2,
+          4,
+          5,
+          5
+        ],
+        "fixpoint_sites_scanned": [
+          0,
+          1,
+          2,
+          2
+        ],
+        "single_pass_round_sizes": [
+          2,
+          4
+        ]
+      },
+      "expected_property": "the single pass omits C and reports non-convergence; the fixpoint includes C",
+      "id": "ag-fixpoint-reaches-nested-unresolved",
+      "input": "synthetic graph root -> dispatch A (unresolved) -> B -> dispatch B (unresolved) -> C, with B reachable only through A's residual admission",
+      "observed_result": "single_pass_has_C=False, single_pass_converged=False, fixpoint_has_C=True, fixpoint_rounds=3",
+      "transformation": "close the graph once (max_rounds=1) and to its least fixed point",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "bound": [
+          32,
+          48,
+          64,
+          80
+        ],
+        "proved_targets": [
+          32,
+          80
+        ],
+        "residual_site_targets": []
+      },
+      "expected_property": "the unresolved bound is a superset of the proved set and of every class-specific set",
+      "id": "ah-monotone-bound-under-classification-loss",
+      "input": "a site classified PROVED_TARGET_SET with {0x20, 0x50}, then UNRESOLVED with the same resolver targets dropped",
+      "observed_result": "proved_set_in_bound=True, class_sets_not_covered=none",
+      "transformation": "re-classify the site and recompute the residual bound",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "analysis_identity": "0d1c8d0f3a8035feb5b7f8eda9592ccdeac1c0eeb03d7cc85eb5bf197cbe3f95",
+        "basis": "sha256 over, in module-name order, each module name, the sha256 of its .text bytes, and the sha256 of its sorted [name, addr, size, kind] defined-symbol rows (``.llvm.<hash>`` and symbol-version suffixes canonicalised)",
+        "dso_digest_is_analysis_identity": false
+      },
+      "expected_property": "the comment-only rebuild shares the analysis identity while its DSO digest differs, and the code edit changes the identity",
+      "id": "ai-neutral-rebuild",
+      "input": "one module, two builds: a comment-only source edit (identical .text and symbol rows, different DSO digest) and a code edit",
+      "observed_result": "comment_only_same_identity=True, dso_digest_differs=True, code_edit_changes_identity=True",
+      "transformation": "compute the analysis identity for both builds",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "canonical_entries": [
+          "names.so:0x10:local_fn.llvm.<hash>",
+          "names.so:0x20:CRYPTO_export"
+        ],
+        "raw_entries_a": [
+          "names.so:0x10:local_fn.llvm.111",
+          "names.so:0x20:CRYPTO_export@@OPENSSL_3.0.0"
+        ],
+        "raw_entries_b": [
+          "names.so:0x10:local_fn.llvm.222",
+          "names.so:0x20:CRYPTO_export@@OPENSSL_3.0.0"
+        ]
+      },
+      "expected_property": "the canonical digest is equal while the raw-name digest differs",
+      "id": "ba-reachable-digest-canonicalisation",
+      "input": "two neutral builds whose reachable addresses are identical but whose compiler-generated .llvm.<hash> suffixes differ",
+      "observed_result": "canonical_equal=True, canonical_digest=cb955caecd39d1a6, raw_digest_differs=True",
+      "transformation": "build the reachable-function list and digest in canonical and raw form",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "admitted_by_refutation": {
+          "count": 1,
+          "rows": [
+            {
+              "address": "0x30",
+              "basis": "final-upper-bound",
+              "bounded": true,
+              "call_site": "0x11",
+              "dso": "admission-fixture.so",
+              "function": "site_func",
+              "pass_index": 1,
+              "role": "reachable-caller",
+              "subject": "excluded_caller",
+              "targets": [
+                "target_dropped"
+              ]
+            }
+          ],
+          "targets": [
+            "target_dropped"
+          ]
+        },
+        "passes": 1,
+        "reachable": [
+          "admission-fixture.so:0x10",
+          "admission-fixture.so:0x20",
+          "admission-fixture.so:0x30",
+          "admission-fixture.so:0x40",
+          "admission-fixture.so:0x50"
+        ],
+        "refuted_exclusions": {
+          "method-store-callsite-caller": 0,
+          "method-store-writer": 0,
+          "reachable-caller": 1
+        }
+      },
+      "expected_property": "the caller's target is admitted, the exclusion is gone, and the record validates against the sound bound",
+      "id": "bb-admission-refuted-caller",
+      "input": "a caller-bound site whose excluded caller the sound bound reaches",
+      "observed_result": "target_admitted=True, exclusions=0, passes=1, admitted_targets=['target_dropped'], defects=[]",
+      "transformation": "run admission + closure recomputation",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {},
+      "expected_property": "no admission occurs, the exclusion survives, and the record validates",
+      "id": "bc-admission-surviving-caller",
+      "input": "a caller-bound site whose excluded caller the sound bound does not reach",
+      "observed_result": "targets=[32], exclusions=1, passes=0, defects=[]",
+      "transformation": "run admission + closure recomputation",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {},
+      "expected_property": "the site becomes UNRESOLVED with a named refutation-unbounded property and the record validates",
+      "id": "bd-admission-widens-to-unresolved",
+      "input": "a caller-bound site whose refuted caller passes an argument with no finite image target set",
+      "observed_result": "unresolved=True, reason=refutation-unbounded: caller(s) reached by the final upper bound have no finite recorded image target set: excluded_caller, dispositions=['UNRESOLVED'], defects=[]",
+      "transformation": "run admission + closure recomputation",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {},
+      "expected_property": "the target is not admitted, the exclusion remains, and the validator refuses the record -- the admission case is sensitive to the mechanism",
+      "id": "be-admission-disabled-control",
+      "input": "the refuted-caller fixture with the admission pass disabled",
+      "observed_result": "target_admitted=False, exclusions=1, defects=3",
+      "transformation": "compute the closure without admission and build records",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {},
+      "expected_property": "the caller is claimed reachable although the bound does not reach it and the validator refuses the record",
+      "id": "bf-admission-unconditional-control",
+      "input": "the surviving-exclusion fixture with unconditional admission (no sound-bound check)",
+      "observed_result": "exclusions=0, defects=1",
+      "transformation": "move the excluded caller regardless of the oracle and build records",
+      "verdict": "PASS"
     }
   ],
   "claim": "stability and sensitivity evidence for the edge resolver: not a proof of soundness",
   "fixture_model": "synthetic function/instruction/call-index fixtures fed to the production evidence pass and edge-record builder; no real object file or linker is exercised",
   "non_claims": [
     "A PASS is not a soundness result: the corpus shows that named transformations do not change the named properties, not that no transformation can.",
+    "A monotone residual bound is not a completeness result: the fixpoint cannot admit a function that no materialised-address evidence names, and the closure cases use synthetic evidence, not a real image.",
+    "The neutral-rebuild case is a metamorphic relation on the identity function.  Byte-identical .text across independent real builds is a separate measurement, not something this fixture establishes.",
     "The fixtures are synthetic and do not reproduce the real library's layout, linker behaviour, or runtime dispatch.",
     "The refusal cases establish that the named disagreements are detected; they do not establish that every real derivation is complete.",
     "The validator compares a record's own ledgers (target_set, admitted_targets, provenance chain) and the final upper-bound oracle.  The ledgers are mutually redundant within the record, not independent derivations.  It does not re-derive the target set to a fixpoint, so a record that is internally consistent and consistent with the upper bound is not thereby proved complete, and it cannot distinguish an analyzer-produced record from a forged one that is internally consistent.  Admissibility needs the identity chain (tool sha256, artefact sha256, sidecar digest) and a re-run of the pinned validator over the pinned sidecar."
@@ -900,17 +1065,18 @@
     "PLT/GOT tricks beyond the fixture's link-time constant thunk slot",
     "dlopen-supplied and dlsym-resolved targets",
     "provider dispatch tables selected at runtime",
+    "admission by refutation of a *real* excluded writer/caller; the corpus exercises the caller-bound shape on a synthetic bound, not a real image",
     "the full library's real instruction idioms; the fixtures use the instruction shapes the semantic rule recognises"
   ],
   "schema": "openssl-rs/campaign/safe-c33/analyzer-metamorphic-corpus/v1",
   "summary": {
     "failed": [],
-    "passed": 53,
-    "total": 53
+    "passed": 62,
+    "total": 62
   },
   "tool": {
     "covered_tool": "forensics/tools/consumer_closure.py",
-    "covered_tool_sha256": "40cc1c64207e2a036b64aa142c9053d6d453369fe148197a457e8cd8072456dd",
+    "covered_tool_sha256": "f26f212bd59de7fb7b77610e2cb3b72138e9e0e3a9bb4a1a9793d4b3f6623d58",
     "edge_record_schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
     "path": "forensics/tools/analyzer_metamorphic_corpus.py"
   }

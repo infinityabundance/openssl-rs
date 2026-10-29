@@ -33,6 +33,21 @@ Change history:
   site whose whole candidate set is unattributable is `UNRESOLVED` with the
   named missing property instead of emitting a bounded set.
 
+Additive fields under `v1.4` (no schema-id change): **admission by refutation**.
+An exclusion derived against the pre-closure direct set is false when the sound
+upper bound reaches its subject. The site then carries
+`refutation_admissions` (the admitted subject, role, address and admitted
+targets) and `refuted_exclusions` (the role and subject of each refuted
+claim), and the admitted targets carry a `refutation-admission` derivation step
+in `provenance_chain`. A refuted caller becomes an ordinary reachable caller row
+(`admitted_by_refutation: true`) and may be named in
+`candidate_source.refutation_admitted_callers`; a re-derived stored-value site
+names retained targets in `candidate_source.refutation_targets`. A subject with
+no finite recorded contribution makes the site `UNRESOLVED` with a
+`refutation-unbounded` missing property rather than keeping an unsound finite
+claim. Exclusions the bound does not reach survive unchanged and are validated
+as before.
+
 v1.3 exists because v1.2 accepted three residual unsound claims and two
 evidence/operations defects:
 
@@ -297,6 +312,134 @@ semantic call-site row with `included: false`, and every caller-bound dropped
 target. A subject that the bound reaches is a violation; a row that cannot be
 checked is also a violation. The audit is mutually redundant with the record
 validator (same record, same oracle) and runs in the same streaming pass.
+
+## The closure operator (v1.5): monotone bound and least fixed point
+
+`build_graph` is the definition of the reachable set the oracle then judges. Two
+soundness defects were fixed in `forensics/tools/consumer_closure.py`
+(`closure-fixpoint-repair.json` records the measurements):
+
+1. **Non-monotone residual admission.** For a *classified* unresolved site the
+   v1.4 bound was the class-specific set (`taken_code` ∪ field-store values ∪
+   unknown-call-argument targets). That set is not a superset of what the same
+   site admitted when it was `PROVED_TARGET_SET`, so losing precision narrowed
+   the reachable set. Across v1n→v1p, 59 sites went `PROVED→UNRESOLVED`, dropped
+   whole evaluated unions, and `CRYPTO_cbc128_encrypt` left the bound although
+   the consumer `.text` was byte-identical.
+2. **One-pass closure.** Residual admission was applied once, to the direct
+   reachable set only, so a function reached *through* residual admission was
+   never scanned for its own unresolved sites:
+   `root → dispatch A → B → dispatch B → C` omitted `C`.
+
+### The bound (`unresolved_site_bound`)
+
+Every residual site is bounded by the union of **all** materialised-address
+evidence for its module, independent of its class:
+
+- `address_taken_union` (code/data materialisations, relocated function slots,
+  and in-image dynamic-relocation targets);
+- `taken_code` (named explicitly so the record shows the source);
+- every integer stored into a field by reachable code (`field_stores`);
+- every value passed at an unresolved call site
+  (`unknown_call_arg_targets`);
+- the site's own resolver `targets` and `arg_targets`.
+
+A class-specific set remains in the receipt as **precision reporting** (the
+per-site class and `precision.unresolved_by_class`), never as the sole bound.
+The rule is one-directional: **a bound may be widened for soundness, never
+narrowed by classification.**
+
+Address to node mapping is also widening-only. A value that is a defined
+function start is its own node; an integer inside `.text`/`.plt`/`.plt.got` is
+mapped to its enclosing function start; a non-executable integer cannot be a
+function entry and is counted (`bound_evidence_sources.*.non_code_values`), not
+silently used; a symbolic target resolves through the export index and an
+unresolved one is counted. No start-set filter is applied to the evidence
+union, so no function-start target can be dropped by the bound.
+
+**Dynamic-relocation widening.** `taken_code`, `taken_data` and `slot_funcs`
+were built only from in-image code materialisations and `R_X86_64_RELATIVE`
+slots. A `R_X86_64_GLOB_DAT`/`JUMP_SLOT` slot whose symbol is defined in the
+same image fixes a function address exactly as a RELATIVE slot does, and was
+missing. `publish()` now adds those targets (`dynamic_reloc_targets`) to
+`address_taken_union`. On the three measured libcrypto builds the widening adds
+1,346–1,349 functions, including `CRYPTO_cbc128_encrypt` (referenced by a
+`GLOB_DAT` slot and by call/jump slots — the earlier finding recorded 25 from
+21 callers), which is absent from the pre-widening union in every build:
+
+| libcrypto | pre-widening union | + dynamic relocs | `address_taken_union` | CBC member |
+|---|---|---|---|---|
+| v1p `dadb0263…` | 5,238 | 1,349 | 6,587 | yes |
+| v1p neutral `c335ac3c…` | 5,244 | 1,346 | 6,590 | yes |
+| v1n `3901731a…` | 5,248 | 1,347 | 6,595 | yes |
+
+### The iteration (least fixed point)
+
+```
+reach = walk(roots)                       # direct edges, resolved site edges, export aliases
+for round in 1..max_rounds:
+    bound = ⋃ unresolved_site_bound(g, s)
+              over every unresolved site whose containing function is in reach
+    nxt   = walk(reach ∪ bound ∪ imports)
+    if nxt == reach: converged at round; break
+    reach = nxt
+```
+
+This is chaotic/worklist iteration over a finite lattice: the node set is the
+finite set of function addresses in the linked DSOs, `walk` is a monotone graph
+closure, and the transfer function only unions evidence, so `reach` is
+increasing. It therefore terminates in at most `|V|` non-final rounds; the cap
+is `4 × total_functions + 8` (65,424–65,552 in the measured runs) and a run
+that hits the cap returns `converged = false` and appends the refusal
+`CLOSURE_NONCONVERGENT` naming the cap, the last growth and the reachable size.
+A partial bound is never accepted. The standard concepts are Kildall 1973 (a
+unifying lattice-theoretic data-flow framework) and Cousot & Cousot 1977
+(abstract interpretation); no quotation is implied.
+
+The return value keeps `direct_reachable` and `upper_reachable` (the fixpoint)
+and adds `closure_rounds`, `round_sizes`, `sites_scanned_per_round`,
+`converged`, `nonconvergent_detail`, `residual_bound_nodes` and
+`bound_evidence_sources`.
+
+### Analysis identity and retention
+
+`analysis_identity(graphs)` hashes, per module in name order, the sha256 of the
+`.text` bytes and the sha256 of the sorted `[name, addr, size, kind]`
+defined-symbol rows, under the domain `openssl-rs/campaign/safe-c33/analysis-identity/v1`.
+The symbol names are canonicalised for the compiler-generated `.llvm.<hash>`
+suffix and the `@@VERSION` suffix (both name no distinct analysis subject; the
+address, size and kind keep distinct symbols distinct). The DSO file digest is
+recorded as a **non-identity**: a comment-only edit changes it while `.text`
+and the symbol addresses are unchanged.
+
+The receipt persists `graph.closure.reachable_functions` (sorted
+`module:hex:name`), `reachable_functions_sha256` (sha256 over the
+newline-terminated entries), `reachable_functions_per_module` and the identity
+block, so a movement between candidates can be adjudicated from the receipt
+rather than the ~1.3 GB record sidecar.
+
+### Source-root hash rules
+
+The build record hashes the pristine tree with
+`sha256('openssl-rs/source-tree/v1\0' + path\0bytes\0)`; the build/link atlas
+emits `sha256(canonical_json(sorted [[relpath, size, sha256]]))` under the same
+field name. The v1.4 check compared them directly, so it always failed when
+provenance was supplied. `source_root_hash_checks` now classifies both rules and
+compares like with like: equal rules compare `source_root_hash` (`STALE_HASH` on
+difference), different rules emit `HASH_RULE_MISMATCH` naming both, and
+`source_tree_domain_hash` is compared when both sides provide it.
+
+### Non-claims
+
+- The bound is a may-bound, not a completeness proof: a function that no
+  materialised-address source names is not admitted.
+- Monotonicity is a property of the transfer function, not of any particular
+  pair of builds. The measured v1p-install vs neutral-build pair is **not** a
+  neutral control: their `.text` differs (4,962,638 vs 4,950,510 bytes) because
+  `Cargo.toml` moved 0.0.42 → 0.0.43, a build-relevant input. Cross-build
+  stability of the fixpoint is therefore not established by that pair.
+- The analysis identity does not cover data-section contents and is not a
+  cross-toolchain byte-reproducibility claim.
 
 ## Sidecar and receipt identity
 

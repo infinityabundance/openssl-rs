@@ -22,6 +22,25 @@ labelled as a caller/writer claim, a writer reason used as a target drop, a
 free-text declared-name derivation, a declared target that is reachable or not
 a candidate, and a forged caller contribution are all refused.
 
+v1.5 adds the *closure* axis.  A residual site's bound is class-independent, so
+a PROVED->UNRESOLVED re-classification cannot shrink it (the monotone-bound
+case); residual admission is iterated to a least fixed point, so a dispatch
+chain nested behind an unresolved site is reached (the nested-dispatch case);
+a non-convergent iteration is a refusal, not a partial bound; and the analysis
+identity is the .text-and-symbol-table canonical hash, not the DSO file digest
+(the neutral-rebuild case).
+
+v1.6 adds *admission by refutation*.  An exclusion derived against the
+pre-closure direct set is false when the sound bound reaches its subject, so
+the subject's contribution is admitted and the closure recomputed (the
+refuted-caller case); an exclusion the sound bound does not reach survives and
+still validates (the surviving-caller case); and a refuted subject with no
+finite recorded contribution turns a resolved site into UNRESOLVED with a
+named property instead of keeping an unsound finite claim.  Two mutation
+controls show that the cases are sensitive to the mechanism: disabling
+admission makes the first fail, and admitting unconditionally makes the second
+fail.
+
 What it does not establish
 --------------------------
 This is evidence of stability and sensitivity, not a soundness proof.  The
@@ -29,7 +48,9 @@ fixtures are synthetic: they do not exercise a real linker, LTO, PLT/GOT
 tricks, dlopen-supplied targets, or provider dispatch tables.  Those are listed
 as explicit non-coverage in the emitted receipt.  The corpus also does not
 re-derive a target set to a fixpoint; it checks the record's internal ledgers
-and the oracle, not a second resolution of the image.
+and the oracle, not a second resolution of the image.  (v1.5's closure cases
+exercise the fixpoint of the *graph builder* on synthetic evidence; they still
+do not re-resolve a real image.)
 
 Run:  python3 forensics/tools/analyzer_metamorphic_corpus.py \
           --out forensics/memory-safety/campaign/safe-c33/atlas-refresh/\
@@ -1590,6 +1611,452 @@ def case_h9_duplicate_edge_id():
         ok, {"defects": defects[:4]})
 
 
+# --------------------------------------------------------------------------- #
+# v1.5: monotone bound and least-fixed-point residual admission
+# --------------------------------------------------------------------------- #
+# These cases exercise the *closure* rather than a single edge record.  They
+# use the production `build_graph`, `unresolved_site_bound`, `analysis_identity`
+# and `closure_refusals` functions; only the graph objects are synthetic.
+
+
+class NestedDispatchGraph:
+    """root -> dispatch A (unresolved) -> B -> dispatch B (unresolved) -> C.
+
+    B has no direct predecessor: it is reached only through A's residual
+    admission, so a one-pass closure never scans B's own unresolved site.
+    """
+
+    name = "nested-dispatch-fixture.so"
+    funcs = {0x10: "root", 0x20: "dispatch_a", 0x30: "b",
+             0x40: "dispatch_b", 0x50: "c"}
+    start_set = set(funcs)
+    direct = {0x10: {0x20}, 0x20: set(), 0x30: {0x40}, 0x40: set(),
+              0x50: set()}
+    taken_code = set()
+    taken_data = set()
+    address_taken_union = set()
+    dynamic_reloc_targets = set()
+    field_stores = {}
+    unknown_call_arg_targets = set()
+    sites = {}
+
+
+def nested_dispatch_fixture():
+    g = NestedDispatchGraph()
+    g.sites = {
+        (0x20, 0x21, "call"): {
+            "kind": "call", "func": 0x20, "addr": 0x21,
+            "text": "call *%rax", "targets": set(), "unresolved": True,
+            "reason": "reg-top", "class": "materialised",
+            "arg_targets": {0x30}},
+        (0x40, 0x41, "call"): {
+            "kind": "call", "func": 0x40, "addr": 0x41,
+            "text": "call *%rax", "targets": set(), "unresolved": True,
+            "reason": "reg-top", "class": "materialised",
+            "arg_targets": {0x50}},
+    }
+    return g
+
+
+def case_fixpoint_reaches_nested_unresolved():
+    g = nested_dispatch_fixture()
+    one_pass = cc.build_graph({g.name: g}, {(g.name, 0x10)}, {}, max_rounds=1)
+    g = nested_dispatch_fixture()
+    fixpoint = cc.build_graph({g.name: g}, {(g.name, 0x10)}, {})
+    c = (g.name, 0x50)
+    ok = (c not in one_pass["upper_reachable"]
+          and one_pass["converged"] is False
+          and c in fixpoint["upper_reachable"]
+          and fixpoint["converged"] is True
+          and (g.name, 0x30) not in fixpoint["direct_reachable"])
+    return _case(
+        "ag-fixpoint-reaches-nested-unresolved",
+        "synthetic graph root -> dispatch A (unresolved) -> B -> dispatch B "
+        "(unresolved) -> C, with B reachable only through A's residual "
+        "admission",
+        "close the graph once (max_rounds=1) and to its least fixed point",
+        "the single pass omits C and reports non-convergence; the fixpoint "
+        "includes C",
+        (f"single_pass_has_C={c in one_pass['upper_reachable']}, "
+         f"single_pass_converged={one_pass['converged']}, "
+         f"fixpoint_has_C={c in fixpoint['upper_reachable']}, "
+         f"fixpoint_rounds={fixpoint['closure_rounds']}"),
+        ok,
+        {"single_pass_round_sizes": one_pass["round_sizes"],
+         "fixpoint_round_sizes": fixpoint["round_sizes"],
+         "fixpoint_sites_scanned": fixpoint["sites_scanned_per_round"]})
+
+
+class MonotoneBoundGraph:
+    """One module whose evidence sources are pairwise distinct.
+
+    ``0x50`` is admitted only by the in-image dynamic-relocation widening --
+    the real ``CRYPTO_cbc128_encrypt`` shape: a function reached through a GOT
+    slot that the pre-repair class-specific bound could not contain.
+    """
+
+    name = "monotone-bound-fixture.so"
+    funcs = {0x10: "root", 0x20: "materialised_target",
+             0x30: "field_target", 0x40: "argument_target",
+             0x50: "got_target"}
+    start_set = set(funcs)
+    taken_code = {0x20}
+    taken_data = {0x30}
+    address_taken_union = {0x20, 0x30, 0x50}
+    dynamic_reloc_targets = {0x50}
+    field_stores = {0x20: {0x30}}
+    unknown_call_arg_targets = {0x40}
+    sites = {}
+
+
+def case_monotone_bound_under_classification_loss():
+    g = MonotoneBoundGraph()
+    proved = {"kind": "call", "func": 0x10, "addr": 0x11,
+              "text": "call *%rax", "targets": {0x20, 0x50},
+              "unresolved": False, "class": "PROVED_TARGET_SET",
+              "arg_targets": set()}
+    residual = {**proved, "unresolved": True, "class": "materialised",
+                "targets": set()}
+    bound = cc.unresolved_site_bound(g, residual)
+    class_sets = {
+        "taken_code": set(g.taken_code),
+        "taken_data": set(g.taken_data),
+        "address_taken_union": set(g.address_taken_union),
+        "dynamic_reloc_targets": set(g.dynamic_reloc_targets),
+        "field_stores": {v for vs in g.field_stores.values() for v in vs},
+        "unknown_call_arg_targets": set(g.unknown_call_arg_targets),
+        "site_targets": set(proved["targets"]) | set(proved["arg_targets"]),
+    }
+    subsets = {k: sorted(v) for k, v in class_sets.items() if not v <= bound}
+    proved_kept = set(proved["targets"]) <= bound
+    ok = proved_kept and not subsets
+    return _case(
+        "ah-monotone-bound-under-classification-loss",
+        "a site classified PROVED_TARGET_SET with {0x20, 0x50}, then "
+        "UNRESOLVED with the same resolver targets dropped",
+        "re-classify the site and recompute the residual bound",
+        "the unresolved bound is a superset of the proved set and of every "
+        "class-specific set",
+        (f"proved_set_in_bound={proved_kept}, "
+         f"class_sets_not_covered={subsets or 'none'}"),
+        ok,
+        {"bound": sorted(bound),
+         "proved_targets": sorted(proved["targets"]),
+         "residual_site_targets": sorted(residual["targets"])})
+
+
+class _IdentityFixture:
+    """A module whose .text and symbol rows are decoupled from its DSO digest."""
+
+    def __init__(self, dso_sha, *, text_sha="a" * 64, size=4096,
+                 rows=None):
+        self.name = "identity-fixture.so"
+        self.sha256 = dso_sha
+        self._text = text_sha
+        self._size = size
+        self._rows = rows or [["f", 0x10, 8, "T"], ["g", 0x20, 16, "T"]]
+
+    def text_digest(self):
+        return self._text, self._size
+
+    def symbol_table_rows(self):
+        return list(self._rows)
+
+
+def case_neutral_rebuild():
+    """A comment-only edit: different DSO digest, identical analysis input."""
+    original = _IdentityFixture("0" * 64)
+    comment_only = _IdentityFixture("f" * 64)          # same .text and symbols
+    code_change = _IdentityFixture("0" * 64, text_sha="b" * 64)
+    i_original = cc.analysis_identity({original.name: original})
+    i_comment = cc.analysis_identity({comment_only.name: comment_only})
+    i_code = cc.analysis_identity({code_change.name: code_change})
+    ok = (i_original["digest"] == i_comment["digest"]
+          and i_original["modules"][original.name]["dso_sha256"]
+          != i_comment["modules"][comment_only.name]["dso_sha256"]
+          and i_original["digest"] != i_code["digest"])
+    return _case(
+        "ai-neutral-rebuild",
+        "one module, two builds: a comment-only source edit (identical .text "
+        "and symbol rows, different DSO digest) and a code edit",
+        "compute the analysis identity for both builds",
+        "the comment-only rebuild shares the analysis identity while its DSO "
+        "digest differs, and the code edit changes the identity",
+        (f"comment_only_same_identity="
+         f"{i_original['digest'] == i_comment['digest']}, "
+         f"dso_digest_differs="
+         f"{original.sha256 != comment_only.sha256}, "
+         f"code_edit_changes_identity={i_original['digest'] != i_code['digest']}"),
+        ok,
+        {"analysis_identity": i_original["digest"],
+         "basis": i_original["basis"],
+         "dso_digest_is_analysis_identity": i_original["modules"][
+             original.name]["dso_sha256_is_analysis_identity"]})
+
+
+# --------------------------------------------------------------------------- #
+# v1.6: admission by refutation
+# --------------------------------------------------------------------------- #
+# The exclusions were derived against the pre-closure direct set.  When the
+# sound bound reaches an excluded caller, the exclusion is false; the caller's
+# contribution is admitted and the closure recomputed.  The corpus exercises the
+# production `admission_fixpoint`, `admit_refuted_exclusions` and record builder.
+
+
+class AdmissionGraph:
+    name = "admission-fixture.so"
+    funcs = {0x10: "site_func", 0x20: "target_ok", 0x30: "excluded_caller",
+             0x40: "target_dropped", 0x50: "reachable_caller"}
+    start_set = set(funcs)
+    all_syms = dict(funcs)
+    names_at = {a: {n} for a, n in funcs.items()}
+    taken_code = set()
+    taken_data = set()
+    address_taken_union = set()
+    dynamic_reloc_targets = set()
+    field_stores = {}
+    unknown_call_arg_targets = set()
+    slot_func_targets = set()
+    sites = {}
+
+    def __init__(self):
+        self.direct = {0x10: {0x50}}
+
+    def section_of(self, _a):
+        return ".text"
+
+    def containing(self, a):
+        return max(x for x in self.funcs if x <= a)
+
+    def static_slot(self, _a):
+        return None
+
+    def seam_symbol(self, _a):
+        return None
+
+    def cstring_at(self, _a):
+        return None
+
+    def is_data(self, _a):
+        return False
+
+
+def admission_fixture(*, reach_excluded, unbounded=False):
+    g = AdmissionGraph()
+    if reach_excluded:
+        g.direct = {0x10: {0x50, 0x30}}
+    excluded_targets = [] if unbounded else ["0x40"]
+    excluded_args = [{
+        "argument_index": 0, "targets": list(excluded_targets),
+        "non_image_values": ["<top>"] if unbounded else [],
+        "unresolved": bool(unbounded), "witness_instruction": []}]
+    arg_targets = {0x20} | ({0x40} if not unbounded else set())
+    g.sites = {(0x10, 0x11, "call"): {
+        "kind": "call", "func": 0x10, "addr": 0x11,
+        "text": "call *%rax", "targets": {0x20},
+        "unresolved": False, "class": "reachable-caller-target",
+        "reason": "reachable-caller target bounding",
+        "field_offsets": set(), "arg_deps": {0}, "arg_targets": arg_targets,
+        "reachable_caller_bound": {
+            "reachable_callers": [{
+                "function": "0x50", "symbol": "reachable_caller",
+                "reachable": True, "reason": None,
+                "call_sites": [{"call_site": "0x51", "arguments": [{
+                    "argument": 0, "argument_index": 0,
+                    "targets": ["0x20"], "non_image_values": [],
+                    "unresolved": False, "witness_instruction": []}]}],
+                "contributed_targets": ["0x20"]}],
+            "excluded_callers": [{
+                "function": "0x30", "symbol": "excluded_caller",
+                "reachable": False, "reason": "not in this family's "
+                "reachable set", "in_image_references": [],
+                "call_sites": [{"call_site": "0x31",
+                                "arguments": excluded_args}],
+                "contributed_targets": excluded_targets}],
+            "bounded_targets": ["0x20"],
+            "attributed_targets": [hex(a) for a in sorted(arg_targets)],
+            "unattributed_targets": []}}}
+    return g
+
+
+def _admission_run(g, *, admit=True):
+    close = lambda: cc.build_graph({g.name: g}, {(g.name, 0x10)}, {})
+    if not admit:
+        return close(), None
+    return cc.admission_fixpoint({g.name: g}, close)
+
+
+def case_admission_refuted_caller():
+    g = admission_fixture(reach_excluded=True)
+    closure, report = _admission_run(g)
+    site = g.sites[(0x10, 0x11, "call")]
+    bound = site["reachable_caller_bound"]
+    oracle = cc.ReachabilityOracle({g.name: g}, closure["upper_reachable"])
+    records = cc.build_edge_records({g.name: g}, oracle)
+    defects = cc.validate_edge_records(records, oracle)
+    ok = (0x40 in site["targets"]
+          and (g.name, 0x40) in closure["upper_reachable"]
+          and bound["excluded_callers"] == []
+          and any(r.get("admitted_by_refutation")
+                  for r in bound["reachable_callers"])
+          and report["refuted_exclusions"][cc.ADMISSION_ROLE_CALLER] == 1
+          and report["admitted_by_refutation"]["count"] == 1
+          and not defects)
+    return _case(
+        "bb-admission-refuted-caller",
+        "a caller-bound site whose excluded caller the sound bound reaches",
+        "run admission + closure recomputation",
+        "the caller's target is admitted, the exclusion is gone, and the record "
+        "validates against the sound bound",
+        (f"target_admitted={0x40 in site['targets']}, "
+         f"exclusions={len(bound['excluded_callers'])}, "
+         f"passes={report['passes']}, "
+         f"admitted_targets={report['admitted_by_refutation']['targets']}, "
+         f"defects={defects[:2]}"),
+        ok,
+        {"passes": report["passes"],
+         "refuted_exclusions": report["refuted_exclusions"],
+         "admitted_by_refutation": report["admitted_by_refutation"],
+         "reachable": sorted(f"{m}:{a:#x}" for m, a in
+                             closure["upper_reachable"])})
+
+
+def case_admission_surviving_caller():
+    g = admission_fixture(reach_excluded=False)
+    closure, report = _admission_run(g)
+    site = g.sites[(0x10, 0x11, "call")]
+    oracle = cc.ReachabilityOracle({g.name: g}, closure["upper_reachable"])
+    defects = cc.validate_edge_records(
+        cc.build_edge_records({g.name: g}, oracle), oracle)
+    ok = (0x40 not in site["targets"]
+          and len(site["reachable_caller_bound"]["excluded_callers"]) == 1
+          and report["passes"] == 0
+          and not defects)
+    return _case(
+        "bc-admission-surviving-caller",
+        "a caller-bound site whose excluded caller the sound bound does not "
+        "reach",
+        "run admission + closure recomputation",
+        "no admission occurs, the exclusion survives, and the record validates",
+        (f"targets={sorted(site['targets'])}, "
+         f"exclusions="
+         f"{len(site['reachable_caller_bound']['excluded_callers'])}, "
+         f"passes={report['passes']}, defects={defects[:2]}"),
+        ok)
+
+
+def case_admission_widens_to_unresolved():
+    g = admission_fixture(reach_excluded=True, unbounded=True)
+    closure, report = _admission_run(g)
+    site = g.sites[(0x10, 0x11, "call")]
+    oracle = cc.ReachabilityOracle({g.name: g}, closure["upper_reachable"])
+    records = cc.build_edge_records({g.name: g}, oracle)
+    defects = cc.validate_edge_records(records, oracle)
+    ok = (site["unresolved"]
+          and "refutation-unbounded" in (site.get("reason") or "")
+          and site["reachable_caller_bound"]["excluded_callers"] == []
+          and [r["disposition"] for r in records] == [cc.DISPOSITION_UNRESOLVED]
+          and all(r.get("missing_property") for r in records)
+          and not defects)
+    return _case(
+        "bd-admission-widens-to-unresolved",
+        "a caller-bound site whose refuted caller passes an argument with no "
+        "finite image target set",
+        "run admission + closure recomputation",
+        "the site becomes UNRESOLVED with a named refutation-unbounded "
+        "property and the record validates",
+        (f"unresolved={site['unresolved']}, "
+         f"reason={site.get('reason')}, "
+         f"dispositions={[r['disposition'] for r in records]}, "
+         f"defects={defects[:2]}"),
+        ok)
+
+
+def case_admission_disabled_control():
+    """Mutation control: without the pass the refuted case must fail."""
+    g = admission_fixture(reach_excluded=True)
+    closure, _report = _admission_run(g, admit=False)
+    site = g.sites[(0x10, 0x11, "call")]
+    oracle = cc.ReachabilityOracle({g.name: g}, closure["upper_reachable"])
+    defects = cc.validate_edge_records(
+        cc.build_edge_records({g.name: g}, oracle), oracle)
+    ok = (0x40 not in site["targets"]
+          and bool(site["reachable_caller_bound"]["excluded_callers"])
+          and bool(defects))
+    return _case(
+        "be-admission-disabled-control",
+        "the refuted-caller fixture with the admission pass disabled",
+        "compute the closure without admission and build records",
+        "the target is not admitted, the exclusion remains, and the validator "
+        "refuses the record -- the admission case is sensitive to the mechanism",
+        (f"target_admitted={0x40 in site['targets']}, "
+         f"exclusions="
+         f"{len(site['reachable_caller_bound']['excluded_callers'])}, "
+         f"defects={len(defects)}"),
+        ok)
+
+
+def case_admission_unconditional_control():
+    """Mutation control: admitting without the bound check must fail."""
+    g = admission_fixture(reach_excluded=False)
+    site = g.sites[(0x10, 0x11, "call")]
+    bound = site["reachable_caller_bound"]
+    moved = bound["excluded_callers"].pop()
+    moved["admitted_by_refutation"] = True
+    bound["reachable_callers"].append(moved)
+    site["targets"] |= {0x40}
+    closure = cc.build_graph({g.name: g}, {(g.name, 0x10)}, {})
+    oracle = cc.ReachabilityOracle({g.name: g}, closure["upper_reachable"])
+    defects = cc.validate_edge_records(
+        cc.build_edge_records({g.name: g}, oracle), oracle)
+    ok = not bound["excluded_callers"] and bool(defects)
+    return _case(
+        "bf-admission-unconditional-control",
+        "the surviving-exclusion fixture with unconditional admission (no "
+        "sound-bound check)",
+        "move the excluded caller regardless of the oracle and build records",
+        "the caller is claimed reachable although the bound does not reach it "
+        "and the validator refuses the record",
+        (f"exclusions={len(bound['excluded_callers'])}, "
+         f"defects={len(defects)}"),
+        ok)
+
+
+def case_reachable_digest_canonicalisation():
+    """Two neutral builds differ only in .llvm.<hash>; the digest must not."""
+    class Names:
+        name = "names.so"
+
+        def __init__(self, suffix):
+            self.funcs = {0x10: f"local_fn.llvm.{suffix}",
+                          0x20: "CRYPTO_export@@OPENSSL_3.0.0"}
+
+    reach = {("names.so", 0x10), ("names.so", 0x20)}
+    a = cc.reachable_function_entries({"names.so": Names("111")}, reach)
+    b = cc.reachable_function_entries({"names.so": Names("222")}, reach)
+    raw_a = cc.reachable_function_entries({"names.so": Names("111")}, reach,
+                                          canonical=False)
+    raw_b = cc.reachable_function_entries({"names.so": Names("222")}, reach,
+                                          canonical=False)
+    ok = (a == b
+          and cc.reachable_functions_digest(a) == cc.reachable_functions_digest(b)
+          and cc.reachable_functions_digest(raw_a)
+          != cc.reachable_functions_digest(raw_b))
+    return _case(
+        "ba-reachable-digest-canonicalisation",
+        "two neutral builds whose reachable addresses are identical but whose "
+        "compiler-generated .llvm.<hash> suffixes differ",
+        "build the reachable-function list and digest in canonical and raw form",
+        "the canonical digest is equal while the raw-name digest differs",
+        (f"canonical_equal={a == b}, "
+         f"canonical_digest={cc.reachable_functions_digest(a)[:16]}, "
+         f"raw_digest_differs="
+         f"{cc.reachable_functions_digest(raw_a) != cc.reachable_functions_digest(raw_b)}"),
+        ok,
+        {"canonical_entries": a, "raw_entries_a": raw_a,
+         "raw_entries_b": raw_b})
+
+
 CASES = (
     case_identical_rebuild,
     case_layout_perturbation,
@@ -1645,6 +2112,17 @@ CASES = (
     case_attribution_witness_mismatch,
     case_unattributed_admission_forged,
     case_zero_attribution_proved_refused,
+    # v1.5: monotone bound, least-fixed-point admission, analysis identity
+    case_fixpoint_reaches_nested_unresolved,
+    case_monotone_bound_under_classification_loss,
+    case_neutral_rebuild,
+    case_reachable_digest_canonicalisation,
+    # v1.6: admission by refutation of unsound exclusions
+    case_admission_refuted_caller,
+    case_admission_surviving_caller,
+    case_admission_widens_to_unresolved,
+    case_admission_disabled_control,
+    case_admission_unconditional_control,
 )
 
 NOT_COVERED = [
@@ -1654,6 +2132,8 @@ NOT_COVERED = [
     "PLT/GOT tricks beyond the fixture's link-time constant thunk slot",
     "dlopen-supplied and dlsym-resolved targets",
     "provider dispatch tables selected at runtime",
+    "admission by refutation of a *real* excluded writer/caller; the corpus "
+    "exercises the caller-bound shape on a synthetic bound, not a real image",
     "the full library's real instruction idioms; the fixtures use the "
     "instruction shapes the semantic rule recognises",
 ]
@@ -1694,6 +2174,12 @@ def main(argv=None):
             "A PASS is not a soundness result: the corpus shows that named "
             "transformations do not change the named properties, not that no "
             "transformation can.",
+            "A monotone residual bound is not a completeness result: the fixpoint "
+            "cannot admit a function that no materialised-address evidence names, "
+            "and the closure cases use synthetic evidence, not a real image.",
+            "The neutral-rebuild case is a metamorphic relation on the identity "
+            "function.  Byte-identical .text across independent real builds is a "
+            "separate measurement, not something this fixture establishes.",
             "The fixtures are synthetic and do not reproduce the real "
             "library's layout, linker behaviour, or runtime dispatch.",
             "The refusal cases establish that the named disagreements are "
