@@ -14,13 +14,13 @@
       "identities_mismatches": 0,
       "links_convention": 302,
       "links_documented": 25,
-      "links_explicit": 21,
+      "links_explicit": 23,
       "problems": 0,
-      "signatures_authority_only": 286,
-      "signatures_checked": 355,
+      "signatures_authority_only": 285,
+      "signatures_checked": 357,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 266,
-      "signatures_unlinked": 4,
+      "signatures_not_a_dispatch": 267,
+      "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
     "identities": {
@@ -1557,7 +1557,6 @@
         "ASN1_primitive_i2c",
         "ASN1_primitive_print",
         "BIO_dgram_sctp_notification_handler_fn",
-        "CRYPTO_EX_free",
         "ENGINE_GEN_FUNC_PTR",
         "GEN_SESSION_CB",
         "OPENSSL_LH_COMPFUNC",
@@ -4138,6 +4137,14 @@
           "how": "explicit"
         },
         {
+          "alias": "FreeFn",
+          "at": "src/runtime/dso_shared.rs",
+          "authority": "CRYPTO_free_fn",
+          "authority_signature": "fptr(void; ptr(opaque), ptr(const(int:1:s)), int:4:s)",
+          "crate_signature": "fptr(void; ptr(opaque), ptr(const(int:1:s)), int:4:s)",
+          "how": "explicit"
+        },
+        {
           "alias": "NewFunc",
           "at": "src/runtime/ex_data.rs",
           "authority": "CRYPTO_EX_new",
@@ -4175,6 +4182,14 @@
           "authority": "CRYPTO_free_fn",
           "authority_signature": "fptr(void; ptr(opaque), ptr(const(int:1:s)), int:4:s)",
           "crate_signature": "fptr(void; ptr(opaque), ptr(const(int:1:s)), int:4:s)",
+          "how": "explicit"
+        },
+        {
+          "alias": "FreeCb",
+          "at": "src/runtime/refcount.rs",
+          "authority": "CRYPTO_EX_free",
+          "authority_signature": "fptr(void; ptr(opaque), ptr(opaque), ptr(opaque), int:4:s, int:8:s, ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque), ptr(opaque), ptr(opaque), int:4:s, int:8:s, ptr(opaque))",
           "how": "explicit"
         },
         {
@@ -4677,11 +4692,6 @@
       "mismatches": [],
       "not_a_dispatch": [
         {
-          "alias": "Rfunc",
-          "at": "src/asn1/a_mbstr.rs",
-          "why": "not an authority type: a crate-local callback shape with no header counterpart"
-        },
-        {
           "alias": "CharIo",
           "at": "src/asn1/a_strex.rs",
           "why": "not an authority type: a crate-local callback shape with no header counterpart"
@@ -4700,6 +4710,11 @@
           "alias": "OsslCmpAllowUnprotectedCb",
           "at": "src/cmp/cmp_vfy.rs",
           "why": "not a provider dispatch: a callback typedef declared in `crypto/cmp/cmp_local.h:996`, which is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "RecipientInfoPushFn",
+          "at": "src/cms/cms_env.rs",
+          "why": "not a provider dispatch: the prototype of the authority's exported `OPENSSL_sk_push` (`int OPENSSL_sk_push(OPENSSL_STACK *, const void *)`), named so the crate's `UnpublishedRecipient::publish_with` can take a test double for the push step; the authority declares a function rather than a callback typedef, so there is no typedef for the atlas to record"
         },
         {
           "alias": "DhGenerateKeyFn",
@@ -5817,6 +5832,11 @@
           "why": "not a provider dispatch: a libssl callback typedef (`ssl.h`/`tls1.h`/`tls_depr.h`), an application callback the `SSL_CTX`/`SSL` setters take rather than a provider dispatch function; the crate's alias name does not squash to the authority's `SSL_*`/`TLS_*` typedef name, so the convention rule has no name to join on"
         },
         {
+          "alias": "StatusCb",
+          "at": "src/ssl/ssl_lib.rs",
+          "why": "not a provider dispatch: an application callback `ssl_local.h` spells inline (`SSL_CTX_set_tlsext_status_cb`'s `int (*)(SSL *, void *)` at `ssl_local.h:1012`); the header is internal, so the atlas records no typedef for it and the convention rule has no authority name to join on"
+        },
+        {
           "alias": "TicketKeyCb",
           "at": "src/ssl/ssl_lib.rs",
           "why": "not a provider dispatch: a libssl callback typedef (`ssl.h`/`tls1.h`/`tls_depr.h`), an application callback the `SSL_CTX`/`SSL` setters take rather than a provider dispatch function; the crate's alias name does not squash to the authority's `SSL_*`/`TLS_*` typedef name, so the convention rule has no name to join on"
@@ -6007,24 +6027,7 @@
           "why": "not a provider dispatch: `struct x509_trust_st`'s `check_trust` member and `X509_TRUST_set_default`'s argument (`include/openssl/x509_vfy.h.in:83-88,145`), declared inline as plain function pointers rather than through `OSSL_CORE_MAKE_FUNC`"
         }
       ],
-      "unlinked": [
-        {
-          "alias": "RecipientInfoPushFn",
-          "at": "src/cms/cms_env.rs"
-        },
-        {
-          "alias": "FreeFn",
-          "at": "src/runtime/dso_shared.rs"
-        },
-        {
-          "alias": "FreeCb",
-          "at": "src/runtime/refcount.rs"
-        },
-        {
-          "alias": "StatusCb",
-          "at": "src/ssl/ssl_lib.rs"
-        }
-      ],
+      "unlinked": [],
       "unmapped": []
     },
     "what": "every `OSSL_FUNC_*` dispatch identity the crate declares agrees with the authority's recorded macro value, and every Rust function-type alias the crate declares agrees with the canonical form of the authority function-type typedef it implements",

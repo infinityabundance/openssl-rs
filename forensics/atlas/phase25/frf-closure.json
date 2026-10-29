@@ -16,7 +16,7 @@
     },
     "claim": {
       "closed": false,
-      "open_residuals": 540,
+      "open_residuals": 664,
       "orphans": 0,
       "reason": "the closure is closed only when every record and obligation is joined with no orphan, every receipt the stratum owes is present, and no residual is open or undisposed. No Phase-25 court is declarable, so the FRF/Gemel chain entry is vacuous and the atlas carries open residuals: the closure records this rather than claiming it closed",
       "undisposed_residuals": 0
@@ -40,10 +40,10 @@
       "records_pending": 0,
       "residual_classes_outside_schema": 1,
       "residual_crosscheck": 11,
-      "residual_records": 574,
-      "residuals": 585,
-      "residuals_disposed": 574,
-      "residuals_open": 540,
+      "residual_records": 698,
+      "residuals": 709,
+      "residuals_disposed": 698,
+      "residuals_open": 664,
       "residuals_undisposed": 0
     },
     "gemel": {
@@ -78,7 +78,7 @@
       "checkpoints_naming_phase": [],
       "current": "checkpoint.4b913a19e54b61b2f21bf0ed78a152424a79e6dbd291684b2b5f4dc0d713d35d",
       "identity": {
-        "candidate_version": "0.0.31",
+        "candidate_version": "0.0.43",
         "checkpoint_state_hash": "a887e4176ee59aec0a6d958696c805efffe6df8a2620c4b9339b849138ac805d",
         "plan": {
           "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
@@ -367,7 +367,7 @@
     "property_findings": [
       "the record set is 22 Phase-25 contract unit(s): 22 joined to their committed evidence and generator, 0 pending with the subphase that lands them and 0 orphaned",
       "the FRF chain owes 0 receipt(s) and the stratum's 22 court obligation(s) join their committed evidence (22 joined, 0 owing a receipt, 0 orphaned), so no receipt/challenge/claim that names a Phase-25 court is orphaned",
-      "the residual census disposes 574 of 574 residual record(s) from the closed disposition vocabulary and records 11 light cross-check leftover(s); 540 residual(s) are open and 0 undisposed",
+      "the residual census disposes 698 of 698 residual record(s) from the closed disposition vocabulary and records 11 light cross-check leftover(s); 664 residual(s) are open and 0 undisposed",
       "1 residual(s) carry a class from a plane's own vocabulary rather than memory_safety_schemas.RESIDUAL_CLASSES (evidence_not_reproducible=1); each is recorded with its disposition rather than read as an undisposed leftover",
       "the open residual(s) are named rather than smoothed to a zero (a bounded sample of 8 per plane; the full set is in the cited plane): clean-regeneration=1, cve-replay=4, exposure-classification=1, historical-cve-census=8, mechanism-reconciliation=4, phase18-fuzz-crosswalk=8, phase22-crosswalk=8, phase24-crosswalk=8, phase24-safety-coverage=8, red-team=1",
       "a passing MS-FRF-CLOSURE is an instrument, not a property: the stratum's chain entry is vacuous (no Phase-25 court is declarable) and the atlas carries open residuals, so the closure records property_status NOT_CLAIMED rather than a chain that ran"
@@ -460,7 +460,7 @@
       {
         "artefact": "artifacts/phase25/exposure.json",
         "artefact_present": true,
-        "artefact_sha256": "310e39cb6e06ba04ecd10e2751d2c86c230d59317296d29ba4c63e4ef60077dc",
+        "artefact_sha256": "2aa6f5a0971776bac2a7417af0c78ce83ffd1c7ab6c99b4a76771f0d28a6aac0",
         "court": "MS-EXPOSURE-CLASSIFICATION",
         "generator": "forensics/tools/ms_exposure.py",
         "generator_present": true,
@@ -589,7 +589,7 @@
       {
         "artefact": "artifacts/phase25/ownership-planes.json",
         "artefact_present": true,
-        "artefact_sha256": "895663c0944f621f3a4deab8996fc3a61f76a43925ccc5bb3ea9603d33833681",
+        "artefact_sha256": "242d863743fa41d658d6172c808b13bf2c836bc41f8f40644ca7e086338979a6",
         "court": "MS-OWNERSHIP-PLANES",
         "generator": "forensics/tools/ms_ownership_planes.py",
         "generator_present": true,
@@ -610,7 +610,7 @@
       {
         "artefact": "artifacts/phase25/phase18-fuzz-crosswalk.json",
         "artefact_present": true,
-        "artefact_sha256": "6bd5a0f61a576b0eb279be19b32115ecd73097c70acf4d4e8fb8631fb8562b01",
+        "artefact_sha256": "19906c7626f07171688aebe80918eb48c20150b9fde2d1da13259ad518d42d1c",
         "court": "MS-PHASE18-FUZZ-CROSSWALK",
         "generator": "forensics/tools/ms_phase18_fuzz_crosswalk.py",
         "generator_present": true,
@@ -642,7 +642,7 @@
       {
         "artefact": "artifacts/phase25/phase24-crosswalk.json",
         "artefact_present": true,
-        "artefact_sha256": "16575592a53614ea904ccda5dd480e537fe1c10a6c12cda99fa50c5859387734",
+        "artefact_sha256": "061a584b0453298a3a721147e5dc3d6c4213f42693944a9c2efff9af83f36c04",
         "court": "MS-PHASE24-CROSSWALK",
         "generator": "forensics/tools/ms_phase24_crosswalk.py",
         "generator_present": true,
@@ -658,7 +658,7 @@
       {
         "artefact": "artifacts/phase25/phase24-safety-coverage.json",
         "artefact_present": true,
-        "artefact_sha256": "f98788c47af91c0b3730f4e1ba1f372398bbd16ee288156ed6799312e35733d5",
+        "artefact_sha256": "ab71d43f617b022ee812658b871075ec9c313508f8be5c466b37d00396cade46",
         "court": "MS-PHASE24-SAFETY-COVERAGE",
         "generator": "forensics/tools/ms_phase24_safety_coverage.py",
         "generator_present": true,
@@ -674,7 +674,7 @@
       {
         "artefact": "artifacts/phase25/red-team.json",
         "artefact_present": true,
-        "artefact_sha256": "af32bf3f309c68f9dd27f10fa48a283fbec26dc877528259c40949978584fbc6",
+        "artefact_sha256": "94ee5fa151cd5434edbae652f0310f474e041fe509a74499afd3ad1dd4331c90",
         "court": "MS-RED-TEAM",
         "generator": "forensics/tools/ms_red_team.py",
         "generator_present": true,
@@ -740,7 +740,7 @@
       {
         "artefact": "artifacts/phase25/unsafe-reduction.json",
         "artefact_present": true,
-        "artefact_sha256": "153609ed444f43281e73201196c16cd2072ce2a292f555b7fb846ba3e76f100a",
+        "artefact_sha256": "baf47a9150bdeaf4ddd045392cdcb877f5e17d91201e652ccb74234a52227e65",
         "court": "MS-UNSAFE-REDUCTION",
         "generator": "forensics/tools/ms_reduction.py",
         "generator_present": true,
@@ -759,7 +759,7 @@
         "evidence_missing": 389,
         "evidence_not_reproducible": 1,
         "historical_cve_unreplayed": 4,
-        "join_evidence_missing": 156,
+        "join_evidence_missing": 280,
         "mechanism_unreconciled": 4,
         "out_of_scope": 20,
         "tool_not_reachable": 4,
@@ -768,7 +768,7 @@
       },
       "by_disposition": {
         "classified": 1,
-        "open": 540,
+        "open": 664,
         "preserved": 33
       },
       "by_plane": {
@@ -927,15 +927,15 @@
         "phase24-crosswalk": {
           "by_class": {
             "evidence_missing": 1,
-            "join_evidence_missing": 95
+            "join_evidence_missing": 219
           },
           "by_disposition": {
-            "open": 96
+            "open": 220
           },
           "crosscheck": 0,
-          "open": 96,
-          "records": 96,
-          "total": 96
+          "open": 220,
+          "records": 220,
+          "total": 220
         },
         "phase24-safety-coverage": {
           "by_class": {
@@ -1005,8 +1005,8 @@
         "evidence_not_reproducible": 1
       },
       "crosscheck": 11,
-      "disposed": 574,
-      "open": 540,
+      "disposed": 698,
+      "open": 664,
       "open_sample": {
         "clean-regeneration": [
           "res-regen-4-drift"
@@ -1059,12 +1059,12 @@
         "phase24-crosswalk": [
           "rx:67146b255d4330fd",
           "rx:d1f041e2571a1994",
+          "rx:8d761d1983e303a6",
+          "rx:914b9a8113620def",
           "rx:107a98feb0939614",
-          "rx:7c81cbb394b84b01",
-          "rx:b6798f72a08bd21d",
-          "rx:d6ef5946da14d6f0",
-          "rx:ad88c38925b6dc5e",
-          "rx:4a755261ae558a51"
+          "rx:d8bd66cb9a87efca",
+          "rx:197c4d3ce915e30e",
+          "rx:ba8ddc0811e8c949"
         ],
         "phase24-safety-coverage": [
           "rx:b93d7b6ce37d13e6",
@@ -1080,16 +1080,16 @@
           "rt-res-rt-phase22-unwitnessed-external"
         ]
       },
-      "records": 574,
+      "records": 698,
       "sample_bound": 8,
-      "total": 585,
+      "total": 709,
       "undisposed": 0,
       "undisposed_sets": {}
     },
     "sort_key": "records by unit; obligations by unit; receipts/challenges/claims by court id; residual_census planes/by_class/by_disposition by key with every list sorted; chain.declared_courts and chain.probe_pairs sorted; gemel so the current checkpoint and the naming sets are derived from the committed projection; every list sorted",
     "what_this_is": "Phase 25.20's FRF/Gemel closure: the record set (every Phase-25 contract unit joined to its committed evidence and its committed generator), the obligation and receipt joins (no unit and no receipt orphaned), the residual census (every residual classified and disposed, the open ones named), the FRF chain staging (why no Phase-25 court is declarable, and the harness challenge that stands in its place) and the Gemel checkpoint projection (the state of the committed forensics/GEMEL_TRAJECTORY.md, never the store). It is an instrument plus an observation record, not a claim that the stratum has a declarable court."
   },
-  "body_hash": "deea6a6e7686a04d3a59f769cc37590670ec4b3cffd1b9e0b390139580dfd7d2",
+  "body_hash": "7b0172e11b9ed032c6b2f61e0cd0de947916b7a3a5a152e5cebec4c2f184802b",
   "generator": "forensics/tools/ms_frf_closure.py",
   "inputs": [
     {
@@ -1145,7 +1145,7 @@
     {
       "name": "ownership-planes",
       "path": "artifacts/phase25/ownership-planes.json",
-      "sha256": "8b38223e5dceba5eb0be692ba5c40c1d6f83256aa7137cf15b24f9a03110c95f"
+      "sha256": "da9ae33e1509013cdcea74b23fe174cfff06b76ddef1cc37eb2940588366afd9"
     },
     {
       "name": "phase22-crosswalk",
@@ -1155,17 +1155,17 @@
     {
       "name": "phase24-crosswalk",
       "path": "artifacts/phase25/phase24-crosswalk.json",
-      "sha256": "b1d9b3fc53677fbeb0ab4a51cacf3d41d6c7a7057765f49ab5e0f8bd1b6406a8"
+      "sha256": "cbdfda9fd6771e5511a53017fa7701a86d3ae5679815d85ee2dd110ad6044fd9"
     },
     {
       "name": "exposure-classification",
       "path": "artifacts/phase25/exposure.json",
-      "sha256": "f9adc37a407ff2801bbbc9c036eda6173a4f12092b6b0d59da083159ae11f35b"
+      "sha256": "84ccfbd52c1dea490b177659a582ac38745fc799b7b6ae81ac787f0ad71b8d36"
     },
     {
       "name": "unsafe-reduction",
       "path": "artifacts/phase25/unsafe-reduction.json",
-      "sha256": "25b440f5e643b2b69bafc930fbd2f7a588de0d5fd331fe28493e3928654fac4e"
+      "sha256": "d4da2565691bd187860a26c9779d42f8eb59387883fffbeb28c9d49783eab0ea"
     },
     {
       "name": "miri",
@@ -1190,17 +1190,17 @@
     {
       "name": "phase18-fuzz-crosswalk",
       "path": "artifacts/phase25/phase18-fuzz-crosswalk.json",
-      "sha256": "f43fe1e087890ae8a44d3af3b2932e90bf013453f277080f37003bc56ae6fd58"
+      "sha256": "95abbea7bb9f793174c0a52e38157d551ba04f2407b8b5e4ca1ff678562ad746"
     },
     {
       "name": "phase24-safety-coverage",
       "path": "artifacts/phase25/phase24-safety-coverage.json",
-      "sha256": "28e20d4206a07f4d8ba06d49f04ad54f60101c7f9024698917b9ae39b0ef1ce3"
+      "sha256": "58a9e03a32cb535d47cf0dbd462e4441a3dd6d3ba52b7594b44aee2ce0da8728"
     },
     {
       "name": "historical-cve-census",
       "path": "artifacts/phase25/historical-cves.json",
-      "sha256": "3de452f14bcb2fa11d9644435f52ac0022b824d73909df708ca4b2065a0664e8"
+      "sha256": "b2d436fe2505a4e1cc84bf753ddbe05260c5afc374a63abbff84ba69641cb192"
     },
     {
       "name": "cve-replay",
@@ -1210,12 +1210,12 @@
     {
       "name": "mechanism-reconciliation",
       "path": "artifacts/phase25/mechanisms.json",
-      "sha256": "02051a0debb3ab2161f3834760e5f888fa9eeaca23c49b031329d7a39b1ee452"
+      "sha256": "7f1ea2baa4e38ba31eb05f432490b51b79ad4fb02ff820e086020e9c35c72abb"
     },
     {
       "name": "red-team",
       "path": "artifacts/phase25/red-team.json",
-      "sha256": "34828e10ee49dd5a5f1909b02744ba94fd881937f2ef84fd4759e622ef08fbea"
+      "sha256": "649d2c171fbe3cad245856f4a98b4b04c3ed6ddd3a4309ce5f263a652de53f60"
     },
     {
       "name": "clean-regeneration",
@@ -1265,7 +1265,7 @@
     {
       "name": "tool:memory-safety-seal",
       "path": "forensics/tools/ms_seal.py",
-      "sha256": "f3b2aaa6b9fcd9d81cc613f1c7d6833ac4567a8fb4a47cf2274937933e8f49c2"
+      "sha256": "902125693de67d964e06356d060331b5b05c05a527686405706d5c616352fd67"
     },
     {
       "name": "tool:miri",

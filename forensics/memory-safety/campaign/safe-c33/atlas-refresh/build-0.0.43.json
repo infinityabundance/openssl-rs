@@ -1,0 +1,99 @@
+{
+  "receipt": "build-0.0.43",
+  "kind": "candidate-install-build",
+  "recorded_utc": "2026-10-28",
+  "crate": "openssl-rs",
+  "version": "0.0.43",
+  "status": "CANDIDATE_BUILD_NOT_PUBLISHED",
+  "purpose": "The install-tree identity of the 0.0.43 working tree, built once with the Phase-2 recipe. It is the identity rendered into README.md and STATUS-2026-10-20.md. It is a repository build identity: 0.0.43 is not published, and the published crate ships source and documentation only, with no binaries.",
+
+  "source_identity": {
+    "candidate_branch": "stage/p25/analyzer-corpus",
+    "measured_source_commit": "ad5913099732821d2e95d03823dd38e501d73481",
+    "measured_source_commit_subject": "fix(evp): restore the authority's unconditional skey destructor; adjudicate wrap cleanse",
+    "measured_source_tree_digest": "a1d8c9fc642b9f4c97e325e4f876a5e50b8a0a9406cb23f5ec59b397d5092bc2",
+    "measured_source_tree_digest_rule": "sha256 over canonical JSON of sorted [relpath, size, sha256] for src/, Cargo.toml, Cargo.lock, build.rs (v1p-candidate-freeze.json, computed by forensics/tools/phase7_courts.py::_source_tree_digest)",
+    "build_head": "2e90cbc6ef4650a70fd70458bd2d277a4ca2e1ce",
+    "build_source_tree_digest": "6a07d7933154cae3642858cc982651df0668661d11ad9b4c0737e7a5d03ffdd9",
+    "build_source_tree_digest_rule": "same rule; 887 files (src/, Cargo.toml, Cargo.lock, build.rs), recorded by forensics/tools/phase7_courts.py and phase8_courts.py `candidate-source-tree` inputs",
+    "manifest_delta_from_measured_source": "Cargo.toml version 0.0.42 -> 0.0.43 and documentation URL -> https://docs.rs/openssl-rs; Cargo.lock openssl-rs entry 0.0.42 -> 0.0.43; no Rust source, build.rs, build script, test or tool changed. The two tree digests differ because the digest includes the manifest.",
+    "working_tree_at_build": "dirty only by the manifest bump above (Cargo.toml, Cargo.lock) and by the tracked install-tree binaries this rebuild rewrote; no src/ file differs from ad5913099."
+  },
+
+  "build": {
+    "recipe": "bash forensics/tools/build_phase2.sh",
+    "court_container": "openssl-rs-court-expand",
+    "court_image": "openssl-rs-court-expand:1",
+    "cargo_build_jobs": 4,
+    "exit_status": 0,
+    "completion_marker": "phase 2 shell built.",
+    "phase2_courts": {
+      "receipt": "artifacts/phase2/COURTS.json",
+      "all_pass": true,
+      "courts": 11,
+      "passed": 11
+    }
+  },
+
+  "artefacts": {
+    "libcrypto.so.3": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "dadb0263f1eab453dc8717a9c1851772ffed7660eeeced29d79d7b206cec7fb3",
+      "size": 16848920,
+      "soname": "libcrypto.so.3",
+      "needed": ["libgcc_s.so.1", "libc.so.6", "ld-linux-x86-64.so.2"],
+      "runpath": null,
+      "dynamic_defined_symbols": 5906
+    },
+    "libssl.so.3": {
+      "path": "artifacts/phase2/install/lib/libssl.so.3",
+      "sha256": "45420e074339a75e82865b4876030200ffd324cf6667065ab4228a91da1a4be7",
+      "size": 16553800,
+      "soname": "libssl.so.3",
+      "needed": ["libcrypto.so.3", "libgcc_s.so.1", "libc.so.6", "ld-linux-x86-64.so.2"],
+      "runpath": null,
+      "dynamic_defined_symbols": 608
+    },
+    "legacy.so": {
+      "path": "artifacts/phase2/install/lib/ossl-modules/legacy.so",
+      "sha256": "9095ab043d8bdd7149481b7b63b78bba26630696abd89bd196a03ff8487e0b3c",
+      "size": 16520808,
+      "soname": null,
+      "needed": ["libcrypto.so.3", "libm.so.6", "libgcc_s.so.1", "libc.so.6", "ld-linux-x86-64.so.2"],
+      "runpath": "$ORIGIN/..",
+      "dynamic_defined_symbols": 1
+    },
+    "openssl": {
+      "path": "artifacts/phase2/install/bin/openssl",
+      "sha256": "96508df13d0d8b5990327828d587114be9bbdbc03b9053f91cceeed6072824bc",
+      "size": 12364680,
+      "dynamic_defined_symbols": null
+    }
+  },
+
+  "export_counting_rule": "`nm -D --defined-only <file> | wc -l`. This includes the version-node definition symbols the linker emits, so it is 5,906 for libcrypto.so.3 and 608 for libssl.so.3. The owned-export rule (5,896 / 603) strips those version-node definitions. The same rule and the same totals hold on the v1p build (c335ac3c / 292ba997), so the version bump moved no export: 0 added, 0 removed.",
+
+  "identity_bound_courts": {
+    "phase7": {
+      "receipt": "artifacts/phase7/COURTS.json",
+      "all_pass": true,
+      "rerun_at_this_build": true,
+      "note": "RT-EVP-SKEY 97/97 and the other Phase-7 courts pass against libcrypto.so.3 dadb0263; the receipt's `candidate-libcrypto-so-3` and `candidate-source-tree` inputs carry this build's digests."
+    },
+    "phase8": {
+      "receipt": "artifacts/phase8/COURTS.json",
+      "all_pass": true,
+      "rerun_at_this_build": true,
+      "accepted_divergences_total": 11,
+      "accepted_divergences_breakdown": "RT-CIPHER 10 (defltwrap.pad21 D561, rsa.obj_upref.zero_ref_after D562, and nine wrap.pad{1,7,8,9,16,17,20,24}.badaiv / wrap.pad.badicv CVE-2026-63072 entries) + RT-RSA 1",
+      "note": "RT-CIPHER 7291/7291 observations; the 11 divergences are the adjudicated set recorded in forensics/tools/phase8_courts.py."
+    }
+  },
+
+  "non_claims": [
+    "The install-tree hashes describe this repository build. The published crate ships source and documentation only; no binary is in the crate payload.",
+    "Byte reproducibility of the DSOs across toolchains, machines or images is not claimed. The v1p freeze established per-tree reproducibility only inside the pinned court image.",
+    "The 0.0.43 version bump changes no dynamic export and no Rust source; it is not a behavioural change.",
+    "This receipt does not carry any obligation count. The v1n/v1p closure finding (closure-monotonicity-finding.json) blocks carriage."
+  ]
+}

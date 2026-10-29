@@ -38811,17 +38811,17 @@
       "name": "candidate-libcrypto-so-3",
       "note": "the DSO every probe links through -L artifacts/phase2 -lcrypto",
       "path": "artifacts/phase2/libcrypto.so.3",
-      "sha256": "c335ac3c7f04b694f62ec27906a094cfbea319eb4b6efbeb4cc661d76e6aa36b"
+      "sha256": "dadb0263f1eab453dc8717a9c1851772ffed7660eeeced29d79d7b206cec7fb3"
     },
     {
       "name": "candidate-source-commit",
       "note": "git rev-parse HEAD (provenance; the tree digest is the live binding)",
-      "sha256": "c63fc23de2048533f634adbcd00fd12c34487d13"
+      "sha256": "2e90cbc6ef4650a70fd70458bd2d277a4ca2e1ce"
     },
     {
       "name": "candidate-source-tree",
       "note": "sha256 over sorted (relpath, size, sha256) of src, Cargo.toml, Cargo.lock, build.rs; files=887",
-      "sha256": "a1d8c9fc642b9f4c97e325e4f876a5e50b8a0a9406cb23f5ec59b397d5092bc2"
+      "sha256": "6a07d7933154cae3642858cc982651df0668661d11ad9b4c0737e7a5d03ffdd9"
     },
     {
       "name": "probe",

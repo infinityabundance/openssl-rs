@@ -24,9 +24,15 @@ carry (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.8). This seal records
 
 - Authority: the admitted venue `openssl-rs-court:1`; the frozen
   candidate is `openssl-rs 0.0.27 (reconstructing openssl-3.6.4-production)`, not live HEAD.
-- Court results: `artifacts/phase25/COURTS.json` — 21 Phase-25 courts,
-  `all_pass` true, `summary` `pass` 15 of 21, `pending_courts`
-  empty. No court is FRF-declarable: each reads committed evidence and stages no
+- Court results: this seal re-derives **21** non-`MS-SEAL` Phase-25 courts
+  from their committed planes: **18 pass, 3 fail**.
+  The failing courts are `MS-SOURCE-CENSUS`, `MS-NON-RUST-TCB`, `MS-MIRI`.
+  The runner's registry `artifacts/phase25/COURTS.json` records **22 court
+  rows, 22 pass and 0 fail**; it is not this seal's
+  input (the runner deletes and rewrites it), so the two records disagree and this seal
+  records the disagreement rather than adopting the registry's verdicts. **The seal therefore
+  records `passed = false`.** No court is FRF-declarable: each reads
+  committed evidence and stages no
   `artifacts/phase25/probes/<probe>.{authority,candidate}` pair.
 - Obligation ledger: `forensics/phase25-obligations.json` — `owned` 22,
   `implemented` 22, `open_in_this_stratum`
@@ -38,7 +44,9 @@ carry (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.8). This seal records
 
 One row per landed Phase-25 court (25.0 through 25.20). The verdict is the court's own
 re-derived verdict and the finding count is its own, so the row is a re-derivation, not a
-reading of `artifacts/phase25/COURTS.json` (which the runner deletes and rewrites). Each
+reading of `artifacts/phase25/COURTS.json` (which the runner deletes and rewrites). Where the
+two disagree, section 'The bounded claim' states both counts and names the failing courts;
+the registry is the runner's record, not an adjudication of the re-derivation. Each
 court's committed artefact **evidence** digest is carried by the machine artefact
 `artifacts/phase25/summary.json`, whose `courts[].artefact_sha256` is that artefact's
 `body_hash` (its evidence digest), not its file digest -- the file digest moves with the
@@ -58,15 +66,15 @@ reproduce.
  `artifacts/phase25/non-rust-tcb.json` |
 | `MS-SAFETY-OBLIGATIONS` | `safety-obligations` | pass | 3 | honest |
  `artifacts/phase25/safety-obligations.json` |
-| `MS-OWNERSHIP-PLANES` | `ownership-planes` | fail | 8 | NOT-honest |
+| `MS-OWNERSHIP-PLANES` | `ownership-planes` | pass | 8 | honest |
  `artifacts/phase25/ownership-planes.json` |
 | `MS-PHASE22-CROSSWALK` | `phase22-crosswalk` | pass | 4 | honest |
  `artifacts/phase25/phase22-crosswalk.json` |
 | `MS-PHASE24-CROSSWALK` | `phase24-crosswalk` | pass | 5 | honest |
  `artifacts/phase25/phase24-crosswalk.json` |
-| `MS-EXPOSURE-CLASSIFICATION` | `exposure-classification` | fail | 5 | NOT-honest |
+| `MS-EXPOSURE-CLASSIFICATION` | `exposure-classification` | pass | 5 | honest |
  `artifacts/phase25/exposure.json` |
-| `MS-UNSAFE-REDUCTION` | `unsafe-reduction` | fail | 3 | NOT-honest |
+| `MS-UNSAFE-REDUCTION` | `unsafe-reduction` | pass | 3 | honest |
  `artifacts/phase25/unsafe-reduction.json` |
 | `MS-MIRI` | `miri` | fail | 4 | NOT-honest |
  `artifacts/phase25/miri.json` |
@@ -98,9 +106,9 @@ reproduce.
 Every residual the committed planes carry, classified from
 `memory_safety_schemas.RESIDUAL_CLASSES` and disposed from `RESIDUAL_DISPOSITIONS`:
 
-- total 585 residual(s): 574 schema record(s) plus
+- total 709 residual(s): 698 schema record(s) plus
   11 light cross-check leftover(s);
-- 574 disposed, 540 open, 0
+- 698 disposed, 664 open, 0
   undisposed.
 
 By class:
@@ -108,7 +116,7 @@ By class:
 - `evidence_missing`: 389
 - `evidence_not_reproducible`: 1
 - `historical_cve_unreplayed`: 4
-- `join_evidence_missing`: 156
+- `join_evidence_missing`: 280
 - `mechanism_unreconciled`: 4
 - `out_of_scope`: 20
 - `tool_not_reachable`: 4
@@ -118,7 +126,7 @@ By class:
 By disposition:
 
 - `classified`: 1
-- `open`: 540
+- `open`: 664
 - `preserved`: 33
 
 ## 3. The open items

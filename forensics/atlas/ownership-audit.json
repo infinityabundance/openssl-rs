@@ -1367,7 +1367,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "14ae930c271c6edd48c1b54f1339b356c35229474fa48aa7b5791176e8e9b145"
+      "sha256": "35d8a754bf4a256612a198c1e8cc0b9f9d24c0b5e9702f57ede87ea3323d5f51"
     },
     {
       "name": "authority-symbols",
@@ -1402,17 +1402,17 @@
     {
       "name": "ledger-7",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "77aa49213f000ee7abc5ec4ca30b1b85b9ce90a4bc5b2ffe2ce4718460afb0b2"
+      "sha256": "80faab0ecbff61f5b6879f3787718fd5d384562a820ed162e43f7497ca18c33e"
     },
     {
       "name": "ledger-8",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "0b4c743244b0cd732f6ba4d86fa1c4c21e85dd220524e721b89035b3c0427383"
+      "sha256": "3029008bc44662690aba944b01305dea098956a729fd86fd5a91a159e6295289"
     },
     {
       "name": "ledger-9",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "68f4e2fcc6b3ff85ad15ebfb9084f33a573bfc45440d52ee9f15d84af9657b0a"
+      "sha256": "93cc54afe35783a1e8cbd1865f54c234cd774924a76789aba4ab67df284d11ea"
     },
     {
       "name": "ledger-10",

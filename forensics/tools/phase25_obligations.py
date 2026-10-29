@@ -107,6 +107,13 @@ PROVIDERS = "forensics/atlas/provider-algorithms.json"
 PREREQUISITES = "forensics/prerequisites.json"
 PLAN = "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md"
 COURTS = "artifacts/phase25/COURTS.json"
+# The seal's own derivation record. The `MS-SEAL` unit's property findings are read from here rather
+# than from the runner's registry row: the registry is the runner's record of its own run, and it
+# currently reports every court as `pass` while the seal's re-derivation of the same committed
+# planes fails six. Copying the registry's typed findings into the ledger made the ledger repeat
+# "21 pass, 0 fail" beside a seal that records 15 pass / 6 fail.
+SUMMARY = "artifacts/phase25/summary.json"
+SEAL_UNIT = "memory-safety-seal"
 GUARD = "forensics/tools/phase25_guard.py"
 SCHEMAS = "forensics/tools/memory_safety_schemas.py"
 
@@ -331,19 +338,53 @@ def machinery_rows(ownership: dict, provider_body: dict, prereq: dict) -> dict:
     }
 
 
-def contract_units(courts_body: dict) -> list[dict]:
+def _seal_findings(courts_body: dict, summary_body: dict, seal_findings: list) -> list:
+    """The seal unit's findings, with the court-count reconciliation stated from both records.
+
+    The first item is derived here rather than copied, because the registry and the seal disagree
+    and the ledger must not repeat one of them as though it were the other. Everything after the
+    first item is the seal's own committed derivation (the residual census, the open items, the
+    withheld parity claim and the non-claims).
+    """
+    counts = (summary_body or {}).get("counts") or {}
+    seal_rows = (summary_body or {}).get("courts") or []
+    seal_failed = sorted(str(r.get("court")) for r in seal_rows
+                         if str(r.get("verdict")) != "pass")
+    registry_rows = courts_body.get("courts") or []
+    registry_pass = sum(1 for r in registry_rows if str(r.get("verdict")) == "pass")
+    registry_fail = len(registry_rows) - registry_pass
+    first = (
+        f"the seal re-derives {counts.get('courts')} non-`MS-SEAL` Phase-25 court result(s) from "
+        f"their committed planes: {counts.get('courts_pass')} pass, {counts.get('courts_fail')} "
+        f"fail ({', '.join(seal_failed)}); the runner's registry `{COURTS}` records "
+        f"{len(registry_rows)} court row(s), {registry_pass} pass and {registry_fail} fail, and is "
+        "not the seal's input, so the two records disagree and this ledger states both rather "
+        "than adopting the registry's verdicts"
+    )
+    return [first] + [str(f) for f in seal_findings[1:]]
+
+
+def contract_units(courts_body: dict, summary_body: dict | None = None) -> list[dict]:
     """The memory-safety contract, each unit's state derived from its own court.
 
     Two axes are recorded, and they are deliberately distinct. `measurement_state` says whether the
     instrument completed; `property_status`/`findings` say what, if anything, the unit claims about
     a property. The seal's court passes while recording the non-claims as findings, so its property
     is `NOT_CLAIMED`.
+
+    The seal unit's findings come from `artifacts/phase25/summary.json`, the seal's own derivation,
+    because the registry row for `MS-SEAL` is a typed copy of an earlier run and must not be read
+    as the seal's verdict (see `SUMMARY` above). Every other unit's findings still come from the
+    registry row for its court.
     """
     units: list[dict] = []
+    seal_findings = (summary_body or {}).get("property_findings")
     for name, court, closure, what in COURT_UNITS:
         passed, observation = court_state(courts_body, court)
         row = court_row(courts_body, court)
         raw_findings = row.get("findings")
+        if name == SEAL_UNIT and isinstance(seal_findings, list):
+            raw_findings = _seal_findings(courts_body, summary_body, seal_findings)
         property_findings = ([str(f) for f in raw_findings]
                              if isinstance(raw_findings, list) else [])
         measures_property = name in PROPERTY_UNITS
@@ -383,6 +424,7 @@ def main(argv: list[str]) -> int:
     provider_body = load(PROVIDERS)["body"]
     prereq = load(PREREQUISITES)["body"]
     courts_body = load(COURTS)["body"]
+    summary_body = load(SUMMARY)["body"] if (REPO_ROOT / SUMMARY).is_file() else None
 
     machinery = machinery_rows(ownership, provider_body, prereq)
     atlas_owned = machinery["atlas_owned"]
@@ -410,7 +452,7 @@ def main(argv: list[str]) -> int:
             f"prerequisite plane or this ledger's plan is wrong"
         )
 
-    contracts = contract_units(courts_body)
+    contracts = contract_units(courts_body, summary_body)
 
     for unit in contracts:
         if unit["unit"] in SEAL_GAP_UNITS and unit["state"] == "implemented" \

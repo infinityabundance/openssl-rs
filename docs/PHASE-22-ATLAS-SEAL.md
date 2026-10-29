@@ -3,10 +3,13 @@
 Status: **sealed**, against the authority `openssl-3.6.4-production`, build profile
 `linux-x86_64-default-shared-legacy-notests`, platform `linux-x86_64`.
 
-This seal is generated from the evidence: every figure below is read from
-`forensics/phase22-obligations.json`, `artifacts/phase22/COURTS.json` and the plane
-artefacts under `forensics/atlas/phase22/`, not typed. `forensics/STATUS.md` is the live
-projection and this document is the stratum's record.
+This seal is **hand-written**, and states that plainly because it is not a generated document:
+`forensics/STATUS.md` and `docs/SEAL-CENSUS.md` are the generated authorities, and
+`docs/SEAL-CENSUS.md` is the one that census-renders this stratum. Every figure below was
+transcribed by hand from `forensics/phase22-obligations.json`,
+`artifacts/phase22/COURTS.json` and the plane artefacts under `forensics/atlas/phase22/`.
+Where this document and a generated artefact disagree, the generated artefact is right and
+this sentence is the stale one. `forensics/STATUS.md` is the live projection.
 
 ## 1. What Phase 22 asked
 

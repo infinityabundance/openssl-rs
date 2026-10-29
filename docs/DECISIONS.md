@@ -36372,3 +36372,40 @@ change cannot make bind9's second bit fail instead of its first.
 `the_remaining_engine_bits_are_accepted_and_raise_nothing`, which asserts `1`, an empty queue and
 fast-path recording for every bit including the union.
 
+
+## D566 -- `CRYPTO_128_unwrap_pad` cleanses `padded_len`, not the authority's `inlen`
+
+**Decision.** On every failure path of `CRYPTO_128_unwrap_pad` (`src/modes/wrap.rs:245-286`) the
+crate cleanses `padded_len` octets: `8` for the RFC 5649 §4.2 sixteen-byte special case and
+`inlen - 8` otherwise. The authority cleanses `inlen` at `crypto/modes/wrap128.c:291,303,317,327`.
+
+**Why the authority extent is not reproduced.** `inlen` is eight octets larger than the region the
+function can legitimately have written, and eight octets larger than the buffer the CMS caller
+allocates: `ossl_cms_RecipientInfo_kekri_decrypt` sizes the unwrap output from the queried
+unwrapped-key length and passes `inlen - 8` writable bytes (`src/cms/cms_env.rs:3950-3982`,
+mirroring `crypto/cms/cms_env.c:995`). Cleansing `inlen` therefore writes past the caller's
+allocation -- the write primitive recorded as CVE-2026-63072. `AGENTS.md` §17 classifies a known
+vulnerability mechanism as something to eliminate rather than conserve, and §5.1 requires
+cleansing to cover the actual secret-bearing storage rather than an unvalidated larger length. The
+narrower extent is exactly that storage.
+
+**Narrowed scope, stated.** The divergence is only the cleanse extent on the failure paths. Every
+other observable is the authority's: the input-length refusals (`(inlen & 7) != 0` and the
+`[16, CRYPTO128_WRAP_MAX)` range), the returned length, the error queue, and the decrypted bytes on
+the success path are unchanged. The function's `# Safety` contract now states the writable extent
+the caller must supply -- `inlen - 8` -- because that is what it may write and cleanse.
+
+**Compatibility consequence.** A caller that inspects the bytes between `inlen - 8` and `inlen`
+after a failed unwrap sees them unchanged where the authority would have zeroed them. That region
+is outside the documented output extent, so no conforming caller should read it; a caller that
+does read it observes the difference. `RT-CIPHER` records it as an accepted divergence under
+`D-WRAP-PAD-CLEANSE-1` in `docs/SECURITY_DIVERGENCE_POLICY.md`, with the exact authority/candidate
+hex pinned for each of the nine arms, so a *different* candidate value at the same key still fails
+the court.
+
+**Evidence.** `forensics/tools/phase8_courts.py` `ACCEPTED_DIVERGENCES`: `wrap.pad1`,
+`wrap.pad7`, `wrap.pad8`, `wrap.pad9`, `wrap.pad16`, `wrap.pad17`, `wrap.pad20`, `wrap.pad24`
+(`.badaiv.out`) and `wrap.pad.badicv.out`. The CMS negative control
+`src/cms/cms_env.rs:3950-3982` asserts the guard bytes past the allocation survive. The authority's
+own over-write is not calibrated into a court arm: running it would require handing a real CMS
+caller a buffer it must not be handed.

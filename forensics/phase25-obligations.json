@@ -362,8 +362,8 @@
       {
         "closure": "the `MS-SEAL` court passes",
         "findings": [
-          "the seal consolidates 21 Phase-25 court result(s): 21 pass, 0 fail, each joined to its committed artefact and digest",
-          "the residual census classifies and disposes 483 residual record(s) plus 11 light cross-check leftover(s); 449 are open and 0 undisposed",
+          "the seal re-derives 21 non-`MS-SEAL` Phase-25 court result(s) from their committed planes: 18 pass, 3 fail (MS-MIRI, MS-NON-RUST-TCB, MS-SOURCE-CENSUS); the runner's registry `artifacts/phase25/COURTS.json` records 22 court row(s), 22 pass and 0 fail, and is not the seal's input, so the two records disagree and this ledger states both rather than adopting the registry's verdicts",
+          "the residual census classifies and disposes 698 residual record(s) plus 11 light cross-check leftover(s); 664 are open and 0 undisposed",
           "the seal records passed=false because 183 externally reachable site(s) carry tool state UNSUPPORTED; UNSUPPORTED is never PASS (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
           "the open items are named rather than smoothed to a zero: census-geiger-unavailable, census-unresolved-reachability, cve-replay-unknown, externally-reachable-fail, externally-reachable-unsupported, mechanism-reconciliation-open, rt-phase22-unwitnessed-external",
           "the bounded claim is the inventory of a fixed candidate's first-party surface in the claimed profile; it is NOT 'no memory-safety bug can exist' and NOT '100% memory safe'",

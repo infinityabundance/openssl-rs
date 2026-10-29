@@ -396,6 +396,32 @@ def main(argv: list[str]) -> int:
                 L.append(f"| {x['court']} | `{x['verdict']}` | "
                          f"{n if has_transcript(x) else '— (structural)'} |")
             L.append("")
+            if phase == 25:
+                # The registry above is the runner's own record. The seal re-derives the same
+                # courts from their committed planes and records a different count, so both are
+                # stated rather than one standing for the other. Data: the committed
+                # `artifacts/phase25/summary.json`, never a fresh measurement here.
+                seal_doc = load("artifacts/phase25/summary.json") or {}
+                seal = seal_doc.get("body", seal_doc)
+                sc = seal.get("counts") or {}
+                seal_rows = seal.get("courts") or []
+                failed = sorted(str(r.get("court")) for r in seal_rows
+                                if str(r.get("verdict")) != "pass")
+                if sc:
+                    L.append("**Phase-25 court-count reconciliation.** The runner's registry "
+                             f"above records **{len(rows)} court rows, "
+                             f"{sum(1 for x in rows if x.get('verdict') == 'pass')} pass** and "
+                             f"{sum(1 for x in rows if x.get('verdict') != 'pass')} fail. The seal "
+                             f"(`docs/PHASE-25-MEMORY-SAFETY-SEAL.md`) re-derives the "
+                             f"**{sc.get('courts')}** non-`MS-SEAL` courts from their committed "
+                             f"planes and records **{sc.get('courts_pass')} pass, "
+                             f"{sc.get('courts_fail')} fail**"
+                             + (": " + ", ".join(f"`{n}`" for n in failed) if failed else "")
+                             + ". The registry is not the seal's input, so the two records "
+                             "disagree; the seal states the disagreement and therefore records "
+                             f"`passed = {str(seal.get('passed')).lower()}`. Neither record is "
+                             "read as an adjudication of the other.")
+                    L.append("")
 
     # The Phase-24 downstream-1000 outcomes. Rendered only when the committed final run is
     # present, so an earlier branch -- which has no frozen P1000 -- produces no section at all
