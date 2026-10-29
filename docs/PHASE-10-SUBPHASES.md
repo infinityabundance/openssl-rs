@@ -45,11 +45,12 @@ whose `owning_phase` is 10) rather than listed here:
 | 5 | 16 | `pem.h` | the `b2i_*`/`i2b_*` PVK readers and writers, the `d2i_PKCS8PrivateKey*`/`i2d_PKCS8PrivateKey*` spellings |
 | 7 | 10 | `evp.h` (9), `pem.h` (1) | `PEM_write_bio_PrivateKey_traditional`, the four `d2i_PrivateKey*`/`d2i_AutoPrivateKey*` and the five `i2d_*` names |
 
-That is a working set of **298 exports**. **Eighty-seven of them are already implemented** — all 79
-`encoder.h`/`decoder.h` exports and 8 `pkcs12.h` ones (`PKCS12_item_decrypt_d2i`, `PKCS12_pbe_crypt`,
-`PKCS8_decrypt` and their `_ex` twins, plus the `i2d_encrypt` pair, landed by D368) — so
-`open_in_this_stratum` is **211**, not 298. `forensics/phase10-obligations.json` carries the exact
-lists and `forensics/atlas/implemented-surface.json` is where each of the 87 is read from.
+That is a working set of **298 exports**. **Eighty-seven of them were already implemented** at
+activation — all 79 `encoder.h`/`decoder.h` exports and 8 `pkcs12.h` ones (`PKCS12_item_decrypt_d2i`,
+`PKCS12_pbe_crypt`, `PKCS8_decrypt` and their `_ex` twins, plus the `i2d_encrypt` pair, landed by
+D368) — so `open_in_this_stratum` was **211**, not 298, when this plan was written.
+`forensics/phase10-obligations.json` carries the exact lists and
+`forensics/atlas/implemented-surface.json` is where each of the 87 is read from.
 
 **The 272 atlas-owned exports are defined by 25 authority translation units**
 (`forensics/atlas/export-defining-units.json`'s `units_by_owner_phase[10]`): six under
@@ -327,25 +328,18 @@ forcing the row.
 
 **Landed exports (checked against the ledger):**
 
-Eighty-seven, and every one was landed by an earlier stratum rather than by this one: the 41
+Eighty-seven of them were landed by an earlier stratum rather than by this one: the 41
 `decoder.h` and 38 `encoder.h` exports of Phase 8's 8.8/8.9 chain (D362–D367), and the 8
 `pkcs12.h` decryption and PKCS#8 names of D368 (`PKCS12_item_decrypt_d2i`, `PKCS12_item_decrypt_d2i_ex`,
 `PKCS12_item_i2d_encrypt`, `PKCS12_item_i2d_encrypt_ex`, `PKCS12_pbe_crypt`, `PKCS12_pbe_crypt_ex`,
-`PKCS8_decrypt`, `PKCS8_decrypt_ex`). No export of this stratum's own work has landed, and no
-provider row has.
+`PKCS8_decrypt`, `PKCS8_decrypt_ex`). The rest of the working set has since landed; the
+per-symbol status is in `forensics/phase10-obligations.json`, which is authoritative and which
+this document does not duplicate.
 
 **Open exports (checked against the ledger):**
 
-Two hundred and eleven. The PKCS#12 block is 109 of them — the container object and its ASN.1
-(`PKCS12`, `PKCS12_SAFEBAG`, `PKCS12_BAGS`, `PKCS12_MAC_DATA` and their accessors, `PKCS12_create`,
-`PKCS12_parse`, `PKCS12_key_gen_*`, `PKCS12_pbe_crypt`'s siblings, `PKCS12_set_mac`,
-`PKCS12_verify_mac`, `PKCS12_gen_mac`, the `PKCS12_add_*` family, `PKCS8_encrypt`, `d2i_PKCS12*`,
-`i2d_PKCS12*`) — and the STORE block is all 76 (`OSSL_STORE_open`, the `OSSL_STORE_INFO` family, the
-`OSSL_STORE_LOADER` object and registry, `OSSL_STORE_SEARCH`, `OSSL_STORE_attach`/`load`/`expect`).
-The 26 hand-offs are the PVK and PKCS#8 container reads and writes
-(`b2i_PVK_bio`, `b2i_PrivateKey`, `d2i_PKCS8PrivateKey_bio`, `i2d_PKCS8PrivateKey_nid_fp`), the four
-`d2i_PrivateKey*`/`d2i_AutoPrivateKey*` and the five `i2d_*` names, and
-`PEM_write_bio_PrivateKey_traditional`.
+None. Every row of the working set is in the ledger's implemented list, and the per-symbol status
+is in `forensics/phase10-obligations.json`, which this document does not duplicate.
 
 **Why 10.0 is staged over two commits, and §4.3 is why it is not one.** The plan and the census
 land with the stratum's ledger, because `phase_state.py` refuses any stratum that has a plan, a
