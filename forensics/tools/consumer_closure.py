@@ -465,24 +465,152 @@ class DsoGraph:
 
     def _elf_sections(self) -> dict:
         out = {}
+        self.section_types = {}
+        self.section_flags = {}
         for line in run(["readelf", "-SW", str(self.path)]).stdout.splitlines():
             toks = line.split()
             if not toks or not toks[0].startswith("["):
                 continue
             if toks[0] == "[":
-                name = toks[2]
+                name, sec_type = toks[2], toks[3]
                 try:
                     addr, off, size = int(toks[4], 16), int(toks[5], 16), int(toks[6], 16)
                 except (ValueError, IndexError):
                     continue
             else:
-                name = toks[1]
+                name, sec_type = toks[1], toks[2]
                 try:
                     addr, off, size = int(toks[3], 16), int(toks[4], 16), int(toks[5], 16)
                 except (ValueError, IndexError):
                     continue
             out[name] = (addr, off, size)
+            self.section_types[name] = sec_type
+            m = re.match(
+                r"^\s*\[\s*\d+\]\s+(\S+)\s+(\S+)\s+([0-9a-fA-F]+)\s+"
+                r"([0-9a-fA-F]+)\s+([0-9a-fA-F]+)\s+([0-9a-fA-F]+)\s+(\S+)",
+                line)
+            if m:
+                self.section_flags[name] = m.group(7)
         return out
+
+    # ------------------------------------------------------------------ #
+    # analysis-input identity (AGENTS.md section 22)
+    # ------------------------------------------------------------------ #
+    #
+    # ``analysis_identity`` must cover every input the graph derivation reads.
+    # These helpers expose the byte ranges and the structural tables in a
+    # canonical form; :func:`analysis_identity` hashes them.  A section that is
+    # present but analysis-irrelevant is named in ``excluded_sections`` and is
+    # not hashed.  Raw ``.symtab``/``.dynsym``/``.rela.*`` bytes are excluded
+    # because their parsed forms are hashed instead (see the basis string).
+
+    def analysis_section_descriptors(self) -> list:
+        """Each analysis-relevant section's canonical descriptor.
+
+        The derivation reads sections through ``section_of`` in more places
+        than a hand-maintained allowlist can safely cover: ``static_slot``
+        reads the GOT/data slots, ``switch_targets`` reads 4-byte entries from
+        the section that contains a code-materialised base, and ``cstring_at``
+        reads up to 257 bytes from the section that contains a dlsym-literal
+        address.  The identity therefore binds **every allocated (SHF_ALLOC)
+        section** and excludes only non-allocated metadata.  The required
+        minimum (``.text``, ``.rodata``, ``.data``, ``.data.rel.ro``, ``.got``,
+        ``.got.plt``) is necessarily a subset of that.
+        """
+        out = []
+        for name, (addr, _off, size) in self.sections.items():
+            flags = self.section_flags.get(name, "")
+            if "A" not in flags:
+                continue
+            if any(name.startswith(prefix)
+                   for prefix in ANALYSIS_IDENTITY_EXCLUDED_PREFIXES):
+                continue
+            sec_type = self.section_types.get(name)
+            if sec_type == "NOBITS":
+                digest = None
+            else:
+                digest = hashlib.sha256(self._section_bytes(name)).hexdigest()
+            out.append({
+                "name": name,
+                "type": sec_type,
+                "addr": addr,
+                "size": size,
+                "sha256": digest,
+            })
+        out.sort(key=lambda row: row["name"])
+        return out
+
+    def analysis_excluded_sections(self) -> list:
+        """Present sections that the identity deliberately excludes."""
+        included = {row["name"] for row in self.analysis_section_descriptors()}
+        return sorted(name for name in self.sections if name not in included)
+
+    def dynamic_symbol_rows(self) -> list:
+        """Sorted ``[canonical name, addr, kind]`` rows of ``.dynsym``.
+
+        ``export_index``, ``PrecisionResolver.exports`` and the dynamic-reloc
+        widening all read this table.  It is a different analysis input from
+        the full ``.symtab``: a version script can hide an in-image definition
+        from ``.dynsym`` while ``.symtab`` still names it.
+        """
+        rows = []
+        for line in run(["nm", "-D", "--defined-only", str(self.path)]).stdout.splitlines():
+            parsed = parse_nm_line(line)
+            if parsed is None:
+                continue
+            addr, typ, name = parsed
+            rows.append([canonical_symbol_name(name), addr, typ])
+        rows.sort()
+        return rows
+
+    def canonical_relocations(self) -> list:
+        """Sorted ``[section, offset_in_section, type, symbol, addend]`` rows.
+
+        The derivation's ``_build_slots`` reads the relocation addend and
+        symbol for ``R_X86_64_RELATIVE``, ``R_X86_64_GLOB_DAT``,
+        ``R_X86_64_JUMP_SLOT`` and ``R_X86_64_64``.  Offsets are made relative
+        to the containing section so that the row is canonical; the section's
+        virtual address is hashed in the section descriptor.
+        """
+        rows = []
+        for off, typ, sym, add, _symval in self.relocs:
+            section = self.section_of(off)
+            rel_off = off - self.sections[section][0] if section else off
+            rows.append([
+                section,
+                rel_off,
+                typ,
+                canonical_symbol_name(sym) if sym else None,
+                add,
+            ])
+        rows.sort(key=lambda row: (
+            row[0] or "", row[1], row[2], row[3] or "",
+            row[4] if row[4] is not None else -1))
+        return rows
+
+    def dynamic_entries(self) -> dict:
+        """The loader-relevant ``.dynamic`` entries (module selection input)."""
+        d = elf_dynamic(self.path)
+        return {
+            "soname": d["soname"],
+            "needed": sorted(d["needed"]),
+            "runpath": list(d["runpath"]),
+            "rpath": list(d["rpath"]),
+        }
+
+    def symbol_addresses_by_name(self) -> dict:
+        """Every defined name (version-stripped) -> sorted addresses.
+
+        ``names_at`` keeps every alias at an address (identical-code folding
+        gives several exported names one address).  Resolution through this
+        table must keep *all* addresses for a name: dropping one would narrow
+        the bound.
+        """
+        index = collections.defaultdict(set)
+        for addr, names in self.names_at.items():
+            for name in names:
+                index[name.split("@")[0]].add(addr)
+        return {name: sorted(addrs) for name, addrs in index.items()}
 
     def _elf_relocs(self) -> list:
         out = []
@@ -6509,7 +6637,7 @@ class EdgeRecordStream:
 def _tool_identity() -> dict:
     """The exact validator identity bound into every receipt (AGENTS.md 22)."""
     path = Path(__file__).resolve()
-    return {"path": TOOL, "version": 4,
+    return {"path": TOOL, "version": 5,
             "sha256": sha256_file(path),
             "schema": EDGE_RECORD_SCHEMA}
 
@@ -6549,8 +6677,73 @@ def _admissibility(tool_sha256: str, artifact_sha256: str,
     }
 
 
-ANALYSIS_IDENTITY_SCHEMA = "openssl-rs/campaign/safe-c33/analysis-identity/v1"
+ANALYSIS_IDENTITY_SCHEMA = "openssl-rs/campaign/safe-c33/analysis-identity/v2"
 UNRESOLVED_BOUND_SCHEMA = "openssl-rs/campaign/safe-c33/unresolved-site-bound/v1"
+
+# Sections the identity always binds when present (the required minimum from
+# the P0-A specification).  The implementation binds *every* SHF_ALLOC section,
+# so this list is documentation and a required-subset check, not the whole set.
+ANALYSIS_IDENTITY_SECTIONS = (
+    ".text",
+    ".plt",
+    ".plt.got",
+    ".init",
+    ".fini",
+    ".rodata",
+    ".data",
+    ".data.rel.ro",
+    ".data.rel.ro.local",
+    ".got",
+    ".got.plt",
+    ".init_array",
+    ".fini_array",
+)
+# SHT_NOBITS: the analysis reads the address/size (section_of) and treats a
+# .bss slot as zero; there are no file bytes to hash.
+ANALYSIS_IDENTITY_NOBITS_SECTIONS = (".bss",)
+
+# Non-allocated / metadata sections that are never an analysis input.  The
+# selection is "SHF_ALLOC minus these prefixes", so a new allocated section is
+# bound automatically rather than silently omitted.
+ANALYSIS_IDENTITY_EXCLUDED_PREFIXES = (
+    ".debug_",
+    ".zdebug_",
+    ".note",
+    ".comment",
+    ".gnu_debuglink",
+    ".gnu_debugaltlink",
+    ".gnu.build.attributes",
+)
+# Named for the receipt's basis string.
+ANALYSIS_IDENTITY_EXCLUDED_CLASSES = (
+    ".debug_*",
+    ".zdebug_*",
+    ".comment",
+    ".note*",
+    ".gnu_debuglink",
+    ".gnu_debugaltlink",
+    ".gnu.build.attributes",
+    "every non-allocated section (SHF_ALLOC is absent)",
+)
+
+
+def _analysis_identity_basis() -> str:
+    return (
+        "sha256 over, in module-name order, each module name and a canonical "
+        "JSON input record: every allocated (SHF_ALLOC) section's (name, ELF "
+        "type, virtual address, size, sha256 of its bytes), the sorted "
+        "relocation table (section, section-relative offset, type, canonical "
+        "symbol, addend), the sorted [name, addr, size, kind] defined-symbol "
+        "rows, the sorted dynamic-symbol rows, and the loader entries "
+        "(SONAME/NEEDED/RUNPATH/RPATH). Required minimum sections: "
+        + ", ".join(ANALYSIS_IDENTITY_SECTIONS)
+        + "; NOBITS sections (address/size only): "
+        + ", ".join(ANALYSIS_IDENTITY_NOBITS_SECTIONS)
+        + ". Excluded: "
+        + ", ".join(ANALYSIS_IDENTITY_EXCLUDED_CLASSES)
+        + ". ``.llvm.<hash>`` and ``@@VERSION`` suffixes are canonicalised as "
+        "in the symbol table; the DSO file digest is recorded as a non-identity."
+    )
 
 
 def reachable_function_entries(graphs: dict, upper_reach,
@@ -6585,17 +6778,33 @@ def reachable_functions_digest(entries) -> str:
     return digest.hexdigest()
 
 
+def _canonical_json_digest(obj) -> str:
+    return hashlib.sha256(
+        json.dumps(obj, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
 def analysis_identity(graphs: dict) -> dict:
     """A canonical identity for the *analysis input* (AGENTS.md section 22).
 
     The DSO file digest is **not** an analysis identity: a comment-only source
     edit changes the file digest (build paths, debug strings, the
     ``.llvm.<hash>`` names) while the executable bytes and the symbol
-    addresses are unchanged.  The identity therefore hashes each module's
-    ``.text`` bytes and its ``(name, addr, size, kind)`` symbol rows, in module
-    name order, with a domain separator.  Two runs with the same identity but
-    different DSO digests are a neutral rebuild; two runs with different
-    identities are different analysis inputs.
+    addresses are unchanged.  The identity therefore hashes every input the
+    graph derivation consumes, per module:
+
+      * each analysis-relevant section's name, ELF type, virtual address, size
+        and byte digest (``DsoGraph.analysis_section_descriptors``);
+      * the canonical relocation table ``(section, offset, type, symbol,
+        addend)`` that supplies GOT/PLT and dispatch-slot targets;
+      * the sorted ``[name, addr, size, kind]`` defined-symbol rows;
+      * the sorted dynamic-symbol rows (the export set);
+      * the loader entries (SONAME/NEEDED/RUNPATH/RPATH).
+
+    Analysis-irrelevant metadata (``.debug_*``, ``.comment``, ``.note*``,
+    ``.gnu_debuglink``, the build-id note, and raw symbol/relocation section
+    bytes whose parsed forms are hashed) is excluded and named in ``basis``.
+    Two modules with the same identity have the same input to this analysis;
+    that is not a claim that the analysis is complete.
     """
     outer = hashlib.sha256()
     outer.update(ANALYSIS_IDENTITY_SCHEMA.encode() + b"\0")
@@ -6604,30 +6813,72 @@ def analysis_identity(graphs: dict) -> dict:
         g = graphs[name]
         text_sha, text_size = g.text_digest()
         rows = g.symbol_table_rows()
-        rows_blob = json.dumps(rows, separators=(",", ":")).encode()
-        sym_sha = hashlib.sha256(rows_blob).hexdigest()
+        sym_sha = _canonical_json_digest(rows)
+
+        section_fn = getattr(g, "analysis_section_descriptors", None)
+        sections = section_fn() if callable(section_fn) else []
+        excluded_fn = getattr(g, "analysis_excluded_sections", None)
+        excluded = excluded_fn() if callable(excluded_fn) else []
+
+        reloc_fn = getattr(g, "canonical_relocations", None)
+        relocs = reloc_fn() if callable(reloc_fn) else []
+        reloc_sha = _canonical_json_digest(relocs)
+
+        dynrows_fn = getattr(g, "dynamic_symbol_rows", None)
+        dynrows = dynrows_fn() if callable(dynrows_fn) else []
+        dyn_sha = _canonical_json_digest(dynrows)
+
+        entries_fn = getattr(g, "dynamic_entries", None)
+        entries = entries_fn() if callable(entries_fn) else {}
+        entries_sha = _canonical_json_digest(entries)
+
+        # The hashed record is the full canonical input.  The receipt keeps the
+        # digests and counts: the full relocation list is ~46k rows for the real
+        # libcrypto and would bloat the receipt without adding evidence beyond
+        # the digest and the negative control that exercises it.
+        input_record = {
+            "sections": sections,
+            "relocations": relocs,
+            "symbol_rows": rows,
+            "dynamic_symbol_rows": dynrows,
+            "dynamic_entries": entries,
+        }
+        input_sha = _canonical_json_digest(input_record)
+
         modules[name] = {
             "text_sha256": text_sha,
             "text_size": text_size,
             "symbol_rows": len(rows),
             "symbol_table_sha256": sym_sha,
+            "dynamic_symbol_rows": len(dynrows),
+            "dynamic_symbol_table_sha256": dyn_sha,
+            "relocations": len(relocs),
+            "relocation_table_sha256": reloc_sha,
+            "dynamic_entries_sha256": entries_sha,
+            "sections": sections,
+            "excluded_sections": excluded,
+            "input_sha256": input_sha,
             "dso_sha256": getattr(g, "sha256", None),
             "dso_sha256_is_analysis_identity": False,
         }
-        outer.update(name.encode() + b"\0" + text_sha.encode() + b"\0"
-                     + sym_sha.encode() + b"\0")
+        outer.update(name.encode() + b"\0" + input_sha.encode() + b"\0")
+    included_union = sorted({row["name"] for module in modules.values()
+                             for row in module["sections"]})
     return {
         "schema": ANALYSIS_IDENTITY_SCHEMA,
-        "basis": (
-            "sha256 over, in module-name order, each module name, the sha256 of "
-            "its .text bytes, and the sha256 of its sorted [name, addr, size, "
-            "kind] defined-symbol rows (``.llvm.<hash>`` and symbol-version "
-            "suffixes canonicalised)"),
+        "basis": _analysis_identity_basis(),
+        "included_sections": included_union,
+        "required_sections": list(ANALYSIS_IDENTITY_SECTIONS),
+        "nobits_sections": list(ANALYSIS_IDENTITY_NOBITS_SECTIONS),
+        "excluded_classes": list(ANALYSIS_IDENTITY_EXCLUDED_CLASSES),
         "digest": outer.hexdigest(),
         "modules": modules,
         "note": (
             "the DSO file digest is recorded as a non-identity: it changes with "
-            "build paths and debug strings when the executable bytes do not"),
+            "build paths and debug strings when the executable bytes do not. "
+            "Input completeness is not proved by this digest: it binds the "
+            "enumerated inputs, and a future analysis that reads another section "
+            "must extend the enumeration."),
     }
 
 
@@ -6664,7 +6915,235 @@ def unresolved_site_bound(g: "DsoGraph", site: dict) -> set:
     return values
 
 
-def _bound_nodes(g, dso_name: str, values, export_index: dict) -> tuple[set, int, int]:
+def _symbol_base(symbol: str) -> str:
+    """The version-stripped form of a relocation symbol name."""
+    return symbol.split("@", 1)[0]
+
+
+# Resolution order for a symbolic residual-bound value (P0-B).  The order is
+# fixed by the task and recorded in every disposition row, so a reader can see
+# which path actually resolved a symbol.
+SYMBOL_RESOLUTION_ORDER = (
+    "exact-export",
+    "version-stripped-export",
+    "names-at",
+    "dynamic-symbol-table",
+    "soname-qualified-import",
+    "plt-stub",
+)
+
+# A *documented* external interface may cover a symbol that is not defined by
+# the closed candidate DSO set.  This table is deliberately exact-name only and
+# deliberately small: an OpenSSL-shaped name, a name absent from the table, or a
+# name whose interface is not cited here is ``blocking``, never external.  It is
+# not a wildcard and it is not a way to clear a refusal.
+EXTERNAL_SYMBOL_CONTRACTS = {
+    "malloc": {
+        "interface": "ISO/IEC 9899:2018 7.22.3 malloc",
+        "why_outside": (
+            "the C library allocator is resolved by the process loader, not by "
+            "any candidate OpenSSL DSO; the consumer owns the allocator contract"),
+    },
+    "calloc": {
+        "interface": "ISO/IEC 9899:2018 7.22.3 calloc",
+        "why_outside": "C library allocator resolved by the process loader",
+    },
+    "realloc": {
+        "interface": "ISO/IEC 9899:2018 7.22.3 realloc",
+        "why_outside": "C library allocator resolved by the process loader",
+    },
+    "free": {
+        "interface": "ISO/IEC 9899:2018 7.22.3 free",
+        "why_outside": "C library allocator resolved by the process loader",
+    },
+    "memcpy": {
+        "interface": "ISO/IEC 9899:2018 7.24.2.1 memcpy",
+        "why_outside": "C library memory function resolved by the process loader",
+    },
+    "memmove": {
+        "interface": "ISO/IEC 9899:2018 7.24.2.2 memmove",
+        "why_outside": "C library memory function resolved by the process loader",
+    },
+    "memset": {
+        "interface": "ISO/IEC 9899:2018 7.24.6.1 memset",
+        "why_outside": "C library memory function resolved by the process loader",
+    },
+    "memcmp": {
+        "interface": "ISO/IEC 9899:2018 7.24.4.1 memcmp",
+        "why_outside": "C library memory function resolved by the process loader",
+    },
+    "strlen": {
+        "interface": "ISO/IEC 9899:2018 7.24.6.3 strlen",
+        "why_outside": "C library string function resolved by the process loader",
+    },
+    "strcmp": {
+        "interface": "ISO/IEC 9899:2018 7.24.4.2 strcmp",
+        "why_outside": "C library string function resolved by the process loader",
+    },
+    "__stack_chk_fail": {
+        "interface": "GNU C library stack-smashing protector runtime (libc)",
+        "why_outside": "libc runtime stub resolved by the process loader",
+    },
+    "dlopen": {
+        "interface": "POSIX.1-2017 dlopen",
+        "why_outside": "dynamic loader interface resolved by libc/ld.so",
+    },
+    "dlsym": {
+        "interface": "POSIX.1-2017 dlsym",
+        "why_outside": "dynamic loader interface resolved by libc/ld.so",
+    },
+    "dlclose": {
+        "interface": "POSIX.1-2017 dlclose",
+        "why_outside": "dynamic loader interface resolved by libc/ld.so",
+    },
+    "dlerror": {
+        "interface": "POSIX.1-2017 dlerror",
+        "why_outside": "dynamic loader interface resolved by libc/ld.so",
+    },
+    "deflate": {
+        "interface": "zlib manual, deflate()",
+        "why_outside": "zlib is a separate DSO resolved by the process loader",
+    },
+    "inflate": {
+        "interface": "zlib manual, inflate()",
+        "why_outside": "zlib is a separate DSO resolved by the process loader",
+    },
+    "deflateInit_": {
+        "interface": "zlib manual, deflateInit_()",
+        "why_outside": "zlib is a separate DSO resolved by the process loader",
+    },
+    "inflateInit_": {
+        "interface": "zlib manual, inflateInit_()",
+        "why_outside": "zlib is a separate DSO resolved by the process loader",
+    },
+    "deflateEnd": {
+        "interface": "zlib manual, deflateEnd()",
+        "why_outside": "zlib is a separate DSO resolved by the process loader",
+    },
+    "inflateEnd": {
+        "interface": "zlib manual, inflateEnd()",
+        "why_outside": "zlib is a separate DSO resolved by the process loader",
+    },
+    "crc32": {
+        "interface": "zlib manual, crc32()",
+        "why_outside": "zlib is a separate DSO resolved by the process loader",
+    },
+}
+
+
+def _plt_stub_targets(g, base: str, slot_offsets) -> list:
+    """PLT entries whose jump targets one of ``base``'s relocation slots.
+
+    ``objdump`` annotates a PLT stub's indirect jump with the GOT slot, e.g.
+    ``jmp *0x2f3d(%rip) # 895ff8 <malloc@GLIBC_2.2.5>``.  A stub is a valid
+    in-image function node for that slot; it is the last resolution path before
+    the symbol is declared blocking.
+    """
+    wanted = set(slot_offsets)
+    if not wanted:
+        return []
+    start_set = getattr(g, "start_set", set()) or set()
+    section_of = getattr(g, "section_of", None)
+    out = set()
+    for fstart, insns in getattr(g, "functions", ()) or ():
+        if fstart not in start_set or not callable(section_of):
+            continue
+        if section_of(fstart) not in (".plt", ".plt.got"):
+            continue
+        for _ins_addr, text in insns:
+            head = text.split("#", 1)[0]
+            if "jmp" not in head:
+                continue
+            m = re.search(r"#\s*([0-9a-f]+)\s+<", text)
+            if m and int(m.group(1), 16) in wanted:
+                out.add(fstart)
+                break
+    return sorted(out)
+
+
+def _resolve_symbolic_value(g, dso_name: str, symbol: str,
+                            export_index: dict) -> dict:
+    """Resolve one symbolic residual-bound value through the fixed order.
+
+    Returns a disposition row.  ``resolved`` carries every in-image target the
+    path found; ``external-contract`` names the documented interface; anything
+    else is ``blocking`` and is refused by :func:`closure_refusals`.
+    """
+    base = _symbol_base(symbol)
+    slot_offsets = sorted(
+        off for off, names in (getattr(g, "slot_syms", {}) or {}).items()
+        if any(_symbol_base(n) == base for n in names))
+    row = {
+        "symbol": symbol,
+        "base": base,
+        "module": dso_name,
+        "disposition": "blocking",
+        "path": None,
+        "targets": [],
+        "slot_offsets": [f"0x{off:x}" for off in slot_offsets],
+        "sites": [],
+        "reason": None,
+        "external_interface": None,
+        "external_justification": None,
+    }
+
+    def resolved(path: str, targets):
+        row.update(disposition="resolved", path=path,
+                   targets=[[m, a] for m, a in targets])
+        return row
+
+    # 1. exact export (bare name in the resolved candidate export index)
+    target = export_index.get(symbol)
+    if target:
+        return resolved("exact-export", [target])
+    # 2. version-stripped export
+    target = export_index.get(base)
+    if target:
+        return resolved("version-stripped-export", [target])
+    # 3. ICF/alias names: every address at which the defined symbol table
+    #    names this symbol.  Keep all addresses; an ICF alias is not one edge.
+    index_fn = getattr(g, "symbol_addresses_by_name", None)
+    if callable(index_fn):
+        by_name = index_fn()
+    else:
+        by_name = collections.defaultdict(list)
+        for addr, names in (getattr(g, "names_at", {}) or {}).items():
+            for name in names:
+                by_name[name.split("@")[0]].append(addr)
+    addrs = sorted(a for a in by_name.get(base, ())
+                   if a in (getattr(g, "start_set", set()) or set()))
+    if addrs:
+        return resolved("names-at", [(dso_name, a) for a in addrs])
+    # 4. dynamic-symbol table of this module
+    addr = (getattr(g, "dynamic_defs", {}) or {}).get(base)
+    if addr in (getattr(g, "start_set", set()) or set()):
+        return resolved("dynamic-symbol-table", [(dso_name, addr)])
+    # 5. SONAME-qualified import (``libcrypto.so.3:NAME``)
+    if ":" in symbol:
+        soname, _, rest = symbol.partition(":")
+        target = export_index.get(rest) or export_index.get(_symbol_base(rest))
+        if target and target[0] == soname:
+            return resolved("soname-qualified-import", [target])
+    # 6. PLT stub
+    stubs = _plt_stub_targets(g, base, slot_offsets)
+    if stubs:
+        return resolved("plt-stub", [(dso_name, a) for a in stubs])
+    # Documented external interface, or blocking.
+    contract = EXTERNAL_SYMBOL_CONTRACTS.get(base)
+    if contract:
+        row.update(disposition="external-contract", path="external-contract",
+                   external_interface=contract["interface"],
+                   external_justification=contract["why_outside"])
+        return row
+    row["reason"] = (
+        "no exact or version-stripped export, names-at alias, dynamic symbol, "
+        "SONAME-qualified import or PLT stub resolves this symbol, and no "
+        "documented external interface covers it")
+    return row
+
+
+def _bound_nodes(g, dso_name: str, values, export_index: dict,
+                 site: tuple | None = None) -> tuple[set, int, list]:
     """Map bound values to reachable nodes, widening rather than narrowing.
 
     An integer that is a defined function start is its own node.  An integer
@@ -6672,23 +7151,25 @@ def _bound_nodes(g, dso_name: str, values, export_index: dict) -> tuple[set, int
     (a widening: a transfer into the middle of a function still reaches that
     function).  Any other integer is not an executable address and cannot be a
     function entry; it is counted, not silently discarded.  A symbolic target
-    is resolved through the export index of the resolved OpenSSL DSOs; one that
-    does not resolve is counted as an unresolved symbol target.
+    is resolved through the fixed :data:`SYMBOL_RESOLUTION_ORDER`; every
+    symbolic value yields a disposition row, so none is counted and discarded.
     """
     nodes = set()
     non_code = 0
-    unresolved_syms = 0
+    symbols = []
     start_set = getattr(g, "start_set", set()) or set()
     section_of = getattr(g, "section_of", None)
     containing = getattr(g, "containing", None)
     for value in values:
         if isinstance(value, tuple):
             if len(value) == 2 and value[0] == "sym":
-                node = export_index.get(value[1])
-                if node is None:
-                    unresolved_syms += 1
-                else:
-                    nodes.add(node)
+                row = _resolve_symbolic_value(g, dso_name, value[1], export_index)
+                if site is not None:
+                    row["sites"] = sorted(set(row.get("sites") or [])
+                                          | {f"0x{site[1]:x}"})
+                for target in row.get("targets") or ():
+                    nodes.add((target[0], target[1]))
+                symbols.append(row)
             continue
         if not isinstance(value, int) or isinstance(value, bool):
             continue
@@ -6702,7 +7183,7 @@ def _bound_nodes(g, dso_name: str, values, export_index: dict) -> tuple[set, int
                 nodes.add((dso_name, base))
                 continue
         non_code += 1
-    return nodes, non_code, unresolved_syms
+    return nodes, non_code, symbols
 
 
 def build_graph(graphs: dict, roots: set, export_index: dict,
@@ -6787,11 +7268,39 @@ def build_graph(graphs: dict, roots: set, export_index: dict,
     module_values = {}
     module_bound = {}
     bound_sources = {}
+    # Every symbolic value in the bound gets exactly one disposition row
+    # (resolved / external-contract / blocking).  A site-extra occurrence adds
+    # its call-site address; the row is never dropped and a bare count is not
+    # the evidence.
+    symbol_dispositions = {}
+
+    def merge_symbol(row, site=None):
+        key = (row["module"], row["symbol"])
+        cur = symbol_dispositions.get(key)
+        if cur is None:
+            cur = dict(row)
+            cur["targets"] = [list(t) for t in (row.get("targets") or [])]
+            cur["slot_offsets"] = list(row.get("slot_offsets") or [])
+            cur["sites"] = []
+            symbol_dispositions[key] = cur
+        for target in row.get("targets") or []:
+            if target not in cur["targets"]:
+                cur["targets"].append(list(target))
+        for off in row.get("slot_offsets") or []:
+            if off not in cur["slot_offsets"]:
+                cur["slot_offsets"].append(off)
+        if site is not None:
+            cur["sites"].append(f"0x{site[1]:x}")
+        cur["sites"] = sorted(set(cur["sites"]))
+        cur["slot_offsets"] = sorted(set(cur["slot_offsets"]))
+
     for dso_name, g in graphs.items():
         values = unresolved_site_bound(g, {})
         module_values[dso_name] = values
-        nodes, non_code, unresolved_syms = _bound_nodes(
+        nodes, non_code, symbol_rows = _bound_nodes(
             g, dso_name, values, export_index)
+        for row in symbol_rows:
+            merge_symbol(row)
         module_bound[dso_name] = nodes
         field_values = {v for stored in (getattr(g, "field_stores", None)
                                          or {}).values() for v in stored}
@@ -6810,7 +7319,16 @@ def build_graph(graphs: dict, roots: set, export_index: dict,
             "bound_values": len(values),
             "bound_nodes": len(nodes),
             "non_code_values": non_code,
-            "unresolved_symbol_values": unresolved_syms,
+            "symbol_values": len(symbol_rows),
+            "resolved_symbol_values": sum(
+                1 for r in symbol_rows if r["disposition"] == "resolved"),
+            "external_contract_symbol_values": sum(
+                1 for r in symbol_rows
+                if r["disposition"] == "external-contract"),
+            "unresolved_symbol_values": sum(
+                1 for r in symbol_rows if r["disposition"] == "blocking"),
+            "symbol_disposition_symbols": sorted(r["symbol"]
+                                                 for r in symbol_rows),
         }
 
     # Site-specific half: the site's own resolver targets, on top of the same
@@ -6826,8 +7344,11 @@ def build_graph(graphs: dict, roots: set, export_index: dict,
             if not extra:
                 site_extra[id(s)] = set()
                 continue
-            nodes, _non_code, _syms = _bound_nodes(g, dso_name[0], extra,
-                                                   export_index)
+            site = (dso_name[0], s.get("addr", dso_name[1]))
+            nodes, _non_code, symbol_rows = _bound_nodes(
+                g, dso_name[0], extra, export_index, site=site)
+            for row in symbol_rows:
+                merge_symbol(row, site=site)
             site_extra[id(s)] = nodes
 
     total_functions = sum(len(getattr(g, "funcs", {})) for g in graphs.values())
@@ -6876,6 +7397,27 @@ def build_graph(graphs: dict, roots: set, export_index: dict,
                 unclassified.add((dso_name, fstart, s["reason"]))
     reachable_residual_sites.sort(key=lambda r: (r[0], r[1], r[2].get("addr", 0)))
 
+    disposition_rows = sorted(symbol_dispositions.values(),
+                              key=lambda r: (r["module"], r["symbol"]))
+    disposition_summary = {
+        "schema": "openssl-rs/campaign/safe-c33/symbol-disposition/v1",
+        "resolution_order": list(SYMBOL_RESOLUTION_ORDER),
+        "resolved": sum(1 for r in disposition_rows
+                        if r["disposition"] == "resolved"),
+        "external-contract": sum(1 for r in disposition_rows
+                                 if r["disposition"] == "external-contract"),
+        "blocking": sum(1 for r in disposition_rows
+                        if r["disposition"] == "blocking"),
+        "rule": (
+            "every symbolic value in the module residual bound and in a "
+            "residual site's own bound is resolved through the fixed order "
+            "exact-export, version-stripped-export, names-at, "
+            "dynamic-symbol-table, soname-qualified-import, plt-stub; a "
+            "symbol covered by a cited documented external interface is "
+            "external-contract; every other symbol is blocking and is "
+            "refused, never counted and discarded"),
+    }
+
     return {
         "direct_reachable": direct_reach,
         "upper_reachable": reach,
@@ -6894,6 +7436,8 @@ def build_graph(graphs: dict, roots: set, export_index: dict,
         "resolved_site_targets": resolved_targets,
         "residual_bound": bound,
         "residual_bound_nodes": len(bound),
+        "symbol_dispositions": disposition_rows,
+        "symbol_disposition_summary": disposition_summary,
         "bound_evidence_sources": {
             "schema": UNRESOLVED_BOUND_SCHEMA,
             "rule": (
@@ -6916,19 +7460,45 @@ def build_graph(graphs: dict, roots: set, export_index: dict,
 
 
 def closure_refusals(closure: dict) -> list:
-    """A non-convergent least fixed point is a refusal, never a partial bound."""
-    if closure.get("converged", True):
-        return []
-    detail = closure.get("nonconvergent_detail") or {}
-    return [{
-        "code": "CLOSURE_NONCONVERGENT",
-        "detail": (
-            "the residual-admission least fixed point did not converge within "
-            f"{detail.get('round_cap')} round(s); the last round added "
-            f"{detail.get('last_growth')} node(s) and the reachable set is "
-            f"{detail.get('reach_size')} node(s). The bound is partial and no "
-            "reachability claim may be drawn from it"),
-    }]
+    """Closure refusals: non-convergence and unresolved symbolic targets.
+
+    A symbol in the residual bound that resolves by no path and is not covered
+    by a cited external interface can become a missing dependency.  It is a
+    refusal naming every blocking symbol and site, not a count.
+    """
+    refusals = []
+    if not closure.get("converged", True):
+        detail = closure.get("nonconvergent_detail") or {}
+        refusals.append({
+            "code": "CLOSURE_NONCONVERGENT",
+            "detail": (
+                "the residual-admission least fixed point did not converge within "
+                f"{detail.get('round_cap')} round(s); the last round added "
+                f"{detail.get('last_growth')} node(s) and the reachable set is "
+                f"{detail.get('reach_size')} node(s). The bound is partial and no "
+                "reachability claim may be drawn from it"),
+        })
+    blocking = [row for row in (closure.get("symbol_dispositions") or [])
+                if row.get("disposition") == "blocking"]
+    if blocking:
+        refusals.append({
+            "code": "CLOSURE_UNRESOLVED_SYMBOL",
+            "detail": (
+                f"{len(blocking)} symbolic target(s) in the residual bound "
+                "resolve by no documented path (exact export, version-stripped "
+                "export, names-at alias, dynamic symbol, SONAME-qualified "
+                "import, PLT stub) and are covered by no cited external "
+                "interface; a missing symbol can be a missing dependency"),
+            "symbols": [
+                {"symbol": row["symbol"],
+                 "module": row["module"],
+                 "slot_offsets": row.get("slot_offsets") or [],
+                 "sites": row.get("sites") or [],
+                 "reason": row.get("reason")}
+                for row in blocking
+            ],
+        })
+    return refusals
 
 
 # --------------------------------------------------------------------------- #
@@ -8563,9 +9133,13 @@ def build_receipt(args) -> dict:
                 "analysis_identity": analysis_ident,
                 "analysis_identity_basis": (
                     "the DSO file digest is not an analysis identity: a "
-                    "comment-only edit changes it with byte-identical .text and "
-                    "symbol addresses; the identity hashes .text and the symbol "
-                    "table"),
+                    "comment-only edit changes it with byte-identical analysis "
+                    "sections and symbol addresses; the identity hashes every "
+                    "analysis-relevant section (name/type/address/size/bytes), "
+                    "the canonical relocation table, the defined- and dynamic-"
+                    "symbol tables and the loader entries, and excludes "
+                    "analysis-irrelevant metadata (basis string in "
+                    "analysis_identity.basis)"),
                 "closure_rounds": closure["closure_rounds"],
                 "max_rounds": closure["max_rounds"],
                 "round_sizes": closure["round_sizes"],
@@ -8594,6 +9168,9 @@ def build_receipt(args) -> dict:
                         "and remain validated"),
                 },
                 "residual_bound_nodes": closure["residual_bound_nodes"],
+                "symbol_dispositions": closure["symbol_dispositions"],
+                "symbol_disposition_summary": closure[
+                    "symbol_disposition_summary"],
                 "bound_evidence_sources": closure["bound_evidence_sources"],
                 "reachable_functions_count": len(reachable_functions),
                 "reachable_functions_sha256": reachable_functions_sha256,
@@ -8666,9 +9243,12 @@ def build_receipt(args) -> dict:
                 "the residual bound is class-independent and therefore monotone, but "
                 "it is still a may-bound: a function that no materialised-address "
                 "source names is not admitted, so monotonicity is not completeness",
-                "the analysis identity covers .text and the defined-symbol table, not "
-                "data-section contents; two candidates with different data but "
-                "identical code and symbols share an identity",
+                "the analysis identity binds the enumerated analysis inputs "
+                "(sections, relocations, defined and dynamic symbol tables, "
+                "loader entries); it is not a proof of input completeness: a "
+                "derivation that starts reading a new section must extend the "
+                "enumeration, and two candidates with identical enumerated "
+                "inputs but a different unenumerated fact would collide",
                 "a dynamic trace proves execution, not unreachability, and never "
                 "narrowed this graph",
                 "function-level reachability is not a proof that a site is safe; it "
@@ -9523,9 +10103,13 @@ def self_test() -> int:
     class _IdG:
         name = "identity.so"
 
-        def __init__(self, dso_sha, rows=None):
+        def __init__(self, dso_sha, rows=None, *, data_sha="d" * 64,
+                     reloc_add=0x10, comment="c"):
             self.sha256 = dso_sha
             self._rows = rows or [["f", 0x10, 8, "T"], ["g", 0x20, 16, "T"]]
+            self._data_sha = data_sha
+            self._reloc_add = reloc_add
+            self._comment = comment
 
         def text_digest(self):
             return "a" * 64, 4096
@@ -9533,16 +10117,65 @@ def self_test() -> int:
         def symbol_table_rows(self):
             return list(self._rows)
 
+        def analysis_section_descriptors(self):
+            return [
+                {"name": ".text", "type": "PROGBITS", "addr": 0x1000,
+                 "size": 4096, "sha256": "a" * 64},
+                {"name": ".data.rel.ro", "type": "PROGBITS", "addr": 0x3000,
+                 "size": 64, "sha256": self._data_sha},
+            ]
+
+        def analysis_excluded_sections(self):
+            return [".comment", ".debug_info"]
+
+        def canonical_relocations(self):
+            return [[".data.rel.ro", 0x0, "R_X86_64_RELATIVE", None,
+                     self._reloc_add]]
+
+        def dynamic_symbol_rows(self):
+            return [["f", 0x10, "T"], ["g", 0x20, "T"]]
+
+        def dynamic_entries(self):
+            return {"soname": "identity.so", "needed": ["libc.so.6"],
+                    "runpath": [], "rpath": []}
+
     id_a = analysis_identity({"identity.so": _IdG("0" * 64)})
     id_b = analysis_identity({"identity.so": _IdG("f" * 64)})
     id_c = analysis_identity({"identity.so": _IdG(
         "0" * 64, [["f", 0x10, 8, "T"], ["g", 0x20, 24, "T"]])})
+    id_data = analysis_identity({"identity.so": _IdG(
+        "0" * 64, data_sha="e" * 64)})
+    id_reloc = analysis_identity({"identity.so": _IdG(
+        "0" * 64, reloc_add=0x20)})
+    id_comment = analysis_identity({"identity.so": _IdG(
+        "0" * 64, comment="z")})
     check("analysis identity is unchanged by a DSO digest change",
           (id_a["digest"] == id_b["digest"],
            id_a["modules"]["identity.so"]["dso_sha256"]
            != id_b["modules"]["identity.so"]["dso_sha256"]), (True, True))
     check("analysis identity changes with a symbol-table change",
           id_a["digest"] == id_c["digest"], False)
+    check("analysis identity changes with a data-section byte change "
+          "while .text and symbol rows stay identical",
+          (id_a["modules"]["identity.so"]["sections"]
+           != id_data["modules"]["identity.so"]["sections"],
+           id_a["modules"]["identity.so"]["text_sha256"]
+           == id_data["modules"]["identity.so"]["text_sha256"],
+           id_a["modules"]["identity.so"]["symbol_table_sha256"]
+           == id_data["modules"]["identity.so"]["symbol_table_sha256"],
+           id_a["digest"] != id_data["digest"]), (True, True, True, True))
+    check("analysis identity changes with a relocation addend change",
+          (id_a["modules"]["identity.so"]["relocation_table_sha256"]
+           != id_reloc["modules"]["identity.so"]["relocation_table_sha256"],
+           id_a["digest"] != id_reloc["digest"]), (True, True))
+    check("analysis identity ignores excluded metadata",
+          id_a["digest"] == id_comment["digest"], True)
+    check("the identity names the included and excluded inputs",
+          (".text" in id_a["included_sections"]
+           and ".data.rel.ro" in id_a["included_sections"]
+           and ".debug_*" in id_a["excluded_classes"]
+           and ".comment" in id_a["modules"]["identity.so"]["excluded_sections"]),
+          True)
     check("the DSO digest is recorded as a non-identity",
           id_a["modules"]["identity.so"]["dso_sha256_is_analysis_identity"],
           False)
@@ -9579,6 +10212,125 @@ def self_test() -> int:
            reachable_functions_digest(raw_a)
            != reachable_functions_digest(raw_b)),
           (True, True, True))
+
+    # ---- symbolic-target dispositions (P0-B) ------------------------------ #
+    # Every symbolic value in the bound gets exactly one disposition.  The
+    # blocking case must refuse; an alias-resolved case must not; an
+    # external-contract case must be recorded without a refusal; and disabling
+    # the refusal must make the blocking case fail.
+    class _SymbolG:
+        name = "symbol-disposition.so"
+        funcs = {0x10: "root", 0x20: "alias_target", 0x30: "dyn_target",
+                 0x40: "plt_stub"}
+        start_set = set(funcs)
+        direct = {}
+        taken_code = set()
+        taken_data = set()
+        field_stores = {}
+        unknown_call_arg_targets = set()
+        dynamic_reloc_targets = set()
+        slot_syms = {0x2000: {"plt_target"}}
+        names_at = {0x20: {"alias_target"}}
+        dynamic_defs = {"dyn_target": 0x30}
+        functions = [(0x40, [(0x40, "jmp *0x1000(%rip) # 2000 <plt_target@plt>")])]
+        sections = {".text": (0x0, 0, 0x100), ".plt": (0x40, 0, 0x10)}
+
+        def __init__(self, symbol):
+            self.address_taken_union = {("sym", symbol)}
+            self.sites = {(0x10, 0x11, "call"): {
+                "kind": "call", "func": 0x10, "addr": 0x11,
+                "text": "call *%rax", "targets": set(), "unresolved": True,
+                "reason": "test", "class": "unclassified",
+                "arg_targets": set()}}
+
+        def section_of(self, addr):
+            if addr == 0x40:
+                return ".plt"
+            return ".text" if 0 <= addr < 0x100 else None
+
+        def containing(self, addr):
+            base = [a for a in sorted(self.start_set) if a <= addr]
+            return base[-1] if base else None
+
+    def _symbol_closure(symbol, export_index=None):
+        g = _SymbolG(symbol)
+        closure = build_graph({g.name: g}, {(g.name, 0x10)},
+                              export_index or {})
+        return closure, g
+
+    blocking_closure, _ = _symbol_closure("no_such_symbol")
+    blocking_rows = [r for r in blocking_closure["symbol_dispositions"]
+                     if r["symbol"] == "no_such_symbol"]
+    check("an unresolved symbol gets a blocking disposition",
+          [(r["disposition"], r["path"]) for r in blocking_rows],
+          [("blocking", None)])
+    blocking_refusals = closure_refusals(blocking_closure)
+    check("an unresolved symbol produces CLOSURE_UNRESOLVED_SYMBOL",
+          [(r["code"], [s["symbol"] for s in r.get("symbols", [])])
+           for r in blocking_refusals],
+          [("CLOSURE_UNRESOLVED_SYMBOL", ["no_such_symbol"])])
+
+    alias_closure, _ = _symbol_closure("alias_target")
+    alias_rows = [r for r in alias_closure["symbol_dispositions"]
+                  if r["symbol"] == "alias_target"]
+    check("a names-at alias resolves and is not a refusal",
+          ([(r["disposition"], r["path"]) for r in alias_rows],
+           [a for _m, a in alias_rows[0]["targets"]],
+           closure_refusals(alias_closure)),
+          ([("resolved", "names-at")], [0x20], []))
+
+    dyn_closure, _ = _symbol_closure("dyn_target")
+    dyn_rows = [r for r in dyn_closure["symbol_dispositions"]
+                if r["symbol"] == "dyn_target"]
+    check("a dynamic-symbol-table target resolves",
+          [(r["disposition"], r["path"]) for r in dyn_rows],
+          [("resolved", "dynamic-symbol-table")])
+
+    plt_closure, _ = _symbol_closure("plt_target")
+    plt_rows = [r for r in plt_closure["symbol_dispositions"]
+                if r["symbol"] == "plt_target"]
+    check("a PLT-stub target resolves",
+          [(r["disposition"], r["path"], r["targets"]) for r in plt_rows],
+          [("resolved", "plt-stub", [["symbol-disposition.so", 0x40]])])
+
+    export_closure, _ = _symbol_closure(
+        "versioned_fn@@V", {"versioned_fn": ("symbol-disposition.so", 0x30)})
+    export_rows = [r for r in export_closure["symbol_dispositions"]
+                   if r["symbol"] == "versioned_fn@@V"]
+    check("a version-stripped export resolves",
+          [(r["disposition"], r["path"]) for r in export_rows],
+          [("resolved", "version-stripped-export")])
+
+    qual_closure, _ = _symbol_closure(
+        "symbol-disposition.so:qualified_fn",
+        {"qualified_fn": ("symbol-disposition.so", 0x30)})
+    qual_rows = [r for r in qual_closure["symbol_dispositions"]
+                 if r["symbol"].endswith("qualified_fn")]
+    check("a SONAME-qualified import resolves",
+          [(r["disposition"], r["path"]) for r in qual_rows],
+          [("resolved", "soname-qualified-import")])
+
+    external_closure, _ = _symbol_closure("malloc")
+    external_rows = [r for r in external_closure["symbol_dispositions"]
+                     if r["symbol"] == "malloc"]
+    check("an external-contract symbol is recorded without a refusal",
+          ([(r["disposition"], bool(r["external_interface"])) for r in external_rows],
+           closure_refusals(external_closure)),
+          ([("external-contract", True)], []))
+
+    _orig_symbol_refusals = globals()["closure_refusals"]
+
+    def _drop_symbol_refusal(closure):
+        return [r for r in _orig_symbol_refusals(closure)
+                if r["code"] != "CLOSURE_UNRESOLVED_SYMBOL"]
+
+    globals()["closure_refusals"] = _drop_symbol_refusal
+    try:
+        symbol_refusal_disabled_fails = not any(
+            r["code"] == "CLOSURE_UNRESOLVED_SYMBOL"
+            for r in closure_refusals(blocking_closure))
+    finally:
+        globals()["closure_refusals"] = _orig_symbol_refusals
 
     # ---- mutation controls ------------------------------------------------- #
     # Each mutation disables exactly one mechanism; the named case must then
@@ -9659,6 +10411,10 @@ def self_test() -> int:
         {"mutation": "unconditional admission (no bound check)",
          "case": "admission-surviving-caller",
          "case_fails": unconditional_admission_fails,
+         "expected": True},
+        {"mutation": "CLOSURE_UNRESOLVED_SYMBOL refusal removed",
+         "case": "unresolved-symbol-refusal",
+         "case_fails": symbol_refusal_disabled_fails,
          "expected": True},
     ]
     check("mutation matrix: every mutation flips its named case",
@@ -11061,12 +11817,15 @@ def self_test() -> int:
           f"derived target_reachability, sidecar default and tool identity), the "
           f"least-fixed-point residual admission (nested unresolved dispatch, "
           f"non-convergence refusal), the monotone class-independent site bound, "
-          f"the analysis identity (DSO digest is not an identity), admission by "
-          f"refutation (refuted caller admitted and closure recomputed, "
-          f"surviving exclusion validated, infinite contribution demoted to "
-          f"UNRESOLVED), and the mutation matrix (single pass, class-narrowed "
-          f"bound, refusal removed, admission disabled, unconditional "
-          f"admission)")
+          f"the analysis identity (DSO digest is not an identity; sections, "
+          f"relocations, defined and dynamic symbols and loader entries are "
+          f"bound), admission by refutation (refuted caller admitted and closure "
+          f"recomputed, surviving exclusion validated, infinite contribution "
+          f"demoted to UNRESOLVED), the symbolic-target dispositions "
+          f"(blocking refusal, names-at alias, dynamic symbol, PLT stub, "
+          f"external contract), and the mutation matrix (single pass, class-"
+          f"narrowed bound, refusal removed, admission disabled, unconditional "
+          f"admission, unresolved-symbol refusal removed)")
     return 0
 
 
