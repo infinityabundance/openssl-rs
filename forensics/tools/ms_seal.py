@@ -130,6 +130,30 @@ SCHEMAS = REPO_ROOT / "forensics" / "tools" / "memory_safety_schemas.py"
 GUARD = REPO_ROOT / "forensics" / "tools" / "phase25_guard.py"
 MANIFEST = REPO_ROOT / "forensics" / "memory-safety" / "container.json"
 LEDGER = REPO_ROOT / "forensics" / "phase25-obligations.json"
+REGISTRY = REPO_ROOT / "artifacts" / "phase25" / "COURTS.json"
+
+
+def registry_counts() -> dict:
+    """The runner's own Phase-25 registry, read **only** to state the disagreement.
+
+    The seal re-derives the courts from their committed planes and deliberately does not adopt
+    this file's verdicts: the runner deletes and rewrites it, and it currently records every row
+    as `pass` while the re-derivation fails six. Reading it here keeps that discrepancy visible in
+    the generated seal instead of letting one record silently stand for the other.
+    """
+    try:
+        body = _body(_load(REGISTRY))
+    except (OSError, ValueError, KeyError):
+        return {}
+    rows = body.get("courts") or []
+    passed = [r for r in rows if str(r.get("verdict")) == "pass"]
+    failed = [r for r in rows if str(r.get("verdict")) != "pass"]
+    return {
+        "rows": len(rows),
+        "pass": len(passed),
+        "fail": len(failed),
+        "failed": sorted(str(r.get("court")) for r in failed),
+    }
 
 # The unit whose evidence is this very seal. Its artefact is the seal document; its own summary is
 # the derivation, so the courts table excludes it (the seal does not summarise itself).
@@ -675,12 +699,20 @@ def derive_claim(counts: dict, census: dict, tool: dict) -> dict:
     }
 
 
-def derive_property_findings(counts: dict, census: dict, open_items: list[dict]) -> list[str]:
+def derive_property_findings(counts: dict, census: dict, open_items: list[dict],
+                            courts: list[dict]) -> list[str]:
     out: list[str] = []
+    failed = [str(c["court"]) for c in courts if c["verdict"] != "pass"]
+    registry = registry_counts()
     out.append(
-        f"the seal consolidates {counts['courts']} Phase-25 court result(s): "
-        f"{counts['courts_pass']} pass, {counts['courts_fail']} fail, each joined to its "
-        f"committed artefact and digest"
+        f"the seal re-derives {counts['courts']} non-`MS-SEAL` Phase-25 court result(s) from their "
+        f"committed planes: {counts['courts_pass']} pass, {counts['courts_fail']} fail"
+        + (f" ({', '.join(failed)})" if failed else "")
+        + "; the runner's registry "
+        f"artifacts/phase25/COURTS.json records {registry.get('rows', '?')} court row(s), "
+        f"{registry.get('pass', '?')} pass and {registry.get('fail', '?')} fail, and is not this "
+        "seal's input, so the two records disagree and the seal states the disagreement rather "
+        "than adopting the registry's verdicts"
     )
     out.append(
         f"the residual census classifies and disposes {counts['residual_records']} residual "
@@ -739,7 +771,7 @@ def derive(evidence: dict) -> dict:
         "claim": derive_claim(counts, census, tool),
         "passed": bool(counts["passed"]),
         "property_status": "NOT_CLAIMED",
-        "property_findings": derive_property_findings(counts, census, open_items),
+        "property_findings": derive_property_findings(counts, census, open_items, courts),
     }
     _DERIVED_CACHE[key] = d
     return d
@@ -799,8 +831,12 @@ def _evidence_paths(evidence: dict) -> list[str]:
 # --------------------------------------------------------------------------------------------
 
 def render_seal(evidence: dict, body: dict) -> str:
-    """Render `docs/PHASE-25-MEMORY-SAFETY-SEAL.md` from the derived body. Deterministic."""
-    d = derive(evidence)
+    """Render `docs/PHASE-25-MEMORY-SAFETY-SEAL.md` from the derived body. Deterministic.
+
+    It renders the *body* it is given and does not re-derive: the body is either the fresh
+    derivation (`--measure`) or the committed `artifacts/phase25/summary.json` (`--render`), and
+    rendering must not turn a documentation correction into a re-measurement of the stratum.
+    """
     c = body["counts"]
     led = body["ledger"]["counts"]
     lines: list[str] = []
@@ -832,9 +868,18 @@ def render_seal(evidence: dict, body: dict) -> str:
     A("")
     A("- Authority: the admitted venue `" + str(evidence.get("venue_image")) + "`; the frozen")
     A("  candidate is `" + str(body["candidate_identity"]) + "`, not live HEAD.")
-    A(f"- Court results: `artifacts/phase25/COURTS.json` — {c['courts']} Phase-25 courts,")
-    A(f"  `all_pass` true, `summary` `pass` {c['courts_pass']} of {c['courts']}, `pending_courts`")
-    A("  empty. No court is FRF-declarable: each reads committed evidence and stages no")
+    A(f"- Court results: this seal re-derives **{c['courts']}** non-`MS-SEAL` Phase-25 courts")
+    A(f"  from their committed planes: **{c['courts_pass']} pass, {c['courts_fail']} fail**.")
+    failed = [str(x['court']) for x in body['courts'] if x['verdict'] != 'pass']
+    if failed:
+        A("  The failing courts are " + ", ".join(f"`{n}`" for n in failed) + ".")
+    registry = registry_counts()
+    A(f"  The runner's registry `artifacts/phase25/COURTS.json` records **{registry.get('rows')} court")
+    A(f"  rows, {registry.get('pass')} pass and {registry.get('fail')} fail**; it is not this seal's")
+    A("  input (the runner deletes and rewrites it), so the two records disagree and this seal")
+    A("  records the disagreement rather than adopting the registry's verdicts. **The seal therefore")
+    A(f"  records `passed = {str(body['passed']).lower()}`.** No court is FRF-declarable: each reads")
+    A("  committed evidence and stages no")
     A("  `artifacts/phase25/probes/<probe>.{authority,candidate}` pair.")
     A(f"- Obligation ledger: `forensics/phase25-obligations.json` — `owned` {led.get('owned')},")
     A(f"  `implemented` {led.get('implemented')}, `open_in_this_stratum`")
@@ -846,7 +891,9 @@ def render_seal(evidence: dict, body: dict) -> str:
     A("")
     A("One row per landed Phase-25 court (25.0 through 25.20). The verdict is the court's own")
     A("re-derived verdict and the finding count is its own, so the row is a re-derivation, not a")
-    A("reading of `artifacts/phase25/COURTS.json` (which the runner deletes and rewrites). Each")
+    A("reading of `artifacts/phase25/COURTS.json` (which the runner deletes and rewrites). Where the")
+    A("two disagree, section 'The bounded claim' states both counts and names the failing courts;")
+    A("the registry is the runner's record, not an adjudication of the re-derivation. Each")
     A("court's committed artefact **evidence** digest is carried by the machine artefact")
     A("`artifacts/phase25/summary.json`, whose `courts[].artefact_sha256` is that artefact's")
     A("`body_hash` (its evidence digest), not its file digest -- the file digest moves with the")
@@ -1295,6 +1342,26 @@ def self_test() -> int:
     return 0
 
 
+def cmd_render() -> int:
+    """Re-render the seal document from the **committed** summary body.
+
+    `--measure` re-derives the courts over the live committed planes, which is a measurement at
+    the live tree: for a seal whose candidate identity is frozen elsewhere, running it here would
+    silently move the recorded verdicts. `--render` therefore separates transcription from
+    measurement: it reads `artifacts/phase25/summary.json` as committed and renders the same
+    document from it, so a documentation correction to the generator can be applied without
+    re-measuring the stratum. The rendered text is still a pure function of committed evidence.
+    """
+    body = _body(_load(OUT))
+    profile = str(body.get("profile") or "")
+    venue = profile.split(" \u00b7 ", 1)[0] if profile else None
+    evidence = {"venue_image": venue, "court_units": list(po.COURT_UNITS)}
+    write_text(SEAL_DOC, render_seal(evidence, body))
+    print(f"[ms-seal] re-rendered {rel(SEAL_DOC)} from the committed {rel(OUT)} "
+          f"(no re-derivation, no measurement)")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     ap.add_argument("--measure", action="store_true",
@@ -1303,6 +1370,8 @@ def main(argv: list[str]) -> int:
                     help="validate the committed seal without regenerating")
     ap.add_argument("--self-test", action="store_true",
                     help="prove the metadata-only admission and the control is honest")
+    ap.add_argument("--render", action="store_true",
+                    help="re-render the seal document from the committed summary, no measurement")
     args = ap.parse_args(argv)
 
     # The Docker-only execution guard, called first. This tool executes nothing, so the manifest
@@ -1313,6 +1382,8 @@ def main(argv: list[str]) -> int:
         return self_test()
     if args.check:
         return cmd_check()
+    if args.render:
+        return cmd_render()
     # The default action is the derivation (and `--measure` names it): `evidence_determinism.py`
     # regenerates every generator with no flags and compares the bytes.
     return cmd_measure()

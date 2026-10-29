@@ -113,5 +113,23 @@
     "No dynamic trace exists for ssh in either run (observed_trace.available = false), so whether ssh executes CRYPTO_cbc128_encrypt is not established either way.",
     "Byte reproducibility across toolchains, machines or images is not established; only within the pinned court image.",
     "SAFE_COMPATIBLE remains 0/33. No obligation discharge from v1n or v1p is carried forward by this receipt."
-  ]
+  ],
+
+  "receipt_retention": {
+    "choice": "A",
+    "choice_statement": "Both candidate inventories are kept in the repository; the closure receipts they cite are identified by path, size and sha256 but are NOT committed, because they live under the gitignored `court/` scratch tree. This receipt therefore claims digest identity only, and explicitly does not claim that the closure can be reproduced from the repository.",
+    "inventories": [
+      {"candidate": "v1n", "path": "atlas-refresh/v1n-candidate-freeze.json", "tracked": "NOT_TRACKED_AT_RECORD_TIME (added by this batch)", "source_commit": "c63fc23de2048533f634adbcd00fd12c34487d13"},
+      {"candidate": "v1p", "path": "atlas-refresh/v1p-candidate-freeze.json", "tracked": "tracked", "source_commit": "ad5913099732821d2e95d03823dd38e501d73481"}
+    ],
+    "closure_receipts": [
+      {"candidate": "v1n", "subject": "ssh", "path": "court/freeze-v1n/closure-ssh-v1n.json", "size": 5600956, "sha256": "8079440e5b20162973f0fd44497e2ce86091045924f2c29ea32395b0b013aa90"},
+      {"candidate": "v1n", "subject": "sshd", "path": "court/freeze-v1n/closure-sshd-v1n.json", "size": 5394196, "sha256": "bf6543ef8835cef53479f585d1fe594d30d288ba8ff4db2419e53789054b6dcf"},
+      {"candidate": "v1p", "subject": "ssh", "path": "court/freeze-v1p/closure-ssh-v1p.json", "size": 5394675, "sha256": "3a7b0346b6d7005705a54620e4ae87be0aba2f13674db7da8e7d170024485d61"},
+      {"candidate": "v1p", "subject": "sshd", "path": "court/freeze-v1p/closure-sshd-v1p.json", "size": 5225495, "sha256": "1a2d6d813d2c6353ac28a4e37cdc6f4c55b3737cb34b884f9e42b4ce727550dc"}
+    ],
+    "receipt_retention": "digest_only_not_in_repository",
+    "reproducibility": "NOT_REPRODUCIBLE_FROM_REPOSITORY",
+    "note": "`court/` is gitignored (`.gitignore`: `/court/`), so the four receipts above are identified by digest and are not part of the repository. The inventories ARE committed, so the candidates (source commit, source-tree digest, install artefacts, consumer binaries) are reproducible as identities, but the closure sidecars and graphs are not. A reader can rebuild the candidates and re-run `forensics/tools/consumer_closure.py` from the inventories; that reproduction is a NEW measurement and must not be assumed to reproduce these digests. This is the same limitation the finding records for the bound itself."
+  }
 }

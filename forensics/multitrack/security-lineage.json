@@ -31,7 +31,7 @@
       "L-security_backport-openssl-3.6.5-openssl-4.0.3-CVE-2026-84782"
     ],
     "boundary": "the plane observes the source's CVE records it binds and records the rest as unobserved; a fixed identifier that is not a catalogue release is an external release reference and is never admitted as an authority; the candidate disposition references docs/SECURITY_DIVERGENCE_POLICY.md and forensics/divergence-obligations.json rather than duplicating the register",
-    "content_hash": "df7fd8b1ad5018298a2109cb4c072dab40ab470607b4654d16b85b91d7eafd2b",
+    "content_hash": "6d7ce63b0fba31319cbb4252c85baa23bf987e9ddffb3fe3014cf17328f2a55f",
     "counts": {
       "backport_edges": 27,
       "branch_fixes": 52,
@@ -430,7 +430,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -497,7 +497,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -564,7 +564,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -631,7 +631,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -698,7 +698,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -765,7 +765,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -832,7 +832,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -899,7 +899,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -966,7 +966,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -1033,7 +1033,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -1100,7 +1100,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -1167,7 +1167,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -1234,7 +1234,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -1301,7 +1301,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -1371,7 +1371,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "a38a60f9dd856cbdc65ee69af43b330a1f4c9b6e73657cb07532fc48438ab546",
+            "sha256": "f14090a46307ef74e968e69d9cdfdc2136319c8dad5479965b2cc7b971d43dfd",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1441,7 +1441,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "a38a60f9dd856cbdc65ee69af43b330a1f4c9b6e73657cb07532fc48438ab546",
+            "sha256": "f14090a46307ef74e968e69d9cdfdc2136319c8dad5479965b2cc7b971d43dfd",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1511,7 +1511,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "a38a60f9dd856cbdc65ee69af43b330a1f4c9b6e73657cb07532fc48438ab546",
+            "sha256": "f14090a46307ef74e968e69d9cdfdc2136319c8dad5479965b2cc7b971d43dfd",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1581,7 +1581,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "a38a60f9dd856cbdc65ee69af43b330a1f4c9b6e73657cb07532fc48438ab546",
+            "sha256": "f14090a46307ef74e968e69d9cdfdc2136319c8dad5479965b2cc7b971d43dfd",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1651,7 +1651,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "a38a60f9dd856cbdc65ee69af43b330a1f4c9b6e73657cb07532fc48438ab546",
+            "sha256": "f14090a46307ef74e968e69d9cdfdc2136319c8dad5479965b2cc7b971d43dfd",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1721,7 +1721,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "a38a60f9dd856cbdc65ee69af43b330a1f4c9b6e73657cb07532fc48438ab546",
+            "sha256": "f14090a46307ef74e968e69d9cdfdc2136319c8dad5479965b2cc7b971d43dfd",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1791,7 +1791,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "a38a60f9dd856cbdc65ee69af43b330a1f4c9b6e73657cb07532fc48438ab546",
+            "sha256": "f14090a46307ef74e968e69d9cdfdc2136319c8dad5479965b2cc7b971d43dfd",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1860,7 +1860,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "a38a60f9dd856cbdc65ee69af43b330a1f4c9b6e73657cb07532fc48438ab546",
+            "sha256": "f14090a46307ef74e968e69d9cdfdc2136319c8dad5479965b2cc7b971d43dfd",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1929,7 +1929,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "a38a60f9dd856cbdc65ee69af43b330a1f4c9b6e73657cb07532fc48438ab546",
+            "sha256": "f14090a46307ef74e968e69d9cdfdc2136319c8dad5479965b2cc7b971d43dfd",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -1998,7 +1998,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "a38a60f9dd856cbdc65ee69af43b330a1f4c9b6e73657cb07532fc48438ab546",
+            "sha256": "f14090a46307ef74e968e69d9cdfdc2136319c8dad5479965b2cc7b971d43dfd",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -2067,7 +2067,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "a38a60f9dd856cbdc65ee69af43b330a1f4c9b6e73657cb07532fc48438ab546",
+            "sha256": "f14090a46307ef74e968e69d9cdfdc2136319c8dad5479965b2cc7b971d43dfd",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -2136,7 +2136,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "a38a60f9dd856cbdc65ee69af43b330a1f4c9b6e73657cb07532fc48438ab546",
+            "sha256": "f14090a46307ef74e968e69d9cdfdc2136319c8dad5479965b2cc7b971d43dfd",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -2205,7 +2205,7 @@
           {
             "kind": "divergence_register",
             "path": "forensics/divergence-obligations.json",
-            "sha256": "a38a60f9dd856cbdc65ee69af43b330a1f4c9b6e73657cb07532fc48438ab546",
+            "sha256": "f14090a46307ef74e968e69d9cdfdc2136319c8dad5479965b2cc7b971d43dfd",
             "what": "the recorded safety divergence the candidate cites, not restates"
           },
           {
@@ -2272,7 +2272,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -2339,7 +2339,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -2406,7 +2406,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -2473,7 +2473,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -2540,7 +2540,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -2607,7 +2607,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -2674,7 +2674,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -2741,7 +2741,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -2808,7 +2808,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -2875,7 +2875,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -2942,7 +2942,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -3009,7 +3009,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -3076,7 +3076,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -3143,7 +3143,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -3210,7 +3210,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -3277,7 +3277,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -3344,7 +3344,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -3411,7 +3411,7 @@
           {
             "kind": "policy",
             "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-            "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7",
+            "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379",
             "what": "the fixed behaviour wins and the vulnerable behaviour is not reproduced"
           },
           {
@@ -3478,7 +3478,7 @@
           {
             "kind": "negative_obligation",
             "path": "forensics/multitrack/negative-obligations.json",
-            "sha256": "58e163cd4204f4c9c118041dc9685728b91ae5d8416ae118a6acbc082d9f5b4b",
+            "sha256": "cad0ac6feaca035e4923993da5a3193b9974e3c838be60983f2defc9c6ec121c",
             "what": "the candidate surface that must not be read as carrying the fix"
           },
           {
@@ -3545,7 +3545,7 @@
           {
             "kind": "negative_obligation",
             "path": "forensics/multitrack/negative-obligations.json",
-            "sha256": "58e163cd4204f4c9c118041dc9685728b91ae5d8416ae118a6acbc082d9f5b4b",
+            "sha256": "cad0ac6feaca035e4923993da5a3193b9974e3c838be60983f2defc9c6ec121c",
             "what": "the candidate surface that must not be read as carrying the fix"
           },
           {
@@ -3612,7 +3612,7 @@
           {
             "kind": "negative_obligation",
             "path": "forensics/multitrack/negative-obligations.json",
-            "sha256": "58e163cd4204f4c9c118041dc9685728b91ae5d8416ae118a6acbc082d9f5b4b",
+            "sha256": "cad0ac6feaca035e4923993da5a3193b9974e3c838be60983f2defc9c6ec121c",
             "what": "the candidate surface that must not be read as carrying the fix"
           },
           {
@@ -3679,7 +3679,7 @@
           {
             "kind": "negative_obligation",
             "path": "forensics/multitrack/negative-obligations.json",
-            "sha256": "58e163cd4204f4c9c118041dc9685728b91ae5d8416ae118a6acbc082d9f5b4b",
+            "sha256": "cad0ac6feaca035e4923993da5a3193b9974e3c838be60983f2defc9c6ec121c",
             "what": "the candidate surface that must not be read as carrying the fix"
           },
           {
@@ -3746,7 +3746,7 @@
           {
             "kind": "negative_obligation",
             "path": "forensics/multitrack/negative-obligations.json",
-            "sha256": "58e163cd4204f4c9c118041dc9685728b91ae5d8416ae118a6acbc082d9f5b4b",
+            "sha256": "cad0ac6feaca035e4923993da5a3193b9974e3c838be60983f2defc9c6ec121c",
             "what": "the candidate surface that must not be read as carrying the fix"
           },
           {
@@ -3813,7 +3813,7 @@
           {
             "kind": "negative_obligation",
             "path": "forensics/multitrack/negative-obligations.json",
-            "sha256": "58e163cd4204f4c9c118041dc9685728b91ae5d8416ae118a6acbc082d9f5b4b",
+            "sha256": "cad0ac6feaca035e4923993da5a3193b9974e3c838be60983f2defc9c6ec121c",
             "what": "the candidate surface that must not be read as carrying the fix"
           },
           {
@@ -3880,7 +3880,7 @@
           {
             "kind": "negative_obligation",
             "path": "forensics/multitrack/negative-obligations.json",
-            "sha256": "58e163cd4204f4c9c118041dc9685728b91ae5d8416ae118a6acbc082d9f5b4b",
+            "sha256": "cad0ac6feaca035e4923993da5a3193b9974e3c838be60983f2defc9c6ec121c",
             "what": "the candidate surface that must not be read as carrying the fix"
           },
           {
@@ -4754,17 +4754,17 @@
     {
       "name": "divergence-obligations",
       "path": "forensics/divergence-obligations.json",
-      "sha256": "a38a60f9dd856cbdc65ee69af43b330a1f4c9b6e73657cb07532fc48438ab546"
+      "sha256": "f14090a46307ef74e968e69d9cdfdc2136319c8dad5479965b2cc7b971d43dfd"
     },
     {
       "name": "security-divergence-policy",
       "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-      "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7"
+      "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379"
     },
     {
       "name": "negative-obligations",
       "path": "forensics/multitrack/negative-obligations.json",
-      "sha256": "58e163cd4204f4c9c118041dc9685728b91ae5d8416ae118a6acbc082d9f5b4b"
+      "sha256": "cad0ac6feaca035e4923993da5a3193b9974e3c838be60983f2defc9c6ec121c"
     }
   ],
   "kind": "security-lineage",

@@ -1,5 +1,14 @@
 # Safe-33 unsafe→safe conversion — progress ledger
 
+> **Current state (2026-10-28).** The current candidate is `openssl-rs 0.0.43` (**not
+> published**; `0.0.42` is the published release, 2026-10-27). The figures below were
+> measured at an earlier HEAD and are retained as the measurement they are. Two current
+> facts supersede any reading of them as a graduation: the consumer closure's reachable
+> bound is not monotone, so **no obligation count is carriable** and `SAFE_COMPATIBLE`
+> remains **0/33** (`atlas-refresh/closure-monotonicity-finding.json`, **OPEN BLOCKING**);
+> and the current file/test/unsafe figures are in
+> `forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md`.
+
 Authority: this file records *landed* conversion batches on `integrate/safe-c33`.
 A batch is "landed" only when its local gate is green in the court container and
 it is merged. The full Phase-25 forensic regeneration stays deferred until the

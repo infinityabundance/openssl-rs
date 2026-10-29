@@ -370,8 +370,11 @@ refusal and appends:
   the pinned tool's job; record-level validation checks the record against
   itself and the oracle.
 - **No real-ELF link-level coverage in the corpus.** The metamorphic corpus and
-  self-test use synthetic graphs; the real run exercises the linked v1m DSOs,
-  but no second derivation of the same slot is performed.
+  self-test use synthetic graphs; the real run exercises the linked candidate
+  DSOs of the v1p measurement (`ad5913099`, `libcrypto.so.3` `c335ac3c…`,
+  rebuilt at 0.0.43 as `dadb0263…`; `atlas-refresh/build-0.0.43.json`), but no
+  second derivation of the same slot is performed. Read this as the current
+  candidate identity, not the v1m DSOs an earlier revision of this file named.
 - **No cross-revision identity.** The oracle is per-candidate. A record is not
   checked against a second revision.
 - **No cryptographic or timing claim.** This schema is about the reachability

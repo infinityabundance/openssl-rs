@@ -49,6 +49,15 @@ footprint is not a proof, and the crate has had memory-safety defects of exactly
 the class Rust is meant to remove (see `docs/PHASE-8-CRYPTO-SEAL.md`, D301/D302).
 See `docs/NON_CLAIMS.md`.
 
+**Current measurement (2026-10-28).** `forensics/atlas/unsafe-footprint.json` (rendered in
+`forensics/STATUS.md`) records **61,454** unsafe sites and **10,980** `extern "C" fn` over
+**877 files / 858,173 lines**, with **89.4%** of the sites in the core parser/algorithm
+modules. The 58,826 / 10,866 / 801,594 figures above are the Phase-18 revision and remain
+true of that revision. The Safe-33 campaign's current state is
+`forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md`; its closure bound is
+currently **OPEN BLOCKING** (`atlas-refresh/closure-monotonicity-finding.json`), so no
+obligation count is carriable and `SAFE_COMPATIBLE` remains 0/33.
+
 - Each module carries a `// SAFETY:` invariant catalogue at the top describing
   every precondition its `unsafe` blocks assume.
 - Every `unsafe` block states, in a comment, *which* catalogue invariant it

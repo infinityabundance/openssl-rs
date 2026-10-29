@@ -1728,3 +1728,31 @@ D334's state, when the column was recorded as a NULL rather than resolved.
   authority, so the claim removed above is restored to the compatible set. The machine-readable row
   is `disposition: "fixed"` with the row-publishing units and `RT-CODEC` as its `evidence`, and
   `docs/PHASE-10-KEYFORMATS-SEAL.md` §9's owed retirement is what this paragraph discharges.
+
+### D-WRAP-PAD-CLEANSE-1 — `CRYPTO_128_unwrap_pad` cleanses `padded_len`, not the authority's `inlen`, because the authority's extent is CVE-2026-63072's write primitive
+
+- **Obligation:** the failure paths of `CRYPTO_128_unwrap_pad` (`src/modes/wrap.rs:245-286`), which
+  cleanse the unwrapped plaintext before returning 0.
+- **Authority:** `crypto/modes/wrap128.c:291,303,317,327` call `OPENSSL_cleanse(out, inlen)`. The
+  output a caller must provide is `inlen - 8` octets, not `inlen`: the CMS key-unwrap caller sizes
+  its buffer from the queried unwrapped-key length and declares `inlen - 8` writable
+  (`crypto/cms/cms_env.c:995`), so the authority's cleanse writes eight octets past the caller's
+  allocation. That is the mechanism recorded as CVE-2026-63072.
+- **Crate:** cleanses `padded_len` — `8` for the sixteen-byte special case, `inlen - 8` otherwise —
+  which is exactly the extent the function can have written and the extent the caller declared.
+- **Reason:** `AGENTS.md` §17 says a known vulnerability mechanism is eliminated and the
+  compatibility consequence recorded, not imitated; §5.1 says cleansing must cover the actual
+  secret-bearing storage, and an unvalidated larger length is not that storage. The divergence is
+  in the safe direction and is narrow: the input-length refusals, the returned length, the error
+  queue and the decrypted bytes are the authority's.
+- **Compatibility consequence:** after a failed unwrap, the bytes between `inlen - 8` and `inlen`
+  are unchanged where the authority would have zeroed them. That region is outside the documented
+  output extent, so a conforming caller does not read it; a caller that does observes the
+  difference. No other observable moves.
+- **Evidence:** nine pinned arms in `forensics/tools/phase8_courts.py`'s `ACCEPTED_DIVERGENCES` —
+  `wrap.pad{1,7,8,9,16,17,20,24}.badaiv.out` and `wrap.pad.badicv.out` — each carrying the exact
+  authority and candidate hex, so a different candidate value at the same key still fails. The
+  negative control `src/cms/cms_env.rs:3950-3982`
+  (`cve_2026_63072_wrap_pad_cleanse_stops_at_the_queried_extent`) reproduces the CMS allocation
+  with eight guard bytes and asserts they survive. Decision record: `docs/DECISIONS.md` D566.
+- **Trigger:** none planned: this is a permanent, deliberate safety divergence.

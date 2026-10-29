@@ -1,13 +1,16 @@
 # Safe-33 closure inventory — `integrate/safe-c33`
 
-> **Superseded (2026-10-22).** This is a frozen inventory at `67ae7f8e9` with
-> crate 0.0.27 and the then-current 8-at-L7 split. It is retained as the freeze
-> record and is not the current status. Read
+> **Superseded (2026-10-22; pointers updated 2026-10-28).** This is a frozen inventory at
+> `67ae7f8e9` with crate 0.0.27 and the then-current 8-at-L7 split. It is retained as the
+> freeze record and is not the current status. Read
 > `forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md`: the current
-> atlas records 33/33 cohort families at `L7-functional`, five mechanisms are
-> `SAFETY_DISCHARGED` (RC-1, OB-1, OB-2, OB-3, ERR-1), and `Cargo.toml` is
-> 0.0.30 (published to crates.io). Every figure below remains true of the frozen
-> inputs it cites.
+> atlas records 33/33 cohort families at `L7-functional`, six mechanisms are
+> `SAFETY_DISCHARGED` (RC-1, OB-1, OB-2, OB-3, ERR-1, GEN-1), and `Cargo.toml` is
+> 0.0.43 (the candidate; 0.0.42 published 2026-10-27). `SAFE_COMPATIBLE` is **0/33**
+> because the closure's reachable bound is not monotone
+> (`atlas-refresh/closure-monotonicity-finding.json`, **OPEN BLOCKING**), so no
+> obligation count from any candidate is carriable. Every figure below remains true of
+> the frozen inputs it cites.
 
 Task: `SAFE-C33-001` · branch `integrate/safe-c33` @ `67ae7f8e9` · base `origin/main`
 Candidate: `openssl-rs 0.0.27` reconstructing `openssl-3.6.4-production`

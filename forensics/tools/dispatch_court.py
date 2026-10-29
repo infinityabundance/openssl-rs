@@ -255,6 +255,18 @@ XLAT_GET = ("not a provider dispatch: the type of `fix_cipher_md`'s two function
             "its own signature rather than as typedefs; the crate names them to parameterise one "
             "function over `EVP_CIPHER` and `EVP_MD`")
 CRATE_LOCAL = "not an authority type: a crate-local callback shape with no header counterpart"
+# `src/cms/cms_env.rs:850` -- `RecipientInfoPushFn` is the prototype of the authority's exported
+# `OPENSSL_sk_push` (`int OPENSSL_sk_push(OPENSSL_STACK *, const void *)`), named so
+# `UnpublishedRecipient::publish_with` can be given the test's refusing push double in place of
+# the real step. The authority declares a *function*, not a callback typedef, so the atlas has no
+# typedef to record and the convention rule has no name to join on.
+SK_PUSH_PROTOTYPE = (
+    "not a provider dispatch: the prototype of the authority's exported `OPENSSL_sk_push` "
+    "(`int OPENSSL_sk_push(OPENSSL_STACK *, const void *)`), named so the crate's "
+    "`UnpublishedRecipient::publish_with` can take a test double for the push step; the "
+    "authority declares a function rather than a callback typedef, so there is no typedef for "
+    "the atlas to record"
+)
 # `src/runtime/dso_shared.rs` -- the five function-pointer prototypes for the
 # `dlsym(RTLD_DEFAULT, ...)` lookups that make the two DSOs share the crate's `ERR`/`CONF`/init
 # state. Each names an authority **function** (`ERR_get_state`, `conf_ssl_name_find`,
@@ -384,10 +396,16 @@ LINKS: dict[str, tuple[str, ...]] = {
     "MallocFn": ("CRYPTO_malloc_fn",),
     "ReallocFn": ("CRYPTO_realloc_fn",),
     # The `stack.rs` declaration of `FreeFn` is the `sk_*_freefunc` shape and is exempted
-    # below, which is why this one is scoped to its file.
+    # below, which is why this one is scoped to its file. `dso_shared.rs` declares the same
+    # `CRYPTO_free` prototype its `MallocFn`/`ReallocFn` do, so it links to the same typedef.
     "FreeFn@src/runtime/mem.rs": ("CRYPTO_free_fn",),
-    # The ex_data callbacks, from `crypto.h`.
+    "FreeFn@src/runtime/dso_shared.rs": ("CRYPTO_free_fn",),
+    # The ex_data callbacks, from `crypto.h`. `FreeCb` is the same six-argument shape as
+    # `NewFunc`; the crate's `refcount.rs` test declares it locally rather than importing the
+    # private `FreeFunc` (which is `type FreeFunc = NewFunc;` and so is not read as a function
+    # alias of its own).
     "NewFunc": ("CRYPTO_EX_new",),
+    "FreeCb@src/runtime/refcount.rs": ("CRYPTO_EX_free",),
     "DupFunc": ("CRYPTO_EX_dup",),
     # `conf.h`'s module-init function type, for the `confmod` declaration of the name.
     "ConfInitFn@src/runtime/confmod/mod.rs": ("conf_init_func",),
@@ -435,6 +453,16 @@ SSL_CALLBACK = (
     "application callback the `SSL_CTX`/`SSL` setters take rather than a provider dispatch "
     "function; the crate's alias name does not squash to the authority's `SSL_*`/`TLS_*` typedef "
     "name, so the convention rule has no name to join on")
+# `ssl_local.h:1012` -- `SSL_CTX_set_tlsext_status_cb`'s argument, written inline as
+# `int (*)(SSL *, void *)`. The header is internal, so the atlas -- whose universe is the
+# installed public surface -- records no typedef for it, exactly as it records none for the
+# `ssl_local.h` members among the `SSL_CALLBACK` entries above (`ServernameCb` at `:994`,
+# `TicketKeyCb` at `:1001`). The crate's alias name does not squash to any authority typedef.
+SSL_LOCAL_CALLBACK = (
+    "not a provider dispatch: an application callback `ssl_local.h` spells inline "
+    "(`SSL_CTX_set_tlsext_status_cb`'s `int (*)(SSL *, void *)` at `ssl_local.h:1012`); the "
+    "header is internal, so the atlas records no typedef for it and the convention rule has no "
+    "authority name to join on")
 
 
 # ---------------------------------------------------------------------------------------------
@@ -479,6 +507,7 @@ NOT_A_DISPATCH: dict[str, str] = {
     "CtValidationCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
     "NpnSelectCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
     "NpnAdvertisedCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "StatusCb@src/ssl/ssl_lib.rs": SSL_LOCAL_CALLBACK,
     "NewSessionCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
     "RemoveSessionCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
     "GetSessionCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
@@ -796,7 +825,12 @@ NOT_A_DISPATCH: dict[str, str] = {
     "CleanupArgsFn": XLAT,
     "XlatGetNameFn": XLAT_GET,
     "XlatGetByNameFn": XLAT_GET,
-    "Rfunc": CRATE_LOCAL,
+    # `Rfunc` was exempted here as a crate-local callback shape at `src/asn1/a_mbstr.rs`.
+    # That alias no longer exists in the crate (a later rewrite of that module removed it), and
+    # the court checks this table in both directions, so a surviving entry named an alias the
+    # crate does not declare. The entry is removed rather than re-pointed at a name that is not
+    # there; `CharIo` and `NistReduce` remain and are still declared.
+    "RecipientInfoPushFn@src/cms/cms_env.rs": SK_PUSH_PROTOTYPE,
     "CharIo": CRATE_LOCAL,
     "NistReduce": CRATE_LOCAL,
 }

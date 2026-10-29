@@ -1,13 +1,15 @@
 {
   "command": "cargo test --lib -- --test-threads=4",
-  "source_commit": "5163f564f",
-  "source_commit_note": "the S'' working tree was bcafae7dc plus the legacy_sha md_data refusal fix; that fix is commit 5163f564f and is included in e92a0720e. The referenced run is freeze-S-double-prime.json gates.rust_suite (182.72s) and openssh-closure-v1j.json gates.rust_suite.",
-  "passed": 2213,
+  "thread_count": 4,
+  "source_commit": "2e90cbc6ef4650a70fd70458bd2d277a4ca2e1ce",
+  "source_commit_note": "HEAD of stage/p25/analyzer-corpus at the run. The working tree carried only the 0.0.43 release-manifest edits (Cargo.toml version/documentation, Cargo.lock version) and the tracked install-tree binaries rebuilt at that version; no src/, test, build.rs, build-script or tool file changed after ad5913099.",
+  "measured_utc": "2026-10-28",
+  "passed": 2222,
   "failed": 0,
   "ignored": 52,
-  "total": 2265,
+  "total": 2274,
   "kind": "full-library-run",
-  "source_tree_unchanged": false,
-  "source_tree_unchanged_note": "e92a0720e adds only the element-7 evidence commit after the fix, and the 0.0.42 release preparation changes only the Cargo.toml/Cargo.lock version fields; no Rust source changed after the run. The 2213 count is a floor for the 0.0.42 tree, not a run at its artefact identity (libcrypto 247803f1 / libssl 3ca46e32), and no serial 2213 run is recorded.",
-  "note": "S'' full run (cargo test --lib -- --test-threads=4, 182.72s) recorded in freeze-S-double-prime.json and openssh-closure-v1j.json. Previous floor 2260 total / 52 ignored; now 2265 total / 52 ignored (+5 tests; none removed or newly ignored). S58's 2148/0/45 at 7bdc53d83 remains history."
+  "source_tree_unchanged": true,
+  "source_tree_unchanged_note": "The suite ran on the exact tree the 0.0.43 build receipt (atlas-refresh/build-0.0.43.json) describes: no source changed between the run, the Phase-2 rebuild and the Phase-7/Phase-8 court re-runs. 2,222 passed / 0 failed / 52 ignored is therefore the current count at the candidate, not a floor.",
+  "note": "Current run: 2,222 passed / 0 failed / 52 ignored (0 measured, 0 filtered out; 145.73 s). Previous records: 2,213/0/52/2,265 at 5163f564f (the S'' floor, superseded); the older documented floor 1,962/0/42 (commit a8676158f) is superseded by every later run. Growth is +9 tests against the 2,265 total with no removed test and no newly ignored test. S58's 2,148/0/45 at 7bdc53d83 remains history."
 }

@@ -1,6 +1,6 @@
 # Phase 7 — the EVP framework: seal
 
-**Status as of 2026-10-27:** this is a historical seal. The current candidate `openssl-rs 0.0.42` (`Cargo.toml`; prepared but not published per `forensics/memory-safety/campaign/safe-c33/atlas-refresh/publish-0.0.42.json`; the latest published release is 0.0.41) is not what this seal measured: every measurement and the compiled claim below were taken at candidate `openssl-rs 0.0.27 (e4f60d8b)` and are labelled as such. Do not read the 0.0.27 figures below as current-release measurements.
+**Status as of 2026-10-28:** this is a historical seal. The current candidate `openssl-rs 0.0.43` (`Cargo.toml`) is **not published**; the latest published release is **0.0.42**, published 2026-10-27 with crates.io checksum `b9a542cf900c5073fc6a4d5d92f5749a84adc47a968b85c903b26d724e2ede5f` per `forensics/memory-safety/campaign/safe-c33/atlas-refresh/publish-0.0.42.json`. The candidate is not what this seal measured: every measurement and the compiled claim below were taken at candidate `openssl-rs 0.0.27 (e4f60d8b)` and are labelled as such. Do not read the 0.0.27 figures below as current-release measurements.
 
 **STATUS: complete.** Every export this stratum owns is either handed to a named later stratum
 with the dependency it is waiting on, or **referenced by a differential court that ran**. That

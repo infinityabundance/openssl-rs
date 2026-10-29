@@ -32,7 +32,7 @@ name = "openssl-rs"
 # be published. 0.0.x is used deliberately: no symbol is `PARITY_VERIFIED`, so the
 # version must not imply a compatibility claim it does not carry (docs/PARITY_MODEL.md,
 # docs/NON_CLAIMS.md).
-version = "0.0.42"
+version = "0.0.43"
 edition = "2021"
 rust-version = "1.98.1"
 description = "Custodian-level native-Rust reconstruction of the OpenSSL 3.x contract"
@@ -40,7 +40,7 @@ license = "Apache-2.0 OR MIT"
 readme = "README.md"
 repository = "https://github.com/infinityabundance/openssl-rs"
 homepage = "https://github.com/infinityabundance/openssl-rs"
-documentation = "https://github.com/infinityabundance/openssl-rs/blob/main/forensics/STATUS.md"
+documentation = "https://docs.rs/openssl-rs"
 keywords = ["openssl", "crypto", "abi", "compatibility", "custodian"]
 categories = ["cryptography", "api-bindings"]
 
