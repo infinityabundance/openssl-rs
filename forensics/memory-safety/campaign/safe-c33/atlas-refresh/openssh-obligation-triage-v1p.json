@@ -1,0 +1,2252 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/obligation-refusal-triage/v1",
+ "kind": "obligation-refusal-triage",
+ "generated_utc": "2026-10-29T10:36:04Z",
+ "subphase": "safe-c33 / OpenSSH dependency closure: refusal triage",
+ "authority": "AGENTS.md sections 7, 8, 14, 15, 17, 22",
+ "source_identity": {
+  "adjudicated_measurement": {
+   "path": "forensics/memory-safety/campaign/safe-c33/evidence/closure-ssh-fixpoint-v1p-admission.json",
+   "sha256": "d8e574c4c5f9fde226fb7dbac48d0d5dd5717aad747b83cef84a5a5c25e51976",
+   "family": "openssh",
+   "verdict": "REFUSED",
+   "tool": {
+    "path": "forensics/tools/consumer_closure.py",
+    "version": 4,
+    "sha256": "f26f212bd59de7fb7b77610e2cb3b72138e9e0e3a9bb4a1a9793d4b3f6623d58",
+    "schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4"
+   },
+   "declared_source_identity": {
+    "repository_head": "6ed2e507af5140c2fa36f7bc1c6c6eb87bebb3d2",
+    "branch": "stage/p25/analyzer-corpus",
+    "tracked_tree_dirty": true,
+    "inventory_path": "court/closure/v1p-rebuild-candidate-freeze.json",
+    "inventory_source_head": "ad5913099732821d2e95d03823dd38e501d73481",
+    "inventory_is_ancestor_or_equal": true,
+    "note": "the admitted install is the V1 frozen candidate; the working tree may be a descendant, so obligations are joined to the inventory at the inventory's own source head, not the working tree"
+   },
+   "artifact_identity": {
+    "path": "court/tmp/openssh-closure/client-v1p/openssh-9.9p1/ssh",
+    "sha256": "0cab1198609b53a38737febbb0bea3a02d470b3c35b83764d25156e40ff9c5db",
+    "dynamic": {
+     "soname": null,
+     "needed": [
+      "libcrypto.so.3",
+      "libz.so.1",
+      "libc.so.6"
+     ],
+     "runpath": [
+      "/work/artifacts/phase2/install/lib"
+     ],
+     "rpath": []
+    },
+    "build_provenance": {
+     "path": "court/tmp/openssh-closure/openssh-v1p-ssh-build-record.json",
+     "record": {
+      "family": "openssh",
+      "recipe_id": "recipe:openssh:9.9p1",
+      "subject": "candidate",
+      "artifact_rel": "ssh",
+      "artifact_path": "court/tmp/openssh-closure/client-v1p/openssh-9.9p1/ssh",
+      "build_cwd": "court/tmp/openssh-closure/client-v1p/openssh-9.9p1",
+      "configure": [
+       "./configure",
+       "--with-ssl-dir=/work/artifacts/phase2/install",
+       "--without-openssl-header-check",
+       "--without-pam",
+       "--without-selinux",
+       "--without-libedit",
+       "--without-ldns",
+       "--silent"
+      ],
+      "make": [
+       "make",
+       "-j4",
+       "ssh",
+       "ssh-keygen"
+      ],
+      "source_root_hash": "63046b625ef6d60491c36fc6780f788e810b3203b52bd01d5c9f192a93d3d7d3",
+      "artifact_sha256": "0cab1198609b53a38737febbb0bea3a02d470b3c35b83764d25156e40ff9c5db",
+      "artifact_size": 3401744,
+      "ldd": "\tlinux-vdso.so.1 (0x00007f24e29e4000)\n\tlibcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 (0x00007f24e2000000)\n\tlibz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007f24e28c8000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f24e1e1e000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f24e28a8000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007f24e29e6000)\n",
+      "needed": [
+       "libcrypto.so.3",
+       "libz.so.1",
+       "libc.so.6"
+      ],
+      "ldd_resolves_install_libcrypto": true,
+      "project": "openssh",
+      "version": "9.9p1",
+      "source_url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz",
+      "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+      "install_prefix": "artifacts/phase2/install",
+      "candidate_libcrypto_sha256": "c335ac3c7f04b694f62ec27906a094cfbea319eb4b6efbeb4cc661d76e6aa36b",
+      "candidate_libssl_sha256": "292ba997c7bded396b98e531791f68f0166ec91fb9a6651dd795d30f41018631",
+      "candidate_legacy_sha256": "8f398d026302732a4bc3440d5d3b5fb9a276efbcd2cdcd429b2b7ff5eecc6fd9",
+      "candidate_openssl_sha256": "8f6c7b2ed3cd929ad7f56001ec572e3e8719f5b07266909f7c874b945846d61e",
+      "container_image_actual": "openssl-rs-court-expand:1",
+      "build_utc": "2026-10-28T20:21:02Z",
+      "built_utc": "2026-10-28T20:21:02Z",
+      "ldflags": "-Wl,--no-as-needed -Wl,-rpath,/work/artifacts/phase2/install/lib",
+      "source_root_hash_rule": "sha256('openssl-rs/source-tree/v1\\0' + sorted path relative to openssh-9.9p1 + '\\0' + bytes + '\\0')",
+      "post_build_tree_hash": "9afd72c26474f4208132e88cd2efdb7f5fb089c540a80f24659b73419ee62d5c",
+      "source_root_hash_scope": "pristine extraction of openssh-9.9p1.tar.gz (881 files, before configure/make)",
+      "source_commit": "ad5913099732821d2e95d03823dd38e501d73481",
+      "source_tree": "c898db5d4163922fbc3decc493ec6b1901f7ec70",
+      "compilers": {
+       "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+       "ld": "GNU ld (GNU Binutils for Debian) 2.40",
+       "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+       "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)"
+      },
+      "configure_command": "LDFLAGS='-Wl,--no-as-needed -Wl,-rpath,/work/artifacts/phase2/install/lib' ./configure --with-ssl-dir=/work/artifacts/phase2/install --without-openssl-header-check --without-pam --without-selinux --without-libedit --without-ldns --silent",
+      "make_command": "make -j4 ssh ssh-keygen",
+      "build_wall_seconds": {
+       "configure": 9,
+       "make": 4
+      },
+      "build_tag": "v1p",
+      "version_output": "OpenSSH_9.9p1, OpenSSL 3.6.4 25 Aug 2026"
+     },
+     "checks": {
+      "artifact_sha256_matches": true,
+      "install_prefix_matches": true,
+      "source_root_hash_rule": {
+       "build_record": "sha256('openssl-rs/source-tree/v1\\0' + sorted path relative to openssh-9.9p1 + '\\0' + bytes + '\\0')",
+       "build_record_class": "domain-separated-tree",
+       "atlas": "sha256(canonical_json(sorted [[relpath, size, sha256], ...])) over the pristine source tree",
+       "atlas_class": "canonical-json-tree"
+      },
+      "source_root_hash_matches_atlas": null,
+      "hash_rule_matches": false
+     }
+    }
+   },
+   "ledger_record": {
+    "run_id": "run:build-link:candidate:openssh",
+    "level": "L4-linked",
+    "artifact_sha256_recorded": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57",
+    "recorded_candidate_install": "be578c866e20f78e4f2241ced9e9c1b0d7283d2e3aa3d3d99e26c0635beb16d3",
+    "artifact_matches_this_build": false
+   }
+  },
+  "current_tree": {
+   "head": "0a3abdfa6f102882faafbd75c3c26a0113ae3be0",
+   "branch": "stage/p25/analyzer-corpus",
+   "src_delta_from_inventory_head": "none (git diff --stat ad591309 0a3abdfa6 -- src/ is empty)",
+   "build_relevant_inputs_changed_by_this_batch": false
+  },
+  "this_batch": {
+   "changed": [
+    "court/triage/ (extraction + probe artifacts)",
+    "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-obligation-triage-v1p.json (this file)"
+   ],
+   "not_changed": [
+    "src/",
+    "state.json",
+    "CAMPAIGN-STATUS.json",
+    "forensics/tools/consumer_closure.py",
+    "any boundary receipt"
+   ]
+  }
+ },
+ "refusals_adjudicated": [
+  "MISSING_BOUNDARY_RECEIPT",
+  "UNKNOWN_OBLIGATION",
+  "UNKNOWN_MECHANISM",
+  "HASH_RULE_MISMATCH"
+ ],
+ "refusals_not_adjudicated": [
+  {
+   "code": "HASH_RULE_MISMATCH",
+   "why": "an identity/digest-rule mismatch between the build record and the atlas, not one of the three obligation refusals; it is untouched by this batch"
+  }
+ ],
+ "extracted_sets": {
+  "missing_boundary_receipt_files": [
+   "src/cms/cms_lib.rs",
+   "src/engine/eng_list.rs",
+   "src/engine/tb_cipher.rs",
+   "src/engine/tb_dh.rs",
+   "src/engine/tb_digest.rs",
+   "src/engine/tb_dsa.rs",
+   "src/engine/tb_eckey.rs",
+   "src/engine/tb_pkmeth.rs",
+   "src/engine/tb_rand.rs",
+   "src/engine/tb_rsa.rs",
+   "src/evp/e_rc2.rs",
+   "src/evp/legacy_md4.rs",
+   "src/evp/legacy_ripemd.rs",
+   "src/evp/legacy_wp.rs",
+   "src/ml_kem/key.rs",
+   "src/provider/eddsa_sig.rs",
+   "src/runtime/bio/bf_readbuff.rs",
+   "src/slh_dsa/adrs.rs",
+   "src/slh_dsa/hash.rs",
+   "src/x509/v3_aaa.rs",
+   "src/x509/v3_audit_id.rs",
+   "src/x509/v3_battcons.rs",
+   "src/x509/v3_bcons.rs",
+   "src/x509/v3_bitst.rs",
+   "src/x509/v3_cpols.rs",
+   "src/x509/v3_enum.rs",
+   "src/x509/v3_extku.rs",
+   "src/x509/v3_group_ac.rs",
+   "src/x509/v3_ia5.rs",
+   "src/x509/v3_ind_iss.rs",
+   "src/x509/v3_info.rs",
+   "src/x509/v3_int.rs",
+   "src/x509/v3_iobo.rs",
+   "src/x509/v3_ist.rs",
+   "src/x509/v3_no_ass.rs",
+   "src/x509/v3_no_rev_avail.rs",
+   "src/x509/v3_pcons.rs",
+   "src/x509/v3_pku.rs",
+   "src/x509/v3_pmaps.rs",
+   "src/x509/v3_sda.rs",
+   "src/x509/v3_single_use.rs",
+   "src/x509/v3_skid.rs",
+   "src/x509/v3_soa_id.rs",
+   "src/x509/v3_sxnet.rs",
+   "src/x509/v3_usernotice.rs",
+   "src/x509/v3_utf8.rs"
+  ],
+  "unknown_obligation_ids": [
+   "V1:src/cms/cms_lib.rs:1378:UNSAFE_FN_DEF",
+   "V1:src/cms/cms_lib.rs:1384:UNSAFE_FN_DEF",
+   "V1:src/engine/eng_list.rs:90:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_asnmth.rs:72:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_cipher.rs:55:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_dh.rs:51:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_digest.rs:66:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_dsa.rs:51:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_eckey.rs:51:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_pkmeth.rs:53:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_rand.rs:51:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_rsa.rs:52:UNSAFE_FN_DEF",
+   "V1:src/evp/e_rc2.rs:348:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_md4.rs:122:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_md4.rs:129:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_md4.rs:136:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_ripemd.rs:123:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_ripemd.rs:130:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_ripemd.rs:137:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_wp.rs:125:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_wp.rs:132:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_wp.rs:139:UNSAFE_FN_DEF",
+   "V1:src/ml_kem/key.rs:272:UNSAFE_FN_DEF",
+   "V1:src/provider/eddsa_sig.rs:940:UNSAFE_FN_DEF",
+   "V1:src/provider/eddsa_sig.rs:951:UNSAFE_FN_DEF",
+   "V1:src/runtime/bio/bf_readbuff.rs:231:UNSAFE_FN_DEF",
+   "V1:src/runtime/bio/bf_readbuff.rs:237:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:119:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:128:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:134:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:147:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:154:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:166:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:172:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:178:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:184:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:193:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:200:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:207:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:221:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:228:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:241:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:248:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:254:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:260:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/adrs.rs:269:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/hash.rs:179:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/hash.rs:212:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/hash.rs:240:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/hash.rs:272:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/hash.rs:301:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/hash.rs:332:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/hash.rs:392:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/hash.rs:442:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/hash.rs:531:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/hash.rs:558:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/hash.rs:586:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/hash.rs:618:UNSAFE_FN_DEF",
+   "V1:src/slh_dsa/hash.rs:649:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_aaa.rs:382:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_aaa.rs:452:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_aaa.rs:500:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_audit_id.rs:30:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_audit_id.rs:37:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_battcons.rs:191:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_battcons.rs:208:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_bcons.rs:192:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_bcons.rs:209:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_bitst.rs:349:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_bitst.rs:360:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_cpols.rs:1366:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_enum.rs:120:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_extku.rs:184:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_extku.rs:212:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_group_ac.rs:33:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_group_ac.rs:43:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_group_ac.rs:53:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_group_ac.rs:66:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_ia5.rs:180:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_ia5.rs:186:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_ind_iss.rs:33:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_ind_iss.rs:43:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_ind_iss.rs:53:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_ind_iss.rs:66:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_info.rs:323:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_info.rs:414:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_int.rs:29:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_int.rs:39:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_iobo.rs:42:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_ist.rs:246:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_ist.rs:331:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_no_ass.rs:36:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_no_ass.rs:47:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_no_ass.rs:61:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_no_ass.rs:75:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_no_rev_avail.rs:33:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_no_rev_avail.rs:43:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_no_rev_avail.rs:53:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_no_rev_avail.rs:66:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_pcons.rs:154:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_pcons.rs:179:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_pku.rs:164:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_pmaps.rs:200:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_pmaps.rs:229:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_sda.rs:140:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_single_use.rs:34:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_single_use.rs:44:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_single_use.rs:54:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_single_use.rs:67:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_skid.rs:249:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_soa_id.rs:33:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_soa_id.rs:43:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_soa_id.rs:53:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_soa_id.rs:66:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_sxnet.rs:332:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_sxnet.rs:406:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_usernotice.rs:287:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_utf8.rs:164:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_utf8.rs:170:UNSAFE_FN_DEF"
+  ],
+  "unknown_mechanism_files": [
+   "src/engine/tb_asnmth.rs",
+   "src/engine/tb_cipher.rs",
+   "src/engine/tb_dh.rs",
+   "src/engine/tb_digest.rs",
+   "src/engine/tb_dsa.rs",
+   "src/engine/tb_eckey.rs",
+   "src/engine/tb_pkmeth.rs",
+   "src/engine/tb_rand.rs",
+   "src/engine/tb_rsa.rs"
+  ],
+  "blocked_obligation_ids": [
+   "V1:src/cms/cms_asn1.rs:523:UNSAFE_FN_DEF",
+   "V1:src/cms/cms_asn1.rs:539:UNSAFE_FN_DEF",
+   "V1:src/cms/cms_asn1.rs:556:UNSAFE_FN_DEF",
+   "V1:src/cms/cms_asn1.rs:585:UNSAFE_FN_DEF",
+   "V1:src/cms/cms_asn1.rs:617:UNSAFE_FN_DEF",
+   "V1:src/cms/cms_asn1.rs:668:UNSAFE_FN_DEF",
+   "V1:src/context/namemap.rs:298:UNSAFE_FN_DEF",
+   "V1:src/context/namemap.rs:308:UNSAFE_FN_DEF",
+   "V1:src/decoder_pkey.rs:561:UNSAFE_FN_DEF",
+   "V1:src/decoder_pkey.rs:567:UNSAFE_FN_DEF",
+   "V1:src/digest/sha2.rs:393:UNSAFE_FN_DEF",
+   "V1:src/encoder_meth.rs:1240:UNSAFE_FN_DEF",
+   "V1:src/engine/eng_dyn.rs:401:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_blake2.rs:243:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_blake2.rs:260:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_blake2.rs:299:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_blake2.rs:315:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_md5.rs:216:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_md5.rs:223:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_md5.rs:234:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_md5.rs:240:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_md5.rs:250:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_md5.rs:258:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_mdc2.rs:197:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_mdc2.rs:204:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_sha.rs:262:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_sha.rs:269:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_sha.rs:277:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_sha.rs:324:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_sha.rs:330:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_sha.rs:360:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_sha.rs:366:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_sha.rs:396:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_sha.rs:402:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_sha.rs:432:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_sha.rs:438:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_sha.rs:471:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_sha.rs:501:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_sha3.rs:277:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_sha3.rs:289:UNSAFE_FN_DEF",
+   "V1:src/evp/legacy_sha3.rs:332:UNSAFE_FN_DEF",
+   "V1:src/pkcs7/pk7_asn1.rs:607:UNSAFE_FN_DEF",
+   "V1:src/property/store.rs:1600:UNSAFE_FN_DEF",
+   "V1:src/provider/cipher.rs:22193:UNSAFE_FN_DEF",
+   "V1:src/provider/conf.rs:234:UNSAFE_FN_DEF",
+   "V1:src/provider/decode_pvk2key.rs:54:UNSAFE_EXTERN_BLOCK",
+   "V1:src/provider/ec_kmgmt.rs:238:UNSAFE_FN_DEF",
+   "V1:src/provider/ec_kmgmt.rs:247:UNSAFE_FN_DEF",
+   "V1:src/provider/ec_kmgmt.rs:910:UNSAFE_FN_DEF",
+   "V1:src/provider/ec_kmgmt.rs:929:UNSAFE_FN_DEF",
+   "V1:src/provider/ec_kmgmt.rs:935:UNSAFE_FN_DEF",
+   "V1:src/provider/ec_kmgmt.rs:1231:UNSAFE_FN_DEF",
+   "V1:src/provider/ec_kmgmt.rs:1254:UNSAFE_FN_DEF",
+   "V1:src/provider/ec_kmgmt.rs:1271:UNSAFE_FN_DEF",
+   "V1:src/provider/ec_kmgmt.rs:1279:UNSAFE_FN_DEF",
+   "V1:src/provider/ec_kmgmt.rs:1881:UNSAFE_FN_DEF",
+   "V1:src/provider/ec_kmgmt.rs:1894:UNSAFE_FN_DEF",
+   "V1:src/provider/ecx_kmgmt.rs:901:UNSAFE_FN_DEF",
+   "V1:src/provider/ecx_kmgmt.rs:906:UNSAFE_FN_DEF",
+   "V1:src/provider/ecx_kmgmt.rs:1089:UNSAFE_FN_DEF",
+   "V1:src/provider/mac_legacy_kmgmt.rs:653:UNSAFE_FN_DEF",
+   "V1:src/provider/mac_legacy_kmgmt.rs:670:UNSAFE_FN_DEF",
+   "V1:src/provider/mac_legacy_kmgmt.rs:691:UNSAFE_FN_DEF",
+   "V1:src/provider/mac_legacy_kmgmt.rs:705:UNSAFE_FN_DEF",
+   "V1:src/provider/mac_legacy_kmgmt.rs:736:UNSAFE_FN_DEF",
+   "V1:src/provider/mac_legacy_kmgmt.rs:904:UNSAFE_FN_DEF",
+   "V1:src/provider/mac_legacy_kmgmt.rs:920:UNSAFE_FN_DEF",
+   "V1:src/provider/mlx_kmgmt.rs:128:UNSAFE_FN_DEF",
+   "V1:src/rand/rand_lib.rs:426:UNSAFE_FN_DEF",
+   "V1:src/rand/rand_lib.rs:468:UNSAFE_FN_DEF",
+   "V1:src/rand/rand_lib.rs:535:UNSAFE_FN_DEF",
+   "V1:src/rand/rand_lib.rs:2032:UNSAFE_FN_DEF",
+   "V1:src/runtime/thread.rs:531:UNSAFE_FN_DEF",
+   "V1:src/runtime/thread.rs:544:UNSAFE_FN_DEF",
+   "V1:src/sm3/legacy_sm3.rs:209:UNSAFE_FN_DEF",
+   "V1:src/ssl/ssl_ciph.rs:741:UNSAFE_FN_DEF",
+   "V1:src/ssl/ssl_ciph.rs:851:UNSAFE_FN_DEF",
+   "V1:src/ssl/ssl_conf.rs:240:UNSAFE_FN_DEF",
+   "V1:src/ssl/ssl_conf.rs:274:UNSAFE_FN_DEF",
+   "V1:src/ssl/ssl_conf.rs:379:UNSAFE_FN_DEF",
+   "V1:src/ssl/ssl_conf.rs:438:UNSAFE_FN_DEF",
+   "V1:src/ssl/ssl_conf.rs:455:UNSAFE_FN_DEF",
+   "V1:src/ssl/ssl_conf.rs:511:UNSAFE_FN_DEF",
+   "V1:src/ssl/ssl_conf.rs:537:UNSAFE_FN_DEF",
+   "V1:src/ssl/ssl_conf.rs:552:UNSAFE_FN_DEF",
+   "V1:src/ssl/ssl_conf.rs:567:UNSAFE_FN_DEF",
+   "V1:src/ssl/ssl_conf.rs:573:UNSAFE_FN_DEF",
+   "V1:src/ssl/ssl_lib.rs:8845:UNSAFE_FN_DEF",
+   "V1:src/ssl/ssl_rsa.rs:1007:UNSAFE_FN_DEF",
+   "V1:src/ssl/ssl_rsa.rs:1033:UNSAFE_FN_DEF",
+   "V1:src/ssl/ssl_rsa.rs:1046:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_asid.rs:686:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_asid.rs:1232:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_asid.rs:1440:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_lib.rs:381:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_timespec.rs:1390:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_timespec.rs:1419:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_timespec.rs:1454:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_timespec.rs:1505:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_timespec.rs:1528:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_timespec.rs:1551:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_timespec.rs:1603:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_timespec.rs:1993:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_timespec.rs:2047:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_tlsf.rs:173:UNSAFE_FN_DEF",
+   "V1:src/x509/v3_tlsf.rs:208:UNSAFE_FN_DEF"
+  ],
+  "discharged_obligation_count": 90,
+  "paths": {
+   "refusal_sets": "court/triage/refusal-sets.json",
+   "missing_receipt_files": "court/triage/missing-receipt-files.json",
+   "unknown_obligations": "court/triage/unknown-obligations.json",
+   "blocked_obligations": "court/triage/blocked-obligations.json",
+   "coverage_scan": "court/triage/missing-coverage-scan.json",
+   "probe_source": "court/triage/legacy_init_probe.c"
+  }
+ },
+ "consistency_checks": {
+  "status_sum": {
+   "DISCHARGED": 90,
+   "BLOCKED": 106,
+   "UNKNOWN": 119,
+   "total": 315,
+   "equals": true
+  },
+  "missing_receipt_files_count": 46,
+  "missing_receipt_equals_without_receipt_list": true,
+  "missing_receipt_files_with_zero_obligations": 0,
+  "unknown_mechanism_files_count": 9,
+  "unknown_ids_equal_unknown_rows": true,
+  "blocked_rows_count": 106,
+  "blocked_distinct_files": 31,
+  "blocked_rows_without_boundary_receipt": 0,
+  "unknown_obligations_in_receiptless_files": 118,
+  "unknown_obligations_in_files_with_a_receipt": 1,
+  "unknown_with_receipt_detail": [
+   {
+    "id": "V1:src/engine/tb_asnmth.rs:72:UNSAFE_FN_DEF",
+    "boundary_ids": [
+     "B16-ASN1-1",
+     "B16-ASN1-2",
+     "B16-ASN1-3",
+     "OSSH-DIS-016"
+    ],
+    "status_reason": "no mechanism state could be established for this reachable file"
+   }
+  ],
+  "discrepancies": []
+ },
+ "boundary_receipt_contract": {
+  "loader": "forensics/tools/consumer_closure.py :: load_boundaries()",
+  "admitted_families": [
+   "boundary-sweep-B*.json in --boundary-dir (default forensics/memory-safety/campaign/safe-c33/atlas-refresh)",
+   "*-sites.json in the same directory whose kind == 'site-enumerating-boundary-receipt'"
+  ],
+  "directory": "--boundary-dir, default forensics/memory-safety/campaign/safe-c33/atlas-refresh",
+  "required_fields_per_boundary": [
+   "id",
+   "file",
+   "mechanism",
+   "disposition"
+  ],
+  "optional_fields_used": [
+   "line",
+   "kind",
+   "contract",
+   "defects",
+   "residuals",
+   "operation",
+   "source_state"
+  ],
+  "ownership_rule": "a file is 'owned' iff some admitted receipt has a boundaries[] entry whose file equals the reachable path exactly; the join is file-level, and line coverage is a separate scoped-discharge match",
+  "adjudication_rule": "a boundary receipt alone can only move an obligation to BLOCKED; DISCHARGED additionally requires a scoped SAFETY_DISCHARGED entry in CAMPAIGN-STATUS.json whose disposition (or an ERR mechanism scope) names the exact file and line",
+  "generator_search": {
+   "result": "no reusable generator exists",
+   "only_generator": "court/gen-provider-sites.py",
+   "why_not_reusable": "hard-coded to four provider files (FILES dict), asserts their closure counts, and its SITES list is hand-authored: 'the classification is the result of reading each body and its callers, not of a heuristic'. It emits BLOCKED for every site and cannot derive a receipt for an arbitrary file.",
+   "other_tooling": "forensics/tools/unknown_obligations_v1l.py validates a site receipt against a frozen closure; it does not generate one. court/cov.py only parses receipts."
+  }
+ },
+ "missing_boundary_receipt_triage": {
+  "class_counts": {
+   "GENERATE": 0,
+   "REAL_OBLIGATION": 46,
+   "NOT_REACHABLE_OR_STALE": 0
+  },
+  "generate_reason": "no existing tool can mechanically produce an admitted receipt for any of the 46; generating one would require authoring per-site contract evidence, which this batch must not do",
+  "not_reachable_reason": "the receipt's own graph is self-consistent: every one of the 46 has at least one reachable production obligation, and recomputing the file set from the obligations reproduces the list exactly; no file is contradicted by the graph",
+  "files": [
+   {
+    "file": "src/cms/cms_lib.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 2,
+    "lines": [
+     1378,
+     1384
+    ],
+    "operations": [
+     [
+      1378,
+      "x509_free_void"
+     ],
+     [
+      1384,
+      "x509_crl_free_void"
+     ]
+    ],
+    "mechanisms": [
+     "RAND_CMS_STORE_KEYFMT"
+    ],
+    "subclass": "AUDIT_COVERS_OTHER_SITES",
+    "evidence": "cms-ownership-audit.json covers src/cms/cms_lib.rs:1201-1208 and :1238-1271 (the get1_certs/get1_crls up-ref and rollback arms); the two V1 obligations are the freefunc thunks at :1378 and :1384, used at :1204/:1264 and :1579/:1594",
+    "missing_proof": "a failure-injection control for the two thunks' failure-arm registration plus a site-enumerating receipt; the element-type contract ('p is an X509/X509_CRL per the stack's element type') is stated in the doc comment but not enumerated in any receipt",
+    "stop": false
+   },
+   {
+    "file": "src/engine/eng_list.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     90
+    ],
+    "operations": [
+     [
+      90,
+      "engine_list_cleanup"
+     ]
+    ],
+    "mechanisms": [
+     "C_ABI_CONTRACT"
+    ],
+    "subclass": "MAPPED_BUT_UNENUMERATED",
+    "evidence": "state.json overrides this site to C_ABI_CONTRACT at the exact coordinate (file,line 90); engine-callback-discharge.json explicitly puts it out of scope ('a distinct callback ... not one of the nine unregister_all paths')",
+    "missing_proof": "a site-enumerating boundary receipt for the cleanup-stack callback, covering ENGINE_LIST_HEAD atomic publication and the ENGINE_remove loop (the body is unreachable until engine_cleanup_int is named)",
+    "stop": false
+   },
+   {
+    "file": "src/engine/tb_cipher.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     55
+    ],
+    "operations": [
+     [
+      55,
+      "engine_unregister_all_ciphers"
+     ]
+    ],
+    "mechanisms": [
+     "None"
+    ],
+    "subclass": "ADJUDICATED_OFF_INSTRUMENT_STALE_REGISTRY_COORDINATE",
+    "evidence": "forensics/.../atlas-refresh/engine-callback-discharge.json adjudicates this exact callback as DISCHARGED under C_ABI_CONTRACT reasoning, but is not an admitted boundary/site receipt; state.json#/obligation_mechanisms already intends the mapping, keyed to the v1l receipt's line coordinate instead of the V1 inventory coordinate",
+    "missing_proof": "an admitted site-enumerating receipt at the admitted candidate, the corrected (file,line,kind) override, and re-adjudication at the admitted S (the off-instrument receipt is bound to S=7b546f64 with libcrypto b3cd799d, not the admitted install)",
+    "stop": false
+   },
+   {
+    "file": "src/engine/tb_dh.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     51
+    ],
+    "operations": [
+     [
+      51,
+      "engine_unregister_all_dh"
+     ]
+    ],
+    "mechanisms": [
+     "None"
+    ],
+    "subclass": "ADJUDICATED_OFF_INSTRUMENT_STALE_REGISTRY_COORDINATE",
+    "evidence": "forensics/.../atlas-refresh/engine-callback-discharge.json adjudicates this exact callback as DISCHARGED under C_ABI_CONTRACT reasoning, but is not an admitted boundary/site receipt; state.json#/obligation_mechanisms already intends the mapping, keyed to the v1l receipt's line coordinate instead of the V1 inventory coordinate",
+    "missing_proof": "an admitted site-enumerating receipt at the admitted candidate, the corrected (file,line,kind) override, and re-adjudication at the admitted S (the off-instrument receipt is bound to S=7b546f64 with libcrypto b3cd799d, not the admitted install)",
+    "stop": false
+   },
+   {
+    "file": "src/engine/tb_digest.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     66
+    ],
+    "operations": [
+     [
+      66,
+      "engine_unregister_all_digests"
+     ]
+    ],
+    "mechanisms": [
+     "None"
+    ],
+    "subclass": "ADJUDICATED_OFF_INSTRUMENT_STALE_REGISTRY_COORDINATE",
+    "evidence": "forensics/.../atlas-refresh/engine-callback-discharge.json adjudicates this exact callback as DISCHARGED under C_ABI_CONTRACT reasoning, but is not an admitted boundary/site receipt; state.json#/obligation_mechanisms already intends the mapping, keyed to the v1l receipt's line coordinate instead of the V1 inventory coordinate",
+    "missing_proof": "an admitted site-enumerating receipt at the admitted candidate, the corrected (file,line,kind) override, and re-adjudication at the admitted S (the off-instrument receipt is bound to S=7b546f64 with libcrypto b3cd799d, not the admitted install)",
+    "stop": false
+   },
+   {
+    "file": "src/engine/tb_dsa.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     51
+    ],
+    "operations": [
+     [
+      51,
+      "engine_unregister_all_dsa"
+     ]
+    ],
+    "mechanisms": [
+     "None"
+    ],
+    "subclass": "ADJUDICATED_OFF_INSTRUMENT_STALE_REGISTRY_COORDINATE",
+    "evidence": "forensics/.../atlas-refresh/engine-callback-discharge.json adjudicates this exact callback as DISCHARGED under C_ABI_CONTRACT reasoning, but is not an admitted boundary/site receipt; state.json#/obligation_mechanisms already intends the mapping, keyed to the v1l receipt's line coordinate instead of the V1 inventory coordinate",
+    "missing_proof": "an admitted site-enumerating receipt at the admitted candidate, the corrected (file,line,kind) override, and re-adjudication at the admitted S (the off-instrument receipt is bound to S=7b546f64 with libcrypto b3cd799d, not the admitted install)",
+    "stop": false
+   },
+   {
+    "file": "src/engine/tb_eckey.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     51
+    ],
+    "operations": [
+     [
+      51,
+      "engine_unregister_all_ec"
+     ]
+    ],
+    "mechanisms": [
+     "None"
+    ],
+    "subclass": "ADJUDICATED_OFF_INSTRUMENT_STALE_REGISTRY_COORDINATE",
+    "evidence": "forensics/.../atlas-refresh/engine-callback-discharge.json adjudicates this exact callback as DISCHARGED under C_ABI_CONTRACT reasoning, but is not an admitted boundary/site receipt; state.json#/obligation_mechanisms already intends the mapping, keyed to the v1l receipt's line coordinate instead of the V1 inventory coordinate",
+    "missing_proof": "an admitted site-enumerating receipt at the admitted candidate, the corrected (file,line,kind) override, and re-adjudication at the admitted S (the off-instrument receipt is bound to S=7b546f64 with libcrypto b3cd799d, not the admitted install)",
+    "stop": false
+   },
+   {
+    "file": "src/engine/tb_pkmeth.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     53
+    ],
+    "operations": [
+     [
+      53,
+      "engine_unregister_all_pkey_meths"
+     ]
+    ],
+    "mechanisms": [
+     "None"
+    ],
+    "subclass": "ADJUDICATED_OFF_INSTRUMENT_STALE_REGISTRY_COORDINATE",
+    "evidence": "forensics/.../atlas-refresh/engine-callback-discharge.json adjudicates this exact callback as DISCHARGED under C_ABI_CONTRACT reasoning, but is not an admitted boundary/site receipt; state.json#/obligation_mechanisms already intends the mapping, keyed to the v1l receipt's line coordinate instead of the V1 inventory coordinate",
+    "missing_proof": "an admitted site-enumerating receipt at the admitted candidate, the corrected (file,line,kind) override, and re-adjudication at the admitted S (the off-instrument receipt is bound to S=7b546f64 with libcrypto b3cd799d, not the admitted install)",
+    "stop": false
+   },
+   {
+    "file": "src/engine/tb_rand.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     51
+    ],
+    "operations": [
+     [
+      51,
+      "engine_unregister_all_rand"
+     ]
+    ],
+    "mechanisms": [
+     "None"
+    ],
+    "subclass": "ADJUDICATED_OFF_INSTRUMENT_STALE_REGISTRY_COORDINATE",
+    "evidence": "forensics/.../atlas-refresh/engine-callback-discharge.json adjudicates this exact callback as DISCHARGED under C_ABI_CONTRACT reasoning, but is not an admitted boundary/site receipt; state.json#/obligation_mechanisms already intends the mapping, keyed to the v1l receipt's line coordinate instead of the V1 inventory coordinate",
+    "missing_proof": "an admitted site-enumerating receipt at the admitted candidate, the corrected (file,line,kind) override, and re-adjudication at the admitted S (the off-instrument receipt is bound to S=7b546f64 with libcrypto b3cd799d, not the admitted install)",
+    "stop": false
+   },
+   {
+    "file": "src/engine/tb_rsa.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     52
+    ],
+    "operations": [
+     [
+      52,
+      "engine_unregister_all_rsa"
+     ]
+    ],
+    "mechanisms": [
+     "None"
+    ],
+    "subclass": "ADJUDICATED_OFF_INSTRUMENT_STALE_REGISTRY_COORDINATE",
+    "evidence": "forensics/.../atlas-refresh/engine-callback-discharge.json adjudicates this exact callback as DISCHARGED under C_ABI_CONTRACT reasoning, but is not an admitted boundary/site receipt; state.json#/obligation_mechanisms already intends the mapping, keyed to the v1l receipt's line coordinate instead of the V1 inventory coordinate",
+    "missing_proof": "an admitted site-enumerating receipt at the admitted candidate, the corrected (file,line,kind) override, and re-adjudication at the admitted S (the off-instrument receipt is bound to S=7b546f64 with libcrypto b3cd799d, not the admitted install)",
+    "stop": false
+   },
+   {
+    "file": "src/evp/e_rc2.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     348
+    ],
+    "operations": [
+     [
+      348,
+      "rc2_magic_to_meth"
+     ]
+    ],
+    "mechanisms": [
+     "EVP_PKEY_PROVIDER"
+    ],
+    "subclass": "VESTIGIAL_OR_NO_OP_MARKER_UNENUMERATED",
+    "evidence": "the body has no caller-facing pointer precondition (no-op callbacks, scalar-only helper, static-table getter); the v1l site receipt recorded the same shape for the analogous class",
+    "missing_proof": "a site-enumerating receipt and the marker decision (remove `unsafe`, or record the no-precondition contract); no admitted receipt covers this file",
+    "stop": false
+   },
+   {
+    "file": "src/evp/legacy_md4.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 3,
+    "lines": [
+     122,
+     129,
+     136
+    ],
+    "operations": [
+     [
+      122,
+      "md4_init"
+     ],
+     [
+      129,
+      "md4_update"
+     ],
+     [
+      136,
+      "md4_final"
+     ]
+    ],
+    "mechanisms": [
+     "EVP_PKEY_PROVIDER"
+    ],
+    "subclass": "STOP_MEASURED_NULL_MD_DATA_INITIALISER",
+    "evidence": "source calls *_Init(md_data(ctx)) with no init_md_data guard (md4_init) while the already-corrected siblings (src/evp/legacy_md5.rs:79, src/evp/legacy_mdc2.rs:68, src/evp/legacy_sha.rs:121) validate the block; the exported EVP_MD_meth_get_init hands the callback to any C caller; the candidate probe segfaults (exit 139) on a fresh EVP_MD_CTX_new",
+    "missing_proof": "none: this is a measured defect, not a missing receipt. The blocking evidence is the candidate SIGSEGV in court/triage/probe.candidate; the correction is the init_md_data refusal already used by the fixed siblings",
+    "stop": true
+   },
+   {
+    "file": "src/evp/legacy_ripemd.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 3,
+    "lines": [
+     123,
+     130,
+     137
+    ],
+    "operations": [
+     [
+      123,
+      "ripe_init"
+     ],
+     [
+      130,
+      "ripe_update"
+     ],
+     [
+      137,
+      "ripe_final"
+     ]
+    ],
+    "mechanisms": [
+     "EVP_PKEY_PROVIDER"
+    ],
+    "subclass": "STOP_MEASURED_NULL_MD_DATA_INITIALISER",
+    "evidence": "source calls *_Init(md_data(ctx)) with no init_md_data guard (ripe_init) while the already-corrected siblings (src/evp/legacy_md5.rs:79, src/evp/legacy_mdc2.rs:68, src/evp/legacy_sha.rs:121) validate the block; the exported EVP_MD_meth_get_init hands the callback to any C caller; the candidate probe segfaults (exit 139) on a fresh EVP_MD_CTX_new",
+    "missing_proof": "none: this is a measured defect, not a missing receipt. The blocking evidence is the candidate SIGSEGV in court/triage/probe.candidate; the correction is the init_md_data refusal already used by the fixed siblings",
+    "stop": true
+   },
+   {
+    "file": "src/evp/legacy_wp.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 3,
+    "lines": [
+     125,
+     132,
+     139
+    ],
+    "operations": [
+     [
+      125,
+      "wp_init"
+     ],
+     [
+      132,
+      "wp_update"
+     ],
+     [
+      139,
+      "wp_final"
+     ]
+    ],
+    "mechanisms": [
+     "EVP_PKEY_PROVIDER"
+    ],
+    "subclass": "STOP_MEASURED_NULL_MD_DATA_INITIALISER",
+    "evidence": "source calls *_Init(md_data(ctx)) with no init_md_data guard (wp_init) while the already-corrected siblings (src/evp/legacy_md5.rs:79, src/evp/legacy_mdc2.rs:68, src/evp/legacy_sha.rs:121) validate the block; the exported EVP_MD_meth_get_init hands the callback to any C caller; the candidate probe segfaults (exit 139) on a fresh EVP_MD_CTX_new",
+    "missing_proof": "none: this is a measured defect, not a missing receipt. The blocking evidence is the candidate SIGSEGV in court/triage/probe.candidate; the correction is the init_md_data refusal already used by the fixed siblings",
+    "stop": true
+   },
+   {
+    "file": "src/ml_kem/key.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     272
+    ],
+    "operations": [
+     [
+      272,
+      "raise_fixed"
+     ]
+    ],
+    "mechanisms": [
+     "EVP_PKEY_PROVIDER"
+    ],
+    "subclass": "VESTIGIAL_OR_NO_OP_MARKER_UNENUMERATED",
+    "evidence": "the body has no caller-facing pointer precondition (no-op callbacks, scalar-only helper, static-table getter); the v1l site receipt recorded the same shape for the analogous class",
+    "missing_proof": "a site-enumerating receipt and the marker decision (remove `unsafe`, or record the no-precondition contract); no admitted receipt covers this file",
+    "stop": false
+   },
+   {
+    "file": "src/provider/eddsa_sig.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 2,
+    "lines": [
+     940,
+     951
+    ],
+    "operations": [
+     [
+      940,
+      "ed25519_sigalg_query_key_types"
+     ],
+     [
+      951,
+      "ed448_sigalg_query_key_types"
+     ]
+    ],
+    "mechanisms": [
+     "EVP_PKEY_PROVIDER"
+    ],
+    "subclass": "VESTIGIAL_OR_NO_OP_MARKER_UNENUMERATED",
+    "evidence": "the body has no caller-facing pointer precondition (no-op callbacks, scalar-only helper, static-table getter); the v1l site receipt recorded the same shape for the analogous class",
+    "missing_proof": "a site-enumerating receipt and the marker decision (remove `unsafe`, or record the no-precondition contract); no admitted receipt covers this file",
+    "stop": false
+   },
+   {
+    "file": "src/runtime/bio/bf_readbuff.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 2,
+    "lines": [
+     231,
+     237
+    ],
+    "operations": [
+     [
+      231,
+      "readbuffer_write"
+     ],
+     [
+      237,
+      "readbuffer_puts"
+     ]
+    ],
+    "mechanisms": [
+     "BIO"
+    ],
+    "subclass": "VESTIGIAL_OR_NO_OP_MARKER_UNENUMERATED",
+    "evidence": "the body has no caller-facing pointer precondition (no-op callbacks, scalar-only helper, static-table getter); the v1l site receipt recorded the same shape for the analogous class",
+    "missing_proof": "a site-enumerating receipt and the marker decision (remove `unsafe`, or record the no-precondition contract); no admitted receipt covers this file",
+    "stop": false
+   },
+   {
+    "file": "src/slh_dsa/adrs.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 19,
+    "lines": [
+     119,
+     128,
+     134,
+     147,
+     154,
+     166,
+     172,
+     178,
+     184,
+     193,
+     200,
+     207,
+     221,
+     228,
+     241,
+     248,
+     254,
+     260,
+     269
+    ],
+    "operations": [
+     [
+      119,
+      "slh_adrs_set_layer_address"
+     ],
+     [
+      128,
+      "slh_adrs_set_tree_address"
+     ],
+     [
+      134,
+      "slh_adrs_set_type_and_clear"
+     ],
+     [
+      147,
+      "slh_adrs_set_keypair_address"
+     ],
+     [
+      154,
+      "slh_adrs_copy_keypair_address"
+     ],
+     [
+      166,
+      "slh_adrs_set_chain_address"
+     ],
+     [
+      172,
+      "slh_adrs_set_hash_address"
+     ],
+     [
+      178,
+      "slh_adrs_zero"
+     ],
+     [
+      184,
+      "slh_adrs_copy"
+     ],
+     [
+      193,
+      "slh_adrsc_set_layer_address"
+     ],
+     [
+      200,
+      "slh_adrsc_set_tree_address"
+     ],
+     [
+      207,
+      "slh_adrsc_set_type_and_clear"
+     ],
+     [
+      221,
+      "slh_adrsc_set_keypair_address"
+     ],
+     [
+      228,
+      "slh_adrsc_copy_keypair_address"
+     ],
+     [
+      241,
+      "slh_adrsc_set_chain_address"
+     ],
+     [
+      248,
+      "slh_adrsc_set_hash_address"
+     ],
+     [
+      254,
+      "slh_adrsc_zero"
+     ],
+     [
+      260,
+      "slh_adrsc_copy"
+     ],
+     [
+      269,
+      "ossl_slh_get_adrs_fn"
+     ]
+    ],
+    "mechanisms": [
+     "EVP_PKEY_PROVIDER"
+    ],
+    "subclass": "INTERNAL_RAW_POINTER_CALLBACK_TABLE",
+    "evidence": "the obligations are the individual unsafe extern \"C\" fn entries plus the table accessor (ossl_slh_get_adrs_fn / ossl_slh_get_hash_fn); each body's extent/liveness precondition is stated only as a per-call SAFETY comment and the callers are inside src/slh_dsa",
+    "missing_proof": "a caller-closure audit tying every table invocation to an owned buffer/key of the required extent, then a site-enumerating receipt; no admitted receipt covers src/slh_dsa",
+    "stop": false
+   },
+   {
+    "file": "src/slh_dsa/hash.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 13,
+    "lines": [
+     179,
+     212,
+     240,
+     272,
+     301,
+     332,
+     392,
+     442,
+     531,
+     558,
+     586,
+     618,
+     649
+    ],
+    "operations": [
+     [
+      179,
+      "slh_hmsg_shake"
+     ],
+     [
+      212,
+      "slh_prf_shake"
+     ],
+     [
+      240,
+      "slh_prf_msg_shake"
+     ],
+     [
+      272,
+      "slh_f_shake"
+     ],
+     [
+      301,
+      "slh_h_shake"
+     ],
+     [
+      332,
+      "slh_t_shake"
+     ],
+     [
+      392,
+      "slh_hmsg_sha2"
+     ],
+     [
+      442,
+      "slh_prf_msg_sha2"
+     ],
+     [
+      531,
+      "slh_prf_sha2"
+     ],
+     [
+      558,
+      "slh_f_sha2"
+     ],
+     [
+      586,
+      "slh_h_sha2"
+     ],
+     [
+      618,
+      "slh_t_sha2"
+     ],
+     [
+      649,
+      "ossl_slh_get_hash_fn"
+     ]
+    ],
+    "mechanisms": [
+     "EVP_PKEY_PROVIDER"
+    ],
+    "subclass": "INTERNAL_RAW_POINTER_CALLBACK_TABLE",
+    "evidence": "the obligations are the individual unsafe extern \"C\" fn entries plus the table accessor (ossl_slh_get_adrs_fn / ossl_slh_get_hash_fn); each body's extent/liveness precondition is stated only as a per-call SAFETY comment and the callers are inside src/slh_dsa",
+    "missing_proof": "a caller-closure audit tying every table invocation to an owned buffer/key of the required extent, then a site-enumerating receipt; no admitted receipt covers src/slh_dsa",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_aaa.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 3,
+    "lines": [
+     382,
+     452,
+     500
+    ],
+    "operations": [
+     [
+      382,
+      "i2r_ALLOWED_ATTRIBUTES_CHOICE"
+     ],
+     [
+      452,
+      "i2r_ALLOWED_ATTRIBUTES_ITEM"
+     ],
+     [
+      500,
+      "i2r_ALLOWED_ATTRIBUTES_SYNTAX"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2r printers over OSSL_ALLOWED_ATTRIBUTES_* values; the i2r slot contract is not documented at the type alias, only as per-call SAFETY comments",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_audit_id.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 2,
+    "lines": [
+     30,
+     37
+    ],
+    "operations": [
+     [
+      30,
+      "audit_i2s"
+     ],
+     [
+      37,
+      "audit_s2i"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2s/s2i wrappers over the audit-identity ASN1 string pair; i2s ownership contract documented at src/x509/v3_lib.rs:105-131",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_battcons.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 2,
+    "lines": [
+     191,
+     208
+    ],
+    "operations": [
+     [
+      191,
+      "i2v_OSSL_BASIC_ATTR_CONSTRAINTS"
+     ],
+     [
+      208,
+      "v2i_OSSL_BASIC_ATTR_CONSTRAINTS"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2v/v2i stack builders; the i2v/v2i slot contract is not documented at the type aliases in src/x509/v3_lib.rs:84-104",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_bcons.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 2,
+    "lines": [
+     192,
+     209
+    ],
+    "operations": [
+     [
+      192,
+      "i2v_BASIC_CONSTRAINTS"
+     ],
+     [
+      209,
+      "v2i_BASIC_CONSTRAINTS"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2v/v2i stack builders; the i2v/v2i slot contract is not documented at the type aliases",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_bitst.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 2,
+    "lines": [
+     349,
+     360
+    ],
+    "operations": [
+     [
+      349,
+      "bitst_i2v"
+     ],
+     [
+      360,
+      "bitst_v2i"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2v/v2i stack builders; the i2v/v2i slot contract is not documented at the type aliases",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_cpols.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     1366
+    ],
+    "operations": [
+     [
+      1366,
+      "i2r_certpol"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2r_certpol over STACK_OF(POLICYINFO); the i2r slot contract is not documented at the type alias",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_enum.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     120
+    ],
+    "operations": [
+     [
+      120,
+      "enum_i2s"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2s forwards to i2s_ASN1_ENUMERATED_TABLE; i2s ownership contract documented at src/x509/v3_lib.rs:105-131",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_extku.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 2,
+    "lines": [
+     184,
+     212
+    ],
+    "operations": [
+     [
+      184,
+      "i2v_EXTENDED_KEY_USAGE"
+     ],
+     [
+      212,
+      "v2i_EXTENDED_KEY_USAGE"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2v/v2i stack builders; the i2v/v2i slot contract is not documented at the type aliases",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_group_ac.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 4,
+    "lines": [
+     33,
+     43,
+     53,
+     66
+    ],
+    "operations": [
+     [
+      33,
+      "i2r_GROUP_AC"
+     ],
+     [
+      43,
+      "r2i_GROUP_AC"
+     ],
+     [
+      53,
+      "i2s_GROUP_AC"
+     ],
+     [
+      66,
+      "s2i_GROUP_AC"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2r/r2i/i2s/s2i; i2r returns 1, r2i/s2i return ASN1_NULL_new; i2s has the documented X509V3ExtI2s ownership contract",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_ia5.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 2,
+    "lines": [
+     180,
+     186
+    ],
+    "operations": [
+     [
+      180,
+      "ia5_i2s"
+     ],
+     [
+      186,
+      "ia5_s2i"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2s/s2i forward to the documented ASN1 IA5 string pair; i2s ownership contract documented at src/x509/v3_lib.rs:105-131",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_ind_iss.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 4,
+    "lines": [
+     33,
+     43,
+     53,
+     66
+    ],
+    "operations": [
+     [
+      33,
+      "i2r_INDIRECT_ISSUER"
+     ],
+     [
+      43,
+      "r2i_INDIRECT_ISSUER"
+     ],
+     [
+      53,
+      "i2s_INDIRECT_ISSUER"
+     ],
+     [
+      66,
+      "s2i_INDIRECT_ISSUER"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2r/r2i/i2s/s2i; i2r returns 1, r2i/s2i return ASN1_NULL_new; i2s has the documented X509V3ExtI2s ownership contract",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_info.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 2,
+    "lines": [
+     323,
+     414
+    ],
+    "operations": [
+     [
+      323,
+      "i2v_AUTHORITY_INFO_ACCESS"
+     ],
+     [
+      414,
+      "v2i_AUTHORITY_INFO_ACCESS"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2v/v2i stack builders; the i2v/v2i slot contract is not documented at the type aliases",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_int.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 2,
+    "lines": [
+     29,
+     39
+    ],
+    "operations": [
+     [
+      29,
+      "int_i2s"
+     ],
+     [
+      39,
+      "s2i_asn1_int"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2s/s2i forward to i2s_ASN1_INTEGER / s2i_ASN1_INTEGER; i2s ownership contract documented at src/x509/v3_lib.rs:105-131",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_iobo.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     42
+    ],
+    "operations": [
+     [
+      42,
+      "i2r_ISSUED_ON_BEHALF_OF"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2r over GENERAL_NAME; the i2r slot contract is not documented at the type alias",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_ist.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 2,
+    "lines": [
+     246,
+     331
+    ],
+    "operations": [
+     [
+      246,
+      "v2i_issuer_sign_tool"
+     ],
+     [
+      331,
+      "i2r_issuer_sign_tool"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; v2i/i2r issuer-sign-tool slots; the i2r/v2i slot contract is not documented at the type aliases",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_no_ass.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 4,
+    "lines": [
+     36,
+     47,
+     61,
+     75
+    ],
+    "operations": [
+     [
+      36,
+      "i2r_NO_ASSERTION"
+     ],
+     [
+      47,
+      "r2i_NO_ASSERTION"
+     ],
+     [
+      61,
+      "i2s_NO_ASSERTION"
+     ],
+     [
+      75,
+      "s2i_NO_ASSERTION"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2r/r2i/i2s/s2i; i2r returns 1, r2i/s2i return ASN1_NULL_new; i2s has the documented X509V3ExtI2s ownership contract",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_no_rev_avail.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 4,
+    "lines": [
+     33,
+     43,
+     53,
+     66
+    ],
+    "operations": [
+     [
+      33,
+      "i2r_NO_REV_AVAIL"
+     ],
+     [
+      43,
+      "r2i_NO_REV_AVAIL"
+     ],
+     [
+      53,
+      "i2s_NO_REV_AVAIL"
+     ],
+     [
+      66,
+      "s2i_NO_REV_AVAIL"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2r/r2i/i2s/s2i; i2r returns 1, r2i/s2i return ASN1_NULL_new; i2s has the documented X509V3ExtI2s ownership contract",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_pcons.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 2,
+    "lines": [
+     154,
+     179
+    ],
+    "operations": [
+     [
+      154,
+      "i2v_POLICY_CONSTRAINTS"
+     ],
+     [
+      179,
+      "v2i_POLICY_CONSTRAINTS"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2v/v2i stack builders; the i2v/v2i slot contract is not documented at the type aliases",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_pku.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     164
+    ],
+    "operations": [
+     [
+      164,
+      "i2r_PKEY_USAGE_PERIOD"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2r over PKEY_USAGE_PERIOD; the i2r slot contract is not documented at the type alias",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_pmaps.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 2,
+    "lines": [
+     200,
+     229
+    ],
+    "operations": [
+     [
+      200,
+      "i2v_POLICY_MAPPINGS"
+     ],
+     [
+      229,
+      "v2i_POLICY_MAPPINGS"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2v/v2i stack builders; the i2v/v2i slot contract is not documented at the type aliases",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_sda.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     140
+    ],
+    "operations": [
+     [
+      140,
+      "i2r_ATTRIBUTES_SYNTAX"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2r over ATTRIBUTES_SYNTAX; the i2r slot contract is not documented at the type alias",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_single_use.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 4,
+    "lines": [
+     34,
+     44,
+     54,
+     67
+    ],
+    "operations": [
+     [
+      34,
+      "i2r_SINGLE_USE"
+     ],
+     [
+      44,
+      "r2i_SINGLE_USE"
+     ],
+     [
+      54,
+      "i2s_SINGLE_USE"
+     ],
+     [
+      67,
+      "s2i_SINGLE_USE"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2r/r2i/i2s/s2i; i2r returns 1 and r2i/s2i return ASN1_NULL_new, so three slots have no caller precondition; i2s has the documented X509V3ExtI2s ownership contract",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_skid.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     249
+    ],
+    "operations": [
+     [
+      249,
+      "skid_i2s"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2s forwards to i2s_ASN1_OCTET_STRING; i2s ownership contract documented at src/x509/v3_lib.rs:105-131",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_soa_id.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 4,
+    "lines": [
+     33,
+     43,
+     53,
+     66
+    ],
+    "operations": [
+     [
+      33,
+      "i2r_SOA_IDENTIFIER"
+     ],
+     [
+      43,
+      "r2i_SOA_IDENTIFIER"
+     ],
+     [
+      53,
+      "i2s_SOA_IDENTIFIER"
+     ],
+     [
+      66,
+      "s2i_SOA_IDENTIFIER"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2r/r2i/i2s/s2i; i2r returns 1, r2i/s2i return ASN1_NULL_new; i2s has the documented X509V3ExtI2s ownership contract",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_sxnet.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 2,
+    "lines": [
+     332,
+     406
+    ],
+    "operations": [
+     [
+      332,
+      "sxnet_i2r"
+     ],
+     [
+      406,
+      "sxnet_v2i"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2r/v2i SXNET slots; the i2r/v2i slot contract is not documented at the type aliases",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_usernotice.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 1,
+    "lines": [
+     287
+    ],
+    "operations": [
+     [
+      287,
+      "i2r_USER_NOTICE_SYNTAX"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2r over USER_NOTICE_SYNTAX; the i2r slot contract is not documented at the type alias",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   },
+   {
+    "file": "src/x509/v3_utf8.rs",
+    "class": "REAL_OBLIGATION",
+    "obligations": 2,
+    "lines": [
+     164,
+     170
+    ],
+    "operations": [
+     [
+      164,
+      "utf8_i2s"
+     ],
+     [
+      170,
+      "utf8_s2i"
+     ]
+    ],
+    "mechanisms": [
+     "X509_VERIFY_POLICY"
+    ],
+    "subclass": "X509V3_EXT_METHOD_ABI_UNENUMERATED",
+    "evidence": "the obligations are X509V3_EXT_METHOD slot callbacks stored in in-repo static rows; i2s/s2i forward to the documented i2s_ASN1_UTF8STRING / s2i_ASN1_UTF8STRING; i2s ownership contract is documented at src/x509/v3_lib.rs:105-131",
+    "missing_proof": "a site-enumerating receipt for every slot plus the missing type-level contract for the non-i2s slots; the directory rule maps the file to X509_VERIFY_POLICY although the operation's contract is the X509V3_EXT_METHOD C ABI",
+    "stop": false
+   }
+  ]
+ },
+ "unknown_mechanism_triage": {
+  "count": 9,
+  "mechanism": "C_ABI_CONTRACT",
+  "summary": "the mechanism is registered and state.json already intends the mapping; the nine override records are keyed to the v1l receipt's line coordinates, so consumer_closure's (file,line,kind) lookup returns None. No new mechanism is needed and none is invented.",
+  "files": [
+   {
+    "file": "src/engine/tb_asnmth.rs",
+    "v1_obligation_id": "V1:src/engine/tb_asnmth.rs:72:UNSAFE_FN_DEF",
+    "v1_line": 72,
+    "source_line_at_inventory_head_ad591309": 72,
+    "state_override_line": 74,
+    "state_override_id": "src/engine/tb_asnmth.rs:74:UNSAFE_FN_DEF",
+    "state_override_mechanism": "C_ABI_CONTRACT",
+    "state_override_basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `engine_table_register(..., Some(engine_unregister_all_pkey_asn1_meths), ...)`; no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`); B16-ASN1-1 remains CONTRACTED.",
+    "mechanism": "C_ABI_CONTRACT",
+    "registry_entry": "state.json#/mechanisms[id=C_ABI_CONTRACT]",
+    "registry_justification": "the registry entry's scope is exactly \"Definitions of unsafe extern \\\"C\\\" fn callbacks ... whose caller contract is a raw C/ABI contract\", and its authority_prefixes include crypto/engine; the same entry already classifies src/engine/eng_list.rs:90, eng_dyn.rs:401/576 and tb_asnmth.rs:330",
+    "contract": "zero-argument callback installed in EngineCleanupCb inside an in-repo engine_table_register call; it reads/writes only this module's &'static EngineTableSlot through the typed accessor, and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and the registration path, not a caller obligation (engine-callback-discharge.json p1-p5)",
+    "registry_entry_missing": false,
+    "coordinate_defect": "the override exists but is keyed to the v1l receipt's line coordinate (unknown_obligations_v1l.py OPERATIONS) rather than the V1 inventory coordinate; mechanism_for() looks up (file,line,kind) and therefore returns None"
+   },
+   {
+    "file": "src/engine/tb_cipher.rs",
+    "v1_obligation_id": "V1:src/engine/tb_cipher.rs:55:UNSAFE_FN_DEF",
+    "v1_line": 55,
+    "source_line_at_inventory_head_ad591309": 55,
+    "state_override_line": 56,
+    "state_override_id": "src/engine/tb_cipher.rs:56:UNSAFE_FN_DEF",
+    "state_override_mechanism": "C_ABI_CONTRACT",
+    "state_override_basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `engine_table_register(..., Some(engine_unregister_all_ciphers), ...)` (`src/engine/tb_cipher.rs:79-88`); no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`).",
+    "mechanism": "C_ABI_CONTRACT",
+    "registry_entry": "state.json#/mechanisms[id=C_ABI_CONTRACT]",
+    "registry_justification": "the registry entry's scope is exactly \"Definitions of unsafe extern \\\"C\\\" fn callbacks ... whose caller contract is a raw C/ABI contract\", and its authority_prefixes include crypto/engine; the same entry already classifies src/engine/eng_list.rs:90, eng_dyn.rs:401/576 and tb_asnmth.rs:330",
+    "contract": "zero-argument callback installed in EngineCleanupCb inside an in-repo engine_table_register call; it reads/writes only this module's &'static EngineTableSlot through the typed accessor, and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and the registration path, not a caller obligation (engine-callback-discharge.json p1-p5)",
+    "registry_entry_missing": false,
+    "coordinate_defect": "the override exists but is keyed to the v1l receipt's line coordinate (unknown_obligations_v1l.py OPERATIONS) rather than the V1 inventory coordinate; mechanism_for() looks up (file,line,kind) and therefore returns None"
+   },
+   {
+    "file": "src/engine/tb_dh.rs",
+    "v1_obligation_id": "V1:src/engine/tb_dh.rs:51:UNSAFE_FN_DEF",
+    "v1_line": 51,
+    "source_line_at_inventory_head_ad591309": 51,
+    "state_override_line": 54,
+    "state_override_id": "src/engine/tb_dh.rs:54:UNSAFE_FN_DEF",
+    "state_override_mechanism": "C_ABI_CONTRACT",
+    "state_override_basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `Some(engine_unregister_all_dh)`; no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`).",
+    "mechanism": "C_ABI_CONTRACT",
+    "registry_entry": "state.json#/mechanisms[id=C_ABI_CONTRACT]",
+    "registry_justification": "the registry entry's scope is exactly \"Definitions of unsafe extern \\\"C\\\" fn callbacks ... whose caller contract is a raw C/ABI contract\", and its authority_prefixes include crypto/engine; the same entry already classifies src/engine/eng_list.rs:90, eng_dyn.rs:401/576 and tb_asnmth.rs:330",
+    "contract": "zero-argument callback installed in EngineCleanupCb inside an in-repo engine_table_register call; it reads/writes only this module's &'static EngineTableSlot through the typed accessor, and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and the registration path, not a caller obligation (engine-callback-discharge.json p1-p5)",
+    "registry_entry_missing": false,
+    "coordinate_defect": "the override exists but is keyed to the v1l receipt's line coordinate (unknown_obligations_v1l.py OPERATIONS) rather than the V1 inventory coordinate; mechanism_for() looks up (file,line,kind) and therefore returns None"
+   },
+   {
+    "file": "src/engine/tb_digest.rs",
+    "v1_obligation_id": "V1:src/engine/tb_digest.rs:66:UNSAFE_FN_DEF",
+    "v1_line": 66,
+    "source_line_at_inventory_head_ad591309": 66,
+    "state_override_line": 68,
+    "state_override_id": "src/engine/tb_digest.rs:68:UNSAFE_FN_DEF",
+    "state_override_mechanism": "C_ABI_CONTRACT",
+    "state_override_basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `Some(engine_unregister_all_digests)`; no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`).",
+    "mechanism": "C_ABI_CONTRACT",
+    "registry_entry": "state.json#/mechanisms[id=C_ABI_CONTRACT]",
+    "registry_justification": "the registry entry's scope is exactly \"Definitions of unsafe extern \\\"C\\\" fn callbacks ... whose caller contract is a raw C/ABI contract\", and its authority_prefixes include crypto/engine; the same entry already classifies src/engine/eng_list.rs:90, eng_dyn.rs:401/576 and tb_asnmth.rs:330",
+    "contract": "zero-argument callback installed in EngineCleanupCb inside an in-repo engine_table_register call; it reads/writes only this module's &'static EngineTableSlot through the typed accessor, and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and the registration path, not a caller obligation (engine-callback-discharge.json p1-p5)",
+    "registry_entry_missing": false,
+    "coordinate_defect": "the override exists but is keyed to the v1l receipt's line coordinate (unknown_obligations_v1l.py OPERATIONS) rather than the V1 inventory coordinate; mechanism_for() looks up (file,line,kind) and therefore returns None"
+   },
+   {
+    "file": "src/engine/tb_dsa.rs",
+    "v1_obligation_id": "V1:src/engine/tb_dsa.rs:51:UNSAFE_FN_DEF",
+    "v1_line": 51,
+    "source_line_at_inventory_head_ad591309": 51,
+    "state_override_line": 54,
+    "state_override_id": "src/engine/tb_dsa.rs:54:UNSAFE_FN_DEF",
+    "state_override_mechanism": "C_ABI_CONTRACT",
+    "state_override_basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `Some(engine_unregister_all_dsa)`; no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`).",
+    "mechanism": "C_ABI_CONTRACT",
+    "registry_entry": "state.json#/mechanisms[id=C_ABI_CONTRACT]",
+    "registry_justification": "the registry entry's scope is exactly \"Definitions of unsafe extern \\\"C\\\" fn callbacks ... whose caller contract is a raw C/ABI contract\", and its authority_prefixes include crypto/engine; the same entry already classifies src/engine/eng_list.rs:90, eng_dyn.rs:401/576 and tb_asnmth.rs:330",
+    "contract": "zero-argument callback installed in EngineCleanupCb inside an in-repo engine_table_register call; it reads/writes only this module's &'static EngineTableSlot through the typed accessor, and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and the registration path, not a caller obligation (engine-callback-discharge.json p1-p5)",
+    "registry_entry_missing": false,
+    "coordinate_defect": "the override exists but is keyed to the v1l receipt's line coordinate (unknown_obligations_v1l.py OPERATIONS) rather than the V1 inventory coordinate; mechanism_for() looks up (file,line,kind) and therefore returns None"
+   },
+   {
+    "file": "src/engine/tb_eckey.rs",
+    "v1_obligation_id": "V1:src/engine/tb_eckey.rs:51:UNSAFE_FN_DEF",
+    "v1_line": 51,
+    "source_line_at_inventory_head_ad591309": 51,
+    "state_override_line": 54,
+    "state_override_id": "src/engine/tb_eckey.rs:54:UNSAFE_FN_DEF",
+    "state_override_mechanism": "C_ABI_CONTRACT",
+    "state_override_basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `Some(engine_unregister_all_ec)`; no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`).",
+    "mechanism": "C_ABI_CONTRACT",
+    "registry_entry": "state.json#/mechanisms[id=C_ABI_CONTRACT]",
+    "registry_justification": "the registry entry's scope is exactly \"Definitions of unsafe extern \\\"C\\\" fn callbacks ... whose caller contract is a raw C/ABI contract\", and its authority_prefixes include crypto/engine; the same entry already classifies src/engine/eng_list.rs:90, eng_dyn.rs:401/576 and tb_asnmth.rs:330",
+    "contract": "zero-argument callback installed in EngineCleanupCb inside an in-repo engine_table_register call; it reads/writes only this module's &'static EngineTableSlot through the typed accessor, and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and the registration path, not a caller obligation (engine-callback-discharge.json p1-p5)",
+    "registry_entry_missing": false,
+    "coordinate_defect": "the override exists but is keyed to the v1l receipt's line coordinate (unknown_obligations_v1l.py OPERATIONS) rather than the V1 inventory coordinate; mechanism_for() looks up (file,line,kind) and therefore returns None"
+   },
+   {
+    "file": "src/engine/tb_pkmeth.rs",
+    "v1_obligation_id": "V1:src/engine/tb_pkmeth.rs:53:UNSAFE_FN_DEF",
+    "v1_line": 53,
+    "source_line_at_inventory_head_ad591309": 53,
+    "state_override_line": 55,
+    "state_override_id": "src/engine/tb_pkmeth.rs:55:UNSAFE_FN_DEF",
+    "state_override_mechanism": "C_ABI_CONTRACT",
+    "state_override_basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `Some(engine_unregister_all_pkey_meths)`; no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`).",
+    "mechanism": "C_ABI_CONTRACT",
+    "registry_entry": "state.json#/mechanisms[id=C_ABI_CONTRACT]",
+    "registry_justification": "the registry entry's scope is exactly \"Definitions of unsafe extern \\\"C\\\" fn callbacks ... whose caller contract is a raw C/ABI contract\", and its authority_prefixes include crypto/engine; the same entry already classifies src/engine/eng_list.rs:90, eng_dyn.rs:401/576 and tb_asnmth.rs:330",
+    "contract": "zero-argument callback installed in EngineCleanupCb inside an in-repo engine_table_register call; it reads/writes only this module's &'static EngineTableSlot through the typed accessor, and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and the registration path, not a caller obligation (engine-callback-discharge.json p1-p5)",
+    "registry_entry_missing": false,
+    "coordinate_defect": "the override exists but is keyed to the v1l receipt's line coordinate (unknown_obligations_v1l.py OPERATIONS) rather than the V1 inventory coordinate; mechanism_for() looks up (file,line,kind) and therefore returns None"
+   },
+   {
+    "file": "src/engine/tb_rand.rs",
+    "v1_obligation_id": "V1:src/engine/tb_rand.rs:51:UNSAFE_FN_DEF",
+    "v1_line": 51,
+    "source_line_at_inventory_head_ad591309": 51,
+    "state_override_line": 54,
+    "state_override_id": "src/engine/tb_rand.rs:54:UNSAFE_FN_DEF",
+    "state_override_mechanism": "C_ABI_CONTRACT",
+    "state_override_basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `Some(engine_unregister_all_rand)`; no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`).",
+    "mechanism": "C_ABI_CONTRACT",
+    "registry_entry": "state.json#/mechanisms[id=C_ABI_CONTRACT]",
+    "registry_justification": "the registry entry's scope is exactly \"Definitions of unsafe extern \\\"C\\\" fn callbacks ... whose caller contract is a raw C/ABI contract\", and its authority_prefixes include crypto/engine; the same entry already classifies src/engine/eng_list.rs:90, eng_dyn.rs:401/576 and tb_asnmth.rs:330",
+    "contract": "zero-argument callback installed in EngineCleanupCb inside an in-repo engine_table_register call; it reads/writes only this module's &'static EngineTableSlot through the typed accessor, and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and the registration path, not a caller obligation (engine-callback-discharge.json p1-p5)",
+    "registry_entry_missing": false,
+    "coordinate_defect": "the override exists but is keyed to the v1l receipt's line coordinate (unknown_obligations_v1l.py OPERATIONS) rather than the V1 inventory coordinate; mechanism_for() looks up (file,line,kind) and therefore returns None"
+   },
+   {
+    "file": "src/engine/tb_rsa.rs",
+    "v1_obligation_id": "V1:src/engine/tb_rsa.rs:52:UNSAFE_FN_DEF",
+    "v1_line": 52,
+    "source_line_at_inventory_head_ad591309": 52,
+    "state_override_line": 55,
+    "state_override_id": "src/engine/tb_rsa.rs:55:UNSAFE_FN_DEF",
+    "state_override_mechanism": "C_ABI_CONTRACT",
+    "state_override_basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `Some(engine_unregister_all_rsa)`; no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`).",
+    "mechanism": "C_ABI_CONTRACT",
+    "registry_entry": "state.json#/mechanisms[id=C_ABI_CONTRACT]",
+    "registry_justification": "the registry entry's scope is exactly \"Definitions of unsafe extern \\\"C\\\" fn callbacks ... whose caller contract is a raw C/ABI contract\", and its authority_prefixes include crypto/engine; the same entry already classifies src/engine/eng_list.rs:90, eng_dyn.rs:401/576 and tb_asnmth.rs:330",
+    "contract": "zero-argument callback installed in EngineCleanupCb inside an in-repo engine_table_register call; it reads/writes only this module's &'static EngineTableSlot through the typed accessor, and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and the registration path, not a caller obligation (engine-callback-discharge.json p1-p5)",
+    "registry_entry_missing": false,
+    "coordinate_defect": "the override exists but is keyed to the v1l receipt's line coordinate (unknown_obligations_v1l.py OPERATIONS) rather than the V1 inventory coordinate; mechanism_for() looks up (file,line,kind) and therefore returns None"
+   }
+  ],
+  "effect_if_corrected": "UNKNOWN -> BLOCKED for the eight receiptless files and tb_asnmth (C_ABI_CONTRACT is UNSAFE_OPEN, and no scoped SAFETY_DISCHARGED entry names these lines). It would not produce a discharge."
+ },
+ "unknown_obligation_sample": {
+  "sample_size": 15,
+  "population": 119,
+  "selection": "15 distinct files covering all six mechanism values present in the UNKNOWN set (X509_VERIFY_POLICY, EVP_PKEY_PROVIDER, RAND_CMS_STORE_KEYFMT, BIO, C_ABI_CONTRACT, and the unmapped engine callback) and all seven file subclasses",
+  "class_counts": {
+   "b": 4,
+   "a": 10,
+   "c": 1
+  },
+  "classes": {
+   "a": "missing proof: the operation is safe as written, but the evidence is not recorded",
+   "b": "contract-bounded interface: intentionally unsafe with the external contract stated",
+   "c": "actual unsafe implementation defect: the reachable interface can cause UB"
+  },
+  "entries": [
+   {
+    "obligation_id": "V1:src/cms/cms_lib.rs:1378:UNSAFE_FN_DEF",
+    "file": "src/cms/cms_lib.rs",
+    "line": 1378,
+    "unsafe_op": "unsafe extern \"C\" fn x509_free_void(p: *mut c_void) { X509_free(p.cast()) }",
+    "source_assertion": "doc comment: the `void (*)(void *)` shape for X509_free; SAFETY: `p` is an X509 per the stack's element type",
+    "classification": "b",
+    "rationale": "Intentionally unsafe at the OPENSSL_sk_pop_free freefunc boundary; the caller establishes the element type. Registered only on stacks whose elements are X509 (:1204, :1579). No caller precondition reaches the Rust interior. Missing: failure-injection control and a site receipt; no defect evidence."
+   },
+   {
+    "obligation_id": "V1:src/engine/eng_list.rs:90:UNSAFE_FN_DEF",
+    "file": "src/engine/eng_list.rs",
+    "line": 90,
+    "unsafe_op": "unsafe extern \"C\" fn engine_list_cleanup() { ENGINE_LIST_HEAD.load(Acquire); ENGINE_remove(head) }",
+    "source_assertion": "zero arguments; only the module's AtomicPtr static and an in-repo callback registration",
+    "classification": "a",
+    "rationale": "No caller-facing precondition: the unsafe marker encodes the EngineCleanupCb function-pointer type, not an obligation (the same conclusion engine-callback-discharge.json reaches for the nine siblings). The operation is not shown unsound; the evidence (site enumeration, lock/publication argument, admitted receipt) is not recorded. No defect found."
+   },
+   {
+    "obligation_id": "V1:src/engine/tb_cipher.rs:55:UNSAFE_FN_DEF",
+    "file": "src/engine/tb_cipher.rs",
+    "line": 55,
+    "unsafe_op": "unsafe extern \"C\" fn engine_unregister_all_ciphers() { engine_table_cleanup(cipher_table_slot()) }",
+    "source_assertion": "zero arguments; module-static EngineTableSlot only",
+    "classification": "a",
+    "rationale": "No caller-facing precondition. A full adjudication exists in engine-callback-discharge.json but is off-instrument and bound to S=7b546f64; the registry override is keyed to line 56, not the V1 line 55, so the instrument reports UNKNOWN_MECHANISM/UNKNOWN_OBLIGATION. Missing proof, not a defect."
+   },
+   {
+    "obligation_id": "V1:src/evp/e_rc2.rs:348:UNSAFE_FN_DEF",
+    "file": "src/evp/e_rc2.rs",
+    "line": 348,
+    "unsafe_op": "unsafe fn rc2_magic_to_meth(i: c_int) -> c_int { match i { ... _ => { raise_site(..); 0 } } }",
+    "source_assertion": "scalar argument only; the single unsafe call is raise_site(&'static ErrSite)",
+    "classification": "a",
+    "rationale": "The function reads one integer and calls raise_site, whose contract is a compile-time-constant ErrSite (src/runtime/err.rs:1170-1172). There is no pointer, alias, init or lifetime precondition; the `unsafe` marker is vestigial. Missing: adjudication and the marker decision. No defect found."
+   },
+   {
+    "obligation_id": "V1:src/evp/legacy_md4.rs:122:UNSAFE_FN_DEF",
+    "file": "src/evp/legacy_md4.rs",
+    "line": 122,
+    "unsafe_op": "unsafe extern \"C\" fn md4_init(ctx) -> c_int { MD4_Init(md_data(ctx).cast::<Md4Ctx>()) }",
+    "source_assertion": "no guard on ctx->md_data; exported through EVP_MD_meth_get_init",
+    "classification": "c",
+    "rationale": "ACTUAL DEFECT (STOP). md_data(ctx) reads (*ctx).md_data, which is NULL for a fresh EVP_MD_CTX_new(); MD4_Init writes 16+ bytes through it (src/digest/md4.rs:172-181). The exported getter hands the callback to any C caller and its documented contract does not establish md_data. This is exactly D-LEGACY-MD-INIT-MD-DATA-1, already recognised as STOP-class and fixed for md5/sha1/mdc2/sha3/sm3/blake2. Measured: court/triage/probe.candidate exits 139 for md4 (and ripemd160, whirlpool), while md5/sha1 return 0. Minimal blocking evidence: the candidate SIGSEGV; the fix shape is init_md_data as in src/evp/legacy_md5.rs:79."
+   },
+   {
+    "obligation_id": "V1:src/ml_kem/key.rs:272:UNSAFE_FN_DEF",
+    "file": "src/ml_kem/key.rs",
+    "line": 272,
+    "unsafe_op": "unsafe fn raise_fixed(site: &ErrSite, msg: &str) { buf.push(0); raise_site_data(site, buf.as_ptr()) }",
+    "source_assertion": "borrowed &ErrSite/&str; the Vec is local and NUL-terminated before the call",
+    "classification": "a",
+    "rationale": "No caller supply of a raw pointer, extent or lifetime; the only unsafe call is inside the function over its own buffer. The v1l receipt recorded the same shape. Missing: a site receipt and the marker decision. No defect found; the only caller is the unsupported-evp_type arm of ossl_ml_kem_key_new."
+   },
+   {
+    "obligation_id": "V1:src/provider/eddsa_sig.rs:940:UNSAFE_FN_DEF",
+    "file": "src/provider/eddsa_sig.rs",
+    "line": 940,
+    "unsafe_op": "unsafe extern \"C\" fn ed25519_sigalg_query_key_types() -> *mut *const c_char { KEYTYPES.0.as_ptr().cast_mut() }",
+    "source_assertion": "no arguments; returns a pointer into a private 'static array of static literals",
+    "classification": "a",
+    "rationale": "No caller precondition and no unsafe operation beyond forming the pointer; the unsafe marker is vestigial. Missing: site receipt and marker decision. No defect found."
+   },
+   {
+    "obligation_id": "V1:src/runtime/bio/bf_readbuff.rs:231:UNSAFE_FN_DEF",
+    "file": "src/runtime/bio/bf_readbuff.rs",
+    "line": 231,
+    "unsafe_op": "unsafe extern \"C\" fn readbuffer_write(_b, _in, _inl) -> c_int { 0 }",
+    "source_assertion": "all three arguments unused; the filter is read-only",
+    "classification": "a",
+    "rationale": "No caller precondition; the body is a constant. The file carries #[allow(clippy::missing_safety_doc)] instead of a contract. Missing: site receipt and marker decision. No defect found."
+   },
+   {
+    "obligation_id": "V1:src/slh_dsa/adrs.rs:119:UNSAFE_FN_DEF",
+    "file": "src/slh_dsa/adrs.rs",
+    "line": 119,
+    "unsafe_op": "unsafe extern \"C\" fn slh_adrs_set_layer_address(adrs: *mut u8, layer_addr: u32) { store_u32_be(adrs.add(16), layer_addr) }",
+    "source_assertion": "SAFETY: the ADRS is writable for its own size; callers hold an owned SLH_ADRS_SIZE buffer",
+    "classification": "b",
+    "rationale": "Intentionally unsafe at an internal dispatch-table boundary; the buffer extent/liveness is stated per site and established by the module's own ADRS owner. Missing: caller-closure enumeration and an admitted receipt; no defect evidence."
+   },
+   {
+    "obligation_id": "V1:src/slh_dsa/hash.rs:179:UNSAFE_FN_DEF",
+    "file": "src/slh_dsa/hash.rs",
+    "line": 179,
+    "unsafe_op": "unsafe extern \"C\" fn slh_hmsg_shake(ctx, r, pk_seed, pk_root, msg, msg_len, out, out_len) -> c_int",
+    "source_assertion": "reads (*ctx).key->params and the input/output buffers; the table is selected by the key's own hash-function pointer",
+    "classification": "b",
+    "rationale": "Intentionally unsafe at the SlhHashFunc table boundary; the pointer preconditions are the caller's (key, message and output extents) and are stated only per call. Missing: a caller-closure audit and an admitted receipt. No defect established by this sample."
+   },
+   {
+    "obligation_id": "V1:src/x509/v3_single_use.rs:34:UNSAFE_FN_DEF",
+    "file": "src/x509/v3_single_use.rs",
+    "line": 34,
+    "unsafe_op": "unsafe extern \"C\" fn i2r_SINGLE_USE(...) -> c_int { 1 }",
+    "source_assertion": "all four arguments unused; returns 1",
+    "classification": "a",
+    "rationale": "No unsafe operation and no caller precondition; the marker is vestigial. Missing: site receipt and marker decision. No defect found."
+   },
+   {
+    "obligation_id": "V1:src/x509/v3_aaa.rs:382:UNSAFE_FN_DEF",
+    "file": "src/x509/v3_aaa.rs",
+    "line": 382,
+    "unsafe_op": "unsafe extern \"C\" fn i2r_ALLOWED_ATTRIBUTES_CHOICE(method, a, out, indent) { (*a).type_; (*a).choice; BIO_printf(out, ...) }",
+    "source_assertion": "per-call SAFETY comments assert `a` is a live OSSL_ALLOWED_ATTRIBUTES_CHOICE and `out` a live BIO",
+    "classification": "a",
+    "rationale": "The body reads a decoded extension value and prints it. The i2r slot contract is NOT documented at the X509V3ExtI3r type alias (only i2s is, at v3_lib.rs:105-131), so the precondition is asserted per call rather than established by a recorded caller closure. Missing proof, not a defect: no sample evidence that the decoded value's type is wrong."
+   },
+   {
+    "obligation_id": "V1:src/x509/v3_cpols.rs:1366:UNSAFE_FN_DEF",
+    "file": "src/x509/v3_cpols.rs",
+    "line": 1366,
+    "unsafe_op": "unsafe extern \"C\" fn i2r_certpol(method, pol, out, indent) { OPENSSL_sk_num(pol); ... }",
+    "source_assertion": "per-call SAFETY comment: `pol` is a live STACK_OF(POLICYINFO); `out` is live",
+    "classification": "a",
+    "rationale": "Same shape as v3_aaa: the i2r callback reads the decoded extension value; the slot contract is not documented at the type alias and no admitted receipt enumerates the callers. Missing proof, not a defect."
+   },
+   {
+    "obligation_id": "V1:src/x509/v3_utf8.rs:164:UNSAFE_FN_DEF",
+    "file": "src/x509/v3_utf8.rs",
+    "line": 164,
+    "unsafe_op": "unsafe extern \"C\" fn utf8_i2s(meth, value) -> *mut c_char { i2s_ASN1_UTF8STRING(...) }",
+    "source_assertion": "i2s ownership/allocator contract documented at src/x509/v3_lib.rs:105-131 for X509V3ExtI2s",
+    "classification": "b",
+    "rationale": "Intentionally unsafe at the X509V3_EXT_METHOD i2s boundary, and this is the one slot family whose contract IS documented at the type. Missing: a site-enumerating receipt and caller enumeration; no defect evidence."
+   },
+   {
+    "obligation_id": "V1:src/x509/v3_no_ass.rs:36:UNSAFE_FN_DEF",
+    "file": "src/x509/v3_no_ass.rs",
+    "line": 36,
+    "unsafe_op": "unsafe extern \"C\" fn i2r_NO_ASSERTION(...) -> c_int { 1 }",
+    "source_assertion": "all four arguments unused; returns 1",
+    "classification": "a",
+    "rationale": "No unsafe operation and no caller precondition; the marker is vestigial. Missing: site receipt and marker decision. No defect found."
+   }
+  ]
+ },
+ "additional_findings": [
+  {
+   "id": "TRIAGE-F1",
+   "severity": "STOP",
+   "finding": "src/evp/legacy_md4.rs:122 md4_init, src/evp/legacy_ripemd.rs:123 ripe_init and src/evp/legacy_wp.rs:125 wp_init still write through a NULL md_data on a fresh context reached through the exported EVP_MD_meth_get_init. Measured SIGSEGV (139) on the admitted candidate for all three; md5/sha1 refuse (exit 0) and the authority faults on all five.",
+   "class": "D-LEGACY-MD-INIT-MD-DATA-1 / D-2 extension (known vulnerability mechanism reproduced)",
+   "minimal_blocking_evidence": "candidate probe SIGSEGV (court/triage/probe.candidate) plus the source contrast with src/evp/legacy_md5.rs:79 / src/evp/legacy_mdc2.rs:68 / src/evp/legacy_sha.rs:121",
+   "action": "no fix in this batch; the correction shape already exists (init_md_data + refusal tests + divergence entry)"
+  },
+  {
+   "id": "TRIAGE-F2",
+   "severity": "BLOCKING-EVIDENCE",
+   "finding": "state.json#/obligation_mechanisms keys the nine engine callbacks to the v1l receipt's line coordinates (74/56/54/68/54/54/55/54/55), not the V1 inventory coordinates (72/55/51/66/51/51/53/51/52); mechanism_for returns None and the instrument reports UNKNOWN_MECHANISM.",
+   "evidence": "unknown_obligations_v1l.py OPERATIONS, state.json override records, court/closure/v1p-rebuild-candidate-freeze.json blockers, and src/ line numbers at ad591309 and 0a3abdfa6 all agree on the V1 coordinates",
+   "action": "correct the nine line fields in a later batch; this is a registry coordinate repair, not a relaxed check"
+  },
+  {
+   "id": "TRIAGE-F3",
+   "severity": "OBSERVATION",
+   "finding": "the off-instrument engine-callback-discharge.json already adjudicates the nine callbacks (DISCHARGED under C_ABI_CONTRACT reasoning, engine sources byte-identical across 7b546f64..ad591309) but is bound to S=7b546f64 / libcrypto b3cd799d and explicitly states it is not registered in the instrument.",
+   "action": "re-adjudicate at the admitted S and register it as an admitted site receipt only through a later evidence batch with independent review"
+  },
+  {
+   "id": "TRIAGE-F4",
+   "severity": "OBSERVATION",
+   "finding": "27 src/x509/v3_*.rs files are mapped to X509_VERIFY_POLICY by the directory rule, although their obligations are X509V3_EXT_METHOD slot callbacks whose contract is the C ABI. Only the i2s slot's ownership/allocator contract is documented at the type alias (src/x509/v3_lib.rs:105-131); i2r/r2i/i2v/v2i have no type-level contract.",
+   "action": "classify per site (C_ABI_CONTRACT) and document the four missing slot contracts before any receipt can be written"
+  }
+ ],
+ "open_blockers": [
+  "46 reachable files carry 118 production obligations with no boundary/site receipt; no generator exists, so each needs authored per-site contract evidence and an admitted receipt.",
+  "119 UNKNOWN = 118 in receiptless files + src/engine/tb_asnmth.rs:72 (has a CONTRACTED boundary but no mechanism); the receiptless 118 cannot move without the first blocker.",
+  "9 UNKNOWN_MECHANISM files: the C_ABI_CONTRACT mapping exists but is keyed to stale v1l lines; correcting it yields BLOCKED, not DISCHARGED.",
+  "3 measured STOP defects (md4/ripemd160/whirlpool initialisers) must be repaired before any batch that touches those files can pass a gate.",
+  "HASH_RULE_MISMATCH remains an independent refusal (identity/digest-rule), not addressed here."
+ ],
+ "what_would_clear_the_three_obligation_refusals": [
+  "MISSING_BOUNDARY_RECEIPT: an admitted boundary/site receipt (or a corrected generator run) for each of the 46, with per-site contract evidence; only a scoped SAFETY_DISCHARGED entry naming the exact line can then discharge an obligation.",
+  "UNKNOWN_MECHANISM: correct the nine state.json override coordinates to the V1 inventory lines; then the sites become BLOCKED under C_ABI_CONTRACT and the refusal disappears.",
+  "UNKNOWN_OBLIGATION: the 118 receiptless files need the first item; src/engine/tb_asnmth.rs:72 needs the second. Both transitions end at BLOCKED or DISCHARGED only with the \u00a77 evidence, never by reclassification."
+ ],
+ "probe": {
+  "purpose": "confirm whether the three unfixed legacy initialisers reproduce the D-LEGACY-MD-INIT-MD-DATA-1 NULL write on the admitted candidate",
+  "source": "court/triage/legacy_init_probe.c",
+  "source_sha256": "2a0197eecfc4c1e51b4a88c1779df09338d16e2e56a49d5a075ec014b0d7457e",
+  "source_text": "/* ADJUDICATION PROBE, not a test and not part of the crate.\n *\n * Reproduces the D-LEGACY-MD-INIT-MD-DATA-1 shape for the three legacy\n * initialisers the 46-file triage found unfixed (MD4, RIPEMD-160, Whirlpool):\n *\n *   init = EVP_MD_meth_get_init(EVP_md4());   // exported getter\n *   ctx  = EVP_MD_CTX_new();                  // zero-filled: md_data == NULL\n *   init(ctx);                                // authority writes through NULL\n *\n * One digest per process (argv[1]), so a SIGSEGV is an observed result.\n * Compiled and run against one install prefix per invocation.\n */\n#include <stdio.h>\n#include <string.h>\n#include <openssl/evp.h>\n\ntypedef int (*init_fn)(EVP_MD_CTX *);\n\nint main(int argc, char **argv) {\n    if (argc != 2) {\n        fprintf(stderr, \"usage: %s {md4|ripemd160|whirlpool|md5|sha1}\\n\", argv[0]);\n        return 2;\n    }\n    const EVP_MD *md = NULL;\n    if (strcmp(argv[1], \"md4\") == 0) md = EVP_md4();\n    else if (strcmp(argv[1], \"ripemd160\") == 0) md = EVP_ripemd160();\n    else if (strcmp(argv[1], \"whirlpool\") == 0) md = EVP_whirlpool();\n    else if (strcmp(argv[1], \"md5\") == 0) md = EVP_md5();\n    else if (strcmp(argv[1], \"sha1\") == 0) md = EVP_sha1();\n    else { fprintf(stderr, \"unknown digest\\n\"); return 2; }\n\n    if (md == NULL) { printf(\"%s: method=NULL\\n\", argv[1]); return 3; }\n    init_fn init = (init_fn)EVP_MD_meth_get_init(md);\n    EVP_MD_CTX *ctx = EVP_MD_CTX_new();\n    if (init == NULL || ctx == NULL) {\n        printf(\"%s: init=%p ctx=%p (no crash)\\n\", argv[1], (void *)init, (void *)ctx);\n        return 3;\n    }\n    fflush(stdout);\n    /* The authority's documented fault: no test on the context's md_data. */\n    int r = init(ctx);\n    printf(\"%s: init(ctx) returned %d (no crash)\\n\", argv[1], r);\n    EVP_MD_CTX_free(ctx);\n    return 0;\n}\n",
+  "candidate_binary": "court/triage/probe.candidate",
+  "candidate_binary_sha256": "9fd1d509818d5fed1ea11b335b838b65a65e05d8b204490130eb24017fb6f3f5",
+  "authority_binary": "court/triage/probe.authority",
+  "authority_binary_sha256": "50c33cf35042dc3849d200e8f7e1798b6366eeaa3aca65d38ab841f57e4a955d",
+  "candidate_install": "artifacts/phase2/install",
+  "candidate_libcrypto_sha256": "dadb0263f1eab453dc8717a9c1851772ffed7660eeeced29d79d7b206cec7fb3",
+  "authority": "forensics/authorities/prefix/openssl-3.6.4-production",
+  "authority_libcrypto_sha256": "482fca3da906a8d7ac99bd88c6d6633226b6d47c3a20d9a2d60ba3eb2b2640b2",
+  "method": "one digest per process; EVP_MD_meth_get_init(md) handed a fresh EVP_MD_CTX_new() (md_data == NULL); exit status observed, core dumps disabled",
+  "results": {
+   "candidate": {
+    "md4": "exit 139 (SIGSEGV)",
+    "ripemd160": "exit 139 (SIGSEGV)",
+    "whirlpool": "exit 139 (SIGSEGV)",
+    "md5": "exit 0 (init returned 0)",
+    "sha1": "exit 0 (init returned 0)"
+   },
+   "authority": {
+    "md4": "exit 139 (SIGSEGV)",
+    "ripemd160": "exit 139 (SIGSEGV)",
+    "whirlpool": "exit 139 (SIGSEGV)",
+    "md5": "exit 139 (SIGSEGV)",
+    "sha1": "exit 139 (SIGSEGV)"
+   }
+  },
+  "reading": "The authority faults on all five (its documented UB). The candidate has already been corrected for md5 and sha1 (they refuse) but still faults for md4, ripemd160 and whirlpool through the same exported getter. That is an unrepaired instance of an already-recognised STOP-class defect, not a missing receipt."
+ },
+ "non_claims": [
+  "Nothing is marked DISCHARGED by this receipt.",
+  "Nothing is SAFE_COMPATIBLE; no consumer family graduates.",
+  "No obligation is carried as satisfied or migrated to another mechanism.",
+  "No source, state.json, CAMPAIGN-STATUS.json, boundary receipt or closure tool was changed.",
+  "The 15 classifications are a sample of the 119 UNKNOWN obligations, not a census.",
+  "The sets are extracted from the committed receipt; the closure was not re-run in this batch.",
+  "The probe observes a fault; it is not a fix, and the three STOP sites remain defective at HEAD.",
+  "No claim is made that the remaining 104 unsampled UNKNOWN obligations are defect-free.",
+  "The 46 REAL_OBLIGATION classifications mean 'a receipt is genuinely missing', not 'the file is unsound'."
+ ]
+}
