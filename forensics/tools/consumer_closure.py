@@ -2977,10 +2977,29 @@ def _semantic_call_index(g: "DsoGraph") -> dict:
     idx = getattr(g, "_semantic_call_index", None)
     if idx is not None:
         return idx
+    # The S1 source corpus and its indexes are the largest retained state at
+    # this point.  They are rebuilt lazily for a later S1 site, so release them
+    # before the call index, which is built while the semantic resolver is live.
+    _drop_s1_caches(g, all_caches=True)
     r = _semantic_provenance_resolver(g)
+    # The index reads only ``calls`` and ``call_stack_args``.  Release the
+    # interpreter's frames, store summaries and instruction maps before the
+    # index is built instead of after, so peak memory is the larger of the two
+    # rather than their sum.
+    r.sites = {}
+    r.store_slots.clear()
+    r.field_stores.clear()
+    r.field_open.clear()
+    r.summary.clear()
+    r.summary_open.clear()
+    r.returns.clear()
+    r.insns_by_func = {}
     idx = {}
     try:
-        for caller, callee, args, addr in r.calls:
+        for position, (caller, callee, args, addr) in enumerate(r.calls):
+            # Drop the consumed tuple: the call log is the largest single
+            # allocation at this point and the index grows as it shrinks.
+            r.calls[position] = None
             if callee is None:
                 continue
             row = idx.setdefault(callee, {})
@@ -5973,6 +5992,23 @@ def _s1_fn_context(span: dict, fn_name: str):
             "declared": " ".join(first.split())}
 
 
+def _s1_cast_types(g: "DsoGraph", ctx_info: dict, field: str):
+    """Concrete source types the site function casts this object field to.
+
+    A cast is the source's own statement that the pointer stored in ``field``
+    denotes the target layout.  It is used only when the target is a decidable
+    struct layout and has declared static instances in this image, so the
+    field-sensitive conjunction is unchanged: the writers of the pointer slot
+    must still store exactly those declared instances.
+    """
+    span = _s1_src_fn(g, ctx_info["file"], ctx_info["function"])
+    if span is None:
+        return []
+    pat = re.compile(r"\b" + re.escape(field)
+                     + r"\s*\.\s*cast\s*::\s*<\s*([A-Za-z_]\w*)\s*>")
+    return sorted({m.group(1) for m in pat.finditer(span["body"])})
+
+
 def _s1_rust_last_segment(name: str):
     """Last identifier of a legacy Rust mangled path, or None.
 
@@ -6452,13 +6488,40 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
                                dispatch_tables=[hex(t["addr"]) for t in tables],
                                chain=chain)
 
-    candidates = []
+    type_candidates = []
+    considered = []
     for cand in pointer_fields:
+        type_candidates.append(cand)
+        for cast_type in _s1_cast_types(g, ctx_info, cand["field"]):
+            layout = _s1_struct_layout(g, cast_type)
+            if layout is None:
+                considered.append({"object": ctx_info["type"],
+                                   "field": cand["field"],
+                                   "table_type": cast_type,
+                                   "reason": "cast target has no decidable layout"})
+                continue
+            type_candidates.append({"field": cand["field"],
+                                    "table_type": cast_type,
+                                    "layout": layout,
+                                    "declaration": cand["declaration"],
+                                    "via_cast": True})
+    candidates = []
+    for cand in type_candidates:
         if member_off not in {r["offset"] for r in cand["layout"]["fields"]}:
+            considered.append({"object": ctx_info["type"],
+                               "field": cand["field"],
+                               "table_type": cand["table_type"],
+                               "reason": ("member offset is not a field of "
+                                          "this layout")})
             continue
         declared = _s1_declared_instances(g, cand["table_type"])
         instances = declared["instances"]
         if not instances:
+            considered.append({"object": ctx_info["type"],
+                               "field": cand["field"],
+                               "table_type": cand["table_type"],
+                               "reason": ("no declared static instance in "
+                                          "this image")})
             continue
         found = {}
         unaccounted = []
@@ -6542,12 +6605,32 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
 
     good = [c for c in candidates if c["ok"]]
     if len(good) != 1:
-        reason = "no-complete-instance-candidate" if not good else "ambiguous-field"
+        if good:
+            reason = "ambiguous-field"
+        elif not candidates:
+            reason = "no-declared-instance-type"
+        elif any(c.get("outside") for c in candidates):
+            # A reachable cohort function other than the constructor's closure
+            # stores to the same displacement; the store's base object is not
+            # established as the context type, so the writer set is open.
+            reason = "unproven-cohort-store"
+        elif any(c.get("unaccounted") for c in candidates):
+            # A writer stores a value that is not a declared instance of the
+            # effective table type (the base-typed, generic store case).
+            reason = "unaccounted-writer-store"
+        elif any(c.get("reason") == "partial-instance-set"
+                 for c in candidates):
+            reason = "partial-instance-set"
+        elif any(c.get("reason") == "no-writer" for c in candidates):
+            reason = "no-writer"
+        else:
+            reason = "no-complete-instance-candidate"
         return _s1_refusal(reason, function=name, call_site=hex(site["addr"]),
                            operand={"base_reg": base_reg,
                                     "member_offset": hex(member_off)},
                            chain=chain,
                            dispatch_tables=[hex(t["addr"]) for t in tables],
+                           considered_types=considered,
                            candidates=[{"object": ctx_info["type"],
                                         "field": c["candidate"]["field"],
                                         "table": c["candidate"]["table_type"],
@@ -6694,6 +6777,12 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
                           "type": r["type"]}
                          for r in ulayout["fields"]
                          if r["offset"] == member_off), None),
+        "effective_type": {
+            "table_type": cand["table_type"],
+            "via_cast": bool(cand.get("via_cast")),
+            "layout": {"file": ulayout.get("file"),
+                       "line": ulayout.get("line"),
+                       "size": hex(ulayout["size"])}},
         "instances": instance_rows,
         "stored_by": sorted(chosen["found"].values(),
                             key=lambda r: (r["function"], r["store_site"])),
@@ -12393,9 +12482,67 @@ def build_receipt(args) -> dict:
                 "observed remain reachable if any bound admits them.  The residual class "
                 "is a bound, not a claim that every listed function is called."),
             "residual_sites": [
-                {"dso": d, "function": hex(f), "reason": s["reason"],
+                {"dso": d, "function": hex(f),
+                 "call_site": hex(s.get("addr", 0)),
+                 "reason": s["reason"],
                  "class": s["class"], "text": s["text"][:160]}
                 for d, f, s in closure["reachable_residual_sites"][:80]],
+            "static_table_instance": {
+                "schema": S1_WITNESS_SCHEMA,
+                "rule": (
+                    "field-sensitive key (object type, pointer-slot offset, "
+                    "member offset); the effective table type is the declared "
+                    "pointer-field type or a source cast of that field to a "
+                    "decidable repr(C) layout; every scalar store to the slot "
+                    "in the dispatch table's constructor cohort must write a "
+                    "declared static instance of that type; every member read "
+                    "must be an in-image function start; a partial instance "
+                    "set or a mutable table refuses the site rather than "
+                    "unioning it"),
+                "summary": {
+                    "resolved": sum(
+                        1 for g in graphs.values() for s in g.sites.values()
+                        if s.get("static_instance_witness")),
+                    "refused": sum(
+                        1 for g in graphs.values() for s in g.sites.values()
+                        if s.get("static_instance_refusal")),
+                    "by_refusal": dict(sorted(collections.Counter(
+                        str((s.get("static_instance_refusal") or {}).get(
+                            "refusal"))
+                        for g in graphs.values() for s in g.sites.values()
+                        if s.get("static_instance_refusal")).items())),
+                },
+                "resolved_sites": [
+                    {"dso": name,
+                     "function": w.get("function"),
+                     "call_site": w.get("call_site"),
+                     "operator": s.get("text", "")[:160],
+                     "operand": w.get("operand"),
+                     "pointer_slot": w.get("pointer_slot"),
+                     "member": w.get("member"),
+                     "effective_type": w.get("effective_type"),
+                     "instances": [r.get("symbol") or r.get("addr")
+                                   for r in w.get("instances", [])],
+                     "targets": w.get("targets")}
+                    for name, g in graphs.items() for s in g.sites.values()
+                    for w in [s.get("static_instance_witness") or {}]
+                    if w],
+                "refused_sites": [
+                    {"dso": name,
+                     "function": w.get("function"),
+                     "call_site": w.get("call_site"),
+                     "operator": s.get("text", "")[:160],
+                     "refusal": w.get("refusal"),
+                     "operand": w.get("operand"),
+                     "pointer_slot": w.get("pointer_slot"),
+                     "dispatch_tables": w.get("dispatch_tables"),
+                     "considered_types": w.get("considered_types"),
+                     "candidates": w.get("candidates"),
+                     "chain": w.get("chain")}
+                    for name, g in graphs.items() for s in g.sites.values()
+                    for w in [s.get("static_instance_refusal") or {}]
+                    if w],
+            },
             "unclassified_reachable_sites": closure["unclassified_sites"],
             "evidence_classes": evidence_stats,
             "dlsym_literals": {
@@ -13664,10 +13811,38 @@ def self_test() -> int:
           _local_witness(extra=True), None)
 
     # S1: field-sensitive static-table instance dispatch.
-    def _s1_source(nullable=False):
+    def _s1_source(nullable=False, cast=False, cast_missing=False):
         cipher = ("unsafe extern \"C\" fn(*mut Wctx) -> c_int"
                   if not nullable else
                   "Option<unsafe extern \"C\" fn(*mut Wctx) -> c_int>")
+        if cast or cast_missing:
+            target = "WMissing" if cast_missing else "WTable"
+            return (
+                "#[repr(C)]\n"
+                "pub(crate) struct WBase {\n"
+                "    pub init: unsafe extern \"C\" fn(*mut Wctx) -> c_int,\n"
+                "}\n"
+                "#[repr(C)]\n"
+                "pub(crate) struct WTable {\n"
+                "    pub base: WBase,\n"
+                f"    pub cipher: {cipher},\n"
+                "    pub fini: unsafe extern \"C\" fn(*mut Wctx) -> c_int,\n"
+                "}\n"
+                "#[repr(C)]\n"
+                "pub(crate) struct Wctx {\n"
+                "    pub flags: c_uint,\n"
+                "    pub hw: *const WBase,\n"
+                "}\n"
+                "static TBL_A: WTable = WTable { base: WBase { init: f0 }, "
+                "cipher: f1, fini: f2 };\n"
+                "static TBL_B: WTable = WTable { base: WBase { init: g0 }, "
+                "cipher: g1, fini: g2 };\n"
+                "static TBL_C: WTable = WTable { base: WBase { init: h0 }, "
+                "cipher: h1, fini: h2 };\n"
+                "unsafe fn site(ctx: *mut Wctx, out: *mut c_uchar) -> c_int {\n"
+                f"    let hw = (*ctx).hw.cast::<{target}>();\n"
+                "    ((*hw).cipher)(ctx, out)\n"
+                "}\n")
         return (
             "#[repr(C)]\n"
             "pub(crate) struct WTable {\n"
@@ -13750,12 +13925,12 @@ def self_test() -> int:
     def _s1_fixture(nullable=False, shape="memory", undeclared=False,
                     bad_member=False, mutable=False, shape_extra=False,
                     rogue=False, third_store=True, guard=True,
-                    null_member=False):
+                    null_member=False, cast=False, cast_missing=False):
         td = tempfile.mkdtemp()
         repo = Path(td)
         path = repo / "src" / "provider" / "cipher_gcm.rs"
         path.parent.mkdir(parents=True)
-        path.write_text(_s1_source(nullable))
+        path.write_text(_s1_source(nullable, cast, cast_missing))
         funcs = {
             S1_SITE: "_RNvNtNtCs3iYjyFzWfzV_10openssl_rs8provider10cipher_gcm4site",
             S1_NEW_A: "newctx_a", S1_NEW_B: "newctx_b",
@@ -13872,6 +14047,16 @@ def self_test() -> int:
           bool(sw2 and sw2.get("resolved")), True)
     check("S1 Option<fn> NULL accepts only the other tables",
           (sw2 or {}).get("targets"), ["0x2110", "0x2210"])
+    sw3 = _s1_witness(cast=True)
+    check("S1 source cast to the concrete table type resolves",
+          bool(sw3 and sw3.get("resolved")), True)
+    check("S1 cast witness records the effective type",
+          ((sw3 or {}).get("effective_type") or {}).get("via_cast"), True)
+    check("S1 cast witness unions the cast layout's member",
+          (sw3 or {}).get("targets"), ["0x2010", "0x2110", "0x2210"])
+    check("S1 cast to a type with no declared instance is refused",
+          (_s1_witness(cast_missing=True) or {}).get("refusal"),
+          "no-declared-instance-type")
     check("S1 undeclared stored value is refused",
           (_s1_witness(undeclared=True) or {}).get("resolved", False), False)
     check("S1 non-function member is refused",
