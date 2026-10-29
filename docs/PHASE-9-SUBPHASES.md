@@ -30,8 +30,9 @@ the defect `docs/CI.md` names for a typed count and D205 records for a seal.
 `forensics/atlas/symbol-ownership.json` assigns exactly 25 exports to phase 9, each declaring
 `rand.h`. No other header in the authority declares an export this stratum owns.
 
-**It also receives seventy hand-offs**, discovered from the other ledgers (`phase*-obligations.json`
-rows whose `owning_phase` is 9) rather than listed here:
+**It also measured seventy hand-offs at plan time** (forty-four of them after Phase 8's share
+retired), discovered from the other ledgers (`phase*-obligations.json` rows whose `owning_phase`
+is 9) rather than listed here:
 
 | from phase | count | what it is |
 |---|---|---|
@@ -163,30 +164,14 @@ else records that rather than forcing the row.
 
 **Landed exports (checked against the ledger):**
 
-None. No export of this stratum is implemented: the crate defines none of the twenty-five `rand.h`
-exports it owns, and none of the seventy that earlier strata handed it. The stratum's provider rows
-are likewise unpublished -- fifteen rows, none of them landed.
+Every export row this stratum was assessed against is landed. The per-symbol status is in
+`forensics/phase9-obligations.json`, which is authoritative and which this document does not
+duplicate; `RAND_bytes` is the stratum's canonical entry point and is among them.
 
 **Open exports (checked against the ledger):**
 
-All ninety-five, beginning with the twenty-five this stratum owns and the seventy it receives.
-The `rand.h` front is `RAND_bytes_ex`, `RAND_bytes`, `RAND_priv_bytes_ex`, `RAND_priv_bytes`,
-`RAND_get0_primary`, `RAND_get0_public`, `RAND_get0_private`, `RAND_status`, `RAND_seed`,
-`RAND_add`, `RAND_poll`, `RAND_OpenSSL`, `RAND_get_rand_method`, `RAND_set_rand_method`,
-`RAND_set_rand_engine`, `RAND_set_DRBG_type`, `RAND_set_seed_source_type`,
-`RAND_set1_random_provider`, `RAND_set0_public`, `RAND_set0_private`, `RAND_pseudo_bytes`,
-`RAND_file_name`, `RAND_load_file`, `RAND_write_file` and `RAND_keep_random_devices_open`. The
-hand-offs are the BN random and blinding families (`BN_rand`, `BN_rand_ex`, `BN_priv_rand`,
-`BN_priv_rand_range_ex`, `BN_pseudo_rand_range`, `BN_bntest_rand`, `BN_BLINDING_create_param`),
-the prime generators (`BN_generate_prime_ex2`, `BN_check_prime`, `BN_X931_generate_prime_ex`), the
-key generators (`RSA_generate_key_ex`, `DH_generate_key`, `DSA_generate_key`,
-`EC_KEY_generate_key`), the four key types' constructors (`RSA_new`, `RSA_new_method`), the RSA
-blinding pair and the six RSA padding functions whose bytes are random
-(`RSA_padding_add_PKCS1_type_2`, `RSA_padding_add_PKCS1_OAEP_mgf1`, `RSA_padding_add_PKCS1_PSS`,
-`RSA_padding_add_PKCS1_PSS_mgf1`, `RSA_padding_check_PKCS1_type_2`, `RSA_X931_generate_key_ex`),
-and the tails (`EVP_SealInit`, `EVP_CIPHER_CTX_rand_key`, `DES_random_key`, `PEM_do_header`,
-`OSSL_HPKE_get_grease_value`, `BIO_f_reliable`, `BIO_f_nbio_test`, `DH_KDF_X9_42`,
-`ECDH_KDF_X9_62`).
+None. Every row of the working set is in the ledger's implemented list, and the per-symbol status
+is in `forensics/phase9-obligations.json`, which this document does not duplicate.
 
 **Why 9.0 is staged over two commits.** The plan and the census land with the stratum's ledger and
 court runner, because `phase_state.py` refuses any stratum that has a plan, a ledger or a court file

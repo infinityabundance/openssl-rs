@@ -1190,7 +1190,7 @@
     {
       "name": "phase18-fuzz-crosswalk",
       "path": "artifacts/phase25/phase18-fuzz-crosswalk.json",
-      "sha256": "95abbea7bb9f793174c0a52e38157d551ba04f2407b8b5e4ca1ff678562ad746"
+      "sha256": "969dfb0a8706bfa1fce807cb1b14b5058cc2f18946d17206eb1bc8b8195db97e"
     },
     {
       "name": "phase24-safety-coverage",
@@ -1215,7 +1215,7 @@
     {
       "name": "red-team",
       "path": "artifacts/phase25/red-team.json",
-      "sha256": "649d2c171fbe3cad245856f4a98b4b04c3ed6ddd3a4309ce5f263a652de53f60"
+      "sha256": "998c6a64e487a3a808be1be51d8fb2fd0d374512488557587f742a5adc2f35fb"
     },
     {
       "name": "clean-regeneration",

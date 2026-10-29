@@ -38816,7 +38816,7 @@
     {
       "name": "candidate-source-commit",
       "note": "git rev-parse HEAD (provenance; the tree digest is the live binding)",
-      "sha256": "2e90cbc6ef4650a70fd70458bd2d277a4ca2e1ce"
+      "sha256": "ce3d75ca0e44d99bb187513c2ad4a05ce52b3302"
     },
     {
       "name": "candidate-source-tree",
