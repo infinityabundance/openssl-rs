@@ -10,7 +10,7 @@ Six real, unmodified downstream programs are built against the candidate distrib
 | git | object hashing through the candidate libcrypto and HTTPS via candidate libcurl | 2.56.0 | PASS | PASS | PASS | PASS | 16/16 | 1 |
 | haproxy | TLS terminator / load balancer in front of a plain-HTTP backend | 3.0.29 | PASS | PASS | PASS | PASS | 16/16 | 0 |
 | nginx | TLS server (terminates TLS 1.3 with the candidate) | 1.26.3 | PASS | PASS | PASS | PASS | 16/16 | 0 |
-| openssh | libcrypto-only consumer (EVP/HMAC/KDF/BN/EC/RSA/Ed25519, never libssl) | 10.5p1 | PASS | PASS | PASS | FAIL | 16/16 | 1 |
+| openssh | libcrypto-only consumer (EVP/HMAC/KDF/BN/EC/RSA/Ed25519, never libssl) | 10.5p1 | PASS | PASS | PASS | PASS | 16/16 | 1 |
 | python | CPython `ssl`/`hashlib` consumer (live TLS and its own `test_ssl`) | 3.12.15 | PASS | PASS | PASS | PASS | 16/16 | 0 |
 
 ## Refreshing the corpus

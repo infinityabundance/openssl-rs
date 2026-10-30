@@ -1,6 +1,6 @@
 # Phase 17 downstream -- unmodified openssh against the candidate shell
 
-Status: **build/link/start/functional all NOT all proven** (FAIL). This file is generated from `courts/phase17/downstream/openssh/result.json` by `forensics/tools/gen_downstream_evidence.py`; edit the record (or re-run the driver), never this file.
+Status: **build/link/start/functional all PROVEN** (PASS). This file is generated from `courts/phase17/downstream/openssh/result.json` by `forensics/tools/gen_downstream_evidence.py`; edit the record (or re-run the driver), never this file.
 
 ## Pinned upstream
 
@@ -16,12 +16,12 @@ Status: **build/link/start/functional all NOT all proven** (FAIL). This file is 
 | build | PASS | OpenSSH 10.5p1 (portable), libcrypto-only consumer |
 | link | PASS | libcrypto.so.3 -> /work/artifacts/phase2/install/lib/libcrypto.so.3 (no libssl) |
 | start | PASS | the candidate-linked sshd starts on a high port |
-| functional | FAIL | live sshd+ssh login, the forced kex/cipher/MAC/host-key matrix including RSA/ECDSA, ssh-keygen RSA/ECDSA/Ed25519 sign+verify, and the regress unit suite |
+| functional | PASS | live sshd+ssh login, the forced kex/cipher/MAC/host-key matrix including RSA/ECDSA, ssh-keygen RSA/ECDSA/Ed25519 sign+verify, and the regress unit suite |
 | concurrency | 16/16 | parallel operations completed |
 
 Functional evidence (harness lines):
 
-- `probe SUMMARY: 30 pass, 1 fail`
+- `probe SUMMARY: 31 pass, 0 fail`
 - `regress unit 12 pass, 1 fail`
 - `concurrent_logins=16/16`
 

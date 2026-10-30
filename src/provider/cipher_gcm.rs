@@ -2849,6 +2849,81 @@ mod tests {
         }
     }
 
+    /// `tlsivfixed` with the `(size_t)-1` sentinel restores the whole IV: `gcm_tls_iv_set_fixed`
+    /// copies exactly `ivlen` bytes from the caller's pointer and answers 1
+    /// (`ciphercommon_gcm.c.in:519-527`). `EVP_CIPHER_CTX_ctrl` forwards `arg == -1` as this
+    /// sentinel, which is the path OpenSSH's AES-GCM handshake takes.
+    #[test]
+    fn gcm_tls_iv_set_fixed_restores_the_whole_iv_for_the_sentinel() {
+        // SAFETY: `aes_gcm_newctx` is the allocator seam; NULL is the absent provider libctx.
+        let raw = unsafe { aes_gcm_newctx(ptr::null_mut(), 128) };
+        assert!(!raw.is_null(), "the allocator refused a GCM context");
+        let ctx = raw.cast::<ProvGcmCtx>();
+        let fixed: [u8; 12] = [
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c,
+        ];
+        // SAFETY: `ctx` is live, `fixed` is this frame's initialised buffer, and the copy length
+        // is the context's own `ivlen`, so both sides are in bounds.
+        unsafe {
+            assert_eq!((*ctx).ivlen, fixed.len());
+            (*ctx).iv = [0xaa; GCM_IV_MAX_SIZE];
+            (*ctx).bits.set_enc(0);
+            assert_eq!(
+                gcm_tls_iv_set_fixed(ctx, fixed.as_ptr(), UNINITIALISED_SIZET),
+                1,
+                "the sentinel restores the whole IV"
+            );
+            let iv: &[u8; GCM_IV_MAX_SIZE] = &(*ctx).iv;
+            assert_eq!(&iv[..fixed.len()], &fixed[..], "exactly ivlen bytes");
+            assert_eq!(iv[fixed.len()], 0xaa, "and not one byte beyond it");
+            assert_eq!((*ctx).bits.iv_gen(), 1);
+            assert_eq!((*ctx).iv_state, IV_STATE_BUFFERED);
+            aes_gcm_freectx(raw);
+        }
+    }
+
+    /// A normal fixed-IV length copies that prefix and leaves the rest of the IV alone; a length
+    /// below the four-byte fixed-field minimum is still refused.
+    #[test]
+    fn gcm_tls_iv_set_fixed_copies_a_normal_length_and_refuses_a_short_one() {
+        // SAFETY: `aes_gcm_newctx` is the allocator seam; NULL is the absent provider libctx.
+        let raw = unsafe { aes_gcm_newctx(ptr::null_mut(), 128) };
+        assert!(!raw.is_null(), "the allocator refused a GCM context");
+        let ctx = raw.cast::<ProvGcmCtx>();
+        let fixed: [u8; 12] = [
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c,
+        ];
+        // SAFETY: as in the sentinel test above; a decrypting context does not draw from the DRBG.
+        unsafe {
+            let ivlen = (*ctx).ivlen;
+            (*ctx).bits.set_enc(0);
+
+            (*ctx).iv = [0xaa; GCM_IV_MAX_SIZE];
+            assert_eq!(gcm_tls_iv_set_fixed(ctx, fixed.as_ptr(), 4), 1);
+            let iv: &[u8; GCM_IV_MAX_SIZE] = &(*ctx).iv;
+            assert_eq!(&iv[..4], &fixed[..4]);
+            assert!(
+                iv[4..ivlen].iter().all(|&b| b == 0xaa),
+                "the invocation field is untouched on decrypt"
+            );
+            assert_eq!((*ctx).bits.iv_gen(), 1);
+
+            (*ctx).iv = [0xaa; GCM_IV_MAX_SIZE];
+            (*ctx).bits.set_iv_gen_rand();
+            assert_eq!(
+                gcm_tls_iv_set_fixed(ctx, fixed.as_ptr(), 3),
+                0,
+                "below the four-byte fixed field"
+            );
+            let after: &[u8; GCM_IV_MAX_SIZE] = &(*ctx).iv;
+            assert!(
+                after.iter().all(|&b| b == 0xaa),
+                "a refused length writes nothing"
+            );
+            aes_gcm_freectx(raw);
+        }
+    }
+
     /// The `tlsivgen` and TLS-record IV-generation outputs are only promised *writable*. The
     /// caller may hand `getivgen` uninitialised memory, so it must write before anything reads it.
     #[test]
