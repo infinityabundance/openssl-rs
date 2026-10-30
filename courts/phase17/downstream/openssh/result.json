@@ -4,7 +4,7 @@
     "detail": "OpenSSH 10.5p1 (portable), libcrypto-only consumer",
     "ok": true
   },
-  "candidate": "0.0.27",
+  "candidate": "0.0.43",
   "concurrency": {
     "ok": 16,
     "total": 16
@@ -12,11 +12,11 @@
   "functional": {
     "detail": "live sshd+ssh login, the forced kex/cipher/MAC/host-key matrix including RSA/ECDSA, ssh-keygen RSA/ECDSA/Ed25519 sign+verify, and the regress unit suite",
     "evidence": [
-      "probe SUMMARY: 31 pass, 0 fail",
+      "probe SUMMARY: 30 pass, 1 fail",
       "regress unit 12 pass, 1 fail",
       "concurrent_logins=16/16"
     ],
-    "ok": true
+    "ok": false
   },
   "historical_failures": [
     {
