@@ -2,8 +2,8 @@
 
 > **Historical identity (2026-10-28).** Sentences below such as "the identity is the current
 > 0.0.27 release" describe this seal's state when it was written; they are **historical**. The
-> current candidate is `openssl-rs 0.0.43`, which is **not published**; the published release is
-> `0.0.42` (2026-10-27, crates.io checksum `b9a542cf…`). Read every `0.0.27` identity in this
+> current candidate is `openssl-rs 0.0.44`, which is **not published**; the published release is
+> `0.0.43` (2026-10-30, crates.io checksum `50afe140…`). Read every `0.0.27` identity in this
 > document as historical evidence, never as the current release.
 
 **STATUS: derived.** This status is not typed; it is the state `forensics/tools/phase_state.py`

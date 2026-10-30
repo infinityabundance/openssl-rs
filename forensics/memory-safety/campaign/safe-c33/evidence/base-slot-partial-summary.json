@@ -1,0 +1,56 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/base-slot-partial/v1",
+  "recorded_utc": "2026-10-30",
+  "source_identity": {
+    "candidate_commit": "61dcdcf2b",
+    "libcrypto_sha256": "23ec6944fb9d8f8b4037263ad8faff4170d561442d81a99a690c6dc083550409",
+    "tool_sha256": "7da237dab00c86cc45cda21432da541e9c2471962995034ed2b0c98bc0099535",
+    "closure_receipt_sha256": "ce5d33a60af1eb93b2553644bdf99ee1e2efd28e9c52634dd79a8c9079578411"
+  },
+  "mechanism": {
+    "name": "context-object qualification",
+    "rule": "The register holding the context at the pointer-slot load must be the function's declared context parameter, proven through a conjunction: the entry argument register, whole-register moves with a recursively proven source, and frame-slot reloads whose every reaching store is stack-parameter-proven to the same parameter. Every reaching definition must agree; branches are never unioned into a may-alias.",
+    "refusals": ["ctx-not-proven-parameter"],
+    "applies_to": "the S1 static-table class only, after a dispatch table is found; non-candidates fall through exactly as before"
+  },
+  "measured": {
+    "reachable_target_bounded_before": 81,
+    "reachable_target_bounded_after": 71,
+    "base_slot_partial_before": 50,
+    "base_slot_partial_after": 39,
+    "resolved_sites": 10,
+    "s1_resolved_before": 54,
+    "s1_resolved_after": 64,
+    "reachable_unresolved": 131,
+    "contract_bounded": 60,
+    "obligations": 312,
+    "discharged_blocked_unknown": [90, 222, 0],
+    "reachable_functions_sha256": "8487ed72a70da4530eb8d2636456e61204af4fbf1041b9c833477aa67701d359",
+    "edge_defects": 0,
+    "oracle_violations": 0,
+    "element_7": "FAIL",
+    "target_sets_remain_unbounded": true
+  },
+  "required_mutation": {
+    "what": "a fourth static table (TBL_D/FUNCS_D/newctx_d) is introduced; the proof must widen the target set from {0x2010,0x2110,0x2210} to {0x2010,0x2110,0x2210,0x2310}",
+    "observed": "the set widens as required; the rogue variants (copy from a different parameter, a spill overwritten from a different parameter, one unproven path among agreeing paths) refuse",
+    "mutation_control": "disabling the context-object proof (s1-ctx-object) flips both the spill and multi-copy positives to ctx-not-proven-parameter"
+  },
+  "remaining_inventory": {
+    "base_slot_partial": 39,
+    "by_missing_condition": {
+      "thin_c_void_forwarding_wrapper_cast_lives_in_callee": 17,
+      "c_abi_with_no_rust_source_module": 1,
+      "pointer_field_has_no_decidable_pointee_layout": 7,
+      "not_in_a_decoded_dispatch_cohort": 13,
+      "base_is_not_a_field_load": 1
+    },
+    "named_refusal": "cts128_cs2_decrypt (ctx-not-proven-parameter, open CFG)"
+  },
+  "non_claims": [
+    "No obligation was adjudicated or discharged; SAFE_COMPATIBLE remains 0/33.",
+    "Element 7 remains FAIL: 131 reachable unresolved (71 target-bounded, 60 contract-bounded).",
+    "The mutation matrix is sensitivity evidence, not a proof of store-graph completeness.",
+    "A site that cannot be proved stays target-bounded; no refusal was weakened to raise the count."
+  ]
+}

@@ -1,9 +1,9 @@
 # Phase 8 — the cryptographic primitives: seal
 
 > **Status as of 2026-10-29.** This is a historical seal. The current candidate
-> is `openssl-rs 0.0.43` (`Cargo.toml`), which is **not published**; the latest
-> published release is **0.0.42** (2026-10-27, crates.io checksum
-> `b9a542cf…`). The measurements below were taken at the historical `0.0.27`
+> is `openssl-rs 0.0.44` (`Cargo.toml`), which is **not published**; the latest
+> published release is **0.0.43** (2026-10-30, crates.io checksum
+> `50afe140…`). The measurements below were taken at the historical `0.0.27`
 > and `0.0.11` candidate identities and are labelled as such. The only court
 > re-run at the current install is RT-CIPHER, which the GCM
 > `EVP_CTRL_GCM_SET_IV_FIXED -1` sentinel fix (`1c2bc4001`) re-ran: it passes

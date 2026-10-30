@@ -1,12 +1,15 @@
 # Safe-33 unsafe→safe conversion — progress ledger
 
-> **Current state (2026-10-28).** The current candidate is `openssl-rs 0.0.43` (**not
-> published**; `0.0.42` is the published release, 2026-10-27). The figures below were
-> measured at an earlier HEAD and are retained as the measurement they are. Two current
-> facts supersede any reading of them as a graduation: the consumer closure's reachable
-> bound is not monotone, so **no obligation count is carriable** and `SAFE_COMPATIBLE`
-> remains **0/33** (`atlas-refresh/closure-monotonicity-finding.json`, **OPEN BLOCKING**);
-> and the current file/test/unsafe figures are in
+> **Current state (2026-10-30).** The current candidate is `openssl-rs 0.0.44` (**not
+> published**; `0.0.43` is the published release, 2026-10-30). The figures below were
+> measured at an earlier HEAD and are retained as the measurement they are. Current
+> facts that supersede any reading of them as a graduation: the non-monotone bound is
+> **REPAIRED** and the v1r closure is ACCEPTED at 312 obligations (90 DISCHARGED /
+> 222 BLOCKED / 0 UNKNOWN), but element 7 remains **FAIL** on 81 target-bounded sites
+> (71 at the pre-engine analyzer checkpoint, not re-measured at 0.0.44), so
+> `SAFE_COMPATIBLE` remains **0/33**. The engine-cleanup package is
+> APPROVED_WITH_CONDITIONS but still blocked and discharges no obligation. The current
+> file/test/unsafe figures are in
 > `forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md`.
 
 Authority: this file records *landed* conversion batches on `integrate/safe-c33`.

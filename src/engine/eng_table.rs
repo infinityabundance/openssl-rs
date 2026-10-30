@@ -263,7 +263,10 @@ unsafe fn int_table_check(t: &EngineTableSlot, create: bool) -> bool {
 /// `e` must be a live, non-NULL `ENGINE` (the crate's register/set-default wrappers always
 /// pass one, and the `setdefault` arm would dereference it; the authority's wrappers check
 /// for NULL before calling); `nids` must point to `num_nids` integers; `cleanup` is a caller
-/// callback that must remain valid until engine cleanup. The engine lock is taken here.
+/// callback that must remain valid until engine cleanup. The engine lock must be initialised
+/// (non-NULL) and must not already be held by this thread; it is taken here. When the lock is
+/// NULL (no `ENGINE` constructor has run), `CRYPTO_THREAD_write_lock` answers 0 and this
+/// function returns 0 without touching the table: the authority-compatible refusal, not UB.
 ///
 /// The registered entry is a **borrow**: `e` must remain alive until it is
 /// unregistered, either because the global engine list holds the structural reference
@@ -459,7 +462,10 @@ unsafe extern "C" fn int_unregister_cb(pile: *mut c_void, e: *mut c_void) {
 /// `void engine_table_unregister(ENGINE_TABLE **table, ENGINE *e)` — `:167-175`.
 ///
 /// # Safety
-/// `e` must be a live `ENGINE`. The engine lock is taken here.
+/// `e` must be a live `ENGINE`. The engine lock must be initialised (non-NULL) and must not
+/// already be held by this thread; it is taken here. With a NULL lock,
+/// `CRYPTO_THREAD_write_lock` answers 0 and this function returns without unregistering
+/// anything: the authority-compatible refusal, not UB.
 pub(crate) unsafe fn engine_table_unregister(table: &EngineTableSlot, e: *mut Engine) {
     // SAFETY: the lock is the engine lock, created by the run-once.
     if unsafe { CRYPTO_THREAD_write_lock(global_engine_lock()) } == 0 {
@@ -512,12 +518,28 @@ unsafe extern "C" fn int_cleanup_cb_doall(p: *mut c_void) {
 /// `void engine_table_cleanup(ENGINE_TABLE **table)` — `:187-197`.
 ///
 /// # Safety
-/// The engine lock must not already be held by this thread; it is taken here. The lhash is
-/// taken out of the slot before it is released, so a second cleanup sees `NULL` and does
-/// nothing.
+/// The engine lock must be **initialised** (non-NULL) through the crate's lock-init path
+/// ([`crate::engine::eng_lib::run_engine_lock_init`], reached from `ENGINE_new`,
+/// `ENGINE_by_id` and `ENGINE_get_first`/`ENGINE_get_last`) and must not already be held by
+/// this thread; it is taken here. The lock-init half is a real obligation, not a formality:
+/// if the lock is NULL, `CRYPTO_THREAD_write_lock` answers 0 and this function returns
+/// **without swapping the slot and without releasing the table**. That is a silent no-op
+/// which leaves the lhash (and its piles) owned by the slot — a leak, not UB. Every public
+/// path that yields an `ENGINE` runs the lock init, and registration is the only way to
+/// enqueue the cleanup callback, so the precondition is established transitively in
+/// production. The lhash is taken out of the slot before it is released, so a second cleanup
+/// (with an initialised lock) sees `NULL` and does nothing.
 pub(crate) unsafe fn engine_table_cleanup(table: &EngineTableSlot) {
-    // SAFETY: the lock is the engine lock, created by the run-once.
-    if unsafe { CRYPTO_THREAD_write_lock(global_engine_lock()) } == 0 {
+    let lock = global_engine_lock();
+    // Make the documented precondition explicit instead of relying on the NULL case of
+    // `CRYPTO_THREAD_write_lock`: an uninitialised lock leaves the slot untouched and the
+    // table unreleased, exactly as the authority's failed acquisition does. No panic, no
+    // release, no behaviour change.
+    if lock.is_null() {
+        return;
+    }
+    // SAFETY: `lock` is the engine lock created by the run-once and is non-NULL per the check.
+    if unsafe { CRYPTO_THREAD_write_lock(lock) } == 0 {
         return;
     }
     // Taking the table out of the slot first is the typed equivalent of the authority's
@@ -530,8 +552,8 @@ pub(crate) unsafe fn engine_table_cleanup(table: &EngineTableSlot) {
             OPENSSL_LH_free(lh);
         }
     }
-    // SAFETY: the engine lock is held by the caller.
-    unsafe { CRYPTO_THREAD_unlock(global_engine_lock()) };
+    // SAFETY: the engine lock is held by this frame (`lock` is the same pointer).
+    unsafe { CRYPTO_THREAD_unlock(lock) };
 }
 
 /// `ENGINE *ossl_engine_table_select(ENGINE_TABLE **table, int nid,
@@ -542,9 +564,12 @@ pub(crate) unsafe fn engine_table_cleanup(table: &EngineTableSlot) {
 ///
 /// # Safety
 /// `table` must be a slot this crate owns for the whole call (every caller passes one of the
-/// `tb_*` module statics or a test-local slot). The engine lock is taken here; the returned
-/// engine is the table's borrowed or functionally referenced answer, exactly as in the
-/// authority, so a caller must not treat it as owning a reference it was not given.
+/// `tb_*` module statics or a test-local slot). The engine lock must be initialised (non-NULL)
+/// and must not already be held by this thread; it is taken here. With a NULL lock,
+/// `CRYPTO_THREAD_write_lock` answers 0 and this returns `NULL` without reading the table: the
+/// authority-compatible refusal, not UB. The returned engine is the table's borrowed or
+/// functionally referenced answer, exactly as in the authority, so a caller must not treat it
+/// as owning a reference it was not given.
 pub(crate) unsafe fn ossl_engine_table_select(
     table: &EngineTableSlot,
     nid: c_int,
@@ -917,10 +942,21 @@ mod tests {
     /// observes an empty slot and must not free the lhash again (a double free here aborts).
     #[test]
     fn cleanup_nulls_the_slot_and_a_second_cleanup_is_a_no_op() {
+        // The callee's documented precondition: the engine lock is initialised. Without it
+        // the cleanup returns before the swap (the sibling uninitialised-lock test pins that
+        // arm); `run_engine_lock_init` is the crate's lock-init path.
+        // SAFETY: the once storage and init are `eng_lib.rs`'s.
+        assert!(unsafe { crate::engine::eng_lib::run_engine_lock_init() });
         // SAFETY: the slot and the lhash in it are this test's.
         unsafe {
             let slot = EngineTableSlot::new();
-            assert!(int_table_check(&slot, true), "the lhash is created");
+            // `int_table_check` requires the engine lock for the whole call; take it for the
+            // publication only. The lhash afterwards is test-local and no other thread can
+            // reach it, so the insert and cleanup below are ordered by `engine_table_cleanup`.
+            assert!(CRYPTO_THREAD_write_lock(global_engine_lock()) != 0);
+            let created = int_table_check(&slot, true);
+            CRYPTO_THREAD_unlock(global_engine_lock());
+            assert!(created, "the lhash is created");
             let lh = slot.load();
             assert!(!lh.is_null());
             let stored = make_pile(0x3347);
@@ -931,6 +967,77 @@ mod tests {
 
             engine_table_cleanup(&slot);
             assert!(slot.load().is_null(), "the second cleanup is a no-op");
+        }
+    }
+
+    const UNINIT_LOCK_CHILD_ENV: &str = "OPENSSL_RS_ENG_TABLE_UNINIT_LOCK_CHILD";
+
+    /// The callee's other documented arm: when the engine lock was never initialised,
+    /// `engine_table_cleanup` returns without swapping the slot. Production cannot reach it —
+    /// every public path that yields an `ENGINE` runs the lock init, and registration is the
+    /// only way to enqueue the cleanup callback — so this pins the precondition rather than a
+    /// supported mode. The un-swapped slot keeps the lhash (and its piles), so the observable
+    /// result of this arm is a **leak**: the authority-compatible no-op, not UB. The probe
+    /// reclaims the lhash so the test itself leaks nothing.
+    ///
+    /// The engine lock is a process-global run-once, so the observation is made in a fresh
+    /// process in which this is the only test that runs.
+    #[test]
+    fn uninitialised_engine_lock_makes_cleanup_a_documented_no_op() {
+        if std::env::var_os(UNINIT_LOCK_CHILD_ENV).is_some() {
+            run_uninitialised_lock_probe();
+            return;
+        }
+
+        let exe = std::env::current_exe().expect("the test binary has a path");
+        let ran_and_passed = std::process::Command::new(exe)
+            .args([
+                "--exact",
+                "engine::eng_table::tests::uninitialised_engine_lock_makes_cleanup_a_documented_no_op",
+                "--nocapture",
+                "--test-threads=1",
+            ])
+            .env(UNINIT_LOCK_CHILD_ENV, "1")
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false);
+        assert!(
+            ran_and_passed,
+            "the isolated uninitialised-lock probe failed"
+        );
+    }
+
+    fn run_uninitialised_lock_probe() {
+        // This process runs exactly this test, so no earlier test has run the lock's once; the
+        // accessor therefore still reports NULL.
+        assert!(
+            crate::engine::eng_lib::global_engine_lock().is_null(),
+            "the child must start before the engine lock once"
+        );
+
+        // SAFETY: the slot and the lhash are this test's; the lhash is reclaimed exactly once
+        // below after the no-op is observed.
+        unsafe {
+            let slot = EngineTableSlot::new();
+            // Do not call `int_table_check`: its contract requires the engine lock, which this
+            // probe deliberately leaves uninitialised. Build the same lhash directly and
+            // publish it into a test-local slot no other thread can observe.
+            let lh = OPENSSL_LH_new(Some(engine_pile_hash), Some(engine_pile_cmp));
+            assert!(!lh.is_null(), "the lhash is created");
+            slot.store(lh);
+
+            engine_table_cleanup(&slot);
+
+            assert_eq!(
+                slot.load(),
+                lh,
+                "an uninitialised lock leaves the slot untouched"
+            );
+            // The documented failure: the table was not released. Take it out of the slot and
+            // release it here so the probe itself does not leak; production never takes this
+            // arm (registration requires an ENGINE, whose constructor initialised the lock).
+            assert_eq!(slot.swap(ptr::null_mut()), lh);
+            OPENSSL_LH_free(lh);
         }
     }
 
