@@ -1,15 +1,15 @@
 {
   "command": "cargo test --lib -- --test-threads=4",
   "thread_count": 4,
-  "source_commit": "2e90cbc6ef4650a70fd70458bd2d277a4ca2e1ce",
-  "source_commit_note": "HEAD of stage/p25/analyzer-corpus at the run. The working tree carried only the 0.0.43 release-manifest edits (Cargo.toml version/documentation, Cargo.lock version) and the tracked install-tree binaries rebuilt at that version; no src/, test, build.rs, build-script or tool file changed after ad5913099.",
-  "measured_utc": "2026-10-28",
-  "passed": 2222,
+  "source_commit": "0590d371d2a9b30a19f9d70dc3fee9e33f3a0d90",
+  "source_commit_note": "HEAD of stage/p25/analyzer-corpus at the run. The tracked tree is clean: 0590d371d adds only the v1r closure and inventory evidence; src/, Cargo.toml, Cargo.lock and build.rs are identical to 1c2bc4001 (the GCM SET_IV_FIXED sentinel fix that re-emitted the install).",
+  "measured_utc": "2026-10-30",
+  "passed": 2230,
   "failed": 0,
   "ignored": 52,
-  "total": 2274,
+  "total": 2282,
   "kind": "full-library-run",
   "source_tree_unchanged": true,
-  "source_tree_unchanged_note": "The suite ran on the exact tree the 0.0.43 build receipt (atlas-refresh/build-0.0.43.json) describes: no source changed between the run, the Phase-2 rebuild and the Phase-7/Phase-8 court re-runs. 2,222 passed / 0 failed / 52 ignored is therefore the current count at the candidate, not a floor.",
-  "note": "Current run: 2,222 passed / 0 failed / 52 ignored (0 measured, 0 filtered out; 145.73 s). Previous records: 2,213/0/52/2,265 at 5163f564f (the S'' floor, superseded); the older documented floor 1,962/0/42 (commit a8676158f) is superseded by every later run. Growth is +9 tests against the 2,265 total with no removed test and no newly ignored test. S58's 2,148/0/45 at 7bdc53d83 remains history."
+  "source_tree_unchanged_note": "2230 passed / 0 failed / 52 ignored is the current count at the 0.0.43 candidate, not a floor. The tree the suite ran on is the same src/, Cargo.toml, Cargo.lock and build.rs that the committed install (build-0.0.43.json, libcrypto 23ec6944 / libssl 493795c2, rebuilt at 1c2bc4001) describes.",
+  "note": "Current run: 2,230 passed / 0 failed / 52 ignored / 2,282 total (0 measured, 0 filtered out). Previous records: 2,222/0/52/2,274 at 2e90cbc6e (superseded); 2,213/0/52/2,265 at the S'' floor (superseded); the older documented floor 1,962/0/42 (commit a8676158f) is superseded by every later run. Growth is +8 tests against the 2,274 total with no removed test and no newly ignored test (0 newly ignored; 52 ignored, unchanged)."
 }
