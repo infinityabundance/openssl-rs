@@ -81,6 +81,74 @@ pub(crate) const OPENSSL_CONF_INCLUDE: &core::ffi::CStr = c"OPENSSL_CONF_INCLUDE
 /// names the configuration file outright.
 const OPENSSL_CONF_ENV: &core::ffi::CStr = c"OPENSSL_CONF";
 
+/// `isspace` as `CONF_parse_list` uses it: a byte widened to `unsigned char` then
+/// to `int`, so the domain is `0..=255`.
+///
+/// The authority calls libc `isspace`, which the Miri driver cannot execute (it is
+/// a foreign function). `cfg(miri)` is set by the Miri driver alone, so this
+/// pure-Rust predicate exists **only** in a Miri build and is invisible to release
+/// and ordinary test builds; they keep the `sys::isspace` path below, unchanged.
+///
+/// Semantics for the domain that matters: the C/POSIX (and UTF-8) locale class
+/// contains exactly space, `\t`, `\n`, `\v`, `\f` and `\r`. Bytes `0x80..=0xFF`
+/// are not whitespace in the admitted locale, so they answer 0 here. A
+/// configuration value can contain non-ASCII bytes and `CONF_parse_list` widens
+/// them without masking, so that part of the domain is reachable and is stated
+/// rather than assumed unused.
+#[cfg(miri)]
+fn conf_isspace(c: c_int) -> c_int {
+    matches!(c, 0x20 | 0x09 | 0x0a | 0x0b | 0x0c | 0x0d) as c_int
+}
+
+/// The unchanged libc `isspace` path, compiled in every non-Miri build.
+#[cfg(not(miri))]
+#[inline]
+fn conf_isspace(c: c_int) -> c_int {
+    // SAFETY: `isspace` accepts EOF or any `unsigned char` value as `int`; both
+    // call sites pass a byte widened from `u8`, i.e. `0..=255`.
+    unsafe { sys::isspace(c) }
+}
+
+/// `strchr` as `CONF_parse_list` uses it: the first occurrence of the separator
+/// byte in a NUL-terminated byte string.
+///
+/// Domain: `s` is a C string whose bytes run up to (and include) a NUL; `sep` is
+/// any non-NUL byte, and — as in libc — only its low byte participates, so a NUL
+/// `sep` answers the terminator itself. The result is NULL when the byte is
+/// absent and otherwise points inside `s`, exactly as `sys::strchr` does. This
+/// pure-Rust predicate exists **only** in a Miri build; release and ordinary test
+/// builds keep the `sys::strchr` path below, unchanged.
+///
+/// # Safety
+/// `s` must be NUL-terminated and valid for reads up to and including its NUL.
+#[cfg(miri)]
+unsafe fn conf_strchr(s: *const c_char, sep: c_int) -> *mut c_char {
+    let needle = sep as u8;
+    let mut p = s as *mut c_char;
+    loop {
+        // SAFETY: `p` starts inside `s` and the loop only advances while the byte
+        // read is non-NUL, so every read is inside the string (or its terminator).
+        let b = unsafe { *p };
+        if b as u8 == needle {
+            return p;
+        }
+        if b == 0 {
+            return ptr::null_mut();
+        }
+        // SAFETY: `b` is non-NUL, so the next byte is still inside the string.
+        p = unsafe { p.add(1) };
+    }
+}
+
+/// The unchanged libc `strchr` path, compiled in every non-Miri build.
+#[cfg(not(miri))]
+#[inline]
+unsafe fn conf_strchr(s: *const c_char, sep: c_int) -> *mut c_char {
+    // SAFETY: the caller guarantees `s` is NUL-terminated; `strchr` reads only up
+    // to the terminator and answers a pointer inside `s` or NULL.
+    unsafe { sys::strchr(s, sep) }
+}
+
 /// `int CONF_parse_list(const char *list, int sep, int nospc, int (*list_cb)(const char *elem, int len, void *usr), void *arg)`
 ///
 /// Splits `list` on `sep`, optionally trimming ASCII space around each element,
@@ -123,17 +191,18 @@ pub unsafe extern "C" fn CONF_parse_list(
                 // `isspace((unsigned char)*lstart)`, and the scan stops at NUL.
                 // SAFETY: `lstart` points into the caller's NUL-terminated string.
                 while unsafe { *lstart } != 0
-                    // SAFETY: the byte is a `c_char` widened to `0..=255`, which is
-                    // what `isspace` requires; the loop stops at the NUL terminator.
-                    && unsafe { sys::isspace(c_int::from(*lstart as u8)) } != 0
+                    // SAFETY: the byte is inside the caller's NUL-terminated string;
+                    // the loop stops at the terminator.
+                    && unsafe { conf_isspace(c_int::from(*lstart as u8)) } != 0
                 {
                     // SAFETY: the loop stopped at a non-NUL byte, so the next byte
                     // is still inside the string (or its terminator).
                     lstart = unsafe { lstart.add(1) };
                 }
             }
-            // SAFETY: `lstart` points into the caller's NUL-terminated string.
-            let p = unsafe { sys::strchr(lstart, sep) };
+            // SAFETY: `lstart` points into the caller's NUL-terminated string; the
+            // pair `conf_strchr` has `strchr`'s contract.
+            let p = unsafe { conf_strchr(lstart, sep) };
             // `strchr(s, 0)` returns the terminator rather than NULL, and the authority's loop
             // then treats it as a separator, sets `lstart = p + 1`, and reads past the
             // terminator on the next iteration (UB in the C). A NUL cannot delimit a C string,
@@ -171,7 +240,8 @@ pub unsafe extern "C" fn CONF_parse_list(
                     // rather than clamped, because the callback observes it.
                     // SAFETY: the leading trim above leaves `*lstart` non-space, so
                     // the backward walk stops at or after `lstart`.
-                    while unsafe { sys::isspace(c_int::from(*tmpend as u8)) } != 0 {
+                    // SAFETY: the byte is inside the element (see above).
+                    while unsafe { conf_isspace(c_int::from(*tmpend as u8)) } != 0 {
                         // SAFETY: the walk only continues while the byte read is
                         // whitespace and `lstart` is non-whitespace, so it cannot
                         // step past `lstart` into preceding memory.

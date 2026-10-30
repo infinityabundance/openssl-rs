@@ -1,0 +1,61 @@
+{
+  "receipt": "miri-ssl-conf-v1",
+  "date": "2026-10-30",
+  "subject": "Miri (Stacked Borrows and Tree Borrows) over the ssl::ssl_conf tests, and the sensitivity control for the SslConfCtx borrow question",
+  "candidate": {
+    "branch": "stage/p25/ssl-session-s1",
+    "source_head_at_run": "4903a9c65",
+    "note": "run against the fix commit plus an uncommitted cfg(miri) shim; the shim is committed with this receipt"
+  },
+  "toolchain": {
+    "rustup_home": "/work/.phase25-rustup",
+    "cargo_home": "/work/.phase25-cargo",
+    "toolchain": "nightly-2026-10-01-x86_64-unknown-linux-gnu",
+    "miri_sysroot": "/work/.phase25-miri-sysroot",
+    "note": "the default 1.98.1 toolchain has no miri component; the pinned nightly is selected by RUSTUP_TOOLCHAIN and the nightly cargo is invoked directly because the rustup proxy resolves to the default toolchain"
+  },
+  "shims": {
+    "file": "src/runtime/conf/modparse.rs",
+    "why": "Miri cannot execute libc foreign calls; CONF_parse_list reached isspace and then strchr before the callback under test was invoked",
+    "added": ["conf_isspace", "conf_strchr"],
+    "gating": "cfg(miri) only; release and ordinary test builds compile the unchanged sys::* path",
+    "semantics": {
+      "conf_isspace": "domain 0..=255; space, tab, LF, VT, FF, CR answer nonzero; 0x80..=0xFF answer 0 in the admitted locale",
+      "conf_strchr": "scan for the separator byte, stop at NUL, return null if absent; sep is any non-NUL byte, and a NUL sep returns the terminator, as libc does"
+    }
+  },
+  "result": {
+    "stacked_borrows": {"tests": 4, "passed": 4, "failed": 0, "ub_diagnostics": 0},
+    "tree_borrows": {"tests": 4, "passed": 4, "failed": 0, "ub_diagnostics": 0},
+    "tests_executed": [
+      "a_verify_option_writes_only_its_own_word",
+      "an_option_command_does_not_retain_its_frame_local_table",
+      "conf_cmd_dispatch_feeds_a_live_ctx_and_does_not_retain_the_value",
+      "option_list_applies_leading_matches_and_reports_failures"
+    ],
+    "two_iteration_path_exercised": true
+  },
+  "control": {
+    "purpose": "prove the instrument fires on the pre-fix borrow shape, so the clean run means something",
+    "shape_restored": "let c = unsafe { &*cctx }; with c.ntbl / c.tbl read across the call into ssl_match_option",
+    "stacked_borrows": {"result": "4 passed, 0 failed", "ub_diagnostics": 0},
+    "tree_borrows": {"result": "4 passed, 0 failed", "ub_diagnostics": 0},
+    "verdict": "NOT_LOAD_BEARING",
+    "why": "the only path that forms &mut *cctx is a match, and ssl_match_option returns true immediately after ssl_set_option, so ssl_set_option_list returns before any later read of c. The loop iterates again only on non-matches, which never take &mut. Miri reports UB on the use of an invalidated tag, not on the retag itself, so the overlap is never witnessed by these tests.",
+    "corroboration": "a temporary compile_error! in the scratch source fired on the identical invocation, so the runner compiled the scratch source and the result is not a stale-artefact artefact",
+    "cleanup": "scratch tree, logs and target directory removed; repository unchanged by the control"
+  },
+  "interpretation": {
+    "what_the_fix_is": "a borrow-discipline hardening that removes a latent shared-across-mutable overlap on SslConfCtx",
+    "what_it_is_not": "a confirmed memory-safety defect repair: no executed path used the stale shared reference after the mutable reborrow, so no undefined behaviour was observed, and this receipt does not claim one was",
+    "corrected_prior_claim": "an earlier commit message in this branch described the overlap as UB by the aliasing rules. That overstated the evidence. The overlap violates the discipline that ssl_set_option's # Safety requires, and a later edit could turn it into observable UB, but no test or instrument in this repository has shown the pre-fix code to be unsound at run time.",
+    "what_the_clean_run_supports": "for these four tests, on these paths, under Stacked Borrows and Tree Borrows, with byte-equivalent pure-Rust shims standing in for isspace and strchr, no undefined behaviour was reported"
+  },
+  "scope_and_non_claims": [
+    "This is a deep-state / modified-model result: libc is replaced by pure-Rust shims, so the claim is about the Rust code around that boundary, not about libc or authentic execution (AGENTS.md 13).",
+    "Four tests, one module, one foreign-call class. No dependency closure, no protocol court, no cryptographic property.",
+    "The absence of a Miri diagnostic is not proof of aliasing freedom; the control shows the chosen tests do not witness this particular overlap at all.",
+    "A load-bearing control would need a test that reads the shared reference after a successful match, or a table whose match does not short-circuit. That test does not exist and is not claimed.",
+    "Miri is not the normative aliasing specification; it is a research instrument and this receipt records what it did and did not cover."
+  ]
+}
