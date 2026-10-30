@@ -1,0 +1,81 @@
+{
+  "receipt": "publish-0.0.45",
+  "date": "2026-10-30",
+  "crate": "openssl-rs",
+  "version": "0.0.45",
+  "registry": "crates-io",
+  "status": "PUBLISHED",
+  "source_identity": {
+    "commit": "ab1d9a372",
+    "commit_subject": "Merge pull request #93 from infinityabundance/stage/p25/ssl-session-s1",
+    "candidate_commit": "9340157f954b8a47e03f44acebd1fb9cb19fa0d9",
+    "note": "The published payload is the tree of ab1d9a372 (PR #93 merged), which contains the 0.0.45 documentation set over candidate 9340157f9. Unlike 0.0.44, the source delta since the last measured candidate is not documentation-only: it includes a borrow-discipline fix, an in-use guard on the SSL_CONF dispatchers, and cfg(miri) test shims, so the install was rebuilt for this release rather than reused.",
+    "working_tree": "clean at ab1d9a372 at publish time",
+    "build_source_tree_digest": "7f3b863cae6704e4654b28927e53a8adaaed23c305752937d9e57eaf999ad620",
+    "release_tree_digest": "beafa79c562b7b72ffe243f554ee9caffb24dd7e508b63eedacf24e2aa63c127",
+    "tree_digest_note": "build_source_tree_digest is the measured candidate tree (Cargo.toml 0.0.44). release_tree_digest is the packaging tree (Cargo.toml/Cargo.lock 0.0.45). Within the digested build inputs they differ only in the release-metadata fields. Both are recorded so the packaging identity and the build identity stay separately checkable (AGENTS.md section 22)."
+  },
+  "artefacts": {
+    "libcrypto.so.3": "df8ca7c3b2c02c907bd54fbdd5c6188ba9c0dedeeaef2b5f2751a7103ffb85bb",
+    "libssl.so.3": "0b47eaf12e4f2717c1e374233647ffb3890c42bd454e0b3ce4e8cf6d19b7565e",
+    "legacy.so": "ab8908b993dc71a709e5a6f67d468d3e4a64a8afc2e43f8e83438ea16148dfc5",
+    "openssl": "ca52dff4dd03d2647fd746a5ba5c63345eb711ad46e9b8f74a7797f9c2195e64",
+    "note": "Rebuilt at candidate 9340157f9 and committed with the release. The crate ships no binaries, so these hashes describe the repository install, not the crate payload.",
+    "phase2_courts": "11/11 passed on this rebuild; dynamic export counts unchanged (libcrypto 5906, libssl 608)"
+  },
+  "packaging": {
+    "files": 1010,
+    "compressed_bytes": 8990351,
+    "uncompressed_mib": 41.1,
+    "limit_bytes": 10000000,
+    "note": "cargo publish: 'Packaged 1010 files, 41.1MiB (8.6MiB compressed)', 'Published openssl-rs v0.0.45 at registry crates-io'. A dry run against the identical tree was performed first; the upload reused the verified package with --no-verify rather than rebuilding. Packaging policy (Cargo.toml exclude) is unchanged: source, tests and the small build-time authority bindings ship; forensics evidence, tools, docker and court scaffolding do not."
+  },
+  "registry_verification": {
+    "endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.45",
+    "checksum": "f4b8639a6a6ef87e2f34490bb740d65b41b1f2d80c6016bde16edeeb02f9a4b9",
+    "checksum_prefix": "f4b8639a",
+    "crate_size": 8990351,
+    "published_at": "2026-10-30T20:56:16.047546Z",
+    "yanked": false,
+    "license": "Apache-2.0 OR MIT",
+    "documentation": "https://docs.rs/openssl-rs"
+  },
+  "evidence_position": {
+    "closure": "The applied closure is measured at candidate v1u (9eccc7e9), not at this build: ACCEPTED, 314 obligations = 99 DISCHARGED / 215 BLOCKED / 0 UNKNOWN, 0 refusals (evidence/closure-ssh-v1u.json, evidence/inventory-sshd-v1u.json). It was not re-measured at 0.0.45.",
+    "scoped_discharges": "B45 is applied (nine engine cleanup thunks, exactly nine obligations moved, backed by a mutation-sensitive control). B46 and B47 are NOT applied: two independent reviews refused them.",
+    "ssl_conf": "Twenty-two SSL_SESSION sites are contracted. The discharge is blocked by a standard question rather than a code defect: the authority documents cross-thread exclusivity for SSL/SSL_CTX but nothing for SSL_CONF_CTX, and a self-authored contract is not an external witness (AGENTS.md 7 and 21). Recorded as gap SSL-CONF-WITNESS.",
+    "miri": "Stacked Borrows and Tree Borrows both pass the four ssl::ssl_conf tests under cfg(miri) stand-ins for libc isspace and strchr. The control does NOT fire, so the borrow fix is recorded as hardening of a latent borrow-discipline violation, not as a repaired instance of observed undefined behaviour (evidence/miri-ssl-conf-v1.json).",
+    "mechanisms": "Six mechanism-scope discharges (RC-1, OB-1, OB-2, OB-3, ERR-1, GEN-1) and six scoped boundary discharges (B23, B25, B27, B28, B29, B45). C_ABI_CONTRACT remains UNSAFE_OPEN.",
+    "element_7": "FAIL",
+    "safe_compatible": "0 of 33 families"
+  },
+  "instruments_not_run_at_this_identity": [
+    "full cargo test --lib suite",
+    "both consumer closures (deliberately deferred to a verification activity)",
+    "ASan, TSan, dudect, authority differential, full forensic regeneration",
+    "independent review of the release itself"
+  ],
+  "release_process": {
+    "merge": "PR #93 was merged at the repository owner's explicit direction while the required checks were red for reasons that predate the branch. Required status checks were temporarily removed for the merge and restored immediately; the protection state was re-read from the API to confirm restoration (contexts: lints (clippy); static gates (build, tests, determinism, no-regression); every active stratum's courts, and the re-derived guard; strict=true; enforce_admins=true).",
+    "disclosure": "This is a PROCESS EXCEPTION, NOT A PRECEDENT. Four merges in this campaign have now used the same relief (PRs #89, #90, #91, #92, and #93). The next release is expected to pass the required checks without relief; making them green is tracked as release-evidence debt.",
+    "red_checks_expected": {
+      "static gates (build, tests, determinism, no-regression)": "FAILURE at step 'Evidence determinism', which runs prerequisite_gate.py and aborts on 892 findings of kind unwired_function_in_the_current_stratum; the later static steps, including the generator fixed-point assertion and the regression guard, are consequently SKIPPED.",
+      "every active stratum's courts, and the re-derived guard": "FAILURE: phases 17, 18, 20, 23, 24 and 25 exit 1; phase 25 additionally reports a missing committed artefact artifacts/phase25/COURTS.json.",
+      "lints (clippy)": "PASS",
+      "adversarial probes": "PASS"
+    },
+    "debt_characterisation": {
+      "prerequisite_findings_total": 892,
+      "by_owner_phase": {"14": 674, "17": 111, "5": 53, "3": 27, "4": 25, "16": 2},
+      "meaning": "An authority-internal function that a transcribed unit calls, where the crate has a module for the defining unit, that module does not mention the name, and the defining unit's stratum is in-progress. Each must be wired or covered by a divergence record naming exactly that name with an evidence citation.",
+      "not_a_verdict": "These are not 892 memory-safety defects; they are unproved dependency edges concentrated in phase 14 (TLS) and phase 17.",
+      "gate_was_not_weakened": "No threshold, rule or exclusion was changed in this release."
+    }
+  },
+  "non_claims": [
+    "This is not a verification event, a graduation, or a compatibility claim.",
+    "The crate ships source and documentation only; no .so is distributed.",
+    "Publishing discharges nothing. SAFE_COMPATIBLE remains 0/33 and element 7 remains FAIL.",
+    "A successful upload is not evidence that a required gate passed."
+  ]
+}
