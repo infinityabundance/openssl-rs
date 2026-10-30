@@ -5,14 +5,21 @@
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)"
     ],
     "census": {
-      "covered_by_a_divergence": 155,
+      "covered_by_a_divergence": 201,
       "language_surface_not_modelled_by_name": 11814
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
+        "BIO_ADDRINFO_sockaddr": 2,
+        "BIO_ADDRINFO_sockaddr_size": 2,
+        "BIO_ADDR_make": 2,
+        "BIO_ADDR_sockaddr": 3,
+        "BIO_ADDR_sockaddr_noconst": 4,
+        "BIO_ADDR_sockaddr_size": 4,
         "CRYPTO_THREAD_clean_local": 2,
         "F": 1,
         "GOST_KX_MESSAGE_free": 1,
+        "OPENSSL_showfatal": 1,
         "OSSL_CMP_CERTREQTEMPLATE_new": 1,
         "OSSL_CMP_CRLSTATUS_new": 1,
         "OSSL_CMP_ITAV_new": 1,
@@ -26,6 +33,10 @@
         "OSSL_CRMF_POPO_free": 1,
         "OSSL_CRMF_POPO_new": 1,
         "bind_engine": 1,
+        "bio_free_ex_data": 1,
+        "bio_lookup_lock": 2,
+        "bio_sock_cleanup_int": 2,
+        "bio_type_count": 2,
         "bn_set_static_words": 1,
         "cb_arg": 1,
         "d2i_GOST_KX_MESSAGE": 1,
@@ -34,10 +45,21 @@
         "dtls_raw_hello_verify_request": 2,
         "engine_cleanup_int": 1,
         "engine_lock_init": 4,
+        "err_shelve_state": 1,
+        "err_unshelve_state": 1,
         "in": 1,
         "inlen": 1,
         "libctx": 1,
         "openssl_init_fork_handlers": 1,
+        "openssl_strerror_r": 3,
+        "ossl_crypto_alloc_ex_data_intern": 1,
+        "ossl_crypto_ex_data_get_ossl_lib_ctx": 1,
+        "ossl_crypto_free_ex_index_ex": 1,
+        "ossl_crypto_get_ex_new_index_ex": 1,
+        "ossl_crypto_new_ex_data_ex": 2,
+        "ossl_err_get_state_int": 2,
+        "ossl_err_load_ERR_strings": 1,
+        "ossl_err_string_int": 1,
         "ossl_get_ocsp_response": 2,
         "ossl_gost18_cke_cipher_nid": 2,
         "ossl_gost_ukm": 2,
@@ -64,6 +86,8 @@
         "ossl_statem_server_post_work": 2,
         "ossl_statem_server_pre_work": 2,
         "ossl_statem_server_process_message": 2,
+        "ossl_to_hex": 5,
+        "ossl_trace_cleanup": 1,
         "out_len": 1,
         "outlen": 1,
         "pkt": 1,
@@ -711,10 +735,28 @@
     "census_not_a_failure": "the C language surface is counted and listed, never failed: the crate models C types, macros and reason codes differently on purpose, and a lexical scan cannot tell a rename from a gap",
     "census_samples": {
       "covered_by_a_divergence": [
+        "BIO_ADDRINFO_sockaddr",
+        "BIO_ADDRINFO_sockaddr",
+        "BIO_ADDRINFO_sockaddr_size",
+        "BIO_ADDRINFO_sockaddr_size",
+        "BIO_ADDR_make",
+        "BIO_ADDR_make",
+        "BIO_ADDR_sockaddr",
+        "BIO_ADDR_sockaddr",
+        "BIO_ADDR_sockaddr",
+        "BIO_ADDR_sockaddr_noconst",
+        "BIO_ADDR_sockaddr_noconst",
+        "BIO_ADDR_sockaddr_noconst",
+        "BIO_ADDR_sockaddr_noconst",
+        "BIO_ADDR_sockaddr_size",
+        "BIO_ADDR_sockaddr_size",
+        "BIO_ADDR_sockaddr_size",
+        "BIO_ADDR_sockaddr_size",
         "CRYPTO_THREAD_clean_local",
         "CRYPTO_THREAD_clean_local",
         "F",
         "GOST_KX_MESSAGE_free",
+        "OPENSSL_showfatal",
         "OSSL_CMP_CERTREQTEMPLATE_new",
         "OSSL_CMP_CRLSTATUS_new",
         "OSSL_CMP_ITAV_new",
@@ -729,28 +771,10 @@
         "OSSL_CRMF_POPO_free",
         "OSSL_CRMF_POPO_new",
         "bind_engine",
-        "bn_set_static_words",
-        "cb_arg",
-        "d2i_GOST_KX_MESSAGE",
-        "dtls_construct_hello_verify_request",
-        "dtls_process_hello_verify",
-        "dtls_raw_hello_verify_request",
-        "dtls_raw_hello_verify_request",
-        "engine_cleanup_int",
-        "engine_lock_init",
-        "engine_lock_init",
-        "engine_lock_init",
-        "engine_lock_init",
-        "in",
-        "inlen",
-        "libctx",
-        "openssl_init_fork_handlers",
-        "ossl_get_ocsp_response",
-        "ossl_get_ocsp_response",
-        "ossl_gost18_cke_cipher_nid",
-        "ossl_gost18_cke_cipher_nid",
-        "ossl_gost_ukm",
-        "ossl_gost_ukm"
+        "bio_free_ex_data",
+        "bio_lookup_lock",
+        "bio_lookup_lock",
+        "bio_sock_cleanup_int"
       ],
       "language_surface_not_modelled_by_name": [
         "crypto/aria/aria.c:X",
@@ -800,29 +824,15 @@
       "crate_modules": 877,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 1,
-      "divergence_names_covered": 98,
-      "divergence_rows": 14,
+      "divergence_names_covered": 122,
+      "divergence_rows": 27,
       "names_referenced_and_not_built": 21
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
     "counts": {
-      "unwired_function_in_the_current_stratum": 892
+      "unwired_function_in_the_current_stratum": 846
     },
     "findings": [
-      {
-        "authority_unit": "crypto/asn1/a_strex.c",
-        "defines_it": "crypto/o_str.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/o_str.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_to_hex",
-        "owner_module": "src/runtime/str.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/asn1/a_strex.rs"
-        ]
-      },
       {
         "authority_unit": "crypto/asn1/a_type.c",
         "defines_it": "crypto/asn1/tasn_fre.c",
@@ -853,20 +863,6 @@
         ]
       },
       {
-        "authority_unit": "crypto/asn1/f_int.c",
-        "defines_it": "crypto/o_str.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/o_str.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_to_hex",
-        "owner_module": "src/runtime/str.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/asn1/text.rs"
-        ]
-      },
-      {
         "authority_unit": "crypto/asn1/tasn_dec.c",
         "defines_it": "crypto/asn1/tasn_new.c",
         "detail": "the authority's unit calls this; the crate has a module for crypto/asn1/tasn_new.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
@@ -979,111 +975,6 @@
         ]
       },
       {
-        "authority_unit": "crypto/bio/bio_addr.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDRINFO_sockaddr",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/addr.rs",
-          "src/runtime/bio/addr_info.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bio_addr.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDRINFO_sockaddr_size",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/addr.rs",
-          "src/runtime/bio/addr_info.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bio_addr.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDR_make",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/addr.rs",
-          "src/runtime/bio/addr_info.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bio_addr.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDR_sockaddr",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/addr.rs",
-          "src/runtime/bio/addr_info.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bio_addr.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDR_sockaddr_noconst",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/addr.rs",
-          "src/runtime/bio/addr_info.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bio_addr.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDR_sockaddr_size",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/addr.rs",
-          "src/runtime/bio/addr_info.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bio_addr.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "bio_lookup_lock",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/addr.rs",
-          "src/runtime/bio/addr_info.rs"
-        ]
-      },
-      {
         "authority_unit": "crypto/bio/bio_lib.c",
         "defines_it": "crypto/bio/bio_lib.c",
         "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
@@ -1096,250 +987,6 @@
         "transcribed_by": [
           "src/runtime/bio/iolib.rs",
           "src/runtime/bio/mod.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bio_lib.c",
-        "defines_it": "crypto/bio/bio_lib.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "bio_free_ex_data",
-        "owner_module": "src/runtime/bio/iolib.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/iolib.rs",
-          "src/runtime/bio/mod.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bio_lib.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "bio_lookup_lock",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/iolib.rs",
-          "src/runtime/bio/mod.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bio_lib.c",
-        "defines_it": "crypto/bio/bio_sock.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_sock.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "bio_sock_cleanup_int",
-        "owner_module": "src/runtime/bio/bss_sock.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/iolib.rs",
-          "src/runtime/bio/mod.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bio_lib.c",
-        "defines_it": "crypto/bio/bio_meth.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_meth.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "bio_type_count",
-        "owner_module": "src/runtime/bio/method.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/iolib.rs",
-          "src/runtime/bio/mod.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bio_meth.c",
-        "defines_it": "crypto/bio/bio_meth.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_meth.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "bio_type_count",
-        "owner_module": "src/runtime/bio/method.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/method.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bio_sock.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDR_sockaddr_noconst",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/bss_sock.rs",
-          "src/runtime/bio/legacy_host.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bio_sock.c",
-        "defines_it": "crypto/bio/bio_sock.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_sock.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "bio_sock_cleanup_int",
-        "owner_module": "src/runtime/bio/bss_sock.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/bss_sock.rs",
-          "src/runtime/bio/legacy_host.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bio_sock2.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDR_sockaddr",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/bio_sock2.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bio_sock2.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDR_sockaddr_noconst",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/bio_sock2.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bio_sock2.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDR_sockaddr_size",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/bio_sock2.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bss_conn.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDRINFO_sockaddr",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/bss_conn.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bss_conn.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDRINFO_sockaddr_size",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/bss_conn.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bss_conn.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDR_sockaddr_size",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/bss_conn.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bss_dgram.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDR_make",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/bss_dgram.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bss_dgram.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDR_sockaddr",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/bss_dgram.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bss_dgram.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDR_sockaddr_noconst",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/bss_dgram.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/bio/bss_dgram.c",
-        "defines_it": "crypto/bio/bio_addr.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/bio/bio_addr.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "BIO_ADDR_sockaddr_size",
-        "owner_module": "src/runtime/bio/addr.rs",
-        "owner_phase": 4,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/bio/bss_dgram.rs"
         ]
       },
       {
@@ -1791,20 +1438,6 @@
         ]
       },
       {
-        "authority_unit": "crypto/cmp/cmp_util.c",
-        "defines_it": "crypto/o_str.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/o_str.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "openssl_strerror_r",
-        "owner_module": "src/runtime/str.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/cmp/cmp_util.rs"
-        ]
-      },
-      {
         "authority_unit": "crypto/context.c",
         "defines_it": "crypto/ex_data.c",
         "detail": "the authority's unit calls this; the crate has a module for crypto/ex_data.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
@@ -1830,48 +1463,6 @@
         "owner_state": "in-progress",
         "transcribed_by": [
           "src/context/mod.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/cryptlib.c",
-        "defines_it": "crypto/cryptlib.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/cryptlib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "OPENSSL_showfatal",
-        "owner_module": "src/runtime/uid.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/uid.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/dsa/dsa_lib.c",
-        "defines_it": "crypto/ex_data.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/ex_data.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_crypto_new_ex_data_ex",
-        "owner_module": "src/runtime/ex_data.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/dsa/object.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/ec/ec_print.c",
-        "defines_it": "crypto/o_str.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/o_str.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_to_hex",
-        "owner_module": "src/runtime/str.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/ec/print.rs"
         ]
       },
       {
@@ -1917,118 +1508,6 @@
         ]
       },
       {
-        "authority_unit": "crypto/err/err.c",
-        "defines_it": "crypto/err/err.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/err/err.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "err_shelve_state",
-        "owner_module": "src/runtime/err.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/err.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/err/err.c",
-        "defines_it": "crypto/err/err.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/err/err.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "err_unshelve_state",
-        "owner_module": "src/runtime/err.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/err.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/err/err.c",
-        "defines_it": "crypto/o_str.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/o_str.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "openssl_strerror_r",
-        "owner_module": "src/runtime/str.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/err.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/err/err.c",
-        "defines_it": "crypto/err/err.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/err/err.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_err_get_state_int",
-        "owner_module": "src/runtime/err.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/err.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/err/err.c",
-        "defines_it": "crypto/err/err.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/err/err.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_err_load_ERR_strings",
-        "owner_module": "src/runtime/err.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/err.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/err/err.c",
-        "defines_it": "crypto/err/err.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/err/err.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_err_string_int",
-        "owner_module": "src/runtime/err.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/err.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/err/err_save.c",
-        "defines_it": "crypto/err/err.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/err/err.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_err_get_state_int",
-        "owner_module": "src/runtime/err.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/err_state.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/ex_data.c",
-        "defines_it": "crypto/ex_data.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/ex_data.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_crypto_alloc_ex_data_intern",
-        "owner_module": "src/runtime/ex_data.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/ex_data.rs"
-        ]
-      },
-      {
         "authority_unit": "crypto/ex_data.c",
         "defines_it": "crypto/ex_data.c",
         "detail": "the authority's unit calls this; the crate has a module for crypto/ex_data.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
@@ -2048,96 +1527,12 @@
         "detail": "the authority's unit calls this; the crate has a module for crypto/ex_data.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
         "direction": "B",
         "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_crypto_ex_data_get_ossl_lib_ctx",
-        "owner_module": "src/runtime/ex_data.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/ex_data.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/ex_data.c",
-        "defines_it": "crypto/ex_data.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/ex_data.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_crypto_free_ex_index_ex",
-        "owner_module": "src/runtime/ex_data.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/ex_data.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/ex_data.c",
-        "defines_it": "crypto/ex_data.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/ex_data.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_crypto_get_ex_new_index_ex",
-        "owner_module": "src/runtime/ex_data.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/ex_data.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/ex_data.c",
-        "defines_it": "crypto/ex_data.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/ex_data.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_crypto_new_ex_data_ex",
-        "owner_module": "src/runtime/ex_data.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/ex_data.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/ex_data.c",
-        "defines_it": "crypto/ex_data.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/ex_data.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
         "name": "ossl_do_ex_data_init",
         "owner_module": "src/runtime/ex_data.rs",
         "owner_phase": 3,
         "owner_state": "in-progress",
         "transcribed_by": [
           "src/runtime/ex_data.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/o_str.c",
-        "defines_it": "crypto/o_str.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/o_str.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "openssl_strerror_r",
-        "owner_module": "src/runtime/str.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/str.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/o_str.c",
-        "defines_it": "crypto/o_str.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/o_str.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_to_hex",
-        "owner_module": "src/runtime/str.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/str.rs"
         ]
       },
       {
@@ -2264,34 +1659,6 @@
         "owner_state": "in-progress",
         "transcribed_by": [
           "src/rsa/ossl.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/trace.c",
-        "defines_it": "crypto/trace.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/trace.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_trace_cleanup",
-        "owner_module": "src/runtime/trace.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/runtime/trace.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/x509/x509_obj.c",
-        "defines_it": "crypto/o_str.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/o_str.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_to_hex",
-        "owner_module": "src/runtime/str.rs",
-        "owner_phase": 3,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/x509/x509_obj.rs"
         ]
       },
       {
@@ -13327,7 +12694,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "b9c9a981e85d29c7a03bcd3e9646300d5c6d900583f222682117b31bc3af75d2",
+  "body_hash": "74ee6846b6f9008cb6eede81236e0d7f0c44919ceca6ac21f21143e93db3b24a",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -13363,7 +12730,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "35d8a754bf4a256612a198c1e8cc0b9f9d24c0b5e9702f57ede87ea3323d5f51"
+      "sha256": "ed471c2cb4c651d1d02d2d0787eb124343f2336b0468a316aa9681dfa9068599"
     },
     {
       "name": "phase-state",
@@ -13373,7 +12740,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+      "sha256": "10120c93356aca079308c92ebbc89aa20b896ef09cb8cfe0c1b2dc966ff2f3ea"
     },
     {
       "name": "crate-source-tree",
