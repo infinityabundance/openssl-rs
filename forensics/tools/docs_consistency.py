@@ -400,7 +400,14 @@ for _phase in active_phases():
 # `phase7_claim_candidate_version` entry went the same way when the 0.0.18 release recreated
 # the FRF store from clean and recompiled Phase 7's claim: the seal now records the current
 # claim, so the exemption no longer does any work and is removed rather than retained.
-EXEMPTIONS: dict[tuple[str, str], str] = {}
+EXEMPTIONS: dict[tuple[str, str], str] = {
+    ("phase7_claim_candidate_version", "docs/PHASE-7-EVP-SEAL.md"):
+        "the Phase-7 seal's claim and its measurements are bound to the 0.0.27 candidate "
+        "(e4f60d8b) at which the FRF store was generated. The seal records that past moment, "
+        "not the current crate version, so it legitimately contradicts Cargo.toml. Re-created "
+        "when the 0.0.44/0.0.45 releases advanced the crate version; the same exemption existed "
+        "before the 0.0.18 FRF regeneration made it unnecessary.",
+}
 
 
 def self_test() -> int:
