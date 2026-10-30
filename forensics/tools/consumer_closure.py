@@ -12244,6 +12244,222 @@ def mechanism_for(file: str, mechanisms: dict,
     return None, "unmapped"
 
 
+def operation_stable_identity(file: str, kind: str | None, item: str | None,
+                              line) -> str:
+    """Stable operation identity: file + kind + enclosing item.
+
+    Line numbers are provenance, not identity.  A documentation or attribute
+    edit shifts lines but must not change which operation an obligation names.
+    A legacy inventory without enclosing-item records falls back to the line
+    and says so in the returned string; callers must surface that basis.
+    """
+    if item:
+        return f"{file}::{kind}::{item}"
+    return f"{file}::{kind}::<line:{line}>"
+
+
+def obligation_candidates(contracts: dict, files_upper: set[str],
+                          boundaries_by_file: dict,
+                          obligation_mechanisms: dict) -> tuple[list[dict], dict]:
+    """Build the obligation set: uncontracted operations plus documented ones.
+
+    Enrollment rule
+    ---------------
+    The queue is the reachable production operations that are still unsafe and
+    either (a) have no attached contract, or (b) are documented but are named
+    by a mechanism's site-enumerating boundary receipt *and* by the persistent
+    ledger ``state.json#/obligation_mechanisms``.  Documentation state can move
+    an operation between ``uncontracted`` and ``contracted``; it can never remove
+    it.  An operation leaves only when a discharge receipt names it (decided
+    later by :func:`adjudicate`) or when the inventory no longer contains it,
+    which is recorded in ``enrollment.excluded`` with a reason.
+
+    A plan site with no ledger record was never an obligation; enrolling it
+    would grow the target set rather than preserve it, so it is skipped.  For
+    every ledger entry that no in-scope site plan names, the gap is recorded in
+    ``enrollment.ledger_entries_without_site_plan`` (uncontracted-only enrollment
+    then applies).
+    """
+    obligations: list[dict] = []
+    seen: set[tuple] = set()
+
+    def add(rec: dict) -> bool:
+        key = (rec["file"], rec["line"], rec["kind"])
+        if key in seen:
+            return False
+        seen.add(key)
+        obligations.append(rec)
+        return True
+
+    blockers = contracts.get("blockers") or []
+    production = [b for b in blockers
+                  if b.get("partition") == V1_PARTITION_PRODUCTION]
+    for b in production:
+        f = b.get("file")
+        if f not in files_upper:
+            continue
+        item = b.get("item")
+        add({
+            "id": f"V1:{f}:{b.get('line')}:{b.get('kind')}",
+            "stable_id": operation_stable_identity(
+                f, b.get("kind"), item, b.get("line")),
+            "file": f,
+            "line": b.get("line"),
+            "line_provenance": (
+                "V1 census operation coordinate at the inventory source head"),
+            "kind": b.get("kind"),
+            "item": item,
+            "partition": b.get("partition"),
+            "v1_reason": b.get("reason"),
+            "contract": "uncontracted",
+            "contract_basis": (b.get("reason")
+                               or "no attached # Safety / SAFETY: contract"),
+            "site_receipt": None,
+            "ledger_basis": None,
+        })
+
+    contracted = contracts.get("contracted_operations")
+    contracted_by_exact: dict[tuple, dict] = {}
+    contracted_by_stable: dict[tuple, dict] = {}
+    for rec in contracted or []:
+        contracted_by_exact.setdefault(
+            (rec.get("file"), rec.get("line"), rec.get("kind")), rec)
+        if rec.get("item"):
+            contracted_by_stable.setdefault(
+                (rec.get("file"), rec.get("kind"), rec.get("item")), rec)
+
+    ledger_stable: dict[tuple, dict] = {}
+    for rec in obligation_mechanisms.values():
+        operation = rec.get("operation")
+        if operation:
+            ledger_stable.setdefault(
+                (rec.get("file"), rec.get("kind"), operation), rec)
+
+    enrolled: list[dict] = []
+    excluded: list[dict] = []
+    planned: set[tuple] = set()
+
+    for f in sorted(files_upper):
+        for b in boundaries_by_file.get(f, []):
+            kind, line = b.get("kind"), b.get("line")
+            if kind is None or line is None:
+                continue
+            planned.add((f, line, kind))
+            key = (f, line, kind)
+            if key in seen:
+                continue  # already enrolled as an uncontracted obligation
+            ledger_rec = obligation_mechanisms.get(key)
+            if ledger_rec is None and b.get("operation"):
+                ledger_rec = ledger_stable.get((f, kind, b["operation"]))
+            if ledger_rec is None:
+                # Never an obligation in the persistent ledger; a plan site
+                # alone does not enroll it (that would grow the target set).
+                continue
+            rec = contracted_by_exact.get(key)
+            if rec is None and b.get("operation"):
+                rec = contracted_by_stable.get((f, kind, b["operation"]))
+            if rec is not None:
+                if rec.get("partition") != V1_PARTITION_PRODUCTION:
+                    excluded.append({
+                        "file": f, "line": line, "kind": kind,
+                        "reason": "contracted operation is not production-partitioned"})
+                    continue
+                item = rec.get("item") or b.get("operation")
+                # The census record is the operation's coordinate at the
+                # inventory identity; the site receipt/ledger line is provenance.
+                # A stable-identity match is exactly the +N-line drift case.
+                if rec.get("line") is not None:
+                    line = rec["line"]
+                basis = ("contracted operation record in the inventory at this "
+                         "identity (contracts.contracted_operations)")
+            else:
+                if contracted is not None:
+                    # The census enumerates every operation.  Absent from both the
+                    # uncontracted blocker set and the contracted records, the
+                    # operation no longer exists at this identity.
+                    excluded.append({
+                        "file": f, "line": line, "kind": kind,
+                        "reason": (
+                            "named by a site receipt and the persistent ledger, but "
+                            "the inventory's per-site enumeration contains it in "
+                            "neither the uncontracted blockers nor the contracted "
+                            "operations; the operation no longer exists at this "
+                            "identity (site receipt is stale)")})
+                    continue
+                # Legacy inventory: blockers are its complete uncontracted
+                # enumeration, so a plan+ledger site absent from them is
+                # documented.  Existence rests on the site receipt's own
+                # enumeration because this inventory predates per-site records.
+                item = b.get("operation") or ledger_rec.get("operation")
+                basis = (
+                    "site receipt enumerates the operation and the inventory's "
+                    "uncontracted blocker set does not contain it; this inventory "
+                    "predates per-site contracted-operation records, so existence "
+                    "rests on the site receipt's enumeration")
+            record = {
+                "id": f"V1:{f}:{line}:{kind}",
+                "stable_id": operation_stable_identity(f, kind, item, line),
+                "file": f,
+                "line": line,
+                "line_provenance": (
+                    "contracted-operation record coordinate at the inventory source "
+                    "head" if contracted is not None
+                    else "site-receipt coordinate; inventory predates per-site records"),
+                "site_receipt_line": b.get("line"),
+                "site_receipt_ledger_line": ledger_rec.get("line"),
+                "kind": kind,
+                "item": item,
+                "partition": V1_PARTITION_PRODUCTION,
+                "v1_reason": None,
+                "contract": "contracted",
+                "contract_basis": basis,
+                "site_receipt": b.get("receipt"),
+                "site_boundary": b.get("id"),
+                "ledger_basis": ledger_rec.get("basis"),
+            }
+            if add(record):
+                enrolled.append({
+                    "id": record["id"],
+                    "stable_id": record["stable_id"],
+                    "file": f, "line": line, "kind": kind,
+                    "item": item,
+                    "site_receipt": b.get("receipt"),
+                    "site_boundary": b.get("id"),
+                    "mechanism": ledger_rec.get("mechanism"),
+                    "contract_basis": basis,
+                })
+
+    gaps = []
+    for key, rec in sorted(obligation_mechanisms.items()):
+        if key in planned or key in seen:
+            continue
+        gaps.append({
+            "file": key[0], "line": key[1], "kind": key[2],
+            "mechanism": rec.get("mechanism"),
+            "reason": ("no site-enumerating boundary receipt in scope names this "
+                       "persistent-ledger operation; uncontracted-only enrollment "
+                       "applies and the gap is recorded here"),
+        })
+
+    obligations.sort(key=lambda o: (o["file"], o["line"] or 0, o["kind"] or ""))
+    enrollment = {
+        "contracted_records_present": contracted is not None,
+        "contracted_record_count": len(contracted or []),
+        "contract_scope": contracts.get("contracted_operations_scope"),
+        "enrolled": enrolled,
+        "enrolled_count": len(enrolled),
+        "excluded": excluded,
+        "excluded_count": len(excluded),
+        "ledger_entries_without_site_plan": gaps,
+        "rule": (
+            "uncontracted production blockers + contracted production operations "
+            "named by an in-scope site-enumerating boundary receipt and by "
+            "state.json#/obligation_mechanisms; documentation state only changes "
+            "the contract field, never membership"),
+    }
+    return obligations, enrollment
+
+
 def load_boundaries(boundary_dir: Path) -> tuple[dict, dict]:
     """Return (by_file, by_id) across every boundary receipt.
 
@@ -12277,6 +12493,9 @@ def load_boundaries(boundary_dir: Path) -> tuple[dict, dict]:
                 "receipt": receipt,
                 "id": b.get("id"),
                 "file": b.get("file"),
+                "line": b.get("line"),
+                "kind": b.get("kind"),
+                "operation": b.get("operation"),
                 "mechanism": b.get("mechanism"),
                 "disposition": b.get("disposition"),
                 "date": doc.get("date"),
@@ -12974,30 +13193,32 @@ def build_receipt(args) -> dict:
             files_upper.add(defs[0])
 
     # ---- 4. obligations --------------------------------------------------- #
-    blockers = (inventory.get("contracts") or {}).get("blockers") or []
+    contracts = inventory.get("contracts") or {}
+    blockers = contracts.get("blockers") or []
     production = [b for b in blockers if b.get("partition") == V1_PARTITION_PRODUCTION]
-    obligations = []
-    for b in production:
-        f = b.get("file")
-        if f not in files_upper:
-            continue
-        mech, basis = mechanism_for(f, mechanisms, b, obligation_mechanisms)
-        obligations.append({
-            "id": f"V1:{f}:{b.get('line')}:{b.get('kind')}",
-            "file": f,
-            "line": b.get("line"),
-            "kind": b.get("kind"),
-            "partition": b.get("partition"),
-            "v1_reason": b.get("reason"),
-            "mechanism": mech,
-            "mechanism_basis": basis,
-            "status": None,
-            "discharge_receipt": None,
-            "status_reason": None,
-        })
-    obligations.sort(key=lambda o: (o["file"], o["line"] or 0, o["kind"] or ""))
+    obligations, enrollment = obligation_candidates(
+        contracts, files_upper, boundaries_by_file, obligation_mechanisms)
+    for o in obligations:
+        mech, basis = mechanism_for(o["file"], mechanisms, o, obligation_mechanisms)
+        o["mechanism"] = mech
+        o["mechanism_basis"] = basis
+        o["status"] = None
+        o["discharge_receipt"] = None
+        o["status_reason"] = None
     for o in obligations:
         adjudicate(o, mechanisms, boundaries_by_file.get(o["file"], []), plane)
+        if o.get("contract") == "contracted":
+            o["documentation_note"] = (
+                "documented (attached contract) but retained in the obligation "
+                "queue because it is named by site receipt "
+                f"{o.get('site_receipt')} and by state.json#/obligation_mechanisms; "
+                "a contract is not a discharge")
+            previous = o.get("status_reason") or ""
+            separator = ". " if previous and not previous.rstrip().endswith(".") else " "
+            o["status_reason"] = (previous + separator if previous else "") + (
+                "The operation is documented (an attached # Safety/SAFETY contract) "
+                "but remains enrolled; a contract transfers the obligation to the "
+                "caller, it does not discharge it.")
 
     # per-symbol join over the narrow direct-call view.  Every symbol is a root of
     # the same global upper bound; the direct view is reported as a narrow,
@@ -13813,9 +14034,11 @@ def build_receipt(args) -> dict:
             },
         },
         "obligations": obligations,
+        "documented_enrollment": enrollment,
         "closure_scope": {
             "v1_production_operations": len(production),
             "included_in_upper_bound": len(obligations),
+            "documented_operations_enrolled": enrollment["enrolled_count"],
             "excluded_from_upper_bound": excluded_production,
             "exclusion_basis": (
                 "a production operation is excluded only when its file has no function "

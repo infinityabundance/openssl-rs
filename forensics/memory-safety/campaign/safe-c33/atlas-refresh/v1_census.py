@@ -527,6 +527,46 @@ def _block_attached_safety(
     return ""
 
 
+def _operation_item_name(
+    view: str,
+    starts: list[int],
+    idx: int,
+    kind: str,
+    lineno: int,
+    model,
+) -> str | None:
+    """Stable enclosing-item label for an operation at ``lineno``.
+
+    The label is the identity component the consumer closure uses alongside
+    ``file`` and ``kind`` so that a site is not keyed by line number alone:
+    a documentation or attribute edit that shifts lines must not change it.
+    """
+    offset = starts[idx]
+    if kind == "UNSAFE_FN_DEF":
+        fn = model.declared_fn(offset, lineno)
+        if fn is None:
+            fn = model.fn_for(kind, offset, lineno)
+        if fn is not None and fn.name:
+            return fn.name
+        name = uc._fn_name(view[offset : offset + 240])
+        return name or None
+    if kind == "UNSAFE_BLOCK":
+        fn = model.enclosing_fn(offset)
+        return fn.name if fn is not None and fn.name else None
+    if kind == "UNSAFE_TRAIT":
+        m = RE_TRAIT.search(view[offset : offset + 240])
+        return m.group(1) if m is not None else None
+    if kind == "UNSAFE_IMPL":
+        m = re.match(r"\s*unsafe\s+impl\b(.*?)\{", view[offset : offset + 400], re.S)
+        header = m.group(1) if m is not None else view[offset : offset + 200]
+        header = re.sub(r"\s+", " ", header).strip()
+        return header or None
+    if kind == "UNSAFE_EXTERN_BLOCK":
+        m = re.match(r'\s*unsafe\s+extern\s+"([^"]*)"', view[offset : offset + 160])
+        return f'extern "{m.group(1)}"' if m is not None else "extern"
+    return None
+
+
 RE_TRAIT = re.compile(r"\btrait\s+(?:r#)?([A-Za-z_][A-Za-z0-9_]*)")
 RE_IMPL_TRAIT = re.compile(
     r"\bimpl\s*(?:<[^>]*>\s*)?([A-Za-z_][A-Za-z0-9_:]*(?:\s*<[^>]*>)?)\s+for\b"
@@ -635,6 +675,7 @@ def contract_check(root: Path, paths: list[str], scan: dict, compiler: dict) -> 
 
     per_file: dict[str, dict] = {}
     blockers: list[dict] = []
+    contracted_operations: list[dict] = []
     lint_false_positives: list[dict] = []
 
     for rel in paths:
@@ -793,16 +834,34 @@ def contract_check(root: Path, paths: list[str], scan: dict, compiler: dict) -> 
                         reason = f"no SAFETY on {kind}"
 
                 stats[f"{kind}_{'contracted' if contracted else 'uncontracted'}"] += 1
+                item = _operation_item_name(view, starts, idx, kind, lineno, model)
                 if not contracted:
                     entry = {
                         "file": rel,
                         "line": lineno,
                         "kind": kind,
+                        "item": item,
                         "partition": partition,
                         "reason": reason,
                     }
                     file_blockers.append(entry)
                     blockers.append(entry)
+                elif partition == "production":
+                    # Production operations only: the consumer-closure obligation
+                    # queue is production-scoped, and test-only/seam operations
+                    # stay enumerated in per_file.contract.  These records let a
+                    # documented (contracted) operation remain an enrolled
+                    # obligation when a mechanism's site plan still names it.
+                    contracted_operations.append(
+                        {
+                            "file": rel,
+                            "line": lineno,
+                            "kind": kind,
+                            "item": item,
+                            "partition": partition,
+                            "contract_basis": reason or "attached # Safety / SAFETY: contract",
+                        }
+                    )
 
         if item_groups:
             per_file[rel] = {
@@ -838,6 +897,10 @@ def contract_check(root: Path, paths: list[str], scan: dict, compiler: dict) -> 
         "allow_suppressed_files": sorted(allow_files),
         "lint_false_positives": lint_false_positives,
         "blockers": blockers,
+        "contracted_operations": contracted_operations,
+        "contracted_operations_scope": (
+            "production operations only; the obligation queue is production-scoped "
+            "and test-only/seam operations remain in per_file.contract"),
         "per_file": per_file,
     }
 
@@ -1521,6 +1584,8 @@ def main(argv: list[str]) -> int:
             "allow_suppressed_files": contracts["allow_suppressed_files"],
             "method": contracts["method"],
             "blockers": contracts["blockers"],
+            "contracted_operations": contracts["contracted_operations"],
+            "contracted_operations_scope": contracts["contracted_operations_scope"],
             "per_file": contracts["per_file"],
         },
         "gates": {
