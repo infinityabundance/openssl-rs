@@ -71,8 +71,8 @@ unsafe fn init_md_data(
     if ctx.is_null() {
         return None;
     }
-    // SAFETY: `ctx` is NULL or live per the contract.
-    let md_data = unsafe { (*ctx).md_data };
+    // SAFETY: `ctx` is non-NULL and live per the contract.
+    let md_data = unsafe { md_data(ctx) };
     // SAFETY: as above.
     let digest = unsafe { (*ctx).digest };
     if md_data.is_null() || digest.is_null() {
@@ -191,16 +191,56 @@ unsafe extern "C" fn wp_init(ctx: *mut EvpMdCtx) -> c_int {
 }
 
 /// `wp_update` — `legacy_meth.h:15-18`.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `data` must be readable for `count` bytes
+/// when `count != 0`, and may be NULL only when `count == 0` (`WHIRLPOOL_Update` returns `1` without
+/// touching it). The callback refuses a context that does not establish a writable `WhirlpoolCtx` —
+/// NULL, a fresh `EVP_MD_CTX_new()`, a NULL method, or a method with a smaller `ctx_size` — with
+/// `0` before any dereference (`docs/SECURITY_DIVERGENCE_POLICY.md`,
+/// `D-LEGACY-MD-CALLBACK-MD-DATA-1`). The context is borrowed exclusively for the duration of the
+/// call and no pointer is retained.
 unsafe extern "C" fn wp_update(ctx: *mut EvpMdCtx, data: *const c_void, count: usize) -> c_int {
-    // SAFETY: as above, and `data`/`count` are forwarded unchanged.
-    unsafe { WHIRLPOOL_Update(md_data(ctx).cast::<WhirlpoolCtx>(), data, count) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `WHIRLPOOL_MD` is a live
+    // static method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(WHIRLPOOL_MD.0),
+            core::mem::size_of::<WhirlpoolCtx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `WhirlpoolCtx`; `data`/`count` are the
+    // caller's.
+    unsafe { WHIRLPOOL_Update(block.cast::<WhirlpoolCtx>(), data, count) }
 }
 
 /// `wp_final` — `legacy_meth.h:19-22`. The authority's macro is
 /// `fn##_Final(md, EVP_MD_CTX_get0_md_data(ctx))`, and `WHIRLPOOL_Final` takes the digest first.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `md` must be writable for
+/// `WHIRLPOOL_DIGEST_LENGTH` (64) bytes. The context precondition is the one [`wp_update`] states,
+/// and a context without a writable block is refused with `0` before `md` is touched.
 unsafe extern "C" fn wp_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
-    // SAFETY: as above.
-    unsafe { WHIRLPOOL_Final(md, md_data(ctx).cast::<WhirlpoolCtx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `WHIRLPOOL_MD` is a live
+    // static method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(WHIRLPOOL_MD.0),
+            core::mem::size_of::<WhirlpoolCtx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `WhirlpoolCtx`; `md` is writable per the
+    // contract.
+    unsafe { WHIRLPOOL_Final(md, block.cast::<WhirlpoolCtx>()) }
 }
 
 /// `whirlpool_md` — `legacy_wp.c:22-30`. `flags` is **0**, `pkey_type` is the authority's literal

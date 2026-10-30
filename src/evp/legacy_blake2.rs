@@ -113,8 +113,8 @@ unsafe fn init_md_data(
     if ctx.is_null() {
         return None;
     }
-    // SAFETY: `ctx` is NULL or live per the contract.
-    let md_data = unsafe { (*ctx).md_data };
+    // SAFETY: `ctx` is non-NULL and live per the contract.
+    let md_data = unsafe { md_data(ctx) };
     // SAFETY: as above.
     let digest = unsafe { (*ctx).digest };
     if md_data.is_null() || digest.is_null() {
@@ -240,26 +240,64 @@ unsafe extern "C" fn blake2b_int_init(ctx: *mut EvpMdCtx) -> c_int {
 }
 
 /// `blake2b_int_update` — the same macro over `ossl_blake2b_update`.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `count` may be zero, in which case `data`
+/// may be NULL and the callback answers `1` without touching either pointer. The callback refuses
+/// a context that does not establish a writable `BLAKE2B_CTX` — NULL, a fresh `EVP_MD_CTX_new()`,
+/// a NULL method, or a method with a smaller `ctx_size` — with `0` before any dereference
+/// (`docs/SECURITY_DIVERGENCE_POLICY.md`, `D-LEGACY-MD-CALLBACK-MD-DATA-1`). The context is
+/// borrowed exclusively for the duration of the call and no pointer is retained.
 unsafe extern "C" fn blake2b_int_update(
     ctx: *mut EvpMdCtx,
     data: *const c_void,
     count: usize,
 ) -> c_int {
-    // SAFETY: as above, and `data`/`count` are forwarded unchanged.
-    unsafe {
-        blake2b::update(
-            md_data(ctx).cast::<blake2b::Ctx>(),
-            data.cast::<u8>(),
-            count,
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `BLAKE2B_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(BLAKE2B_MD.0),
+            core::mem::size_of::<blake2b::Ctx>(),
         )
+    }) else {
+        return 0;
+    };
+    // The authority's `ossl_blake2b_update` reaches `copy_nonoverlapping` even for a zero length;
+    // answer the zero-length update before the pointer is used so a NULL `data` is accepted here.
+    if count == 0 {
+        return 1;
     }
+    // SAFETY: `init_md_data` established a writable `BLAKE2B_CTX`; `data`/`count` are the caller's.
+    unsafe { blake2b::update(block.cast::<blake2b::Ctx>(), data.cast::<u8>(), count) }
 }
 
 /// `blake2b_int_final` — the same macro over `ossl_blake2b_final`. The authority's macro is
 /// `fn##_final(md, EVP_MD_CTX_get0_md_data(ctx))`, so the digest comes first.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `md` must be writable for
+/// `BLAKE2B_DIGEST_LENGTH` (64) bytes. The context precondition is the one
+/// [`blake2b_int_update`] states, and a context without a writable block is refused with `0`
+/// before `md` is touched.
 unsafe extern "C" fn blake2b_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
-    // SAFETY: as above.
-    unsafe { blake2b::final_(md, md_data(ctx).cast::<blake2b::Ctx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `BLAKE2B_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(BLAKE2B_MD.0),
+            core::mem::size_of::<blake2b::Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `BLAKE2B_CTX`; `md` is writable per the
+    // contract.
+    unsafe { blake2b::final_(md, block.cast::<blake2b::Ctx>()) }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -296,25 +334,57 @@ unsafe extern "C" fn blake2s_int_init(ctx: *mut EvpMdCtx) -> c_int {
 }
 
 /// `blake2s_int_update` — the same macro over `ossl_blake2s_update`.
+///
+/// # Safety
+///
+/// As [`blake2b_int_update`], over a writable `BLAKE2S_CTX` (`BLAKE2S_MD` is the owner): `ctx`
+/// NULL or live, `count` zero allowed with `data` NULL, and a context without a writable block
+/// refused with `0` before any dereference.
 unsafe extern "C" fn blake2s_int_update(
     ctx: *mut EvpMdCtx,
     data: *const c_void,
     count: usize,
 ) -> c_int {
-    // SAFETY: as above, and `data`/`count` are forwarded unchanged.
-    unsafe {
-        blake2s::update(
-            md_data(ctx).cast::<blake2s::Ctx>(),
-            data.cast::<u8>(),
-            count,
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `BLAKE2S_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(BLAKE2S_MD.0),
+            core::mem::size_of::<blake2s::Ctx>(),
         )
+    }) else {
+        return 0;
+    };
+    // As in the BLAKE2b arm: a zero-length update is answered before the pointer is used.
+    if count == 0 {
+        return 1;
     }
+    // SAFETY: `init_md_data` established a writable `BLAKE2S_CTX`; `data`/`count` are the caller's.
+    unsafe { blake2s::update(block.cast::<blake2s::Ctx>(), data.cast::<u8>(), count) }
 }
 
 /// `blake2s_int_final` — the same macro over `ossl_blake2s_final`.
+///
+/// # Safety
+///
+/// As [`blake2b_int_final`], over a writable `BLAKE2S_CTX`: `ctx` NULL or live, `md` writable for
+/// `BLAKE2S_DIGEST_LENGTH` (32) bytes, and a context without a writable block refused with `0`.
 unsafe extern "C" fn blake2s_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
-    // SAFETY: as above.
-    unsafe { blake2s::final_(md, md_data(ctx).cast::<blake2s::Ctx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `BLAKE2S_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(BLAKE2S_MD.0),
+            core::mem::size_of::<blake2s::Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `BLAKE2S_CTX`; `md` is writable per the
+    // contract.
+    unsafe { blake2s::final_(md, block.cast::<blake2s::Ctx>()) }
 }
 
 // ---------------------------------------------------------------------------------------------

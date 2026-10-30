@@ -84,8 +84,8 @@ unsafe fn init_md_data(
     if ctx.is_null() {
         return None;
     }
-    // SAFETY: `ctx` is NULL or live per the contract.
-    let md_data = unsafe { (*ctx).md_data };
+    // SAFETY: `ctx` is non-NULL and live per the contract.
+    let md_data = unsafe { md_data(ctx) };
     // SAFETY: as above.
     let digest = unsafe { (*ctx).digest };
     if md_data.is_null() || digest.is_null() {
@@ -213,16 +213,54 @@ unsafe extern "C" fn md5_init(ctx: *mut EvpMdCtx) -> c_int {
 }
 
 /// `md5_update` — `legacy_meth.h:15-18`.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `data` must be readable for `count` bytes
+/// when `count != 0`, and may be NULL only when `count == 0`. The callback refuses a context that
+/// does not establish a writable `MD5_CTX` — NULL, a fresh `EVP_MD_CTX_new()` (`md_data` and
+/// `digest` NULL), a NULL method, or a method with a smaller `ctx_size` — with `0` instead of
+/// dereferencing it (`docs/SECURITY_DIVERGENCE_POLICY.md`, `D-LEGACY-MD-CALLBACK-MD-DATA-1`). The
+/// context is borrowed exclusively for the duration of the call and no pointer is retained.
 unsafe extern "C" fn md5_update(ctx: *mut EvpMdCtx, data: *const c_void, count: usize) -> c_int {
-    // SAFETY: as above, and `data`/`count` are forwarded unchanged.
-    unsafe { MD5_Update(md_data(ctx).cast::<Md5Ctx>(), data, count) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `MD5_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(MD5_MD.0),
+            core::mem::size_of::<Md5Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `MD5_CTX`; `data`/`count` are the caller's.
+    unsafe { MD5_Update(block.cast::<Md5Ctx>(), data, count) }
 }
 
 /// `md5_final` — `legacy_meth.h:19-22`. Note the argument order: the authority's macro is
 /// `fn##_Final(md, EVP_MD_CTX_get0_md_data(ctx))`, and `MD5_Final` takes the digest first.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `md` must be writable for
+/// `MD5_DIGEST_LENGTH` (16) bytes. The context precondition is the one [`md5_update`] states, and
+/// a context that does not establish a writable `MD5_CTX` is refused with `0` before `md` is
+/// touched.
 unsafe extern "C" fn md5_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
-    // SAFETY: as above.
-    unsafe { MD5_Final(md, md_data(ctx).cast::<Md5Ctx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `MD5_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(MD5_MD.0),
+            core::mem::size_of::<Md5Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `MD5_CTX`; `md` is writable per the contract.
+    unsafe { MD5_Final(md, block.cast::<Md5Ctx>()) }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -231,38 +269,112 @@ unsafe extern "C" fn md5_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
 // ---------------------------------------------------------------------------------------------
 
 /// `md5_sha1_int_init` — `legacy_md5_sha1.c:21` over `ossl_md5_sha1_init`.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`. The callback validates the context through
+/// `init_md_data` before writing: a fresh `EVP_MD_CTX_new()` (`md_data` and `digest` NULL), a NULL
+/// context, a NULL method, or a method with a smaller `ctx_size` answers `0` instead of performing
+/// the authority's NULL write (`docs/SECURITY_DIVERGENCE_POLICY.md`,
+/// `D-LEGACY-MD-INIT-MD-DATA-1`). The normal table shape — a writable `MD5_SHA1_CTX` behind a
+/// context bound to `md5_sha1_md` — still initialises and returns `1`.
 unsafe extern "C" fn md5_sha1_int_init(ctx: *mut EvpMdCtx) -> c_int {
-    // SAFETY: the caller's contract; `md_data` is a live context's block.
-    unsafe { ossl_md5_sha1_init(md_data(ctx).cast::<Md5Sha1Ctx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `MD5_SHA1_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(MD5_SHA1_MD.0),
+            core::mem::size_of::<Md5Sha1Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `MD5_SHA1_CTX`.
+    unsafe { ossl_md5_sha1_init(block.cast::<Md5Sha1Ctx>()) }
 }
 
 /// `md5_sha1_int_update` — the same macro over `ossl_md5_sha1_update`.
+///
+/// # Safety
+///
+/// As [`md5_update`], over a writable `MD5_SHA1_CTX` (`MD5_SHA1_MD` is the owner): `ctx` NULL or
+/// live; `data` readable for `count` bytes and NULL only when `count == 0`; a context without a
+/// writable block answers `0` before any dereference.
 unsafe extern "C" fn md5_sha1_int_update(
     ctx: *mut EvpMdCtx,
     data: *const c_void,
     count: usize,
 ) -> c_int {
-    // SAFETY: as above, and `data`/`count` are forwarded unchanged.
-    unsafe { ossl_md5_sha1_update(md_data(ctx).cast::<Md5Sha1Ctx>(), data, count) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `MD5_SHA1_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(MD5_SHA1_MD.0),
+            core::mem::size_of::<Md5Sha1Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `MD5_SHA1_CTX`; `data`/`count` are the caller's.
+    unsafe { ossl_md5_sha1_update(block.cast::<Md5Sha1Ctx>(), data, count) }
 }
 
 /// `md5_sha1_int_final` — the same macro over `ossl_md5_sha1_final`.
+///
+/// # Safety
+///
+/// As [`md5_final`], over a writable `MD5_SHA1_CTX`: `ctx` NULL or live, `md` writable for
+/// `MD5_SHA1_DIGEST_LENGTH` (36) bytes, and a context without a writable block refused with `0`.
 unsafe extern "C" fn md5_sha1_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
-    // SAFETY: as above.
-    unsafe { ossl_md5_sha1_final(md, md_data(ctx).cast::<Md5Sha1Ctx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `MD5_SHA1_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(MD5_SHA1_MD.0),
+            core::mem::size_of::<Md5Sha1Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `MD5_SHA1_CTX`; `md` is writable per the
+    // contract.
+    unsafe { ossl_md5_sha1_final(md, block.cast::<Md5Sha1Ctx>()) }
 }
 
 /// `md5_sha1_int_ctrl` — `legacy_md5_sha1.c:22-25`. Forwards the context's `md_data` and the four
 /// control arguments straight to `ossl_md5_sha1_ctrl`, which answers `-2` for any command but
 /// `EVP_CTRL_SSL3_MASTER_SECRET`.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `ms` must be readable for `mslen` bytes when
+/// `mslen == 48`. A context that does not establish a writable `MD5_SHA1_CTX` is refused with `0`
+/// before the block is read (`D-LEGACY-MD-CALLBACK-MD-DATA-1`); `ossl_md5_sha1_ctrl` would also
+/// answer `0` for a NULL block, but this callback must not dereference the context to discover
+/// that.
 unsafe extern "C" fn md5_sha1_int_ctrl(
     ctx: *mut EvpMdCtx,
     cmd: c_int,
     mslen: c_int,
     ms: *mut c_void,
 ) -> c_int {
-    // SAFETY: the caller's contract; every argument is passed through unchanged.
-    unsafe { ossl_md5_sha1_ctrl(md_data(ctx).cast::<Md5Sha1Ctx>(), cmd, mslen, ms) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `MD5_SHA1_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(MD5_SHA1_MD.0),
+            core::mem::size_of::<Md5Sha1Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `MD5_SHA1_CTX`; the control arguments are the
+    // caller's.
+    unsafe { ossl_md5_sha1_ctrl(block.cast::<Md5Sha1Ctx>(), cmd, mslen, ms) }
 }
 
 // ---------------------------------------------------------------------------------------------

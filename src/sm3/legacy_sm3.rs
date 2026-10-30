@@ -75,8 +75,8 @@ unsafe fn init_md_data(
     if ctx.is_null() {
         return None;
     }
-    // SAFETY: `ctx` is NULL or live per the contract.
-    let md_data = unsafe { (*ctx).md_data };
+    // SAFETY: `ctx` is non-NULL and live per the contract.
+    let md_data = unsafe { md_data(ctx) };
     // SAFETY: as above.
     let digest = unsafe { (*ctx).digest };
     if md_data.is_null() || digest.is_null() {
@@ -195,20 +195,60 @@ unsafe extern "C" fn sm3_int_init(ctx: *mut EvpMdCtx) -> c_int {
 }
 
 /// `sm3_int_update` — `legacy_meth.h:29-32`.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `data` must be readable for `count` bytes
+/// when `count != 0`, and may be NULL only when `count == 0`. The callback refuses a context that
+/// does not establish a writable `SM3_CTX` — NULL, a fresh `EVP_MD_CTX_new()`, a NULL method, or a
+/// method with a smaller `ctx_size` — with `0` before any dereference
+/// (`docs/SECURITY_DIVERGENCE_POLICY.md`, `D-LEGACY-MD-CALLBACK-MD-DATA-1`). The context is
+/// borrowed exclusively for the duration of the call and no pointer is retained.
 unsafe extern "C" fn sm3_int_update(
     ctx: *mut EvpMdCtx,
     data: *const c_void,
     count: usize,
 ) -> c_int {
-    // SAFETY: as above, and `data`/`count` are forwarded unchanged.
-    unsafe { ossl_sm3_update(md_data(ctx).cast::<Sm3Ctx>(), data, count) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `SM3_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(SM3_MD.0),
+            core::mem::size_of::<Sm3Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `SM3_CTX`; `data`/`count` are the caller's.
+    unsafe { ossl_sm3_update(block.cast::<Sm3Ctx>(), data, count) }
 }
 
 /// `sm3_int_final` — `legacy_meth.h:33-36`. The authority's macro is
 /// `fn##_final(md, EVP_MD_CTX_get0_md_data(ctx))`, and `ossl_sm3_final` takes the digest first.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `md` must be writable for
+/// `SM3_DIGEST_LENGTH` (32) bytes. The callback refuses a context that does not establish a
+/// writable `SM3_CTX` — NULL, a fresh `EVP_MD_CTX_new()`, a NULL method, or a method with a
+/// smaller `ctx_size` — with `0` before `md` is touched (`docs/SECURITY_DIVERGENCE_POLICY.md`,
+/// `D-LEGACY-MD-CALLBACK-MD-DATA-1`). The context is borrowed exclusively for the duration of the
+/// call and no pointer is retained.
 unsafe extern "C" fn sm3_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
-    // SAFETY: as above.
-    unsafe { ossl_sm3_final(md, md_data(ctx).cast::<Sm3Ctx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `SM3_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(SM3_MD.0),
+            core::mem::size_of::<Sm3Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `SM3_CTX`; `md` is writable per the contract.
+    unsafe { ossl_sm3_final(md, block.cast::<Sm3Ctx>()) }
 }
 
 /// `sm3_md` — `legacy_sm3.c:17-25`. `flags` is **0** and `md_ctrl` is **NULL**, both the authority's
