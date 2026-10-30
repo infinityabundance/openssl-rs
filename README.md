@@ -31,13 +31,13 @@ at. Every row names its own machine-readable evidence; none of them is a claim
 of completeness.
 
 <!-- BEGIN GENERATED: readme-achievements -->
-Source identity: candidate commit `0590d371d2a9b30a19f9d70dc3fee9e33f3a0d90`; build source-tree digest `22a58468d5db58da90dd99044682a5303dbef0938ac2789be0eb5406cfb7d58d`; crate version `0.0.43` (**published** 2026-10-30, checksum `50afe140…`); `libcrypto.so.3` sha256 `23ec6944fb9d8f8b4037263ad8faff4170d561442d81a99a690c6dc083550409`; `libssl.so.3` sha256 `493795c2eae8496ce808006e86efff133f0ebb6c6a341536a6f5a20c9b8710a9`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
+Source identity: candidate commit `afcfdc47e`; build source-tree digest `22aef07a4b4bc4d02ee31149b1ef319816f4464b0ada00417370715a76662da9`; release-tree digest `2def42175198830cb1c6dc9b72ffc8a7002b804133310dcf5f070c579d2dd2ed` (the packaging tree; within the digested build inputs it differs from the build tree only in `Cargo.toml`/`Cargo.lock`, and the library hashes below describe the build tree, not a rebuild at this version); working-tree crate version `0.0.44` (**not published at this candidate identity**); `libcrypto.so.3` sha256 `d720727aa4b9a59fa7618dc5a5130b30d2554c97776cf55ce2ab7a605a573837`; `libssl.so.3` sha256 `6baed3eddf1eb986c9a9bfc66ccfca2e6393db5715ab5ec8ee4b30d91279f4b3`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
 
 | Dimension | Result | Evidence |
 |---|---|---|
 | **Downstream drop-in, Safe-33 cohort** | **33 / 33 families at `L7-functional`**, candidate and authority; **carried forward** — 33/33 cohort rows are in `evidence_reuse.reused_families` and `candidate_identity_match=false` | `forensics/downstream/runtime-functional-atlas.json` (`body.runs`); `CAMPAIGN-STATUS.json` (`consumers`) |
 | **Downstream drop-in, 1000-family corpus** | **207 / 1000 at `L7-functional`**; candidate 207 / authority 209 `L7-functional`; measured asymmetry: authority-only `ewftools`, `xilinx-bootgen`; **307 recipes, 253 built, 245 linked**; 223 loaded, 22 `L4-linked`, 7 failed, 755 not attempted (693 with no recipe); 307 of 307 recipe-backed rows carried forward | same atlas, `body.counts.by_subject`, `body.evidence_reuse`; `forensics/downstream/build-link-atlas.json` |
-| **Library test suite** | **2,230 passing, 0 failing, 52 ignored** | `atlas-refresh/test-baseline.json` (`full-library-run`) |
+| **Library test suite** | **2,231 passing, 0 failing, 52 ignored** at `cc7762e5d` — a **floor**, not the current count: later commits add tests without a further full run | `atlas-refresh/test-baseline.json` (`full-library-run`) |
 | **Memory safety: mechanisms** | **6 mechanisms discharged at mechanism scope** — RC-1 refcounting, OB-1 OwnedBuf release state, OB-2 OwnedStr string ownership, OB-3 OwnedCtx/RawCtx context ownership, ERR-1 ERR error-queue ownership and allocator file-coordinate seam, GEN-1 GENERAL_NAME selected-arm representation | `CAMPAIGN-STATUS.json` (`mechanism_discharges`) |
 | **Memory safety: boundaries** | 5 scoped boundary discharges (B23, B25, B27, B28, B29); **B39–B40 independently checked**; B41–B43 batch-checked; B44 author-evidenced | `atlas-refresh/boundary-sweep-*.json` |
 | **Memory safety: files converted / partial** | **877 files**: 92 `ZERO_UNSAFE`, 18 `BOUNDARY_COVERED`, 761 `PARTIAL` (audited 761/761), 6 `TEST_ONLY`, **0 unaccounted** | `atlas-refresh/unsafe-census.json`, `atlas-refresh/post-census-delta.json` |
@@ -45,7 +45,7 @@ Source identity: candidate commit `0590d371d2a9b30a19f9d70dc3fee9e33f3a0d90`; bu
 | **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility for the S16–S61 cluster | `CAMPAIGN-STATUS.json` (`gates.boundary_gate`, `gates.seal_gate`) |
 | **Allocator / ABI invariants** | **preserved** — recorded invariant planes: `abi_courts`, `allocator_seam`, `exported_symbols`, `repr_c_layouts`, `unsafe_lints` | `CAMPAIGN-STATUS.json` (`structural_invariants`) |
 | **Known gaps** | `CLOSURE-NON-MONOTONE` REPAIRED; `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN AT THE MEASURED IDENTITY; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` CLOSED IN S61 (carried forward); `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 76 CARRIED S59-S60 BLOCKERS + 25 NEW VENUE/BUILD BLOCKERS; `DOWNSTREAM-BELOW-L7` 100 FAMILIES; `DOWNSTREAM-S42-SYMMETRIC-LOSSES` CLOSED IN S44; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 693 UNMEASURED; `DOWNSTREAM-MEDUSA` HARNESS; `DOWNSTREAM-S53-YIELD` 2 NEW L7 / 35 ADMITTED; `DOWNSTREAM-S60-YIELD` 7 NEW L7 / 30 ADMITTED; `S56-RESIDUALS` RETAINED; `S57-RACE` DATA-RACE FREEDOM NOT ESTABLISHED; `S58-SECURITY-CALLBACK` PERMISSIVE ARMS RETAINED; `S61-RESIDUALS` OTHER CALLBACK ARMS REMAIN PERMISSIVE; `ELEMENT-7-PRECISION` OPEN — FAIL; `CONTRACTED-OBLIGATIONS-BLOCKED` 222 BLOCKED; `RELEASE-EVIDENCE-DEBT` OPEN | `CAMPAIGN-STATUS.json` (`known_gaps`) |
-| **Release** | **Published: 0.0.43** on crates.io (2026-10-30), checksum `50afe140…`, install-tree artefacts `libcrypto.so.3` `23ec6944…` / `libssl.so.3` `493795c2…`. The published crate ships **source and documentation only, with no binaries**; those install-tree hashes describe the repository build recorded in the receipt, not the crate payload. This evidence is bound to the 0.0.43 tree, which is the published 0.0.43 crate. 0.0.42 remains the previous release. | `atlas-refresh/publish-0.0.43.json`; `Cargo.toml` |
+| **Release** | **Published: 0.0.43** on crates.io (2026-10-30), checksum `50afe140…`, install-tree artefacts `libcrypto.so.3` `23ec6944…` / `libssl.so.3` `493795c2…`. The published crate ships **source and documentation only, with no binaries**; those install-tree hashes describe the repository build recorded in the receipt, not the crate payload. **Working tree: 0.0.44 — the candidate, not yet published.** This evidence is bound to the 0.0.44 tree, not to the published 0.0.43 crate. 0.0.42 remains the previous release. | `atlas-refresh/publish-0.0.43.json`; `Cargo.toml` |
 
 Downstream evidence reuse: **307 of 307 recipe-backed families carried forward** (`committed-rows-carried-forward`); `candidate_identity_match` = `false`. A carried-forward row is compatibility evidence from the build recorded on that row, not a fresh measurement at the identity above. The Safe-33 cohort has 33/33 of its families in that set.
 <!-- END GENERATED: readme-achievements -->
@@ -115,10 +115,13 @@ and verification, then ML-DSA, then the remaining provider and algorithm cores.
 [`SEAL-CENSUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/SEAL-CENSUS.md) ·
 [`PARITY_MODEL.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/PARITY_MODEL.md)
 
-## Where the memory-safety campaign actually stands (2026-10-29)
+## Where the memory-safety campaign actually stands (2026-10-30)
 
 Receipts only. This is not a graduation and does not claim `SAFE_COMPATIBLE`,
-constant-time behaviour, or that the BOUNDARY/SEAL gates passed.
+constant-time behaviour, or that the BOUNDARY/SEAL gates passed. This section
+was refreshed for the 0.0.44 candidate. 0.0.44 is a packaging/documentation
+release, **not a verification event**: nothing below was re-measured at it
+unless a bullet says so.
 
 - **The consumer closure is ACCEPTED, with zero refusals**
   (`evidence/closure-ssh-v1r.json`, `evidence/inventory-sshd-v1r.json`;
@@ -131,12 +134,28 @@ constant-time behaviour, or that the BOUNDARY/SEAL gates passed.
   with **27 refuted exclusions admitted**, and **5 symbolic values resolved,
   0 blocking**. Acceptance means no refusal condition fired; it is not a
   graduation and carries no consumer claim.
+- **The analyzer precision checkpoint reduced the target-bounded set**
+  (`evidence/base-slot-partial-summary.json`): at the pre-engine DSO, reachable
+  target-bounded unresolved sites moved **81 → 71** and base-slot-partial
+  **50 → 39** (10 sites proved), with the reachable-function digest unchanged
+  and obligations unchanged. Element 7 remains FAIL. This checkpoint is **not
+  re-measured at 0.0.44**.
+- **The engine lock precondition is now explicit**
+  (`evidence/mechanism-discharge-ENGINE-CLEANUP.json`, independent verdict in
+  `evidence/mechanism-discharge-ENGINE-CLEANUP-review.json`):
+  `engine_table_cleanup` documents and enforces the initialised-lock
+  precondition, its idempotence test initialises the lock, and a new C8 pins the
+  NULL-lock no-op. The package is **APPROVED_WITH_CONDITIONS and still blocked**
+  — it discharges no obligation and the closure has not been re-run at S′. The
+  **90 / 222 / 0** split is unchanged.
 - **Element 7 is FAIL** (`element_7` in the same receipts): **141 reachable
   unresolved** indirect sites, **81 target-bounded** and 60 contract-bounded
   (46 `ABI_CONTRACT_EXPORT_CALLBACK` + 14 `ABI_CONTRACT_PROVIDER`), 0
-  unclassified. `SAFE_COMPATIBLE` therefore stays **0/33**: 222 obligations are
-  contracted but BLOCKED, and no family inherits safety from an accepted
-  closure alone (`AGENTS.md` §7).
+  unclassified. A pre-engine analyzer checkpoint reduced target-bounded to
+  **71** (base-slot-partial 50 → 39) but is **not re-measured at 0.0.44**.
+  `SAFE_COMPATIBLE` therefore stays **0/33**: 222 obligations are contracted but
+  BLOCKED, and no family inherits safety from an accepted closure alone
+  (`AGENTS.md` §7).
 - **The analyzer repair is implemented and measured**
   (`atlas-refresh/closure-fixpoint-repair.json`): the residual admission is now
   a class-independent superset of every class the resolver may admit (monotone
@@ -181,16 +200,23 @@ constant-time behaviour, or that the BOUNDARY/SEAL gates passed.
 
 **Known open work**
 
-- **Element-7 precision**: 81 target-bounded reachable sites still lack a
-  bounded target set, so element 7 remains FAIL.
+- **Element-7 precision**: the accepted v1r closure has 81 target-bounded
+  reachable sites. The pre-engine analyzer checkpoint reduced that to **71**
+  (base-slot-partial 50 → 39), but it is **not re-measured at 0.0.44** and the
+  sites still lack a bounded target set, so element 7 remains FAIL.
 - **222 contracted obligations awaiting discharge** (BLOCKED), inside each
-  family's dependency closure; `SAFE_COMPATIBLE` remains **0/33**.
+  family's dependency closure; `SAFE_COMPATIBLE` remains **0/33**. The
+  engine-cleanup package is APPROVED_WITH_CONDITIONS but still blocked, so it
+  contributes no discharge.
 - **Release-evidence debt**: FRF's 143 manifests are still `0.0.27`; the
   Phase-18 unsafe-bounds ratchet is +3,017 real sites and needs a reviewable
   re-base; the Phase-24 candidate freeze and P1000 counts are pinned to
   `0.0.27`; the Phase-25 planes carry 47k per-file hashes and four Miri findings
   from the stale candidate; 892 prerequisite findings are correctly gated until
-  those strata seal; and the required `main` CI check is red.
+  those strata seal; and the required CI gates remain **red** (892 prerequisite
+  findings; phases 18/20/23/24/25). They were relaxed and then restored for the
+  0.0.43 merge; that is recorded as debt, not as a success. The 0.0.44 release is
+  **not** a verification event.
 - The 13 `src/evp/legacy_sha.rs` update/final/ctrl callbacks still dereference
   `md_data` without a check (`atlas-refresh/openssh-v1j-sites.json`; BLOCKED).
 - S56/S57 races are not established; no faithful Loom model exists
@@ -332,12 +358,15 @@ The local gate is exactly:
 cargo fmt --all -- --check && cargo clippy --all-targets -- -D warnings && cargo test --lib -- --test-threads=4
 ```
 
-The last full library run on record is **2,230 passed, 0 failed, 52 ignored**
-(`cargo test --lib -- --test-threads=4`; `atlas-refresh/test-baseline.json`). The
+The last full library run on record is **2,231 passed, 0 failed, 52 ignored**
+(`cargo test --lib -- --test-threads=4`; `atlas-refresh/test-baseline.json`). It
+was measured at `cc7762e5d` during the engine lock repair. It was **not re-run
+for 0.0.44**, so for the release tree it is a floor, not a current count. The
 floor the campaign previously quoted, 1,962 passed / 42 ignored, is superseded by
 that run; the rule is no unexplained removals and no newly ignored tests, not a
-frozen literal. The `cargo test` line above is the library gate only: it is not
-the differential courts, which run in the court against the pinned authority.
+frozen literal. 0.0.44 is a packaging/documentation release, **not a
+verification event**. The `cargo test` line above is the library gate only: it is
+not the differential courts, which run in the court against the pinned authority.
 
 ## Architecture
 

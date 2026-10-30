@@ -139,14 +139,21 @@ def build_identity(refresh: Path, version: str) -> dict:
     commit = str(source.get("measured_source_commit") or "")
     tree = str(source.get("build_source_tree_digest") or "")
     measured_tree = str(source.get("measured_source_tree_digest") or "")
+    release_tree = str(source.get("release_tree_digest") or "")
     if not commit or not tree:
         raise RenderError(
             f"build receipt {path.name} records no source commit or build source-tree digest"
         )
+    for label, digest in (("build", tree), ("measured", measured_tree), ("release", release_tree)):
+        if digest and not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise RenderError(
+                f"build receipt {path.name} has a malformed {label} source-tree digest"
+            )
     return {
         "commit": commit,
         "tree": tree,
         "measured_tree": measured_tree,
+        "release_tree": release_tree,
         "libs": libs,
         "source": f"atlas-refresh/{path.name}",
     }
@@ -626,6 +633,18 @@ class Evidence:
                 "measured source at that commit `"
                 f"{self.build['measured_tree']}`; the build tree differs only in the "
                 "`Cargo.toml`/`Cargo.lock` release-metadata fields"
+            )
+        release_tree = self.build["release_tree"]
+        if release_tree and release_tree != self.build["tree"]:
+            # The 0.0.44 packaging tree bumps Cargo.toml/Cargo.lock after S', and
+            # the install was deliberately not rebuilt.  Say so on the identity
+            # line itself, so a version string never sits next to hashes without a
+            # machine-checked statement of which tree produced them.
+            bits.append(
+                f"release-tree digest `{release_tree}` (the packaging tree; within the "
+                "digested build inputs it differs from the build tree only in "
+                "`Cargo.toml`/`Cargo.lock`, and the library hashes below describe the "
+                "build tree, not a rebuild at this version)"
             )
         if self.publish["is_candidate"]:
             bits.append(

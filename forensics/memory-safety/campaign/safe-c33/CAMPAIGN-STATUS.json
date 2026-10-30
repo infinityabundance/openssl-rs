@@ -2,10 +2,19 @@
  "schema": "openssl-rs/safe-c33/campaign-status/v1",
  "kind": "safe-c33-campaign-status",
  "generated_date": "2026-10-30",
- "branch": "stage/p25/analyzer-corpus",
- "source_head": "0590d371d",
- "source_head_subject": "evidence(openssh): re-freeze the closure at the GCM-fix install",
- "source_head_note": "Measurements in this ledger are carried forward from cef757e09..ad5913099 and re-bound at the current candidate, 0590d371d (clean tracked tree; src/, Cargo.toml, Cargo.lock and build.rs are identical to 1c2bc4001). Receipt map: adversarial-review-v1f.json (v1f contract-predicate refutation); v1g-candidate-freeze.json (corrected census); freeze-S-prime.json and openssh-closure-v1h.json; openssh-closure-v1i.json and openssh-v1i-sites.json; v1j-candidate-freeze.json, openssh-closure-v1j.json, openssh-v1j-sites.json and element7-regression-v1j.json (S'' and the legacy_sha fix); freeze-S-double-prime.json (S'' source-to-artefact-to-consumer freeze); publish-0.0.42.json (0.0.42, PUBLISHED 2026-10-27); v1n/v1p-candidate-freeze.json (the two pre-repair closure candidates); closure-monotonicity-finding.json (the finding the repair supersedes); closure-fixpoint-repair.json (the implemented repair and its measurements); v1r-candidate-freeze.json (the frozen candidate and committed install); evidence/closure-ssh-v1r.json and evidence/inventory-sshd-v1r.json (the accepted closure); build-0.0.43.json (the rebound 0.0.43 install identity); legacy-md-init-fix.json (the extended legacy digest NULL-deref repair). v1n is c63fc23de (libcrypto 3901731a) and v1p is ad5913099 (libcrypto c335ac3c): 313 -> 321 reachable files, 155 -> 171 obligations in the pre-repair bound, and neither count is carriable. The repaired bound, accepted at v1r on the GCM-fix install (libcrypto 23ec6944), measures 624 ssh / 623 sshd reachable files and 312 obligations (90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN); element 7 remains FAIL on 81 target-bounded sites.",
+ "branch": "release/0.0.44",
+ "source_head": "afcfdc47e",
+ "source_head_subject": "freeze S': add ENGINE_get_last to the cleanup caller contracts",
+ "source_head_note": "Release candidate: 0.0.44 on release/0.0.44, merging S-prime (afcfdc47e) and the analyzer base-slot-partial tooling (adceec204) onto 61dcdcf2b and bumping the version only; no verification measurement was taken at this tree. Measurements in this ledger are carried forward from cef757e09..ad5913099 and re-bound at the current candidate, 0590d371d (clean tracked tree; src/, Cargo.toml, Cargo.lock and build.rs are identical to 1c2bc4001). Receipt map: adversarial-review-v1f.json (v1f contract-predicate refutation); v1g-candidate-freeze.json (corrected census); freeze-S-prime.json and openssh-closure-v1h.json; openssh-closure-v1i.json and openssh-v1i-sites.json; v1j-candidate-freeze.json, openssh-closure-v1j.json, openssh-v1j-sites.json and element7-regression-v1j.json (S'' and the legacy_sha fix); freeze-S-double-prime.json (S'' source-to-artefact-to-consumer freeze); publish-0.0.42.json (0.0.42, PUBLISHED 2026-10-27); v1n/v1p-candidate-freeze.json (the two pre-repair closure candidates); closure-monotonicity-finding.json (the finding the repair supersedes); closure-fixpoint-repair.json (the implemented repair and its measurements); v1r-candidate-freeze.json (the frozen candidate and committed install); evidence/closure-ssh-v1r.json and evidence/inventory-sshd-v1r.json (the accepted closure); build-0.0.43.json (the rebound 0.0.43 install identity); legacy-md-init-fix.json (the extended legacy digest NULL-deref repair). v1n is c63fc23de (libcrypto 3901731a) and v1p is ad5913099 (libcrypto c335ac3c): 313 -> 321 reachable files, 155 -> 171 obligations in the pre-repair bound, and neither count is carriable. The repaired bound, accepted at v1r on the GCM-fix install (libcrypto 23ec6944), measures 624 ssh / 623 sshd reachable files and 312 obligations (90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN); element 7 remains FAIL on 81 target-bounded sites; the pre-engine analyzer checkpoint (71 target-bounded, 39 base-slot-partial) was NOT re-measured at 0.0.44, and no obligation is discharged.",
+ "release_candidate": {
+  "version": "0.0.44",
+  "branch": "release/0.0.44",
+  "base": "61dcdcf2b (0.0.43 publication)",
+  "sources": ["adceec204 (analyzer base-slot-partial, tools only)", "afcfdc47e (S-prime engine lock repair, install and freeze)"],
+  "kind": "packaging-and-documentation release",
+  "verification_event": false,
+  "note": "The crate version moved 0.0.43 -> 0.0.44 and the docs were refreshed. No cargo test, clippy, court, closure or rebuild was run for this release. The test count and closure figures below are last-measured values, explicitly not re-measured here."
+ },
  "binding_note": "This status reconciles the campaign summary with the individual receipts. It makes no new discharge or compatibility claim. Mechanism-level and scoped-boundary discharges are recorded separately and are never summed into a consumer graduation.",
  "census": {
   "pinned_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
@@ -1121,17 +1130,17 @@
    "source": "atlas-refresh/openssh-seal-prep.json task_c_seal_gate.fmt_clippy records PASS: cargo clippy --all-targets -- -D warnings (rc 0); atlas-refresh/openssh-final-close.json gates.clippy records the same PASS."
   },
   "library_tests": {
-   "passed": 2230,
+   "passed": 2231,
    "failed": 0,
    "ignored": 52,
-   "total": 2282,
+   "total": 2283,
    "command": "cargo test --lib -- --test-threads=4",
    "thread_count": 4,
-   "source": "measured at 0590d371d (0.0.43 candidate, src/ identical to the 1c2bc4001 install): 2230 passed / 0 failed / 52 ignored / 2282 total, cargo test --lib -- --test-threads=4. Current count, not a floor: atlas-refresh/test-baseline.json.",
-   "parallel": "2230 passed; 0 failed; 52 ignored; 2282 total (cargo test --lib -- --test-threads=4, 0.0.43 candidate).",
-   "serial": "NOT_RUN at 0590d371d: only --test-threads=4 was recorded. The last serial floor is 2204 passed / 0 failed / 52 ignored at the seal-prep identity, which is not this tree.",
-   "ignored_note": "The 52 ignored tests are probes run separately by design; no test was newly ignored and none was removed (+8 tests over the 2274-total record).",
-   "source_tree_note": "The run, the committed install and the v1r closure all use the same src/, Cargo.toml, Cargo.lock and build.rs; the GCM sentinel fix (1c2bc4001) re-emitted the install but changed no test definition."
+   "source": "measured at cc7762e5d during the engine lock-precondition repair: 2231 passed / 0 failed / 52 ignored / 2283 total, cargo test --lib -- --test-threads=4. NOT re-run at 0.0.44: this is the last measured full-library count and a floor for the release tree, not a count taken at 0.0.44. atlas-refresh/test-baseline.json.",
+   "parallel": "2231 passed; 0 failed; 52 ignored; 2283 total (cargo test --lib -- --test-threads=4, engine repair source cc7762e5d).",
+   "serial": "NOT_RUN at cc7762e5d and NOT_RUN at 0.0.44: only --test-threads=4 was recorded. The last serial floor is 2204 passed / 0 failed / 52 ignored at the seal-prep identity, which is not this tree.",
+   "ignored_note": "The 52 ignored tests are probes run separately by design; no test was newly ignored and none was removed (+1 test over the 2282-total record).",
+   "source_tree_note": "The 2231 run predates the comment-only S-prime caller-contract edits, the independent-review commit, and the 0.0.44 version bump. None of those changes a test definition, but the suite was not re-run for the release, so the figure is a floor."
   },
   "phase2_abi_courts": {
    "courts_total": 11,
@@ -1791,6 +1800,30 @@
    "unclassified_reachable_sites": 0
   },
   "boundary_coverage": {"reachable_files_with_receipt": 92, "reachable_files_without_receipt": 0},
+  "base_slot_partial_checkpoint": {
+   "recorded_utc": "2026-10-30",
+   "measured_at": "the pre-engine DSO (libcrypto 23ec6944), before the S-prime rebuild",
+   "target_bounded_before": 81,
+   "target_bounded_after": 71,
+   "base_slot_partial_before": 50,
+   "base_slot_partial_after": 39,
+   "resolved_sites": 10,
+   "reachable_function_digest_unchanged": true,
+   "obligations_unchanged": true,
+   "element_7": "FAIL",
+   "remeasured_at_0_0_44": false,
+   "note": "The analyzer precision checkpoint reduces the target-bounded set from 81 to 71 and base-slot-partial from 50 to 39, proving 10 sites. It changes no obligation and element 7 remains FAIL. It was measured at the pre-engine DSO and is NOT a 0.0.44 measurement.",
+   "source": "evidence/base-slot-partial-summary.json"
+  },
+  "engine_cleanup_discharge": {
+   "state": "APPROVED_WITH_CONDITIONS",
+   "discharged": false,
+   "blocked": true,
+   "obligations_changed": {"DISCHARGED": 0, "BLOCKED": 0, "UNKNOWN": 0},
+   "closure_rerun_at_s_prime": false,
+   "detail": "engine_table_cleanup now documents and enforces the initialised-lock precondition; the idempotence test initialises the lock and C8 pins the NULL-lock no-op. The independent review is APPROVE_WITH_CONDITIONS and the package remains blocked: no obligation is discharged and the closure has not been re-run at S-prime.",
+   "source": "evidence/mechanism-discharge-ENGINE-CLEANUP.json; evidence/mechanism-discharge-ENGINE-CLEANUP-review.json"
+  },
   "downstream_corpus": {
    "status": "GREEN",
    "candidate": "0.0.43",
@@ -1807,7 +1840,7 @@
    "fix": "the guard is `arg < -1`; -1 becomes SIZE_MAX exactly as the authority's size_t, and the provider copies ctx->ivlen and returns 1",
    "consequence": "OpenSSH AES-GCM handshake restored; the v1r closure is dispositionally identical to the accepted v1q run"
   },
-  "note": "The closure is ACCEPTED because no refusal condition fired: the repaired bound is monotone, the admission is a least fixed point, every unresolved symbol is dispositioned, and every reachable file carries a receipt. It does not graduate any family: 222 obligations are contracted but BLOCKED and element 7 is FAIL on 81 target-bounded sites, so SAFE_COMPATIBLE stays 0/33."
+  "note": "The closure is ACCEPTED because no refusal condition fired: the repaired bound is monotone, the admission is a least fixed point, every unresolved symbol is dispositioned, and every reachable file carries a receipt. It does not graduate any family: 222 obligations are contracted but BLOCKED and element 7 is FAIL on 81 target-bounded sites, so SAFE_COMPATIBLE stays 0/33. This closure was not re-run at S-prime or at 0.0.44; the S-prime engine-cleanup package did not change the 90/222/0 split."
  },
  "remaining_obligations": [
   "BOUNDARY and SEAL remain NOT_RUN for the S16-S61 cluster. S27-S30, S34, S39-S41, S49-S51, S56-S58 and S61 are FAST/BATCH; S31/S33/S35/S36/S42/S44/S46/S52/S53/S59/S60 are compatibility measurements; S45 is a distribution/linkage change, S48/S55/S62 are release rebuilds, and S54 is documentation. None of S48-S62 is a BOUNDARY or SEAL gate.",
@@ -1888,7 +1921,11 @@
   "The v1h element-7 PASS was an artefact of which symbol the linker kept; element 7 remains FAIL at S'' with 9 resolvable-in-principle sites and 0 genuinely unbounded sites (element7-regression-v1j.json).",
   "Reachability is non-monotone: 19 of 19 v1h -> v1j reachable-file changes are unexplained by the source diff, so 169 -> 146 obligations is not a progress measurement.",
   "SAFE_COMPATIBLE remains 0/33 and is further away than the earlier deltas implied; the openssh closure still REFUSES and no consumer family graduates.",
-  "CORRECTION (2026-10-28): the `0.0.42 is PREPARED, not published` non-claim above is superseded; 0.0.42 was published 2026-10-27 and 0.0.43 is the unpublished candidate. Publishing remains not a memory-safety result."
+  "CORRECTION (2026-10-30): the `0.0.42 is PREPARED, not published` non-claim above is superseded; 0.0.42 was published 2026-10-27 and 0.0.43 was published 2026-10-30 (checksum 50afe140…). 0.0.44 is the unpublished candidate. Publishing remains not a memory-safety result.",
+  "0.0.44 is a packaging/documentation release, NOT a verification event: no cargo test/clippy, court, closure, BOUNDARY/SEAL gate or rebuild was run for it. The test count and closure figures are last-measured values, explicitly not re-measured at 0.0.44.",
+  "The base-slot-partial checkpoint (target-bounded 81 -> 71, base-slot-partial 50 -> 39, 10 sites proved) was measured at the pre-engine DSO, not at 0.0.44; it changes no obligation and element 7 remains FAIL.",
+  "The engine-cleanup package is APPROVED_WITH_CONDITIONS and still blocked: it discharges no obligation, the closure was not re-run at S-prime, and the 90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN split is unchanged.",
+  "The required CI gates remain red for pre-existing evidence debt (892 prerequisite findings; phases 18/20/23/24/25). Relaxing and then restoring them for the 0.0.43 merge is not a pass and is not repeated as a success here."
  ],
  "reduction_census": {
   "artifact": "atlas-refresh/s19-reduction-census.json",
@@ -2102,6 +2139,16 @@
    "subphase": "v1j",
    "outcome": "Defect repair + re-freeze. Five legacy digest initialisers now refuse md_data-NULL contexts; production uncontracted blockers 325 -> 320; 13 update/final/ctrl callbacks remain BLOCKED. S'' rebuilt once (libcrypto e87a85bd, 0 export changes), ssh/sshd relinked, both L7 workloads pass with negatives, probe 18/18 pass, scratch guard-removal control reproduces SIGSEGV. Closure v1j: 146 obligations, 62 DISCHARGED / 55 BLOCKED / 29 UNKNOWN, both REFUSED; element 7 FAIL (9 target-bounded reachable unresolved sites) and STALE_HASH because S'' is uncommitted.",
    "evidence": "atlas-refresh/openssh-closure-v1j.json"
+  },
+  {
+   "subphase": "bsp",
+   "outcome": "Analyzer base-slot-partial precision at the pre-engine DSO: target-bounded reachable unresolved sites 81 -> 71 and base-slot-partial 50 -> 39, 10 sites proved by the context-object qualification rule; reachable-function digest unchanged and obligations unchanged (90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN). Element 7 remains FAIL. Tools only (forensics/tools/consumer_closure.py); no src/ change. NOT re-measured at 0.0.44.",
+   "evidence": "evidence/base-slot-partial-summary.json"
+  },
+  {
+   "subphase": "v1s",
+   "outcome": "Engine lock-precondition repair and S-prime freeze. engine_table_cleanup now documents and enforces the initialised-lock precondition; the idempotence test initialises the lock and a new C8 pins the NULL-lock no-op. 2231 library tests passed / 0 failed / 52 ignored at cc7762e5d (not re-run for 0.0.44). The independent review is APPROVE_WITH_CONDITIONS but the discharge package is STILL BLOCKED: no obligation is discharged and the closure was not re-run at S-prime. The install was rebuilt at S-prime (libcrypto d720727a / libssl 6baed3ed).",
+   "evidence": "atlas-refresh/v1s-candidate-freeze.json; evidence/mechanism-discharge-ENGINE-CLEANUP.json; evidence/mechanism-discharge-ENGINE-CLEANUP-review.json"
   }
  ],
  "uninitialised_storage_census": {
@@ -2255,19 +2302,19 @@
   {
    "id": "ELEMENT-7-PRECISION",
    "status": "OPEN — FAIL",
-   "detail": "Element 7 remains FAIL: 141 reachable unresolved indirect sites, of which 81 are target-bounded (no contract establishes the target set) and 60 are contract-bounded (46 ABI_CONTRACT_EXPORT_CALLBACK + 14 ABI_CONTRACT_PROVIDER); 0 are unclassified. The 194 -> 81 target-bounded reduction is real, but 81 sites still lack a bounded target set, so element 7 cannot be ESTABLISHED and no family graduates.",
-   "evidence": "evidence/inventory-sshd-v1r.json (element_7, precision_totals); evidence/closure-ssh-v1r.json (precision)"
+   "detail": "Element 7 remains FAIL: in the accepted v1r closure, 141 reachable unresolved indirect sites, of which 81 are target-bounded (no contract establishes the target set) and 60 are contract-bounded (46 ABI_CONTRACT_EXPORT_CALLBACK + 14 ABI_CONTRACT_PROVIDER); 0 are unclassified. A later analyzer precision checkpoint at the pre-engine DSO reduced the target-bounded set to 71 (base-slot-partial 50 -> 39, 10 sites proved) with the reachable-function digest unchanged and obligations unchanged. That checkpoint is NOT re-measured at 0.0.44 and does not change the FAIL verdict: sites still lack a bounded target set, so element 7 cannot be ESTABLISHED and no family graduates.",
+   "evidence": "evidence/inventory-sshd-v1r.json (element_7, precision_totals); evidence/closure-ssh-v1r.json (precision); evidence/base-slot-partial-summary.json (pre-engine checkpoint, not re-measured at 0.0.44)"
   },
   {
    "id": "CONTRACTED-OBLIGATIONS-BLOCKED",
    "status": "222 BLOCKED",
-   "detail": "The accepted v1r closure carries 312 reachable production obligations: 90 DISCHARGED, 222 contracted but BLOCKED, 0 UNKNOWN. Every reachable file now carries a receipt (92 files, 0 unreceipted), so the 222 are not missing-boundary refusals; they are mechanisms whose safety contracts are recorded but not discharged. SAFE_COMPATIBLE remains 0/33 until they are discharged within each family's dependency closure.",
-   "evidence": "evidence/closure-ssh-v1r.json (counts); evidence/inventory-sshd-v1r.json (boundary_coverage)"
+   "detail": "The accepted v1r closure carries 312 reachable production obligations: 90 DISCHARGED, 222 contracted but BLOCKED, 0 UNKNOWN. Every reachable file carries a receipt (92 files, 0 unreceipted), so the 222 are not missing-boundary refusals; they are mechanisms whose safety contracts are recorded but not discharged. The S-prime engine-cleanup package is APPROVED_WITH_CONDITIONS but remains blocked: it documents and enforces a previously hidden lock precondition, yet discharges no obligation, and the closure was not re-run at S-prime. The split therefore remains 90/222/0 and SAFE_COMPATIBLE remains 0/33 until the obligations are discharged within each family's dependency closure.",
+   "evidence": "evidence/closure-ssh-v1r.json (counts); evidence/inventory-sshd-v1r.json (boundary_coverage); evidence/mechanism-discharge-ENGINE-CLEANUP.json; evidence/mechanism-discharge-ENGINE-CLEANUP-review.json"
   },
   {
    "id": "RELEASE-EVIDENCE-DEBT",
    "status": "OPEN",
-   "detail": "The release-evidence planes are stale relative to 0.0.43 and were not re-measured in this documentation pass: FRF still carries 143 manifests at 0.0.27; the Phase-18 unsafe-bounds ratchet is +3,017 real sites and needs a reviewable re-base; the Phase-24 candidate freeze and P1000 counts are pinned to 0.0.27; the Phase-25 planes carry 47k per-file hashes and four Miri findings from the 0.0.27 candidate; and 892 prerequisite findings are correctly gated until the stale strata seal. The required `main` CI check is red. No gate in this list may be read as passed.",
+   "detail": "The release-evidence planes are stale relative to 0.0.44 and were not re-measured in this documentation pass: FRF still carries 143 manifests at 0.0.27; the Phase-18 unsafe-bounds ratchet is +3,017 real sites and needs a reviewable re-base; the Phase-24 candidate freeze and P1000 counts are pinned to 0.0.27; the Phase-25 planes carry 47k per-file hashes and four Miri findings from the 0.0.27 candidate; and 892 prerequisite findings are correctly gated until the stale strata seal. The required CI gates remain red for this pre-existing evidence debt (892 prerequisite findings; phases 18/20/23/24/25); they were relaxed and then restored for the 0.0.43 merge, and that is not a success. The 0.0.44 release is a packaging/documentation event, NOT a verification event. No gate in this list may be read as passed.",
    "evidence": "forensics/phase-state.json; forensics/atlas/prerequisite-gate.json; docs/PHASE-24-DOWNSTREAM-1000-SEAL.md; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md"
   }
  ],

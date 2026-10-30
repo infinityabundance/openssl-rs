@@ -1,15 +1,15 @@
 {
   "command": "cargo test --lib -- --test-threads=4",
   "thread_count": 4,
-  "source_commit": "0590d371d2a9b30a19f9d70dc3fee9e33f3a0d90",
-  "source_commit_note": "HEAD of stage/p25/analyzer-corpus at the run. The tracked tree is clean: 0590d371d adds only the v1r closure and inventory evidence; src/, Cargo.toml, Cargo.lock and build.rs are identical to 1c2bc4001 (the GCM SET_IV_FIXED sentinel fix that re-emitted the install).",
+  "source_commit": "cc7762e5d",
+  "source_commit_note": "Measured during the engine lock-precondition repair (fix(engine): make the engine-lock precondition explicit and test it), which is the source that produced the S' install. Later commits are the independent review verdict (174abb8b9), nine comment-only caller-contract edits and the rebuilt install (afcfdc47e), the analyzer base-slot-partial tooling (adceec204), and the 0.0.44 version bump. No later commit changes executable test behaviour, but the count was NOT re-run for the 0.0.44 release.",
   "measured_utc": "2026-10-30",
-  "passed": 2230,
+  "passed": 2231,
   "failed": 0,
   "ignored": 52,
-  "total": 2282,
+  "total": 2283,
   "kind": "full-library-run",
-  "source_tree_unchanged": true,
-  "source_tree_unchanged_note": "2230 passed / 0 failed / 52 ignored is the current count at the 0.0.43 candidate, not a floor. The tree the suite ran on is the same src/, Cargo.toml, Cargo.lock and build.rs that the committed install (build-0.0.43.json, libcrypto 23ec6944 / libssl 493795c2, rebuilt at 1c2bc4001) describes.",
-  "note": "Current run: 2,230 passed / 0 failed / 52 ignored / 2,282 total (0 measured, 0 filtered out). Previous records: 2,222/0/52/2,274 at 2e90cbc6e (superseded); 2,213/0/52/2,265 at the S'' floor (superseded); the older documented floor 1,962/0/42 (commit a8676158f) is superseded by every later run. Growth is +8 tests against the 2,274 total with no removed test and no newly ignored test (0 newly ignored; 52 ignored, unchanged)."
+  "source_tree_unchanged": false,
+  "source_tree_unchanged_note": "False by construction: the run predates the comment-only S' delta and the release version bump. 2231 passed / 0 failed / 52 ignored is the last measured full-library count, not a count taken at the 0.0.44 tree. It is a floor for 0.0.44: a full-suite pass at the release tree is NOT_RUN.",
+  "note": "Current record: 2,231 passed / 0 failed / 52 ignored / 2,283 total (0 measured, 0 filtered out), cargo test --lib -- --test-threads=4. Previous record: 2,230/0/52/2,282 at 0590d371d (the 0.0.43 candidate; superseded). The older documented floor 1,962/0/42 (commit a8676158f) is superseded by every later run. Growth is +1 test against the 2,282 total with no removed test and no newly ignored test (0 newly ignored; 52 ignored, unchanged). NOT re-run for the 0.0.44 release: 0.0.44 is a packaging/documentation release, not a verification event."
 }

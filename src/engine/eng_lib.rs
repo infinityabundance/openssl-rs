@@ -679,7 +679,9 @@ pub(crate) unsafe fn engine_cleanup_add_last(cb: Option<EngineCleanupCb>) -> c_i
 /// unreachable until `engine_cleanup_int` is called (see the module header).
 ///
 /// # Safety
-/// `item` must be a live `EngineCleanupItem`.
+/// `item` must be a live `EngineCleanupItem`. The engine lock must be initialised (non-NULL)
+/// and must not be held by this thread when the item's callback runs: the engine-table
+/// callbacks take it themselves, and a NULL lock makes their cleanup a no-op.
 #[allow(dead_code)] // unreachable until `engine_cleanup_int` is named by `OPENSSL_cleanup`
 unsafe extern "C" fn engine_cleanup_cb_free(item: *mut c_void) {
     let item = item.cast::<EngineCleanupItem>();
