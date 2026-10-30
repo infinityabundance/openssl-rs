@@ -13,6 +13,16 @@
 > P1000 counts and custodian/multitrack re-derivation). Phases 7 and 8 are green. No sentence in
 > this seal is a green CI result.
 
+> **Corpus re-measured at 0.0.43 (2026-10-29).** The machine-owned downstream
+> corpus this seal depends on was re-measured at the current candidate
+> `openssl-rs 0.0.43` (commits `f8f366298` and the GCM-fix `1c2bc4001`;
+> committed install `libcrypto 23ec6944…` / `libssl 493795c2…`): all six
+> families — curl, git, haproxy, nginx, openssh, python — pass,
+> `RT-DOWNSTREAM-CORPUS` passes, and OpenSSH is **31/31** after the
+> `EVP_CTRL_GCM_SET_IV_FIXED -1` sentinel fix. The `0.0.27` corpus figures
+> below are historical. This is a corpus re-measurement, not a re-adjudication
+> of the seal's `complete` predicate.
+
 **STATUS: derived.** This status is not typed; it is the state `forensics/tools/phase_state.py`
 derives from artefact existence. The stratum's obligation ledger is empty of open rows —
 `forensics/phase17-obligations.json` reads `open_in_this_stratum: 0` — every earlier stratum is

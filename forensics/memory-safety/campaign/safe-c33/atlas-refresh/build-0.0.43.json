@@ -1,23 +1,32 @@
 {
   "receipt": "build-0.0.43",
   "kind": "candidate-install-build",
-  "recorded_utc": "2026-10-28",
+  "recorded_utc": "2026-10-30",
   "crate": "openssl-rs",
   "version": "0.0.43",
   "status": "CANDIDATE_BUILD_NOT_PUBLISHED",
-  "purpose": "The install-tree identity of the 0.0.43 working tree, built once with the Phase-2 recipe. It is the identity rendered into README.md and STATUS-2026-10-20.md. It is a repository build identity: 0.0.43 is not published, and the published crate ships source and documentation only, with no binaries.",
+  "purpose": "The install-tree identity of the 0.0.43 working tree at the v1r closure freeze. It is the identity rendered into README.md and STATUS-2026-10-20.md. It is a repository build identity: 0.0.43 is not published, and the published crate ships source and documentation only, with no binaries.",
+  "rebinding": {
+    "rebound_utc": "2026-10-30",
+    "previous_identity": "ad5913099 / libcrypto dadb0263 / libssl 45420e07 (preserved verbatim under superseded_builds[0])",
+    "cause": "the GCM SET_IV_FIXED -1 sentinel fix (1c2bc4001) re-emitted the install; the committed install is now libcrypto 23ec6944 / libssl 493795c2, as measured by v1r-candidate-freeze.json and evidence/closure-ssh-v1r.json",
+    "candidate_head": "0590d371d adds only the v1r closure and inventory evidence; src/, Cargo.toml, Cargo.lock and build.rs are identical to 1c2bc4001, so the frozen source-tree digest is unchanged",
+    "no_new_measurement": "no cold rebuild was performed here; the hashes are the committed install measured at the v1r freeze"
+  },
 
   "source_identity": {
     "candidate_branch": "stage/p25/analyzer-corpus",
-    "measured_source_commit": "ad5913099732821d2e95d03823dd38e501d73481",
-    "measured_source_commit_subject": "fix(evp): restore the authority's unconditional skey destructor; adjudicate wrap cleanse",
-    "measured_source_tree_digest": "a1d8c9fc642b9f4c97e325e4f876a5e50b8a0a9406cb23f5ec59b397d5092bc2",
-    "measured_source_tree_digest_rule": "sha256 over canonical JSON of sorted [relpath, size, sha256] for src/, Cargo.toml, Cargo.lock, build.rs (v1p-candidate-freeze.json, computed by forensics/tools/phase7_courts.py::_source_tree_digest)",
-    "build_head": "2e90cbc6ef4650a70fd70458bd2d277a4ca2e1ce",
-    "build_source_tree_digest": "6a07d7933154cae3642858cc982651df0668661d11ad9b4c0737e7a5d03ffdd9",
-    "build_source_tree_digest_rule": "same rule; 887 files (src/, Cargo.toml, Cargo.lock, build.rs), recorded by forensics/tools/phase7_courts.py and phase8_courts.py `candidate-source-tree` inputs",
-    "manifest_delta_from_measured_source": "Cargo.toml version 0.0.42 -> 0.0.43 and documentation URL -> https://docs.rs/openssl-rs; Cargo.lock openssl-rs entry 0.0.42 -> 0.0.43; no Rust source, build.rs, build script, test or tool changed. The two tree digests differ because the digest includes the manifest.",
-    "working_tree_at_build": "dirty only by the manifest bump above (Cargo.toml, Cargo.lock) and by the tracked install-tree binaries this rebuild rewrote; no src/ file differs from ad5913099."
+    "measured_source_commit": "0590d371d2a9b30a19f9d70dc3fee9e33f3a0d90",
+    "measured_source_commit_subject": "evidence(openssh): re-freeze the closure at the GCM-fix install",
+    "measured_source_tree_digest": "22a58468d5db58da90dd99044682a5303dbef0938ac2789be0eb5406cfb7d58d",
+    "measured_source_tree_digest_rule": "sha256 over canonical JSON of sorted [relpath, size, sha256] for src/, Cargo.toml, Cargo.lock, build.rs (v1r-candidate-freeze.json, computed by forensics/tools/phase7_courts.py::_source_tree_digest)",
+    "install_source_commit": "1c2bc40011d8f94ba3e8b37f43220acd9f6b52f0",
+    "install_source_commit_note": "fix(evp): forward the documented GCM whole-IV sentinel to the provider; this commit re-emitted the install and re-ran the Phase-2 ABI courts",
+    "build_head": "1c2bc40011d8f94ba3e8b37f43220acd9f6b52f0",
+    "build_source_tree_digest": "22a58468d5db58da90dd99044682a5303dbef0938ac2789be0eb5406cfb7d58d",
+    "build_source_tree_digest_rule": "same rule; 887 files (src/, Cargo.toml, Cargo.lock, build.rs), identical at 1c2bc4001 and 0590d371d",
+    "manifest_delta_from_measured_source": "none: the tracked tree is clean at 0590d371d, and the digest covers the same src/, Cargo.toml, Cargo.lock and build.rs at both 1c2bc4001 and the candidate head",
+    "working_tree_at_build": "clean at 0590d371d; the v1r freeze records no tracked or untracked change at the candidate"
   },
 
   "build": {
@@ -31,15 +40,16 @@
       "receipt": "artifacts/phase2/COURTS.json",
       "all_pass": true,
       "courts": 11,
-      "passed": 11
+      "passed": 11,
+      "source": "emitted by the install rebuild that 1c2bc4001 commits; re-bound, not re-run, at the v1r freeze"
     }
   },
 
   "artefacts": {
     "libcrypto.so.3": {
       "path": "artifacts/phase2/install/lib/libcrypto.so.3",
-      "sha256": "dadb0263f1eab453dc8717a9c1851772ffed7660eeeced29d79d7b206cec7fb3",
-      "size": 16848920,
+      "sha256": "23ec6944fb9d8f8b4037263ad8faff4170d561442d81a99a690c6dc083550409",
+      "size": 16835672,
       "soname": "libcrypto.so.3",
       "needed": ["libgcc_s.so.1", "libc.so.6", "ld-linux-x86-64.so.2"],
       "runpath": null,
@@ -47,8 +57,8 @@
     },
     "libssl.so.3": {
       "path": "artifacts/phase2/install/lib/libssl.so.3",
-      "sha256": "45420e074339a75e82865b4876030200ffd324cf6667065ab4228a91da1a4be7",
-      "size": 16553800,
+      "sha256": "493795c2eae8496ce808006e86efff133f0ebb6c6a341536a6f5a20c9b8710a9",
+      "size": 16544648,
       "soname": "libssl.so.3",
       "needed": ["libcrypto.so.3", "libgcc_s.so.1", "libc.so.6", "ld-linux-x86-64.so.2"],
       "runpath": null,
@@ -56,8 +66,8 @@
     },
     "legacy.so": {
       "path": "artifacts/phase2/install/lib/ossl-modules/legacy.so",
-      "sha256": "9095ab043d8bdd7149481b7b63b78bba26630696abd89bd196a03ff8487e0b3c",
-      "size": 16520808,
+      "sha256": "8c5961e8717c22ef1a6f1b0f7e4c98686ac3b643aec06c969162a1a3bda9db09",
+      "size": 16511656,
       "soname": null,
       "needed": ["libcrypto.so.3", "libm.so.6", "libgcc_s.so.1", "libc.so.6", "ld-linux-x86-64.so.2"],
       "runpath": "$ORIGIN/..",
@@ -65,20 +75,20 @@
     },
     "openssl": {
       "path": "artifacts/phase2/install/bin/openssl",
-      "sha256": "96508df13d0d8b5990327828d587114be9bbdbc03b9053f91cceeed6072824bc",
-      "size": 12364680,
+      "sha256": "205ca6f0649cc0d67a48c473599101ac39a49ab60bdff341095f2fd91ab56b57",
+      "size": 12351880,
       "dynamic_defined_symbols": null
     }
   },
 
-  "export_counting_rule": "`nm -D --defined-only <file> | wc -l`. This includes the version-node definition symbols the linker emits, so it is 5,906 for libcrypto.so.3 and 608 for libssl.so.3. The owned-export rule (5,896 / 603) strips those version-node definitions. The same rule and the same totals hold on the v1p build (c335ac3c / 292ba997), so the version bump moved no export: 0 added, 0 removed.",
+  "export_counting_rule": "`nm -D --defined-only <file> | wc -l`. This includes the version-node definition symbols the linker emits, so it is 5,906 for libcrypto.so.3 and 608 for libssl.so.3. The owned-export rule (5,896 / 603) strips those version-node definitions. The same rule and the same totals hold at v1p and at this GCM-fix build, so the fix moved no export: 0 added, 0 removed.",
 
   "identity_bound_courts": {
     "phase7": {
       "receipt": "artifacts/phase7/COURTS.json",
       "all_pass": true,
-      "rerun_at_this_build": true,
-      "note": "RT-EVP-SKEY 97/97 and the other Phase-7 courts pass against libcrypto.so.3 dadb0263; the receipt's `candidate-libcrypto-so-3` and `candidate-source-tree` inputs carry this build's digests."
+      "rerun_at_this_build": false,
+      "note": "the Phase-7 courts were last re-run at the 0.0.43 rebuild; the GCM fix changed EVP cipher dispatch and re-ran the Phase-8 cipher court, not the Phase-7 receipt"
     },
     "phase8": {
       "receipt": "artifacts/phase8/COURTS.json",
@@ -86,14 +96,35 @@
       "rerun_at_this_build": true,
       "accepted_divergences_total": 11,
       "accepted_divergences_breakdown": "RT-CIPHER 10 (defltwrap.pad21 D561, rsa.obj_upref.zero_ref_after D562, and nine wrap.pad{1,7,8,9,16,17,20,24}.badaiv / wrap.pad.badicv CVE-2026-63072 entries) + RT-RSA 1",
-      "note": "RT-CIPHER 7291/7291 observations; the 11 divergences are the adjudicated set recorded in forensics/tools/phase8_courts.py."
+      "note": "the GCM sentinel fix added an rt_cipher_probe differential arm; the new observations are identical on both sides and RT-CIPHER passes with only the 10 pre-existing wrap-pad divergences"
     }
   },
 
+  "superseded_builds": [
+    {
+      "recorded_utc": "2026-10-28",
+      "source_identity": {
+        "measured_source_commit": "ad5913099732821d2e95d03823dd38e501d73481",
+        "measured_source_commit_subject": "fix(evp): restore the authority's unconditional skey destructor; adjudicate wrap cleanse",
+        "measured_source_tree_digest": "a1d8c9fc642b9f4c97e325e4f876a5e50b8a0a9406cb23f5ec59b397d5092bc2",
+        "build_head": "2e90cbc6ef4650a70fd70458bd2d277a4ca2e1ce",
+        "build_source_tree_digest": "6a07d7933154cae3642858cc982651df0668661d11ad9b4c0737e7a5d03ffdd9",
+        "manifest_delta_from_measured_source": "Cargo.toml version 0.0.42 -> 0.0.43 and documentation URL -> https://docs.rs/openssl-rs; Cargo.lock openssl-rs entry 0.0.42 -> 0.0.43; no Rust source, build.rs, build script, test or tool changed."
+      },
+      "artefacts": {
+        "libcrypto.so.3": "dadb0263f1eab453dc8717a9c1851772ffed7660eeeced29d79d7b206cec7fb3",
+        "libssl.so.3": "45420e074339a75e82865b4876030200ffd324cf6667065ab4228a91da1a4be7",
+        "legacy.so": "9095ab043d8bdd7149481b7b63b78bba26630696abd89bd196a03ff8487e0b3c",
+        "openssl": "96508df13d0d8b5990327828d587114be9bbdbc03b9053f91cceeed6072824bc"
+      },
+      "superseded_by": "the GCM SET_IV_FIXED sentinel fix (1c2bc4001) re-emitted the install"
+    }
+  ],
+
   "non_claims": [
     "The install-tree hashes describe this repository build. The published crate ships source and documentation only; no binary is in the crate payload.",
-    "Byte reproducibility of the DSOs across toolchains, machines or images is not claimed. The v1p freeze established per-tree reproducibility only inside the pinned court image.",
-    "The 0.0.43 version bump changes no dynamic export and no Rust source; it is not a behavioural change.",
-    "This receipt does not carry any obligation count. The v1n/v1p closure finding (closure-monotonicity-finding.json) blocks carriage."
+    "Byte reproducibility of the DSOs across toolchains, machines or images is not claimed. The v1r freeze establishes committed-install identity only; no cold rebuild was performed for this re-bind.",
+    "The GCM SET_IV_FIXED -1 sentinel fix is a behavioural change (the provider now receives SIZE_MAX and copies ivlen, as the authority returns 1); it moved no obligation count in the v1r closure, which is dispositionally identical to the accepted v1q run.",
+    "This receipt does not carry any obligation count. The accepted v1r closure (evidence/closure-ssh-v1r.json, evidence/inventory-sshd-v1r.json) carries 312 obligations at 90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN, and element 7 remains FAIL."
   ]
 }
