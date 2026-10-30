@@ -28,6 +28,13 @@
 //!   `STACK_OF(X509_NAME)` onto the context or connection; nothing in this slice installs one, so
 //!   `canames` is always NULL and the stack is freed with `OPENSSL_sk_free` rather than a typed
 //!   `sk_X509_NAME_pop_free`.
+//! * **The configuration-context contract is narrower than the authority's.** The authority's
+//!   `SSL_CONF_cmd(3)` documentation states that the context is valid but neither requires nor
+//!   checks exclusive access, and the C implementation performs no such check. This crate's
+//!   [`SSL_CONF_cmd`]/[`SSL_CONF_cmd_argv`] `# Safety` contracts require exclusive access to the
+//!   context and to the `SSL`/`SSL_CTX` it wraps and forbid concurrent mutation. This is a
+//!   documented divergence (`AGENTS.md` §17) that narrows what we accept; it changes no behaviour
+//!   and no return value.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -237,6 +244,23 @@ unsafe fn ssl_set_option(
 }
 
 /// `ssl_match_option` — `ssl_conf.c:146-160`.
+///
+/// # Safety
+///
+/// `cctx` must be non-NULL, aligned, live, initialised and exclusively accessible for the
+/// whole call: on a match this function calls [`ssl_set_option`], which takes `&mut *cctx`
+/// and writes a field of the selected `SSL`/`SSL_CTX`, so no other shared/exclusive
+/// reference to either object and no racing raw access may exist. `tbl` is a safe
+/// reference, so Rust already guarantees its validity; the caller must keep the name it
+/// borrows valid for the call. `elem` must be readable for `len` bytes when `len >= 0`,
+/// or NUL-terminated when `len == -1`; no other value is accepted. `onoff` is an integer
+/// toggle with no pointer obligation.
+///
+/// Authority-derived: `elem`/`len` are `CONF_parse_list`'s element-callback arguments
+/// (`ssl_conf.c:146-160` consumes them the same way); the candidate's only caller is
+/// [`ssl_set_option_list`], which receives them from `CONF_parse_list` at `:490`. The
+/// exclusivity requirement comes from [`ssl_set_option`], not from the authority's
+/// documentation.
 unsafe fn ssl_match_option(
     cctx: *mut SslConfCtx,
     tbl: &SslFlagTbl,
@@ -271,6 +295,24 @@ unsafe fn ssl_match_option(
 }
 
 /// `ssl_set_option_list` — `ssl_conf.c:162-190`.
+///
+/// # Safety
+///
+/// `usr` must be non-NULL and point to a live, initialised `SslConfCtx` that this callback
+/// has exclusive access to for its whole duration: the body reads `tbl`/`ntbl` from the
+/// context and, on a match, reaches [`ssl_match_option`] -> [`ssl_set_option`], which takes
+/// `&mut *cctx` and writes a field of the selected `SSL`/`SSL_CTX`. No other reference and
+/// no racing raw access may exist. `cctx.tbl` must be NULL or point to a live array of
+/// `ntbl` `SslFlagTbl` values that outlives the call (NULL with `ntbl == 0` is the empty
+/// list). `elem` must be NULL or readable for `len` bytes when `len >= 0`, or
+/// NUL-terminated when `len == -1`. The callback stores no pointer to `elem` or `usr`.
+///
+/// Authority-derived: this is the `CONF_parse_list` element callback installed by
+/// [`parse_option_list`] with `usr = cctx` (`:491`); `CONF_parse_list` invokes it
+/// synchronously with the element pointer/length and never retains it. The context table
+/// is set to a frame-local table by `parse_option_list` and cleared before it returns. The
+/// exclusivity requirement is this crate's [`ssl_set_option`] contract, not an
+/// authority-documented one.
 unsafe extern "C" fn ssl_set_option_list(
     elem: *const c_char,
     len: c_int,
@@ -384,6 +426,23 @@ pub(crate) fn ssl_set_version_bound(
 }
 
 /// `min_max_proto` — `ssl_conf.c:335-349`.
+///
+/// # Safety
+///
+/// `cctx` must be non-NULL, aligned, live, initialised and exclusively accessible for the
+/// call. When `cctx.ctx` is non-NULL it must be a live in-crate `SSL_CTX` whose `method` is
+/// a live method table; when `cctx.ssl` is non-NULL it must be a live in-crate `SSL` whose
+/// `defltmeth` is a live method table. `value` must be non-NULL and NUL-terminated (the
+/// body reads it with `CStr::from_ptr`). `bound` must be NULL or a live, aligned, writable
+/// `c_int` that outlives the call; `SSL_CONF_CTX_set_ssl`/`SSL_CONF_CTX_set_ssl_ctx`
+/// establish it as the `min_proto_version`/`max_proto_version` field of that object
+/// whenever `ctx`/`ssl` is non-NULL, and when both are NULL the body returns 0 before
+/// reading `value` or `bound`.
+///
+/// Authority-derived: the protocol-name table and the version-range/method-match rules
+/// are the authority's (`ssl/ssl_conf.c:303-349`, `ssl/statem/statem_lib.c:2107-2156`);
+/// they are behaviour, not pointer-safety preconditions. The live-`method` obligation
+/// rests on `SSL_CTX_new`/`SSL_new`, which install a non-NULL method table.
 unsafe fn min_max_proto(cctx: *mut SslConfCtx, value: *const c_char, bound: *mut c_int) -> c_int {
     // SAFETY: `cctx` is live.
     let c = unsafe { &*cctx };
@@ -454,15 +513,16 @@ unsafe fn parse_option_list(
 /// stores no copy of the pointer. ABI: the `ConfCmdFn`
 /// (`int (*)(SSL_CONF_CTX *, const char *)`) signature the command table stores.
 ///
-/// Established by the sole caller, `SSL_CONF_cmd` (`src/ssl/ssl_conf.rs:1318`): it
-/// refuses a NULL `cctx` at `:1290` and a NULL `value` for a typed row at `:1311`
-/// before the indirect call. `cctx` provenance is `SSL_CONF_CTX_new` (`:1438`), and
-/// `SSL_CONF_CTX_set_ssl`/`_set_ssl_ctx` (`:1561`/`:1605`) establish `ctx`/`ssl` as
+/// Established by the sole caller, `SSL_CONF_cmd` (`src/ssl/ssl_conf.rs:1426`): it
+/// refuses a NULL `cctx` at `:1398` and a NULL `value` for a typed row at `:1419`
+/// before the indirect call. `cctx` provenance is `SSL_CONF_CTX_new` (`:1561`), and
+/// `SSL_CONF_CTX_set_ssl`/`_set_ssl_ctx` (`:1684`/`:1728`) establish `ctx`/`ssl` as
 /// NULL or live in-crate objects. The dispatch holds no shared `&SslConfCtx` across
-/// `:1318` (the `&*cctx` at `:1302` ends with the lookup), but `SSL_CONF_cmd`'s
-/// public `# Safety` (`:1281`) says only "live", so a foreign caller's
-/// no-concurrent-access obligation is authority-derived, not enforced by an
-/// executing candidate path. Returns 1 only when every element matched:
+/// `:1426` (the `&*cctx` at `:1410` ends with the lookup). `SSL_CONF_cmd`'s
+/// public `# Safety` (`:1368`) now requires exclusive access to the context and
+/// to the `SSL`/`SSL_CTX` it wraps and forbids concurrent mutation; the authority
+/// documents neither, so this is a recorded divergence (`AGENTS.md` §17, B46-D1)
+/// that narrows the accepted contract. Returns 1 only when every element matched:
 /// `CONF_parse_list` stops at the first element whose callback returns `<= 0` and
 /// returns that value, so a mixed list may apply its leading matches and still
 /// return 0. `SSL_CONF_cmd` maps `>0` to 2 and every other value to 0.
@@ -496,13 +556,14 @@ unsafe extern "C" fn cmd_Protocol(cctx: *mut SslConfCtx, value: *const c_char) -
 /// NUL-terminated byte string readable for the whole call; the handler stores no
 /// copy of the pointer. ABI: the `ConfCmdFn` signature the command table stores.
 ///
-/// Established by the sole caller, `SSL_CONF_cmd` (`:1318`): NULL `cctx` is refused
-/// at `:1290` and a NULL `value` for a typed row at `:1311` before the call; `cctx`
-/// provenance is `SSL_CONF_CTX_new` (`:1438`) with `set_ssl`/`set_ssl_ctx`
-/// (`:1561`/`:1605`) supplying NULL-or-live members. Exclusivity is established by
-/// construction inside the dispatch but only asserted by `SSL_CONF_cmd`'s public
-/// `# Safety` (`:1281`), which says "live" without forbidding concurrent access;
-/// that part is authority-derived for a foreign caller. This handler additionally
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1426`): NULL `cctx` is refused
+/// at `:1398` and a NULL `value` for a typed row at `:1419` before the call; `cctx`
+/// provenance is `SSL_CONF_CTX_new` (`:1561`) with `set_ssl`/`set_ssl_ctx`
+/// (`:1684`/`:1728`) supplying NULL-or-live members. `SSL_CONF_cmd`'s public
+/// `# Safety` (`:1368`) now requires exclusive access to the context and the
+/// wrapped `SSL`/`SSL_CTX` and forbids concurrent mutation; the authority
+/// documents neither, so this is a recorded divergence (`AGENTS.md` §17, B46-D1)
+/// that narrows the accepted contract. This handler additionally
 /// tolerates a NULL `value` by returning `-3` (authority `ssl_conf.c:411-412`); that
 /// arm is unreachable through `SSL_CONF_cmd`, which refuses NULL first, and the
 /// dispatch maps `-3` to 0. Returns 1 only when every element matched on the parse
@@ -576,13 +637,14 @@ unsafe extern "C" fn cmd_Options(cctx: *mut SslConfCtx, value: *const c_char) ->
 /// NUL-terminated byte string readable for the whole call; the handler stores no
 /// copy of the pointer. ABI: the `ConfCmdFn` signature the command table stores.
 ///
-/// Established by the sole caller, `SSL_CONF_cmd` (`:1318`): NULL `cctx` is refused
-/// at `:1290` and a NULL `value` for a typed row at `:1311`; `cctx` provenance is
-/// `SSL_CONF_CTX_new` (`:1438`) with `set_ssl`/`set_ssl_ctx` (`:1561`/`:1605`)
-/// supplying NULL-or-live members. Exclusivity is established by construction in
-/// the dispatch but only asserted by `SSL_CONF_cmd`'s public `# Safety` (`:1281`),
-/// which says "live" without forbidding concurrent access; that part is
-/// authority-derived for a foreign caller. This handler additionally tolerates a
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1426`): NULL `cctx` is refused
+/// at `:1398` and a NULL `value` for a typed row at `:1419`; `cctx` provenance is
+/// `SSL_CONF_CTX_new` (`:1561`) with `set_ssl`/`set_ssl_ctx` (`:1684`/`:1728`)
+/// supplying NULL-or-live members. `SSL_CONF_cmd`'s public `# Safety` (`:1368`)
+/// now requires exclusive access to the context and the wrapped `SSL`/`SSL_CTX`
+/// and forbids concurrent mutation; the authority documents neither, so this is a
+/// recorded divergence (`AGENTS.md` §17, B46-D1) that narrows the accepted
+/// contract. This handler additionally tolerates a
 /// NULL `value` by returning `-3` (authority `ssl_conf.c:432-433`); that arm is
 /// unreachable through `SSL_CONF_cmd`, which refuses NULL first, and the dispatch
 /// maps `-3` to 0. Returns 1 only when every element matched on the parse path;
@@ -626,13 +688,14 @@ unsafe extern "C" fn cmd_VerifyMode(cctx: *mut SslConfCtx, value: *const c_char)
 /// dispatch refuses it first); the setters parse it into fresh stacks and retain no
 /// reference. ABI: the `ConfCmdFn` signature the command table stores.
 ///
-/// Established by the sole caller, `SSL_CONF_cmd` (`:1318`): NULL `cctx` is refused
-/// at `:1290` and a NULL `value` for a typed row at `:1311`; `cctx` provenance is
-/// `SSL_CONF_CTX_new` (`:1438`) with `set_ssl`/`set_ssl_ctx` (`:1561`/`:1605`)
-/// supplying NULL-or-live members. Exclusivity is established by construction in
-/// the dispatch but only asserted by `SSL_CONF_cmd`'s public `# Safety` (`:1281`),
-/// which says "live" without forbidding concurrent access; that part is
-/// authority-derived for a foreign caller. Returns 1 when the last applied setter
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1426`): NULL `cctx` is refused
+/// at `:1398` and a NULL `value` for a typed row at `:1419`; `cctx` provenance is
+/// `SSL_CONF_CTX_new` (`:1561`) with `set_ssl`/`set_ssl_ctx` (`:1684`/`:1728`)
+/// supplying NULL-or-live members. `SSL_CONF_cmd`'s public `# Safety` (`:1368`)
+/// now requires exclusive access to the context and the wrapped `SSL`/`SSL_CTX`
+/// and forbids concurrent mutation; the authority documents neither, so this is a
+/// recorded divergence (`AGENTS.md` §17, B46-D1) that narrows the accepted
+/// contract. Returns 1 when the last applied setter
 /// succeeded and 0 otherwise. A `NULL` result from `ssl_create_cipher_list` leaves
 /// the previous lists untouched, but the authority's zero-TLS1.2-cipher arm returns
 /// 0 after `ssl_create_cipher_list` has already published new
@@ -665,13 +728,14 @@ unsafe extern "C" fn cmd_CipherString(cctx: *mut SslConfCtx, value: *const c_cha
 /// dispatch refuses it first); the setters parse it and retain no reference. ABI:
 /// the `ConfCmdFn` signature the command table stores.
 ///
-/// Established by the sole caller, `SSL_CONF_cmd` (`:1318`): NULL `cctx` is refused
-/// at `:1290` and a NULL `value` for a typed row at `:1311`; `cctx` provenance is
-/// `SSL_CONF_CTX_new` (`:1438`) with `set_ssl`/`set_ssl_ctx` (`:1561`/`:1605`)
-/// supplying NULL-or-live members. Exclusivity is established by construction in
-/// the dispatch but only asserted by `SSL_CONF_cmd`'s public `# Safety` (`:1281`),
-/// which says "live" without forbidding concurrent access; that part is
-/// authority-derived for a foreign caller. Returns 1 when the last applied setter
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1426`): NULL `cctx` is refused
+/// at `:1398` and a NULL `value` for a typed row at `:1419`; `cctx` provenance is
+/// `SSL_CONF_CTX_new` (`:1561`) with `set_ssl`/`set_ssl_ctx` (`:1684`/`:1728`)
+/// supplying NULL-or-live members. `SSL_CONF_cmd`'s public `# Safety` (`:1368`)
+/// now requires exclusive access to the context and the wrapped `SSL`/`SSL_CTX`
+/// and forbids concurrent mutation; the authority documents neither, so this is a
+/// recorded divergence (`AGENTS.md` §17, B46-D1) that narrows the accepted
+/// contract. Returns 1 when the last applied setter
 /// succeeded and 0 otherwise. `set_ciphersuites` does not replace the TLS 1.3 list
 /// on a parse failure, but the authority's `update_cipher_list` arm
 /// (`ssl_ciph.c:1381-1385`) can return 0 after the TLS 1.3 list and the paired
@@ -703,15 +767,16 @@ unsafe extern "C" fn cmd_Ciphersuites(cctx: *mut SslConfCtx, value: *const c_cha
 /// `CStr::from_ptr`, so a NULL value while `ctx` or `ssl` is live is undefined
 /// behaviour. ABI: the `ConfCmdFn` signature the command table stores.
 ///
-/// Established by the sole caller, `SSL_CONF_cmd` (`:1318`): NULL `cctx` is refused
-/// at `:1290` and a NULL `value` for a typed row at `:1311` before the call; `cctx`
-/// provenance is `SSL_CONF_CTX_new` (`:1438`) with `set_ssl`/`set_ssl_ctx`
-/// (`:1561`/`:1605`) supplying NULL-or-live members and a live `min_version`
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1426`): NULL `cctx` is refused
+/// at `:1398` and a NULL `value` for a typed row at `:1419` before the call; `cctx`
+/// provenance is `SSL_CONF_CTX_new` (`:1561`) with `set_ssl`/`set_ssl_ctx`
+/// (`:1684`/`:1728`) supplying NULL-or-live members and a live `min_version`
 /// whenever `ctx` or `ssl` is non-NULL (when both are NULL, `min_max_proto` returns
-/// 0 before reading `value` or the bound). Exclusivity is established by
-/// construction in the dispatch but only asserted by `SSL_CONF_cmd`'s public
-/// `# Safety` (`:1281`), which says "live" without forbidding concurrent access;
-/// that part is authority-derived for a foreign caller. Returns 1 when
+/// 0 before reading `value` or the bound). `SSL_CONF_cmd`'s public `# Safety`
+/// (`:1368`) now requires exclusive access to the context and the wrapped
+/// `SSL`/`SSL_CTX` and forbids concurrent mutation; the authority documents
+/// neither, so this is a recorded divergence (`AGENTS.md` §17, B46-D1) that
+/// narrows the accepted contract. Returns 1 when
 /// `ssl_set_version_bound` accepts the name, otherwise 0; acceptance does not imply
 /// a write: the bound is written only for `version == 0` and for the matching
 /// `TLS_ANY_VERSION`/`DTLS_ANY_VERSION` arm, while the `_` arm returns true without
@@ -734,15 +799,16 @@ unsafe extern "C" fn cmd_MinProtocol(cctx: *mut SslConfCtx, value: *const c_char
 /// `CStr::from_ptr`, so a NULL value while `ctx` or `ssl` is live is undefined
 /// behaviour. ABI: the `ConfCmdFn` signature the command table stores.
 ///
-/// Established by the sole caller, `SSL_CONF_cmd` (`:1318`): NULL `cctx` is refused
-/// at `:1290` and a NULL `value` for a typed row at `:1311` before the call; `cctx`
-/// provenance is `SSL_CONF_CTX_new` (`:1438`) with `set_ssl`/`set_ssl_ctx`
-/// (`:1561`/`:1605`) supplying NULL-or-live members and a live `max_version`
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1426`): NULL `cctx` is refused
+/// at `:1398` and a NULL `value` for a typed row at `:1419` before the call; `cctx`
+/// provenance is `SSL_CONF_CTX_new` (`:1561`) with `set_ssl`/`set_ssl_ctx`
+/// (`:1684`/`:1728`) supplying NULL-or-live members and a live `max_version`
 /// whenever `ctx` or `ssl` is non-NULL (when both are NULL, `min_max_proto` returns
-/// 0 before reading `value` or the bound). Exclusivity is established by
-/// construction in the dispatch but only asserted by `SSL_CONF_cmd`'s public
-/// `# Safety` (`:1281`), which says "live" without forbidding concurrent access;
-/// that part is authority-derived for a foreign caller. Returns 1 when
+/// 0 before reading `value` or the bound). `SSL_CONF_cmd`'s public `# Safety`
+/// (`:1368`) now requires exclusive access to the context and the wrapped
+/// `SSL`/`SSL_CTX` and forbids concurrent mutation; the authority documents
+/// neither, so this is a recorded divergence (`AGENTS.md` §17, B46-D1) that
+/// narrows the accepted contract. Returns 1 when
 /// `ssl_set_version_bound` accepts the name, otherwise 0; acceptance does not imply
 /// a write: the bound is written only for `version == 0` and for the matching
 /// `TLS_ANY_VERSION`/`DTLS_ANY_VERSION` arm, while the `_` arm returns true without
@@ -1300,7 +1366,28 @@ unsafe fn ctrl_switch_option(cctx: *mut SslConfCtx, idx: usize) -> c_int {
 /// `ssl/ssl_conf.c:970-1010`.
 ///
 /// # Safety
-/// `cctx` NULL or live; `cmd`/`value` NULL or NUL-terminated.
+///
+/// `cctx` must be NULL or point to a live, initialised `SslConfCtx` that this call has
+/// exclusive access to for its whole duration: no other thread may read or write the
+/// context, and no other shared or exclusive reference to it may be live. When
+/// `cctx.ctx`/`cctx.ssl` are non-NULL they must be live in-crate `SSL_CTX`/`SSL` objects
+/// that this call also has exclusive access to: the handlers write their option, verify,
+/// cipher-list and protocol-bound fields, and [`SSL_CONF_cmd_argv`] also writes
+/// `cctx.flags`, so no other thread may mutate or read them concurrently.
+///
+/// `cmd` must be NULL or NUL-terminated and readable for the call. `value` must be
+/// non-NULL and NUL-terminated for every typed row (`value_type != SSL_CONF_TYPE_NONE`);
+/// for a switch row or an unrecognised command the authority permits NULL and this
+/// function never dereferences it on those paths, so NULL is accepted there. Any non-NULL
+/// `value` must be readable for the whole call; no pointer is retained.
+///
+/// Authority-derived / documented divergence (`AGENTS.md` §17): the pinned authority's
+/// `SSL_CONF_cmd(3)` documentation requires neither exclusive access nor the absence of
+/// concurrent mutation, and the C implementation performs no check. This contract
+/// therefore *narrows* what this crate accepts rather than changing behaviour: a caller
+/// that follows the authority's documented usage (configure one `SSL_CTX`/`SSL` through
+/// one context at a time) already satisfies it, while concurrent use is outside the
+/// supported contract rather than silently treated as safe.
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CONF_cmd(
     cctx: *mut SslConfCtx,
@@ -1352,7 +1439,22 @@ pub unsafe extern "C" fn SSL_CONF_cmd(
 /// `ssl/ssl_conf.c:1012-1044`.
 ///
 /// # Safety
-/// `cctx` live; `pargc`/`pargv` per the C contract.
+///
+/// `cctx` must be NULL or a live, initialised `SslConfCtx` with the same exclusive-access
+/// and no-concurrent-mutation requirements as [`SSL_CONF_cmd`], including the
+/// `SSL`/`SSL_CTX` it wraps: this function writes `cctx.flags` before dispatch. `pargc`
+/// must be NULL or point to a live, aligned, writable `c_int` that this call has
+/// exclusive access to. `pargv` must be NULL or point to a live, writable
+/// `*mut *mut c_char` whose `*pargv` is NULL or points to a readable array of
+/// NUL-terminated C strings that this call has exclusive access to: at least `*pargc`
+/// entries when `pargc` is non-NULL and positive, otherwise at least two entries (the
+/// authority reads `argv[0]` and, for a two-argument command, `argv[1]`). When `pargc`
+/// is non-NULL it is decremented by the number of arguments consumed. Neither the array
+/// nor its strings are retained.
+///
+/// Authority-derived / documented divergence (`AGENTS.md` §17): as for [`SSL_CONF_cmd`],
+/// the authority's documentation does not require exclusive access; this contract
+/// narrows what the crate accepts without changing behaviour.
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CONF_cmd_argv(
     cctx: *mut SslConfCtx,
@@ -1691,6 +1793,8 @@ unsafe fn free_cert_filename(c: &mut SslConfCtx) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_lib::{SSL_CTX_free, SSL_CTX_new};
 
     /// The verify-mode words of an `SSL`/`SSL_CTX` are `int`s. Writing them through
     /// a widened `u64` view (as the pre-repair code did for both flag classes) runs
@@ -1786,6 +1890,67 @@ mod tests {
         // SAFETY: `cctx` is live and the NULL arm returns before any dereference.
         let direct = unsafe { cmd_Options(&raw mut cctx, ptr::null()) };
         assert_eq!(direct, -3, "the handler's own NULL arm returns -3");
+    }
+
+    /// C3 control for the `min_max_proto`/`ssl_set_version_bound` contract: a real
+    /// `SSL_CTX`'s bound is written only for a name the authority's protocol table
+    /// recognises, and an unrecognised name is refused without touching the bound.
+    /// Mutating `protocol_from_string`'s unrecognised-name answer (the `-1`) so that
+    /// it returns a valid version makes the refusal assertions fail (recorded in the
+    /// B47 receipt).
+    #[test]
+    fn conf_cmd_min_max_protocol_bounds_are_range_checked() {
+        // SAFETY: the method is a process-lifetime static; the constructor returns an
+        // owned context.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null(), "SSL_CTX_new");
+        // SAFETY: no arguments; the returned context is owned here.
+        let cctx = unsafe { SSL_CONF_CTX_new() };
+        assert!(!cctx.is_null(), "SSL_CONF_CTX_new");
+        // SAFETY: both objects are live and exclusively ours for this test, and both
+        // are released exactly once at the end.
+        unsafe {
+            SSL_CONF_CTX_set_flags(cctx, t::SSL_CONF_FLAG_FILE as c_uint);
+            SSL_CONF_CTX_set_ssl_ctx(cctx, ctx);
+        }
+        // SAFETY: `ctx` is live and exclusively ours; the constructor zeroes both bounds.
+        assert_eq!(unsafe { (*ctx).min_proto_version }, 0);
+
+        // SAFETY: both objects are live and exclusively accessible; the literal is
+        // NUL-terminated and the dispatch refuses any NULL before the handler.
+        let accepted = unsafe { SSL_CONF_cmd(cctx, c"MinProtocol".as_ptr(), c"TLSv1.2".as_ptr()) };
+        assert_eq!(accepted, 2, "a recognised protocol name is accepted");
+        // SAFETY: `ctx` is live and exclusively ours.
+        let written_min = unsafe { (*ctx).min_proto_version };
+        assert_eq!(
+            written_min,
+            t::TLS1_2_VERSION as c_int,
+            "the accepted name writes the live bound"
+        );
+
+        // SAFETY: `ctx` is live and exclusively ours; the read is a plain field access.
+        let before = unsafe { (*ctx).min_proto_version };
+        // SAFETY: as above. "TLSv1.4" is outside the authority's protocol table.
+        let refused = unsafe { SSL_CONF_cmd(cctx, c"MinProtocol".as_ptr(), c"TLSv1.4".as_ptr()) };
+        assert_eq!(refused, 0, "an unrecognised protocol name is refused");
+        // SAFETY: `ctx` is live and exclusively ours.
+        let after_min = unsafe { (*ctx).min_proto_version };
+        assert_eq!(
+            after_min, before,
+            "a refused name leaves the bound untouched"
+        );
+
+        // SAFETY: as above; the dispatch answers -3 without reading `value`.
+        let null = unsafe { SSL_CONF_cmd(cctx, c"MaxProtocol".as_ptr(), ptr::null()) };
+        assert_eq!(null, -3, "a NULL value is refused as a bad value");
+        // SAFETY: `ctx` is live and exclusively ours.
+        assert_eq!(unsafe { (*ctx).max_proto_version }, 0);
+
+        // SAFETY: both objects are live and exclusively ours; each is released once.
+        unsafe {
+            SSL_CONF_CTX_free(cctx);
+            SSL_CTX_free(ctx);
+        }
     }
 
     /// Exercises the multi-element path through `ssl_set_option_list`, which is where

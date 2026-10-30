@@ -738,6 +738,21 @@ unsafe extern "C" fn ssl_cipher_ptr_id_cmp(a: *const c_void, b: *const c_void) -
 }
 
 /// `update_cipher_list_by_id` — `ssl_ciph.c:1325-1341`.
+///
+/// # Safety
+///
+/// `cipher_list_by_id` must be non-NULL and point to a writable slot that this call has
+/// exclusive access to; the slot must hold NULL or a live stack currently owned by the
+/// same `SSL_CTX`/`SSL`, and the old value is freed here. `cipherstack` must be a live
+/// stack of NULL-or-live `*const SSL_CIPHER` entries owned by the caller; it is
+/// duplicated, so the caller retains ownership of `cipherstack`. No other reference to
+/// the slot or to the installed stack may be live for the call.
+///
+/// Authority-derived: the slot/stack ownership split is the authority's
+/// (`ssl_ciph.c:1325-1341`). The candidate establishes it at both callers:
+/// [`update_cipher_list`] (`:828`), whose `cipher_list_by_id` comes from a live
+/// `SSL_CTX`, and `ssl_create_cipher_list` (`:1208`), which passes
+/// `&mut (*ctx).cipher_list_by_id` from a live context.
 unsafe fn update_cipher_list_by_id(
     cipher_list_by_id: *mut *mut OpenSslStack,
     cipherstack: *mut OpenSslStack,
@@ -848,6 +863,20 @@ unsafe extern "C" fn ciphersuite_cb(elem: *const c_char, len: c_int, arg: *mut c
 }
 
 /// `set_ciphersuites` — `ssl_ciph.c:1304-1323`.
+///
+/// # Safety
+///
+/// `currciphers` must be non-NULL and point to a writable slot owned by a live
+/// `SSL_CTX`/`SSL` that this call has exclusive access to; the slot must hold NULL or a
+/// stack the object owns (the old value is freed here). `str_` must be NULL or point to a
+/// NUL-terminated byte string readable for the whole call; no pointer to it is retained.
+/// No other reference to the object or its stack slot may be live for the call.
+///
+/// Authority-derived: the NULL-`str_` arm is the authority's "empty list" behaviour
+/// (`ssl_ciph.c:1304-1323`), and the element callback is `CONF_parse_list`'s contract.
+/// The candidate's callers are `SSL_CTX_set_ciphersuites` (`:1638`) and
+/// `SSL_set_ciphersuites` (`:1668`), which pass `&mut (*ctx).tls13_ciphersuites` /
+/// `&mut (*s).tls13_ciphersuites` from live objects.
 unsafe fn set_ciphersuites(currciphers: *mut *mut OpenSslStack, str_: *const c_char) -> bool {
     // SAFETY: a fresh empty stack.
     let newciphers = OPENSSL_sk_new_null();

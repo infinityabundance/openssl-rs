@@ -1061,6 +1061,17 @@ unsafe fn is_dtls(sc: *const Ssl) -> bool {
 }
 
 /// `SSL_CONNECTION_IS_TLS13(sc)` — `ssl_local.h:265-267`.
+///
+/// # Safety
+///
+/// `sc` must be non-NULL, aligned and point to a live `Ssl` that is not concurrently
+/// written for the call; its `method` field must be NULL or a live method table. The body
+/// only reads `method`/`version` and calls [`is_dtls`].
+///
+/// Authority-derived: the `SSL_CONNECTION_IS_TLS13` predicate (`ssl_local.h:265-267`). The
+/// candidate establishes liveness/shared access through the trace printers, each of whose
+/// `# Safety` requires `sc` live (`:2357`, `:2395`, `:2429`, `:2533`, `:2662`, `:2712`,
+/// `:2742`).
 unsafe fn is_tls13(sc: *const Ssl) -> bool {
     // SAFETY: `sc` is live per the caller's contract.
     let m = unsafe { (*sc).method };
@@ -1074,6 +1085,16 @@ unsafe fn is_tls13(sc: *const Ssl) -> bool {
 }
 
 /// `SSL_USE_SIGALGS(sc)` — `ssl_local.h:284-285`, through the method's `enc_flags` bit.
+///
+/// # Safety
+///
+/// `sc` must be non-NULL, aligned and point to a live `Ssl` that is not concurrently
+/// written for the call; its `method` field must be NULL or a live method table. The body
+/// only reads `method`/`enc_flags`.
+///
+/// Authority-derived: the `SSL_USE_SIGALGS` predicate (`ssl_local.h:284-285`). The
+/// candidate establishes liveness/shared access through the trace printers
+/// (`:1267`, `:2566`), each of whose `# Safety` requires `sc` live.
 unsafe fn use_sigalgs(sc: *const Ssl) -> bool {
     // SAFETY: `sc` is live per the caller's contract.
     !unsafe { (*sc).method }.is_null()

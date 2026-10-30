@@ -1004,6 +1004,20 @@ unsafe fn serverinfo_find_extension(
 }
 
 /// `static int serverinfoex_srv_parse_cb(...)` — `ssl/ssl_rsa.c:637-650`.
+///
+/// # Safety
+///
+/// ABI-only, because this slice installs the callback but never invokes it: the
+/// `custom_ext_method` record in `src/ssl/statem/extensions_cust.rs` stores the erased
+/// add/parse pointers and records that this slice never calls either. If an invocation is
+/// added, the `SSL_custom_ext_parse_cb_ex` contract applies: `s` must be a live
+/// connection, `in` must be NULL or readable for `inlen` bytes, and `al` must be non-NULL
+/// and point to a writable `int` for the call (this body writes `*al` whenever
+/// `inlen != 0`). `ext_type`, `context`, `x`, `chainidx` and `arg` are unread here.
+///
+/// Authority-derived: the signature and the `al`/`in` contract are the authority's
+/// (`ssl.h:337`, `ssl/ssl_rsa.c:637-650`). Installation is by [`serverinfo_process_buffer`]
+/// (`:1176`) through `SSL_CTX_add_custom_ext` with `arg = NULL`.
 unsafe extern "C" fn serverinfoex_srv_parse_cb(
     _s: *mut Ssl,
     _ext_type: c_uint,
@@ -1030,6 +1044,16 @@ const SSL_AD_DECODE_ERROR: c_int = 50;
 const SSL_AD_INTERNAL_ERROR: c_int = 80;
 
 /// `static int serverinfo_srv_parse_cb(...)` — `ssl/ssl_rsa.c:652-658`.
+///
+/// # Safety
+///
+/// Same ABI-only status as [`serverinfoex_srv_parse_cb`]: installed by
+/// [`serverinfo_process_buffer`] (`:1165`) as the old-style `custom_ext_parse_cb` and never
+/// invoked at this identity. On invocation, `s` must be live, `in` NULL or readable for
+/// `inlen`, and `al` non-NULL and writable; this body forwards every pointer unchanged to
+/// `serverinfoex_srv_parse_cb`.
+///
+/// Authority-derived: `ssl.h:321` and `ssl/ssl_rsa.c:652-658`.
 unsafe extern "C" fn serverinfo_srv_parse_cb(
     s: *mut Ssl,
     ext_type: c_uint,
@@ -1043,6 +1067,18 @@ unsafe extern "C" fn serverinfo_srv_parse_cb(
 }
 
 /// `static int serverinfoex_srv_add_cb(...)` — `ssl/ssl_rsa.c:660-696`, reduced (see header).
+///
+/// # Safety
+///
+/// No caller-independent precondition on the argument values: the body ignores `s`,
+/// `out`, `outlen`, `x`, `al` and `arg` and returns 0, so NULL, dangling or unaligned
+/// values are not dereferenced. The obligation is the ABI: it may only be installed as the
+/// ex-style add callback (`SSL_custom_ext_add_cb_ex`) of `SSL_CTX_add_custom_ext`, which
+/// [`serverinfo_process_buffer`] does at `:1173`. It is never invoked at this identity
+/// (`extensions_cust.rs` stores the erased pointer without calling it).
+///
+/// Authority-derived: the signature is `ssl.h:325`; the reduced body follows
+/// `ssl/ssl_rsa.c:660-696` only as far as refusing to publish serverinfo.
 unsafe extern "C" fn serverinfoex_srv_add_cb(
     _s: *mut Ssl,
     _ext_type: c_uint,
