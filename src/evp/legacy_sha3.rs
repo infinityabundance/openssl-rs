@@ -380,31 +380,39 @@ unsafe extern "C" fn shake_init(ctx: *mut EvpMdCtx) -> c_int {
 ///
 /// # Safety
 ///
-/// `evp_ctx` must be NULL or point to a live `EVP_MD_CTX` whose `md_data` is either NULL or a
-/// writable `KeccakCtx`; `_p2` is not read and `p1` is an integer length. A NULL context or a NULL
-/// block answers `0` without a dereference (`docs/SECURITY_DIVERGENCE_POLICY.md`,
-/// `D-LEGACY-MD-CALLBACK-MD-DATA-1`); the authority would write through the NULL block.
+/// `evp_ctx` must be NULL or point to a live `EVP_MD_CTX` whose block and method establish a
+/// writable `KeccakCtx` with a positive `md_size`, as [`init_keccak`] requires; `_p2` is not read
+/// and `p1` is an integer length. A NULL context, a NULL block, a NULL method, a too-small
+/// `app_datasize` and a non-positive `md_size` all answer `0` before the write
+/// (`docs/SECURITY_DIVERGENCE_POLICY.md`, `D-LEGACY-MD-CALLBACK-MD-DATA-1`); the authority would
+/// write `md_size` through the undersized block. When the method is not one of the two SHAKE
+/// tables, the block *type* is not established by the context; the guard establishes its extent
+/// from the caller's declared `app_datasize`, exactly as `init_keccak` does for the initialiser.
 unsafe extern "C" fn shake_ctrl(
     evp_ctx: *mut EvpMdCtx,
     cmd: c_int,
     p1: c_int,
     _p2: *mut c_void,
 ) -> c_int {
-    if evp_ctx.is_null() {
+    // SAFETY: `evp_ctx` is NULL or live per the callback's contract, and both SHAKE table objects
+    // are live static methods.
+    let Some((kctx, _md_size)) = (unsafe {
+        init_keccak(
+            evp_ctx,
+            &[
+                core::ptr::addr_of!(SHAKE128_MD.0),
+                core::ptr::addr_of!(SHAKE256_MD.0),
+            ],
+        )
+    }) else {
         return 0;
-    }
-    // SAFETY: `evp_ctx` is non-NULL per the check above and is the live context.
-    let raw = unsafe { (*evp_ctx).md_data };
-    if raw.is_null() {
-        return 0;
-    }
-    let kctx = raw.cast::<KeccakCtx>();
+    };
 
     match cmd {
         EVP_MD_CTRL_XOF_LEN => {
-            // SAFETY: `kctx` is the live context's block, a `KECCAK1600_CTX`. The `int`-to-`usize`
-            // cast is the authority's `int`-to-`size_t` assignment; the length is non-negative in
-            // every call `EVP_DigestSqueeze` makes.
+            // SAFETY: `init_keccak` established a writable `KeccakCtx` and a positive `md_size`.
+            // The `int`-to-`usize` cast is the authority's `int`-to-`size_t` assignment; the
+            // length is non-negative in every call `EVP_DigestSqueeze` makes.
             unsafe { (*kctx).md_size = p1 as usize };
             1
         }
@@ -768,5 +776,102 @@ mod tests {
         // SAFETY: `ctx` is live, bound to `shake_md`, and `store` is a writable context.
         let initialised = unsafe { init(&mut ctx) };
         assert_eq!(initialised, 1, "init refused a writable md_data");
+    }
+
+    /// A C caller can build a method with `EVP_MD_meth_new`, give it an 8-byte `app_datasize` and
+    /// install the exported `shake_ctrl`. `EVP_DigestInit_ex`'s legacy arm allocates that 8-byte
+    /// block and `shake_init` refuses it, leaving `md_data` valid but undersized. The control must
+    /// refuse *before* it writes `KeccakCtx::md_size`, which is hundreds of bytes into the
+    /// structure. Before the guard this returned 1 and performed the out-of-bounds write.
+    #[test]
+    fn legacy_shake_ctrl_refuses_undersized_md_data() {
+        use crate::evp::digest::{
+            EVP_DigestInit_ex, EVP_MD_CTX_ctrl, EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_meth_free,
+            EVP_MD_meth_get_ctrl, EVP_MD_meth_get_init, EVP_MD_meth_new,
+            EVP_MD_meth_set_app_datasize, EVP_MD_meth_set_ctrl, EVP_MD_meth_set_init,
+            EVP_MD_meth_set_result_size,
+        };
+
+        // SAFETY: both getters answer the live static SHAKE-128 method's own callbacks.
+        let ctrl = unsafe { EVP_MD_meth_get_ctrl(EVP_shake128()) }.expect("shake_md has a ctrl");
+        // SAFETY: as above.
+        let init = unsafe { EVP_MD_meth_get_init(EVP_shake128()) }.expect("shake_md has an init");
+
+        // SAFETY: `EVP_MD_meth_new` allocates a fresh method this test owns.
+        let md = unsafe { EVP_MD_meth_new(NID_shake128, 0) };
+        assert!(!md.is_null(), "EVP_MD_meth_new answered NULL");
+        // SAFETY: `md` is the fresh method above; each setter writes one still-zero field.
+        unsafe {
+            assert_eq!(EVP_MD_meth_set_result_size(md, SHAKE128_DIGEST_LENGTH), 1);
+            assert_eq!(EVP_MD_meth_set_app_datasize(md, 8), 1);
+            assert_eq!(EVP_MD_meth_set_init(md, Some(init)), 1);
+            assert_eq!(EVP_MD_meth_set_ctrl(md, Some(ctrl)), 1);
+        }
+
+        let ctx = EVP_MD_CTX_new();
+        assert!(!ctx.is_null(), "EVP_MD_CTX_new answered NULL");
+        // SAFETY: `ctx` and `md` are live. The legacy arm allocates the 8-byte block, and
+        // `shake_init` refuses it because the method is not one of the SHAKE tables and 8 is
+        // smaller than a `KeccakCtx`; the block nevertheless exists and the context owns it.
+        let initialised = unsafe { EVP_DigestInit_ex(ctx, md, core::ptr::null_mut()) };
+        assert_eq!(initialised, 0, "shake_init accepted an 8-byte md_data");
+
+        // SAFETY: `ctx` is live and its legacy init arm allocated the block, so it is readable
+        // for the eight bytes the method declared.
+        let (block, before) = unsafe {
+            let raw = (*ctx).md_data;
+            assert!(!raw.is_null(), "the legacy arm did not allocate md_data");
+            let mut before = [0u8; 8];
+            before.copy_from_slice(core::slice::from_raw_parts(raw.cast::<u8>(), 8));
+            (raw, before)
+        };
+
+        // SAFETY: `ctx` is live and the command needs no argument buffer. The callback must
+        // refuse before it treats the 8-byte block as a `KeccakCtx`.
+        let refused =
+            unsafe { EVP_MD_CTX_ctrl(ctx, EVP_MD_CTRL_XOF_LEN, 32, core::ptr::null_mut()) };
+        assert_eq!(
+            refused, 0,
+            "shake_ctrl wrote KeccakCtx::md_size into an 8-byte md_data"
+        );
+
+        // SAFETY: the block is still the eight bytes the legacy arm allocated.
+        let after = unsafe {
+            let mut after = [0u8; 8];
+            after.copy_from_slice(core::slice::from_raw_parts(block.cast::<u8>(), 8));
+            after
+        };
+        assert_eq!(after, before, "the refused control modified md_data");
+
+        // Retryable: a second identical call is refused the same way and still writes nothing.
+        // SAFETY: as the first call.
+        let retried =
+            unsafe { EVP_MD_CTX_ctrl(ctx, EVP_MD_CTRL_XOF_LEN, 32, core::ptr::null_mut()) };
+        assert_eq!(retried, 0, "a retried control was not refused identically");
+
+        // A context that does contain a writable `KeccakCtx` still succeeds, so the guard leaves
+        // the authority's result for a valid call intact.
+        let mut store = core::mem::MaybeUninit::<KeccakCtx>::uninit();
+        let mut valid = bound_context(EVP_shake128(), store.as_mut_ptr().cast());
+        // SAFETY: `store` is writable and `valid` is live, bound to `shake_md`.
+        unsafe {
+            assert_eq!(init(&mut valid), 1, "init refused a writable md_data");
+            assert_eq!(
+                EVP_MD_CTX_ctrl(&mut valid, EVP_MD_CTRL_XOF_LEN, 32, core::ptr::null_mut()),
+                1,
+                "a valid KeccakCtx was refused"
+            );
+            assert_eq!(
+                (*store.as_ptr()).md_size,
+                32,
+                "the XOF length was not stored"
+            );
+        }
+
+        // SAFETY: `ctx` and `md` are this test's own objects, released exactly once each.
+        unsafe {
+            EVP_MD_CTX_free(ctx);
+            EVP_MD_meth_free(md);
+        }
     }
 }
