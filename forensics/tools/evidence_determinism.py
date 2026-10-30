@@ -510,61 +510,10 @@ GENERATORS_BEFORE_LEDGERS = [
     # and the `MS-PHASE24-SAFETY-COVERAGE` court re-runs the same pure checks over the committed
     # artefact, the census and the committed 25.6/25.7/25.8 and Phase-24 planes.
     "forensics/tools/ms_phase24_safety_coverage.py",
-    # **Phase 25.15's historical CVE census (`forensics/tools/ms_historical_cve.py` ->
-    # `artifacts/phase25/historical-cves.json`) is a pure function of committed inputs too, so it
-    # belongs here and is byte-compared.** It classifies the historical memory-safety-relevant
-    # OpenSSL CVEs from the closed CVE taxonomy, reading the frozen official vulnerability index and
-    # the advisories it carries (`forensics/multitrack/security-source.json`) for the advisory text,
-    # the affected ranges and the commit URLs, the committed security lineage
-    # (`forensics/multitrack/security-lineage.json`) for the bound CVE records, 25.1's census for the
-    # candidate region paths and their compiler-derived unsafe-operation counts, and 25.2's non-Rust
-    # TCB for the layer a resolved region belongs to. It compiles nothing -- no compiler, no tool, no
-    # probe -- so `forensics/memory-safety/container.json` lists it `metadata_only` and the
-    # Docker-only guard admits it on any host, exactly as `ms_phase24_safety_coverage` is. A stale
-    # committed census -- or a dropped CVE, a fabricated CVE the committed evidence does not
-    # classify, a class outside the taxonomy, a typed count, an untraceable mechanism or an unjoined
-    # region read as correspondent without its residual -- is a failure rather than a silent
-    # divergence, and the `MS-HISTORICAL-CVE` court re-runs the same pure checks over the committed
-    # artefact and the committed evidence.
-    "forensics/tools/ms_historical_cve.py",
-    # **Phase 25.17's vulnerability-mechanism reconciliation
-    # (`forensics/tools/ms_mechanism_reconciliation.py` ->
-    # `artifacts/phase25/mechanisms.json`) is a pure function of committed inputs too, so it
-    # belongs here and is byte-compared.** It reconciles each historical memory-corruption
-    # mechanism the 25.15 census classified against the committed 25.16 replay, the committed 25.1
-    # census (the candidate regions, sites and unsafe contexts), the committed 25.2 non-Rust TCB,
-    # the committed 25.7 exposure classification, the committed 25.8 reduction axis and the
-    # committed 25.9-25.12 evidence planes (Miri, ASan/MSan, TSan, Kani), giving each mechanism a
-    # disposition in the closed vocabulary (ELIMINATED / RELOCATED_TO_BOUNDARY / HIDDEN / PRESENT /
-    # UNRESOLVED), a structural-immunity reason that cites the 25.16 replay's own structure, and an
-    # honest residual where the operation survives. It compiles nothing -- no compiler, no tool, no
-    # probe -- so `forensics/memory-safety/container.json` lists it `metadata_only` and the
-    # Docker-only guard admits it on any host, exactly as `ms_historical_cve` is. A stale committed
-    # reconciliation -- or a dropped mechanism, a fabricated mechanism, a disposition outside the
-    # vocabulary, a disposition with no evidence, a surviving operation read as ELIMINATED, a typed
-    # count or a non-extinct mechanism with no residual -- is a failure rather than a silent
-    # divergence, and the `MS-MECHANISM-RECONCILIATION` court re-runs the same pure checks over the
-    # committed artefact and the committed evidence.
-    "forensics/tools/ms_mechanism_reconciliation.py",
-    # **Phase 25.18's red team (`forensics/tools/ms_red_team.py` -> `artifacts/phase25/red-team.json`)
-    # is a pure function of committed inputs too, so it belongs here and is byte-compared.** It
-    # attacks the atlas's own claims: it tries to falsify "no unexplained reachable unsafe site" by
-    # hunting a reachable site the atlas left unexplained, UNKNOWN or unreachable, a claimed-safe
-    # site the committed Phase-22 typed edges reach from a public root, an UNREACHABLE_PROFILE or
-    # tool NOT_REACHABLE classification with no witness, an unpreserved discovered failure or a
-    # reachable site dropped from a plane -- reasoning only over the committed 25.7 exposure
-    # classification and its witnesses, the committed Phase-22 atlas through 25.5's crosswalk, the
-    # committed 25.8 reduction axis, the committed 25.13 fuzz crosswalk and its hostile corpus, the
-    # committed 25.14 coverage, the committed 25.17 mechanisms, the committed 25.9-25.12 evidence
-    # planes and the committed 25.16 replay index. It compiles nothing -- no compiler, no tool, no
-    # probe -- so `forensics/memory-safety/container.json` lists it `metadata_only` and the
-    # Docker-only guard admits it on any host, exactly as `ms_mechanism_reconciliation` is. A stale
-    # committed red team -- or a gap with no residual, an absence claim from a single method, an
-    # unreachable classification with no witness, a typed count, an outcome or method outside the
-    # closed vocabulary or a dropped attack -- is a failure rather than a silent divergence, and the
-    # `MS-RED-TEAM` court re-runs the same pure checks over the committed artefact and the committed
-    # evidence.
-    "forensics/tools/ms_red_team.py",
+    # Phase 25.15-25.21 (`ms_historical_cve.py` .. `ms_seal.py`) are deliberately **not**
+    # here: 25.15 reads `security-lineage.json` and 25.21 reads the Phase-25 obligation
+    # ledger, both of which are produced after this block. They are listed in
+    # `GENERATORS_AFTER_LEDGERS`, after `security_lineage.py`, where their rationale lives.
     # **Phase 25.10's ASan measurement (`forensics/tools/ms_asan.py` ->
     # `artifacts/phase25/asan-msan.json`) follows the `ms_census.py`/`ms_miri.py` measurement
     # precedent, so it is deliberately NOT listed here and NOT in `COMPARED`.** It builds the exact
@@ -634,36 +583,6 @@ GENERATORS_BEFORE_LEDGERS = [
     # `ms_regeneration.regen_sensitivity_control`) over the committed plane and the committed
     # manifest. Its procedure constant names the planes it re-runs, so a plane added to the stratum
     # without being added to the procedure is a failure rather than a silent omission.
-    # **Phase 25.20's FRF/Gemel closure (`forensics/tools/ms_frf_closure.py` ->
-    # `forensics/atlas/phase25/frf-closure.json`) is a pure function of committed inputs too, so it
-    # belongs here and is byte-compared.** It joins every Phase-25 contract unit to its committed
-    # evidence and its committed generator, joins each obligation to its court and each `.frf`
-    # receipt/challenge/claim to a declarable court, disposes every residual from the closed
-    # vocabularies (naming the open ones) and records the FRF chain staging and the Gemel checkpoint
-    # projection. It reads only committed evidence -- the Phase-25 contract table and planes, the
-    # committed FRF registry, the committed Gemel projection and the committed `.frf` store -- and
-    # it compiles nothing, so `forensics/memory-safety/container.json` lists it `metadata_only` and
-    # the Docker-only guard admits it on any host, exactly as `ms_red_team` is. A stale committed
-    # closure -- a dropped record, an orphaned obligation, a join with no committed evidence, a
-    # typed count or a closure claimed closed with an open residual -- is a failure rather than a
-    # silent divergence, and the `MS-FRF-CLOSURE` court re-runs the same pure checks over the
-    # committed artefact and the committed evidence.
-    "forensics/tools/ms_frf_closure.py",
-    # **Phase 25.21's memory-safety seal (`forensics/tools/ms_seal.py` ->
-    # `artifacts/phase25/summary.json` and the generated `docs/PHASE-25-MEMORY-SAFETY-SEAL.md`) is a
-    # pure function of committed inputs too, so it belongs here and is byte-compared.** It re-runs
-    # each landed Phase-25 court's own handler over the committed planes, joins the census's
-    # externally reachable sites to the committed tool planes' per-site state and derives the
-    # seal-class closure record -- the bounded claim, the residual census, the withheld parity claim
-    # and the non-claims -- and renders the seal document from the same derivation. It reads only
-    # committed evidence and compiles nothing, so `forensics/memory-safety/container.json` lists it
-    # `metadata_only` and the Docker-only guard admits it on any host, exactly as `ms_frf_closure`
-    # is. It sits after `ms_frf_closure.py` because it embeds each court's artefact digest, the
-    # closure's included, and the closure in turn reads the seal document it writes; the `MS-SEAL`
-    # court re-runs the same pure checks over the committed artefact and the committed evidence. A
-    # dropped court result, a dropped residual, an overclaim, a granted parity, a typed count or a
-    # dropped non-claim is a failure rather than a silent divergence.
-    "forensics/tools/ms_seal.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -696,6 +615,97 @@ GENERATORS_AFTER_LEDGERS = [
     # court re-derives the whole plane through the same generator and re-reads every cited evidence
     # path.
     "forensics/tools/security_lineage.py",
+    # Phase 25.15-25.21. 25.15 reads the security lineage generated immediately above;
+    # 25.17/25.18/25.20/25.21 chain off it, and 25.21 also reads the Phase-25 obligation
+    # ledger, which every `LEDGERS` entry has already written by the time this block runs.
+    # Listing them before the ledgers made one pass consume the *previous* plane state, so
+    # `evidence_determinism.py` needed two passes to reach its fixed point -- see
+    # `FEEDBACK_EDGES` for the one edge that genuinely cannot be topologically ordered.
+    # **Phase 25.15's historical CVE census (`forensics/tools/ms_historical_cve.py` ->
+    # `artifacts/phase25/historical-cves.json`) is a pure function of committed inputs too, so it
+    # belongs here and is byte-compared.** It classifies the historical memory-safety-relevant
+    # OpenSSL CVEs from the closed CVE taxonomy, reading the frozen official vulnerability index and
+    # the advisories it carries (`forensics/multitrack/security-source.json`) for the advisory text,
+    # the affected ranges and the commit URLs, the committed security lineage
+    # (`forensics/multitrack/security-lineage.json`) for the bound CVE records, 25.1's census for the
+    # candidate region paths and their compiler-derived unsafe-operation counts, and 25.2's non-Rust
+    # TCB for the layer a resolved region belongs to. It compiles nothing -- no compiler, no tool, no
+    # probe -- so `forensics/memory-safety/container.json` lists it `metadata_only` and the
+    # Docker-only guard admits it on any host, exactly as `ms_phase24_safety_coverage` is. A stale
+    # committed census -- or a dropped CVE, a fabricated CVE the committed evidence does not
+    # classify, a class outside the taxonomy, a typed count, an untraceable mechanism or an unjoined
+    # region read as correspondent without its residual -- is a failure rather than a silent
+    # divergence, and the `MS-HISTORICAL-CVE` court re-runs the same pure checks over the committed
+    # artefact and the committed evidence.
+    "forensics/tools/ms_historical_cve.py",
+    # **Phase 25.17's vulnerability-mechanism reconciliation
+    # (`forensics/tools/ms_mechanism_reconciliation.py` ->
+    # `artifacts/phase25/mechanisms.json`) is a pure function of committed inputs too, so it
+    # belongs here and is byte-compared.** It reconciles each historical memory-corruption
+    # mechanism the 25.15 census classified against the committed 25.16 replay, the committed 25.1
+    # census (the candidate regions, sites and unsafe contexts), the committed 25.2 non-Rust TCB,
+    # the committed 25.7 exposure classification, the committed 25.8 reduction axis and the
+    # committed 25.9-25.12 evidence planes (Miri, ASan/MSan, TSan, Kani), giving each mechanism a
+    # disposition in the closed vocabulary (ELIMINATED / RELOCATED_TO_BOUNDARY / HIDDEN / PRESENT /
+    # UNRESOLVED), a structural-immunity reason that cites the 25.16 replay's own structure, and an
+    # honest residual where the operation survives. It compiles nothing -- no compiler, no tool, no
+    # probe -- so `forensics/memory-safety/container.json` lists it `metadata_only` and the
+    # Docker-only guard admits it on any host, exactly as `ms_historical_cve` is. A stale committed
+    # reconciliation -- or a dropped mechanism, a fabricated mechanism, a disposition outside the
+    # vocabulary, a disposition with no evidence, a surviving operation read as ELIMINATED, a typed
+    # count or a non-extinct mechanism with no residual -- is a failure rather than a silent
+    # divergence, and the `MS-MECHANISM-RECONCILIATION` court re-runs the same pure checks over the
+    # committed artefact and the committed evidence.
+    "forensics/tools/ms_mechanism_reconciliation.py",
+    # **Phase 25.18's red team (`forensics/tools/ms_red_team.py` -> `artifacts/phase25/red-team.json`)
+    # is a pure function of committed inputs too, so it belongs here and is byte-compared.** It
+    # attacks the atlas's own claims: it tries to falsify "no unexplained reachable unsafe site" by
+    # hunting a reachable site the atlas left unexplained, UNKNOWN or unreachable, a claimed-safe
+    # site the committed Phase-22 typed edges reach from a public root, an UNREACHABLE_PROFILE or
+    # tool NOT_REACHABLE classification with no witness, an unpreserved discovered failure or a
+    # reachable site dropped from a plane -- reasoning only over the committed 25.7 exposure
+    # classification and its witnesses, the committed Phase-22 atlas through 25.5's crosswalk, the
+    # committed 25.8 reduction axis, the committed 25.13 fuzz crosswalk and its hostile corpus, the
+    # committed 25.14 coverage, the committed 25.17 mechanisms, the committed 25.9-25.12 evidence
+    # planes and the committed 25.16 replay index. It compiles nothing -- no compiler, no tool, no
+    # probe -- so `forensics/memory-safety/container.json` lists it `metadata_only` and the
+    # Docker-only guard admits it on any host, exactly as `ms_mechanism_reconciliation` is. A stale
+    # committed red team -- or a gap with no residual, an absence claim from a single method, an
+    # unreachable classification with no witness, a typed count, an outcome or method outside the
+    # closed vocabulary or a dropped attack -- is a failure rather than a silent divergence, and the
+    # `MS-RED-TEAM` court re-runs the same pure checks over the committed artefact and the committed
+    # evidence.
+    "forensics/tools/ms_red_team.py",
+    # **Phase 25.20's FRF/Gemel closure (`forensics/tools/ms_frf_closure.py` ->
+    # `forensics/atlas/phase25/frf-closure.json`) is a pure function of committed inputs too, so it
+    # belongs here and is byte-compared.** It joins every Phase-25 contract unit to its committed
+    # evidence and its committed generator, joins each obligation to its court and each `.frf`
+    # receipt/challenge/claim to a declarable court, disposes every residual from the closed
+    # vocabularies (naming the open ones) and records the FRF chain staging and the Gemel checkpoint
+    # projection. It reads only committed evidence -- the Phase-25 contract table and planes, the
+    # committed FRF registry, the committed Gemel projection and the committed `.frf` store -- and
+    # it compiles nothing, so `forensics/memory-safety/container.json` lists it `metadata_only` and
+    # the Docker-only guard admits it on any host, exactly as `ms_red_team` is. A stale committed
+    # closure -- a dropped record, an orphaned obligation, a join with no committed evidence, a
+    # typed count or a closure claimed closed with an open residual -- is a failure rather than a
+    # silent divergence, and the `MS-FRF-CLOSURE` court re-runs the same pure checks over the
+    # committed artefact and the committed evidence.
+    "forensics/tools/ms_frf_closure.py",
+    # **Phase 25.21's memory-safety seal (`forensics/tools/ms_seal.py` ->
+    # `artifacts/phase25/summary.json` and the generated `docs/PHASE-25-MEMORY-SAFETY-SEAL.md`) is a
+    # pure function of committed inputs too, so it belongs here and is byte-compared.** It re-runs
+    # each landed Phase-25 court's own handler over the committed planes, joins the census's
+    # externally reachable sites to the committed tool planes' per-site state and derives the
+    # seal-class closure record -- the bounded claim, the residual census, the withheld parity claim
+    # and the non-claims -- and renders the seal document from the same derivation. It reads only
+    # committed evidence and compiles nothing, so `forensics/memory-safety/container.json` lists it
+    # `metadata_only` and the Docker-only guard admits it on any host, exactly as `ms_frf_closure`
+    # is. It sits after `ms_frf_closure.py` because it embeds each court's artefact digest, the
+    # closure's included, and the closure in turn reads the seal document it writes; the `MS-SEAL`
+    # court re-runs the same pure checks over the committed artefact and the committed evidence. A
+    # dropped court result, a dropped residual, an overclaim, a granted parity, a typed count or a
+    # dropped non-claim is a failure rather than a silent divergence.
+    "forensics/tools/ms_seal.py",
     # Phase 23.16's assembled compatibility matrix (D546). It is a pure function of the five
     # committed planes -- the compatibility views, the directional edges, the negative obligations,
     # the security lineage and the support-status ladder -- so a stale matrix, or a verdict that was
@@ -755,19 +765,28 @@ GENERATORS_AFTER_LEDGERS = [
 
 
 def phase_ledgers() -> list[tuple[str, str]]:
-    """`(generator, artefact)` for every stratum's obligation ledger on disk."""
-    out: list[tuple[str, str]] = []
-    for path in sorted((REPO_ROOT / "forensics" / "tools").glob("phase*_obligations.py")):
+    """`(generator, artefact)` for every stratum's obligation ledger on disk, in order.
+
+    The order is **numeric**, not the glob's lexicographic order. Every ledger with an
+    incoming hand-off set reads the ledgers of the strata *below* it (`source >= PHASE`
+    is skipped), so the hand-off edge is always earlier -> later. Sorting the filenames
+    as strings put `phase10`..`phase25` before `phase3`..`phase9`, which made phase 10
+    and 11 read the previous pass's phase 3-9 ledgers -- the same one-run lag this tool
+    exists to surface, hidden in the discovery order rather than in a hand-written list.
+    """
+    found: list[tuple[int, str, str]] = []
+    for path in (REPO_ROOT / "forensics" / "tools").glob("phase*_obligations.py"):
         m = re.fullmatch(r"phase(\d+)_obligations\.py", path.name)
         if m is None:
             continue
-        out.append((rel(path), f"forensics/phase{m.group(1)}-obligations.json"))
-    if not out:
+        phase = int(m.group(1))
+        found.append((phase, rel(path), f"forensics/phase{phase}-obligations.json"))
+    if not found:
         raise SystemExit(
             "[evidence-determinism] no forensics/tools/phase<N>_obligations.py found, "
             "which cannot be right"
         )
-    return out
+    return [(gen, artefact) for _phase, gen, artefact in sorted(found)]
 
 
 LEDGERS = phase_ledgers()
@@ -776,6 +795,42 @@ GENERATORS = (
     + [g for g, _a in LEDGERS]
     + GENERATORS_AFTER_LEDGERS
 )
+
+# Genuine feedback edges -- an edge that *cannot* be removed by ordering. Each pair
+# reads the other's committed artefact, so no single pass is topological:
+#
+#   * `ms_seal.py` records the Phase-25 obligation ledger's counts, and
+#     `phase25_obligations.py` records the seal's findings from `summary.json`;
+#   * `phase7_obligations.py` declares `phase-state.json` as an input (it records the
+#     hash, not the content), and `phase_state.py` consumes every ledger.
+#
+# They are recorded here rather than left implicit, because the previous registry made
+# the *ordering* accident carry this fact and nothing checked the residual lag. The
+# fixed-point assertion in `main` re-runs every generator and requires the second pass
+# to be byte-identical; a non-topological order becomes a hard failure instead of a
+# silent one-run lag between the committed plane and the pass that produced it. The
+# `artefact` field is the artefact whose content lags, and `reads` says what is taken
+# from it -- so a reader can see exactly which claim waits a pass for its input.
+FEEDBACK_EDGES = [
+    {
+        "consumer": "forensics/tools/ms_seal.py",
+        "producer": "forensics/tools/phase25_obligations.py",
+        "artefact": "forensics/phase25-obligations.json",
+        "reads": "ledger counts",
+    },
+    {
+        "consumer": "forensics/tools/phase25_obligations.py",
+        "producer": "forensics/tools/ms_seal.py",
+        "artefact": "artifacts/phase25/summary.json",
+        "reads": "seal findings",
+    },
+    {
+        "consumer": "forensics/tools/phase7_obligations.py",
+        "producer": "forensics/tools/phase_state.py",
+        "artefact": "forensics/phase-state.json",
+        "reads": "declared input hash (normalised away; the content is not read)",
+    },
+]
 
 # The hand-written-document consistency gate (`forensics/tools/docs_consistency.py`,
 # docs/DECISIONS.md D203). It writes no artefact and compares no artefact: it asserts that
@@ -1238,6 +1293,17 @@ def artefact_differences(relpath: str, committed_text: str, now_text: str,
     return [f"{relpath}: {d}" for d in differences(a, b)]
 
 
+def run_generators() -> None:
+    """Run every generator once, in registry order, failing on the first nonzero exit."""
+    for gen in GENERATORS:
+        res = subprocess.run([sys.executable, gen], cwd=REPO_ROOT,
+                             capture_output=True, text=True, check=False)
+        if res.returncode != 0:
+            raise SystemExit(
+                f"[evidence-determinism] {gen} failed with {res.returncode}:\n"
+                f"{res.stdout}\n{res.stderr}")
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--keep", action="store_true",
@@ -1252,13 +1318,7 @@ def main(argv: list[str]) -> int:
             raise SystemExit(f"[evidence-determinism] missing artefact: {relpath}")
         committed[relpath] = p.read_text(encoding="utf-8")
 
-    for gen in GENERATORS:
-        res = subprocess.run([sys.executable, gen], cwd=REPO_ROOT,
-                             capture_output=True, text=True, check=False)
-        if res.returncode != 0:
-            raise SystemExit(
-                f"[evidence-determinism] {gen} failed with {res.returncode}:\n"
-                f"{res.stdout}\n{res.stderr}")
+    run_generators()
 
     # The prose checks run against the freshly regenerated evidence, so a document that
     # contradicts the *current* generator output fails here rather than one release later.
@@ -1270,13 +1330,28 @@ def main(argv: list[str]) -> int:
                 f"[evidence-determinism] {check} failed with {res.returncode}:\n"
                 f"{res.stdout}\n{res.stderr}")
 
+    # Fixed point: run the same registry a second time over the artefacts the first
+    # pass just wrote. Every generator is a declared pure function of committed inputs,
+    # so identical output is the determinism property; a generator that consumes an
+    # artefact produced later in the same pass (a non-topological edge, or one of
+    # `FEEDBACK_EDGES`) only reaches it after two passes. The assertion does not care
+    # whether the first pass was *correct* -- only that the order has converged.
+    first: dict[str, str] = {
+        relpath: (REPO_ROOT / relpath).read_text(encoding="utf-8")
+        for relpath in COMPARED
+    }
+    run_generators()
+    moved = [relpath for relpath in COMPARED
+             if (REPO_ROOT / relpath).read_text(encoding="utf-8") != first[relpath]]
+
     problems: list[str] = []
     fired: set[str] = set()
     for relpath in COMPARED:
-        now = (REPO_ROOT / relpath).read_text(encoding="utf-8")
-        problems += artefact_differences(relpath, committed[relpath], now, fired)
-
-        if not args.keep:
+        problems += artefact_differences(relpath, committed[relpath], first[relpath],
+                                         fired)
+        if args.keep:
+            (REPO_ROOT / relpath).write_text(first[relpath], encoding="utf-8")
+        else:
             (REPO_ROOT / relpath).write_text(committed[relpath], encoding="utf-8")
 
     if fired:
@@ -1288,11 +1363,26 @@ def main(argv: list[str]) -> int:
         print("  every other field is compared exactly "
               "(docs/DECISIONS.md D30, D33).")
 
+    if moved:
+        print(f"[evidence-determinism] FAIL: fixed point not reached -- "
+              f"{len(moved)} artefact(s) moved on a second identical pass")
+        for relpath in moved:
+            print(f"  MOVED: {relpath}")
+        if FEEDBACK_EDGES:
+            print("  Declared feedback edges (a second pass is required for these inputs):")
+            for edge in FEEDBACK_EDGES:
+                print(f"    {edge['consumer']} reads {edge['reads']} from "
+                      f"{edge['artefact']}")
+        print("  Order the registries topologically, or split the tool: a second pass "
+              "must produce identical bytes.")
+
     if problems:
         print(f"[evidence-determinism] FAIL: {len(problems)} stale artefact(s)")
         for p in problems:
             print(f"  STALE: {p}")
         print("  Regenerate and commit: the generators are the source of truth.")
+
+    if moved or problems:
         return 1
 
     print(f"[evidence-determinism] ok: {len(COMPARED)} artefact(s) reproduce "
