@@ -26,8 +26,9 @@ the atlas for the README's "source identity" line published a version string
 next to hashes that build did not produce.
 
 Usage:
-    render_docs.py --check   # exit 0 clean, 1 drift, 2 structural error
-    render_docs.py --write   # rewrite the marked blocks
+    render_docs.py --check      # exit 0 clean, 1 drift, 2 structural error
+    render_docs.py --write      # rewrite the marked blocks
+    render_docs.py --self-test  # prove a rejected proposal is never counted
 """
 
 from __future__ import annotations
@@ -344,7 +345,12 @@ def publish_identity(refresh: Path, root: Path, version: str, candidate: dict) -
 
 
 def boundary_evidence(sweeps, status_json: dict) -> dict:
-    independent, batch, author, scoped = [], [], [], []
+    independent, batch, author = [], [], []
+    # Every boundary id a receipt names, with the disposition it carries, plus the
+    # ids each receipt proposes to discharge.
+    named: dict[str, list[tuple[str, str]]] = {}
+    proposals: dict[str, list[str]] = {}
+    reviews: dict[str, dict] = {}
     for number, name, data in sweeps:
         label = f"B{number}"
         graduation = data.get("graduation")
@@ -355,14 +361,69 @@ def boundary_evidence(sweeps, status_json: dict) -> dict:
             batch.append(label)
         elif state == "BATCH_AUTHOR_EVIDENCED":
             author.append(label)
+        review = data.get("review") if isinstance(data.get("review"), dict) else {}
+        reviews[label] = review
         for boundary in data.get("boundaries") or []:
             if not isinstance(boundary, dict):
                 continue
+            ident = str(boundary.get("id", "?"))
             disposition = str(boundary.get("disposition", ""))
+            named.setdefault(ident, []).append((label, disposition))
             if disposition.startswith("SAFETY_DISCHARGED"):
-                scoped.append((label, boundary.get("id", "?"), disposition))
+                proposals.setdefault(label, []).append(ident)
 
-    scoped_labels = sorted({label for label, _, _ in scoped})
+    # The campaign ledger is authoritative for what was actually applied.  A
+    # receipt's own disposition is a proposal until the ledger applies it.
+    ledger_ids: set[str] = set()
+    for entry in status_json.get("scoped_boundary_discharges") or []:
+        if not isinstance(entry, dict):
+            continue
+        for ident in entry.get("discharged_boundaries") or []:
+            ledger_ids.add(str(ident))
+
+    # Fail closed: the ledger applies an id, but a receipt records a
+    # non-discharge disposition for it.
+    for ident in sorted(ledger_ids):
+        for label, disposition in named.get(ident, []):
+            if not disposition.startswith("SAFETY_DISCHARGED"):
+                raise RenderError(
+                    f"{label}: boundary {ident} is applied in CAMPAIGN-STATUS but "
+                    f"the receipt records disposition {disposition!r}"
+                )
+
+    scoped, proposed, scoped_ids = [], [], {}
+    for label in sorted(proposals, key=lambda value: int(value[1:])):
+        ids = proposals[label]
+        review = reviews.get(label) or {}
+        verdict = str(review.get("verdict") or "").upper()
+        applied = review.get("applied")
+        in_ledger = [ident for ident in ids if ident in ledger_ids]
+        if verdict == "REJECT":
+            if in_ledger:
+                raise RenderError(
+                    f"{label}: review verdict is REJECT but CAMPAIGN-STATUS "
+                    f"applies {', '.join(in_ledger)}"
+                )
+            proposed.append(label)
+        elif applied is False:
+            if in_ledger:
+                raise RenderError(
+                    f"{label}: review records applied=false but CAMPAIGN-STATUS "
+                    f"applies {', '.join(in_ledger)}"
+                )
+            proposed.append(label)
+        elif not in_ledger:
+            # A proposal the ledger never applied; never a published discharge.
+            proposed.append(label)
+        elif len(in_ledger) != len(ids):
+            missing = sorted(set(ids) - set(in_ledger))
+            raise RenderError(
+                f"{label}: CAMPAIGN-STATUS applies only part of the receipt's "
+                f"declared discharges (missing {', '.join(missing)})"
+            )
+        else:
+            scoped.append(label)
+            scoped_ids[label] = in_ledger
 
     # Cross-check the receipt-derived classification against the campaign JSON.
     plane = status_json.get("independently_checked_plane") or []
@@ -381,7 +442,9 @@ def boundary_evidence(sweeps, status_json: dict) -> dict:
         "independent": independent,
         "batch": batch,
         "author": author,
-        "scoped": scoped_labels,
+        "scoped": scoped,
+        "scoped_ids": scoped_ids,
+        "proposed": proposed,
     }
 
 
@@ -770,6 +833,8 @@ class Evidence:
                 "| **Memory safety: boundaries** | "
                 f"{plural(len(b['scoped']), 'scoped boundary discharge')} "
                 f"({compact(b['scoped'])}); "
+                f"{plural(len(b['proposed']), 'proposal')} not applied "
+                f"({compact(b['proposed'])}); "
                 f"**{compact(b['independent'])} independently checked**; "
                 f"{compact(b['batch'])} batch-checked; "
                 f"{compact(b['author'])} author-evidenced | "
@@ -960,9 +1025,7 @@ class Evidence:
             else "No incomplete mechanism is recorded in the independently checked plane."
         )
 
-        scoped: dict[str, list[str]] = {}
-        for label, ident in _scoped_pairs(self.sweeps):
-            scoped.setdefault(label, []).append(ident)
+        scoped = b["scoped_ids"]
         scoped_text = (
             ", ".join(
                 f"{label} (" + ", ".join(f"`{i}`" for i in ids) + ")"
@@ -994,8 +1057,9 @@ class Evidence:
                 f"**{len(self.mechanisms)}** — {mechanisms}. Mechanism scope only; "
                 "not a file-level or consumer-level graduation. |",
                 "| **Discharged (scoped boundary)** | "
-                f"**{plural(len(b['scoped']), 'receipt')}** — {scoped_text}. Retained "
-                "boundaries stay `CONTRACTED`. |",
+                f"**{plural(len(b['scoped']), 'receipt')}** — {scoped_text}. "
+                f"Proposals not applied (not counted): {compact(b['proposed'])}. "
+                "Retained boundaries stay `CONTRACTED`. |",
                 "| **Independently checked (not discharged)** | "
                 f"{compact(b['independent'])} boundary-checked "
                 "(memory-BIO constructor/destructor, connect-BIO descriptor); "
@@ -1180,14 +1244,6 @@ class Evidence:
         }
 
 
-def _scoped_pairs(sweeps):
-    for number, name, data in sweeps:
-        for boundary in data.get("boundaries") or []:
-            if isinstance(boundary, dict) and str(
-                boundary.get("disposition", "")
-            ).startswith("SAFETY_DISCHARGED"):
-                yield f"B{number}", boundary.get("id", "?")
-
 
 BEGIN = "<!-- BEGIN GENERATED: {name} -->"
 END = "<!-- END GENERATED: {name} -->"
@@ -1228,11 +1284,79 @@ def replace_blocks(path: Path, blocks: dict[str, str], names: list[str]) -> str:
     return text
 
 
+def self_test() -> int:
+    """Prove a rejected proposal can never be published as a discharge.
+
+    The negative control is a REJECT receipt with discharge-shaped dispositions;
+    the positive control is an applied receipt.  The published set must contain
+    only the latter.  The same rejected id is then moved into the ledger to prove
+    the contradiction fails closed.
+    """
+    sweeps = [
+        (1, "boundary-sweep-B1", {
+            "review": {"verdict": "REJECT", "applied": False},
+            "boundaries": [
+                {"id": "B1-X1", "disposition": "SAFETY_DISCHARGED (proposed)"}
+            ],
+        }),
+        (2, "boundary-sweep-B2", {
+            "review": {"verdict": "ACCEPT", "applied": True},
+            "boundaries": [
+                {"id": "B2-X1", "disposition": "SAFETY_DISCHARGED"}
+            ],
+        }),
+    ]
+    applied = {
+        "scoped_boundary_discharges": [
+            {"receipt": "boundary-sweep-B2", "discharged_boundaries": ["B2-X1"]}
+        ]
+    }
+    failures = []
+    evidence = boundary_evidence(sweeps, applied)
+    if evidence["scoped"] != ["B2"]:
+        failures.append(
+            f"published {evidence['scoped']!r}, expected ['B2']"
+        )
+    if len(evidence["scoped"]) != 1:
+        failures.append(
+            f"published count {len(evidence['scoped'])}, expected 1"
+        )
+    if evidence["proposed"] != ["B1"]:
+        failures.append(
+            f"proposed {evidence['proposed']!r}, expected ['B1']"
+        )
+
+    contradiction = {
+        "scoped_boundary_discharges": [
+            {"receipt": "boundary-sweep-B1", "discharged_boundaries": ["B1-X1"]}
+        ]
+    }
+    try:
+        boundary_evidence(sweeps, contradiction)
+    except RenderError:
+        pass
+    else:
+        failures.append("a REJECT receipt applied in the ledger was not refused")
+
+    if failures:
+        print("render_docs: self-test: FAIL")
+        for failure in failures:
+            print(f"  {failure}")
+        return 1
+    print("render_docs: self-test: ok (rejected proposal excluded; contradiction refused)")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check", action="store_true", help="report drift, write nothing")
     mode.add_argument("--write", action="store_true", help="rewrite the marked blocks")
+    mode.add_argument(
+        "--self-test",
+        action="store_true",
+        help="prove a rejected proposal is never counted as discharged",
+    )
     parser.add_argument(
         "--root",
         type=Path,
@@ -1240,6 +1364,8 @@ def main(argv: list[str] | None = None) -> int:
         help="repository root (default: derived from this script's path)",
     )
     args = parser.parse_args(argv)
+    if args.self_test:
+        return self_test()
     root = args.root.resolve()
 
     try:

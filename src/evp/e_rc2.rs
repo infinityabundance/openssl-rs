@@ -345,6 +345,12 @@ unsafe fn rc2_meth_to_magic(e: *mut EvpCipherCtx) -> c_int {
 }
 
 /// `rc2_magic_to_meth` — `e_rc2.c:116-128`.
+///
+/// # Safety
+///
+/// No pointer precondition: `i` is an integer and the function reads no memory. The `unsafe`
+/// qualifier is retained because the body enters an `unsafe` raise site; a caller cannot cause
+/// undefined behaviour through this function.
 unsafe fn rc2_magic_to_meth(i: c_int) -> c_int {
     match i {
         RC2_128_MAGIC => 128,

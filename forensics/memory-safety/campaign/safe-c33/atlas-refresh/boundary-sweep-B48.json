@@ -1,0 +1,1208 @@
+{
+ "receipt": "boundary-sweep-B48",
+ "date": "2026-10-30",
+ "campaign": "safe-c33 shared-contract establishment (E2: the legacy provider digest vtables)",
+ "subphase": "B48: the 36 BLOCKED EVP_PKEY_PROVIDER legacy digest-vtable sites. The shared ctx/block contract is documented at fn level, the update/final/ctrl callbacks now establish the block themselves through the audited init_md_data/init_md_data_any/init_keccak helpers, and one mutation-sensitive test covers the strongest shared claim. The discharge is NOT applied: CAMPAIGN-STATUS.json is untouched and the closure was not run.",
+ "candidate": {
+  "base_commit": "7f611abb1b4ddbd7bb1ea1baf28b2ece9822c772",
+  "base_commit_subject": "Merge pull request #94 from infinityabundance/docs/publish-0.0.45",
+  "branch": "main",
+  "working_tree": "dirty: fn-level # Safety contracts and guarded callback bodies in the ten files below, plus the post-review repair of sha1_int_ctrl and shake_ctrl and two undersized-block regression tests (one per file); nothing committed, nothing rebuilt into an install, CAMPAIGN-STATUS.json untouched. The REJECT verdict is retained: this is the repair of the rejected sites, not an application of the receipt.",
+  "files": [
+   "src/evp/legacy_sha.rs",
+   "src/evp/legacy_md5.rs",
+   "src/evp/legacy_md4.rs",
+   "src/evp/legacy_blake2.rs",
+   "src/evp/legacy_sha3.rs",
+   "src/evp/legacy_mdc2.rs",
+   "src/evp/legacy_ripemd.rs",
+   "src/evp/legacy_wp.rs",
+   "src/sm3/legacy_sm3.rs",
+   "src/evp/e_rc2.rs"
+  ],
+  "files_sha256": {
+   "src/evp/legacy_sha.rs": "175e35e84acff65ba8dd259521905444bbb2fb4b1429a8350d78190db7252c3f",
+   "src/evp/legacy_md5.rs": "9117059ebc96f42c103a2f11913cb188cebb877f98e7a81257c0c48ded387d7e",
+   "src/evp/legacy_md4.rs": "2ae1545db7cc7b256ee5e14828c03362da019d854c799a423e735a41e88de286",
+   "src/evp/legacy_blake2.rs": "88b804d52f7735e00fe2ee9b7d30a525cbbbc2e3d561151191e5a02b08d52d82",
+   "src/evp/legacy_sha3.rs": "bf5d47c7f006d2f93d486142bf4fbe2773d7201bc49e4d720a73a11a4deabf42",
+   "src/evp/legacy_mdc2.rs": "5d76e34d15f207b3ef95d08e23b424a893da1db07a2edb2620b4cfd301102cff",
+   "src/evp/legacy_ripemd.rs": "a5752a013fdd46f125bb5452acb793e48048b3a131f4d7f4c3364c0d1ab33e99",
+   "src/evp/legacy_wp.rs": "c4cc3ef49937be6642a9e7067b3267be3625e95729d4e9872a2368da5b23ab24",
+   "src/sm3/legacy_sm3.rs": "7e1841c1c9cefb2200678129777d3c1c14b2c95933e2315331b8ce3a35e7298b",
+   "src/evp/e_rc2.rs": "ef0cc7760e22b883ae5f3889941c0b456f97f0422a28f1a7f92f60f11fadb4d3"
+  },
+  "note": "No freeze tag was created. The obligation coordinates (line fields) are the V1 census coordinates and are retained as provenance; line_current and every embedded candidate line reference were refreshed to this working tree. Every quoted line number is bound to files_sha256."
+ },
+ "authority": {
+  "id": "openssl-3.6.4-production",
+  "source": "forensics/authorities/src/openssl-3.6.4",
+  "legacy_meth": "crypto/evp/legacy_meth.h:10-36",
+  "legacy_sha": "crypto/evp/legacy_sha.c:29-88, 87-231",
+  "digest": "crypto/evp/digest.c:258-344, 391-476",
+  "evp_lib": "crypto/evp/evp_lib.c:1087 (EVP_MD_CTX_get0_md_data is a bare `return ctx->md_data`)",
+  "e_rc2": "crypto/evp/e_rc2.c:116-128",
+  "note": "The authority's IMPLEMENT_LEGACY_EVP_MD_METH / _LC / SHA3 bodies forward EVP_MD_CTX_get0_md_data(ctx) to the digest primitive without testing the block. The exported EVP_MD_meth_get_init/update/final/ctrl let any C caller obtain and invoke those callbacks, and EVP_MD_CTX_new() zero-fills the context, so md_data is NULL on a fresh context. The authority documents no concurrency guarantee for EVP_MD_CTX, so exclusive use is a caller obligation in both implementations. Every authority-derived statement below is marked; the guards and the zero-length arms are candidate safety divergences, not authority behaviour."
+ },
+ "scope": {
+  "aggregation": "jq: .obligations[] | select(.mechanism == \"EVP_PKEY_PROVIDER\" and .status == \"BLOCKED\" and (.file is one of the ten legacy digest modules))",
+  "raw_blocked_count": 36,
+  "per_file": [
+   {
+    "file": "src/evp/legacy_sha.rs",
+    "count": 13,
+    "operations": [
+     "sha1_update",
+     "sha1_final",
+     "sha1_int_ctrl",
+     "sha224_update",
+     "sha224_final",
+     "sha256_update",
+     "sha256_final",
+     "sha384_update",
+     "sha384_final",
+     "sha512_update",
+     "sha512_final",
+     "sha512_224_int_final",
+     "sha512_256_int_final"
+    ]
+   },
+   {
+    "file": "src/evp/legacy_md5.rs",
+    "count": 6,
+    "operations": [
+     "md5_update",
+     "md5_final",
+     "md5_sha1_int_init",
+     "md5_sha1_int_update",
+     "md5_sha1_int_final",
+     "md5_sha1_int_ctrl"
+    ]
+   },
+   {
+    "file": "src/evp/legacy_md4.rs",
+    "count": 2,
+    "operations": [
+     "md4_update",
+     "md4_final"
+    ]
+   },
+   {
+    "file": "src/evp/legacy_blake2.rs",
+    "count": 4,
+    "operations": [
+     "blake2b_int_update",
+     "blake2b_int_final",
+     "blake2s_int_update",
+     "blake2s_int_final"
+    ]
+   },
+   {
+    "file": "src/evp/legacy_sha3.rs",
+    "count": 3,
+    "operations": [
+     "sha3_int_update",
+     "sha3_int_final",
+     "shake_ctrl"
+    ]
+   },
+   {
+    "file": "src/evp/legacy_mdc2.rs",
+    "count": 2,
+    "operations": [
+     "mdc2_update",
+     "mdc2_final"
+    ]
+   },
+   {
+    "file": "src/evp/legacy_ripemd.rs",
+    "count": 2,
+    "operations": [
+     "ripe_update",
+     "ripe_final"
+    ]
+   },
+   {
+    "file": "src/evp/legacy_wp.rs",
+    "count": 2,
+    "operations": [
+     "wp_update",
+     "wp_final"
+    ]
+   },
+   {
+    "file": "src/sm3/legacy_sm3.rs",
+    "count": 1,
+    "operations": [
+     "sm3_int_final"
+    ]
+   },
+   {
+    "file": "src/evp/e_rc2.rs",
+    "count": 1,
+    "operations": [
+     "rc2_magic_to_meth"
+    ]
+   }
+  ],
+  "path_note": "The task's scope named `src/evp/legacy_sm3.rs`; the module is actually `src/sm3/legacy_sm3.rs` (the only SM3 legacy vtable). It is included, which brings the aggregate from 35 to the expected 36. `e_rc2.rs::rc2_magic_to_meth` is included as the one non-vtable site in the cluster: it is an integer-only helper, not an init/update/final callback."
+ },
+ "shared_contract": "Every vtable site is an `unsafe extern \"C\"` callback whose first argument is the caller-supplied `*mut EvpMdCtx` and whose remaining arguments are the operation's input/output. The shared contract is: (1) `ctx` is NULL or a live, aligned, initialised `EVP_MD_CTX`; (2) when the operation needs the legacy digest block, the context must expose a writable block of the callback's concrete type (`SHA_CTX`, `SHA256_CTX`, `SHA512_CTX`, `MD5_CTX`, `MD41_CTX`-equivalent `Md4Ctx`, `Md5Sha1Ctx`, `BLAKE2B/S_CTX`, `KECCAK1600_CTX`, `MDC2_CTX`, `Ripemd160Ctx`, `WhirlpoolCtx`, `SM3_CTX`), which is established either by `ctx->digest == <the table object that installs this callback>` or by a live method whose `ctx_size >= size_of::<block>()` (the block `evp_md_init_legacy` allocates for that method); (3) the callback itself now establishes or refuses that precondition through `init_md_data` / `init_md_data_any` / `init_keccak`, answering `0` before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, or a NULL/negative `md_size`; (4) for update, `data` is readable for `count` bytes and may be NULL only when `count == 0` (the primitives' zero-length arms, plus the new BLAKE2/MDC2 early returns); (5) the call is exclusive for the context for its duration and no pointer is retained; (6) on the guard path the operation leaves the context untouched and is retryable; a primitive-level failure may leave partial state and is not transactional, and a successful final consumes the block per the authority. `rc2_magic_to_meth` shares only (5) and (6): it has no pointer precondition at all.",
+ "dispatch_paths": {
+  "init": "`evp_md_init_internal` (src/evp/digest.rs:2146-2163) takes the legacy arm only for `NO_INIT` or `EVP_ORIG_METH`; the normal path for these global tables fetches the provider method by NID at :2202 and rebinds before any callback runs. On the legacy arm, `evp_md_init_legacy` (:2291) sets `ctx->update` at :2304-2306 and allocates `md_data` at :2311-2323 only when `ctx_size != 0`; these tables have `ctx_size == 0`, so the init callback is reached only through `NO_INIT` or the exported `EVP_MD_meth_get_init` (:1565).",
+  "update": "`EVP_DigestUpdate` (:2417; public # Safety :2414) returns 1 at :2422-2424 for `count == 0`, refuses a FINALISED context at :2427-2432, and on the legacy arm (`digest == NULL || digest->prov == NULL || NO_INIT`) reads `(*ctx).update` at :2468 and calls it at :2469-2471. `ctx->update` is installed only by `evp_md_init_legacy` at :2304-2306 when `ctx_size != 0`, or by `EVP_MD_CTX_set_update_fn` at :3952; the exported `EVP_MD_meth_get_update` (:1576) is the direct source.",
+  "final": "`EVP_DigestFinal_ex` (:2526; public # Safety :2523) refuses a NULL `digest` at :2532-2535, and for `digest->prov == NULL` calls `evp_md_final_legacy` (:2601) at :2545-2547, which reads `digest->final_` at :2610 and calls it at :2618. The XOF arm `evp_digest_final_xof_legacy` (:2723) calls the same `final_` at :2749. The exported `EVP_MD_meth_get_final` (:1586) is the direct source.",
+  "ctrl": "`EVP_MD_CTX_ctrl` (:3547) reaches `evp_md_ctx_ctrl_legacy` (:3633), which reads `digest->md_ctrl` at :3640 and calls it at :3646; `evp_digest_final_xof_legacy` calls `md_ctrl` at :2735. The exported `EVP_MD_meth_get_ctrl` (:1617) is the direct source.",
+  "rc2": "`rc2_magic_to_meth` is called at src/evp/e_rc2.rs:383 inside `rc2_get_asn1_type_and_iv` (:365), the `EVP_CIPHER::get_asn1_parameters` callback installed in the RC2 cipher table; it only reads the integer `num` decoded by `ASN1_TYPE_get_int_octetstring` at :378."
+ },
+ "defect_class": {
+  "existing": "D-LEGACY-MD-INIT-MD-DATA-1 (and D-LEGACY-BLAKE2-INIT-MD-DATA-1): the legacy initialisers used to dereference a NULL `md_data`; they now refuse through `init_md_data`/`init_keccak`.",
+  "extension": "D-LEGACY-MD-CALLBACK-MD-DATA-1: the update, final and control callbacks had the same unguarded `md_data` dereference (and `shake_ctrl` wrote through a NULL block). They now use the same audited helpers and answer 0 before any dereference. The BLAKE2 and MDC2 update callbacks additionally answer 1 for `count == 0` before the pointer is used, because the transcribed primitive reaches `copy_nonoverlapping` even for a zero length; `SHA`/`MD5`/`MD4`/`RIPEMD-160`/`SM3` already early-return in `md32::update`/`SHA512_Update`/`ossl_sha3_update`, and `WHIRLPOOL_Update` skips the zero-length loop.",
+  "sites_with_initialiser_guard_before_b48": "All init sites except `md5_sha1_int_init` already carried the `init_md_data` guard (the SHA/MD4/MD5/MDC2/RIPEMD/Whirlpool/SM3/BLAKE2/SHA3 initialisers). `md5_sha1_int_init` did not; it now does.",
+  "sites_needing_a_guard": "Every update/final/ctrl site needed one; every one has it after the post-review repair. `sha1_int_ctrl` now validates through `init_md_data` (it previously passed `md_data(ctx)` straight to `ossl_sha1_ctrl`, which refuses NULL but writes through an undersized block), `shake_ctrl` through `init_keccak` (it previously checked only NULL and then wrote `KeccakCtx::md_size`), and `md5_sha1_int_ctrl` already did because `md_data(ctx)` was dereferenced before `ossl_md5_sha1_ctrl`'s own NULL check. `rc2_magic_to_meth` needs none. The SM3 table's `sm3_int_update` is not one of the 36 census sites but was guarded on the same terms, so the table is internally consistent."
+ },
+ "boundaries": [
+  {
+   "id": "B48-SHA-001",
+   "file": "src/evp/legacy_sha.rs",
+   "line": 262,
+   "line_current": 286,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to this working tree (sha256 d8699d993b2773f20e74e8adf226cd2cbafb2dca031262b7368bac81b8707f1c)",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha1_update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
+   "registration": "SHA1_MD at src/evp/legacy_sha.rs:742; Some(sha1_update) at :748",
+   "guard": "init_md_data(ctx, addr_of!(SHA1_MD.0), size_of::<ShaCtx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: sha1_update and its dispatch path; src/evp/legacy_sha.rs:262)",
+   "contract": "Update contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA_CTX` (owner `SHA1_MD`, or a live method with `ctx_size >= size_of::<ShaCtx>()`). `data` is readable for `count` bytes and NULL only when `count == 0` (`md32::update` returns 1 for zero length at src/digest/md32.rs:106-109; `EVP_DigestUpdate` does not invoke the callback for zero length at src/evp/digest.rs:2422). The callback refuses a context without the block with 0 before any dereference; the refusal leaves the context untouched and retryable.",
+   "established": [
+    "`EVP_DigestUpdate` (src/evp/digest.rs:2417) reads `(*ctx).update` at :2468 and calls it at :2469-2471 on the legacy arm; its public # Safety (:2414) requires a live ctx.",
+    "`ctx->update` is installed by `evp_md_init_legacy` at :2304-2306 only when `ctx_size != 0`, after the block allocation at :2311-2323; `EVP_MD_CTX_set_update_fn` (:3952) is the other writer.",
+    "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the exported `EVP_MD_meth_get_update` (:1576) is the direct source, and the callback's own `init_md_data` now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `SHA1_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)` with no block test (crypto/evp/legacy_meth.h:15-18); `EVP_MD_CTX_get0_md_data` is `return ctx->md_data` (crypto/evp/evp_lib.c:1087).",
+    "Exclusive use of an `EVP_MD_CTX` is a caller obligation; the authority documents no serialization."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-SHA-002",
+   "file": "src/evp/legacy_sha.rs",
+   "line": 269,
+   "line_current": 311,
+   "line_provenance": "V1 census coordinate; line_current refreshed to d8699d99",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha1_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "SHA1_MD at :742; Some(sha1_final) at :749",
+   "guard": "init_md_data(ctx, addr_of!(SHA1_MD.0), size_of::<ShaCtx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: sha1_final and its dispatch path; src/evp/legacy_sha.rs:269)",
+   "contract": "Final contract: `ctx` NULL or live and exclusively borrowed with a writable `SHA_CTX` (same owner/size rule as `sha1_update`); `md` writable for `SHA_DIGEST_LENGTH` (20) bytes. The callback refuses a context without the block with 0 before `md` is touched. A successful final consumes the block per the authority; a second final is refused by `EVP_DigestFinal_ex`'s FINALISED check (src/evp/digest.rs:2559-2564), so retry-after-success is not allowed; retry after a guard refusal is allowed.",
+   "established": [
+    "`EVP_DigestFinal_ex` (:2526) requires a live ctx (:2523) and a non-NULL `digest` (:2532-2535); for `prov == NULL` it calls `evp_md_final_legacy` (:2601) at :2545-2547, which calls `final_` at :2618.",
+    "`evp_digest_final_xof_legacy` (:2723) calls the same `final_` at :2749 for the XOF arm.",
+    "`EVP_MD_meth_get_final` (:1586) is the direct source; the callback now establishes the block itself."
+   ],
+   "authority_derived": [
+    "The authority's body is `SHA1_Final(md, EVP_MD_CTX_get0_md_data(ctx))` (crypto/evp/legacy_meth.h:19-22).",
+    "The authority's legacy final cleanses the block after the callback and sets CLEANED only if a cleanup callback exists (crypto/evp/digest.c:464-476)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-SHA-003",
+   "file": "src/evp/legacy_sha.rs",
+   "line": 277,
+   "line_current": 344,
+   "line_provenance": "V1 census coordinate; line_current refreshed to the post-review repair tree (sha256 175e35e8)",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha1_int_ctrl",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, c_int, c_int, *mut c_void) -> c_int",
+   "registration": "SHA1_MD at :742; Some(sha1_int_ctrl) at :750",
+   "guard": "init_md_data(ctx, addr_of!(SHA1_MD.0), size_of::<ShaCtx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: sha1_int_ctrl and its dispatch path; src/evp/legacy_sha.rs:277)",
+   "contract": "Control contract over `SHA_CTX`: `ctx` NULL or live; `p2` readable for `p1` bytes when `cmd == EVP_CTRL_SSL3_MASTER_SECRET` (48). The callback establishes a writable `SHA_CTX` through `init_md_data` and refuses before any write when the context or method is NULL, `md_data` is NULL, or the method's `app_datasize` is smaller than `size_of::<ShaCtx>()`: the master-secret command answers 0, any other command -2, with no state change. On a valid block it forwards the four arguments to `ossl_sha1_ctrl` unchanged, so a valid call's result is unchanged. When the method is not `sha1_md`, owner identity does not establish the block type; the caller's declared `app_datasize` establishes the extent, the same contract `init_md_data` applies to the initialisers, and every write is bounded by it. Candidate divergence from the authority, which passes an undersized block to `SHA1_Update`.",
+   "established": [
+    "`EVP_MD_CTX_ctrl` (:3547) \u2192 `evp_md_ctx_ctrl_legacy` (:3633) reads `digest->md_ctrl` at :3640 and calls it at :3646.",
+    "`evp_digest_final_xof_legacy` calls `md_ctrl` at :2735; `EVP_MD_meth_get_ctrl` (:1617) is the direct source.",
+    "The callback itself now establishes a writable `SHA_CTX` through `init_md_data` before it calls `ossl_sha1_ctrl`; `legacy_sha1_int_ctrl_refuses_undersized_md_data` exercises the exported `EVP_MD_meth_new` + `EVP_MD_meth_set_app_datasize(8)` path."
+   ],
+   "authority_derived": [
+    "The authority's `sha1_int_ctrl` passes NULL rather than a field of a NULL context (crypto/evp/legacy_sha.c:70-74); `ossl_sha1_ctrl` is the authority's own NULL guard."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-SHA-004",
+   "file": "src/evp/legacy_sha.rs",
+   "line": 324,
+   "line_current": 390,
+   "line_provenance": "V1 census coordinate; line_current refreshed to d8699d99",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha224_update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
+   "registration": "SHA224_MD at :754; Some(sha224_update) at :760",
+   "guard": "init_md_data(ctx, addr_of!(SHA224_MD.0), size_of::<Sha256Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: sha224_update and its dispatch path; src/evp/legacy_sha.rs:324)",
+   "contract": "Update contract over `SHA256_CTX` (owner `SHA224_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0` (`md32::update` early return); a context without the block answers 0 before any dereference, leaving the context untouched and retryable.",
+   "established": [
+    "As B48-SHA-001: `EVP_DigestUpdate` :2417/:2468-2471; `evp_md_init_legacy` :2304-2306/:2311-2323; `EVP_MD_meth_get_update` :1576; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `SHA256_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:15-18; SHA224_Update is SHA256_Update in sha.h)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-SHA-005",
+   "file": "src/evp/legacy_sha.rs",
+   "line": 330,
+   "line_current": 412,
+   "line_provenance": "V1 census coordinate; line_current refreshed to d8699d99",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha224_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "SHA224_MD at :754; Some(sha224_final) at :761",
+   "guard": "init_md_data(ctx, addr_of!(SHA224_MD.0), size_of::<Sha256Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: sha224_final and its dispatch path; src/evp/legacy_sha.rs:330)",
+   "contract": "Final contract over `SHA256_CTX`: `ctx` NULL or live and exclusive with the block; `md` writable for `SHA224_DIGEST_LENGTH` (28) bytes; refusal before `md` is touched; successful final consumes the block; retry-after-success is refused by the FINALISED check at src/evp/digest.rs:2559-2564.",
+   "established": [
+    "As B48-SHA-002: `EVP_DigestFinal_ex` :2526/:2545-2547; `evp_md_final_legacy` :2601/:2618; `EVP_MD_meth_get_final` :1586; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `SHA256_Final(md, EVP_MD_CTX_get0_md_data(ctx))`; the legacy final cleanses the block after the callback."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-SHA-006",
+   "file": "src/evp/legacy_sha.rs",
+   "line": 360,
+   "line_current": 459,
+   "line_provenance": "V1 census coordinate; line_current refreshed to d8699d99",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha256_update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
+   "registration": "SHA256_MD at :766; Some(sha256_update) at :772",
+   "guard": "init_md_data(ctx, addr_of!(SHA256_MD.0), size_of::<Sha256Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: sha256_update and its dispatch path; src/evp/legacy_sha.rs:360)",
+   "contract": "Update contract over `SHA256_CTX` (owner `SHA256_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0`; refusal with 0 before any dereference; no state change on refusal.",
+   "established": [
+    "As B48-SHA-001: `EVP_DigestUpdate` :2417/:2468-2471; `evp_md_init_legacy` :2304-2306/:2311-2323; `EVP_MD_meth_get_update` :1576; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `SHA256_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:15-18)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-SHA-007",
+   "file": "src/evp/legacy_sha.rs",
+   "line": 366,
+   "line_current": 481,
+   "line_provenance": "V1 census coordinate; line_current refreshed to d8699d99",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha256_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "SHA256_MD at :766; Some(sha256_final) at :773",
+   "guard": "init_md_data(ctx, addr_of!(SHA256_MD.0), size_of::<Sha256Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: sha256_final and its dispatch path; src/evp/legacy_sha.rs:366)",
+   "contract": "Final contract over `SHA256_CTX`: `ctx` NULL or live and exclusive with the block; `md` writable for `SHA256_DIGEST_LENGTH` (32) bytes; refusal before `md` is touched; successful final consumes the block; retry-after-success refused by the FINALISED check.",
+   "established": [
+    "As B48-SHA-002: `EVP_DigestFinal_ex` :2526/:2545-2547; `evp_md_final_legacy` :2601/:2618; `EVP_MD_meth_get_final` :1586; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `SHA256_Final(md, EVP_MD_CTX_get0_md_data(ctx))`."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-SHA-008",
+   "file": "src/evp/legacy_sha.rs",
+   "line": 396,
+   "line_current": 530,
+   "line_provenance": "V1 census coordinate; line_current refreshed to d8699d99",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha384_update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
+   "registration": "SHA384_MD at :778, Some(sha384_update) at :784; also installed by SHA512_224_MD at :810 and SHA512_256_MD at :823",
+   "guard": "init_md_data_any(ctx, [SHA384_MD, SHA512_224_MD, SHA512_256_MD], size_of::<Sha512Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: sha384_update and its dispatch path; src/evp/legacy_sha.rs:396)",
+   "contract": "Update contract over `SHA512_CTX` with three owners (`SHA384_MD`, `SHA512_224_MD`, `SHA512_256_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0` (`SHA512_Update` returns 1 at src/digest/sha2.rs:615); a context without the block answers 0 before any dereference.",
+   "established": [
+    "As B48-SHA-001: `EVP_DigestUpdate` :2417/:2468-2471; `evp_md_init_legacy` :2304-2306/:2311-2323; `EVP_MD_meth_get_update` :1576; the callback now establishes the block for all three owners."
+   ],
+   "authority_derived": [
+    "The authority's SHA512_224/256 tables install the same `SHA512_Update` callback (crypto/evp/legacy_sha.c)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-SHA-009",
+   "file": "src/evp/legacy_sha.rs",
+   "line": 402,
+   "line_current": 557,
+   "line_provenance": "V1 census coordinate; line_current refreshed to d8699d99",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha384_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "SHA384_MD at :778; Some(sha384_final) at :785",
+   "guard": "init_md_data(ctx, addr_of!(SHA384_MD.0), size_of::<Sha512Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: sha384_final and its dispatch path; src/evp/legacy_sha.rs:402)",
+   "contract": "Final contract over `SHA512_CTX` (owner `SHA384_MD`): `ctx` NULL or live and exclusive; `md` writable for `SHA384_DIGEST_LENGTH` (48) bytes; refusal before `md` is touched; successful final consumes the block.",
+   "established": [
+    "As B48-SHA-002: `EVP_DigestFinal_ex` :2526/:2545-2547; `evp_md_final_legacy` :2601/:2618; `EVP_MD_meth_get_final` :1586; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `SHA512_Final(md, EVP_MD_CTX_get0_md_data(ctx))`."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-SHA-010",
+   "file": "src/evp/legacy_sha.rs",
+   "line": 432,
+   "line_current": 604,
+   "line_provenance": "V1 census coordinate; line_current refreshed to d8699d99",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha512_update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
+   "registration": "SHA512_MD at :790; Some(sha512_update) at :796",
+   "guard": "init_md_data(ctx, addr_of!(SHA512_MD.0), size_of::<Sha512Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: sha512_update and its dispatch path; src/evp/legacy_sha.rs:432)",
+   "contract": "Update contract over `SHA512_CTX` (owner `SHA512_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0`; refusal with 0 before any dereference; no state change on refusal.",
+   "established": [
+    "As B48-SHA-001: `EVP_DigestUpdate` :2417/:2468-2471; `evp_md_init_legacy` :2304-2306/:2311-2323; `EVP_MD_meth_get_update` :1576; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `SHA512_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)`; zero length returns 1 before the pointer is read (src/digest/sha2.rs:615)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-SHA-011",
+   "file": "src/evp/legacy_sha.rs",
+   "line": 438,
+   "line_current": 626,
+   "line_provenance": "V1 census coordinate; line_current refreshed to d8699d99",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha512_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "SHA512_MD at :790; Some(sha512_final) at :797",
+   "guard": "init_md_data(ctx, addr_of!(SHA512_MD.0), size_of::<Sha512Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: sha512_final and its dispatch path; src/evp/legacy_sha.rs:438)",
+   "contract": "Final contract over `SHA512_CTX`: `ctx` NULL or live and exclusive; `md` writable for `SHA512_DIGEST_LENGTH` (64) bytes; refusal before `md` is touched; successful final consumes the block per the authority.",
+   "established": [
+    "As B48-SHA-002: `EVP_DigestFinal_ex` :2526/:2545-2547; `evp_md_final_legacy` :2601/:2618; `EVP_MD_meth_get_final` :1586; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `SHA512_Final(md, EVP_MD_CTX_get0_md_data(ctx))`."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-SHA-012",
+   "file": "src/evp/legacy_sha.rs",
+   "line": 471,
+   "line_current": 675,
+   "line_provenance": "V1 census coordinate; line_current refreshed to d8699d99",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha512_224_int_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "SHA512_224_MD at :804; Some(sha512_224_int_final) at :811",
+   "guard": "init_md_data(ctx, addr_of!(SHA512_224_MD.0), size_of::<Sha512Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: sha512_224_int_final and its dispatch path; src/evp/legacy_sha.rs:471)",
+   "contract": "Final contract over `SHA512_CTX` (owner `SHA512_224_MD`): `ctx` NULL or live and exclusive; `md` writable for 28 bytes; refusal before `md` is touched; successful final consumes the block. The update half of this table is `sha384_update`, contracted as B48-SHA-008.",
+   "established": [
+    "As B48-SHA-002: `EVP_DigestFinal_ex` :2526/:2545-2547; `evp_md_final_legacy` :2601/:2618; `EVP_MD_meth_get_final` :1586; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's table installs `SHA512_Final` over the SHA-512/224 initialiser (crypto/evp/legacy_sha.c)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-SHA-013",
+   "file": "src/evp/legacy_sha.rs",
+   "line": 501,
+   "line_current": 721,
+   "line_provenance": "V1 census coordinate; line_current refreshed to d8699d99",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha512_256_int_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "SHA512_256_MD at :817; Some(sha512_256_int_final) at :824",
+   "guard": "init_md_data(ctx, addr_of!(SHA512_256_MD.0), size_of::<Sha512Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: sha512_256_int_final and its dispatch path; src/evp/legacy_sha.rs:501)",
+   "contract": "Final contract over `SHA512_CTX` (owner `SHA512_256_MD`): `ctx` NULL or live and exclusive; `md` writable for 32 bytes; refusal before `md` is touched; successful final consumes the block. The update half of this table is `sha384_update`, contracted as B48-SHA-008.",
+   "established": [
+    "As B48-SHA-002: `EVP_DigestFinal_ex` :2526/:2545-2547; `evp_md_final_legacy` :2601/:2618; `EVP_MD_meth_get_final` :1586; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's table installs `SHA512_Final` over the SHA-512/256 initialiser (crypto/evp/legacy_sha.c)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-MD5-001",
+   "file": "src/evp/legacy_md5.rs",
+   "line": 216,
+   "line_current": 225,
+   "line_provenance": "V1 census coordinate; line_current refreshed to 9117059ebc96f42c103a2f11913cb188cebb877f98e7a81257c0c48ded387d7e",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "md5_update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
+   "registration": "MD5_MD at src/evp/legacy_md5.rs:386; Some(md5_update) at :393",
+   "guard": "init_md_data(ctx, addr_of!(MD5_MD.0), size_of::<Md5Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: md5_update and its dispatch path; src/evp/legacy_md5.rs:216)",
+   "contract": "Update contract over `MD5_CTX` (owner `MD5_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0` (`md32::update` early return); a context without the block answers 0 before any dereference, leaving it untouched and retryable.",
+   "established": [
+    "As B48-SHA-001: `EVP_DigestUpdate` :2417/:2468-2471; `evp_md_init_legacy` :2304-2306/:2311-2323; `EVP_MD_meth_get_update` :1576; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `MD5_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:15-18)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-MD5-002",
+   "file": "src/evp/legacy_md5.rs",
+   "line": 223,
+   "line_current": 250,
+   "line_provenance": "V1 census coordinate; line_current refreshed to 9117059e",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "md5_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "MD5_MD at :386; Some(md5_final) at :394",
+   "guard": "init_md_data(ctx, addr_of!(MD5_MD.0), size_of::<Md5Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: md5_final and its dispatch path; src/evp/legacy_md5.rs:223)",
+   "contract": "Final contract over `MD5_CTX`: `ctx` NULL or live and exclusive; `md` writable for `MD5_DIGEST_LENGTH` (16) bytes; refusal before `md` is touched; successful final consumes the block; retry-after-success is refused by the FINALISED check.",
+   "established": [
+    "As B48-SHA-002: `EVP_DigestFinal_ex` :2526/:2545-2547; `evp_md_final_legacy` :2601/:2618; `EVP_MD_meth_get_final` :1586; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `MD5_Final(md, EVP_MD_CTX_get0_md_data(ctx))`."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-MD5-003",
+   "file": "src/evp/legacy_md5.rs",
+   "line": 234,
+   "line_current": 281,
+   "line_provenance": "V1 census coordinate; line_current refreshed to 9117059e",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "md5_sha1_int_init",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx) -> c_int",
+   "registration": "MD5_SHA1_MD at :400; Some(md5_sha1_int_init) at :406",
+   "guard": "init_md_data(ctx, addr_of!(MD5_SHA1_MD.0), size_of::<Md5Sha1Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: md5_sha1_int_init and its dispatch path; src/evp/legacy_md5.rs:234)",
+   "contract": "Init contract over `MD5_SHA1_CTX` (owner `MD5_SHA1_MD`): `ctx` NULL or live; the callback refuses a context without the writable block with 0 instead of the authority's NULL write. This was the one initialiser in the cluster that did not already have the guard; it now does (`D-LEGACY-MD-INIT-MD-DATA-1`). A context bound to `md5_sha1_md` with a writable block still initialises and returns 1.",
+   "established": [
+    "`evp_md_init_legacy` (:2291) calls `digest->init` at :2339-2348 after allocating `md_data` when `ctx_size != 0`; these tables have `ctx_size == 0`, so the legacy arm is reached only under NO_INIT, and `EVP_MD_meth_get_init` (:1565) is the direct source.",
+    "The callback now validates through `init_md_data`."
+   ],
+   "authority_derived": [
+    "The authority's body is `ossl_md5_sha1_init(EVP_MD_CTX_get0_md_data(ctx))` with no block test (crypto/evp/legacy_meth.h:25-28)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-MD5-004",
+   "file": "src/evp/legacy_md5.rs",
+   "line": 240,
+   "line_current": 304,
+   "line_provenance": "V1 census coordinate; line_current refreshed to 9117059e",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "md5_sha1_int_update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
+   "registration": "MD5_SHA1_MD at :400; Some(md5_sha1_int_update) at :407",
+   "guard": "init_md_data(ctx, addr_of!(MD5_SHA1_MD.0), size_of::<Md5Sha1Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: md5_sha1_int_update and its dispatch path; src/evp/legacy_md5.rs:240)",
+   "contract": "Update contract over `MD5_SHA1_CTX`: `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0` (both `MD5_Update` and `SHA1_Update` early-return in md32::update); refusal with 0 before any dereference; no state change on refusal.",
+   "established": [
+    "As B48-SHA-001: `EVP_DigestUpdate` :2417/:2468-2471; `evp_md_init_legacy` :2304-2306/:2311-2323; `EVP_MD_meth_get_update` :1576; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `ossl_md5_sha1_update(EVP_MD_CTX_get0_md_data(ctx), data, count)`."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-MD5-005",
+   "file": "src/evp/legacy_md5.rs",
+   "line": 250,
+   "line_current": 330,
+   "line_provenance": "V1 census coordinate; line_current refreshed to 9117059e",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "md5_sha1_int_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "MD5_SHA1_MD at :400; Some(md5_sha1_int_final) at :408",
+   "guard": "init_md_data(ctx, addr_of!(MD5_SHA1_MD.0), size_of::<Md5Sha1Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: md5_sha1_int_final and its dispatch path; src/evp/legacy_md5.rs:250)",
+   "contract": "Final contract over `MD5_SHA1_CTX`: `ctx` NULL or live and exclusive; `md` writable for `MD5_SHA1_DIGEST_LENGTH` (36) bytes; refusal before `md` is touched; successful final consumes the block.",
+   "established": [
+    "As B48-SHA-002: `EVP_DigestFinal_ex` :2526/:2545-2547; `evp_md_final_legacy` :2601/:2618; `EVP_MD_meth_get_final` :1586; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `ossl_md5_sha1_final(md, EVP_MD_CTX_get0_md_data(ctx))`."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-MD5-006",
+   "file": "src/evp/legacy_md5.rs",
+   "line": 258,
+   "line_current": 358,
+   "line_provenance": "V1 census coordinate; line_current refreshed to 9117059e",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "md5_sha1_int_ctrl",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, c_int, c_int, *mut c_void) -> c_int",
+   "registration": "MD5_SHA1_MD at :400; Some(md5_sha1_int_ctrl) at :409",
+   "guard": "init_md_data(ctx, addr_of!(MD5_SHA1_MD.0), size_of::<Md5Sha1Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: md5_sha1_int_ctrl and its dispatch path; src/evp/legacy_md5.rs:258)",
+   "contract": "Control contract over `MD5_SHA1_CTX`: `ctx` NULL or live; `ms` readable for `mslen` bytes when `mslen == 48`. The callback refuses a context without the block with 0 before `md_data` is read, instead of dereferencing it; `ossl_md5_sha1_ctrl` would also answer 0 for a NULL block, but only after this callback had read it. No state change on refusal; other commands answer -2 per the authority.",
+   "established": [
+    "`EVP_MD_CTX_ctrl` (:3547) \u2192 `evp_md_ctx_ctrl_legacy` (:3633) reads `digest->md_ctrl` at :3640 and calls it at :3646; `evp_digest_final_xof_legacy` calls `md_ctrl` at :2735; `EVP_MD_meth_get_ctrl` (:1617) is the direct source."
+   ],
+   "authority_derived": [
+    "The authority's body is `ossl_md5_sha1_ctrl(EVP_MD_CTX_get0_md_data(ctx), cmd, mslen, ms)`; `ossl_md5_sha1_ctrl` refuses a NULL block (src/digest/md5_sha1.rs:102-112)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-MD4-001",
+   "file": "src/evp/legacy_md4.rs",
+   "line": 191,
+   "line_current": 200,
+   "line_provenance": "V1 census coordinate; line_current refreshed to 2ae1545db7cc7b256ee5e14828c03362da019d854c799a423e735a41e88de286",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "md4_update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
+   "registration": "MD4_MD at src/evp/legacy_md4.rs:243; Some(md4_update) at :250",
+   "guard": "init_md_data(ctx, addr_of!(MD4_MD.0), size_of::<Md4Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: md4_update and its dispatch path; src/evp/legacy_md4.rs:191)",
+   "contract": "Update contract over `Md4Ctx` (owner `MD4_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0` (`md32::update` early return); a context without the block answers 0 before any dereference, leaving it untouched and retryable.",
+   "established": [
+    "As B48-SHA-001: `EVP_DigestUpdate` :2417/:2468-2471; `evp_md_init_legacy` :2304-2306/:2311-2323; `EVP_MD_meth_get_update` :1576; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `MD4_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:15-18)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-MD4-002",
+   "file": "src/evp/legacy_md4.rs",
+   "line": 198,
+   "line_current": 225,
+   "line_provenance": "V1 census coordinate; line_current refreshed to 2ae1545d",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "md4_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "MD4_MD at :243; Some(md4_final) at :251",
+   "guard": "init_md_data(ctx, addr_of!(MD4_MD.0), size_of::<Md4Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: md4_final and its dispatch path; src/evp/legacy_md4.rs:198)",
+   "contract": "Final contract over `Md4Ctx`: `ctx` NULL or live and exclusive; `md` writable for `MD4_DIGEST_LENGTH` (16) bytes; refusal before `md` is touched; successful final consumes the block.",
+   "established": [
+    "As B48-SHA-002: `EVP_DigestFinal_ex` :2526/:2545-2547; `evp_md_final_legacy` :2601/:2618; `EVP_MD_meth_get_final` :1586; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `MD4_Final(md, EVP_MD_CTX_get0_md_data(ctx))`."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-BLAKE2-001",
+   "file": "src/evp/legacy_blake2.rs",
+   "line": 243,
+   "line_current": 252,
+   "line_provenance": "V1 census coordinate; line_current refreshed to 88b804d52f7735e00fe2ee9b7d30a525cbbbc2e3d561151191e5a02b08d52d82",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "blake2b_int_update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
+   "registration": "BLAKE2B_MD at src/evp/legacy_blake2.rs:396; Some(blake2b_int_update) at :403",
+   "guard": "init_md_data(ctx, addr_of!(BLAKE2B_MD.0), size_of::<blake2b::Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: blake2b_int_update and its dispatch path; src/evp/legacy_blake2.rs:243)",
+   "contract": "Update contract over `BLAKE2B_CTX`: `ctx` NULL or live and exclusive; the callback refuses a context without the block with 0 before any dereference. `count == 0` is answered 1 before `data` is used, so `data` may be NULL at `count == 0`; for `count != 0` it is readable for `count` bytes. The zero-length arm is a candidate divergence: the transcribed `ossl_blake2b_update` reaches `copy_nonoverlapping` even for a zero length (src/digest/blake2.rs:417-420), which requires a non-NULL pointer.",
+   "established": [
+    "As B48-SHA-001: `EVP_DigestUpdate` :2417/:2468-2471; `evp_md_init_legacy` :2304-2306/:2311-2323; `EVP_MD_meth_get_update` :1576; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `ossl_blake2b_update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:29-32). The authority does not special-case a zero length."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R2",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-BLAKE2-002",
+   "file": "src/evp/legacy_blake2.rs",
+   "line": 260,
+   "line_current": 286,
+   "line_provenance": "V1 census coordinate; line_current refreshed to 88b804d5",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "blake2b_int_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "BLAKE2B_MD at :396; Some(blake2b_int_final) at :404",
+   "guard": "init_md_data(ctx, addr_of!(BLAKE2B_MD.0), size_of::<blake2b::Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: blake2b_int_final and its dispatch path; src/evp/legacy_blake2.rs:260)",
+   "contract": "Final contract over `BLAKE2B_CTX`: `ctx` NULL or live and exclusive; `md` writable for `BLAKE2B_DIGEST_LENGTH` (64) bytes; refusal before `md` is touched; successful final consumes the block. The block must have been initialised (its `outlen` set) by `blake2b_int_init` or an equivalent call.",
+   "established": [
+    "As B48-SHA-002: `EVP_DigestFinal_ex` :2526/:2545-2547; `evp_md_final_legacy` :2601/:2618; `EVP_MD_meth_get_final` :1586; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `ossl_blake2b_final(md, EVP_MD_CTX_get0_md_data(ctx))`."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-BLAKE2-003",
+   "file": "src/evp/legacy_blake2.rs",
+   "line": 299,
+   "line_current": 343,
+   "line_provenance": "V1 census coordinate; line_current refreshed to 88b804d5",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "blake2s_int_update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
+   "registration": "BLAKE2S_MD at :409; Some(blake2s_int_update) at :416",
+   "guard": "init_md_data(ctx, addr_of!(BLAKE2S_MD.0), size_of::<blake2s::Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: blake2s_int_update and its dispatch path; src/evp/legacy_blake2.rs:299)",
+   "contract": "Update contract over `BLAKE2S_CTX`: `ctx` NULL or live and exclusive; refusal with 0 before any dereference; `count == 0` answered 1 before `data` is used, so `data` may be NULL at `count == 0`; otherwise readable for `count` bytes. The zero-length arm is the same candidate divergence as B48-BLAKE2-001.",
+   "established": [
+    "As B48-SHA-001: `EVP_DigestUpdate` :2417/:2468-2471; `evp_md_init_legacy` :2304-2306/:2311-2323; `EVP_MD_meth_get_update` :1576; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `ossl_blake2s_update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:29-32)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R2",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-BLAKE2-004",
+   "file": "src/evp/legacy_blake2.rs",
+   "line": 315,
+   "line_current": 373,
+   "line_provenance": "V1 census coordinate; line_current refreshed to 88b804d5",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "blake2s_int_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "BLAKE2S_MD at :409; Some(blake2s_int_final) at :417",
+   "guard": "init_md_data(ctx, addr_of!(BLAKE2S_MD.0), size_of::<blake2s::Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: blake2s_int_final and its dispatch path; src/evp/legacy_blake2.rs:315)",
+   "contract": "Final contract over `BLAKE2S_CTX`: `ctx` NULL or live and exclusive; `md` writable for `BLAKE2S_DIGEST_LENGTH` (32) bytes; refusal before `md` is touched; successful final consumes the block; the block must have been initialised by `blake2s_int_init`.",
+   "established": [
+    "As B48-SHA-002: `EVP_DigestFinal_ex` :2526/:2545-2547; `evp_md_final_legacy` :2601/:2618; `EVP_MD_meth_get_final` :1586; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `ossl_blake2s_final(md, EVP_MD_CTX_get0_md_data(ctx))`."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-SHA3-001",
+   "file": "src/evp/legacy_sha3.rs",
+   "line": 277,
+   "line_current": 287,
+   "line_provenance": "V1 census coordinate; line_current refreshed to 0cbc47105f57c74a9b1e7b62cd4851e1d79aa2fb952871fa60d98579e5805da1",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha3_int_update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
+   "registration": "installed on SHA3_224_MD (:423/:430), SHA3_256_MD (:436/:443), SHA3_384_MD (:449/:456), SHA3_512_MD (:462/:469), SHAKE128_MD (:478/:485), SHAKE256_MD (:492/:499)",
+   "guard": "init_keccak(ctx, [SHA3_224_MD, SHA3_256_MD, SHA3_384_MD, SHA3_512_MD, SHAKE128_MD, SHAKE256_MD])",
+   "disposition": "SAFETY_DISCHARGED (scope: sha3_int_update and its dispatch path; src/evp/legacy_sha3.rs:277)",
+   "contract": "Update contract over `KECCAK1600_CTX` with six owners: `ctx` NULL or live and exclusive; the context's `md_data` must be a writable `KeccakCtx` and the method's `md_size` positive, established by ownership of one of the six tables or a live method with `ctx_size >= size_of::<KeccakCtx>()`; `data` readable for `count` bytes and NULL only at `count == 0` (`ossl_sha3_update` returns 1 at src/digest/sha3.rs:331); a context without the block or with a non-positive `md_size` answers 0 before any dereference.",
+   "established": [
+    "As B48-SHA-001: `EVP_DigestUpdate` :2417/:2468-2471; `evp_md_init_legacy` :2304-2306/:2311-2323; `EVP_MD_meth_get_update` :1576; the callback now establishes the block and `md_size` via `init_keccak`."
+   ],
+   "authority_derived": [
+    "The authority's body reads `ctx->digest->md_size` and writes `EVP_MD_CTX_get0_md_data(ctx)` with no test (crypto/evp/legacy_sha.c:34-37)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-SHA3-002",
+   "file": "src/evp/legacy_sha3.rs",
+   "line": 289,
+   "line_current": 323,
+   "line_provenance": "V1 census coordinate; line_current refreshed to 0cbc4710",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha3_int_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "the same six tables: :431, :444, :457, :470, :486, :500",
+   "guard": "init_keccak(ctx, [the six owners])",
+   "disposition": "SAFETY_DISCHARGED (scope: sha3_int_final and its dispatch path; src/evp/legacy_sha3.rs:289)",
+   "contract": "Final contract over `KECCAK1600_CTX`: `ctx` NULL or live and exclusive; `md` writable for the context's current `md_size` bytes (the authority uses `kctx->md_size`, which a SHAKE `shake_ctrl` may have changed, not the digest size); the block and a positive `md_size` are established as for `sha3_int_update`; refusal before `md` is touched.",
+   "established": [
+    "As B48-SHA-002: `EVP_DigestFinal_ex` :2526/:2545-2547; `evp_md_final_legacy` :2601/:2618; `EVP_MD_meth_get_final` :1586; the callback now establishes the block through `init_keccak`."
+   ],
+   "authority_derived": [
+    "The authority's body is `ossl_sha3_final(kctx, md, kctx->md_size)` (crypto/evp/legacy_sha.c:38-42)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-SHA3-003",
+   "file": "src/evp/legacy_sha3.rs",
+   "line": 332,
+   "line_current": 391,
+   "line_provenance": "V1 census coordinate; line_current refreshed to the post-review repair tree (sha256 bf5d47c7)",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "shake_ctrl",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, c_int, c_int, *mut c_void) -> c_int",
+   "registration": "SHAKE128_MD at :478; Some(shake_ctrl) at :487; SHAKE256_MD at :492; Some(shake_ctrl) at :501",
+   "guard": "init_keccak(evp_ctx, [SHAKE128_MD, SHAKE256_MD])",
+   "disposition": "SAFETY_DISCHARGED (scope: shake_ctrl and its dispatch path; src/evp/legacy_sha3.rs:332)",
+   "contract": "Control contract over `KECCAK1600_CTX`: `evp_ctx` NULL or live and exclusive; `_p2` is not read; `p1` is an integer length. The callback establishes a writable `KeccakCtx` and a positive `md_size` through `init_keccak` (owner identity for the two SHAKE tables, otherwise a live method with `app_datasize` at least `size_of::<KeccakCtx>()`) and refuses with 0 before the `EVP_MD_CTRL_XOF_LEN` write when the context, method or block is NULL, the block is too small, or `md_size` is non-positive. On a valid call it stores `p1` in `KeccakCtx::md_size` and returns 1; any other command returns 0 and changes nothing. When the method is not a SHAKE table, the declared `app_datasize` establishes the extent, not the type; the store is bounded by it. Candidate divergence from the authority, which writes through a NULL or undersized block.",
+   "established": [
+    "`EVP_MD_CTX_ctrl` (:3547) \u2192 `evp_md_ctx_ctrl_legacy` (:3633) reads `digest->md_ctrl` at :3640 and calls it at :3646; `evp_digest_final_xof_legacy` calls `md_ctrl` at :2735; `EVP_MD_meth_get_ctrl` (:1617) is the direct source.",
+    "The callback itself now establishes the block through `init_keccak` before the `EVP_MD_CTRL_XOF_LEN` write; `legacy_shake_ctrl_refuses_undersized_md_data` exercises the exported `EVP_MD_meth_new` + `EVP_MD_meth_set_app_datasize(8)` path."
+   ],
+   "authority_derived": [
+    "The authority's `shake_ctrl` writes `ctx = evp_ctx->md_data` and then `ctx->md_size` with only a NULL-context test (crypto/evp/legacy_sha.c:73-88)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R2",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-MDC2-001",
+   "file": "src/evp/legacy_mdc2.rs",
+   "line": 197,
+   "line_current": 206,
+   "line_provenance": "V1 census coordinate; line_current refreshed to 5d76e34d15f207b3ef95d08e23b424a893da1db07a2edb2620b4cfd301102cff",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "mdc2_update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
+   "registration": "MDC2_MD at src/evp/legacy_mdc2.rs:253; Some(mdc2_update) at :260",
+   "guard": "init_md_data(ctx, addr_of!(MDC2_MD.0), size_of::<Mdc2Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: mdc2_update and its dispatch path; src/evp/legacy_mdc2.rs:197)",
+   "contract": "Update contract over `MDC2_CTX` (owner `MDC2_MD`): `ctx` NULL or live and exclusive; refusal with 0 before any dereference; `count == 0` answered 1 before `data` is used, so `data` may be NULL at `count == 0`; otherwise readable for `count` bytes. The zero-length arm is a candidate divergence: `MDC2_Update` can reach `copy_nonoverlapping` with a zero length (src/digest/mdc2.rs:156-163), which requires a non-NULL pointer.",
+   "established": [
+    "As B48-SHA-001: `EVP_DigestUpdate` :2417/:2468-2471; `evp_md_init_legacy` :2304-2306/:2311-2323; `EVP_MD_meth_get_update` :1576; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `MDC2_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:15-18)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R2",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-MDC2-002",
+   "file": "src/evp/legacy_mdc2.rs",
+   "line": 204,
+   "line_current": 235,
+   "line_provenance": "V1 census coordinate; line_current refreshed to 5d76e34d",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "mdc2_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "MDC2_MD at :253; Some(mdc2_final) at :261",
+   "guard": "init_md_data(ctx, addr_of!(MDC2_MD.0), size_of::<Mdc2Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: mdc2_final and its dispatch path; src/evp/legacy_mdc2.rs:204)",
+   "contract": "Final contract over `MDC2_CTX`: `ctx` NULL or live and exclusive; `md` writable for `MDC2_DIGEST_LENGTH` (16) bytes; refusal before `md` is touched; successful final consumes the block.",
+   "established": [
+    "As B48-SHA-002: `EVP_DigestFinal_ex` :2526/:2545-2547; `evp_md_final_legacy` :2601/:2618; `EVP_MD_meth_get_final` :1586; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `MDC2_Final(md, EVP_MD_CTX_get0_md_data(ctx))`."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-RIPE-001",
+   "file": "src/evp/legacy_ripemd.rs",
+   "line": 192,
+   "line_current": 201,
+   "line_provenance": "V1 census coordinate; line_current refreshed to a5752a013fdd46f125bb5452acb793e48048b3a131f4d7f4c3364c0d1ab33e99",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ripe_update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
+   "registration": "RIPEMD160_MD at src/evp/legacy_ripemd.rs:245; Some(ripe_update) at :252",
+   "guard": "init_md_data(ctx, addr_of!(RIPEMD160_MD.0), size_of::<Ripemd160Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: ripe_update and its dispatch path; src/evp/legacy_ripemd.rs:192)",
+   "contract": "Update contract over `Ripemd160Ctx` (owner `RIPEMD160_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0` (`md32::update` early return); a context without the block answers 0 before any dereference, leaving it untouched and retryable.",
+   "established": [
+    "As B48-SHA-001: `EVP_DigestUpdate` :2417/:2468-2471; `evp_md_init_legacy` :2304-2306/:2311-2323; `EVP_MD_meth_get_update` :1576; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `RIPEMD160_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:15-18)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-RIPE-002",
+   "file": "src/evp/legacy_ripemd.rs",
+   "line": 199,
+   "line_current": 226,
+   "line_provenance": "V1 census coordinate; line_current refreshed to a5752a01",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ripe_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "RIPEMD160_MD at :245; Some(ripe_final) at :253",
+   "guard": "init_md_data(ctx, addr_of!(RIPEMD160_MD.0), size_of::<Ripemd160Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: ripe_final and its dispatch path; src/evp/legacy_ripemd.rs:199)",
+   "contract": "Final contract over `Ripemd160Ctx`: `ctx` NULL or live and exclusive; `md` writable for `RIPEMD160_DIGEST_LENGTH` (20) bytes; refusal before `md` is touched; successful final consumes the block.",
+   "established": [
+    "As B48-SHA-002: `EVP_DigestFinal_ex` :2526/:2545-2547; `evp_md_final_legacy` :2601/:2618; `EVP_MD_meth_get_final` :1586; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `RIPEMD160_Final(md, EVP_MD_CTX_get0_md_data(ctx))`."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-WP-001",
+   "file": "src/evp/legacy_wp.rs",
+   "line": 194,
+   "line_current": 204,
+   "line_provenance": "V1 census coordinate; line_current refreshed to c4cc3ef49937be6642a9e7067b3267be3625e95729d4e9872a2368da5b23ab24",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "wp_update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
+   "registration": "WHIRLPOOL_MD at src/evp/legacy_wp.rs:248; Some(wp_update) at :255",
+   "guard": "init_md_data(ctx, addr_of!(WHIRLPOOL_MD.0), size_of::<WhirlpoolCtx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: wp_update and its dispatch path; src/evp/legacy_wp.rs:194)",
+   "contract": "Update contract over `WhirlpoolCtx` (owner `WHIRLPOOL_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0` (`WHIRLPOOL_Update` skips the zero-length loop and returns 1 at src/digest/wp.rs:166-176); a context without the block answers 0 before any dereference.",
+   "established": [
+    "As B48-SHA-001: `EVP_DigestUpdate` :2417/:2468-2471; `evp_md_init_legacy` :2304-2306/:2311-2323; `EVP_MD_meth_get_update` :1576; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `WHIRLPOOL_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:15-18)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-WP-002",
+   "file": "src/evp/legacy_wp.rs",
+   "line": 201,
+   "line_current": 229,
+   "line_provenance": "V1 census coordinate; line_current refreshed to c4cc3ef4",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "wp_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "WHIRLPOOL_MD at :248; Some(wp_final) at :256",
+   "guard": "init_md_data(ctx, addr_of!(WHIRLPOOL_MD.0), size_of::<WhirlpoolCtx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: wp_final and its dispatch path; src/evp/legacy_wp.rs:201)",
+   "contract": "Final contract over `WhirlpoolCtx`: `ctx` NULL or live and exclusive; `md` writable for `WHIRLPOOL_DIGEST_LENGTH` (64) bytes; refusal before `md` is touched; successful final consumes the block.",
+   "established": [
+    "As B48-SHA-002: `EVP_DigestFinal_ex` :2526/:2545-2547; `evp_md_final_legacy` :2601/:2618; `EVP_MD_meth_get_final` :1586; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `WHIRLPOOL_Final(md, EVP_MD_CTX_get0_md_data(ctx))`."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-SM3-001",
+   "file": "src/sm3/legacy_sm3.rs",
+   "line": 209,
+   "line_current": 238,
+   "line_provenance": "V1 census coordinate at the inventory source head; the module path in the task was `src/evp/legacy_sm3.rs`, the tree path is `src/sm3/legacy_sm3.rs`. line_current refreshed to 7e1841c1c9cefb2200678129777d3c1c14b2c95933e2315331b8ce3a35e7298b",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sm3_int_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
+   "registration": "SM3_MD at src/sm3/legacy_sm3.rs:256; Some(sm3_int_final) at :264",
+   "guard": "init_md_data(ctx, addr_of!(SM3_MD.0), size_of::<Sm3Ctx>())",
+   "disposition": "SAFETY_DISCHARGED (scope: sm3_int_final and its dispatch path; src/sm3/legacy_sm3.rs:209)",
+   "contract": "Final contract over `SM3_CTX` (owner `SM3_MD`): `ctx` NULL or live and exclusive; `md` writable for `SM3_DIGEST_LENGTH` (32) bytes; refusal before `md` is touched; successful final consumes the block. The update half is the same file's `sm3_int_update` (not a blocked obligation) and now uses the same `init_md_data` guard.",
+   "established": [
+    "As B48-SHA-002: `EVP_DigestFinal_ex` :2526/:2545-2547; `evp_md_final_legacy` :2601/:2618; `EVP_MD_meth_get_final` :1586; the callback now establishes the block."
+   ],
+   "authority_derived": [
+    "The authority's body is `ossl_sm3_final(md, EVP_MD_CTX_get0_md_data(ctx))` (crypto/evp/legacy_meth.h:33-36)."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R3"
+   ]
+  },
+  {
+   "id": "B48-RC2-001",
+   "file": "src/evp/e_rc2.rs",
+   "line": 348,
+   "line_current": 354,
+   "line_provenance": "V1 census coordinate; line_current refreshed to ef0cc7760e22b883ae5f3889941c0b456f97f0422a28f1a7f92f60f11fadb4d3",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rc2_magic_to_meth",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "signature": "unsafe fn(c_int) -> c_int",
+   "registration": "not a vtable slot; called at src/evp/e_rc2.rs:383 from rc2_get_asn1_type_and_iv (:365)",
+   "guard": "none needed: no pointer is read",
+   "disposition": "SAFETY_DISCHARGED (scope: rc2_magic_to_meth and its dispatch path; src/evp/e_rc2.rs:348)",
+   "contract": "No caller precondition beyond the integer argument: the function maps the three RC2 magic values to key lengths and raises `E_RC2_125` (returning 0) otherwise. It reads no memory, retains nothing and cannot be re-entered through application code. The `unsafe` qualifier is retained because the error arm enters the crate's `raise_site`, not because a caller can cause undefined behaviour. Its sole caller passes the integer decoded by `ASN1_TYPE_get_int_octetstring` and treats 0 as a refusal.",
+   "established": [
+    "`rc2_get_asn1_type_and_iv` (:365) reads `num` at :378 and calls this helper at :383; the cipher table installs `rc2_get_asn1_type_and_iv` as `EVP_CIPHER::get_asn1_parameters`."
+   ],
+   "authority_derived": [
+    "The authority's `rc2_magic_to_meth` is the same three-arm switch with `EVP_R_UNKNOWN`/0 on the default (crypto/evp/e_rc2.c:116-128)."
+   ],
+   "residuals": [
+    "B48-R1"
+   ]
+  }
+ ],
+ "hidden_obligations": 0,
+ "hidden_obligations_note": "Within these 36 sites every retained precondition is stated in the fn-level # Safety and each update/final/ctrl callback now enforces the block precondition itself, including sha1_int_ctrl and shake_ctrl after the post-review repair (B48-H1 closed). The conditions that are not mechanically enforced are exclusive use of the EVP_MD_CTX (an authority-side caller obligation; OpenSSL provides no serialization) and a non-negative XOF length in shake_ctrl; both are stated as caller obligations, not hidden. No site was silently reclassified.",
+ "new_unsafe_assumptions": 0,
+ "new_unsafe_assumptions_note": "No production signature, layout, exported symbol or allocator seam changed. The guards add checked reads and early returns; the BLAKE2/MDC2 zero-length arms return 1 before the primitive is called. No new unsafe operation was introduced: the only new unsafe expressions are calls to the existing `init_md_data`/`init_md_data_any`/`init_keccak`/`md_data` helpers inside their documented contracts.",
+ "unsafe_operations_removed": 0,
+ "unsafe_operations_introduced": 0,
+ "test_only_unsafe_added": 1,
+ "boundary_size": "36 sites across ten files: 13 SHA-1/SHA-2 callbacks, 6 MD5/MD5-SHA1 callbacks, 2 MD4, 4 BLAKE2, 3 SHA-3/SHAKE, 2 MDC2, 2 RIPEMD-160, 2 Whirlpool, 1 SM3, and the integer-only RC2 helper. 35 are vtable slots (init/update/final/ctrl) and one is a pure integer mapping. The callback bodies gain the shared `init_md_data` guard; five static-table registration blocks are unchanged.",
+ "safe_callers_can_cause_ub": true,
+ "safe_callers_can_cause_ub_note": "Kept true: the two ctrl sites no longer permit the reachable undersized-block out-of-bounds write under a documented call, but the 36 sites remain reachable only through `unsafe extern \"C\"` entry points with caller obligations. `sha1_int_ctrl` and `shake_ctrl` now refuse an absent, too-small or NULL block before the first write; the remaining stated obligations are exclusive use of the context (B48-R3), a non-negative XOF length (`shake_ctrl` stores `p1` verbatim, as the authority does), and, for a method that is not one of the table objects, the caller's declared `app_datasize` establishing extent but not type. A caller that violates those is outside the safe interface, and no safe Rust path exists; the field stays true so the receipt claims no more than the repair establishes.",
+ "negative_control": {
+  "id": "B48-C1",
+  "name": "evp::legacy_sha::tests::legacy_sha1_update_and_final_refuse_context_without_md_data_after_refused_init",
+  "kind": "court functional test, lib unittest",
+  "result": "PASS (1 passed, 0 failed, 0 ignored at --exact --test-threads=1)",
+  "observation": "`EVP_MD_meth_get_init(EVP_sha1())` refuses a fresh `EVP_MD_CTX_new()` with 0; the same context's update and final callbacks then answer 0 without touching `md_data`; the callbacks also answer 0 for a NULL context.",
+  "mutation_sensitive": true,
+  "fails_if": "the `sha1_update` refusal is changed from `return 0` to `return 1`: observed panic at src/evp/legacy_sha.rs:1108, `left: 1`, `right: 0`, message `update dereferenced a context whose init was refused`.",
+  "limits": "Exercises the `EVP_MD_meth_get_*` direct-callback path and the SHA-1 table only; it does not exercise the `EVP_DigestUpdate`/`EVP_DigestFinal_ex` dispatch path with a bound block, a concurrency interleaving, or the BLAKE2/MDC2 zero-length arm."
+ },
+ "evidence": {
+  "fast": {
+   "fmt": "cargo fmt --all -- --check: PASS (exit 0, no output) in the court container at the candidate hashes above",
+   "clippy": "cargo clippy --all-targets -- -D warnings: PASS (Finished dev profile in 17.02s) at the same source",
+   "focused_tests": "cargo test --lib -- evp:: -- --test-threads=4: PASS, 279 passed / 0 failed / 0 ignored (2012 filtered out); cargo test --lib -- sm3:: -- --test-threads=4: PASS, 5 passed / 0 failed"
+  },
+  "mutation": {
+   "canary": "B48-C1 (evp::legacy_sha::tests::legacy_sha1_update_and_final_refuse_context_without_md_data_after_refused_init)",
+   "guarded_check": "sha1_update's `init_md_data` refusal (`return 0` at src/evp/legacy_sha.rs:296 in the measured tree)",
+   "pre_mutation_sha256": "d8699d993b2773f20e74e8adf226cd2cbafb2dca031262b7368bac81b8707f1c",
+   "mutation": "replaced the `return 0` inside sha1_update's `else` with `return 1`",
+   "command": "cargo test --lib -- evp::legacy_sha::tests::legacy_sha1_update_and_final_refuse_context_without_md_data_after_refused_init -- --exact --test-threads=1",
+   "observed": "FAILED: panicked at src/evp/legacy_sha.rs:1108:9: assertion `left == right` failed: update dereferenced a context whose init was refused; left: 1, right: 0; test result 0 passed / 1 failed",
+   "restore": "restored from the snapshot with `cp`; `sha256sum` matched d8699d993b2773f20e74e8adf226cd2cbafb2dca031262b7368bac81b8707f1c byte-for-byte; the test then passed again"
+  },
+  "bounded_reuse": "No prior SAFETY_DISCHARGED receipt covered these 36 census lines. The initialiser guards were established under D-LEGACY-MD-INIT-MD-DATA-1 / D-LEGACY-BLAKE2-INIT-MD-DATA-1; B48 reuses that audited helper (same source identity, same contract) and extends it to the update/final/ctrl callbacks. No measurement is reused from a different boundary."
+ },
+ "residuals": [
+  {
+   "id": "B48-R1",
+   "severity": "low",
+   "disposition": "NOT_RUN",
+   "description": "No Miri (Stacked/Tree Borrows), ASan, TSan, dudect or authority differential was run for these sites. The changed code is pointer-checking around synchronous callbacks with no new aliasing model; Miri/ASan remain the BOUNDARY/SEAL instruments."
+  },
+  {
+   "id": "B48-R2",
+   "severity": "low",
+   "disposition": "AUTHORITY-DIVERGENCE",
+   "description": "The BLAKE2b/BLAKE2s and MDC2 update callbacks now answer 1 for `count == 0` before the primitive is called. The authority reaches `copy_nonoverlapping`/`memcpy` with a zero length and a possibly-NULL `data`; the crate does not reproduce that UB (\u00a717). Observable return value is the same (1). Recorded as D-LEGACY-MD-CALLBACK-MD-DATA-1."
+  },
+  {
+   "id": "B48-R3",
+   "severity": "low",
+   "disposition": "AUTHORITY-DERIVED",
+   "description": "Exclusive use of the `EVP_MD_CTX` is a caller obligation. The authority documents no serialization and the candidate adds no runtime lock; a same-context concurrent entry is outside the contract, not mechanically refused. The callbacks invoke no application code, so there is no reentrancy edge through these vtables."
+  },
+  {
+   "id": "B48-R4",
+   "severity": "low",
+   "disposition": "NOT_RUN",
+   "description": "The direct-C-getter path is covered by the guard and by the Rust test, but no C-level adversarial harness was added for these tables; the `EVP_DigestUpdate`/`EVP_DigestFinal_ex` dispatch path with a bound block is covered by the existing per-family result tests, not by a new negative control."
+  }
+ ],
+ "not_run": [
+  {
+   "gate": "Miri (Stacked/Tree Borrows)",
+   "blocker": "not invoked in B48; no new aliasing model claim"
+  },
+  {
+   "gate": "ASan / TSan / dudect",
+   "blocker": "no instrument run; none of the changed sites is a secret-dependent operation and the change adds only pointer checks"
+  },
+  {
+   "gate": "authority differential",
+   "blocker": "no differential court run; the authority-derived statements are read from the pinned 3.6.4 source"
+  },
+  {
+   "gate": "full library suite",
+   "blocker": "only the evp:: and sm3:: filters were run; the full library suite is a BATCH/SEAL gate"
+  },
+  {
+   "gate": "consumer closure and CAMPAIGN-STATUS application",
+   "blocker": "deliberately not run; this subphase establishes the receipt, not the discharge"
+  },
+  {
+   "gate": "BLAKE2/MDC2 zero-length adversarial test",
+   "blocker": "not added; the early return is a straight-line guard and the return value is unchanged, but no NULL/0 call is exercised"
+  }
+ ],
+ "non_claims": [
+  "B48 scopes the claim to the 36 named sites and their dispatch paths only; the EVP_PKEY_PROVIDER mechanism stays at its current state and is not discharged mechanism-wide.",
+  "The B48 dispositions are receipts, not applied adjudications: the closure was not run and CAMPAIGN-STATUS.json was not edited.",
+  "No sanitizer, Miri, dudect or authority differential was run; no cryptographic or constant-time claim is made.",
+  "The initialiser guard reuse is bound to `init_md_data`'s contract; if that helper changes, every B48 boundary must be re-opened.",
+  "The README of the legacy tables (`ctx_size == 0`) means the crate digest path does not invoke these callbacks; the contract is nevertheless stated and enforced for the exported getter path and the NO_INIT legacy arm.",
+  "Every candidate line number is bound to candidate.files_sha256; any source edit invalidates these coordinates and the receipt."
+ ],
+ "hidden_obligation_detail": [
+  {
+   "id": "B48-H1",
+   "severity": "high",
+   "state": "CLOSED \u2014 undersized-block out-of-bounds write refused",
+   "description": "sha1_int_ctrl (src/evp/legacy_sha.rs:337) and shake_ctrl (src/evp/legacy_sha3.rs:387) check only that the context is non-NULL, not that the md_data block is the type and size they write. The exported EVP_MD_meth_new (origin EVP_ORIG_METH), EVP_MD_meth_set_app_datasize, EVP_MD_meth_get_ctrl and EVP_DigestInit_ex's legacy arm let a C caller build a method with ctx_size = 8, obtain an 8-byte md_data, and then invoke these callbacks: SHA1_Update / SHA1_Final write a full ShaCtx, and shake_ctrl writes KeccakCtx.md_size at roughly offset 376. Both are out of bounds.",
+   "correction": "the review falsified the claim 'every caller is our own code': EVP_MD_meth_get_ctrl and the EVP_MD_meth_* setters are exported and reachable from any C caller.",
+   "resolution": "Both callbacks now establish the block before the first write: sha1_int_ctrl through init_md_data(ctx, SHA1_MD, size_of::<ShaCtx>()) and shake_ctrl through init_keccak(ctx, [SHAKE128_MD, SHAKE256_MD]). The exported EVP_MD_meth_new + EVP_MD_meth_set_app_datasize(8) + EVP_DigestInit_ex path was reproduced as two tests. Pre-fix, SHA-1 aborted with 'corrupted size vs. prev_size' (SIGABRT) and SHAKE returned 1; post-fix both answer 0, leave the 8-byte block unchanged, and are retryable. The valid table path still returns 1 (positive controls in both tests). The guard is mutation-sensitive: replacing sha1_int_ctrl's init_md_data with Some(md_data(ctx)) reproduces the SIGABRT. Not part of H1 and still open as a stated caller obligation: shake_ctrl stores p1 verbatim (so a negative XOF length is an authority-derived caller contract violation), and a non-owner method's declared app_datasize establishes extent but not type."
+  }
+ ],
+ "review": {
+  "reviewer": "independent adversarial reviewer (not the author)",
+  "verdict": "REJECT",
+  "applied": false,
+  "date": "2026-10-30",
+  "decisive_reason": "The discharge is false for two of the 36 sites. sha1_int_ctrl and shake_ctrl validate NULL but not block type/size, and an exported path lets a C caller supply an undersized block, turning them into out-of-bounds writes. That is an unchecked-precondition defect of the same class as SSL_CONF, and it is reachable, so the batch stops.",
+  "passing_checks": [
+   "scope exactness: 36/36 dispositions parse to one file and one line, and the union equals the 36 BLOCKED EVP_PKEY_PROVIDER ids for those files",
+   "four sampled update/final guards refuse before the first dereference, are side-effect free, retryable, and do not change the value returned for a valid call",
+   "the sha1_update canary is mutation-sensitive (disabling the refusal fails the test at legacy_sha.rs:1108)"
+  ],
+  "failing_checks": {
+   "precondition_established": "FAIL: the dispatch guarantees only liveness; the block precondition is carried by the callback, and for ctrl it is not established at all",
+   "guard_correctness": "FAIL: sha1_int_ctrl and shake_ctrl are NULL-only guards over an undersized-block path",
+   "contract_truth": "FAIL: sha1_int_ctrl's 'imposes no writable-block precondition' is false; the defect_class.extension claim is false for it and shake_ctrl; blake2b_int_update's 'without touching either pointer' overstates",
+   "receipt_integrity": "FAIL: hidden_obligations 0, safe_callers_can_cause_ub false, and two per-site claims contradicted the reachable OOB; coordinates are census-drifted against current source"
+  },
+  "prohibition": [
+   "Do not apply B48. All 36 sites stay BLOCKED and EVP_PKEY_PROVIDER stays OWNERSHIP_RECONSTRUCTED.",
+   "Do not reclassify the OOB write as an acceptable residual; fix the two ctrl guards or keep the sites blocked."
+  ]
+ }
+}

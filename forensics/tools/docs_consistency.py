@@ -92,6 +92,7 @@ LIBCRYPTO = SURFACE["libraries"]["libcrypto"]
 P1 = load_json("forensics/atlas/phase1-completeness.json")["body"]
 P7 = load_json("forensics/phase7-obligations.json")["body"]
 STATE = load_json("forensics/phase-state.json")["body"]
+STATUS = load_json("forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json")
 
 SRC_FRF = "forensics/tools/gen_frf_courts.py's COURTS table"
 SRC_SURFACE = "forensics/atlas/implemented-surface.json"
@@ -100,6 +101,8 @@ SRC_P1 = "forensics/atlas/phase1-completeness.json"
 SRC_P7 = "forensics/phase7-obligations.json"
 SRC_STATE = "forensics/phase-state.json"
 SRC_CARGO = "Cargo.toml, through gen_frf_courts.py"
+SRC_STATUS = ("forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json"
+              "#/scoped_boundary_discharges")
 
 # Spelled numerals, for the prose counts that are written as words.
 NUMBER_WORDS = {
@@ -294,6 +297,30 @@ def _clause_symbols(text: str, heading: str) -> list[str]:
     return re.findall(r"`([A-Za-z_][A-Za-z0-9_]*)`", segment)
 
 
+def scoped_boundary_discharges(text: str) -> list[tuple[str, str, str]]:
+    """The README's generated scoped-boundary count against the applied ledger.
+
+    The renderer decides what to publish, so this gate re-derives the number from
+    the authoritative ledger: only `boundary-sweep-*` receipts that the ledger
+    actually applied may be counted.  A mismatch names both numbers.
+    """
+    m = re.search(r"(?P<n>\d+) scoped boundary discharges?", text)
+    if m is None:
+        raise ClaimMissing("the generated scoped-boundary discharge count")
+    claimed = as_int(m.group("n"))
+    applied = sorted(
+        str(entry.get("receipt"))
+        for entry in STATUS.get("scoped_boundary_discharges") or []
+        if isinstance(entry, dict)
+        and str(entry.get("receipt", "")).startswith("boundary-sweep-")
+        and entry.get("discharged_boundaries")
+    )
+    if claimed != len(applied):
+        return [("the scoped-boundary discharge count", str(claimed),
+                 f"{len(applied)} ({', '.join(applied)})")]
+    return []
+
+
 def active_status_check(phase: int, path: str) -> Check:
     """The active stratum's plan status sentences against its obligation ledger."""
     ledger = load_json(f"forensics/phase{phase}-obligations.json")["body"]
@@ -357,6 +384,8 @@ CHECKS: list[Check] = [
         ("OPEN UNKNOWNS", r"OPEN UNKNOWNS:\s*(?P<n>\d+)", P1["open_unknown_count"]),
         ("DEFERRED PLANES", r"DEFERRED PLANES:\s*(?P<n>\d+)", P1["deferred_count"]),
     ]),
+    Check("readme_scoped_boundary_discharges", "README.md", SRC_STATUS,
+          scoped_boundary_discharges),
     Check("phase4_defers_to_census", "docs/PHASE-4-BIO-CONF-SEAL.md", SRC_SURFACE,
           defers_to_census),
     Check("phase5_defers_to_census", "docs/PHASE-5-BN-ASN1-PEM-SEAL.md", SRC_SURFACE,
