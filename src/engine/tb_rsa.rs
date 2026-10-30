@@ -52,7 +52,7 @@ pub unsafe extern "C" fn ENGINE_unregister_RSA(e: *mut Engine) {
 ///
 /// # Safety
 /// Invoked as a cleanup-stack callback after an engine was registered through the public
-/// engine API. That path (`ENGINE_new` / `ENGINE_by_id` / `ENGINE_get_first`) has already
+/// engine API. That path (`ENGINE_new` / `ENGINE_by_id` / `ENGINE_get_first` / `ENGINE_get_last`) has already
 /// initialised the engine lock, and the lock is not held when the callback runs;
 /// [`engine_table_cleanup`] takes it. If the lock were uninitialised, the cleanup would
 /// return before releasing the table (a documented no-op/leak, not UB).
