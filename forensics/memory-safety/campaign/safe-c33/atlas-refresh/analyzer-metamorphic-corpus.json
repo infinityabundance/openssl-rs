@@ -716,7 +716,7 @@
         "tool": {
           "path": "forensics/tools/consumer_closure.py",
           "schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
-          "sha256": "c5f40baf47e868cd04c54674d1a34addcc669b2be7b41d4ffce09b42fede663f",
+          "sha256": "7da237dab00c86cc45cda21432da541e9c2471962995034ed2b0c98bc0099535",
           "version": 5
         }
       },
@@ -1199,7 +1199,7 @@
   },
   "tool": {
     "covered_tool": "forensics/tools/consumer_closure.py",
-    "covered_tool_sha256": "c5f40baf47e868cd04c54674d1a34addcc669b2be7b41d4ffce09b42fede663f",
+    "covered_tool_sha256": "7da237dab00c86cc45cda21432da541e9c2471962995034ed2b0c98bc0099535",
     "edge_record_schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
     "path": "forensics/tools/analyzer_metamorphic_corpus.py"
   }
