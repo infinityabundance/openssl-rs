@@ -297,13 +297,21 @@ unsafe extern "C" fn ssl_set_option_list(
             onoff = 0;
         }
     }
+    // Copy the table view out of the context instead of holding `&*cctx` across the
+    // loop. `ssl_match_option` reaches `ssl_set_option`, which takes `&mut *cctx`;
+    // `ssl_set_option`'s contract forbids any other reference to the context for the
+    // duration of that call, so the shared borrow must end before it. `tbl` denotes
+    // the frame-local option table (a separate allocation from the context), not the
+    // context itself.
     // SAFETY: `cctx` is live per `SSL_CONF_cmd`.
-    let c = unsafe { &*cctx };
-    for i in 0..c.ntbl {
-        // SAFETY: `i` is in range of the table `tbl` points into.
-        let tbl = unsafe { &*c.tbl.add(i) };
-        // SAFETY: the pointers are per the callback contract.
-        if unsafe { ssl_match_option(cctx, tbl, e, l, onoff) } {
+    let (tbl, ntbl) = unsafe { ((*cctx).tbl, (*cctx).ntbl) };
+    for i in 0..ntbl {
+        // SAFETY: `i` is in range of the table `tbl` points into, per the context's
+        // invariant established by `parse_option_list`.
+        let elem_tbl = unsafe { &*tbl.add(i) };
+        // SAFETY: the pointers are per the callback contract; no borrow of `*cctx`
+        // is live here, so `ssl_match_option`'s exclusive access is exclusive.
+        if unsafe { ssl_match_option(cctx, elem_tbl, e, l, onoff) } {
             return 1;
         }
     }
@@ -454,8 +462,11 @@ unsafe fn parse_option_list(
 /// `:1318` (the `&*cctx` at `:1302` ends with the lookup), but `SSL_CONF_cmd`'s
 /// public `# Safety` (`:1281`) says only "live", so a foreign caller's
 /// no-concurrent-access obligation is authority-derived, not enforced by an
-/// executing candidate path. Returns 1 on a match, otherwise 0; `SSL_CONF_cmd` maps
-/// `>0` to 2 and every other value to 0. `parse_option_list` clears
+/// executing candidate path. Returns 1 only when every element matched:
+/// `CONF_parse_list` stops at the first element whose callback returns `<= 0` and
+/// returns that value, so a mixed list may apply its leading matches and still
+/// return 0. `SSL_CONF_cmd` maps `>0` to 2 and every other value to 0.
+/// `parse_option_list` clears
 /// `cctx.tbl`/`ntbl` on the normal and `guard_ffi`-caught paths, so an error leaves
 /// no frame-local pointer behind.
 unsafe extern "C" fn cmd_Protocol(cctx: *mut SslConfCtx, value: *const c_char) -> c_int {
@@ -494,8 +505,10 @@ unsafe extern "C" fn cmd_Protocol(cctx: *mut SslConfCtx, value: *const c_char) -
 /// that part is authority-derived for a foreign caller. This handler additionally
 /// tolerates a NULL `value` by returning `-3` (authority `ssl_conf.c:411-412`); that
 /// arm is unreachable through `SSL_CONF_cmd`, which refuses NULL first, and the
-/// dispatch maps `-3` to 0. Returns 1 on a match, otherwise 0, on the parse path;
-/// `parse_option_list` clears `cctx.tbl`/`ntbl` before returning on every path, so a
+/// dispatch maps `-3` to 0. Returns 1 only when every element matched on the parse
+/// path; `CONF_parse_list` stops at the first failing element, so a mixed list may
+/// apply its leading matches and still return 0. `parse_option_list` clears
+/// `cctx.tbl`/`ntbl` before returning on every path, so a
 /// rejected list leaves no frame-local pointer behind.
 unsafe extern "C" fn cmd_Options(cctx: *mut SslConfCtx, value: *const c_char) -> c_int {
     let table = [
@@ -572,8 +585,10 @@ unsafe extern "C" fn cmd_Options(cctx: *mut SslConfCtx, value: *const c_char) ->
 /// authority-derived for a foreign caller. This handler additionally tolerates a
 /// NULL `value` by returning `-3` (authority `ssl_conf.c:432-433`); that arm is
 /// unreachable through `SSL_CONF_cmd`, which refuses NULL first, and the dispatch
-/// maps `-3` to 0. Returns 1 on a match, otherwise 0, on the parse path;
-/// `parse_option_list` clears `cctx.tbl`/`ntbl` before returning on every path.
+/// maps `-3` to 0. Returns 1 only when every element matched on the parse path;
+/// `CONF_parse_list` stops at the first failing element, so a mixed list may apply
+/// its leading matches and still return 0. `parse_option_list` clears
+/// `cctx.tbl`/`ntbl` before returning on every path.
 unsafe extern "C" fn cmd_VerifyMode(cctx: *mut SslConfCtx, value: *const c_char) -> c_int {
     let table = [
         flag_vfy_cli(b"Peer", t::SSL_VERIFY_PEER),
@@ -697,8 +712,11 @@ unsafe extern "C" fn cmd_Ciphersuites(cctx: *mut SslConfCtx, value: *const c_cha
 /// construction in the dispatch but only asserted by `SSL_CONF_cmd`'s public
 /// `# Safety` (`:1281`), which says "live" without forbidding concurrent access;
 /// that part is authority-derived for a foreign caller. Returns 1 when
-/// `ssl_set_version_bound` accepts the name, otherwise 0; the bound is written only
-/// on acceptance, so a rejected name leaves it untouched.
+/// `ssl_set_version_bound` accepts the name, otherwise 0; acceptance does not imply
+/// a write: the bound is written only for `version == 0` and for the matching
+/// `TLS_ANY_VERSION`/`DTLS_ANY_VERSION` arm, while the `_` arm returns true without
+/// writing, so a rejected name and an unmatched method version both leave it
+/// untouched.
 unsafe extern "C" fn cmd_MinProtocol(cctx: *mut SslConfCtx, value: *const c_char) -> c_int {
     // SAFETY: `cctx` is live.
     unsafe { min_max_proto(cctx, value, (*cctx).min_version) }
@@ -725,8 +743,11 @@ unsafe extern "C" fn cmd_MinProtocol(cctx: *mut SslConfCtx, value: *const c_char
 /// construction in the dispatch but only asserted by `SSL_CONF_cmd`'s public
 /// `# Safety` (`:1281`), which says "live" without forbidding concurrent access;
 /// that part is authority-derived for a foreign caller. Returns 1 when
-/// `ssl_set_version_bound` accepts the name, otherwise 0; the bound is written only
-/// on acceptance, so a rejected name leaves it untouched.
+/// `ssl_set_version_bound` accepts the name, otherwise 0; acceptance does not imply
+/// a write: the bound is written only for `version == 0` and for the matching
+/// `TLS_ANY_VERSION`/`DTLS_ANY_VERSION` arm, while the `_` arm returns true without
+/// writing, so a rejected name and an unmatched method version both leave it
+/// untouched.
 unsafe extern "C" fn cmd_MaxProtocol(cctx: *mut SslConfCtx, value: *const c_char) -> c_int {
     // SAFETY: `cctx` is live.
     unsafe { min_max_proto(cctx, value, (*cctx).max_version) }
@@ -1765,5 +1786,79 @@ mod tests {
         // SAFETY: `cctx` is live and the NULL arm returns before any dereference.
         let direct = unsafe { cmd_Options(&raw mut cctx, ptr::null()) };
         assert_eq!(direct, -3, "the handler's own NULL arm returns -3");
+    }
+
+    /// Exercises the multi-element path through `ssl_set_option_list`, which is where
+    /// the context borrow used to be held across the `&mut *cctx` inside
+    /// `ssl_set_option`. Two matching elements force the loop to run more than once
+    /// with a mutable write between iterations; the mixed and all-failing lists pin
+    /// `CONF_parse_list`'s "stops at the first failing element" return contract.
+    ///
+    /// This is a functional control only: from safe test code the aliasing itself is
+    /// not observable, and the assertions would still pass if the shared borrow were
+    /// reintroduced. Miri/Tree Borrows is required to test the borrowing discipline;
+    /// that check is NOT_RUN under the FAST gate.
+    #[test]
+    fn option_list_applies_leading_matches_and_reports_failures() {
+        let mut options: u64 = 0;
+        // SAFETY: all-zero is the authority's `OPENSSL_zalloc` state and every field
+        // is a raw pointer, `usize` or integer.
+        let mut cctx: SslConfCtx = unsafe { core::mem::zeroed() };
+        cctx.flags = (t::SSL_CONF_FLAG_FILE | t::SSL_CONF_FLAG_CLIENT) as c_uint;
+        cctx.poptions = &raw mut options;
+
+        // Both elements match: the loop must apply both and report success.
+        // SAFETY: `cctx` is this frame's live context; the literal is NUL-terminated.
+        let both = unsafe {
+            SSL_CONF_cmd(
+                &raw mut cctx,
+                c"Options".as_ptr(),
+                c"Bugs,MiddleboxCompat".as_ptr(),
+            )
+        };
+        assert_eq!(both, 2, "an all-matching list succeeds");
+        assert_ne!(options & t::SSL_OP_ALL, 0, "the first element applied");
+        assert_ne!(
+            options & t::SSL_OP_ENABLE_MIDDLEBOX_COMPAT,
+            0,
+            "the second element applied after the first mutable call"
+        );
+        assert!(
+            cctx.tbl.is_null() && cctx.ntbl == 0,
+            "the context retained a pointer to the handler's stack table"
+        );
+
+        // A leading match followed by a failure: the match is applied, but the list
+        // as a whole returns 0 because `CONF_parse_list` stops at the failing element.
+        // SAFETY: as above; the literal is NUL-terminated.
+        let mixed = unsafe {
+            SSL_CONF_cmd(
+                &raw mut cctx,
+                c"Options".as_ptr(),
+                c"-Bugs,NoSuchOption".as_ptr(),
+            )
+        };
+        assert_eq!(mixed, 0, "a mixed list does not succeed as a whole");
+        assert_eq!(
+            options & t::SSL_OP_ALL,
+            0,
+            "the leading `-Bugs` was applied before the failure"
+        );
+        assert!(
+            cctx.tbl.is_null() && cctx.ntbl == 0,
+            "the failure path also clears the frame-local table"
+        );
+
+        // An entirely failing list changes no state and still clears the table.
+        let before = options;
+        // SAFETY: as above; the literal is NUL-terminated.
+        let none =
+            unsafe { SSL_CONF_cmd(&raw mut cctx, c"Options".as_ptr(), c"NoSuchOption".as_ptr()) };
+        assert_eq!(none, 0, "an unmatched list is rejected");
+        assert_eq!(options, before, "a rejected list changes no state");
+        assert!(
+            cctx.tbl.is_null() && cctx.ntbl == 0,
+            "a rejected list leaves no frame-local pointer behind"
+        );
     }
 }
