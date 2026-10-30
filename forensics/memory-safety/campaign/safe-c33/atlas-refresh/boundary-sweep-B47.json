@@ -688,5 +688,25 @@
   "Foreign-caller exclusivity and NUL-termination are obligations on the exported SSL_CONF_cmd/SSL_CONF_cmd_argv caller; they are not mechanically enforced by the candidate.",
   "Every candidate line number is bound to candidate.files_sha256; any source edit invalidates these coordinates and the receipt.",
   "Part A is a contract narrowing (B46-D1), not a behaviour change: no return value or state transition changed."
- ]
+ ],
+ "review": {
+  "reviewer": "independent adversarial reviewer (not the author)",
+  "verdict": "REJECT",
+  "applied": false,
+  "date": "2026-10-30",
+  "decisive_reason": "B46-R1 does not close. AGENTS.md 7 requires the precondition to be established by callers or by an external ABI contract, and both 7 and 21 state that documentation alone does not discharge an obligation. A candidate-authored # Safety is our own record of a divergence (B46-D1), not an external witness, and nothing establishes or enforces exclusive access at run time. The pinned authority's SSL_CONF_cmd.pod and ssl_conf.c impose neither exclusivity nor a no-concurrent-mutation rule.",
+  "secondary_failures": [
+   "min_max_proto clause 'an accepted name is range-checked before any write' is false for the accepted name None (version 0): ssl_set_version_bound writes *bound at ssl_conf.rs:399-401 before any range test; the bound clause also reads as permitting NULL where the body dereferences it.",
+   "receipt integrity: hidden_obligations 0 and 'R1 closed' contradict the preserved REJECT verdict and failing_checks.exclusivity_gap; callers[].role table refs are off by six; boundary_size omits ssl_set_option_list/ssl_match_option/ssl_set_option; boundary-001 repeats the false CONF_parse_list return wording; the candidate block is stale against the commit that contains the receipt."
+  ],
+  "passing_checks": [
+   "scope exactness: all dispositions parse to one file and one range; the union equals the 18 BLOCKED SSL_SESSION ids at v1u census coordinates, reconciled to current source 18/18",
+   "conditional ABI-only sites are handled correctly: no root invocation, no safe-Rust caller can install or invoke them, and re-opening on a new invocation path is stated",
+   "the min/max protocol canary is mutation-sensitive: replacing protocol_from_string's -1 with TLS1_2_VERSION makes the refusal assertion fail"
+  ],
+  "prohibition": [
+   "Do not apply B46 or B47. All 18 sites stay BLOCKED and SSL_SESSION stays OWNERSHIP_RECONSTRUCTED.",
+   "Do not substitute our own documentation for an external witness, and do not widen a disposition range to move a count."
+  ]
+ }
 }
