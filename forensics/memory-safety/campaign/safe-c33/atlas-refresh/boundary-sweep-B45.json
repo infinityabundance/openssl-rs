@@ -1,0 +1,346 @@
+{
+  "receipt": "boundary-sweep-B45",
+  "date": "2026-10-30",
+  "campaign": "safe-c33 scoped mechanism discharge (first scoped ENGINE-CLEANUP discharge)",
+  "subphase": "B45: the nine zero-argument engine static-table cleanup thunks, discharged as callers at the frozen candidate v1t; the two retained sites and the shared callee stay BLOCKED/CONTRACTED",
+  "candidate": {
+    "tag": "v1t",
+    "source_head": "afcfdc47eb8354a6eadef9adf92d49b174c98db5",
+    "source_head_subject": "freeze S': add ENGINE_get_last to the cleanup caller contracts",
+    "branch": "stage/p25/obligation-persistence",
+    "freeze": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1t-candidate-freeze.json",
+    "checkout": "clean detached checkout court/tmp/sprime-v1t at afcfdc47e",
+    "files": [
+      "src/engine/tb_asnmth.rs",
+      "src/engine/tb_cipher.rs",
+      "src/engine/tb_dh.rs",
+      "src/engine/tb_digest.rs",
+      "src/engine/tb_dsa.rs",
+      "src/engine/tb_eckey.rs",
+      "src/engine/tb_pkmeth.rs",
+      "src/engine/tb_rand.rs",
+      "src/engine/tb_rsa.rs"
+    ],
+    "src_identity": "src/ is byte-identical between afcfdc47e and the evidence-worktree HEAD of this subphase; no src/ change is made by B45. The nine obligation coordinates below are the census coordinates at afcfdc47e, not the pre-repair site-receipt coordinates."
+  },
+  "authority": {
+    "id": "openssl-3.6.4-production",
+    "source": "forensics/authorities/src/openssl-3.6.4",
+    "cleanup_stack": "crypto/engine/eng_lib.c:128-166",
+    "table_cleanup": "crypto/engine/eng_table.c:83-134",
+    "list_cleanup": "crypto/engine/eng_list.c:42-51",
+    "registration": "crypto/engine/eng_table.c:136-189",
+    "note": "each callback is stored as ENGINE_CLEANUP_CB, registered by engine_table_register via engine_cleanup_add_first, and invoked by engine_cleanup_cb_free under OPENSSL_cleanup; the callee takes the engine write lock"
+  },
+  "boundaries": [
+    {
+      "id": "B45-ENG-CB-001",
+      "file": "src/engine/tb_asnmth.rs",
+      "line": 79,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_pkey_asn1_meths",
+      "mechanism": "C_ABI_CONTRACT",
+      "site_receipt": "p25-engine-callback-sites#P25-ENGINE-CB-001",
+      "disposition": "SAFETY_DISCHARGED (scope: the zero-argument engine-table cleanup thunk engine_unregister_all_pkey_asn1_meths and its single registration/invocation path; src/engine/tb_asnmth.rs:79)",
+      "contract": "`unsafe extern \"C\" fn()` stored as `EngineCleanupCb` and registered by `engine_table_register(Some(engine_unregister_all_pkey_asn1_meths))` at two sites in this file. Preconditions established before the callback can run: (1) the engine lock is initialised, because every path that reaches registration (ENGINE_new / ENGINE_by_id / ENGINE_get_first / ENGINE_get_last, and RawEngine::new is private) runs the lock init, and GLOBAL_ENGINE_LOCK is stored once and never freed; (2) the lock is not held when the callback runs, because engine_cleanup_cb_free invokes cb() unlocked and the sole registration path runs through the public engine API; (3) the callback runs only after registration through that API. The body takes no arguments and reads only this module's own `&'static EngineTableSlot` (`PKEY_ASN1_METH_TABLE`), so there is no caller-supplied pointer, extent, alignment or initialisation precondition. `engine_table_cleanup` takes the write lock itself and its initialised-lock precondition is documented at its `# Safety`. Sole invocation path is the withheld `engine_cleanup_int`; no call executes at this source identity. A NULL run-once lock would only make the callee a documented no-op/leak, pinned by the C8 probe.",
+      "defects": [],
+      "residuals": [
+        "B45-R1",
+        "B45-R2",
+        "B45-R3"
+      ]
+    },
+    {
+      "id": "B45-ENG-CB-002",
+      "file": "src/engine/tb_cipher.rs",
+      "line": 62,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_ciphers",
+      "mechanism": "C_ABI_CONTRACT",
+      "site_receipt": "p25-engine-callback-sites#P25-ENGINE-CB-002",
+      "disposition": "SAFETY_DISCHARGED (scope: the zero-argument engine-table cleanup thunk engine_unregister_all_ciphers and its single registration/invocation path; src/engine/tb_cipher.rs:62)",
+      "contract": "`unsafe extern \"C\" fn()` stored as `EngineCleanupCb` and registered by `engine_table_register(Some(engine_unregister_all_ciphers))` at two sites in this file. Preconditions established before the callback can run: (1) the engine lock is initialised, because every path that reaches registration (ENGINE_new / ENGINE_by_id / ENGINE_get_first / ENGINE_get_last, and RawEngine::new is private) runs the lock init, and GLOBAL_ENGINE_LOCK is stored once and never freed; (2) the lock is not held when the callback runs, because engine_cleanup_cb_free invokes cb() unlocked and the sole registration path runs through the public engine API; (3) the callback runs only after registration through that API. The body takes no arguments and reads only this module's own `&'static EngineTableSlot` (`CIPHER_TABLE`), so there is no caller-supplied pointer, extent, alignment or initialisation precondition. `engine_table_cleanup` takes the write lock itself and its initialised-lock precondition is documented at its `# Safety`. Sole invocation path is the withheld `engine_cleanup_int`; no call executes at this source identity. A NULL run-once lock would only make the callee a documented no-op/leak, pinned by the C8 probe.",
+      "defects": [],
+      "residuals": [
+        "B45-R1",
+        "B45-R2",
+        "B45-R3"
+      ]
+    },
+    {
+      "id": "B45-ENG-CB-003",
+      "file": "src/engine/tb_dh.rs",
+      "line": 58,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_dh",
+      "mechanism": "C_ABI_CONTRACT",
+      "site_receipt": "p25-engine-callback-sites#P25-ENGINE-CB-003",
+      "disposition": "SAFETY_DISCHARGED (scope: the zero-argument engine-table cleanup thunk engine_unregister_all_dh and its single registration/invocation path; src/engine/tb_dh.rs:58)",
+      "contract": "`unsafe extern \"C\" fn()` stored as `EngineCleanupCb` and registered by `engine_table_register(Some(engine_unregister_all_dh))` at two sites in this file. Preconditions established before the callback can run: (1) the engine lock is initialised, because every path that reaches registration (ENGINE_new / ENGINE_by_id / ENGINE_get_first / ENGINE_get_last, and RawEngine::new is private) runs the lock init, and GLOBAL_ENGINE_LOCK is stored once and never freed; (2) the lock is not held when the callback runs, because engine_cleanup_cb_free invokes cb() unlocked and the sole registration path runs through the public engine API; (3) the callback runs only after registration through that API. The body takes no arguments and reads only this module's own `&'static EngineTableSlot` (`DH_TABLE`), so there is no caller-supplied pointer, extent, alignment or initialisation precondition. `engine_table_cleanup` takes the write lock itself and its initialised-lock precondition is documented at its `# Safety`. Sole invocation path is the withheld `engine_cleanup_int`; no call executes at this source identity. A NULL run-once lock would only make the callee a documented no-op/leak, pinned by the C8 probe.",
+      "defects": [],
+      "residuals": [
+        "B45-R1",
+        "B45-R2",
+        "B45-R3"
+      ]
+    },
+    {
+      "id": "B45-ENG-CB-004",
+      "file": "src/engine/tb_digest.rs",
+      "line": 73,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_digests",
+      "mechanism": "C_ABI_CONTRACT",
+      "site_receipt": "p25-engine-callback-sites#P25-ENGINE-CB-004",
+      "disposition": "SAFETY_DISCHARGED (scope: the zero-argument engine-table cleanup thunk engine_unregister_all_digests and its single registration/invocation path; src/engine/tb_digest.rs:73)",
+      "contract": "`unsafe extern \"C\" fn()` stored as `EngineCleanupCb` and registered by `engine_table_register(Some(engine_unregister_all_digests))` at two sites in this file. Preconditions established before the callback can run: (1) the engine lock is initialised, because every path that reaches registration (ENGINE_new / ENGINE_by_id / ENGINE_get_first / ENGINE_get_last, and RawEngine::new is private) runs the lock init, and GLOBAL_ENGINE_LOCK is stored once and never freed; (2) the lock is not held when the callback runs, because engine_cleanup_cb_free invokes cb() unlocked and the sole registration path runs through the public engine API; (3) the callback runs only after registration through that API. The body takes no arguments and reads only this module's own `&'static EngineTableSlot` (`DIGEST_TABLE`), so there is no caller-supplied pointer, extent, alignment or initialisation precondition. `engine_table_cleanup` takes the write lock itself and its initialised-lock precondition is documented at its `# Safety`. Sole invocation path is the withheld `engine_cleanup_int`; no call executes at this source identity. A NULL run-once lock would only make the callee a documented no-op/leak, pinned by the C8 probe.",
+      "defects": [],
+      "residuals": [
+        "B45-R1",
+        "B45-R2",
+        "B45-R3"
+      ]
+    },
+    {
+      "id": "B45-ENG-CB-005",
+      "file": "src/engine/tb_dsa.rs",
+      "line": 58,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_dsa",
+      "mechanism": "C_ABI_CONTRACT",
+      "site_receipt": "p25-engine-callback-sites#P25-ENGINE-CB-005",
+      "disposition": "SAFETY_DISCHARGED (scope: the zero-argument engine-table cleanup thunk engine_unregister_all_dsa and its single registration/invocation path; src/engine/tb_dsa.rs:58)",
+      "contract": "`unsafe extern \"C\" fn()` stored as `EngineCleanupCb` and registered by `engine_table_register(Some(engine_unregister_all_dsa))` at two sites in this file. Preconditions established before the callback can run: (1) the engine lock is initialised, because every path that reaches registration (ENGINE_new / ENGINE_by_id / ENGINE_get_first / ENGINE_get_last, and RawEngine::new is private) runs the lock init, and GLOBAL_ENGINE_LOCK is stored once and never freed; (2) the lock is not held when the callback runs, because engine_cleanup_cb_free invokes cb() unlocked and the sole registration path runs through the public engine API; (3) the callback runs only after registration through that API. The body takes no arguments and reads only this module's own `&'static EngineTableSlot` (`DSA_TABLE`), so there is no caller-supplied pointer, extent, alignment or initialisation precondition. `engine_table_cleanup` takes the write lock itself and its initialised-lock precondition is documented at its `# Safety`. Sole invocation path is the withheld `engine_cleanup_int`; no call executes at this source identity. A NULL run-once lock would only make the callee a documented no-op/leak, pinned by the C8 probe.",
+      "defects": [],
+      "residuals": [
+        "B45-R1",
+        "B45-R2",
+        "B45-R3"
+      ]
+    },
+    {
+      "id": "B45-ENG-CB-006",
+      "file": "src/engine/tb_eckey.rs",
+      "line": 58,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_ec",
+      "mechanism": "C_ABI_CONTRACT",
+      "site_receipt": "p25-engine-callback-sites#P25-ENGINE-CB-006",
+      "disposition": "SAFETY_DISCHARGED (scope: the zero-argument engine-table cleanup thunk engine_unregister_all_ec and its single registration/invocation path; src/engine/tb_eckey.rs:58)",
+      "contract": "`unsafe extern \"C\" fn()` stored as `EngineCleanupCb` and registered by `engine_table_register(Some(engine_unregister_all_ec))` at two sites in this file. Preconditions established before the callback can run: (1) the engine lock is initialised, because every path that reaches registration (ENGINE_new / ENGINE_by_id / ENGINE_get_first / ENGINE_get_last, and RawEngine::new is private) runs the lock init, and GLOBAL_ENGINE_LOCK is stored once and never freed; (2) the lock is not held when the callback runs, because engine_cleanup_cb_free invokes cb() unlocked and the sole registration path runs through the public engine API; (3) the callback runs only after registration through that API. The body takes no arguments and reads only this module's own `&'static EngineTableSlot` (`EC_TABLE`), so there is no caller-supplied pointer, extent, alignment or initialisation precondition. `engine_table_cleanup` takes the write lock itself and its initialised-lock precondition is documented at its `# Safety`. Sole invocation path is the withheld `engine_cleanup_int`; no call executes at this source identity. A NULL run-once lock would only make the callee a documented no-op/leak, pinned by the C8 probe.",
+      "defects": [],
+      "residuals": [
+        "B45-R1",
+        "B45-R2",
+        "B45-R3"
+      ]
+    },
+    {
+      "id": "B45-ENG-CB-007",
+      "file": "src/engine/tb_pkmeth.rs",
+      "line": 60,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_pkey_meths",
+      "mechanism": "C_ABI_CONTRACT",
+      "site_receipt": "p25-engine-callback-sites#P25-ENGINE-CB-007",
+      "disposition": "SAFETY_DISCHARGED (scope: the zero-argument engine-table cleanup thunk engine_unregister_all_pkey_meths and its single registration/invocation path; src/engine/tb_pkmeth.rs:60)",
+      "contract": "`unsafe extern \"C\" fn()` stored as `EngineCleanupCb` and registered by `engine_table_register(Some(engine_unregister_all_pkey_meths))` at two sites in this file. Preconditions established before the callback can run: (1) the engine lock is initialised, because every path that reaches registration (ENGINE_new / ENGINE_by_id / ENGINE_get_first / ENGINE_get_last, and RawEngine::new is private) runs the lock init, and GLOBAL_ENGINE_LOCK is stored once and never freed; (2) the lock is not held when the callback runs, because engine_cleanup_cb_free invokes cb() unlocked and the sole registration path runs through the public engine API; (3) the callback runs only after registration through that API. The body takes no arguments and reads only this module's own `&'static EngineTableSlot` (`PKEY_METH_TABLE`), so there is no caller-supplied pointer, extent, alignment or initialisation precondition. `engine_table_cleanup` takes the write lock itself and its initialised-lock precondition is documented at its `# Safety`. Sole invocation path is the withheld `engine_cleanup_int`; no call executes at this source identity. A NULL run-once lock would only make the callee a documented no-op/leak, pinned by the C8 probe.",
+      "defects": [],
+      "residuals": [
+        "B45-R1",
+        "B45-R2",
+        "B45-R3"
+      ]
+    },
+    {
+      "id": "B45-ENG-CB-008",
+      "file": "src/engine/tb_rand.rs",
+      "line": 58,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_rand",
+      "mechanism": "C_ABI_CONTRACT",
+      "site_receipt": "p25-engine-callback-sites#P25-ENGINE-CB-008",
+      "disposition": "SAFETY_DISCHARGED (scope: the zero-argument engine-table cleanup thunk engine_unregister_all_rand and its single registration/invocation path; src/engine/tb_rand.rs:58)",
+      "contract": "`unsafe extern \"C\" fn()` stored as `EngineCleanupCb` and registered by `engine_table_register(Some(engine_unregister_all_rand))` at two sites in this file. Preconditions established before the callback can run: (1) the engine lock is initialised, because every path that reaches registration (ENGINE_new / ENGINE_by_id / ENGINE_get_first / ENGINE_get_last, and RawEngine::new is private) runs the lock init, and GLOBAL_ENGINE_LOCK is stored once and never freed; (2) the lock is not held when the callback runs, because engine_cleanup_cb_free invokes cb() unlocked and the sole registration path runs through the public engine API; (3) the callback runs only after registration through that API. The body takes no arguments and reads only this module's own `&'static EngineTableSlot` (`RAND_TABLE`), so there is no caller-supplied pointer, extent, alignment or initialisation precondition. `engine_table_cleanup` takes the write lock itself and its initialised-lock precondition is documented at its `# Safety`. Sole invocation path is the withheld `engine_cleanup_int`; no call executes at this source identity. A NULL run-once lock would only make the callee a documented no-op/leak, pinned by the C8 probe.",
+      "defects": [],
+      "residuals": [
+        "B45-R1",
+        "B45-R2",
+        "B45-R3"
+      ]
+    },
+    {
+      "id": "B45-ENG-CB-009",
+      "file": "src/engine/tb_rsa.rs",
+      "line": 59,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_rsa",
+      "mechanism": "C_ABI_CONTRACT",
+      "site_receipt": "p25-engine-callback-sites#P25-ENGINE-CB-009",
+      "disposition": "SAFETY_DISCHARGED (scope: the zero-argument engine-table cleanup thunk engine_unregister_all_rsa and its single registration/invocation path; src/engine/tb_rsa.rs:59)",
+      "contract": "`unsafe extern \"C\" fn()` stored as `EngineCleanupCb` and registered by `engine_table_register(Some(engine_unregister_all_rsa))` at two sites in this file. Preconditions established before the callback can run: (1) the engine lock is initialised, because every path that reaches registration (ENGINE_new / ENGINE_by_id / ENGINE_get_first / ENGINE_get_last, and RawEngine::new is private) runs the lock init, and GLOBAL_ENGINE_LOCK is stored once and never freed; (2) the lock is not held when the callback runs, because engine_cleanup_cb_free invokes cb() unlocked and the sole registration path runs through the public engine API; (3) the callback runs only after registration through that API. The body takes no arguments and reads only this module's own `&'static EngineTableSlot` (`RSA_TABLE`), so there is no caller-supplied pointer, extent, alignment or initialisation precondition. `engine_table_cleanup` takes the write lock itself and its initialised-lock precondition is documented at its `# Safety`. Sole invocation path is the withheld `engine_cleanup_int`; no call executes at this source identity. A NULL run-once lock would only make the callee a documented no-op/leak, pinned by the C8 probe.",
+      "defects": [],
+      "residuals": [
+        "B45-R1",
+        "B45-R2",
+        "B45-R3"
+      ]
+    }
+  ],
+  "state_table": [
+    {
+      "path": "ENGINE_register_* -> engine_table_register -> engine_cleanup_add_first(Some(cb))",
+      "lock": "initialised by the public engine API before registration",
+      "callback_registered": "yes, exactly once per module",
+      "result": "the thunk is on CLEANUP_STACK and cannot run until OPENSSL_cleanup"
+    },
+    {
+      "path": "OPENSSL_cleanup -> engine_cleanup_int -> engine_cleanup_cb_free(item) -> cb()",
+      "lock": "not held at cb() entry; engine_cleanup_cb_free runs unlocked",
+      "callee": "engine_table_cleanup takes the write lock itself",
+      "result": "the thunk reads only its own static slot; a NULL lock would make the callee a documented no-op"
+    },
+    {
+      "path": "engine_cleanup_int at this source identity",
+      "lock": "withheld",
+      "callback_registered": "the nine are registered but never invoked",
+      "result": "unreachable at afcfdc47e; the invocation-path assumptions are derived from the pinned authority"
+    }
+  ],
+  "caller_closure": [
+    {
+      "file": "src/engine/eng_table.rs",
+      "caller": "engine_table_register (registration)",
+      "disposition": "SAFE (unchanged by B45); the only producer of the registered callback pointer",
+      "evidence": "the nine names occur in exactly one source file each and only as Some(cb) at the two registration sites per file"
+    },
+    {
+      "file": "src/engine/eng_lib.rs",
+      "caller": "engine_cleanup_add_first / engine_cleanup_cb_free (invocation)",
+      "disposition": "SAFE (unchanged by B45); invokes cb() unlocked and frees the item after the call",
+      "evidence": "CLEANUP_STACK is written only by int_cleanup_check and manipulated only by add_first/add_last; engine_cleanup_int is withheld"
+    },
+    {
+      "file": "src/engine/eng_lib.rs",
+      "caller": "engine_cleanup_int",
+      "disposition": "WITHHELD at afcfdc47e; the nine thunks are unreachable",
+      "evidence": "the sole invoker is not exported and no safe-Rust path reaches it"
+    }
+  ],
+  "evidence": {
+    "fast": {
+      "fmt": "cargo fmt --all -- --check: NOT_RUN in this subphase; B45 changes no Rust source",
+      "clippy": "cargo clippy --all-targets -- -D warnings: NOT_RUN in this subphase; no src/ change",
+      "focused_tests": "reused from the reviewed package (see controls_observed); not re-executed in B45"
+    },
+    "bounded_reuse": "The B45 scope is exactly the nine caller sites. Their contract, slot identity and invocation path are unchanged since the independent review of mechanism-discharge-ENGINE-CLEANUP.json; B45 re-binds those findings to the v1t census coordinates and to an exact per-site disposition. No contract, owner or precondition was edited, so the reviewed evidence remains applicable."
+  },
+  "controls_observed": [
+    "engine::eng_table::tests::cleanup_nulls_the_slot_and_a_second_cleanup_is_a_no_op (C3): the idempotence control; passes isolated and in the module filter after the test initialises the engine lock",
+    "engine::eng_table::tests::concurrent_select_and_cleanup_serialise_on_the_engine_lock (C4): the functional serialisation control (not a TSan result)",
+    "engine::eng_table::tests::register_select_and_cleanup_round_trip_through_the_slot (C5): register -> select -> cleanup through the typed slot",
+    "C1 static pairing: 9/9 callback bodies call engine_table_cleanup on their own module static and the static is declared in the same file",
+    "C2 caller set: each of the nine names occurs in exactly one source file"
+  ],
+  "negative_control": {
+    "id": "C8",
+    "name": "engine::eng_table::tests::uninitialised_engine_lock_makes_cleanup_a_documented_no_op",
+    "kind": "court functional test, fresh child process, --exact --test-threads=1",
+    "result": "PASS at the reviewed candidate",
+    "observation": "with global_engine_lock() NULL, engine_table_cleanup returns before the swap and slot.load() still equals the lhash: the NULL-lock arm is a documented no-op/leak, not UB and not a panic",
+    "fails_if": "cleanup swaps or releases with a NULL lock, panics in a debug build, or the child process starts after another test has run the lock once"
+  },
+  "miri": {
+    "status": "NOT_RUN",
+    "reason": "miri is not installed in the pinned court toolchain and the court has no network; the boundary is C ABI callback plumbing over a static atomic slot and the shared callee"
+  },
+  "loom_or_tsan": {
+    "status": "NOT_RUN",
+    "reason": "no TSan venue is provisioned; C4 is a functional serialisation test, not a race-detector result. The lock protocol is the shared callee's B20 contract, not a new B45 mechanism"
+  },
+  "sanitizers": {
+    "asan": "NOT_RUN",
+    "tsan": "NOT_RUN",
+    "dudect": "NOT_RUN"
+  },
+  "hidden_obligations": 0,
+  "hidden_obligations_note": "Zero for the nine caller sites. Each remaining unsafe operation (the unsafe extern \"C\" fn definitions and their one-line body call) has an explicit validity contract at its site and in this receipt. The shared callee's retained obligations are not hidden: B20-TBL-3 is explicitly CONTRACTED with B20-R2/R3 open.",
+  "new_unsafe_assumptions": 0,
+  "new_unsafe_assumptions_note": "None. B45 adds no unsafe operation and changes no source. It re-binds existing, reviewed contracts to the v1t coordinates.",
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_introduced": 0,
+  "test_only_unsafe_added": 0,
+  "boundary_size": "Nine caller sites in nine files (src/engine/tb_asnmth.rs, tb_cipher.rs, tb_dh.rs, tb_digest.rs, tb_dsa.rs, tb_eckey.rs, tb_pkmeth.rs, tb_rand.rs, tb_rsa.rs), each a zero-argument unsafe extern \"C\" fn whose body is one engine_table_cleanup call. No source change; the boundary is the registration/invocation edge, not the callee.",
+  "safe_callers_can_cause_ub": false,
+  "safe_callers_can_cause_ub_note": "No safe-Rust path registers or invokes these callbacks: they are private, not exported, and engine_cleanup_int is withheld. The callback takes no caller-supplied pointer, so the only stated obligations (initialised lock, not held, invoked after registration) are established by the public engine API and the withheld cleanup path.",
+  "retained_blocked": [
+    {
+      "obligation": "src/engine/eng_list.rs:97",
+      "operation": "engine_list_cleanup",
+      "boundary": "P25-ENGINE-CB-000",
+      "state": "BLOCKED",
+      "reason": "the Acquire load of ENGINE_LIST_HEAD is outside the write lock that ENGINE_remove takes, and the ENGINE_remove reference transition is not proven; this is a different callback (list cleanup) from the nine table cleanups. NOTE: the task's prose called this site engine_table_cleanup, but the v1t census operation at eng_list.rs:97 is engine_list_cleanup; the shared callee engine_table_cleanup lives in eng_table.rs (B20-TBL-3)."
+    },
+    {
+      "obligation": "src/engine/eng_dyn.rs:401",
+      "operation": "dynamic_data_ctx_free_func",
+      "boundary": "OSSH-DIS-014 / B20-DYN-*",
+      "state": "BLOCKED",
+      "reason": "CRYPTO_EX_free receives a caller-supplied pointer; the free-func contract is not discharged"
+    }
+  ],
+  "callee_retained": {
+    "id": "B20-TBL-3",
+    "state": "CONTRACTED",
+    "file": "src/engine/eng_table.rs",
+    "reason": "engine_table_cleanup is CONTRACTED, not SAFETY_DISCHARGED; B20-R2 (table entries borrow ENGINE*, no reference) and B20-R3 (authority parity) remain open. The nine caller discharges rest on this CONTRACTED dependency and do not promote it."
+  },
+  "residuals": [
+    {
+      "id": "B45-R1",
+      "severity": "medium",
+      "disposition": "DEPENDENCY CONTRACTED",
+      "description": "The nine caller discharges rest on the shared callee B20-TBL-3 (engine_table_cleanup), which is CONTRACTED with B20-R2/R3 open. A caller discharge does not discharge the callee."
+    },
+    {
+      "id": "B45-R2",
+      "severity": "medium",
+      "disposition": "UNREACHABLE AT THIS IDENTITY",
+      "description": "engine_cleanup_int is withheld (src/engine/eng_lib.rs:696-700), so the nine callbacks never run at afcfdc47e. The invocation-path assumptions are derived from the pinned authority, not exercised by the candidate; callbacks unreachable at this identity are out of scope for runtime evidence."
+    },
+    {
+      "id": "B45-R3",
+      "severity": "low",
+      "disposition": "NOT_RUN",
+      "description": "No Miri, ASan, TSan or dudect run for this scope. C4 is a functional serialisation test, not a race detector. A third-party provider destructor's null-contract is unverified."
+    }
+  ],
+  "not_run": [
+    {
+      "gate": "Miri (Stacked/Tree Borrows)",
+      "blocker": "miri absent from the pinned court toolchain (no network); the boundary is C ABI callback plumbing over a static slot"
+    },
+    {
+      "gate": "ASan",
+      "blocker": "no ASan venue provisioned for the court; the callbacks do not run at this identity"
+    },
+    {
+      "gate": "TSan / Loom for the lock protocol",
+      "blocker": "no TSan venue; Loom is not a fit for the shared engine lock's authority-parity design. The lock protocol belongs to B20-TBL-3"
+    },
+    {
+      "gate": "dudect / constant-time",
+      "blocker": "not a secret-dependent operation"
+    },
+    {
+      "gate": "full library suite and clippy gate",
+      "blocker": "B45 changes no source; the FAST/BATCH gates are recorded for the source candidate elsewhere"
+    }
+  ],
+  "non_claims": [
+    "B45 scopes a discharge to the nine named caller sites only; it does not discharge C_ABI_CONTRACT mechanism-wide (state stays UNSAFE_OPEN).",
+    "It does not discharge the shared callee engine_table_cleanup (B20-TBL-3, CONTRACTED) or the two retained sites.",
+    "No sanitizer, Miri, dudect or authority differential was run in B45.",
+    "A green closure count is a consumer-adjudication result, not a cryptographic or memory-safety proof."
+  ]
+}
