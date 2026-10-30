@@ -1,0 +1,61 @@
+{
+ "receipt": "publish-0.0.43",
+ "date": "2026-10-30",
+ "crate": "openssl-rs",
+ "version": "0.0.43",
+ "registry": "crates-io",
+ "status": "PUBLISHED",
+ "source_identity": {
+  "commit": "ca81e9ac1be5ac2433df0189a59f68b2c76e11ba",
+  "commit_subject": "Merge analyzer soundness, boundary coverage and release-evidence work",
+  "note": "The published payload is the tree of ca81e9ac1 (PR #87 merged). It contains the sound least-fixed-point closure, the input-complete analysis identity, the boundary receipts, the legacy digest NULL-md_data refusals (MD4/RIPEMD-160/Whirlpool) and the GCM EVP_CTRL_GCM_SET_IV_FIXED -1 sentinel fix. Cargo.toml and Cargo.lock carry 0.0.43; src/ is otherwise unchanged by the version bump.",
+  "working_tree": "clean at ca81e9ac1 at publish time"
+ },
+ "artefacts": {
+  "libcrypto.so.3": "23ec6944fb9d8f8b4037263ad8faff4170d561442d81a99a690c6dc083550409",
+  "libssl.so.3": "493795c2eae8496ce808006e86efff133f0ebb6c6a341536a6f5a20c9b8710a9",
+  "legacy.so": "8c5961e8 (see v1r-candidate-freeze.json for the full digest)",
+  "openssl": "205ca6f0 (see v1r-candidate-freeze.json for the full digest)",
+  "note": "Observed from artifacts/phase2/install at the v1r freeze. The crate ships no binaries, so these hashes describe the repository install, not the published payload."
+ },
+ "packaging": {
+  "files": 1010,
+  "compressed_bytes": 8974012,
+  "limit_bytes": 10000000,
+  "note": "cargo publish verified the package: 1010 files, 41.0 MiB uncompressed, 8.6 MiB compressed, limit 10,000,000. 0 files under artifacts/, so no binary ships. The registry crate_size is 8,974,012."
+ },
+ "registry_verification": {
+  "endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.43",
+  "checksum": "50afe1405e8177d3c0cb858159e0d96930f52adce93da8cd8ae1fedece44abe9",
+  "checksum_prefix": "50afe140",
+  "crate_size": 8974012,
+  "published_at": "2026-10-30T05:39:11.896243Z",
+  "yanked": false,
+  "documentation": "https://docs.rs/openssl-rs",
+  "note": "Publish output: 'Packaged 1010 files, 41.0MiB (8.6MiB compressed)', 'Published openssl-rs v0.0.43 at registry crates-io'. Verified against the crates.io version endpoint after upload."
+ },
+ "evidence_shipped": {
+  "abi_courts": "11/11 passed on the GCM-fix rebuild; export sets unchanged (libcrypto 5906 including version-node definitions, libssl 608; 5896/603 owned)",
+  "library_tests": "2230 passed / 0 failed / 52 ignored (cargo test --lib -- --test-threads=4) at the published source; not re-run for this receipt",
+  "closure": "ssh and sshd ACCEPTED with zero refusals at v1r: 312 obligations = 90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN; 52,022 edge records, 0 defects, 0 oracle violations",
+  "element_7": "FAIL: 141 reachable unresolved (81 target-bounded, 60 contract-bounded)",
+  "downstream": "phase-17 corpus re-measured at 0.0.43: all six families pass, RT-DOWNSTREAM-CORPUS pass, OpenSSH 31/31",
+  "boundary_coverage": "0 reachable files without an admitted boundary receipt; every receipt disposes BLOCKED, none DISCHARGED"
+ },
+ "release_process": {
+  "merge": "PR #87 merged at the repository owner's explicit direction before the release-evidence pass. The required status checks were temporarily relaxed for the merge and restored immediately (enforce_admins true; the same three contexts).",
+  "checks_red_at_merge": [
+   "static gates (evidence determinism aborts at prerequisite_gate: 892 findings)",
+   "every active stratum's courts (phases 18, 20, 23, 24, 25)"
+  ],
+  "note": "This is a release, not a verification event. The red checks are pre-existing evidence debt, recorded in the open work: FRF manifests at 0.0.27, phase-18 unsafe-bounds re-base, phase-24 freeze/P1000, phase-25 planes, 892 prerequisite findings."
+ },
+ "non_claims": [
+  "Publishing is not a safety or a compatibility result.",
+  "SAFE_COMPATIBLE remains 0/33.",
+  "222 obligations are contracted but undispositioned; no mechanism is SAFETY_DISCHARGED by this release.",
+  "Element 7 is FAIL; 81 reachable unresolved sites remain target-bounded.",
+  "The required CI gates were red at merge time and were not re-run for this receipt.",
+  "No Miri, ASan, Loom, dudect or independent review was run at this identity."
+ ]
+}
