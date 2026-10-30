@@ -1,8 +1,8 @@
 # Phase 25 — the memory-safety stratum, as subphases
 
 > **Status as of 2026-10-30 — planes stale relative to 0.0.44.** The current
-> candidate is `openssl-rs 0.0.44`, which is **not published**; the published
-> release is `0.0.43` (2026-10-30). The Phase-25 evidence planes and the
+> release is `openssl-rs 0.0.44` (**published 2026-10-30**, crates.io checksum
+> `ba87719c…`); `0.0.43` is the previous release. The Phase-25 evidence planes and the
 > generated seal (`docs/PHASE-25-MEMORY-SAFETY-SEAL.md`) were measured at the
 > frozen `0.0.27` candidate and were **not** re-measured at 0.0.44. They must
 > not be read as a current-measurement claim. The blockers are: the Phase-24
