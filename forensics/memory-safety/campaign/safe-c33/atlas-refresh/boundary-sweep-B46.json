@@ -533,28 +533,21 @@
   "reviewer": "independent adversarial reviewer (not the author)",
   "verdict": "REJECT",
   "applied": false,
-  "decisive_reason": "The option-list handlers transitively overlap a shared reference to SslConfCtx with ssl_set_option's `&mut *cctx` (ssl_conf.rs:301 -> :306 -> :185). That violates the discipline ssl_set_option's own # Safety requires. CORRECTION (2026-10-30): this is a latent borrow-discipline violation, not observed undefined behaviour. The mutation path returns before the stale reference is used, and neither Miri model fires on the pre-fix shape; see evidence/miri-ssl-conf-v1.json. The batch still stops for the exclusivity gap in check 3, and the sites stay BLOCKED.",
-  "failing_checks": {
-   "contract_truth": "FAIL: cctx is live but not unaliased for the whole call; the shared borrow at :301 is live across :306 into the &mut at :185. Return-value wording is also wrong for a mixed option list (CONF_parse_list returns 1 only when every element matches), and cmd_MinProtocol's 'writes on success' is over-broad because ssl_set_version_bound returns true without writing in its `_` arm.",
-   "exclusivity_gap": "FAIL (fatal for a discharge): SSL_CONF_cmd's # Safety at :1281 says only 'live'. Under AGENTS.md 7 and 21 an authority-derived precondition is an unresolved obligation, not a discharge.",
-   "receipt_integrity": "FAIL: hidden_obligations 0 is false (the :301/:185 alias and B46-R1); boundary_size omits ssl_set_option_list, ssl_match_option and ssl_set_option; the candidate block was stale (branch main, base 661f81c) while the receipt is committed at 213cd598c.",
-   "canary_strength": "PASS only at the mutation point: it detects removal of cmd_Options' NULL arm and nothing else. Exclusivity, retention, NUL-termination and mixed-list returns are untested."
-  },
-  "passing_checks": {
-   "scope_exactness": "PASS: each disposition parses to exactly one file and one line; the union covers 7 of the 10 blocked obligations in ssl_conf.rs and leaves :240/:274/:379 outside.",
-   "false_coverage": "PASS: the three other operations cannot be covered by these ranges, and non_claims keep SSL_SESSION OWNERSHIP_RECONSTRUCTED."
-  },
-  "prohibition": [
-   "Do not apply B46. The seven sites stay BLOCKED.",
-   "Do not reclassify the aliasing hazard or the exclusivity gap as acceptable residuals."
+  "date": "2026-10-30",
+  "decisive_reason": "B46-R1 does not close. AGENTS.md 7 requires the precondition to be established by callers or by an external ABI contract, and both 7 and 21 state that documentation alone does not discharge an obligation. A candidate-authored # Safety is our own record of a divergence (B46-D1), not an external witness, and nothing establishes or enforces exclusive access at run time. The pinned authority's SSL_CONF_cmd.pod and ssl_conf.c impose neither exclusivity nor a no-concurrent-mutation rule.",
+  "secondary_failures": [
+   "min_max_proto clause 'an accepted name is range-checked before any write' is false for the accepted name None (version 0): ssl_set_version_bound writes *bound at ssl_conf.rs:399-401 before any range test; the bound clause also reads as permitting NULL where the body dereferences it.",
+   "receipt integrity: hidden_obligations 0 and 'R1 closed' contradict the preserved REJECT verdict and failing_checks.exclusivity_gap; callers[].role table refs are off by six; boundary_size omits ssl_set_option_list/ssl_match_option/ssl_set_option; boundary-001 repeats the false CONF_parse_list return wording; the candidate block is stale against the commit that contains the receipt."
   ],
-  "correction": {
-   "date": "2026-10-30",
-   "what_changed": "the aliasing finding is downgraded from 'confirmed memory-safety defect' to 'latent borrow-discipline violation, not observed UB'",
-   "basis": "evidence/miri-ssl-conf-v1.json: control does not fire; Miri reports UB on use of an invalidated tag, not on the retag",
-   "effect_on_verdict": "verdict stays REJECT, but on the exclusivity gap (check 3) and the falsified contract statements, not on a claimed UB"
-  },
-  "coordinate_note": "Coordinates quoted inside this review block (:301/:306/:185, :1281) are the pre-fix coordinates at the rejected candidate and are preserved as history; they are intentionally not rewritten to the current source."
+  "passing_checks": [
+   "scope exactness: all dispositions parse to one file and one range; the union equals the 18 BLOCKED SSL_SESSION ids at v1u census coordinates, reconciled to current source 18/18",
+   "conditional ABI-only sites are handled correctly: no root invocation, no safe-Rust caller can install or invoke them, and re-opening on a new invocation path is stated",
+   "the min/max protocol canary is mutation-sensitive: replacing protocol_from_string's -1 with TLS1_2_VERSION makes the refusal assertion fail"
+  ],
+  "prohibition": [
+   "Do not apply B46 or B47. All 18 sites stay BLOCKED and SSL_SESSION stays OWNERSHIP_RECONSTRUCTED.",
+   "Do not substitute our own documentation for an external witness, and do not widen a disposition range to move a count."
+  ]
  },
  "hidden_obligation_detail": [
   {
