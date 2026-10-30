@@ -73,8 +73,8 @@ unsafe fn init_md_data(
     if ctx.is_null() {
         return None;
     }
-    // SAFETY: `ctx` is NULL or live per the contract.
-    let md_data = unsafe { (*ctx).md_data };
+    // SAFETY: `ctx` is non-NULL and live per the contract.
+    let md_data = unsafe { md_data(ctx) };
     // SAFETY: as above.
     let digest = unsafe { (*ctx).digest };
     if md_data.is_null() || digest.is_null() {
@@ -194,16 +194,58 @@ unsafe extern "C" fn mdc2_init(ctx: *mut EvpMdCtx) -> c_int {
 
 /// `mdc2_update` — `legacy_meth.h:15-18`. `MDC2_Update`'s input is `const unsigned char *`, so the
 /// void pointer the macro forwards is re-typed at the call.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `count` may be zero, in which case `data`
+/// may be NULL and the callback answers `1` without touching either pointer. The callback refuses
+/// a context that does not establish a writable `MDC2_CTX` — NULL, a fresh `EVP_MD_CTX_new()`,
+/// a NULL method, or a method with a smaller `ctx_size` — with `0` before any dereference
+/// (`docs/SECURITY_DIVERGENCE_POLICY.md`, `D-LEGACY-MD-CALLBACK-MD-DATA-1`). The context is
+/// borrowed exclusively for the duration of the call and no pointer is retained.
 unsafe extern "C" fn mdc2_update(ctx: *mut EvpMdCtx, data: *const c_void, count: usize) -> c_int {
-    // SAFETY: as above, and `data`/`count` are forwarded unchanged.
-    unsafe { MDC2_Update(md_data(ctx).cast::<Mdc2Ctx>(), data.cast::<u8>(), count) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `MDC2_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(MDC2_MD.0),
+            core::mem::size_of::<Mdc2Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // The authority's `MDC2_Update` can reach `copy_nonoverlapping` for a zero length; answer that
+    // update before the pointer is used so a NULL `data` is accepted here.
+    if count == 0 {
+        return 1;
+    }
+    // SAFETY: `init_md_data` established a writable `MDC2_CTX`; `data`/`count` are the caller's.
+    unsafe { MDC2_Update(block.cast::<Mdc2Ctx>(), data.cast::<u8>(), count) }
 }
 
 /// `mdc2_final` — `legacy_meth.h:19-22`. The authority's macro is
 /// `fn##_Final(md, EVP_MD_CTX_get0_md_data(ctx))`, and `MDC2_Final` takes the digest first.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `md` must be writable for
+/// `MDC2_DIGEST_LENGTH` (16) bytes. The context precondition is the one [`mdc2_update`] states,
+/// and a context without a writable block is refused with `0` before `md` is touched.
 unsafe extern "C" fn mdc2_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
-    // SAFETY: as above.
-    unsafe { MDC2_Final(md, md_data(ctx).cast::<Mdc2Ctx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `MDC2_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(MDC2_MD.0),
+            core::mem::size_of::<Mdc2Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `MDC2_CTX`; `md` is writable per the contract.
+    unsafe { MDC2_Final(md, block.cast::<Mdc2Ctx>()) }
 }
 
 /// `mdc2_md` — `legacy_mdc2.c:22-30`. `flags` is **0** and `md_ctrl` is **NULL**, both the
