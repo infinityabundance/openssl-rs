@@ -5551,6 +5551,11 @@ def local_fptr_witness(g: "DsoGraph", site: dict, name: str):
 # it stores anything else.  A reachable direct caller outside the cohort also
 # refuses the site (the context could have come from another constructor).
 #
+# The base object is first qualified as the function's declared context
+# parameter: the entry argument, a whole-register copy chain, or a reload from
+# a frame slot whose every reaching store is that same parameter.  Every
+# reaching definition must agree; branches are never unioned into a may-alias.
+#
 # Refusals are conjunctions, never unions: any one failure leaves the site
 # target-bounded.  A partially enumerated instance set is never unioned.
 
@@ -7065,32 +7070,103 @@ def _s1_refusal(reason: str, **extra) -> dict:
     return rec
 
 
+def _s1_ctx_param(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                  want: int, seen: frozenset = frozenset()):
+    """Prove that ``reg`` at ``idx`` holds the context parameter ``want``.
+
+    This qualifies the *object* rather than widening the table.  Every
+    reaching definition must independently establish the same parameter:
+
+    * the entry argument register for ``want``;
+    * a whole-register ``mov`` whose source is again proven (a compiler copy
+      into a callee-saved register);
+    * a reload from a frame slot whose every reaching store is proven to be
+      that same parameter, as established by ``_stack_param``.
+
+    A branch that cannot be proved refuses the whole object, so two paths are
+    never unioned into a may-alias, and a call result or a different parameter
+    never qualifies.  This is the only admission: a partially proven reaching
+    definition returns None.
+    """
+    reg = _canon(reg) if reg in _SUBREG else reg
+    key = (idx, reg)
+    if key in seen:
+        return None
+    seen = seen | {key}
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if not defs:
+        return None
+    insns = g.precision.insns_by_func.get(fstart, ())
+    proofs = []
+    for d in sorted(defs):
+        if d == _ENTRY_DEF:
+            if _ENTRY_ARG_REGS.get(reg) != want:
+                return None
+            proofs.append({"step": "entry-register", "reg": reg})
+            continue
+        if not (0 <= d < len(insns)):
+            return None
+        mn, _rest, ops = _insn_parts(insns[d][1])
+        if mn not in ("mov", "movq") or len(ops) < 2:
+            return None
+        dst = ops[-1]
+        if dst not in _REGS or _canon(dst) != reg:
+            return None
+        src = ops[0].strip()
+        proof = None
+        if src in _REGS:
+            proof = _s1_ctx_param(g, fstart, d, src, want, seen)
+            if proof is not None:
+                proofs.append({"step": "register-copy",
+                               "addr": hex(insns[d][0]), "src": src})
+        elif re.fullmatch(r"(-?0x[0-9a-f]+)?\((%rsp|%rbp)\)", src):
+            spill = _stack_param(g, fstart, d, src, None)
+            if spill is not None and spill.get("index") == want:
+                proof = spill
+                proofs.append({"step": "frame-slot-reload",
+                               "addr": hex(insns[d][0]), "slot": src,
+                               "provenance": spill.get("provenance")})
+        if proof is None:
+            return None
+    return {"kind": "param", "index": want, "via": proofs}
+
+
 def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
-                                  reachable: set | None = None):
+                                  reachable: set | None = None,
+                                  trace: list | None = None):
     """Prove (or refuse) a field-sensitive static-table instance dispatch.
 
     Returns None when this site is not a field-dispatch candidate at all; a
     dict with ``resolved`` otherwise.  Every refusal is recorded and leaves the
     site target-bounded -- callers must not fall through to a weaker class.
+
+    ``trace`` is an optional diagnostic list.  When supplied, the name of the
+    gate that rejected a non-candidate is appended to it.  It never changes the
+    returned value and is never populated by the closure itself.
     """
-    if site.get("kind") != "call" or not _has_insns(g):
+    def _miss(gate):
+        if trace is not None:
+            trace.append(gate)
         return None
+
+    if site.get("kind") != "call" or not _has_insns(g):
+        return _miss("not-call-or-no-insns")
     fstart = site.get("func")
     insns = g.precision.insns_by_func.get(fstart, ())
     idx = next((i for i, (a, _t) in enumerate(insns) if a == site.get("addr")),
                None)
     if idx is None:
-        return None
+        return _miss("site-not-in-function")
     ctx_info = _s1_site_context(g, fstart)
     if ctx_info is None:
-        return None
+        return _miss("no-context-type")
     # Only the pointer fields of T are needed.  T itself need not have a
     # fully decidable layout: the pointer-slot offset is read from the load
     # that produces the call's base, and the table type U carries the layout
     # that the member offsets are checked against.
     tfields = _s1_struct_fields(g, ctx_info["type"])
     if tfields is None:
-        return None
+        return _miss("context-layout-undecidable")
     pointer_fields = []
     for fname, ftype in tfields[0]:
         m = re.match(r"\*\s*(?:const|mut)\s+([A-Za-z_]\w*)", ftype)
@@ -7104,12 +7180,12 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
                                "declaration": (f"{tfields[1]['file']}:"
                                                f"{tfields[1]['line']}")})
     if not pointer_fields:
-        return None
+        return _miss("no-pointer-field-with-layout")
 
     text = site.get("text") or ""
     m = re.search(r"call\w*\s+\*(.+)$", text.split("#", 1)[0].strip())
     if not m:
-        return None
+        return _miss("operand-not-field")
     operand = m.group(1).strip()
     member_off = None
     base_reg = None
@@ -7121,13 +7197,13 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
     elif operand in _REGS or operand in _SUBREG:
         base_reg = _canon(operand)
     else:
-        return None
+        return _miss("operand-is-not-register-or-field")
     origin = _reg_origin(g, fstart, idx, base_reg)
     chain = []
     if mo:
         if origin.get("kind") != "load":
             if "s1-base-not-table" not in _MUTED:
-                return None
+                return _miss("base-not-field-load")
             # Mutation only: the call operand is not a field load.  Use the
             # observed member offset so the rest of the checks still run.
             slot_off = member_off
@@ -7139,14 +7215,14 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
             slot_load_idx = origin["at"]
     else:
         if origin.get("kind") != "load":
-            return None
+            return _miss("base-reg-not-field-load")
         member_off = origin["offset"]
         table_reg = origin["base_reg"]
         slot_load_idx = origin["at"]
         slot_origin = _reg_origin(g, fstart, slot_load_idx, table_reg)
         if slot_origin.get("kind") != "load":
             if "s1-base-not-table" not in _MUTED:
-                return None
+                return _miss("table-reg-not-field-load")
             slot_off = member_off
         else:
             slot_off = slot_origin["offset"]
@@ -7156,30 +7232,53 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
                           "member_offset": hex(member_off)})
             table_reg = slot_origin["base_reg"]
             slot_load_idx = slot_origin["at"]
-    ctx_origin = _reg_origin(g, fstart, slot_load_idx,
-                             _canon(table_reg) if table_reg in _SUBREG else table_reg)
-    if ctx_origin.get("kind") != "param":
-        if "s1-base-not-table" not in _MUTED:
-            return None
-        ctx_origin = {"kind": "param", "index": ctx_info.get("param_index")}
-    if ctx_origin.get("index") != ctx_info.get("param_index"):
-        if "s1-base-not-table" not in _MUTED:
-            return None
-        ctx_origin = {"kind": "param", "index": ctx_info.get("param_index")}
-    slot_load_addr = (insns[slot_load_idx][0]
-                      if slot_load_idx < len(insns) else None)
-    chain.insert(0, {"step": "parameter ctx",
-                     "param": ctx_info.get("param"),
-                     "register": table_reg,
-                     "index": ctx_origin.get("index")})
-    chain.insert(1, {"step": "load pointer_slot",
-                     "addr": hex(slot_load_addr) if slot_load_addr else None,
-                     "offset": hex(slot_off)})
+    want = ctx_info.get("param_index")
+    table_object_reg = (_canon(table_reg) if table_reg in _SUBREG
+                        else table_reg)
+    if "s1-ctx-object" in _MUTED:
+        # Mutation control: fall back to the single-provenance resolver, which
+        # cannot follow a spill or a two-path copy.
+        ctx_origin = _reg_origin(g, fstart, slot_load_idx, table_object_reg)
+        if (ctx_origin.get("kind") != "param"
+                or ctx_origin.get("index") != want):
+            ctx_origin = None
+    else:
+        ctx_origin = _s1_ctx_param(g, fstart, slot_load_idx,
+                                   table_object_reg, want)
+    ctx_failure = ctx_origin is None
+    if not ctx_failure:
+        slot_load_addr = (insns[slot_load_idx][0]
+                          if slot_load_idx < len(insns) else None)
+        chain.insert(0, {"step": "parameter ctx",
+                         "param": ctx_info.get("param"),
+                         "register": table_reg,
+                         "index": ctx_origin.get("index")})
+        chain.insert(1, {"step": "load pointer_slot",
+                         "addr": hex(slot_load_addr) if slot_load_addr else None,
+                         "offset": hex(slot_off)})
 
     tables = [t for t in _s1_dispatch_tables(g)
               if fstart in _s1_closure(g, [e["target"] for e in t["entries"]], 2)]
     if not tables:
-        return None
+        return _miss("no-dispatch-table")
+    if ctx_failure:
+        # This is a genuine dispatch candidate (the pointer slot and a table
+        # were found), so an unproven base object is a named refusal.  A site
+        # that is not a candidate returned above and still falls through to
+        # whatever weaker evidence class it had before.
+        if "s1-base-not-table" not in _MUTED:
+            return _s1_refusal(
+                "ctx-not-proven-parameter", function=name,
+                call_site=hex(site["addr"]),
+                operand={"base_reg": base_reg,
+                         "member_offset": hex(member_off)},
+                context={"type": ctx_info["type"],
+                         "param": ctx_info.get("param"),
+                         "index": want,
+                         "register": table_object_reg,
+                         "slot_load": hex(insns[slot_load_idx][0])
+                         if slot_load_idx < len(insns) else None})
+        ctx_origin = {"kind": "param", "index": want, "via": "mutation"}
     cohort = set()
     writers = set()
     paired = []
@@ -13334,7 +13433,11 @@ def build_receipt(args) -> dict:
                 "schema": S1_WITNESS_SCHEMA,
                 "rule": (
                     "field-sensitive key (object type, pointer-slot offset, "
-                    "member offset); the effective table type is the declared "
+                    "member offset); the base object is the function's "
+                    "declared context parameter, proven through the entry "
+                    "register, whole-register copies or a frame spill whose "
+                    "every reaching store is the same parameter (branches are "
+                    "never unioned); the effective table type is the declared "
                     "pointer-field type or a source cast of that field to a "
                     "decidable repr(C) layout; every scalar store to the slot "
                     "in the dispatch table's constructor cohort must write a "
@@ -14669,7 +14772,7 @@ def self_test() -> int:
     def _s1_source(nullable=False, cast=False, cast_missing=False,
                    prefix=False, prefix_nonbase=False, prefix_layout=False,
                    prefix_cast=False, different_object=False,
-                   unknown_base=False):
+                   unknown_base=False, fourth=False):
         cipher = ("unsafe extern \"C\" fn(*mut Wctx) -> c_int"
                   if not nullable else
                   "Option<unsafe extern \"C\" fn(*mut Wctx) -> c_int>")
@@ -14840,7 +14943,9 @@ def self_test() -> int:
                 "static TBL_A: WTable = WTable { init: f0, cipher: f1, fini: f2 };\n"
                 "static TBL_B: WTable = WTable { init: g0, cipher: g1, fini: g2 };\n"
                 "static TBL_C: WTable = WTable { init: h0, cipher: h1, fini: h2 };\n"
-                "unsafe fn site(ctx: *mut Wctx, out: *mut c_uchar) -> c_int {\n"
+                + ("static TBL_D: WTable = WTable { init: i0, cipher: i1, "
+                   "fini: i2 };\n" if fourth else "")
+                + "unsafe fn site(ctx: *mut Wctx, out: *mut c_uchar) -> c_int {\n"
                 "    let hw = (*ctx).hw;\n"
                 "    ((*hw).cipher)(ctx, out)\n"
                 "}\n")
@@ -14851,7 +14956,7 @@ def self_test() -> int:
             "    let ctx = owner.as_ptr();\n"
             "    (*ctx).hw = &TBL_" + n + ";\n"
             "    owner.into_raw().cast()\n"
-            "}\n" for n in "ABC")
+            "}\n" for n in ("ABCD" if fourth else "ABC"))
         return body + writers + tail
 
     class _S1G:
@@ -14901,13 +15006,17 @@ def self_test() -> int:
             return self._u32.get(a)
 
     S1_SITE, S1_NEW_A, S1_NEW_B, S1_NEW_C = 0x1000, 0x1100, 0x1200, 0x1240
+    S1_NEW_D = 0x1360
     S1_ZALLOC, S1_ROGUE = 0x1500, 0x1300
     S1_OTHER, S1_UNKNOWN = 0x1280, 0x12c0
     S1_TBL = {0x3000: "A", 0x3100: "B", 0x3200: "C"}
     S1_MEM = {0x3000: (0x2000, 0x2010, 0x2020),
               0x3100: (0x2100, 0x2110, 0x2120),
               0x3200: (0x2200, 0x2210, 0x2220)}
+    S1_TBL_D = {0x3300: "D"}
+    S1_MEM_D = (0x2300, 0x2310, 0x2320)
     S1_FUNCS = {0x3400: "FUNCS_A", 0x3440: "FUNCS_B", 0x3480: "FUNCS_C"}
+    S1_FUNCS_D = {0x34c0: "FUNCS_D"}
 
     def _s1_sym(letter):
         return ("_RNvNtNtCs3iYjyFzWfzV_10openssl_rs8provider10cipher_gcm5TBL_"
@@ -14919,7 +15028,7 @@ def self_test() -> int:
                     null_member=False, cast=False, cast_missing=False,
                     prefix=False, prefix_nonbase=False, prefix_layout=False,
                     prefix_cast=False, different_object=False,
-                    unknown_base=False):
+                    unknown_base=False, fourth=False):
         td = tempfile.mkdtemp()
         repo = Path(td)
         path = repo / "src" / "provider" / "cipher_gcm.rs"
@@ -14928,13 +15037,16 @@ def self_test() -> int:
             nullable, cast, cast_missing, prefix=prefix,
             prefix_nonbase=prefix_nonbase, prefix_layout=prefix_layout,
             prefix_cast=prefix_cast, different_object=different_object,
-            unknown_base=unknown_base))
+            unknown_base=unknown_base, fourth=fourth))
         funcs = {
             S1_SITE: "_RNvNtNtCs3iYjyFzWfzV_10openssl_rs8provider10cipher_gcm4site",
             S1_NEW_A: "newctx_a", S1_NEW_B: "newctx_b",
             S1_NEW_C: "newctx_c", S1_ZALLOC: "zalloc",
         }
-        for base in (0x2000, 0x2100, 0x2200):
+        if fourth:
+            funcs[S1_NEW_D] = "newctx_d"
+        for base in ((0x2000, 0x2100, 0x2200, 0x2300) if fourth
+                     else (0x2000, 0x2100, 0x2200)):
             for k in range(3):
                 funcs[base + k * 0x10] = f"member_{base:x}_{k}"
         if rogue:
@@ -14957,6 +15069,53 @@ def self_test() -> int:
             insns[S1_SITE] += [(0x100c if guard else 0x1008,
                                 "call   *%rax"),
                                (0x1010 if guard else 0x100c, "ret")]
+        elif shape == "copy":
+            insns[S1_SITE] = [(0x1000, "mov    %rdi,%r14"),
+                              (0x1004, "mov    0x8(%r14),%r8"),
+                              (0x1008, "call   *0x8(%r8)"),
+                              (0x100c, "ret")]
+        elif shape == "copy-rogue":
+            insns[S1_SITE] = [(0x1000, "mov    %rsi,%r14"),
+                              (0x1004, "mov    0x8(%r14),%r8"),
+                              (0x1008, "call   *0x8(%r8)"),
+                              (0x100c, "ret")]
+        elif shape in ("copy-multi", "copy-multi-rogue"):
+            second = ("mov    %rsi,%r14"
+                      if shape == "copy-multi-rogue" else "mov    %rdi,%r14")
+            insns[S1_SITE] = [(0x1000, "test   %rdi,%rdi"),
+                              (0x1004, "je     1010 <site+0x10>"),
+                              (0x1006, "mov    %rdi,%r14"),
+                              (0x100a, "jmp    1014 <site+0x14>"),
+                              (0x1010, second),
+                              (0x1014, "mov    0x8(%r14),%r8"),
+                              (0x1018, "call   *0x8(%r8)"),
+                              (0x101c, "ret")]
+        elif shape == "spill":
+            insns[S1_SITE] = [(0x1000, "mov    %rdi,0x10(%rsp)"),
+                              (0x1004, "mov    0x10(%rsp),%r14"),
+                              (0x1008, "mov    0x8(%r14),%r8"),
+                              (0x100c, "call   *0x8(%r8)"),
+                              (0x1010, "ret")]
+        elif shape == "spill-rogue":
+            insns[S1_SITE] = [(0x1000, "mov    %rdi,0x10(%rsp)"),
+                              (0x1004, "mov    %rsi,0x10(%rsp)"),
+                              (0x1008, "mov    0x10(%rsp),%r14"),
+                              (0x100c, "mov    0x8(%r14),%r8"),
+                              (0x1010, "call   *0x8(%r8)"),
+                              (0x1014, "ret")]
+        elif shape in ("spill-multi", "spill-multi-rogue"):
+            second = ("mov    %rsi,0x10(%rsp)"
+                      if shape == "spill-multi-rogue"
+                      else "mov    %rdi,0x10(%rsp)")
+            insns[S1_SITE] = [(0x1000, "test   %rdi,%rdi"),
+                              (0x1004, "je     1010 <site+0x10>"),
+                              (0x1006, "mov    %rdi,0x10(%rsp)"),
+                              (0x100a, "jmp    1014 <site+0x14>"),
+                              (0x1010, second),
+                              (0x1014, "mov    0x10(%rsp),%r14"),
+                              (0x1018, "mov    0x8(%r14),%r8"),
+                              (0x101c, "call   *0x8(%r8)"),
+                              (0x1020, "ret")]
         else:
             insns[S1_SITE] = [(0x1000, "call   *0x8(%rdi)"),
                               (0x1004, "ret")]
@@ -14982,6 +15141,8 @@ def self_test() -> int:
         insns[S1_NEW_B] = newctx(S1_NEW_B, 0x3100)
         insns[S1_NEW_C] = (newctx(S1_NEW_C, 0x3200) if third_store
                            else [(S1_NEW_C, "ret")])
+        if fourth:
+            insns[S1_NEW_D] = newctx(S1_NEW_D, 0x3300)
         if rogue:
             insns[S1_ROGUE] = [(0x1300, "call   1000 <site>"),
                                (0x1305, "ret")]
@@ -14994,12 +15155,16 @@ def self_test() -> int:
                                  (0x12c7, "ret")]
         static_values, u32, sizes = {}, {}, {}
         data_syms = {}
-        for base, letter in S1_TBL.items():
+        tables = dict(S1_TBL)
+        if fourth:
+            tables.update(S1_TBL_D)
+        for base, letter in tables.items():
             addr = tbl_a if base == 0x3000 else base
             data_syms[addr] = _s1_sym(letter)
             sizes[_s1_sym(letter)] = (0x20 if (shape_extra and base == 0x3000)
                                       else 0x18)
-            for k, member in enumerate(S1_MEM[base]):
+            members = S1_MEM.get(base) or S1_MEM_D
+            for k, member in enumerate(members):
                 value = member
                 if bad_member and base == 0x3000 and k == 1:
                     value = 0x9999
@@ -15009,11 +15174,16 @@ def self_test() -> int:
         if shape_extra:
             static_values[tbl_a + 0x18] = {0x2030}
             funcs[0x2030] = "extra_member"
+        dispatch = dict(S1_FUNCS)
+        if fourth:
+            dispatch.update(S1_FUNCS_D)
+        newctx_all = (S1_NEW_A, S1_NEW_B, S1_NEW_C,
+                      S1_NEW_D) if fourth else (S1_NEW_A, S1_NEW_B, S1_NEW_C)
         for i, (addr, name) in enumerate(sorted(
-                S1_FUNCS.items(), key=lambda kv: kv[0])):
+                dispatch.items(), key=lambda kv: kv[0])):
             sizes[name] = 0x30
             data_syms[addr] = name
-            newctx_addr = (S1_NEW_A, S1_NEW_B, S1_NEW_C)[i]
+            newctx_addr = newctx_all[i]
             u32[addr] = 1
             static_values[addr + 8] = {newctx_addr}
             u32[addr + 0x10] = 6
@@ -15126,6 +15296,43 @@ def self_test() -> int:
           (_s1_witness(prefix_layout=True) or {}).get("resolved", False),
           False)
 
+    # Context-object qualification: a compiler copy, a frame spill and two
+    # agreeing paths admit; one unproven path refuses the whole object.  The
+    # fourth-instance case proves the newly admitted object still widens by a
+    # real static instance rather than dropping or inventing a target.
+    swc = _s1_witness(shape="copy")
+    check("S1 context copy chain resolves",
+          bool(swc and swc.get("resolved")), True)
+    check("S1 context copy keeps only the requested member",
+          (swc or {}).get("targets"), ["0x2010", "0x2110", "0x2210"])
+    swsp = _s1_witness(shape="spill")
+    check("S1 context frame spill resolves",
+          bool(swsp and swsp.get("resolved")), True)
+    swcm = _s1_witness(shape="copy-multi")
+    check("S1 two agreeing context copies resolve",
+          bool(swcm and swcm.get("resolved")), True)
+    swsm = _s1_witness(shape="spill-multi")
+    check("S1 two agreeing frame stores resolve",
+          bool(swsm and swsm.get("resolved")), True)
+    swfour = _s1_witness(shape="spill", fourth=True)
+    check("S1 context spill admits a newly added static instance",
+          bool(swfour and swfour.get("resolved")), True)
+    check("S1 context spill widens to the fourth table target",
+          (swfour or {}).get("targets"),
+          ["0x2010", "0x2110", "0x2210", "0x2310"])
+    check("S1 a copy from a different parameter is refused",
+          (_s1_witness(shape="copy-rogue") or {}).get("refusal"),
+          "ctx-not-proven-parameter")
+    check("S1 a frame slot overwritten from a different parameter is refused",
+          (_s1_witness(shape="spill-rogue") or {}).get("refusal"),
+          "ctx-not-proven-parameter")
+    check("S1 one unproven copy path refuses the whole object",
+          (_s1_witness(shape="copy-multi-rogue") or {}).get("refusal"),
+          "ctx-not-proven-parameter")
+    check("S1 one unproven frame-store path refuses the whole object",
+          (_s1_witness(shape="spill-multi-rogue") or {}).get("refusal"),
+          "ctx-not-proven-parameter")
+
     mut_rows = []
 
     def _mutation(name, fn):
@@ -15186,6 +15393,10 @@ def self_test() -> int:
          True, None),
         ("s1-prefix-layout", lambda: _s1_witness(prefix_layout=True),
          True, None),
+        ("s1-ctx-object", lambda: _s1_witness(shape="spill"),
+         False, "ctx-not-proven-parameter"),
+        ("s1-ctx-object", lambda: _s1_witness(shape="copy-multi"),
+         False, "ctx-not-proven-parameter"),
     ]
     mut2_results = []
     for name, fn, _wr, _rf in mut2:
