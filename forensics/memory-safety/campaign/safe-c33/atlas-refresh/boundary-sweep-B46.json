@@ -524,7 +524,7 @@
   "reviewer": "independent adversarial reviewer (not the author)",
   "verdict": "REJECT",
   "applied": false,
-  "decisive_reason": "The option-list handlers transitively violate their own contract: ssl_set_option_list holds a shared reference to SslConfCtx across the call at ssl_conf.rs:306 into ssl_set_option's `&mut *cctx`, which ssl_set_option's own # Safety at :173-175 forbids. A shared-and-exclusive overlap is a UB class, not a documentation gap, so the batch stops (AGENTS.md stop conditions).",
+  "decisive_reason": "The option-list handlers transitively overlap a shared reference to SslConfCtx with ssl_set_option's `&mut *cctx` (ssl_conf.rs:301 -> :306 -> :185). That violates the discipline ssl_set_option's own # Safety requires. CORRECTION (2026-10-30): this is a latent borrow-discipline violation, not observed undefined behaviour. The mutation path returns before the stale reference is used, and neither Miri model fires on the pre-fix shape; see evidence/miri-ssl-conf-v1.json. The batch still stops for the exclusivity gap in check 3, and the sites stay BLOCKED.",
   "failing_checks": {
    "contract_truth": "FAIL: cctx is live but not unaliased for the whole call; the shared borrow at :301 is live across :306 into the &mut at :185. Return-value wording is also wrong for a mixed option list (CONF_parse_list returns 1 only when every element matches), and cmd_MinProtocol's 'writes on success' is over-broad because ssl_set_version_bound returns true without writing in its `_` arm.",
    "exclusivity_gap": "FAIL (fatal for a discharge): SSL_CONF_cmd's # Safety at :1281 says only 'live'. Under AGENTS.md 7 and 21 an authority-derived precondition is an unresolved obligation, not a discharge.",
@@ -538,7 +538,13 @@
   "prohibition": [
    "Do not apply B46. The seven sites stay BLOCKED.",
    "Do not reclassify the aliasing hazard or the exclusivity gap as acceptable residuals."
-  ]
+  ],
+  "correction": {
+   "date": "2026-10-30",
+   "what_changed": "the aliasing finding is downgraded from 'confirmed memory-safety defect' to 'latent borrow-discipline violation, not observed UB'",
+   "basis": "evidence/miri-ssl-conf-v1.json: control does not fire; Miri reports UB on use of an invalidated tag, not on the retag",
+   "effect_on_verdict": "verdict stays REJECT, but on the exclusivity gap (check 3) and the falsified contract statements, not on a claimed UB"
+  }
  },
  "hidden_obligation_detail": [
   {
