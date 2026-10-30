@@ -1,0 +1,160 @@
+{
+ "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "p25-vestigial-marker-sites",
+ "subphase": "safe-c33 analyzer-corpus: vestigial ABI/table markers (ml_kem, RC2, EdDSA dispatch, readbuffer BIO methods)",
+ "date": "2026-10-30",
+ "mechanism": "EVP_PKEY_PROVIDER + BIO",
+ "mechanism_registered": true,
+ "mechanism_registry": "forensics/tools/consumer_closure.py MECHANISM_RULES: src/(ml_kem|evp|provider)/ -> EVP_PKEY_PROVIDER; src/runtime/bio/ -> BIO",
+ "candidate": {
+  "branch": "stage/p25/analyzer-corpus",
+  "head": "6fa558f9c17cc218f52e76f33aaa06eb2a5f47d1",
+  "working_tree_dirty": true,
+  "working_tree_note": "uncommitted doc-only block in src/x509/v3_lib.rs; none of this receipt's files were modified",
+  "inventory_path": "court/inventory/closure-ssh-s1b.json",
+  "inventory_source_head": "47beaa1a7caedfdd666ad026e41fafc25a8ce00a",
+  "line_number_basis": "closure obligation coordinates at the inventory source head; verified against the working tree at HEAD"
+ },
+ "authority": {
+  "id": "openssl-3.6.4-production",
+  "source": "forensics/authorities/src/openssl-3.6.4",
+  "ml_kem": "crypto/ml_kem/ml_kem.c:1977-1988",
+  "rc2": "crypto/evp/e_rc2.c:116-128",
+  "eddsa": "providers/implementations/signature/eddsa_sig.c.in:783-795",
+  "readbuffer": "crypto/bio/bf_readbuff.c write/puts arms",
+  "note": "each site's body was read; where the body has no unsafe operation the receipt says so and keeps the marker"
+ },
+ "summary": {
+  "files": 4,
+  "boundaries": 6,
+  "blocked": 6,
+  "discharged": 0,
+  "eliminated": 0,
+  "statement": "Four files, six sites. Four bodies perform no unsafe operation (ml_kem get_vinfo, both EdDSA query callbacks, both readbuffer methods in two files); RC2's body performs one raise_site on a static site. Every site is BLOCKED and the marker is retained."
+ },
+ "files": [
+  {
+   "file": "src/ml_kem/key.rs",
+   "sites": 1
+  },
+  {
+   "file": "src/evp/e_rc2.rs",
+   "sites": 1
+  },
+  {
+   "file": "src/provider/eddsa_sig.rs",
+   "sites": 2
+  },
+  {
+   "file": "src/runtime/bio/bf_readbuff.rs",
+   "sites": 2
+  }
+ ],
+ "defects": [],
+ "boundaries": [
+  {
+   "id": "P25-VESTIGIAL-MARKER-001",
+   "file": "src/ml_kem/key.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 272,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_ml_kem_get_vinfo",
+   "contract": "`ossl_ml_kem_get_vinfo(evp_type)`: `evp_type` is any `c_int`. The body performs NO unsafe operation \u2014 it is a `match` returning `&VINFO_MAP.0[0..2]` (a const static table) or `ptr::null()`, so the marker is not justified by an unsafe body. The `unsafe fn` qualifier is retained because this is the module's raw-pointer table accessor: it returns a `*const MlKemVinfo` that callers dereference, and the raw return is the ABI-adjacent edge; the declared `# Safety: Nothing` is the existing accessor convention. Typing/removing the marker is a separate change and is out of this batch. Caller obligation: none beyond supplying an `evp_type` that selects a valid arm; the returned pointer is `'static` and must not be freed or written.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "marker retained per batch scope; body has no unsafe operation"
+   ]
+  },
+  {
+   "id": "P25-VESTIGIAL-MARKER-002",
+   "file": "src/evp/e_rc2.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 348,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rc2_magic_to_meth",
+   "contract": "`rc2_magic_to_meth(i)`: `i` is a plain `c_int`; returns the RC2 strength (128/64/40) for the three magic values and 0 otherwise. The body DOES perform one unsafe operation: `raise_site(&err_sites::E_RC2_125)` in the unknown-magic arm. Its precondition is a `'static ErrSite` whose `file`/`func` are static NUL-terminated C strings (src/runtime/err.rs:1722-1724); the generated constant discharges it. No caller-supplied pointer, extent or lifetime is involved. The `unsafe fn` marker is retained as the raising helper's declaration convention and imposes no caller obligation here.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "marker retained per batch scope"
+   ]
+  },
+  {
+   "id": "P25-VESTIGIAL-MARKER-003",
+   "file": "src/provider/eddsa_sig.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 940,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ed25519_sigalg_query_key_types",
+   "contract": "`static const char **ed25519_sigalg_query_key_types(void)`: zero-argument provider query callback. The body performs NO unsafe operation \u2014 it returns `KEYTYPES.0.as_ptr().cast_mut()` for a `#[repr(C)]` `[*const c_char; 2]` static holding the `'static` literal `\"ED25519\"` and a NULL terminator (`unsafe impl Sync` covers cross-thread sharing, not the body). The marker is retained because the callback address is stored in a provider `OSSL_DISPATCH` slot (`function: ed25519_sigalg_query_key_types as *mut c_void` at src/provider/eddsa_sig.rs:1315, :1398, :1470) \u2014 the ABI dispatch-table type. The identical body is declared a safe `extern \"C\" fn` in sibling modules (src/provider/dsa_sig.rs:1514, ecdsa_sig.rs:1553, rsa_sig.rs:3192), evidence the qualifier is vestigial. Contract for the returned pointer: process-lifetime, NUL-terminated array of static C strings; the caller must not free, write or mutate it.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "marker retained per batch scope; body has no unsafe operation"
+   ]
+  },
+  {
+   "id": "P25-VESTIGIAL-MARKER-004",
+   "file": "src/provider/eddsa_sig.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 951,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ed448_sigalg_query_key_types",
+   "contract": "`static const char **ed448_sigalg_query_key_types(void)`: zero-argument provider query callback. The body performs NO unsafe operation \u2014 it returns `KEYTYPES.0.as_ptr().cast_mut()` for a `#[repr(C)]` `[*const c_char; 2]` static holding the `'static` literal `\"ED448\"` and a NULL terminator. Registered in the same `OSSL_DISPATCH` shape at src/provider/eddsa_sig.rs:1534 and :1614 \u2014 the ABI dispatch-table type that keeps the marker. Contract for the returned pointer: process-lifetime, NUL-terminated array of static C strings; the caller must not free, write or mutate it.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "marker retained per batch scope; body has no unsafe operation"
+   ]
+  },
+  {
+   "id": "P25-VESTIGIAL-MARKER-005",
+   "file": "src/runtime/bio/bf_readbuff.rs",
+   "mechanism": "BIO",
+   "disposition": "BLOCKED",
+   "line": 231,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "readbuffer_write",
+   "contract": "`readbuffer_write` \u2014 the read-only buffer filter's `bwrite_old` method. The body is `0` and performs NO unsafe operation: both arguments are ignored and never dereferenced. The marker is retained because the field type is `unsafe extern \"C\" fn` in `BioMethod`, the ABI method-table type; the function is stored at src/runtime/bio/bf_readbuff.rs:48 (`bwrite_old: Some(readbuffer_write)`). Contract: the caller supplies whatever `write` arguments the BIO layer has; this callback imposes no pointer/extent precondition and always reports failure (0), matching the authority's read-only filter.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "marker retained per batch scope; body has no unsafe operation"
+   ]
+  },
+  {
+   "id": "P25-VESTIGIAL-MARKER-006",
+   "file": "src/runtime/bio/bf_readbuff.rs",
+   "mechanism": "BIO",
+   "disposition": "BLOCKED",
+   "line": 237,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "readbuffer_puts",
+   "contract": "`readbuffer_puts` \u2014 the read-only buffer filter's `bputs` method. The body is `0` and performs NO unsafe operation: `_b` and `_str_` are ignored and never dereferenced. The marker is retained because the field type is `unsafe extern \"C\" fn` in `BioMethod`; the function is stored at src/runtime/bio/bf_readbuff.rs:51 (`bputs: Some(readbuffer_puts)`). Contract: no pointer/extent precondition; always reports failure (0).",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "marker retained per batch scope; body has no unsafe operation"
+   ]
+  }
+ ],
+ "related_receipts": [],
+ "non_claims": [
+  "no site is SAFETY_DISCHARGED; every entry is BLOCKED",
+  "a receipt moves an obligation from UNKNOWN to BLOCKED only; documentation alone does not discharge an obligation (AGENTS.md \u00a77)",
+  "no family graduation or SAFE_COMPATIBLE claim is made",
+  "no Rust behaviour change was made by this batch"
+ ]
+}
