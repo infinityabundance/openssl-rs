@@ -1,0 +1,79 @@
+{
+  "receipt": "build-0.0.44",
+  "kind": "candidate-install-build",
+  "recorded_utc": "2026-10-30",
+  "crate": "openssl-rs",
+  "version": "0.0.44",
+  "status": "CANDIDATE_BUILD_NOT_PUBLISHED",
+  "purpose": "The install-tree identity rendered into README.md for the 0.0.44 candidate. It is a repository build identity: 0.0.44 is not published, and the published crate ships source and documentation only, with no binaries.",
+  "source_identity": {
+    "candidate_branch": "release/0.0.44",
+    "measured_source_commit": "afcfdc47e",
+    "measured_source_commit_subject": "freeze S': add ENGINE_get_last to the cleanup caller contracts",
+    "measured_source_tree_digest": "22aef07a4b4bc4d02ee31149b1ef319816f4464b0ada00417370715a76662da9",
+    "build_source_tree_digest": "22aef07a4b4bc4d02ee31149b1ef319816f4464b0ada00417370715a76662da9",
+    "build_source_tree_digest_rule": "sha256 over canonical JSON of sorted [relpath, size, sha256] for src/, Cargo.toml, Cargo.lock, build.rs (v1s-candidate-freeze.json, computed by forensics/tools/phase7_courts.py::_source_tree_digest)",
+    "release_tree_digest": "2def42175198830cb1c6dc9b72ffc8a7002b804133310dcf5f070c579d2dd2ed",
+    "release_tree_digest_rule": "same rule and same 887-entry enumeration, computed over the 0.0.44 packaging tree (this commit's Cargo.toml/Cargo.lock at 0.0.44). Within that enumeration the only difference from build_source_tree_digest is the release-metadata fields.",
+    "release_tree_digest_note": "The crate and its documentation are packaged from this tree. The install-tree artefacts recorded below were not rebuilt at it; they are the S' build, and the README identity line says so. Recording both digests keeps the packaging identity and the build identity separately checkable, so no version string is published next to hashes whose producing tree is unstated (AGENTS.md section 22).",
+    "install_source_commit": "cc7762e5d",
+    "install_source_commit_note": "fix(engine): make the engine-lock precondition explicit and test it. The install was rebuilt at this source and committed together with the nine comment-only caller-contract edits as afcfdc47e (S').",
+    "version_bump_note": "Cargo.toml and Cargo.lock were bumped 0.0.43 -> 0.0.44 after S'. The install was not rebuilt at the bumped tree; the hashes below describe the S' install, which the release candidate reuses. This is a documentation/packaging release, not a verification event.",
+    "working_tree_at_build": "clean at the committed S' tree afcfdc47e; v1s-candidate-freeze.json records the pre-commit dirty tree and its nine-file comment delta"
+  },
+  "build": {
+    "recipe": "bash forensics/tools/build_phase2.sh",
+    "court_container": "openssl-rs-court-expand",
+    "court_image": "openssl-rs-court-expand:1",
+    "cargo_build_jobs": 4,
+    "exit_status": 0,
+    "phase2_courts": {
+      "receipt": "artifacts/phase2/COURTS.json",
+      "all_pass": true,
+      "courts": 11,
+      "passed": 11,
+      "source": "the install rebuild committed at afcfdc47e; re-bound, not re-run, for 0.0.44"
+    },
+    "not_rebuilt_for_release": true
+  },
+  "artefacts": {
+    "libcrypto.so.3": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "d720727aa4b9a59fa7618dc5a5130b30d2554c97776cf55ce2ab7a605a573837",
+      "size": 16852648,
+      "soname": "libcrypto.so.3",
+      "needed": ["libgcc_s.so.1", "libc.so.6", "ld-linux-x86-64.so.2"],
+      "runpath": null,
+      "dynamic_defined_symbols": 5906
+    },
+    "libssl.so.3": {
+      "path": "artifacts/phase2/install/lib/libssl.so.3",
+      "sha256": "6baed3eddf1eb986c9a9bfc66ccfca2e6393db5715ab5ec8ee4b30d91279f4b3",
+      "size": 16561624,
+      "soname": "libssl.so.3",
+      "needed": ["libcrypto.so.3", "libgcc_s.so.1", "libc.so.6", "ld-linux-x86-64.so.2"],
+      "runpath": null,
+      "dynamic_defined_symbols": 608
+    },
+    "legacy.so": {
+      "path": "artifacts/phase2/install/lib/ossl-modules/legacy.so",
+      "sha256": "613a147ed5e4d4c9e78a944e7f5b3e77be1aee6b4d1249c6f05caf686a0f0f47",
+      "size": 16528624,
+      "soname": null
+    },
+    "openssl": {
+      "path": "artifacts/phase2/install/bin/openssl",
+      "sha256": "9422139764e36c3d2cc605ea71fe8060f731b5c96cbe7eb8820505227fe50df7",
+      "size": 12365752
+    }
+  },
+  "identity_sources": [
+    "atlas-refresh/v1s-candidate-freeze.json",
+    "evidence/mechanism-discharge-ENGINE-CLEANUP.json"
+  ],
+  "non_claims": [
+    "No obligation is discharged by this receipt. The engine-cleanup package remains APPROVED_WITH_CONDITIONS and blocked.",
+    "The closure was not re-run at this identity.",
+    "The install hash is not a publish receipt and the crate payload contains no binaries."
+  ]
+}
