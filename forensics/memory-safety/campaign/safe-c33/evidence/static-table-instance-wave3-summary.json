@@ -1,0 +1,58 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/static-table-instance/v2",
+  "recorded_utc": "2026-10-29",
+  "source_identity": {
+    "candidate_commit": "3fc35e711",
+    "libcrypto_sha256": "199258d5dd0b75bda337e782bb7f2267c143c6f70dfb8913562e858d075b09e8",
+    "ssh_sha256": "f95c15ec…",
+    "tool_sha256": "c5f40baf47e868cd04c54674d1a34addcc669b2be7b41d4ffce09b42fede663f",
+    "analysis_identity": "628b1f76",
+    "closure_receipt_sha256": "2743538df893b4ef50d11dad8311eb8839775c2e054ab098fd610f7d1bb2a3ba"
+  },
+  "completions": [
+    {
+      "condition": "base-object-qualified",
+      "rule": "A store mutates the cohort field only when the base pointer's origin proves it denotes the declaring context object: entry parameter (with sret shift), load of the pointer field, allocation/constructor whose result type is the declared type, or a cast to it.",
+      "excluded_example": "runtime::err::dup_c store 0x4daf97 writes its own sret Option<SlotStr> slot, not the cipher context",
+      "refusal_if_unknown": "unproven-cohort-store"
+    },
+    {
+      "condition": "prefix-compatible-base",
+      "rule": "A writer may store a concrete #[repr(C)] type T whose first field denotes the declared base B, only if every used member offset is identical in B and T, every cohort store is a declared instance of an admitted type, the union is complete, and any unaccounted writer refuses the site.",
+      "narrow_case": "ProvCipherHwChacha20Poly1305's first field is a distinct repr(C) base; admitted only when layout-identical at every used offset and explicitly cast in source"
+    }
+  ],
+  "measured": {
+    "s1_resolved": 54,
+    "s1_refused": 0,
+    "reachable_target_bounded_before": 87,
+    "reachable_target_bounded_after": 81,
+    "reachable_unresolved": 141,
+    "reachable_contract_bounded": 60,
+    "unclassified_reachable": 0,
+    "reachable_files": 624,
+    "obligations": 312,
+    "discharged_blocked_unknown": [90, 107, 115],
+    "reachable_functions_sha256": "8487ed72a70da4530eb8d2636456e61204af4fbf1041b9c833477aa67701d359",
+    "element_7": "FAIL",
+    "target_sets_remain_unbounded": true,
+    "reachability_movement": "none",
+    "corpus": "67/67"
+  },
+  "remaining_target_bounded": {
+    "count": 81,
+    "by_class": {
+      "base-slot-partial": 50,
+      "reg-top": 19,
+      "reg-value-partial[int]": 12
+    },
+    "note": "These are not S1 refusals; they are the pre-existing field/materialised classes and are the next precision work list."
+  },
+  "non_claims": [
+    "No obligation was adjudicated or discharged; SAFE_COMPATIBLE remains 0/33.",
+    "Element 7 remains FAIL: 141 reachable unresolved sites (81 target-bounded, 60 contract-bounded).",
+    "Contract-bounded sites are not resolved and their target sets remain unbounded.",
+    "Reachability and the obligation counts are unchanged; the digest is identical.",
+    "The mutation matrix is sensitivity evidence, not an independent proof of store-graph completeness."
+  ]
+}

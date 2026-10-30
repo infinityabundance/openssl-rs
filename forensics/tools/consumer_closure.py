@@ -6173,6 +6173,725 @@ def _s1_declared_instances(g: "DsoGraph", table_type: str):
     return result
 
 
+# ---- S1 base-object qualification (2026-10-29) -------------------------- #
+#
+# A store ``mov value, off(base)`` is a cohort store only when ``base`` is
+# proven to designate an object of the type that declares the pointer field.
+# The admitted origins are an entry parameter of that type, a load of a
+# pointer-typed field of that type, an allocation/constructor whose result type
+# is that type, and a cast to that type.  A base proven to be a *different*
+# object is excluded with the reason recorded; an unknown base refuses the
+# site.  Nothing here trusts an offset alone: the DSO has 98,005 offset-keyed
+# stores, so a base-typing conjunct is what makes the store set field-sensitive.
+
+_S1_SCALAR_RET = re.compile(
+    r"(?:(?:c_)?(?:int|uint|char|short|long|size_t|ssize_t|void)"
+    r"|[ui](?:8|16|32|64|128|size)|f(?:32|64)|bool)$")
+_S1_ALLOC_SYM = re.compile(
+    r"(?:CRYPTO_)?(?:zalloc|malloc|calloc|realloc|memdup|secure_malloc|"
+    r"clear_malloc|clear_free)$")
+
+
+def _s1_pointee(type_text: str):
+    """Pointee name of a pointer/reference type, or None."""
+    t = " ".join((type_text or "").split())
+    m = re.search(r"(?:\*\s*(?:const|mut)|&\s*(?:mut\s+)?)\s*"
+                  r"([A-Za-z_]\w*)", t)
+    return m.group(1) if m else None
+
+
+def _s1_resolve_type(g: "DsoGraph", type_text: str):
+    """The named object type a source type string denotes, or None."""
+    t = " ".join((type_text or "").split())
+    if not t or t.startswith("Option<"):
+        return None
+    name = _s1_pointee(t)
+    if name is None:
+        ids = re.findall(r"[A-Za-z_]\w*", t)
+        name = ids[-1] if ids else None
+    if name is None:
+        return None
+    alias = _s1_type_alias(g, name)
+    if alias is not None and alias != name:
+        nxt = _s1_pointee(alias)
+        if nxt is None:
+            ids = re.findall(r"[A-Za-z_]\w*", alias)
+            nxt = ids[-1] if ids else None
+        if nxt:
+            name = nxt
+    return name
+
+
+def _s1_prefix_chain(g: "DsoGraph", type_name: str, base: str,
+                     depth: int = 0):
+    """``[T, ..., base]`` when base is T's first field, transitively.
+
+    Every step is a ``#[repr(C)]`` struct whose *first* field has offset zero,
+    so the base layout is a prefix of T's layout at the same offsets.
+    """
+    if not type_name:
+        return None
+    if type_name == base:
+        return [base]
+    if depth >= 5:
+        return None
+    fields = _s1_struct_fields(g, type_name)
+    layout = _s1_struct_layout(g, type_name)
+    if fields is None:
+        return None
+    if layout is not None and layout["fields"] \
+            and layout["fields"][0]["offset"] != 0:
+        return None
+    first_type = fields[0][0][1]
+    if (first_type.startswith("*") or first_type.startswith("&")
+            or first_type.startswith("Option<") or first_type.startswith("[")):
+        return None
+    inner = _s1_resolve_type(g, first_type)
+    if inner is None or inner == type_name:
+        return None
+    chain = _s1_prefix_chain(g, inner, base, depth + 1)
+    return None if chain is None else [type_name] + chain
+
+
+def _s1_type_compatible(g: "DsoGraph", type_text: str, base: str) -> dict:
+    """Whether a declared type is ``base`` or carries it as its first field."""
+    t = " ".join((type_text or "").split())
+    if not t or t.startswith("Option<"):
+        return {"admitted": False, "type": t or None,
+                "why": "Option/empty type is not the object type"}
+    resolved = _s1_resolve_type(g, t)
+    if resolved is None:
+        return {"admitted": False, "type": None, "why": "no type name"}
+    if resolved == base:
+        return {"admitted": True, "type": resolved, "exact": True,
+                "prefix": [base]}
+    chain = _s1_prefix_chain(g, resolved, base)
+    if chain:
+        return {"admitted": True, "type": resolved, "exact": False,
+                "prefix": chain}
+    return {"admitted": False, "type": resolved,
+            "why": (f"{resolved} is not {base} and does not carry it as "
+                    "its first field")}
+
+
+def _s1_signature(span: dict):
+    """Explicit parameter types and the return type of a source function."""
+    header = span.get("header") or ""
+    m = re.search(r"\(", header)
+    if not m:
+        return None
+    depth, end, i = 0, None, m.start()
+    while i < len(header):
+        if header[i] == "(":
+            depth += 1
+        elif header[i] == ")":
+            depth -= 1
+            if depth == 0:
+                end = i
+                break
+        i += 1
+    if end is None:
+        return None
+    inner = header[m.start() + 1:end]
+    params, cur, depth = [], [], 0
+    for ch in inner:
+        if ch in "([<":
+            depth += 1
+        elif ch in ")]>" :
+            depth = max(0, depth - 1)
+        if ch == "," and depth == 0:
+            params.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+    if cur:
+        params.append("".join(cur).strip())
+    ptypes = []
+    for p in params:
+        if not p:
+            continue
+        mm = re.match(r"[A-Za-z_]\w*\s*:\s*(.+)$", p, re.S)
+        ptypes.append(" ".join((mm.group(1) if mm else p).split()))
+    after = header[end + 1:]
+    at = after.find("->")
+    if at < 0:
+        ret = "()"
+    else:
+        ret = after[at + 2:].split("{", 1)[0]
+        ret = re.split(r"\bwhere\b", ret, maxsplit=1)[0]
+        ret = " ".join(ret.split()) or "()"
+    return {"params": ptypes, "ret": ret}
+
+
+def _s1_return_uses_sret(ret: str):
+    """Whether the return value is passed through a hidden first pointer."""
+    t = " ".join((ret or "").split())
+    if not t or t in ("()", "!"):
+        return False
+    if t.startswith("*") or t.startswith("&"):
+        return False
+    if t.startswith("Option<"):
+        inner = t[len("Option<"):-1].strip() if t.endswith(">") else ""
+        if (inner.startswith("*") or inner.startswith("&")
+                or inner.startswith("NonNull<")
+                or inner.startswith("NonZero")):
+            return False
+        return True
+    return not _S1_SCALAR_RET.match(t)
+
+
+def _s1_abi_types(sig: dict, idx: int):
+    """Declared types an entry argument register can carry."""
+    params = sig.get("params") or []
+    if _s1_return_uses_sret(sig.get("ret")):
+        if idx == 0:
+            return [{"role": "sret-return", "type": sig.get("ret")}]
+        j = idx - 1
+        return ([{"role": f"param{j}", "type": params[j]}]
+                if 0 <= j < len(params) else [])
+    return ([{"role": f"param{idx}", "type": params[idx]}]
+            if 0 <= idx < len(params) else [])
+
+
+def _s1_writer_source(g: "DsoGraph", wf: int):
+    """(file, span) of a writer's source function, or None."""
+    cache = getattr(g, "_s1_writer_src_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_writer_src_cache = cache
+    if wf in cache:
+        return cache[wf]
+    dm = _s1_demangled(g, wf)
+    name, out = None, None
+    if dm:
+        m = CRATE_NS.match(dm)
+        if m:
+            segs = m.group(1).split("::")
+            if len(segs) >= 2:
+                name = segs[-1]
+                root = _repo_root(g)
+                if root is not None:
+                    fallback = getattr(g, "_s1_module_index", None)
+                    if fallback is None:
+                        fallback = build_module_index(root / "src")
+                        g._s1_module_index = fallback
+                    relpath = module_to_file("::".join(segs[:-1]),
+                                             root / "src", fallback)
+                    if relpath:
+                        span = _s1_src_fn(g, relpath, name)
+                        if span is not None:
+                            out = {"file": relpath, "span": span,
+                                   "name": name, "via": "module"}
+        if name is None:
+            name = dm.split("::")[-1].strip()
+    if out is None and name:
+        hits = []
+        for path in sorted(_s1_docs(g)):
+            span = _s1_src_fn(g, path, name)
+            if span is not None:
+                hits.append({"file": path, "span": span,
+                             "name": name, "via": "unique-name"})
+        if len(hits) == 1:
+            out = hits[0]
+    cache[wf] = out
+    return out
+
+
+_S1_RUST_KEYWORDS = {
+    "unsafe", "extern", "fn", "let", "mut", "pub", "crate", "self",
+    "super", "use", "mod", "static", "const", "struct", "enum", "impl",
+    "trait", "type", "where", "if", "else", "match", "return", "break",
+    "continue", "while", "for", "in", "as", "loop", "move", "ref",
+    "true", "false", "core", "crate", "c_void", "c_int", "c_uint",
+    "c_uchar", "c_char", "usize", "isize", "u8", "u16", "u32", "u64",
+    "i8", "i16", "i32", "i64", "bool", "Option", "Some", "None",
+}
+
+
+def _s1_macro_sources(g: "DsoGraph", name: str):
+    """Function definitions a macro-generated writer expands to.
+
+    A macro-generated dispatch wrapper has no literal ``fn`` of its own.  The
+    constructor can be an identifier argument of the invocation, or it can be
+    called (with a fixed name) by the macro's own body -- both are followed, so
+    a macro that hard-codes its sub-constructor is not silently untyped.
+    """
+    cache = getattr(g, "_s1_macro_arg_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_macro_arg_cache = cache
+    if name in cache:
+        return cache[name]
+    out = []
+    seen = set()
+    tok = re.compile(r"\b" + re.escape(name) + r"\b")
+    idpat = re.compile(r"\b([A-Za-z_]\w*)\b")
+    docs = _s1_docs(g)
+
+    def _add(path, ident, via):
+        if ident in seen or ident in _S1_RUST_KEYWORDS:
+            return
+        span = _s1_src_fn(g, path, ident)
+        if span is not None:
+            seen.add(ident)
+            out.append({"file": path, "span": span, "name": ident,
+                        "via": via})
+
+    for path, text in docs.items():
+        if name not in text:
+            continue
+        for mm in re.finditer(r"\b([A-Za-z_]\w*)!\s*\(", text):
+            open_at = text.find("(", mm.end() - 1)
+            depth, i, end = 0, open_at, None
+            while i < len(text):
+                if text[i] == "(":
+                    depth += 1
+                elif text[i] == ")":
+                    depth -= 1
+                    if depth == 0:
+                        end = i
+                        break
+                i += 1
+            if end is None:
+                continue
+            args = text[open_at + 1:end]
+            if not tok.search(args):
+                continue
+            for arg in args.split(","):
+                am = re.match(r"\s*([A-Za-z_]\w*)", arg)
+                if am and am.group(1) != name:
+                    _add(path, am.group(1), "macro-arg")
+            macro_name = mm.group(1)
+            defs = getattr(g, "_s1_macro_def_cache", None)
+            if defs is None:
+                defs = {}
+                g._s1_macro_def_cache = defs
+            if macro_name not in defs:
+                hit = None
+                for dpath, dtext in docs.items():
+                    dm = re.search(r"macro_rules!\s*" + re.escape(macro_name)
+                                   + r"\s*\{", dtext)
+                    if not dm:
+                        continue
+                    brace = dtext.find("{", dm.start())
+                    bend = _s1_brace_span(dtext, brace)
+                    if bend is not None:
+                        hit = (dpath, dtext[brace + 1:bend - 1])
+                        break
+                defs[macro_name] = hit
+            hit = defs.get(macro_name)
+            if hit is not None:
+                for ident in sorted(set(idpat.findall(hit[1]))):
+                    _add(hit[0], ident, "macro-body")
+    cache[name] = out
+    return out
+
+
+def _s1_construct_witness(g: "DsoGraph", span: dict, base: str, via: str):
+    """The unique compatible allocation/constructor type in one function."""
+    body = span.get("body") or ""
+    hits = []
+    for m in re.finditer(r"Owned[A-Za-z_]*\s*::\s*<\s*([A-Za-z_]\w*)\s*>",
+                         body):
+        hits.append({"type": m.group(1), "kind": "owned-constructor",
+                     "witness": f"{span['file']}:{span['line']}",
+                     "via": via})
+    if not hits:
+        for m in re.finditer(
+                r"(?:\.\s*cast\s*::\s*<|as\s+\*\s*(?:const|mut)\s+)"
+                r"([A-Za-z_]\w*)", body):
+            hits.append({"type": m.group(1), "kind": "cast",
+                         "witness": f"{span['file']}:{span['line']}",
+                         "via": via})
+    comp = []
+    for h in hits:
+        c = _s1_type_compatible(g, h["type"], base)
+        if c.get("admitted"):
+            comp.append(dict(h, prefix=c.get("prefix"),
+                             exact=c.get("exact")))
+    owned = [h for h in comp if h["kind"] == "owned-constructor"]
+    pool = owned or comp
+    seen = {}
+    for h in pool:
+        seen.setdefault(h["type"], h)
+    if len(seen) == 1:
+        return next(iter(seen.values()))
+    if seen:
+        return {"ambiguous": sorted(seen)}
+    return None
+
+
+def _s1_writer_construct(g: "DsoGraph", wf: int, base: str):
+    """The allocation type a writer's base can denote, or None.
+
+    An ``Owned*::<T>`` allocation in the writer (or in the function a
+    macro-generated wrapper expands to) is preferred; a cast in the writer's
+    own literal source is the fallback.  A cast found in an unrelated function
+    that merely appears in a macro body is not evidence about this allocation
+    and is not used.
+    """
+    cache = getattr(g, "_s1_construct_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_construct_cache = cache
+    key = (wf, base)
+    if key in cache:
+        return cache[key]
+    sources = []
+    src = _s1_writer_source(g, wf)
+    if src is not None:
+        sources.append(src)
+    name = (src or {}).get("name")
+    if name is None:
+        dm = _s1_demangled(g, wf) or (g.funcs.get(wf) or "")
+        name = dm.split("::")[-1].split("@")[0].strip() if dm else None
+    if name:
+        sources.extend(_s1_macro_sources(g, name))
+    owned, casts, amb = [], [], set()
+    for s in sources:
+        w = _s1_construct_witness(g, s["span"], base, s["via"])
+        if not isinstance(w, dict):
+            continue
+        if w.get("ambiguous"):
+            amb.update(w["ambiguous"])
+            continue
+        if w.get("kind") == "owned-constructor":
+            owned.append(w)
+        elif w.get("kind") == "cast" and s.get("via") in ("module",
+                                                          "unique-name"):
+            casts.append(w)
+    pool = owned or casts
+    distinct = {}
+    for h in pool:
+        distinct.setdefault(h["type"], h)
+    if len(distinct) == 1:
+        cache[key] = next(iter(distinct.values()))
+        return cache[key]
+    if len(distinct) > 1:
+        cache[key] = {"ambiguous": sorted(distinct)}
+        return cache[key]
+    if amb:
+        cache[key] = {"ambiguous": sorted(amb)}
+        return cache[key]
+    cache[key] = None
+    return None
+
+
+def _s1_call_symbol(g: "DsoGraph", fstart: int, idx: int):
+    """Symbol a call instruction names, directly or through its GOT slot."""
+    text = _insn(g, fstart, idx)
+    if "#" in text:
+        m = re.search(r"<([A-Za-z_][\w]*)", text.split("#", 1)[1])
+        if m:
+            return m.group(1)
+    direct = _direct_call_target(g, fstart, idx)
+    if direct is not None:
+        return (g.funcs.get(direct[1]) or "").split("@")[0]
+    return None
+
+
+def _s1_call_def(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                 depth: int = 0):
+    """Index of the call that produced ``reg``, or None."""
+    if depth > 8:
+        return None
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None or len(defs) != 1 or defs == {_ENTRY_DEF}:
+        return None
+    k = next(iter(defs))
+    mn, _rest, ops = _insn_parts(_insn(g, fstart, k))
+    if mn.startswith("call"):
+        return k
+    if mn in ("mov", "movq") and len(ops) >= 2 and (ops[0] in _REGS
+                                                     or ops[0] in _SUBREG):
+        return _s1_call_def(g, fstart, k, _canon(ops[0]), depth + 1)
+    return None
+
+
+def _s1_store_base_witness_raw(g: "DsoGraph", wf: int, store: dict,
+                               decl_type: str, slot_off: int):
+    """Qualify, exclude, or refuse one store's base object."""
+    origin = _reg_origin(g, wf, store["index"], _canon(store["base"]))
+    kind = origin.get("kind")
+    rec = {"function": g.funcs.get(wf, hex(wf)),
+           "store_site": hex(store["addr"]), "origin_kind": kind}
+    if kind == "param":
+        src = _s1_writer_source(g, wf)
+        sig = _s1_signature(src["span"]) if src else None
+        if sig is None:
+            rec.update(qualified=False, unknown=True,
+                       reason="entry-parameter origin without a source "
+                              "signature")
+            return rec
+        cands = _s1_abi_types(sig, origin.get("index"))
+        if not cands:
+            rec.update(qualified=False, unknown=True,
+                       reason="entry index has no declared type")
+            return rec
+        compat = [(c, _s1_type_compatible(g, c["type"], decl_type))
+                  for c in cands]
+        admitted = [(c, t) for c, t in compat if t.get("admitted")]
+        if admitted and len(admitted) == len(compat):
+            c, t = admitted[0]
+            rec.update(qualified=True, origin="entry-parameter",
+                       declared_role=c["role"], declared_type=c["type"],
+                       prefix=t.get("prefix"), exact=t.get("exact"),
+                       witness=f"{src['file']}:{src['span']['line']}")
+            return rec
+        if not admitted:
+            if "s1-base-different" in _MUTED:
+                rec.update(qualified=False, unknown=True,
+                           reason="mutation: different-object base trusted")
+                return rec
+            rec.update(qualified=False, excluded=True,
+                       origin="entry-parameter",
+                       reason=("base is an entry value of declared type "
+                               + ", ".join(f"{c['role']}:{c['type']}"
+                                           for c, _t in compat)
+                               + f", not {decl_type}"))
+            return rec
+        rec.update(qualified=False, unknown=True,
+                   reason="ambiguous ABI parameter mapping across the "
+                          "return-slot shift")
+        return rec
+    if kind == "load":
+        outer = _reg_origin(g, wf, origin["at"],
+                            _canon(origin["base_reg"]))
+        if outer.get("kind") == "param":
+            src = _s1_writer_source(g, wf)
+            sig = _s1_signature(src["span"]) if src else None
+            cands = _s1_abi_types(sig, outer.get("index")) if sig else []
+            for c in cands:
+                owner = _s1_resolve_type(g, c["type"])
+                layout = _s1_struct_layout(g, owner) if owner else None
+                if layout is None:
+                    continue
+                row = next((r for r in layout["fields"]
+                            if r["offset"] == origin["offset"]), None)
+                if row is None:
+                    continue
+                comp = _s1_type_compatible(g, row["type"], decl_type)
+                if comp.get("admitted"):
+                    rec.update(qualified=True, origin="pointer-field-load",
+                               field_type=row["type"], owner=owner,
+                               prefix=comp.get("prefix"),
+                               exact=comp.get("exact"),
+                               witness=f"{src['file']}:{src['span']['line']}")
+                    return rec
+                if "s1-base-different" in _MUTED:
+                    continue
+                rec.update(qualified=False, excluded=True,
+                           origin="pointer-field-load",
+                           reason=(f"base is field {row['name']}:"
+                                   f"{row['type']} of {owner}, not a pointer "
+                                   f"to {decl_type}"))
+                return rec
+        rec.update(qualified=False, unknown=True,
+                   reason="load origin with no decidable owning type")
+        return rec
+    if kind in ("call", "unknown"):
+        if kind == "call":
+            call_idx = origin.get("call_site")
+            sym = ((g.funcs.get(origin.get("callee")) or "").split("@")[0]
+                   or _s1_call_symbol(g, wf, call_idx))
+            target = origin.get("callee")
+        elif "call" in str(origin.get("why") or ""):
+            call_idx = _s1_call_def(g, wf, store["index"],
+                                    _canon(store["base"]))
+            sym = _s1_call_symbol(g, wf, call_idx) if call_idx is not None \
+                else None
+            target = None
+        else:
+            rec.update(qualified=False, unknown=True,
+                       reason="unproven base origin: "
+                              + str(origin.get("why") or kind))
+            return rec
+        if target is not None and not (sym and _S1_ALLOC_SYM.search(sym)):
+            csrc = _s1_writer_source(g, target)
+            sig = _s1_signature(csrc["span"]) if csrc else None
+            if sig is not None:
+                comp = _s1_type_compatible(g, sig["ret"], decl_type)
+                if comp.get("admitted"):
+                    rec.update(qualified=True, origin="constructor-result",
+                               constructor_type=comp["type"],
+                               constructor_kind="return-type",
+                               prefix=comp.get("prefix"),
+                               exact=comp.get("exact"),
+                               witness=(f"{csrc['file']}:"
+                                        f"{csrc['span']['line']}"))
+                    return rec
+        if sym and _S1_ALLOC_SYM.search(sym):
+            w = _s1_writer_construct(g, wf, decl_type)
+            if isinstance(w, dict) and w.get("type"):
+                rec.update(qualified=True, origin="allocation-constructor",
+                           constructor_type=w["type"],
+                           constructor_kind=w["kind"],
+                           prefix=w.get("prefix"), exact=w.get("exact"),
+                           witness=w.get("witness"))
+                return rec
+            if isinstance(w, dict) and w.get("ambiguous"):
+                rec.update(qualified=False, unknown=True,
+                           reason="multiple compatible constructor types: "
+                                  + ", ".join(w["ambiguous"]))
+                return rec
+        rec.update(qualified=False, unknown=True,
+                   reason=("call origin "
+                           + (f"to {sym}" if sym else "with no resolvable "
+                              "symbol")
+                           + " without a typed constructor witness"))
+        return rec
+    rec.update(qualified=False, unknown=True,
+               reason="unproven base origin: " + str(origin.get("why") or kind))
+    return rec
+
+
+def _s1_store_base_witness(g: "DsoGraph", wf: int, store: dict,
+                           decl_type: str, slot_off: int):
+    """Base-object qualification with its mutation control."""
+    rec = _s1_store_base_witness_raw(g, wf, store, decl_type, slot_off)
+    if rec.get("unknown") and "s1-base-unknown" in _MUTED:
+        return dict(rec, unknown=False, excluded=True,
+                    reason="mutation: unknown base trusted as a different "
+                           "object")
+    return rec
+
+
+# ---- S1 prefix-compatible instance enumeration (2026-10-29) ------------- #
+#
+# A writer may store a concrete ``#[repr(C)]`` type T whose declared layout
+# begins with the field type B.  The instance set is then the union of the
+# declared statics of B and of every admitted T, and the union must account
+# for *every* cohort store.  A T whose first field is not B (or a layout-
+# identical first field with a source cast to B) is not admitted, so a store
+# of one refuses the site instead of silently widening it.
+
+
+def _s1_static_type(g: "DsoGraph", addr: int):
+    """The source type of the static at ``addr``, or None."""
+    cache = getattr(g, "_s1_static_type_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_static_type_cache = cache
+    if addr in cache:
+        return cache[addr]
+    out = None
+    for raw in (getattr(g, "names_at", {}) or {}).get(addr, ()):
+        short = _s1_rust_last_segment(raw) or (raw or "").split("@")[0]
+        if not short:
+            continue
+        pat = re.compile(r"\bstatic\s+" + re.escape(short)
+                         + r"\s*:\s*([A-Za-z_]\w*)\s*=")
+        hits = set()
+        for _path, text in _s1_docs(g).items():
+            for m in pat.finditer(text):
+                hits.add(m.group(1))
+        if len(hits) == 1:
+            out = hits.pop()
+            break
+    cache[addr] = out
+    return out
+
+
+def _s1_static_cast_witness(g: "DsoGraph", type_name: str, base: str):
+    """A source cast of a T static's first field to B, or None."""
+    cache = getattr(g, "_s1_static_cast_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_static_cast_cache = cache
+    key = (type_name, base)
+    if key in cache:
+        return cache[key]
+    inst = _s1_declared_instances(g, type_name).get("instances") or {}
+    names = {v["name"] for v in inst.values() if v.get("name")}
+    if not names:
+        return None
+    alt = "|".join(re.escape(n) for n in sorted(names))
+    pat = re.compile(r"addr_of!\s*\(\s*(?:" + alt + r")\b[^)]*\)\s*"
+                     r"\.cast::<\s*" + re.escape(base) + r"\s*>")
+    pat2 = re.compile(r"\(\s*(?:" + alt + r")\s+as\s+\*\s*const\s+"
+                      + re.escape(base) + r"\s*\)")
+    for path, text in _s1_docs(g).items():
+        m = pat.search(text) or pat2.search(text)
+        if m:
+            cache[key] = (f"{path}:"
+                          f"{text.count(chr(10), 0, m.start()) + 1}")
+            return cache[key]
+    cache[key] = None
+    return None
+
+
+def _s1_prefix_witness(g: "DsoGraph", type_name: str, base: str,
+                       used_offsets):
+    """Admit a concrete first-field-compatible type, with both witnesses."""
+    if type_name == base:
+        return None
+    fields = _s1_struct_fields(g, type_name)
+    layout = _s1_struct_layout(g, type_name)
+    blayout = _s1_struct_layout(g, base)
+    if fields is None or blayout is None or not fields[0]:
+        return None
+    if layout is not None and layout["fields"] \
+            and layout["fields"][0]["offset"] != 0:
+        return None
+    first_name, first_type = fields[0][0]
+    exact = _s1_resolve_type(g, first_type) == base
+    cast = None
+    prefix_object = base
+    if not exact:
+        inner = _s1_resolve_type(g, first_type)
+        flayout = _s1_struct_layout(g, inner) if inner else None
+        if flayout is None:
+            if "s1-prefix-first-field" not in _MUTED:
+                return None
+            flayout = blayout
+            prefix_object = base
+        else:
+            prefix_object = inner
+        offsets = set(used_offsets or ())
+        offsets |= {r["offset"] for r in blayout["fields"]}
+        if "s1-prefix-layout" not in _MUTED:
+            for off in offsets:
+                b = next((r for r in blayout["fields"]
+                          if r["offset"] == off), None)
+                f = next((r for r in flayout["fields"]
+                          if r["offset"] == off), None)
+                if b is None or f is None:
+                    return None
+                # The ABI slot is what matters: same offset and same
+                # size/alignment.  `Option<fn>` and `fn` occupy the same
+                # eight-byte pointer slot, and the concrete row is allowed
+                # to model a NULL the base type declares non-nullable.
+                if _s1_type_size(g, b["type"]) \
+                        != _s1_type_size(g, f["type"]):
+                    return None
+        cast = _s1_static_cast_witness(g, type_name, base)
+        if cast is None:
+            return None
+    return {
+        "type": type_name, "repr_c": True,
+        "first_field": {"name": first_name, "type": first_type,
+                        "offset": 0},
+        "first_field_is_base": bool(exact),
+        "prefix_object_type": prefix_object,
+        "source_witness": ((f"{layout.get('file')}:{layout.get('line')}")
+                           if layout is not None
+                           else f"{fields[1].get('file')}:"
+                                f"{fields[1].get('line')}"),
+        "layout_witness": {
+            "base_size": blayout["size"],
+            "type_size": (layout["size"] if layout is not None else None),
+            "offsets": sorted({hex(o) for o in (set(used_offsets or ())
+                                               | {r["offset"] for r in
+                                                  blayout["fields"]})}),
+            "extra_offsets": (sorted({hex(o) for o in
+                                      range(blayout["size"], layout["size"],
+                                            8)})
+                              if layout is not None else []),
+        },
+        "cast_witness": cast,
+    }
+
+
 def _s1_dispatch_tables(g: "DsoGraph"):
     """Decode immutable ``OsslDispatch`` tables from the exact image."""
     cache = getattr(g, "_s1_dispatch_cache", None)
@@ -6514,8 +7233,64 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
                                "reason": ("member offset is not a field of "
                                           "this layout")})
             continue
-        declared = _s1_declared_instances(g, cand["table_type"])
-        instances = declared["instances"]
+        base_union = _s1_declared_instances(g, cand["table_type"])
+        instances = dict(base_union["instances"])
+        used_offsets = [r["offset"] for r in cand["layout"]["fields"]]
+        found = {}
+        unaccounted = []
+        outside_writers = []
+        unproven_base = []
+        excluded_base = []
+        writer_rows = []
+        outside_rows = []
+        for wf in sorted(writers):
+            for store in _s1_scalar_stores(g, wf, slot_off):
+                bq = _s1_store_base_witness(g, wf, store,
+                                            ctx_info["type"], slot_off)
+                if bq.get("excluded"):
+                    excluded_base.append(bq)
+                    continue
+                if not bq.get("qualified"):
+                    unproven_base.append(bq)
+                    continue
+                value, kind = _s1_store_value(g, wf, store["index"],
+                                              store["src"], slot_off)
+                writer_rows.append((wf, store, value, kind, bq))
+        for cf in sorted(cohort - writers):
+            for store in _s1_scalar_stores(g, cf, slot_off):
+                bq = _s1_store_base_witness(g, cf, store,
+                                            ctx_info["type"], slot_off)
+                if bq.get("excluded"):
+                    excluded_base.append(bq)
+                    continue
+                if not bq.get("qualified"):
+                    unproven_base.append(bq)
+                    continue
+                value, kind = _s1_store_value(g, cf, store["index"],
+                                              store["src"], slot_off)
+                outside_rows.append((cf, store, value, kind, bq))
+        # Admit the concrete first-field-compatible types the writers store;
+        # the instance union is then the base's declared instances plus every
+        # admitted type's declared instances.  A stored type that is not
+        # admitted stays unaccounted and refuses the site: it is never
+        # silently unioned into the set.
+        seen_types = set()
+        for _f, _s, value, kind, _b in writer_rows + outside_rows:
+            if kind in ("immediate", "static") and isinstance(value, int):
+                st = _s1_static_type(g, value)
+                if st:
+                    seen_types.add(st)
+        prefix_types = {}
+        for tn in sorted(seen_types):
+            if "s1-prefix-types" in _MUTED:
+                break
+            w = _s1_prefix_witness(g, tn, cand["table_type"], used_offsets)
+            if w is None:
+                continue
+            prefix_types[tn] = w
+            more = _s1_declared_instances(g, tn).get("instances") or {}
+            for a, rec in more.items():
+                instances.setdefault(a, rec)
         if not instances:
             considered.append({"object": ctx_info["type"],
                                "field": cand["field"],
@@ -6523,65 +7298,77 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
                                "reason": ("no declared static instance in "
                                           "this image")})
             continue
-        found = {}
-        unaccounted = []
-        partial = False
-        for wf in sorted(writers):
-            for store in _s1_scalar_stores(g, wf, slot_off):
-                value, kind = _s1_store_value(g, wf, store["index"],
-                                              store["src"], slot_off)
-                if kind == "identity":
-                    found.setdefault((wf, store["addr"]), {
-                        "function": g.funcs.get(wf, hex(wf)),
-                        "store_site": hex(store["addr"]),
-                        "value": "identity(reload of the same slot)",
-                        "kind": kind})
-                    continue
-                if value is None or kind not in ("immediate", "static"):
-                    unaccounted.append({"function": g.funcs.get(wf, hex(wf)),
-                                        "store_site": hex(store["addr"]),
-                                        "reason": kind})
-                    continue
-                if value not in instances:
-                    if "s1-undeclared-store" not in _MUTED:
-                        unaccounted.append({"function": g.funcs.get(wf, hex(wf)),
-                                            "store_site": hex(store["addr"]),
-                                            "value": hex(value),
-                                            "reason": "not a declared "
-                                                      + cand["table_type"]})
-                    continue
-                found[(wf, store["addr"])] = {
+        for wf, store, value, kind, bq in writer_rows:
+            if kind == "identity":
+                found.setdefault((wf, store["addr"]), {
                     "function": g.funcs.get(wf, hex(wf)),
                     "store_site": hex(store["addr"]),
-                    "value": hex(value), "kind": kind}
-        outside_writers = []
-        for cf in sorted(cohort - writers):
-            for store in _s1_scalar_stores(g, cf, slot_off):
-                value, kind = _s1_store_value(g, cf, store["index"],
-                                              store["src"], slot_off)
-                if kind == "identity":
-                    continue
-                if value is None or kind not in ("immediate", "static") \
-                        or value not in instances:
-                    outside_writers.append({
-                        "function": g.funcs.get(cf, hex(cf)),
-                        "store_site": hex(store["addr"]),
-                        "value": (hex(value) if value is not None else kind)})
-                else:
-                    found[(cf, store["addr"])] = {
-                        "function": g.funcs.get(cf, hex(cf)),
-                        "store_site": hex(store["addr"]),
-                        "value": hex(value), "kind": kind}
+                    "value": "identity(reload of the same slot)",
+                    "kind": kind})
+                continue
+            if value is None or kind not in ("immediate", "static"):
+                unaccounted.append({"function": g.funcs.get(wf, hex(wf)),
+                                    "store_site": hex(store["addr"]),
+                                    "reason": kind})
+                continue
+            if value not in instances:
+                if "s1-undeclared-store" not in _MUTED:
+                    unaccounted.append({"function": g.funcs.get(wf, hex(wf)),
+                                        "store_site": hex(store["addr"]),
+                                        "value": hex(value),
+                                        "reason": ("not a declared instance "
+                                                   "of an admitted type for "
+                                                   + cand["table_type"])})
+                continue
+            found[(wf, store["addr"])] = {
+                "function": g.funcs.get(wf, hex(wf)),
+                "store_site": hex(store["addr"]),
+                "value": hex(value), "kind": kind,
+                "base_origin": bq.get("origin"),
+                "base_witness": bq.get("witness")}
+        for cf, store, value, kind, bq in outside_rows:
+            if kind == "identity":
+                continue
+            if value is None or kind not in ("immediate", "static") \
+                    or value not in instances:
+                outside_writers.append({
+                    "function": g.funcs.get(cf, hex(cf)),
+                    "store_site": hex(store["addr"]),
+                    "value": (hex(value) if value is not None else kind)})
+            else:
+                found[(cf, store["addr"])] = {
+                    "function": g.funcs.get(cf, hex(cf)),
+                    "store_site": hex(store["addr"]),
+                    "value": hex(value), "kind": kind,
+                    "base_origin": bq.get("origin"),
+                    "base_witness": bq.get("witness")}
+        if unproven_base:
+            candidates.append({"candidate": cand, "ok": False,
+                               "unaccounted": unaccounted,
+                               "outside": outside_writers,
+                               "unproven_base": unproven_base,
+                               "excluded_base": excluded_base,
+                               "prefix_types": prefix_types,
+                               "instances": instances,
+                               "found": found})
+            continue
         if unaccounted or outside_writers:
             candidates.append({"candidate": cand, "ok": False,
                                "unaccounted": unaccounted,
                                "outside": outside_writers,
+                               "unproven_base": [],
+                               "excluded_base": excluded_base,
+                               "prefix_types": prefix_types,
+                               "instances": instances,
                                "found": found})
             continue
         if not found:
             candidates.append({"candidate": cand, "ok": False,
                                "unaccounted": [], "outside": [],
-                               "found": {},
+                               "unproven_base": [],
+                               "excluded_base": excluded_base,
+                               "prefix_types": prefix_types,
+                               "instances": instances, "found": {},
                                "reason": "no-writer"})
             continue
         # Each matched dispatch table must contribute at least one declared
@@ -6596,11 +7383,19 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
         if not all(per_table) and "s1-partial-instances" not in _MUTED:
             candidates.append({"candidate": cand, "ok": False,
                                "unaccounted": [], "outside": [],
+                               "unproven_base": [],
+                               "excluded_base": excluded_base,
+                               "prefix_types": prefix_types,
+                               "instances": instances,
                                "found": found,
                                "reason": "partial-instance-set"})
             continue
         candidates.append({"candidate": cand, "ok": True,
                            "unaccounted": [], "outside": [],
+                           "unproven_base": [],
+                           "excluded_base": excluded_base,
+                           "prefix_types": prefix_types,
+                           "instances": instances,
                            "found": found})
 
     good = [c for c in candidates if c["ok"]]
@@ -6609,6 +7404,12 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
             reason = "ambiguous-field"
         elif not candidates:
             reason = "no-declared-instance-type"
+        elif any(c.get("unproven_base") for c in candidates):
+            # A store wrote the slot but its base object is not proven to be the
+            # declared context type.  It is neither a different object (which
+            # would be excluded) nor a member of the cohort: the writer set is
+            # open, so the site refuses.
+            reason = "unproven-cohort-store"
         elif any(c.get("outside") for c in candidates):
             # A reachable cohort function other than the constructor's closure
             # stores to the same displacement; the store's base object is not
@@ -6639,13 +7440,19 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
                                             c.get("unaccounted", []),
                                         "stores_outside_writers":
                                             c.get("outside", []),
+                                        "unproven_base_stores":
+                                            c.get("unproven_base", []),
+                                        "excluded_different_object_stores":
+                                            c.get("excluded_base", []),
+                                        "prefix_compatible_types":
+                                            sorted(c.get("prefix_types", {})),
                                         "reason": c.get("reason")}
                                        for c in candidates])
     chosen = good[0]
     cand = chosen["candidate"]
     ulayout = cand["layout"]
     declared = _s1_declared_instances(g, cand["table_type"])
-    instances = declared["instances"]
+    instances = chosen.get("instances") or declared["instances"]
 
     instance_rows = []
     targets = set()
@@ -6656,6 +7463,14 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
         inst = instances.get(addr)
         if inst is None:
             continue
+        inst_type = _s1_static_type(g, addr)
+        is_prefix = (inst_type is not None
+                     and inst_type != cand["table_type"])
+        prefix_w = (chosen.get("prefix_types", {}).get(inst_type)
+                    if is_prefix else None)
+        obj_type = ((prefix_w or {}).get("prefix_object_type")
+                    or cand["table_type"])
+        olayout = _s1_struct_layout(g, obj_type) or ulayout
         sec = g.section_of(addr)
         if sec not in S1_IMMUTABLE_SECTIONS and "s1-mutable-table" not in _MUTED:
             unaccounted_tables.append({"table": inst["name"],
@@ -6665,7 +7480,7 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
         members = {}
         derived_but_undeclared = []
         declared_but_absent = []
-        for row in ulayout["fields"]:
+        for row in olayout["fields"]:
             members[hex(row["offset"])] = None
         size = None
         for raw in (getattr(g, "names_at", {}) or {}).get(addr, ()):
@@ -6678,8 +7493,15 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
                                    "reason": "no symbol size"})
             continue
         derived = [o for o in range(0, size, 8)]
-        declared_offs = [r["offset"] for r in ulayout["fields"]]
-        if size != ulayout["size"]:
+        declared_offs = [r["offset"] for r in olayout["fields"]]
+        if is_prefix and size > olayout["size"]:
+            # The instance's declared type carries the base as its first
+            # field: only the base prefix belongs to this field's layout.  The
+            # prefix's own offsets were checked against the base layout when
+            # the type was admitted, so compare the base prefix here and
+            # record the extra members rather than refusing them.
+            derived = [o for o in range(0, olayout["size"], 8)]
+        elif size != olayout["size"]:
             derived_but_undeclared = [o for o in derived if o not in declared_offs]
             declared_but_absent = [o for o in declared_offs if o not in derived]
             if "s1-shape-mismatch" not in _MUTED:
@@ -6691,7 +7513,7 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
                     "declared_but_absent": [hex(o) for o in declared_but_absent]})
                 continue
         member_ok = True
-        for row in ulayout["fields"]:
+        for row in olayout["fields"]:
             vals = g.static_slot(addr + row["offset"])
             ints = {x for x in (vals or ()) if isinstance(x, int)}
             if len(ints) != 1:
@@ -6730,6 +7552,11 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
         instance_rows.append({
             "addr": hex(addr), "symbol": inst["symbol"],
             "section": sec, "members": members,
+            "declared_type": inst_type or cand["table_type"],
+            "prefix_compatible": bool(is_prefix),
+            "extra_members_after_base": (
+                [hex(o) for o in range(olayout["size"], size, 8)]
+                if is_prefix and size > olayout["size"] else []),
             "shape_ok": (not derived_but_undeclared and not declared_but_absent),
         })
     if unaccounted_tables or shape_failures:
@@ -6788,8 +7615,24 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
                             key=lambda r: (r["function"], r["store_site"])),
         "chain": chain,
         "dispatch_tables": paired,
-        "completeness": {"unaccounted_table_pointers": [],
-                         "unscanned_writers": []},
+        "conditions": ([
+            "field-sensitive-key",
+            "base-object-qualified",
+            "single-newctx-per-table",
+            "caller-in-cohort",
+            "declared-instance-writers",
+            "instance-union-complete",
+        ] + (["prefix-compatible-base"]
+             if chosen.get("prefix_types") else [])),
+        "completeness": {
+            "unaccounted_table_pointers": [],
+            "unscanned_writers": [],
+            "base_object_qualified": True,
+            "excluded_different_object_stores":
+                chosen.get("excluded_base", []),
+            "prefix_compatible_types":
+                chosen.get("prefix_types", {}),
+        },
         "targets": [hex(t) for t in sorted(targets)],
         "basis": ("field-sensitive static-table instance dispatch: the base "
                   "register is loaded from one pointer field of the documented "
@@ -12486,7 +13329,7 @@ def build_receipt(args) -> dict:
                  "call_site": hex(s.get("addr", 0)),
                  "reason": s["reason"],
                  "class": s["class"], "text": s["text"][:160]}
-                for d, f, s in closure["reachable_residual_sites"][:80]],
+                for d, f, s in closure["reachable_residual_sites"][:200]],
             "static_table_instance": {
                 "schema": S1_WITNESS_SCHEMA,
                 "rule": (
@@ -12523,6 +13366,18 @@ def build_receipt(args) -> dict:
                      "effective_type": w.get("effective_type"),
                      "instances": [r.get("symbol") or r.get("addr")
                                    for r in w.get("instances", [])],
+                     "instances_detail": [
+                         {"symbol": r.get("symbol"),
+                          "declared_type": r.get("declared_type"),
+                          "prefix_compatible": r.get("prefix_compatible")}
+                         for r in w.get("instances", [])],
+                     "conditions": w.get("conditions"),
+                     "prefix_compatible_types":
+                         (w.get("completeness") or {}).get(
+                             "prefix_compatible_types"),
+                     "excluded_different_object_stores":
+                         (w.get("completeness") or {}).get(
+                             "excluded_different_object_stores"),
                      "targets": w.get("targets")}
                     for name, g in graphs.items() for s in g.sites.values()
                     for w in [s.get("static_instance_witness") or {}]
@@ -13811,13 +14666,139 @@ def self_test() -> int:
           _local_witness(extra=True), None)
 
     # S1: field-sensitive static-table instance dispatch.
-    def _s1_source(nullable=False, cast=False, cast_missing=False):
+    def _s1_source(nullable=False, cast=False, cast_missing=False,
+                   prefix=False, prefix_nonbase=False, prefix_layout=False,
+                   prefix_cast=False, different_object=False,
+                   unknown_base=False):
         cipher = ("unsafe extern \"C\" fn(*mut Wctx) -> c_int"
                   if not nullable else
                   "Option<unsafe extern \"C\" fn(*mut Wctx) -> c_int>")
+        fn = "unsafe extern \"C\" fn(*mut Wctx) -> c_int"
+        tail = ""
+        if different_object:
+            tail += (
+                "#[repr(C)]\n"
+                "pub(crate) struct WOther {\n"
+                "    pub tag: usize,\n"
+                "    pub slot: usize,\n"
+                "}\n"
+                "unsafe fn other_dup(p: *mut WOther, value: usize) {\n"
+                "    (*p).slot = value;\n"
+                "}\n")
+        if unknown_base:
+            tail += (
+                "unsafe fn unknown_store(\n"
+                "    p: *mut c_void,\n"
+                "    value: usize,\n"
+                ") -> *mut c_void {\n"
+                "    let f: unsafe extern \"C\" fn(*mut c_void) -> *mut c_void\n"
+                "        = core::mem::transmute(p);\n"
+                "    f(value as *mut c_void)\n"
+                "}\n")
+        if prefix or prefix_nonbase or prefix_layout or prefix_cast:
+            if prefix_nonbase:
+                rows = (
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WBase {\n"
+                    f"    pub init: {fn},\n"
+                    f"    pub cipher: {fn},\n"
+                    f"    pub fini: {fn},\n"
+                    "}\n"
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WRow {\n"
+                    "    pub tag: u64,\n"
+                    f"    pub cipher: {fn},\n"
+                    f"    pub fini: {fn},\n"
+                    "}\n")
+                inits = [f"WRow {{ tag: {k}, cipher: f{k}, fini: g{k} }}"
+                         for k in range(3)]
+            elif prefix_layout:
+                rows = (
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WBase {\n"
+                    f"    pub init: {fn},\n"
+                    f"    pub cipher: {fn},\n"
+                    f"    pub fini: {fn},\n"
+                    "}\n"
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WBadBase {\n"
+                    f"    pub init: {fn},\n"
+                    f"    pub cipher: {fn},\n"
+                    "}\n"
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WRow {\n"
+                    "    pub base: WBadBase,\n"
+                    f"    pub fini: {fn},\n"
+                    "}\n")
+                inits = [f"WRow {{ base: WBadBase {{ init: f{k}, "
+                         f"cipher: g{k} }}, fini: h{k} }}" for k in range(3)]
+            elif prefix_cast:
+                rows = (
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WBase {\n"
+                    f"    pub init: {fn},\n"
+                    f"    pub cipher: {fn},\n"
+                    f"    pub fini: {fn},\n"
+                    "}\n"
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WPrefix {\n"
+                    f"    pub init: {fn},\n"
+                    "    pub cipher: Option<unsafe extern \"C\" "
+                    "fn(*mut Wctx) -> c_int>,\n"
+                    "    pub fini: Option<unsafe extern \"C\" "
+                    "fn(*mut Wctx) -> c_int>,\n"
+                    "}\n"
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WRow {\n"
+                    "    pub base: WPrefix,\n"
+                    f"    pub extra: {fn},\n"
+                    "}\n")
+                inits = [f"WRow {{ base: WPrefix {{ init: f{k}, "
+                         f"cipher: Some(g{k}), fini: Some(h{k}) }}, "
+                         f"extra: f{k} }}" for k in range(3)]
+            else:
+                rows = (
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WBase {\n"
+                    f"    pub init: {fn},\n"
+                    f"    pub cipher: {fn},\n"
+                    f"    pub fini: {fn},\n"
+                    "}\n"
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WRow {\n"
+                    "    pub base: WBase,\n"
+                    f"    pub extra: {fn},\n"
+                    "}\n")
+                inits = [f"WRow {{ base: WBase {{ init: f{k}, "
+                         f"cipher: g{k}, fini: h{k} }}, extra: f{k} }}"
+                         for k in range(3)]
+            body = (
+                rows
+                + "#[repr(C)]\n"
+                "pub(crate) struct Wctx {\n"
+                "    pub flags: c_uint,\n"
+                "    pub hw: *const WBase,\n"
+                "}\n"
+                + "".join(f"static TBL_{n}: WRow = {v};\n"
+                          for n, v in zip("ABC", inits))
+                + "unsafe fn site(ctx: *mut Wctx, out: *mut c_uchar) -> c_int {\n"
+                "    let hw = (*ctx).hw;\n"
+                "    ((*hw).cipher)(ctx, out)\n"
+                "}\n")
+            writers = "".join(
+                f"unsafe fn newctx_{n.lower()}(provctx: *mut c_void) "
+                "-> *mut c_void {\n"
+                "    let owner = OwnedCtx::<Wctx>::new();\n"
+                "    let ctx = owner.as_ptr();\n"
+                "    (*ctx).hw = core::ptr::addr_of!(TBL_" + n
+                + ").cast::<WBase>();\n"
+                "    owner.into_raw().cast()\n"
+                "}\n" for n in "ABC")
+            return body + writers + tail
+        # The exact and via-cast fixtures.
         if cast or cast_missing:
             target = "WMissing" if cast_missing else "WTable"
-            return (
+            body = (
                 "#[repr(C)]\n"
                 "pub(crate) struct WBase {\n"
                 "    pub init: unsafe extern \"C\" fn(*mut Wctx) -> c_int,\n"
@@ -13843,26 +14824,35 @@ def self_test() -> int:
                 f"    let hw = (*ctx).hw.cast::<{target}>();\n"
                 "    ((*hw).cipher)(ctx, out)\n"
                 "}\n")
-        return (
-            "#[repr(C)]\n"
-            "pub(crate) struct WTable {\n"
-            "    pub init: unsafe extern \"C\" fn(*mut Wctx) -> c_int,\n"
-            f"    pub cipher: {cipher},\n"
-            "    pub fini: unsafe extern \"C\" fn(*mut Wctx) -> c_int,\n"
-            "}\n"
-            "#[repr(C)]\n"
-            "pub(crate) struct Wctx {\n"
-            "    pub flags: c_uint,\n"
-            "    pub hw: *const WTable,\n"
-            "}\n"
-            "static TBL_A: WTable = WTable { init: f0, cipher: f1, fini: f2 };\n"
-            "static TBL_B: WTable = WTable { init: g0, cipher: g1, fini: g2 };\n"
-            "static TBL_C: WTable = WTable { init: h0, cipher: h1, fini: h2 };\n"
-            "unsafe fn site(ctx: *mut Wctx, out: *mut c_uchar) -> c_int {\n"
-            "    let hw = (*ctx).hw;\n"
-            "    ((*hw).cipher)(ctx, out)\n"
-            "}\n"
-        )
+        else:
+            body = (
+                "#[repr(C)]\n"
+                "pub(crate) struct WTable {\n"
+                "    pub init: unsafe extern \"C\" fn(*mut Wctx) -> c_int,\n"
+                f"    pub cipher: {cipher},\n"
+                "    pub fini: unsafe extern \"C\" fn(*mut Wctx) -> c_int,\n"
+                "}\n"
+                "#[repr(C)]\n"
+                "pub(crate) struct Wctx {\n"
+                "    pub flags: c_uint,\n"
+                "    pub hw: *const WTable,\n"
+                "}\n"
+                "static TBL_A: WTable = WTable { init: f0, cipher: f1, fini: f2 };\n"
+                "static TBL_B: WTable = WTable { init: g0, cipher: g1, fini: g2 };\n"
+                "static TBL_C: WTable = WTable { init: h0, cipher: h1, fini: h2 };\n"
+                "unsafe fn site(ctx: *mut Wctx, out: *mut c_uchar) -> c_int {\n"
+                "    let hw = (*ctx).hw;\n"
+                "    ((*hw).cipher)(ctx, out)\n"
+                "}\n")
+        writers = "".join(
+            f"unsafe fn newctx_{n.lower()}(provctx: *mut c_void) "
+            "-> *mut c_void {\n"
+            "    let owner = OwnedCtx::<Wctx>::new();\n"
+            "    let ctx = owner.as_ptr();\n"
+            "    (*ctx).hw = &TBL_" + n + ";\n"
+            "    owner.into_raw().cast()\n"
+            "}\n" for n in "ABC")
+        return body + writers + tail
 
     class _S1G:
         def __init__(self, insns, funcs, data_syms, sizes, static_values,
@@ -13912,6 +14902,7 @@ def self_test() -> int:
 
     S1_SITE, S1_NEW_A, S1_NEW_B, S1_NEW_C = 0x1000, 0x1100, 0x1200, 0x1240
     S1_ZALLOC, S1_ROGUE = 0x1500, 0x1300
+    S1_OTHER, S1_UNKNOWN = 0x1280, 0x12c0
     S1_TBL = {0x3000: "A", 0x3100: "B", 0x3200: "C"}
     S1_MEM = {0x3000: (0x2000, 0x2010, 0x2020),
               0x3100: (0x2100, 0x2110, 0x2120),
@@ -13925,12 +14916,19 @@ def self_test() -> int:
     def _s1_fixture(nullable=False, shape="memory", undeclared=False,
                     bad_member=False, mutable=False, shape_extra=False,
                     rogue=False, third_store=True, guard=True,
-                    null_member=False, cast=False, cast_missing=False):
+                    null_member=False, cast=False, cast_missing=False,
+                    prefix=False, prefix_nonbase=False, prefix_layout=False,
+                    prefix_cast=False, different_object=False,
+                    unknown_base=False):
         td = tempfile.mkdtemp()
         repo = Path(td)
         path = repo / "src" / "provider" / "cipher_gcm.rs"
         path.parent.mkdir(parents=True)
-        path.write_text(_s1_source(nullable, cast, cast_missing))
+        path.write_text(_s1_source(
+            nullable, cast, cast_missing, prefix=prefix,
+            prefix_nonbase=prefix_nonbase, prefix_layout=prefix_layout,
+            prefix_cast=prefix_cast, different_object=different_object,
+            unknown_base=unknown_base))
         funcs = {
             S1_SITE: "_RNvNtNtCs3iYjyFzWfzV_10openssl_rs8provider10cipher_gcm4site",
             S1_NEW_A: "newctx_a", S1_NEW_B: "newctx_b",
@@ -13941,6 +14939,10 @@ def self_test() -> int:
                 funcs[base + k * 0x10] = f"member_{base:x}_{k}"
         if rogue:
             funcs[S1_ROGUE] = "rogue"
+        if different_object:
+            funcs[S1_OTHER] = "other_dup"
+        if unknown_base:
+            funcs[S1_UNKNOWN] = "unknown_store"
         insns = {}
         if shape == "memory":
             insns[S1_SITE] = [(0x1000, "mov    0x8(%rdi),%r8"),
@@ -13983,6 +14985,13 @@ def self_test() -> int:
         if rogue:
             insns[S1_ROGUE] = [(0x1300, "call   1000 <site>"),
                                (0x1305, "ret")]
+        if different_object:
+            insns[S1_OTHER] = [(0x1280, "mov    %rsi,0x8(%rdi)"),
+                               (0x1284, "ret")]
+        if unknown_base:
+            insns[S1_UNKNOWN] = [(0x12c0, "call   *(%rdi)"),
+                                 (0x12c2, "mov    %rcx,0x8(%rax)"),
+                                 (0x12c7, "ret")]
         static_values, u32, sizes = {}, {}, {}
         data_syms = {}
         for base, letter in S1_TBL.items():
@@ -14015,6 +15024,10 @@ def self_test() -> int:
                     ".data.rel.ro": (0x3000, 0, 0x1000),
                     ".data": (0x5000, 0, 0x1000)}
         direct = {S1_ROGUE: {S1_SITE}} if rogue else {}
+        if different_object:
+            direct.setdefault(S1_SITE, set()).add(S1_OTHER)
+        if unknown_base:
+            direct.setdefault(S1_SITE, set()).add(S1_UNKNOWN)
         g = _S1G(insns, funcs, data_syms, sizes, static_values, u32,
                  sections, direct=direct, source_root=repo)
         site = {"kind": "call", "func": S1_SITE, "addr": site_addr,
@@ -14075,6 +15088,44 @@ def self_test() -> int:
           (_s1_witness(shape="register", nullable=True, null_member=True,
                        guard=False) or {}).get("resolved", False), False)
 
+    # Base-object qualification: a store into a different object is excluded
+    # with its reason, and an unknown base origin still refuses.
+    sw4 = _s1_witness(different_object=True)
+    check("S1 same-offset store into an unrelated object is excluded",
+          bool(sw4 and sw4.get("resolved")), True)
+    check("S1 excluded store records its base type",
+          [r.get("origin") for r in
+           ((sw4 or {}).get("completeness") or {}).get(
+               "excluded_different_object_stores", [])],
+          ["entry-parameter"])
+    check("S1 unknown base origin still refuses",
+          (_s1_witness(unknown_base=True) or {}).get("refusal"),
+          "unproven-cohort-store")
+
+    # Prefix-compatible instance enumeration.
+    sw5 = _s1_witness(prefix=True)
+    check("S1 prefix-compatible instance type resolves",
+          bool(sw5 and sw5.get("resolved")), True)
+    ptypes = ((sw5 or {}).get("completeness") or {}).get(
+        "prefix_compatible_types", {}) or {}
+    check("S1 prefix witness records the first-field source witness",
+          bool((ptypes.get("WRow") or {}).get("source_witness")), True)
+    check("S1 prefix witness records the layout witness",
+          ((ptypes.get("WRow") or {}).get("layout_witness") or {}).get(
+              "offsets"), ["0x0", "0x10", "0x8"])
+    check("S1 prefix-compatible-base is in the conjunction",
+          "prefix-compatible-base" in ((sw5 or {}).get("conditions") or []),
+          True)
+    sw6 = _s1_witness(prefix_cast=True)
+    check("S1 layout-equivalent first field with a source cast resolves",
+          bool(sw6 and sw6.get("resolved")), True)
+    check("S1 first-field-incompatible type is refused",
+          (_s1_witness(prefix_nonbase=True) or {}).get("resolved", False),
+          False)
+    check("S1 layout-incompatible prefix type is refused",
+          (_s1_witness(prefix_layout=True) or {}).get("resolved", False),
+          False)
+
     mut_rows = []
 
     def _mutation(name, fn):
@@ -14120,6 +15171,33 @@ def self_test() -> int:
           [(name, True) for name, _fn in mut_rows])
     print("[consumer-closure] witness mutation matrix: " + "; ".join(
         f"{name} -> negative accepted" for name, _fn in mut_rows))
+
+    # The base/prefix extensions have their own load-bearing mutations.  Some
+    # disable an exclusion (so the positive case must then refuse), some
+    # disable an admission (so the negative case must then resolve).
+    mut2 = [
+        ("s1-base-different", lambda: _s1_witness(different_object=True),
+         False, "unproven-cohort-store"),
+        ("s1-base-unknown", lambda: _s1_witness(unknown_base=True),
+         True, None),
+        ("s1-prefix-types", lambda: _s1_witness(prefix=True),
+         False, "no-declared-instance-type"),
+        ("s1-prefix-first-field", lambda: _s1_witness(prefix_nonbase=True),
+         True, None),
+        ("s1-prefix-layout", lambda: _s1_witness(prefix_layout=True),
+         True, None),
+    ]
+    mut2_results = []
+    for name, fn, _wr, _rf in mut2:
+        w = _mutation(name, fn) or {}
+        mut2_results.append((name, bool(w.get("resolved")),
+                             w.get("refusal")))
+    check("witness mutation matrix 2: base/prefix checks are load-bearing",
+          mut2_results,
+          [(name, wr, rf) for name, _fn, wr, rf in mut2])
+    print("[consumer-closure] witness mutation matrix 2: " + "; ".join(
+        f"{name} -> resolved={w} refusal={r}"
+        for name, w, r in mut2_results))
 
     # ---- evidence-class controls ------------------------------------------ #
     # R1: a non-literal dlsym argument must not be resolved.
