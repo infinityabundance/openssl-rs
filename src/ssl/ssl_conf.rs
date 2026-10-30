@@ -33,8 +33,16 @@
 //!   checks exclusive access, and the C implementation performs no such check. This crate's
 //!   [`SSL_CONF_cmd`]/[`SSL_CONF_cmd_argv`] `# Safety` contracts require exclusive access to the
 //!   context and to the `SSL`/`SSL_CTX` it wraps and forbid concurrent mutation. This is a
-//!   documented divergence (`AGENTS.md` §17) that narrows what we accept; it changes no behaviour
-//!   and no return value.
+//!   documented divergence (`AGENTS.md` §17) that narrows what we accept; it changes no return
+//!   value for a conforming caller (B46-D1).
+//! * **An overlapping invocation is refused at run time (B46-D2).** The authority performs no
+//!   check, so a re-entrant or aliased `SSL_CONF_cmd` on the same context would proceed into
+//!   aliasing/UB. `SslConfCtx` now carries an `in_use` flag set on entry to
+//!   [`SSL_CONF_cmd`]/[`SSL_CONF_cmd_argv`] and cleared by an RAII guard on every exit path,
+//!   including panic. A second invocation while the flag is set returns the API's ordinary
+//!   failure value (`0`) instead of aliasing. This is a deliberate, documented divergence: it
+//!   refuses where the authority would proceed, and it is the only same-context, same-thread
+//!   guarantee this crate adds beyond the authority.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -42,6 +50,7 @@
 
 use core::ffi::{c_char, c_int, c_long, c_uint, c_void};
 use core::ptr;
+use core::sync::atomic::{AtomicBool, Ordering};
 
 use crate::ffi::guard_ffi;
 use crate::runtime::conf::modparse::CONF_parse_list;
@@ -100,6 +109,13 @@ struct SslConfCmdTbl {
 }
 
 /// `struct ssl_conf_ctx_st` — `ssl_conf.c:77-109`. Opaque to a consumer.
+///
+/// The type is deliberately **not** `#[repr(C)]`: the authority allocates one block and
+/// hands out only the pointer, so no consumer observes the field order or the size. The
+/// `in_use` field is a candidate-only addition (it has no authority counterpart) and does
+/// not change any exported symbol or ABI: `SSL_CONF_CTX_new` allocates
+/// `size_of::<SslConfCtx>()` through the crate's own `CRYPTO_*` seam, and every other
+/// exported entry point takes/returns the opaque pointer.
 pub struct SslConfCtx {
     flags: c_uint,
     prefix: *mut c_char,
@@ -116,6 +132,58 @@ pub struct SslConfCtx {
     tbl: *const SslFlagTbl,
     ntbl: usize,
     canames: *mut OpenSslStack,
+    /// Non-authority field: nonzero while a public dispatch is running on this context.
+    /// All-zero (free) is the state `SSL_CONF_CTX_new`/`zeroed` produce. It is atomic so
+    /// the check-and-set itself introduces no data race; it does **not** make the rest of
+    /// the context thread-safe (cross-thread mutation remains outside the contract).
+    in_use: AtomicBool,
+}
+
+// ---------------------------------------------------------------------------------------------
+// Same-context overlap refusal (candidate-only; see B46-D2)
+// ---------------------------------------------------------------------------------------------
+
+/// RAII release of [`SslConfCtx::in_use`].
+///
+/// The guard stores the flag's address rather than a reference so that no shared borrow of
+/// the context is live while the dispatch takes `&mut *cctx` for its handlers (the aliasing
+/// shape B46-H1 removed). Its `Drop` clears the flag on every exit path, including the early
+/// returns and the unwind that `guard_ffi` catches.
+struct InUseGuard {
+    /// Address of the `in_use` field of a context that outlives this guard.
+    busy: *const AtomicBool,
+}
+
+impl Drop for InUseGuard {
+    fn drop(&mut self) {
+        // SAFETY: the context whose flag this guard marked is live for at least as long as
+        // the guard: the guard is created and dropped inside one public dispatch call that
+        // holds exclusive access to the context, and nothing in that call releases it.
+        unsafe { (*self.busy).store(false, Ordering::Release) };
+    }
+}
+
+/// Marks `cctx` in use for the lifetime of the returned guard, or returns `None` when a
+/// public dispatch is already running on the same context.
+///
+/// This is not an authority operation: the authority performs no such check (B46-D2). It is
+/// the candidate's deterministic replacement for allowing two overlapping dispatches to
+/// alias the context.
+///
+/// # Safety
+/// `cctx` must be non-NULL, aligned and point to a live, initialised `SslConfCtx` that
+/// outlives the returned guard. The caller must hold the exclusive-access precondition of
+/// the public dispatch for the whole guard lifetime.
+unsafe fn enter_use(cctx: *mut SslConfCtx) -> Option<InUseGuard> {
+    // SAFETY: `cctx` is live and aligned per the caller's contract; `addr_of!` creates no
+    // reference, so it does not conflict with the `&mut *cctx` the handlers later take.
+    let busy = unsafe { core::ptr::addr_of!((*cctx).in_use) };
+    // SAFETY: `busy` is a live, aligned `AtomicBool` per the caller's contract.
+    if unsafe { (*busy).swap(true, Ordering::Acquire) } {
+        None
+    } else {
+        Some(InUseGuard { busy })
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -258,7 +326,7 @@ unsafe fn ssl_set_option(
 ///
 /// Authority-derived: `elem`/`len` are `CONF_parse_list`'s element-callback arguments
 /// (`ssl_conf.c:146-160` consumes them the same way); the candidate's only caller is
-/// [`ssl_set_option_list`], which receives them from `CONF_parse_list` at `:490`. The
+/// [`ssl_set_option_list`], which receives them from `CONF_parse_list` at `:558`. The
 /// exclusivity requirement comes from [`ssl_set_option`], not from the authority's
 /// documentation.
 unsafe fn ssl_match_option(
@@ -308,7 +376,7 @@ unsafe fn ssl_match_option(
 /// NUL-terminated when `len == -1`. The callback stores no pointer to `elem` or `usr`.
 ///
 /// Authority-derived: this is the `CONF_parse_list` element callback installed by
-/// [`parse_option_list`] with `usr = cctx` (`:491`); `CONF_parse_list` invokes it
+/// [`parse_option_list`] with `usr = cctx` (`:559`); `CONF_parse_list` invokes it
 /// synchronously with the element pointer/length and never retains it. The context table
 /// is set to a frame-local table by `parse_option_list` and cleared before it returns. The
 /// exclusivity requirement is this crate's [`ssl_set_option`] contract, not an
@@ -513,13 +581,13 @@ unsafe fn parse_option_list(
 /// stores no copy of the pointer. ABI: the `ConfCmdFn`
 /// (`int (*)(SSL_CONF_CTX *, const char *)`) signature the command table stores.
 ///
-/// Established by the sole caller, `SSL_CONF_cmd` (`src/ssl/ssl_conf.rs:1426`): it
-/// refuses a NULL `cctx` at `:1398` and a NULL `value` for a typed row at `:1419`
-/// before the indirect call. `cctx` provenance is `SSL_CONF_CTX_new` (`:1561`), and
-/// `SSL_CONF_CTX_set_ssl`/`_set_ssl_ctx` (`:1684`/`:1728`) establish `ctx`/`ssl` as
+/// Established by the sole caller, `SSL_CONF_cmd` (`src/ssl/ssl_conf.rs:1473`): it
+/// refuses a NULL `cctx` at `:1522` and a NULL `value` for a typed row at `:1490`
+/// before the indirect call. `cctx` provenance is `SSL_CONF_CTX_new` (`:1672`), and
+/// `SSL_CONF_CTX_set_ssl`/`_set_ssl_ctx` (`:1795`/`:1839`) establish `ctx`/`ssl` as
 /// NULL or live in-crate objects. The dispatch holds no shared `&SslConfCtx` across
-/// `:1426` (the `&*cctx` at `:1410` ends with the lookup). `SSL_CONF_cmd`'s
-/// public `# Safety` (`:1368`) now requires exclusive access to the context and
+/// `:1473` (the `&*cctx` at `:1457` ends with the lookup). `SSL_CONF_cmd`'s
+/// public `# Safety` (`:1489`) now requires exclusive access to the context and
 /// to the `SSL`/`SSL_CTX` it wraps and forbids concurrent mutation; the authority
 /// documents neither, so this is a recorded divergence (`AGENTS.md` §17, B46-D1)
 /// that narrows the accepted contract. Returns 1 only when every element matched:
@@ -556,11 +624,11 @@ unsafe extern "C" fn cmd_Protocol(cctx: *mut SslConfCtx, value: *const c_char) -
 /// NUL-terminated byte string readable for the whole call; the handler stores no
 /// copy of the pointer. ABI: the `ConfCmdFn` signature the command table stores.
 ///
-/// Established by the sole caller, `SSL_CONF_cmd` (`:1426`): NULL `cctx` is refused
-/// at `:1398` and a NULL `value` for a typed row at `:1419` before the call; `cctx`
-/// provenance is `SSL_CONF_CTX_new` (`:1561`) with `set_ssl`/`set_ssl_ctx`
-/// (`:1684`/`:1728`) supplying NULL-or-live members. `SSL_CONF_cmd`'s public
-/// `# Safety` (`:1368`) now requires exclusive access to the context and the
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1473`): NULL `cctx` is refused
+/// at `:1522` and a NULL `value` for a typed row at `:1490` before the call; `cctx`
+/// provenance is `SSL_CONF_CTX_new` (`:1672`) with `set_ssl`/`set_ssl_ctx`
+/// (`:1795`/`:1839`) supplying NULL-or-live members. `SSL_CONF_cmd`'s public
+/// `# Safety` (`:1489`) now requires exclusive access to the context and the
 /// wrapped `SSL`/`SSL_CTX` and forbids concurrent mutation; the authority
 /// documents neither, so this is a recorded divergence (`AGENTS.md` §17, B46-D1)
 /// that narrows the accepted contract. This handler additionally
@@ -637,10 +705,10 @@ unsafe extern "C" fn cmd_Options(cctx: *mut SslConfCtx, value: *const c_char) ->
 /// NUL-terminated byte string readable for the whole call; the handler stores no
 /// copy of the pointer. ABI: the `ConfCmdFn` signature the command table stores.
 ///
-/// Established by the sole caller, `SSL_CONF_cmd` (`:1426`): NULL `cctx` is refused
-/// at `:1398` and a NULL `value` for a typed row at `:1419`; `cctx` provenance is
-/// `SSL_CONF_CTX_new` (`:1561`) with `set_ssl`/`set_ssl_ctx` (`:1684`/`:1728`)
-/// supplying NULL-or-live members. `SSL_CONF_cmd`'s public `# Safety` (`:1368`)
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1473`): NULL `cctx` is refused
+/// at `:1522` and a NULL `value` for a typed row at `:1490`; `cctx` provenance is
+/// `SSL_CONF_CTX_new` (`:1672`) with `set_ssl`/`set_ssl_ctx` (`:1795`/`:1839`)
+/// supplying NULL-or-live members. `SSL_CONF_cmd`'s public `# Safety` (`:1489`)
 /// now requires exclusive access to the context and the wrapped `SSL`/`SSL_CTX`
 /// and forbids concurrent mutation; the authority documents neither, so this is a
 /// recorded divergence (`AGENTS.md` §17, B46-D1) that narrows the accepted
@@ -688,10 +756,10 @@ unsafe extern "C" fn cmd_VerifyMode(cctx: *mut SslConfCtx, value: *const c_char)
 /// dispatch refuses it first); the setters parse it into fresh stacks and retain no
 /// reference. ABI: the `ConfCmdFn` signature the command table stores.
 ///
-/// Established by the sole caller, `SSL_CONF_cmd` (`:1426`): NULL `cctx` is refused
-/// at `:1398` and a NULL `value` for a typed row at `:1419`; `cctx` provenance is
-/// `SSL_CONF_CTX_new` (`:1561`) with `set_ssl`/`set_ssl_ctx` (`:1684`/`:1728`)
-/// supplying NULL-or-live members. `SSL_CONF_cmd`'s public `# Safety` (`:1368`)
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1473`): NULL `cctx` is refused
+/// at `:1522` and a NULL `value` for a typed row at `:1490`; `cctx` provenance is
+/// `SSL_CONF_CTX_new` (`:1672`) with `set_ssl`/`set_ssl_ctx` (`:1795`/`:1839`)
+/// supplying NULL-or-live members. `SSL_CONF_cmd`'s public `# Safety` (`:1489`)
 /// now requires exclusive access to the context and the wrapped `SSL`/`SSL_CTX`
 /// and forbids concurrent mutation; the authority documents neither, so this is a
 /// recorded divergence (`AGENTS.md` §17, B46-D1) that narrows the accepted
@@ -728,10 +796,10 @@ unsafe extern "C" fn cmd_CipherString(cctx: *mut SslConfCtx, value: *const c_cha
 /// dispatch refuses it first); the setters parse it and retain no reference. ABI:
 /// the `ConfCmdFn` signature the command table stores.
 ///
-/// Established by the sole caller, `SSL_CONF_cmd` (`:1426`): NULL `cctx` is refused
-/// at `:1398` and a NULL `value` for a typed row at `:1419`; `cctx` provenance is
-/// `SSL_CONF_CTX_new` (`:1561`) with `set_ssl`/`set_ssl_ctx` (`:1684`/`:1728`)
-/// supplying NULL-or-live members. `SSL_CONF_cmd`'s public `# Safety` (`:1368`)
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1473`): NULL `cctx` is refused
+/// at `:1522` and a NULL `value` for a typed row at `:1490`; `cctx` provenance is
+/// `SSL_CONF_CTX_new` (`:1672`) with `set_ssl`/`set_ssl_ctx` (`:1795`/`:1839`)
+/// supplying NULL-or-live members. `SSL_CONF_cmd`'s public `# Safety` (`:1489`)
 /// now requires exclusive access to the context and the wrapped `SSL`/`SSL_CTX`
 /// and forbids concurrent mutation; the authority documents neither, so this is a
 /// recorded divergence (`AGENTS.md` §17, B46-D1) that narrows the accepted
@@ -767,13 +835,13 @@ unsafe extern "C" fn cmd_Ciphersuites(cctx: *mut SslConfCtx, value: *const c_cha
 /// `CStr::from_ptr`, so a NULL value while `ctx` or `ssl` is live is undefined
 /// behaviour. ABI: the `ConfCmdFn` signature the command table stores.
 ///
-/// Established by the sole caller, `SSL_CONF_cmd` (`:1426`): NULL `cctx` is refused
-/// at `:1398` and a NULL `value` for a typed row at `:1419` before the call; `cctx`
-/// provenance is `SSL_CONF_CTX_new` (`:1561`) with `set_ssl`/`set_ssl_ctx`
-/// (`:1684`/`:1728`) supplying NULL-or-live members and a live `min_version`
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1473`): NULL `cctx` is refused
+/// at `:1522` and a NULL `value` for a typed row at `:1490` before the call; `cctx`
+/// provenance is `SSL_CONF_CTX_new` (`:1672`) with `set_ssl`/`set_ssl_ctx`
+/// (`:1795`/`:1839`) supplying NULL-or-live members and a live `min_version`
 /// whenever `ctx` or `ssl` is non-NULL (when both are NULL, `min_max_proto` returns
 /// 0 before reading `value` or the bound). `SSL_CONF_cmd`'s public `# Safety`
-/// (`:1368`) now requires exclusive access to the context and the wrapped
+/// (`:1489`) now requires exclusive access to the context and the wrapped
 /// `SSL`/`SSL_CTX` and forbids concurrent mutation; the authority documents
 /// neither, so this is a recorded divergence (`AGENTS.md` §17, B46-D1) that
 /// narrows the accepted contract. Returns 1 when
@@ -799,13 +867,13 @@ unsafe extern "C" fn cmd_MinProtocol(cctx: *mut SslConfCtx, value: *const c_char
 /// `CStr::from_ptr`, so a NULL value while `ctx` or `ssl` is live is undefined
 /// behaviour. ABI: the `ConfCmdFn` signature the command table stores.
 ///
-/// Established by the sole caller, `SSL_CONF_cmd` (`:1426`): NULL `cctx` is refused
-/// at `:1398` and a NULL `value` for a typed row at `:1419` before the call; `cctx`
-/// provenance is `SSL_CONF_CTX_new` (`:1561`) with `set_ssl`/`set_ssl_ctx`
-/// (`:1684`/`:1728`) supplying NULL-or-live members and a live `max_version`
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1473`): NULL `cctx` is refused
+/// at `:1522` and a NULL `value` for a typed row at `:1490` before the call; `cctx`
+/// provenance is `SSL_CONF_CTX_new` (`:1672`) with `set_ssl`/`set_ssl_ctx`
+/// (`:1795`/`:1839`) supplying NULL-or-live members and a live `max_version`
 /// whenever `ctx` or `ssl` is non-NULL (when both are NULL, `min_max_proto` returns
 /// 0 before reading `value` or the bound). `SSL_CONF_cmd`'s public `# Safety`
-/// (`:1368`) now requires exclusive access to the context and the wrapped
+/// (`:1489`) now requires exclusive access to the context and the wrapped
 /// `SSL`/`SSL_CTX` and forbids concurrent mutation; the authority documents
 /// neither, so this is a recorded divergence (`AGENTS.md` §17, B46-D1) that
 /// narrows the accepted contract. Returns 1 when
@@ -1362,6 +1430,57 @@ unsafe fn ctrl_switch_option(cctx: *mut SslConfCtx, idx: usize) -> c_int {
     1
 }
 
+/// The body of [`SSL_CONF_cmd`] and [`SSL_CONF_cmd_argv`], separated so the latter can run
+/// it while holding the same in-use guard instead of re-entering the guarded public entry
+/// point.
+///
+/// # Safety
+/// As [`SSL_CONF_cmd`], except that the caller must already hold the context's in-use guard
+/// (or otherwise have established exclusive access). `cctx` must be non-NULL.
+unsafe fn ssl_conf_cmd_inner(
+    cctx: *mut SslConfCtx,
+    cmd: *const c_char,
+    value: *const c_char,
+) -> c_int {
+    if cctx.is_null() || cmd.is_null() {
+        return 0;
+    }
+    let mut p = cmd;
+    // SAFETY: `cctx` and `cmd` are per the guards above.
+    if !unsafe { skip_prefix(cctx, &mut p) } {
+        return -2;
+    }
+    // SAFETY: `p` points into the (NUL-terminated) command string.
+    let name = unsafe { core::ffi::CStr::from_ptr(p) }.to_bytes();
+    let table = commands();
+    // SAFETY: `cctx` is live.
+    let c = unsafe { &*cctx };
+    let Some(idx) = cmd_lookup(c, name, &table) else {
+        return -2;
+    };
+    let row = &table[idx];
+    if row.value_type == t::SSL_CONF_TYPE_NONE as c_uint {
+        // SAFETY: `cctx` is live.
+        return unsafe { ctrl_switch_option(cctx, idx) };
+    }
+    if value.is_null() {
+        return -3;
+    }
+    let Some(f) = row.cmd else {
+        return -2;
+    };
+    // SAFETY: `cctx` and `value` are live per the caller's contract.
+    let rv = unsafe { f(cctx, value) };
+    if rv > 0 {
+        return 2;
+    }
+    if rv != -2 {
+        0
+    } else {
+        rv
+    }
+}
+
 /// `int SSL_CONF_cmd(SSL_CONF_CTX *cctx, const char *cmd, const char *value)` —
 /// `ssl/ssl_conf.c:970-1010`.
 ///
@@ -1388,6 +1507,11 @@ unsafe fn ctrl_switch_option(cctx: *mut SslConfCtx, idx: usize) -> c_int {
 /// that follows the authority's documented usage (configure one `SSL_CTX`/`SSL` through
 /// one context at a time) already satisfies it, while concurrent use is outside the
 /// supported contract rather than silently treated as safe.
+///
+/// Same-thread overlap (`AGENTS.md` §17, B46-D2): an invocation that overlaps a dispatch
+/// already in progress on the same `cctx` is refused deterministically with `0`; it is not
+/// allowed to alias the context. This diverges from the authority, which would proceed, and
+/// is the mechanism that closes the same-thread half of the exclusivity gap.
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CONF_cmd(
     cctx: *mut SslConfCtx,
@@ -1398,40 +1522,15 @@ pub unsafe extern "C" fn SSL_CONF_cmd(
         if cctx.is_null() || cmd.is_null() {
             return 0;
         }
-        let mut p = cmd;
-        // SAFETY: `cctx` and `cmd` are per the guards above.
-        if !unsafe { skip_prefix(cctx, &mut p) } {
-            return -2;
-        }
-        // SAFETY: `p` points into the (NUL-terminated) command string.
-        let name = unsafe { core::ffi::CStr::from_ptr(p) }.to_bytes();
-        let table = commands();
-        // SAFETY: `cctx` is live.
-        let c = unsafe { &*cctx };
-        let Some(idx) = cmd_lookup(c, name, &table) else {
-            return -2;
+        // SAFETY: `cctx` is non-NULL and live per the caller's contract and outlives this
+        // call. Marking it before the body refuses an overlapping invocation (including
+        // one issued from a handler) instead of allowing it to alias the context.
+        let Some(_in_use) = (unsafe { enter_use(cctx) }) else {
+            return 0;
         };
-        let row = &table[idx];
-        if row.value_type == t::SSL_CONF_TYPE_NONE as c_uint {
-            // SAFETY: `cctx` is live.
-            return unsafe { ctrl_switch_option(cctx, idx) };
-        }
-        if value.is_null() {
-            return -3;
-        }
-        let Some(f) = row.cmd else {
-            return -2;
-        };
-        // SAFETY: `cctx` and `value` are live per the caller's contract.
-        let rv = unsafe { f(cctx, value) };
-        if rv > 0 {
-            return 2;
-        }
-        if rv != -2 {
-            0
-        } else {
-            rv
-        }
+        // SAFETY: `cctx`/`cmd`/`value` are per the caller's contract; `_in_use` holds the
+        // context for this call and is released on every exit path (including unwind).
+        unsafe { ssl_conf_cmd_inner(cctx, cmd, value) }
     })
 }
 
@@ -1454,7 +1553,9 @@ pub unsafe extern "C" fn SSL_CONF_cmd(
 ///
 /// Authority-derived / documented divergence (`AGENTS.md` §17): as for [`SSL_CONF_cmd`],
 /// the authority's documentation does not require exclusive access; this contract
-/// narrows what the crate accepts without changing behaviour.
+/// narrows what the crate accepts without changing behaviour. An invocation overlapping a
+/// dispatch already in progress on the same context is refused with `0` (B46-D2), and a
+/// NULL `cctx` is now rechecked and answered with `0` instead of being dereferenced.
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CONF_cmd_argv(
     cctx: *mut SslConfCtx,
@@ -1462,6 +1563,15 @@ pub unsafe extern "C" fn SSL_CONF_cmd_argv(
     pargv: *mut *mut *mut c_char,
 ) -> c_int {
     guard_ffi(0, || {
+        if cctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `cctx` is non-NULL and live per the caller's contract and outlives this
+        // call. The guard is held across the whole body, so a nested `SSL_CONF_cmd` (or a
+        // second `SSL_CONF_cmd_argv`) is refused rather than aliasing the context.
+        let Some(_in_use) = (unsafe { enter_use(cctx) }) else {
+            return 0;
+        };
         // SAFETY: `pargc` is NULL or points at a live `int` per the caller's contract.
         let count0 = if pargc.is_null() {
             0
@@ -1501,8 +1611,9 @@ pub unsafe extern "C" fn SSL_CONF_cmd_argv(
             (*cctx).flags &= !(t::SSL_CONF_FLAG_FILE as c_uint);
             (*cctx).flags |= t::SSL_CONF_FLAG_CMDLINE as c_uint;
         }
-        // SAFETY: `cctx`/`arg`/`argn` are per `SSL_CONF_cmd`'s contract.
-        let rv = unsafe { SSL_CONF_cmd(cctx, arg, argn) };
+        // SAFETY: `cctx`/`arg`/`argn` are per `SSL_CONF_cmd`'s contract. The inner body is
+        // used so this call does not re-enter the guarded public entry point.
+        let rv = unsafe { ssl_conf_cmd_inner(cctx, arg, argn) };
         if rv > 0 {
             // SAFETY: `pargv`/`pargc` are per the caller's contract.
             unsafe {
@@ -2025,5 +2136,147 @@ mod tests {
             cctx.tbl.is_null() && cctx.ntbl == 0,
             "a rejected list leaves no frame-local pointer behind"
         );
+    }
+
+    /// C4 control for the same-context overlap refusal (B46-D2).
+    ///
+    /// A handler receives the same raw `*mut SslConfCtx` and can only re-enter through the
+    /// public entry point, so holding the guard here is exactly the state a real dispatch
+    /// presents to a handler that calls back into `SSL_CONF_cmd`. Mutating `SSL_CONF_cmd`
+    /// to skip `enter_use` makes the re-entrant call succeed and this test fail (recorded in
+    /// the B46 receipt).
+    #[test]
+    fn a_reentrant_dispatch_is_refused_and_leaves_the_context_usable() {
+        let mut options: u64 = 0;
+        // SAFETY: all-zero is the authority's `OPENSSL_zalloc` state; the added `in_use`
+        // field is an `AtomicBool`, whose all-zero value is `false`.
+        let mut cctx: SslConfCtx = unsafe { core::mem::zeroed() };
+        cctx.flags = (t::SSL_CONF_FLAG_FILE | t::SSL_CONF_FLAG_CLIENT) as c_uint;
+        cctx.poptions = &raw mut options;
+
+        // A normal call first, so the refused call is compared against real applied state.
+        // SAFETY: `cctx` is this frame's live context; the literal is NUL-terminated.
+        let first = unsafe { SSL_CONF_cmd(&raw mut cctx, c"Options".as_ptr(), c"Bugs".as_ptr()) };
+        assert_eq!(first, 2, "the first call succeeds");
+        assert_ne!(
+            options & t::SSL_OP_ALL,
+            0,
+            "the first call applied its option"
+        );
+
+        // Enter the in-use state exactly as an in-flight public dispatch does.
+        // SAFETY: `cctx` is live and exclusively ours for this test.
+        let in_flight = unsafe { enter_use(&raw mut cctx) };
+        assert!(
+            in_flight.is_some(),
+            "the context was free before the overlap"
+        );
+        assert!(
+            cctx.in_use.load(Ordering::Acquire),
+            "the guard marks the context in use"
+        );
+
+        // The re-entrant call is refused with 0 and changes no state.
+        // SAFETY: as above; the literal is a distinct NUL-terminated string.
+        let reentrant =
+            unsafe { SSL_CONF_cmd(&raw mut cctx, c"Options".as_ptr(), c"-Bugs".as_ptr()) };
+        assert_eq!(reentrant, 0, "an overlapping invocation is refused");
+        assert_ne!(
+            options & t::SSL_OP_ALL,
+            0,
+            "the refused invocation changed no state"
+        );
+
+        // Releasing the in-flight guard makes the context usable again.
+        drop(in_flight);
+        assert!(
+            !cctx.in_use.load(Ordering::Acquire),
+            "dropping the guard clears the flag"
+        );
+        // SAFETY: as above; the literal is NUL-terminated.
+        let after = unsafe { SSL_CONF_cmd(&raw mut cctx, c"Options".as_ptr(), c"-Bugs".as_ptr()) };
+        assert_eq!(after, 2, "the context is usable after the overlap");
+        assert_eq!(
+            options & t::SSL_OP_ALL,
+            0,
+            "the post-overlap call applied its option"
+        );
+    }
+
+    /// C5 control for guard release: every early error exit must clear `in_use` (the RAII
+    /// guard drops on `return` and on unwind), otherwise the context would be permanently
+    /// unusable after one rejected command.
+    #[test]
+    fn the_in_use_guard_is_cleared_on_every_error_exit() {
+        let mut options: u64 = 0;
+        // SAFETY: all-zero is the authority's `OPENSSL_zalloc` state.
+        let mut cctx: SslConfCtx = unsafe { core::mem::zeroed() };
+        cctx.flags = (t::SSL_CONF_FLAG_FILE | t::SSL_CONF_FLAG_CLIENT) as c_uint;
+        cctx.poptions = &raw mut options;
+
+        // Unrecognised command -> -2, after the guard was taken.
+        // SAFETY: `cctx` is live; the literals are NUL-terminated.
+        let unknown =
+            unsafe { SSL_CONF_cmd(&raw mut cctx, c"NoSuchCommand".as_ptr(), c"x".as_ptr()) };
+        assert_eq!(unknown, -2, "an unrecognised command is refused");
+        assert!(
+            !cctx.in_use.load(Ordering::Acquire),
+            "the guard is cleared after the -2 exit"
+        );
+
+        // Typed row with a NULL value -> -3, after the guard was taken.
+        // SAFETY: as above; the dispatch refuses NULL before reading it.
+        let null = unsafe { SSL_CONF_cmd(&raw mut cctx, c"Options".as_ptr(), ptr::null()) };
+        assert_eq!(null, -3, "a NULL value for a typed row is refused");
+        assert!(
+            !cctx.in_use.load(Ordering::Acquire),
+            "the guard is cleared after the -3 exit"
+        );
+
+        // A handler-originated failure (unmatched option) is also an error exit.
+        // SAFETY: as above; the literal is NUL-terminated.
+        let unmatched =
+            unsafe { SSL_CONF_cmd(&raw mut cctx, c"Options".as_ptr(), c"NoSuchOption".as_ptr()) };
+        assert_eq!(unmatched, 0, "an unmatched option is rejected");
+        assert!(
+            !cctx.in_use.load(Ordering::Acquire),
+            "the guard is cleared after the handler error exit"
+        );
+
+        // The context still works after all three errors.
+        // SAFETY: as above; the literal is NUL-terminated.
+        let good = unsafe { SSL_CONF_cmd(&raw mut cctx, c"Options".as_ptr(), c"Bugs".as_ptr()) };
+        assert_eq!(good, 2, "the context remains usable after the errors");
+        assert_ne!(
+            options & t::SSL_OP_ALL,
+            0,
+            "the recovery call applied its option"
+        );
+    }
+
+    /// C6 control: the guard does not refuse ordinary sequential calls.
+    #[test]
+    fn sequential_dispatches_are_not_refused_by_the_in_use_guard() {
+        let mut options: u64 = 0;
+        // SAFETY: all-zero is the authority's `OPENSSL_zalloc` state.
+        let mut cctx: SslConfCtx = unsafe { core::mem::zeroed() };
+        cctx.flags = (t::SSL_CONF_FLAG_FILE | t::SSL_CONF_FLAG_CLIENT) as c_uint;
+        cctx.poptions = &raw mut options;
+
+        for (value, expected_set) in [(c"Bugs".as_ptr(), true), (c"-Bugs".as_ptr(), false)] {
+            // SAFETY: `cctx` is live and the literal is NUL-terminated; sequential calls
+            // are serialised by the caller, so each must take and release the guard.
+            let rv = unsafe { SSL_CONF_cmd(&raw mut cctx, c"Options".as_ptr(), value) };
+            assert_eq!(rv, 2, "a sequential dispatch is not refused");
+            assert_eq!(
+                options & t::SSL_OP_ALL != 0,
+                expected_set,
+                "each sequential dispatch applied its own value"
+            );
+            assert!(
+                !cctx.in_use.load(Ordering::Acquire),
+                "the guard is released before the next sequential call"
+            );
+        }
     }
 }
