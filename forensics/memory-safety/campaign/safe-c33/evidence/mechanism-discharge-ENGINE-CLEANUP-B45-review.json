@@ -1,0 +1,108 @@
+{
+  "receipt": "mechanism-discharge-ENGINE-CLEANUP-B45-review",
+  "subject": "boundary-sweep-B45: nine zero-argument engine-table cleanup thunks in src/engine/tb_*.rs",
+  "candidate": {
+    "tag": "v1t",
+    "source_commit": "afcfdc47e",
+    "source_head_subject": "freeze S': add ENGINE_get_last to the cleanup caller contracts",
+    "install": {
+      "libcrypto.so.3": "d720727aa4b9a59fa7618dc5a5130b30d2554c97776cf55ce2ab7a605a573837",
+      "libssl.so.3": "6baed3eddf1eb986c9a9bfc66ccfca2e6393db5715ab5ec8ee4b30d91279f4b3"
+    },
+    "observation_commit_for_reused_tests": "cc7762e5d",
+    "observation_note": "C3/C4/C5/C8 were run at cc7762e5d. The delta to afcfdc47e is documentation-only in the nine files; an independent byte comparison of src/engine/eng_table.rs and src/engine/eng_lib.rs at the two commits was performed during this review."
+  },
+  "reviewer": {
+    "role": "independent adversarial reviewer",
+    "independence": "not the author of the boundary receipt or of the closure run; reviewed read-only",
+    "scope_limits": [
+      "did not re-run consumer_closure.py adjudication (imported scoped_ranges only)",
+      "did not re-execute C3/C4/C5/C8 or either closure",
+      "the nine-count was recomputed from committed-versus-working-tree evidence, not regenerated"
+    ]
+  },
+  "verdict": "APPROVE_WITH_CONDITIONS",
+  "disposition": "NOT_APPLIED",
+  "disposition_note": "The conditions are open, so boundary-sweep-B45 is NOT in CAMPAIGN-STATUS.json#/scoped_boundary_discharges and the closure remains 312 = 90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN. The nine sites stay BLOCKED. This is the same treatment the earlier ENGINE-CLEANUP package received: an approved package that discharges nothing until its conditions are met.",
+  "checks": [
+    {
+      "id": 1,
+      "claim": "scope exactness",
+      "result": "PASS",
+      "detail": "scoped_ranges() yields exactly {file: [(line,line)]} for each of the nine; each equals the obligation coordinate and is the unique unsafe extern \"C\" fn in that file; no other obligation in those files falls in a range."
+    },
+    {
+      "id": 2,
+      "claim": "contract truth against the source",
+      "result": "PASS",
+      "detail": "The initialised-lock half is established: engine_table_register itself takes CRYPTO_THREAD_write_lock(global_engine_lock()) and fails on NULL, so the callback cannot be enqueued uninitialised. The 'lock not held when the callback runs' half is authority-derived, not established by an executing candidate path."
+    },
+    {
+      "id": 3,
+      "claim": "caller-precondition discharge",
+      "result": "PASS",
+      "detail": "Registration path ENGINE_register_* -> engine_table_register -> write_lock -> engine_cleanup_add_first -> CLEANUP_STACK. engine_cleanup_int does not exist in src/; engine_cleanup_cb_free is private and self-referenced; ENGINE_free -> engine_free_util never touches the cleanup stack. No safe-Rust caller reaches any of the nine."
+    },
+    {
+      "id": 4,
+      "claim": "negative control",
+      "result": "FAIL",
+      "detail": "C8 characterises the current no-op but does not detect either guard. Removing the explicit is_null guard alone leaves identical behaviour because CRYPTO_THREAD_write_lock(NULL) already returns 0; removing the write_lock == 0 guard alone also leaves C8 passing. Only deleting both guards makes it fire. C8 is therefore not mutation-sensitive to the precondition it is cited for."
+    },
+    {
+      "id": 5,
+      "claim": "split soundness",
+      "result": "PASS",
+      "detail": "A site-scoped DISCHARGED may rest on a CONTRACTED callee. AGENTS.md section 7's dependency-closure requirement binds SAFE_COMPATIBLE, which the closure still reports false. B45-R1 and callee_retained record B20-TBL-3 and B20-R2/R3 without promoting them."
+    },
+    {
+      "id": 6,
+      "claim": "receipt integrity",
+      "result": "PASS",
+      "detail": "Independent recount: 312 = 99/213/0 in both families before this disposition was withdrawn; only the nine stable_ids changed status; boundary ids, files, lines, operations and mechanism-site obligation_ids match by stable identity; declared sha256s match the working-tree files."
+    },
+    {
+      "id": 7,
+      "claim": "residuals",
+      "result": "PASS",
+      "detail": "B20-TBL-3 with B20-R2/R3, unreachable callbacks, third-party provider destructor null contract, and Miri/ASan/TSan/dudect NOT_RUN are recorded; C_ABI_CONTRACT remains UNSAFE_OPEN; eng_list.rs:97 and eng_dyn.rs:401 remain BLOCKED. Reused test results are not identity-bound to the commit that observed them (see C4)."
+    }
+  ],
+  "conditions": [
+    {
+      "id": "C1",
+      "status": "OPEN",
+      "requirement": "Add a mutation-sensitive control for the acquisition-failure arm: call engine_table_cleanup with the engine lock already held by the same thread so CRYPTO_THREAD_write_lock returns 0, and assert the slot is unchanged. The control must fail if the acquisition check is removed.",
+      "why": "check 4 FAIL: the cited negative control does not fire for either guard individually"
+    },
+    {
+      "id": "C2",
+      "status": "OPEN",
+      "requirement": "Correct the nine B45-ENG-CB-* contract fields. 'The sole registration path runs through the public engine API' does not establish invocation-time lock state. Cite engine_cleanup_cb_free's body and the authority's engine_cleanup_int, and state that the discharge is conditional on engine_cleanup_int staying unlanded.",
+      "why": "the boundary contract prose overstates what the registration path establishes"
+    },
+    {
+      "id": "C3",
+      "status": "OPEN",
+      "requirement": "Record the AGENTS.md section 17 divergence: the authority's engine_cleanup_int frees and NULLs global_engine_lock, while the candidate never frees it. Landing engine_cleanup_int invalidates the 'initialised, never freed' premise and must re-open the nine.",
+      "why": "an unrecorded authority divergence underlying the contract"
+    },
+    {
+      "id": "C4",
+      "status": "OPEN",
+      "requirement": "Name the observation commit for the reused C3/C4/C5/C8 results (cc7762e5d) and the doc-only delta to afcfdc47e. 'Reviewed package' alone is insufficient identity under sections 6(4) and 22.",
+      "why": "evidence identity is incomplete for reused measurements"
+    },
+    {
+      "id": "C5",
+      "status": "OPEN",
+      "requirement": "Create evidence commit E and freeze; the tree was dirty when the discharge was proposed, so the evidence was not final under section 22.",
+      "why": "evidence finality"
+    }
+  ],
+  "prohibition": [
+    "Do not re-apply boundary-sweep-B45 to scoped_boundary_discharges until C1 is satisfied with a control that fails when the check it guards is removed.",
+    "Do not widen the disposition ranges to make any count move.",
+    "Do not mark C_ABI_CONTRACT SAFETY_DISCHARGED: nine callers do not discharge a mechanism whose callee and two other sites remain blocked."
+  ]
+}
