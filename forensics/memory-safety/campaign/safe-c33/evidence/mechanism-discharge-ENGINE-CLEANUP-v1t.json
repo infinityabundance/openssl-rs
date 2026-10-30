@@ -1,0 +1,473 @@
+{
+ "schema": "safe-c33/mechanism-discharge/receipt/v1",
+ "receipt_id": "ENGINE-CLEANUP-v1t",
+ "date": "2026-10-30",
+ "subject": "Proposed first scoped mechanism discharge: the nine ENGINE-CLEANUP callbacks at frozen candidate v1t. NOT APPLIED: the independent review returned APPROVE_WITH_CONDITIONS with a failing negative-control check, so the nine remain BLOCKED.",
+ "candidate": {
+  "tag": "v1t",
+  "branch": "stage/p25/obligation-persistence",
+  "source_head": "afcfdc47eb8354a6eadef9adf92d49b174c98db5",
+  "source_head_subject": "freeze S': add ENGINE_get_last to the cleanup caller contracts",
+  "freeze_document": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1t-candidate-freeze.json",
+  "freeze_sha256": "508d3251c3af0511886dddbe9bec55265a5f76514650d68deeb8ebc0a9095aef",
+  "checkout": "clean detached checkout court/tmp/sprime-v1t at afcfdc47e",
+  "src_changed_by_this_subphase": false,
+  "src_identity": "Production src/ is byte-identical between afcfdc47e and this working tree. The only src/ change after afcfdc47e is the test-only C1 control in the test module of src/engine/eng_table.rs; no production source, unsafe operation, signature or layout changes. The nine sites remain BLOCKED.",
+  "observation_commit_for_reused_tests": "cc7762e5d",
+  "observation_note": "C3/C4/C5/C8 were observed at cc7762e5d, not at afcfdc47e. The delta from cc7762e5d to afcfdc47e is documentation-only in the nine files; an independent byte comparison of src/engine/eng_table.rs and src/engine/eng_lib.rs at the two commits was performed during the review. Every reused measurement in this receipt is identity-bound to cc7762e5d.",
+  "artifacts": {
+   "libcrypto_so_3_sha256": "d720727aa4b9a59fa7618dc5a5130b30d2554c97776cf55ce2ab7a605a573837",
+   "ssh_sha256": "7a76fa32066d8bcebee96c30e7826cda81e774c507315d3ca3849dc9844d4ddb",
+   "sshd_sha256": "227f467e1c78a85c1e25936b4a94135258fa5bad36d417445f0f4c93edba59ba"
+  }
+ },
+ "mechanism": "C_ABI_CONTRACT",
+ "mechanism_state_after": "UNSAFE_OPEN (unchanged; this is a site-scoped discharge only)",
+ "boundary_id": "B45",
+ "boundary_artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B45.json",
+ "authority_divergences": [
+  {
+   "id": "B45-D1",
+   "section": "AGENTS.md section 17",
+   "divergence": "The pinned authority's engine_cleanup_int (crypto/engine/eng_lib.c:175-184) calls CRYPTO_THREAD_lock_free(global_engine_lock) and sets global_engine_lock = NULL after invoking the cleanup stack; the candidate never frees the engine lock. GLOBAL_ENGINE_LOCK is stored once and never freed.",
+   "effect": "The 'initialised, never freed' premise behind precondition (1) of the nine contracts holds only while engine_cleanup_int is unlanded. Landing engine_cleanup_int would free and NULL the lock, invalidating that premise (a subsequent cleanup becomes the documented no-op/leak and the free is a new boundary), and must re-open the nine sites.",
+   "disposition": "CONSERVED BY WITHHOLDING engine_cleanup_int at this identity; recorded, not silently reproduced"
+  }
+ ],
+ "discharged_boundaries": [
+  "B45-ENG-CB-001",
+  "B45-ENG-CB-002",
+  "B45-ENG-CB-003",
+  "B45-ENG-CB-004",
+  "B45-ENG-CB-005",
+  "B45-ENG-CB-006",
+  "B45-ENG-CB-007",
+  "B45-ENG-CB-008",
+  "B45-ENG-CB-009"
+ ],
+ "sites": [
+  {
+   "boundary": "B45-ENG-CB-001",
+   "site_id": "P25-ENGINE-CB-001",
+   "obligation_id": "V1:src/engine/tb_asnmth.rs:79:UNSAFE_FN_DEF",
+   "file": "src/engine/tb_asnmth.rs",
+   "line": 79,
+   "operation": "engine_unregister_all_pkey_asn1_meths",
+   "table_static": "PKEY_ASN1_METH_TABLE"
+  },
+  {
+   "boundary": "B45-ENG-CB-002",
+   "site_id": "P25-ENGINE-CB-002",
+   "obligation_id": "V1:src/engine/tb_cipher.rs:62:UNSAFE_FN_DEF",
+   "file": "src/engine/tb_cipher.rs",
+   "line": 62,
+   "operation": "engine_unregister_all_ciphers",
+   "table_static": "CIPHER_TABLE"
+  },
+  {
+   "boundary": "B45-ENG-CB-003",
+   "site_id": "P25-ENGINE-CB-003",
+   "obligation_id": "V1:src/engine/tb_dh.rs:58:UNSAFE_FN_DEF",
+   "file": "src/engine/tb_dh.rs",
+   "line": 58,
+   "operation": "engine_unregister_all_dh",
+   "table_static": "DH_TABLE"
+  },
+  {
+   "boundary": "B45-ENG-CB-004",
+   "site_id": "P25-ENGINE-CB-004",
+   "obligation_id": "V1:src/engine/tb_digest.rs:73:UNSAFE_FN_DEF",
+   "file": "src/engine/tb_digest.rs",
+   "line": 73,
+   "operation": "engine_unregister_all_digests",
+   "table_static": "DIGEST_TABLE"
+  },
+  {
+   "boundary": "B45-ENG-CB-005",
+   "site_id": "P25-ENGINE-CB-005",
+   "obligation_id": "V1:src/engine/tb_dsa.rs:58:UNSAFE_FN_DEF",
+   "file": "src/engine/tb_dsa.rs",
+   "line": 58,
+   "operation": "engine_unregister_all_dsa",
+   "table_static": "DSA_TABLE"
+  },
+  {
+   "boundary": "B45-ENG-CB-006",
+   "site_id": "P25-ENGINE-CB-006",
+   "obligation_id": "V1:src/engine/tb_eckey.rs:58:UNSAFE_FN_DEF",
+   "file": "src/engine/tb_eckey.rs",
+   "line": 58,
+   "operation": "engine_unregister_all_ec",
+   "table_static": "EC_TABLE"
+  },
+  {
+   "boundary": "B45-ENG-CB-007",
+   "site_id": "P25-ENGINE-CB-007",
+   "obligation_id": "V1:src/engine/tb_pkmeth.rs:60:UNSAFE_FN_DEF",
+   "file": "src/engine/tb_pkmeth.rs",
+   "line": 60,
+   "operation": "engine_unregister_all_pkey_meths",
+   "table_static": "PKEY_METH_TABLE"
+  },
+  {
+   "boundary": "B45-ENG-CB-008",
+   "site_id": "P25-ENGINE-CB-008",
+   "obligation_id": "V1:src/engine/tb_rand.rs:58:UNSAFE_FN_DEF",
+   "file": "src/engine/tb_rand.rs",
+   "line": 58,
+   "operation": "engine_unregister_all_rand",
+   "table_static": "RAND_TABLE"
+  },
+  {
+   "boundary": "B45-ENG-CB-009",
+   "site_id": "P25-ENGINE-CB-009",
+   "obligation_id": "V1:src/engine/tb_rsa.rs:59:UNSAFE_FN_DEF",
+   "file": "src/engine/tb_rsa.rs",
+   "line": 59,
+   "operation": "engine_unregister_all_rsa",
+   "table_static": "RSA_TABLE"
+  }
+ ],
+ "disposition_strings": {
+  "pattern": "SAFETY_DISCHARGED (scope: the zero-argument engine-table cleanup thunk <operation> and its single registration/invocation path; <file>:<line>)",
+  "range_check": "consumer_closure.scoped_ranges parses each disposition to exactly [(<file>, (<line>, <line>))] and nothing else; verified for all nine against the tool's own parser"
+ },
+ "what_was_established": [
+  "Each callback is an `unsafe extern \"C\" fn()` taking no arguments, stored as EngineCleanupCb and registered by engine_table_register(Some(cb)) at two sites in its own file.",
+  "The engine lock is initialised before the callback can run: every path that reaches registration (ENGINE_new / ENGINE_by_id / ENGINE_get_first / ENGINE_get_last; RawEngine::new is private) runs the lock init, and GLOBAL_ENGINE_LOCK is stored once and never freed.",
+  "The lock is not held when the callback runs: engine_cleanup_cb_free's body (the registration/enqueue path reached only through engine_cleanup_add_first) invokes cb() without holding the engine lock, and the pinned authority's engine_cleanup_int (crypto/engine/eng_lib.c:175-184) runs that body while the lock is free. The discharge is conditional on engine_cleanup_int staying unlanded in the candidate: it does not exist in src/ at this identity, so no callback executes and the invocation-time lock state is authority-derived, not exercised. Landing it must re-open the nine sites and re-establish the precondition against the landed body.",
+  "The callback runs only after registration through that API; the callback body reads only its own module's `&'static EngineTableSlot`, so there is no caller-supplied pointer, extent, alignment or initialisation precondition.",
+  "The shared callee engine_table_cleanup takes the write lock itself; its initialised-lock precondition is documented at its `# Safety` (B20-TBL-3).",
+  "Sole invocation path is the withheld engine_cleanup_int; no call executes at afcfdc47e, so the invocation-path assumptions are derived from the pinned authority."
+ ],
+ "negative_control": {
+  "id": "C8",
+  "test": "engine::eng_table::tests::uninitialised_engine_lock_makes_cleanup_a_documented_no_op",
+  "kind": "court functional test, fresh child process, --exact --test-threads=1",
+  "observation": "with global_engine_lock() NULL, engine_table_cleanup returns before the swap and slot.load() still equals the lhash (documented no-op/leak), not UB and not a panic",
+  "review_finding": "FAIL: not mutation-sensitive to either guard individually (review check 4). Superseded by the C1 control below."
+ },
+ "c1_negative_control": {
+  "id": "C1",
+  "test": "engine::eng_table::tests::cleanup_preserves_the_table_when_the_write_lock_acquisition_fails",
+  "kind": "court functional test; this thread already holds the engine write lock, so CRYPTO_THREAD_write_lock answers 0 without a second thread or a deadlock",
+  "observation": "with the engine write lock held by this thread, engine_table_cleanup returns before the swap: slot.load() still equals the lhash and release_probe records no pile release. After the unlock, the retried cleanup empties the slot and releases the pile block exactly once; a third cleanup releases nothing.",
+  "mutation_result": "with the acquisition check reduced to `let _ = CRYPTO_THREAD_write_lock(lock);`, the test failed at src/engine/eng_table.rs:1012 with `assertion left == right failed: a failed write-lock acquisition leaves the slot untouched` (left 0x0, right 0x7fa134000f50); test result 0 passed / 1 failed. The guard was restored byte-for-byte (sha256 dadacd4ecfd16e67fe640e42598b549ff53dae90b0c8124d7f911280f2e442d6).",
+  "null_guard_note": "Removing the lock.is_null() guard alone is behaviourally undetectable: CRYPTO_THREAD_write_lock(NULL) already returns 0, so the acquisition check still refuses. The is_null guard is redundant defence-in-depth; this control and its evidence do not claim to detect its removal."
+ },
+ "closure_counts": {
+  "ssh": {
+   "before": {
+    "DISCHARGED": 90,
+    "BLOCKED": 222,
+    "UNKNOWN": 0,
+    "total": 312
+   },
+   "after": {
+    "DISCHARGED": 99,
+    "BLOCKED": 213,
+    "UNKNOWN": 0,
+    "total": 312
+   },
+   "verdict": "ACCEPTED",
+   "refusals": 0,
+   "reachable_files": 625
+  },
+  "sshd": {
+   "before": {
+    "DISCHARGED": 90,
+    "BLOCKED": 222,
+    "UNKNOWN": 0,
+    "total": 312
+   },
+   "after": {
+    "DISCHARGED": 99,
+    "BLOCKED": 213,
+    "UNKNOWN": 0,
+    "total": 312
+   },
+   "verdict": "ACCEPTED",
+   "refusals": 0,
+   "reachable_files": 624
+  },
+  "delta": {
+   "DISCHARGED": 9,
+   "BLOCKED": -9,
+   "UNKNOWN": 0,
+   "total": 0
+  }
+ },
+ "exactly_nine_assertion": {
+  "result": "PASS in both families",
+  "method": "per-obligation join by stable identity against the prior v1t evidence; only-in-new 0, only-in-old 0, status changes exactly 9",
+  "changed": [
+   "src/engine/tb_asnmth.rs:79 engine_unregister_all_pkey_asn1_meths BLOCKED -> DISCHARGED",
+   "src/engine/tb_cipher.rs:62 engine_unregister_all_ciphers BLOCKED -> DISCHARGED",
+   "src/engine/tb_dh.rs:58 engine_unregister_all_dh BLOCKED -> DISCHARGED",
+   "src/engine/tb_digest.rs:73 engine_unregister_all_digests BLOCKED -> DISCHARGED",
+   "src/engine/tb_dsa.rs:58 engine_unregister_all_dsa BLOCKED -> DISCHARGED",
+   "src/engine/tb_eckey.rs:58 engine_unregister_all_ec BLOCKED -> DISCHARGED",
+   "src/engine/tb_pkmeth.rs:60 engine_unregister_all_pkey_meths BLOCKED -> DISCHARGED",
+   "src/engine/tb_rand.rs:58 engine_unregister_all_rand BLOCKED -> DISCHARGED",
+   "src/engine/tb_rsa.rs:59 engine_unregister_all_rsa BLOCKED -> DISCHARGED"
+  ],
+  "no_other_obligation_changed": true
+ },
+ "deliberately_retained_blocked": [
+  {
+   "file": "src/engine/eng_list.rs",
+   "line": 97,
+   "operation": "engine_list_cleanup",
+   "boundary": "P25-ENGINE-CB-000",
+   "status": "BLOCKED",
+   "reason": "the Acquire load of ENGINE_LIST_HEAD is outside the write lock ENGINE_remove takes, and the ENGINE_remove reference transition is not proven"
+  },
+  {
+   "file": "src/engine/eng_dyn.rs",
+   "line": 401,
+   "operation": "dynamic_data_ctx_free_func",
+   "status": "BLOCKED",
+   "reason": "CRYPTO_EX_free receives a caller-supplied pointer; the free-func contract is not discharged"
+  }
+ ],
+ "callee_retained": {
+  "id": "B20-TBL-3",
+  "file": "src/engine/eng_table.rs",
+  "state": "CONTRACTED",
+  "open_residuals": [
+   "B20-R2",
+   "B20-R3"
+  ],
+  "note": "engine_table_cleanup is CONTRACTED, not SAFETY_DISCHARGED; the nine caller discharges rest on this dependency and do not promote it"
+ },
+ "residuals": [
+  {
+   "id": "R1",
+   "severity": "medium",
+   "state": "OPEN",
+   "description": "B20-TBL-3 is CONTRACTED with B20-R2 (table entries borrow ENGINE*, no reference) and B20-R3 (authority parity) open. The nine caller discharges rest on a CONTRACTED dependency."
+  },
+  {
+   "id": "R2",
+   "severity": "medium",
+   "state": "OUT OF SCOPE AT THIS IDENTITY",
+   "description": "engine_cleanup_int is withheld (src/engine/eng_lib.rs:696-700), so the nine callbacks are unreachable at afcfdc47e; unreachable callbacks are out of scope for runtime evidence."
+  },
+  {
+   "id": "R3",
+   "severity": "medium",
+   "state": "UNVERIFIED",
+   "description": "A third-party provider destructor's null-contract (a provider cleanup hook invoked with a NULL or foreign context) is not verified by this discharge."
+  },
+  {
+   "id": "R4",
+   "severity": "low",
+   "state": "NOT_RUN",
+   "description": "Miri NOT_RUN (component absent from the pinned toolchain, no network). ASan NOT_RUN (no venue; the callbacks do not run). TSan NOT_RUN (no venue; C4 is a functional serialisation test, not a race detector). dudect NOT_RUN (not a secret-dependent operation)."
+  },
+  {
+   "id": "R5",
+   "severity": "low",
+   "state": "NOT_RUN",
+   "description": "No full library suite or clippy gate was run for this subphase because no Rust source changed; FAST/BATCH source gates are recorded for the candidate elsewhere."
+  }
+ ],
+ "review": {
+  "subject": "evidence/mechanism-discharge-ENGINE-CLEANUP.json",
+  "verdict": "APPROVE_WITH_CONDITIONS",
+  "supports_caller_only_discharge": true,
+  "basis": "The review states the caller set, slot identity, lock precondition, reentrancy and idempotence hold, and condition 4 explicitly requires keeping C_ABI_CONTRACT UNSAFE_OPEN and retaining eng_list.rs and eng_dyn.rs:401 as BLOCKED. The split is therefore the review's own required shape.",
+  "conditions_status": [
+   {
+    "id": 1,
+    "status": "PARTIAL",
+    "detail": "S' is frozen and committed at afcfdc47e; the evidence commit E was NOT created because this subphase is instructed not to commit or push."
+   },
+   {
+    "id": 2,
+    "status": "SATISFIED",
+    "detail": "The nine obligation IDs and v1t coordinates are regenerated at afcfdc47e; B45 uses those census lines, not the pre-repair doc-comment lines."
+   },
+   {
+    "id": 3,
+    "status": "SATISFIED",
+    "detail": "Both closures were re-run at S'; exactly 9 BLOCKED -> DISCHARGED with no other obligation changing; this receipt records it."
+   },
+   {
+    "id": 4,
+    "status": "SATISFIED",
+    "detail": "state.json C_ABI_CONTRACT remains UNSAFE_OPEN; eng_list.rs:97 and eng_dyn.rs:401 remain BLOCKED."
+   },
+   {
+    "id": 5,
+    "status": "SATISFIED",
+    "detail": "Residuals recorded, not suppressed: B20-TBL-3 CONTRACTED with B20-R2/R3 open, unreachable callbacks, Miri/ASan/TSan/dudect NOT_RUN."
+   },
+   {
+    "id": 6,
+    "status": "SATISFIED",
+    "detail": "afcfdc47e already contains ENGINE_get_last in the nine caller doc contracts (the commit subject is exactly that edit)."
+   }
+  ],
+  "naming_note": "The task prose named the retained eng_list.rs site engine_table_cleanup. The v1t census operation at src/engine/eng_list.rs:97 is engine_list_cleanup (P25-ENGINE-CB-000). The shared callee engine_table_cleanup lives in src/engine/eng_table.rs and is B20-TBL-3 (CONTRACTED). Both are retained; the coordinate is unambiguous."
+ },
+ "evidence_artifacts": {
+  "observation_closure_ssh": {
+   "path": "forensics/memory-safety/campaign/safe-c33/evidence/closure-ssh-v1t-B45-observation.json",
+   "sha256": "264ccfa352962036816726f3c0dd2302671f3913cfbb4488feea0fe348b15e28",
+   "state": "OBSERVATION (99/213/0), not the applied evidence"
+  },
+  "observation_closure_sshd": {
+   "path": "forensics/memory-safety/campaign/safe-c33/evidence/inventory-sshd-v1t-B45-observation.json",
+   "sha256": "dea27c145525b37107e10f4f325ca517d250d8f13cf4213854fc2126a9a54e0d",
+   "state": "OBSERVATION (99/213/0), not the applied evidence"
+  },
+  "applied_closure_ssh": {
+   "path": "forensics/memory-safety/campaign/safe-c33/evidence/closure-ssh-v1t.json",
+   "sha256": "4308e1bf9a8de08d3d319db09293d90ec58aff10529a85285d902dd404ee6005",
+   "state": "APPLIED (90/222/0)"
+  },
+  "applied_closure_sshd": {
+   "path": "forensics/memory-safety/campaign/safe-c33/evidence/inventory-sshd-v1t.json",
+   "sha256": "8d727abc40df810d607a907ae6f0afa514d698476eb3e4b6c60d9a235b9af400",
+   "state": "APPLIED (90/222/0)"
+  },
+  "note": "The observation receipts are preserved so the mechanism's effect is checkable; the applied evidence is unchanged because the conditions are open."
+ },
+ "environment": {
+  "court": "docker/openssl-rs-court.sh exec sh -c 'cd /work && ...'",
+  "invocations": [
+   "python3 court/freeze-v1t/run_closure_v1t.py ssh court/tmp/openssh-closure/client-v1s/openssh-9.9p1/ssh court/inventory/closure-ssh-v1t.json",
+   "python3 court/freeze-v1t/run_closure_v1t.py sshd court/tmp/openssh-closure/server-v1s/openssh-9.9p1/sshd court/inventory/closure-sshd-v1t.json"
+  ],
+  "serial": true,
+  "peak_rss_kib_ssh": 4082572,
+  "note": "The reused v1t runner writes a generic `scoped_receipt_applied: false` note into its own .out record from the adjudicability-only subphase; that note is stale for this run. The closure JSON listed under evidence_artifacts is the authoritative output and records the nine discharges."
+ },
+ "non_claims": [
+  "This is a site-scoped discharge of nine caller sites; C_ABI_CONTRACT remains UNSAFE_OPEN mechanism-wide.",
+  "It does not discharge the shared callee B20-TBL-3 (CONTRACTED) or the two retained sites.",
+  "A green closure count is a consumer-adjudication result, not a memory-safety or cryptographic proof.",
+  "No sanitizer, Miri, dudect or authority differential was run."
+ ],
+ "application_state": {
+  "state": "PROPOSED_NOT_APPLIED",
+  "why": "Independent adversarial review of B45 FAILED check 4 (negative control). C8 does not distinguish either guard: removing the is_null guard alone or the write_lock==0 guard alone leaves it passing. Under AGENTS.md section 16 the cited control does not detect the class it is cited for, so the sites are not discharged until C1 lands.",
+  "closure_consequence": "CAMPAIGN-STATUS.json#/scoped_boundary_discharges does not contain B45; the applied closure is 312 = 90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN and all nine sites are BLOCKED.",
+  "review": "evidence/mechanism-discharge-ENGINE-CLEANUP-B45-review.json"
+ },
+ "application_at_v1u": {
+  "state": "APPLIED",
+  "candidate": {
+   "branch": "stage/p25/obligation-persistence",
+   "source_head": "9eccc7e9",
+   "install_sha256": {
+    "libcrypto.so.3": "e6752e31b564ed3613516bf7e33c86eec4bfc049d7f1ef5ff6511cba6409c68c",
+    "libssl.so.3": "353af719f61baad4c873edc7bb25660b09562eeb5cf4112be7ce275f423c79c3"
+   },
+   "consumer_sha256": {
+    "ssh": "130865ebc3c75da810c8ac8432e6eedd4eaa3d4fdf2f035e31f3c867b6ca84ec",
+    "sshd": "7108bdd845a9203bfec6895d0a0274ce133129456365aae38884738d122f18cf"
+   }
+  },
+  "closure_counts": {
+   "ssh": {
+    "before": {
+     "DISCHARGED": 90,
+     "BLOCKED": 224,
+     "UNKNOWN": 0,
+     "total": 314
+    },
+    "after": {
+     "DISCHARGED": 99,
+     "BLOCKED": 215,
+     "UNKNOWN": 0,
+     "total": 314
+    },
+    "verdict": "ACCEPTED",
+    "refusals": 0
+   },
+   "sshd": {
+    "before": {
+     "DISCHARGED": 90,
+     "BLOCKED": 224,
+     "UNKNOWN": 0,
+     "total": 314
+    },
+    "after": {
+     "DISCHARGED": 99,
+     "BLOCKED": 215,
+     "UNKNOWN": 0,
+     "total": 314
+    },
+    "verdict": "ACCEPTED",
+    "refusals": 0
+   },
+   "delta": {
+    "DISCHARGED": 9,
+    "BLOCKED": -9,
+    "UNKNOWN": 0,
+    "total": 0
+   }
+  },
+  "exactly_nine_assertion": {
+   "ssh": {
+    "only_old": 0,
+    "only_new": 0,
+    "moved": 9,
+    "no_other_obligation_changed": true
+   },
+   "sshd": {
+    "only_old": 0,
+    "only_new": 0,
+    "moved": 9,
+    "no_other_obligation_changed": true
+   },
+   "method": "per-obligation join by stable identity against the preserved v1u B45 baselines; every moved obligation is one of the nine tb_*.rs cleanup thunks",
+   "changed": [
+    "src/engine/tb_asnmth.rs:79 engine_unregister_all_pkey_asn1_meths BLOCKED -> DISCHARGED",
+    "src/engine/tb_cipher.rs:62 engine_unregister_all_ciphers BLOCKED -> DISCHARGED",
+    "src/engine/tb_dh.rs:58 engine_unregister_all_dh BLOCKED -> DISCHARGED",
+    "src/engine/tb_digest.rs:73 engine_unregister_all_digests BLOCKED -> DISCHARGED",
+    "src/engine/tb_dsa.rs:58 engine_unregister_all_dsa BLOCKED -> DISCHARGED",
+    "src/engine/tb_eckey.rs:58 engine_unregister_all_ec BLOCKED -> DISCHARGED",
+    "src/engine/tb_pkmeth.rs:60 engine_unregister_all_pkey_meths BLOCKED -> DISCHARGED",
+    "src/engine/tb_rand.rs:58 engine_unregister_all_rand BLOCKED -> DISCHARGED",
+    "src/engine/tb_rsa.rs:59 engine_unregister_all_rsa BLOCKED -> DISCHARGED"
+   ]
+  },
+  "evidence_artifacts": {
+   "closure_ssh": {
+    "path": "evidence/closure-ssh-v1u.json",
+    "sha256": "a6636177a388bcb12ec7350e2985fe779bf46adb670170adaa26b1e136ef72b4"
+   },
+   "closure_sshd": {
+    "path": "evidence/inventory-sshd-v1u.json",
+    "sha256": "5c11bc70d320cdf6ca5ead75fd73f1cbb7a2eff344ac8c84d87262eb126513ea"
+   },
+   "closure_ssh_b45_baseline": {
+    "path": "evidence/closure-ssh-v1u-B45-baseline.json",
+    "sha256": "09c966cc95f232acb53b380d6a8db2b3ed9206d6a5ce4ff44af2621aa7a965c6"
+   },
+   "closure_sshd_b45_baseline": {
+    "path": "evidence/inventory-sshd-v1u-B45-baseline.json",
+    "sha256": "11eda7c776e3f6fa096f0cfba5f6dc23a02192d7c3c536c024ff1291ff3acb63"
+   }
+  },
+  "retained_blocked": [
+   {
+    "file": "src/engine/eng_list.rs",
+    "line": 97,
+    "operation": "engine_list_cleanup",
+    "status": "BLOCKED"
+   },
+   {
+    "file": "src/engine/eng_dyn.rs",
+    "line": 401,
+    "operation": "dynamic_data_ctx_free_func",
+    "status": "BLOCKED"
+   }
+  ],
+  "note": "v1u holds 314 reachable production obligations rather than 312 because the relinked ssh binary makes two additional SSL_SESSION obligations reachable at src/ssl/t1_trce.rs:1064 and :1077; the count was not adjusted. B45 is now applied: CAMPAIGN-STATUS.json#/scoped_boundary_discharges carries the boundary-sweep-B45 row, moving exactly the nine tb_*.rs sites in both families while eng_list.rs:97 and eng_dyn.rs:401 remain BLOCKED. C_ABI_CONTRACT remains UNSAFE_OPEN mechanism-wide."
+ }
+}

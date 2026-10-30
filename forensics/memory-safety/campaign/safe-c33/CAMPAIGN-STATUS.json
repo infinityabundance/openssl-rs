@@ -10,7 +10,10 @@
   "version": "0.0.44",
   "branch": "release/0.0.44",
   "base": "61dcdcf2b (0.0.43 publication)",
-  "sources": ["adceec204 (analyzer base-slot-partial, tools only)", "afcfdc47e (S-prime engine lock repair, install and freeze)"],
+  "sources": [
+   "adceec204 (analyzer base-slot-partial, tools only)",
+   "afcfdc47e (S-prime engine lock repair, install and freeze)"
+  ],
   "kind": "packaging-and-documentation release",
   "verification_event": false,
   "note": "The crate version moved 0.0.43 -> 0.0.44 and the docs were refreshed. No cargo test, clippy, court, closure or rebuild was run for this release. The test count and closure figures below are last-measured values, explicitly not re-measured here."
@@ -605,7 +608,7 @@
    "retained_boundaries": [],
    "hidden_obligations": 0,
    "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-rebind-sites.json",
-   "note": "Site-scoped only; EVP_PKEY_PROVIDER remains OWNERSHIP_RECONSTRUCTED. OSSH-RB-001 now validates ctx/md_data/digest through init_md_data and refuses a context without a writable BLAKE2B_CTX with 0; the bound path still initialises and returns 1. Authority: four 3.6.4 probes exit 139; §17 D-LEGACY-BLAKE2-INIT-MD-DATA-1.",
+   "note": "Site-scoped only; EVP_PKEY_PROVIDER remains OWNERSHIP_RECONSTRUCTED. OSSH-RB-001 now validates ctx/md_data/digest through init_md_data and refuses a context without a writable BLAKE2B_CTX with 0; the bound path still initialises and returns 1. Authority: four 3.6.4 probes exit 139; \u00a717 D-LEGACY-BLAKE2-INIT-MD-DATA-1.",
    "blake2_harden_receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-final-blockers.json"
   },
   {
@@ -777,7 +780,7 @@
    "retained_boundaries": [],
    "hidden_obligations": 0,
    "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-final-close-sites.json",
-   "note": "Site-scoped only; EVP_PKEY_PROVIDER remains OWNERSHIP_RECONSTRUCTED mechanism-wide. Four callbacks refuse the authority's crashing shapes under §17 D-LEGACY-MD-INIT-MD-DATA-1; the two key2text provider callbacks had only a vestigial unsafe marker, now removed."
+   "note": "Site-scoped only; EVP_PKEY_PROVIDER remains OWNERSHIP_RECONSTRUCTED mechanism-wide. Four callbacks refuse the authority's crashing shapes under \u00a717 D-LEGACY-MD-INIT-MD-DATA-1; the two key2text provider callbacks had only a vestigial unsafe marker, now removed."
   },
   {
    "receipt": "openssh-v1j",
@@ -862,6 +865,29 @@
    "hidden_obligations": 0,
    "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1l-sites.json",
    "note": "Site-scoped only; no mechanism state is changed. The 9 ENGINE cleanup callbacks, the 2 CMS free thunks and ml_kem raise_fixed stay UNKNOWN at v1l; eng_dyn and tb_asnmth stay BLOCKED under B20/B16."
+  },
+  {
+   "receipt": "boundary-sweep-B45",
+   "scope": "nine zero-argument engine-table cleanup thunks in src/engine/tb_*.rs (B45-ENG-CB-001..009)",
+   "base_head": "afcfdc47e",
+   "source_state": "committed",
+   "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+   "discharged_boundaries": [
+    "B45-ENG-CB-001",
+    "B45-ENG-CB-002",
+    "B45-ENG-CB-003",
+    "B45-ENG-CB-004",
+    "B45-ENG-CB-005",
+    "B45-ENG-CB-006",
+    "B45-ENG-CB-007",
+    "B45-ENG-CB-008",
+    "B45-ENG-CB-009"
+   ],
+   "retained_boundaries": [],
+   "retained_state": "BLOCKED",
+   "hidden_obligations": 0,
+   "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B45.json",
+   "note": "Site-scoped only. mechanisms.C_ABI_CONTRACT remains UNSAFE_OPEN. Engine table cleanup (B20-TBL-3) stays CONTRACTED with B20-R2/R3 open; eng_list.rs engine_list_cleanup and eng_dyn.rs:401 remain BLOCKED. Applied at v1u; the control for this boundary is the mutation-sensitive test in src/engine/eng_table.rs."
   }
  ],
  "defects_closed": [
@@ -1776,17 +1802,32 @@
   "verdict": "ACCEPTED",
   "safe_compatible": false,
   "refusals": 0,
-  "reachable_files": {"ssh": 624, "sshd": 623},
-  "obligations": {"total": 312, "DISCHARGED": 90, "BLOCKED": 222, "UNKNOWN": 0},
+  "reachable_files": {
+   "ssh": 624,
+   "sshd": 623
+  },
+  "obligations": {
+   "total": 312,
+   "DISCHARGED": 90,
+   "BLOCKED": 222,
+   "UNKNOWN": 0
+  },
   "edge_records": 52022,
   "edge_record_defects": 0,
   "oracle_violations": 0,
-  "reachable_functions": {"ssh": 8686, "sshd": 8652},
+  "reachable_functions": {
+   "ssh": 8686,
+   "sshd": 8652
+  },
   "closure_rounds": 2,
   "converged": true,
   "admission_passes": 1,
   "admitted_by_refutation": 27,
-  "symbol_dispositions": {"resolved": 5, "external_contract": 0, "blocking": 0},
+  "symbol_dispositions": {
+   "resolved": 5,
+   "external_contract": 0,
+   "blocking": 0
+  },
   "analysis_identity": {
    "schema": "openssl-rs/campaign/safe-c33/analysis-identity/v2",
    "digest": "cede10d6b60959e58ecd46e2522adabc5319bcecd46d00ec3678843b572c4e51"
@@ -1796,10 +1837,16 @@
    "reachable_unresolved_sites": 141,
    "target_bounded_unresolved_sites": 81,
    "contract_bounded_sites": 60,
-   "contract_bounded_by_class": {"ABI_CONTRACT_EXPORT_CALLBACK": 46, "ABI_CONTRACT_PROVIDER": 14},
+   "contract_bounded_by_class": {
+    "ABI_CONTRACT_EXPORT_CALLBACK": 46,
+    "ABI_CONTRACT_PROVIDER": 14
+   },
    "unclassified_reachable_sites": 0
   },
-  "boundary_coverage": {"reachable_files_with_receipt": 92, "reachable_files_without_receipt": 0},
+  "boundary_coverage": {
+   "reachable_files_with_receipt": 92,
+   "reachable_files_without_receipt": 0
+  },
   "base_slot_partial_checkpoint": {
    "recorded_utc": "2026-10-30",
    "measured_at": "the pre-engine DSO (libcrypto 23ec6944), before the S-prime rebuild",
@@ -1819,7 +1866,11 @@
    "state": "APPROVED_WITH_CONDITIONS",
    "discharged": false,
    "blocked": true,
-   "obligations_changed": {"DISCHARGED": 0, "BLOCKED": 0, "UNKNOWN": 0},
+   "obligations_changed": {
+    "DISCHARGED": 0,
+    "BLOCKED": 0,
+    "UNKNOWN": 0
+   },
    "closure_rerun_at_s_prime": false,
    "detail": "engine_table_cleanup now documents and enforces the initialised-lock precondition; the idempotence test initialises the lock and C8 pins the NULL-lock no-op. The independent review is APPROVE_WITH_CONDITIONS and the package remains blocked: no obligation is discharged and the closure has not been re-run at S-prime.",
    "source": "evidence/mechanism-discharge-ENGINE-CLEANUP.json; evidence/mechanism-discharge-ENGINE-CLEANUP-review.json"
@@ -1828,7 +1879,14 @@
    "status": "GREEN",
    "candidate": "0.0.43",
    "court": "RT-DOWNSTREAM-CORPUS",
-   "families": ["curl", "git", "haproxy", "nginx", "openssh", "python"],
+   "families": [
+    "curl",
+    "git",
+    "haproxy",
+    "nginx",
+    "openssh",
+    "python"
+   ],
    "openssh": "31/31",
    "receipt": "courts/phase17/downstream; artifacts/phase17/COURTS.json",
    "remeasured_at": "f8f366298 (0.0.43 corpus) and 1c2bc4001 (GCM-fix OpenSSH re-run)",
@@ -1921,7 +1979,7 @@
   "The v1h element-7 PASS was an artefact of which symbol the linker kept; element 7 remains FAIL at S'' with 9 resolvable-in-principle sites and 0 genuinely unbounded sites (element7-regression-v1j.json).",
   "Reachability is non-monotone: 19 of 19 v1h -> v1j reachable-file changes are unexplained by the source diff, so 169 -> 146 obligations is not a progress measurement.",
   "SAFE_COMPATIBLE remains 0/33 and is further away than the earlier deltas implied; the openssh closure still REFUSES and no consumer family graduates.",
-  "CORRECTION (2026-10-30): the `0.0.42 is PREPARED, not published` non-claim above is superseded; 0.0.42 was published 2026-10-27 and 0.0.43 was published 2026-10-30 (checksum 50afe140…). 0.0.44 is the unpublished candidate. Publishing remains not a memory-safety result.",
+  "CORRECTION (2026-10-30): the `0.0.42 is PREPARED, not published` non-claim above is superseded; 0.0.42 was published 2026-10-27 and 0.0.43 was published 2026-10-30 (checksum 50afe140\u2026). 0.0.44 is the unpublished candidate. Publishing remains not a memory-safety result.",
   "0.0.44 is a packaging/documentation release, NOT a verification event: no cargo test/clippy, court, closure, BOUNDARY/SEAL gate or rebuild was run for it. The test count and closure figures are last-measured values, explicitly not re-measured at 0.0.44.",
   "The base-slot-partial checkpoint (target-bounded 81 -> 71, base-slot-partial 50 -> 39, 10 sites proved) was measured at the pre-engine DSO, not at 0.0.44; it changes no obligation and element 7 remains FAIL.",
   "The engine-cleanup package is APPROVED_WITH_CONDITIONS and still blocked: it discharges no obligation, the closure was not re-run at S-prime, and the 90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN split is unchanged.",
@@ -2301,14 +2359,14 @@
   },
   {
    "id": "ELEMENT-7-PRECISION",
-   "status": "OPEN — FAIL",
+   "status": "OPEN \u2014 FAIL",
    "detail": "Element 7 remains FAIL: in the accepted v1r closure, 141 reachable unresolved indirect sites, of which 81 are target-bounded (no contract establishes the target set) and 60 are contract-bounded (46 ABI_CONTRACT_EXPORT_CALLBACK + 14 ABI_CONTRACT_PROVIDER); 0 are unclassified. A later analyzer precision checkpoint at the pre-engine DSO reduced the target-bounded set to 71 (base-slot-partial 50 -> 39, 10 sites proved) with the reachable-function digest unchanged and obligations unchanged. That checkpoint is NOT re-measured at 0.0.44 and does not change the FAIL verdict: sites still lack a bounded target set, so element 7 cannot be ESTABLISHED and no family graduates.",
    "evidence": "evidence/inventory-sshd-v1r.json (element_7, precision_totals); evidence/closure-ssh-v1r.json (precision); evidence/base-slot-partial-summary.json (pre-engine checkpoint, not re-measured at 0.0.44)"
   },
   {
    "id": "CONTRACTED-OBLIGATIONS-BLOCKED",
-   "status": "222 BLOCKED",
-   "detail": "The accepted v1r closure carries 312 reachable production obligations: 90 DISCHARGED, 222 contracted but BLOCKED, 0 UNKNOWN. Every reachable file carries a receipt (92 files, 0 unreceipted), so the 222 are not missing-boundary refusals; they are mechanisms whose safety contracts are recorded but not discharged. The S-prime engine-cleanup package is APPROVED_WITH_CONDITIONS but remains blocked: it documents and enforces a previously hidden lock precondition, yet discharges no obligation, and the closure was not re-run at S-prime. The split therefore remains 90/222/0 and SAFE_COMPATIBLE remains 0/33 until the obligations are discharged within each family's dependency closure.",
+   "status": "215 BLOCKED at the applied v1u closure (222 at the historical v1r closure)",
+   "detail": "The accepted v1r closure carries 312 reachable production obligations: 90 DISCHARGED, 222 contracted but BLOCKED, 0 UNKNOWN. Every reachable file carries a receipt (92 files, 0 unreceipted), so the 222 are not missing-boundary refusals; they are mechanisms whose safety contracts are recorded but not discharged. The S-prime engine-cleanup package is APPROVED_WITH_CONDITIONS but remains blocked: it documents and enforces a previously hidden lock precondition, yet discharges no obligation, and the closure was not re-run at S-prime. The split therefore remains 90/222/0 and SAFE_COMPATIBLE remains 0/33 until the obligations are discharged within each family's dependency closure. At the applied candidate v1u the closure is 314 reachable production obligations: 99 DISCHARGED, 215 BLOCKED, 0 UNKNOWN, ACCEPTED with zero refusals. Nine zero-argument engine-table cleanup callbacks were discharged as the scoped boundary B45; two SSL_SESSION operations in src/ssl/t1_trce.rs became reachable because the relinked binary's graph differs, which is why the total is 314 rather than 312. C_ABI_CONTRACT remains UNSAFE_OPEN and eng_list.rs / eng_dyn.rs:401 remain BLOCKED.",
    "evidence": "evidence/closure-ssh-v1r.json (counts); evidence/inventory-sshd-v1r.json (boundary_coverage); evidence/mechanism-discharge-ENGINE-CLEANUP.json; evidence/mechanism-discharge-ENGINE-CLEANUP-review.json"
   },
   {

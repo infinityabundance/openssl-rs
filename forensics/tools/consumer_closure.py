@@ -12235,6 +12235,22 @@ def mechanism_for(file: str, mechanisms: dict,
         if rec is not None:
             return rec["mechanism"], (
                 "obligation-override:state.json#/obligation_mechanisms")
+        # A contracted operation enrolled from the census's per-site records
+        # carries the census coordinate, which may have drifted from the
+        # ledger's coordinate by the lines a `# Safety` prelude added.  The
+        # enrollment already resolves that drift by stable identity; resolve it
+        # here too, or a documented site loses its mechanism and is reported
+        # UNKNOWN instead of BLOCKED.  A contract is not a discharge.
+        item = obligation.get("item")
+        if item:
+            for r in obligation_mechanisms.values():
+                if (r.get("file") == file
+                        and r.get("kind") == obligation.get("kind")
+                        and r.get("operation") == item
+                        and r.get("mechanism")):
+                    return r["mechanism"], (
+                        "obligation-override:state.json#/obligation_mechanisms "
+                        "(stable identity file/kind/operation; +N-line drift)")
     for mid, rec in mechanisms.items():
         if file in (rec.get("converted_files_on_branch") or []):
             return mid, "converted_files_on_branch"
