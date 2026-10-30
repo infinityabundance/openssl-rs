@@ -1,0 +1,49 @@
+{
+  "receipt": "ssl-conf-boundary-review-2026-10-30",
+  "subject": "Two independent reviews of the SSL_CONF boundary, and the strategic consequence for SSL_SESSION",
+  "candidate": {
+    "branch": "stage/p25/ssl-session-s1",
+    "reviewed_head": "c37f0323e",
+    "applied": false,
+    "closure": "unchanged at v1u: ACCEPTED, 314 = 99 DISCHARGED / 215 BLOCKED / 0 UNKNOWN"
+  },
+  "outcome": {
+    "b46": "REJECT",
+    "b47": "REJECT",
+    "sites_discharged": 0,
+    "ssl_session_state": "OWNERSHIP_RECONSTRUCTED (unchanged)"
+  },
+  "why_the_second_review_refused": [
+    "The in_use guard serialises only SSL_CONF_cmd and SSL_CONF_cmd_argv. SSL_CONF_CTX_set1_prefix, _set_ssl, _set_ssl_ctx, _set_flags, _clear_flags and _free reach the same object and remain unguarded, so a concrete interleaving is still live: a dispatch reading prefix/prefixlen while another call frees and rewrites them, or a free that makes the guard's Drop store into released memory.",
+    "B47 claimed the B46-R1 split was 'not an obligation of these eleven sites'. That is false for its three ssl_conf.rs sites (ssl_match_option, ssl_set_option_list, min_max_proto), which take &mut *cctx through the same dispatch.",
+    "A precondition that is stated in our own documentation and only partly enforced is still doing the work of establishing itself, which AGENTS.md 7 and 21 forbid."
+  ],
+  "what_did_pass": [
+    "The guard itself is correct on the paths it covers: Acquire swap, RAII clear on every exit including the unwind path, a nested call cannot clear the outer flag, refusal is 0 and not a panic.",
+    "Layout and ABI: SslConfCtx is opaque, not #[repr(C)], never taken by value, and no exported signature changed.",
+    "The corrected min_max_proto clause is true (version 0 is written before any range test; bound is never NULL at a dereference).",
+    "Scope exactness: the 18 dispositions parse to exactly the 18 blocked SSL_SESSION obligations."
+  ],
+  "what_is_now_understood": {
+    "two_halves": "The precondition splits into cross-thread exclusivity of the wrapped SSL/SSL_CTX, which the pinned authority does document (SSL_CTX_new.pod:97-99; openssl-threads.pod:19 and :63-65; ossl-guide-quic-multi-stream.pod:51-53), and same-thread overlap of the SSL_CONF_CTX itself, which nothing in the authority documents.",
+    "the_real_difficulty": "A C caller can always violate a pointer-based contract in ways the callee cannot make inexpressible: hold two pointers, free from another thread, or re-enter from a callback. For a C ABI surface, 'make it inexpressible' has a hard limit, so the standard's external-ABI-contract clause is what must carry the claim.",
+    "the_open_decision": "Either the campaign accepts the authority's general rule ('most objects are not safe for simultaneous use', openssl-threads.pod:19) as the external contract covering SSL_CONF_CTX as well, or the SSL_CONF sites are not dischargeable at the required standard and stay BLOCKED. That is a campaign-level adjudication about what counts as an external witness, not an engineering fix."
+  },
+  "recommendation": {
+    "do_not_apply": "Neither receipt is applied. The 18 sites stay BLOCKED and SSL_SESSION stays OWNERSHIP_RECONSTRUCTED.",
+    "keep_the_work": "The contracts, the guard, the tests and the two reviews are all retained. The guard is a real hardening (it converts an in-process overlap into a refusal) and its divergences are recorded as B46-D1 and B46-D2.",
+    "next": "Resolve the witness question before spending another rebuild/freeze/closure cycle on SSL_CONF. If the general threading rule is accepted, re-derive the receipts against it and re-review; if not, re-score the mechanism map without SSL_SESSION and pick the next target (EVP_PKEY_PROVIDER's clusters are the only ones with enough reuse to matter)."
+  },
+  "residuals": [
+    "Six SSL_CONF_CTX entry points remain unguarded.",
+    "InUseGuard's liveness obligation rests on the same exclusivity that is under discussion.",
+    "SSL_CONF_cmd_argv returns 0 for an unknown switch, which is its own code, while its error code is -1; the divergence note said 'the ordinary failure value 0' and must say which code applies where.",
+    "No Miri/ASan/TSan on the guarded paths beyond the earlier ssl_conf run, and no authority differential.",
+    "Miri coverage remains a modified-model result (cfg(miri) shims for isspace and strchr) with a control that does not fire."
+  ],
+  "non_claims": [
+    "Nothing in this receipt discharges an obligation or changes SAFE_COMPATIBLE, which remains 0/33.",
+    "The reviews establish refusal, not absence of defects; the interleaving they describe is reachable only from code that violates the stated contract.",
+    "This is not a recommendation to weaken the standard; it records where the standard currently cannot be met from the C ABI surface."
+  ]
+}
