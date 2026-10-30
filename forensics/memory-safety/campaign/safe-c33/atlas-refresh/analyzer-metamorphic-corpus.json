@@ -716,7 +716,7 @@
         "tool": {
           "path": "forensics/tools/consumer_closure.py",
           "schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
-          "sha256": "7da237dab00c86cc45cda21432da541e9c2471962995034ed2b0c98bc0099535",
+          "sha256": "3eee76571d4df387a1225a63951e2c944e7f1066cd909517113a36973e9bd8d0",
           "version": 5
         }
       },
@@ -1169,6 +1169,106 @@
       "observed_result": "exclusions=0, defects=1",
       "transformation": "move the excluded caller regardless of the oracle and build records",
       "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "enrollment": {
+          "contract_scope": null,
+          "contracted_record_count": 1,
+          "contracted_records_present": true,
+          "enrolled": [
+            {
+              "contract_basis": "contracted operation record in the inventory at this identity (contracts.contracted_operations)",
+              "file": "src/engine/tb_x.rs",
+              "id": "V1:src/engine/tb_x.rs:19:UNSAFE_FN_DEF",
+              "item": "engine_unregister_all_x",
+              "kind": "UNSAFE_FN_DEF",
+              "line": 19,
+              "mechanism": "C_ABI_CONTRACT",
+              "site_boundary": "X-1",
+              "site_receipt": "p25-x-sites.json",
+              "stable_id": "src/engine/tb_x.rs::UNSAFE_FN_DEF::engine_unregister_all_x"
+            }
+          ],
+          "enrolled_count": 1,
+          "excluded": [],
+          "excluded_count": 0,
+          "ledger_entries_without_site_plan": [],
+          "rule": "uncontracted production blockers + contracted production operations named by an in-scope site-enumerating boundary receipt and by state.json#/obligation_mechanisms; documentation state only changes the contract field, never membership"
+        }
+      },
+      "expected_property": "the operation is enrolled and marked contracted; a contract is not a discharge",
+      "id": "bg-documented-obligation-persists",
+      "input": "a reachable unsafe fn with an attached # Safety prelude, named by a site-enumerating receipt and by state.json#/obligation_mechanisms",
+      "observed_result": "obligations=1, contract=contracted, stable_id=src/engine/tb_x.rs::UNSAFE_FN_DEF::engine_unregister_all_x",
+      "transformation": "build the obligation queue from the inventory census",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "enrollment": {
+          "contract_scope": null,
+          "contracted_record_count": 0,
+          "contracted_records_present": true,
+          "enrolled": [],
+          "enrolled_count": 0,
+          "excluded": [],
+          "excluded_count": 0,
+          "ledger_entries_without_site_plan": [],
+          "rule": "uncontracted production blockers + contracted production operations named by an in-scope site-enumerating boundary receipt and by state.json#/obligation_mechanisms; documentation state only changes the contract field, never membership"
+        }
+      },
+      "expected_property": "the obligation PERSISTS and flips to uncontracted; the stable identity does not move with the documentation state",
+      "id": "bh-documentation-stripped-obligation-persists",
+      "input": "the same site after the # Safety prelude is stripped, so the census classifies it uncontracted again",
+      "observed_result": "obligations=1, contract=uncontracted, stable_id=src/engine/tb_x.rs::UNSAFE_FN_DEF::engine_unregister_all_x",
+      "transformation": "build the obligation queue",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {},
+      "expected_property": "the new operation ENTERS the queue as an uncontracted obligation",
+      "id": "bi-new-unsafe-fn-enters",
+      "input": "a genuinely new unsafe fn that no receipt or ledger entry names",
+      "observed_result": "obligations=2, stable_ids=['src/engine/tb_new.rs::UNSAFE_FN_DEF::brand_new_unsafe_fn', 'src/engine/tb_x.rs::UNSAFE_FN_DEF::engine_unregister_all_x']",
+      "transformation": "build the obligation queue",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {},
+      "expected_property": "the obligation is not enrolled and the removal is recorded with a reason",
+      "id": "bj-removed-operation-leaves-with-reason",
+      "input": "a site receipt and ledger entry whose operation is absent from both the uncontracted blockers and the per-site contracted records",
+      "observed_result": "obligations=0, excluded=1, reason=named by a site receipt and the persistent ledge",
+      "transformation": "build the obligation queue",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {},
+      "expected_property": "the documented site is still enrolled, and the basis records that existence rests on the site receipt's enumeration",
+      "id": "bk-legacy-inventory-documented-site-persists",
+      "input": "an inventory that predates per-site contracted-operation records, naming the site only through its receipt and the persistent ledger",
+      "observed_result": "obligations=1, basis=site receipt enumerates the operation and the invent",
+      "transformation": "build the obligation queue",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {},
+      "expected_property": "the operation is enrolled once at the census coordinate, with the same file+kind+item identity and the receipt line kept as provenance",
+      "id": "bm-contracted-record-line-drift-stable-identity",
+      "input": "the site receipt and ledger name line 19 while the census contracted record is at line 26 after a documentation prelude",
+      "observed_result": "obligations=1, line=26, plan_line=19, stable_id=src/engine/tb_x.rs::UNSAFE_FN_DEF::engine_unregister_all_x",
+      "transformation": "build the queue by exact coordinate then by stable identity",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {},
+      "expected_property": "the plan-only site does not grow the target set and the ledger-without-plan gap is recorded explicitly",
+      "id": "bl-plan-without-ledger-does-not-enroll",
+      "input": "a site receipt naming a documented operation that the persistent ledger never recorded, plus a ledger entry with no site plan",
+      "observed_result": "obligations=0, gaps=1",
+      "transformation": "build the obligation queue",
+      "verdict": "PASS"
     }
   ],
   "claim": "stability and sensitivity evidence for the edge resolver: not a proof of soundness",
@@ -1194,12 +1294,12 @@
   "schema": "openssl-rs/campaign/safe-c33/analyzer-metamorphic-corpus/v1",
   "summary": {
     "failed": [],
-    "passed": 67,
-    "total": 67
+    "passed": 74,
+    "total": 74
   },
   "tool": {
     "covered_tool": "forensics/tools/consumer_closure.py",
-    "covered_tool_sha256": "7da237dab00c86cc45cda21432da541e9c2471962995034ed2b0c98bc0099535",
+    "covered_tool_sha256": "3eee76571d4df387a1225a63951e2c944e7f1066cd909517113a36973e9bd8d0",
     "edge_record_schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
     "path": "forensics/tools/analyzer_metamorphic_corpus.py"
   }
