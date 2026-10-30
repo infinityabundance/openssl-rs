@@ -355,5 +355,119 @@
   "why": "Independent adversarial review of B45 FAILED check 4 (negative control). C8 does not distinguish either guard: removing the is_null guard alone or the write_lock==0 guard alone leaves it passing. Under AGENTS.md section 16 the cited control does not detect the class it is cited for, so the sites are not discharged until C1 lands.",
   "closure_consequence": "CAMPAIGN-STATUS.json#/scoped_boundary_discharges does not contain B45; the applied closure is 312 = 90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN and all nine sites are BLOCKED.",
   "review": "evidence/mechanism-discharge-ENGINE-CLEANUP-B45-review.json"
+ },
+ "application_at_v1u": {
+  "state": "APPLIED",
+  "candidate": {
+   "branch": "stage/p25/obligation-persistence",
+   "source_head": "9eccc7e9",
+   "install_sha256": {
+    "libcrypto.so.3": "e6752e31b564ed3613516bf7e33c86eec4bfc049d7f1ef5ff6511cba6409c68c",
+    "libssl.so.3": "353af719f61baad4c873edc7bb25660b09562eeb5cf4112be7ce275f423c79c3"
+   },
+   "consumer_sha256": {
+    "ssh": "130865ebc3c75da810c8ac8432e6eedd4eaa3d4fdf2f035e31f3c867b6ca84ec",
+    "sshd": "7108bdd845a9203bfec6895d0a0274ce133129456365aae38884738d122f18cf"
+   }
+  },
+  "closure_counts": {
+   "ssh": {
+    "before": {
+     "DISCHARGED": 90,
+     "BLOCKED": 224,
+     "UNKNOWN": 0,
+     "total": 314
+    },
+    "after": {
+     "DISCHARGED": 99,
+     "BLOCKED": 215,
+     "UNKNOWN": 0,
+     "total": 314
+    },
+    "verdict": "ACCEPTED",
+    "refusals": 0
+   },
+   "sshd": {
+    "before": {
+     "DISCHARGED": 90,
+     "BLOCKED": 224,
+     "UNKNOWN": 0,
+     "total": 314
+    },
+    "after": {
+     "DISCHARGED": 99,
+     "BLOCKED": 215,
+     "UNKNOWN": 0,
+     "total": 314
+    },
+    "verdict": "ACCEPTED",
+    "refusals": 0
+   },
+   "delta": {
+    "DISCHARGED": 9,
+    "BLOCKED": -9,
+    "UNKNOWN": 0,
+    "total": 0
+   }
+  },
+  "exactly_nine_assertion": {
+   "ssh": {
+    "only_old": 0,
+    "only_new": 0,
+    "moved": 9,
+    "no_other_obligation_changed": true
+   },
+   "sshd": {
+    "only_old": 0,
+    "only_new": 0,
+    "moved": 9,
+    "no_other_obligation_changed": true
+   },
+   "method": "per-obligation join by stable identity against the preserved v1u B45 baselines; every moved obligation is one of the nine tb_*.rs cleanup thunks",
+   "changed": [
+    "src/engine/tb_asnmth.rs:79 engine_unregister_all_pkey_asn1_meths BLOCKED -> DISCHARGED",
+    "src/engine/tb_cipher.rs:62 engine_unregister_all_ciphers BLOCKED -> DISCHARGED",
+    "src/engine/tb_dh.rs:58 engine_unregister_all_dh BLOCKED -> DISCHARGED",
+    "src/engine/tb_digest.rs:73 engine_unregister_all_digests BLOCKED -> DISCHARGED",
+    "src/engine/tb_dsa.rs:58 engine_unregister_all_dsa BLOCKED -> DISCHARGED",
+    "src/engine/tb_eckey.rs:58 engine_unregister_all_ec BLOCKED -> DISCHARGED",
+    "src/engine/tb_pkmeth.rs:60 engine_unregister_all_pkey_meths BLOCKED -> DISCHARGED",
+    "src/engine/tb_rand.rs:58 engine_unregister_all_rand BLOCKED -> DISCHARGED",
+    "src/engine/tb_rsa.rs:59 engine_unregister_all_rsa BLOCKED -> DISCHARGED"
+   ]
+  },
+  "evidence_artifacts": {
+   "closure_ssh": {
+    "path": "evidence/closure-ssh-v1u.json",
+    "sha256": "a6636177a388bcb12ec7350e2985fe779bf46adb670170adaa26b1e136ef72b4"
+   },
+   "closure_sshd": {
+    "path": "evidence/inventory-sshd-v1u.json",
+    "sha256": "5c11bc70d320cdf6ca5ead75fd73f1cbb7a2eff344ac8c84d87262eb126513ea"
+   },
+   "closure_ssh_b45_baseline": {
+    "path": "evidence/closure-ssh-v1u-B45-baseline.json",
+    "sha256": "09c966cc95f232acb53b380d6a8db2b3ed9206d6a5ce4ff44af2621aa7a965c6"
+   },
+   "closure_sshd_b45_baseline": {
+    "path": "evidence/inventory-sshd-v1u-B45-baseline.json",
+    "sha256": "11eda7c776e3f6fa096f0cfba5f6dc23a02192d7c3c536c024ff1291ff3acb63"
+   }
+  },
+  "retained_blocked": [
+   {
+    "file": "src/engine/eng_list.rs",
+    "line": 97,
+    "operation": "engine_list_cleanup",
+    "status": "BLOCKED"
+   },
+   {
+    "file": "src/engine/eng_dyn.rs",
+    "line": 401,
+    "operation": "dynamic_data_ctx_free_func",
+    "status": "BLOCKED"
+   }
+  ],
+  "note": "v1u holds 314 reachable production obligations rather than 312 because the relinked ssh binary makes two additional SSL_SESSION obligations reachable at src/ssl/t1_trce.rs:1064 and :1077; the count was not adjusted. B45 is now applied: CAMPAIGN-STATUS.json#/scoped_boundary_discharges carries the boundary-sweep-B45 row, moving exactly the nine tb_*.rs sites in both families while eng_list.rs:97 and eng_dyn.rs:401 remain BLOCKED. C_ABI_CONTRACT remains UNSAFE_OPEN mechanism-wide."
  }
 }
