@@ -7,7 +7,7 @@
   "base_commit": "7f611abb1b4ddbd7bb1ea1baf28b2ece9822c772",
   "base_commit_subject": "Merge pull request #94 from infinityabundance/docs/publish-0.0.45",
   "branch": "main",
-  "working_tree": "dirty: fn-level # Safety contracts and guarded callback bodies in the ten files below, plus one test in src/evp/legacy_sha.rs; nothing committed, nothing rebuilt into an install, CAMPAIGN-STATUS.json untouched.",
+  "working_tree": "dirty: fn-level # Safety contracts and guarded callback bodies in the ten files below, plus the post-review repair of sha1_int_ctrl and shake_ctrl and two undersized-block regression tests (one per file); nothing committed, nothing rebuilt into an install, CAMPAIGN-STATUS.json untouched. The REJECT verdict is retained: this is the repair of the rejected sites, not an application of the receipt.",
   "files": [
    "src/evp/legacy_sha.rs",
    "src/evp/legacy_md5.rs",
@@ -21,11 +21,11 @@
    "src/evp/e_rc2.rs"
   ],
   "files_sha256": {
-   "src/evp/legacy_sha.rs": "d8699d993b2773f20e74e8adf226cd2cbafb2dca031262b7368bac81b8707f1c",
+   "src/evp/legacy_sha.rs": "175e35e84acff65ba8dd259521905444bbb2fb4b1429a8350d78190db7252c3f",
    "src/evp/legacy_md5.rs": "9117059ebc96f42c103a2f11913cb188cebb877f98e7a81257c0c48ded387d7e",
    "src/evp/legacy_md4.rs": "2ae1545db7cc7b256ee5e14828c03362da019d854c799a423e735a41e88de286",
    "src/evp/legacy_blake2.rs": "88b804d52f7735e00fe2ee9b7d30a525cbbbc2e3d561151191e5a02b08d52d82",
-   "src/evp/legacy_sha3.rs": "0cbc47105f57c74a9b1e7b62cd4851e1d79aa2fb952871fa60d98579e5805da1",
+   "src/evp/legacy_sha3.rs": "bf5d47c7f006d2f93d486142bf4fbe2773d7201bc49e4d720a73a11a4deabf42",
    "src/evp/legacy_mdc2.rs": "5d76e34d15f207b3ef95d08e23b424a893da1db07a2edb2620b4cfd301102cff",
    "src/evp/legacy_ripemd.rs": "a5752a013fdd46f125bb5452acb793e48048b3a131f4d7f4c3364c0d1ab33e99",
    "src/evp/legacy_wp.rs": "c4cc3ef49937be6642a9e7067b3267be3625e95729d4e9872a2368da5b23ab24",
@@ -159,7 +159,7 @@
   "existing": "D-LEGACY-MD-INIT-MD-DATA-1 (and D-LEGACY-BLAKE2-INIT-MD-DATA-1): the legacy initialisers used to dereference a NULL `md_data`; they now refuse through `init_md_data`/`init_keccak`.",
   "extension": "D-LEGACY-MD-CALLBACK-MD-DATA-1: the update, final and control callbacks had the same unguarded `md_data` dereference (and `shake_ctrl` wrote through a NULL block). They now use the same audited helpers and answer 0 before any dereference. The BLAKE2 and MDC2 update callbacks additionally answer 1 for `count == 0` before the pointer is used, because the transcribed primitive reaches `copy_nonoverlapping` even for a zero length; `SHA`/`MD5`/`MD4`/`RIPEMD-160`/`SM3` already early-return in `md32::update`/`SHA512_Update`/`ossl_sha3_update`, and `WHIRLPOOL_Update` skips the zero-length loop.",
   "sites_with_initialiser_guard_before_b48": "All init sites except `md5_sha1_int_init` already carried the `init_md_data` guard (the SHA/MD4/MD5/MDC2/RIPEMD/Whirlpool/SM3/BLAKE2/SHA3 initialisers). `md5_sha1_int_init` did not; it now does.",
-  "sites_needing_a_guard": "Every update/final site and `shake_ctrl` needed one; every one has it after B48. `sha1_int_ctrl` needs no block guard because it passes NULL to `ossl_sha1_ctrl`, which refuses NULL (`src/digest/sha1.rs:354`). `md5_sha1_int_ctrl` now guards because `md_data(ctx)` was dereferenced before `ossl_md5_sha1_ctrl`'s own NULL check. `rc2_magic_to_meth` needs none. The SM3 table's `sm3_int_update` is not one of the 36 census sites but was guarded on the same terms, so the table is internally consistent."
+  "sites_needing_a_guard": "Every update/final/ctrl site needed one; every one has it after the post-review repair. `sha1_int_ctrl` now validates through `init_md_data` (it previously passed `md_data(ctx)` straight to `ossl_sha1_ctrl`, which refuses NULL but writes through an undersized block), `shake_ctrl` through `init_keccak` (it previously checked only NULL and then wrote `KeccakCtx::md_size`), and `md5_sha1_int_ctrl` already did because `md_data(ctx)` was dereferenced before `ossl_md5_sha1_ctrl`'s own NULL check. `rc2_magic_to_meth` needs none. The SM3 table's `sm3_int_update` is not one of the 36 census sites but was guarded on the same terms, so the table is internally consistent."
  },
  "boundaries": [
   {
@@ -222,19 +222,20 @@
    "id": "B48-SHA-003",
    "file": "src/evp/legacy_sha.rs",
    "line": 277,
-   "line_current": 337,
-   "line_provenance": "V1 census coordinate; line_current refreshed to d8699d99",
+   "line_current": 344,
+   "line_provenance": "V1 census coordinate; line_current refreshed to the post-review repair tree (sha256 175e35e8)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha1_int_ctrl",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, c_int, c_int, *mut c_void) -> c_int",
    "registration": "SHA1_MD at :742; Some(sha1_int_ctrl) at :750",
-   "guard": "explicit NULL check: passes NULL to ossl_sha1_ctrl when ctx is NULL; ossl_sha1_ctrl refuses NULL",
+   "guard": "init_md_data(ctx, addr_of!(SHA1_MD.0), size_of::<ShaCtx>())",
    "disposition": "SAFETY_DISCHARGED (scope: sha1_int_ctrl and its dispatch path; src/evp/legacy_sha.rs:277)",
-   "contract": "Control contract: `ctx` NULL or live; `p2` readable for `p1` bytes when `cmd == EVP_CTRL_SSL3_MASTER_SECRET` (48). A NULL context or a NULL `md_data` is passed to `ossl_sha1_ctrl` as NULL, which answers 0 (or -2 for any other command) without a dereference (src/digest/sha1.rs:351-355), so this callback imposes no writable-block precondition. No state is changed on refusal; the authority's command semantics are unchanged.",
+   "contract": "Control contract over `SHA_CTX`: `ctx` NULL or live; `p2` readable for `p1` bytes when `cmd == EVP_CTRL_SSL3_MASTER_SECRET` (48). The callback establishes a writable `SHA_CTX` through `init_md_data` and refuses before any write when the context or method is NULL, `md_data` is NULL, or the method's `app_datasize` is smaller than `size_of::<ShaCtx>()`: the master-secret command answers 0, any other command -2, with no state change. On a valid block it forwards the four arguments to `ossl_sha1_ctrl` unchanged, so a valid call's result is unchanged. When the method is not `sha1_md`, owner identity does not establish the block type; the caller's declared `app_datasize` establishes the extent, the same contract `init_md_data` applies to the initialisers, and every write is bounded by it. Candidate divergence from the authority, which passes an undersized block to `SHA1_Update`.",
    "established": [
     "`EVP_MD_CTX_ctrl` (:3547) \u2192 `evp_md_ctx_ctrl_legacy` (:3633) reads `digest->md_ctrl` at :3640 and calls it at :3646.",
-    "`evp_digest_final_xof_legacy` calls `md_ctrl` at :2735; `EVP_MD_meth_get_ctrl` (:1617) is the direct source."
+    "`evp_digest_final_xof_legacy` calls `md_ctrl` at :2735; `EVP_MD_meth_get_ctrl` (:1617) is the direct source.",
+    "The callback itself now establishes a writable `SHA_CTX` through `init_md_data` before it calls `ossl_sha1_ctrl`; `legacy_sha1_int_ctrl_refuses_undersized_md_data` exercises the exported `EVP_MD_meth_new` + `EVP_MD_meth_set_app_datasize(8)` path."
    ],
    "authority_derived": [
     "The authority's `sha1_int_ctrl` passes NULL rather than a field of a NULL context (crypto/evp/legacy_sha.c:70-74); `ossl_sha1_ctrl` is the authority's own NULL guard."
@@ -851,19 +852,19 @@
    "id": "B48-SHA3-003",
    "file": "src/evp/legacy_sha3.rs",
    "line": 332,
-   "line_current": 387,
-   "line_provenance": "V1 census coordinate; line_current refreshed to 0cbc4710",
+   "line_current": 391,
+   "line_provenance": "V1 census coordinate; line_current refreshed to the post-review repair tree (sha256 bf5d47c7)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "shake_ctrl",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, c_int, c_int, *mut c_void) -> c_int",
    "registration": "SHAKE128_MD at :478; Some(shake_ctrl) at :487; SHAKE256_MD at :492; Some(shake_ctrl) at :501",
-   "guard": "explicit `evp_ctx.is_null()` and `md_data.is_null()` checks, then the write",
+   "guard": "init_keccak(evp_ctx, [SHAKE128_MD, SHAKE256_MD])",
    "disposition": "SAFETY_DISCHARGED (scope: shake_ctrl and its dispatch path; src/evp/legacy_sha3.rs:332)",
-   "contract": "Control contract: `evp_ctx` NULL or live and exclusive; `md_data` NULL or a writable `KeccakCtx`; `_p2` is not read; `p1` is an integer length. A NULL context or a NULL block answers 0 before the command is looked at, so `EVP_MD_CTRL_XOF_LEN` cannot write through NULL. On success it sets the sponge's `md_size` and returns 1; any other command returns 0 and changes nothing. The NULL-block refusal is a candidate divergence: the authority writes through the block unconditionally.",
+   "contract": "Control contract over `KECCAK1600_CTX`: `evp_ctx` NULL or live and exclusive; `_p2` is not read; `p1` is an integer length. The callback establishes a writable `KeccakCtx` and a positive `md_size` through `init_keccak` (owner identity for the two SHAKE tables, otherwise a live method with `app_datasize` at least `size_of::<KeccakCtx>()`) and refuses with 0 before the `EVP_MD_CTRL_XOF_LEN` write when the context, method or block is NULL, the block is too small, or `md_size` is non-positive. On a valid call it stores `p1` in `KeccakCtx::md_size` and returns 1; any other command returns 0 and changes nothing. When the method is not a SHAKE table, the declared `app_datasize` establishes the extent, not the type; the store is bounded by it. Candidate divergence from the authority, which writes through a NULL or undersized block.",
    "established": [
     "`EVP_MD_CTX_ctrl` (:3547) \u2192 `evp_md_ctx_ctrl_legacy` (:3633) reads `digest->md_ctrl` at :3640 and calls it at :3646; `evp_digest_final_xof_legacy` calls `md_ctrl` at :2735; `EVP_MD_meth_get_ctrl` (:1617) is the direct source.",
-    "The callback itself now checks the block before the `EVP_MD_CTRL_XOF_LEN` write."
+    "The callback itself now establishes the block through `init_keccak` before the `EVP_MD_CTRL_XOF_LEN` write; `legacy_shake_ctrl_refuses_undersized_md_data` exercises the exported `EVP_MD_meth_new` + `EVP_MD_meth_set_app_datasize(8)` path."
    ],
    "authority_derived": [
     "The authority's `shake_ctrl` writes `ctx = evp_ctx->md_data` and then `ctx->md_size` with only a NULL-context test (crypto/evp/legacy_sha.c:73-88)."
@@ -1075,8 +1076,8 @@
    ]
   }
  ],
- "hidden_obligations": 1,
- "hidden_obligations_note": "Within these 36 sites every retained precondition is stated in the fn-level # Safety and each update/final/ctrl callback now enforces the block precondition itself. The one condition that is not mechanically enforced is exclusive use of the EVP_MD_CTX; it is an authority-side caller obligation (OpenSSL provides no serialization) and is stated as such, not hidden. No site was silently reclassified.",
+ "hidden_obligations": 0,
+ "hidden_obligations_note": "Within these 36 sites every retained precondition is stated in the fn-level # Safety and each update/final/ctrl callback now enforces the block precondition itself, including sha1_int_ctrl and shake_ctrl after the post-review repair (B48-H1 closed). The conditions that are not mechanically enforced are exclusive use of the EVP_MD_CTX (an authority-side caller obligation; OpenSSL provides no serialization) and a non-negative XOF length in shake_ctrl; both are stated as caller obligations, not hidden. No site was silently reclassified.",
  "new_unsafe_assumptions": 0,
  "new_unsafe_assumptions_note": "No production signature, layout, exported symbol or allocator seam changed. The guards add checked reads and early returns; the BLAKE2/MDC2 zero-length arms return 1 before the primitive is called. No new unsafe operation was introduced: the only new unsafe expressions are calls to the existing `init_md_data`/`init_md_data_any`/`init_keccak`/`md_data` helpers inside their documented contracts.",
  "unsafe_operations_removed": 0,
@@ -1084,7 +1085,7 @@
  "test_only_unsafe_added": 1,
  "boundary_size": "36 sites across ten files: 13 SHA-1/SHA-2 callbacks, 6 MD5/MD5-SHA1 callbacks, 2 MD4, 4 BLAKE2, 3 SHA-3/SHAKE, 2 MDC2, 2 RIPEMD-160, 2 Whirlpool, 1 SM3, and the integer-only RC2 helper. 35 are vtable slots (init/update/final/ctrl) and one is a pure integer mapping. The callback bodies gain the shared `init_md_data` guard; five static-table registration blocks are unchanged.",
  "safe_callers_can_cause_ub": true,
- "safe_callers_can_cause_ub_note": "Every site is a private `unsafe fn`/`unsafe extern \"C\" fn` or a private callback slot. The exported entry points that reach them (`EVP_DigestUpdate`, `EVP_DigestFinal_ex`, `EVP_MD_CTX_ctrl`, `EVP_MD_meth_get_*`) remain `unsafe extern \"C\"` with stated contracts, so no safe Rust caller can invoke one. A C caller that supplies a NULL or uninitialised context now gets the documented refusal (0) instead of a dereference.",
+ "safe_callers_can_cause_ub_note": "Kept true: the two ctrl sites no longer permit the reachable undersized-block out-of-bounds write under a documented call, but the 36 sites remain reachable only through `unsafe extern \"C\"` entry points with caller obligations. `sha1_int_ctrl` and `shake_ctrl` now refuse an absent, too-small or NULL block before the first write; the remaining stated obligations are exclusive use of the context (B48-R3), a non-negative XOF length (`shake_ctrl` stores `p1` verbatim, as the authority does), and, for a method that is not one of the table objects, the caller's declared `app_datasize` establishing extent but not type. A caller that violates those is outside the safe interface, and no safe Rust path exists; the field stays true so the receipt claims no more than the repair establishes.",
  "negative_control": {
   "id": "B48-C1",
   "name": "evp::legacy_sha::tests::legacy_sha1_update_and_final_refuse_context_without_md_data_after_refused_init",
@@ -1176,9 +1177,10 @@
   {
    "id": "B48-H1",
    "severity": "high",
-   "state": "OPEN \u2014 reachable out-of-bounds write",
+   "state": "CLOSED \u2014 undersized-block out-of-bounds write refused",
    "description": "sha1_int_ctrl (src/evp/legacy_sha.rs:337) and shake_ctrl (src/evp/legacy_sha3.rs:387) check only that the context is non-NULL, not that the md_data block is the type and size they write. The exported EVP_MD_meth_new (origin EVP_ORIG_METH), EVP_MD_meth_set_app_datasize, EVP_MD_meth_get_ctrl and EVP_DigestInit_ex's legacy arm let a C caller build a method with ctx_size = 8, obtain an 8-byte md_data, and then invoke these callbacks: SHA1_Update / SHA1_Final write a full ShaCtx, and shake_ctrl writes KeccakCtx.md_size at roughly offset 376. Both are out of bounds.",
-   "correction": "the review falsified the claim 'every caller is our own code': EVP_MD_meth_get_ctrl and the EVP_MD_meth_* setters are exported and reachable from any C caller."
+   "correction": "the review falsified the claim 'every caller is our own code': EVP_MD_meth_get_ctrl and the EVP_MD_meth_* setters are exported and reachable from any C caller.",
+   "resolution": "Both callbacks now establish the block before the first write: sha1_int_ctrl through init_md_data(ctx, SHA1_MD, size_of::<ShaCtx>()) and shake_ctrl through init_keccak(ctx, [SHAKE128_MD, SHAKE256_MD]). The exported EVP_MD_meth_new + EVP_MD_meth_set_app_datasize(8) + EVP_DigestInit_ex path was reproduced as two tests. Pre-fix, SHA-1 aborted with 'corrupted size vs. prev_size' (SIGABRT) and SHAKE returned 1; post-fix both answer 0, leave the 8-byte block unchanged, and are retryable. The valid table path still returns 1 (positive controls in both tests). The guard is mutation-sensitive: replacing sha1_int_ctrl's init_md_data with Some(md_data(ctx)) reproduces the SIGABRT. Not part of H1 and still open as a stated caller obligation: shake_ctrl stores p1 verbatim (so a negative XOF length is an authority-derived caller contract violation), and a non-owner method's declared app_datasize establishes extent but not type."
   }
  ],
  "review": {
