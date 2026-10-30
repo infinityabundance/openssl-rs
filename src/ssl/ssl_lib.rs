@@ -8842,6 +8842,18 @@ pub unsafe extern "C" fn SSL_set_ct_validation_callback(
 }
 
 /// `ct_permissive` — `ssl/ssl_lib.c:6529-6533`: the information-gathering callback, always 1.
+///
+/// # Safety
+///
+/// No caller-independent precondition on the argument values: `_ctx`, `_scts` and `_arg`
+/// are never read (the body returns 1), so NULL, dangling or unaligned pointers are
+/// harmless. The obligation is the ABI: it may only be installed as an
+/// `SSL_CTX_set_ct_validation_callback`/`SSL_set_ct_validation_callback` callback
+/// (`ssl_ct_validation_cb`), which [`SSL_CTX_enable_ct`] (`:8897`) and [`SSL_enable_ct`]
+/// (`:8920`) do with `arg = NULL`. This slice stores the callback but has no invocation
+/// path for it.
+///
+/// Authority-derived: the signature and return value are `ssl/ssl_lib.c:6529-6533`.
 unsafe extern "C" fn ct_permissive(
     _ctx: *const c_void,
     _scts: *const c_void,
