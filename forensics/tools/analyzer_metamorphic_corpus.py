@@ -2251,6 +2251,216 @@ def case_reachable_digest_canonicalisation():
          "raw_entries_b": raw_b})
 
 
+# --------------------------------------------------------------------------- #
+# v1.7: documentation state must not remove an obligation
+# --------------------------------------------------------------------------- #
+ENGINE_FILE = "src/engine/tb_x.rs"
+ENGINE_ITEM = "engine_unregister_all_x"
+ENGINE_KIND = "UNSAFE_FN_DEF"
+ENGINE_LINE = 19
+
+
+def _enrollment_fixture(*, contracted=True, blockers=None, item=ENGINE_ITEM,
+                        line=ENGINE_LINE):
+    """One site that is named by a site receipt and by the persistent ledger."""
+    contract_records = ([{
+        "file": ENGINE_FILE, "line": line, "kind": ENGINE_KIND,
+        "item": item, "partition": "production",
+        "contract_basis": "attached # Safety / SAFETY: contract"}]
+                        if contracted else None)
+    contracts = {
+        "blockers": blockers or [],
+        "contracted_operations": contract_records,
+        "per_file": {ENGINE_FILE: {"all_operations_contracted": contracted is not None}},
+    }
+    boundaries = {ENGINE_FILE: [{
+        "receipt": "p25-x-sites.json", "id": "X-1", "file": ENGINE_FILE,
+        "line": line, "kind": ENGINE_KIND, "operation": item,
+        "mechanism": "C_ABI_CONTRACT", "disposition": "BLOCKED"}]}
+    ledger = {(ENGINE_FILE, line, ENGINE_KIND): {
+        "file": ENGINE_FILE, "line": line, "kind": ENGINE_KIND,
+        "mechanism": "C_ABI_CONTRACT", "operation": item, "basis": "fixture"}}
+    return contracts, boundaries, ledger
+
+
+def case_documented_obligation_persists():
+    contracts, boundaries, ledger = _enrollment_fixture()
+    obs, enr = cc.obligation_candidates(
+        contracts, {ENGINE_FILE}, boundaries, ledger)
+    want_stable = f"{ENGINE_FILE}::{ENGINE_KIND}::{ENGINE_ITEM}"
+    ok = (len(obs) == 1
+          and obs[0]["contract"] == "contracted"
+          and obs[0]["item"] == ENGINE_ITEM
+          and obs[0]["stable_id"] == want_stable
+          and enr["enrolled_count"] == 1)
+    return _case(
+        "bg-documented-obligation-persists",
+        "a reachable unsafe fn with an attached # Safety prelude, named by a "
+        "site-enumerating receipt and by state.json#/obligation_mechanisms",
+        "build the obligation queue from the inventory census",
+        "the operation is enrolled and marked contracted; a contract is not a "
+        "discharge",
+        (f"obligations={len(obs)}, contract={obs[0]['contract'] if obs else None}, "
+         f"stable_id={obs[0]['stable_id'] if obs else None}"),
+        ok, {"enrollment": enr})
+
+
+def case_documentation_stripped_obligation_persists():
+    stripped = [{
+        "file": ENGINE_FILE, "line": ENGINE_LINE, "kind": ENGINE_KIND,
+        "item": ENGINE_ITEM, "partition": "production",
+        "reason": "no # Safety / SAFETY: contract on the unsafe fn"}]
+    contracts, boundaries, ledger = _enrollment_fixture(
+        contracted=False, blockers=stripped)
+    # The census at this identity has no contracted record at all.
+    contracts["contracted_operations"] = []
+    obs, enr = cc.obligation_candidates(
+        contracts, {ENGINE_FILE}, boundaries, ledger)
+    want_stable = f"{ENGINE_FILE}::{ENGINE_KIND}::{ENGINE_ITEM}"
+    ok = (len(obs) == 1
+          and obs[0]["contract"] == "uncontracted"
+          and obs[0]["stable_id"] == want_stable)
+    return _case(
+        "bh-documentation-stripped-obligation-persists",
+        "the same site after the # Safety prelude is stripped, so the census "
+        "classifies it uncontracted again",
+        "build the obligation queue",
+        "the obligation PERSISTS and flips to uncontracted; the stable identity "
+        "does not move with the documentation state",
+        (f"obligations={len(obs)}, contract={obs[0]['contract'] if obs else None}, "
+         f"stable_id={obs[0]['stable_id'] if obs else None}"),
+        ok, {"enrollment": enr})
+
+
+def case_new_unsafe_fn_enters():
+    new_file = "src/engine/tb_new.rs"
+    new_item = "brand_new_unsafe_fn"
+    blockers = [
+        {"file": ENGINE_FILE, "line": ENGINE_LINE, "kind": ENGINE_KIND,
+         "item": ENGINE_ITEM, "partition": "production",
+         "reason": "no # Safety / SAFETY: contract on the unsafe fn"},
+        {"file": new_file, "line": 7, "kind": ENGINE_KIND,
+         "item": new_item, "partition": "production",
+         "reason": "no # Safety / SAFETY: contract on the unsafe fn"},
+    ]
+    contracts, boundaries, ledger = _enrollment_fixture(contracted=False)
+    contracts["blockers"] = blockers
+    contracts["contracted_operations"] = []
+    obs, _ = cc.obligation_candidates(
+        contracts, {ENGINE_FILE, new_file}, boundaries, ledger)
+    ids = {o["stable_id"] for o in obs}
+    ok = (len(obs) == 2
+          and f"{new_file}::{ENGINE_KIND}::{new_item}" in ids)
+    return _case(
+        "bi-new-unsafe-fn-enters",
+        "a genuinely new unsafe fn that no receipt or ledger entry names",
+        "build the obligation queue",
+        "the new operation ENTERS the queue as an uncontracted obligation",
+        f"obligations={len(obs)}, stable_ids={sorted(ids)}",
+        ok)
+
+
+def case_removed_operation_leaves_with_reason():
+    contracts, boundaries, ledger = _enrollment_fixture(contracted=False)
+    contracts["blockers"] = []
+    contracts["contracted_operations"] = []
+    obs, enr = cc.obligation_candidates(
+        contracts, {ENGINE_FILE}, boundaries, ledger)
+    ok = (not obs
+          and enr["excluded_count"] == 1
+          and "no longer exists" in enr["excluded"][0]["reason"])
+    return _case(
+        "bj-removed-operation-leaves-with-reason",
+        "a site receipt and ledger entry whose operation is absent from both the "
+        "uncontracted blockers and the per-site contracted records",
+        "build the obligation queue",
+        "the obligation is not enrolled and the removal is recorded with a reason",
+        (f"obligations={len(obs)}, excluded={enr['excluded_count']}, "
+         f"reason={enr['excluded'][0]['reason'][:48] if enr['excluded'] else None}"),
+        ok)
+
+
+def case_legacy_inventory_documented_site_persists():
+    contracts, boundaries, ledger = _enrollment_fixture(contracted=False)
+    contracts["blockers"] = []
+    contracts["contracted_operations"] = None
+    contracts["per_file"] = {ENGINE_FILE: {"all_operations_contracted": False}}
+    obs, enr = cc.obligation_candidates(
+        contracts, {ENGINE_FILE}, boundaries, ledger)
+    ok = (len(obs) == 1 and obs[0]["contract"] == "contracted"
+          and "predates" in obs[0]["contract_basis"]
+          and enr["contracted_records_present"] is False)
+    return _case(
+        "bk-legacy-inventory-documented-site-persists",
+        "an inventory that predates per-site contracted-operation records, "
+        "naming the site only through its receipt and the persistent ledger",
+        "build the obligation queue",
+        "the documented site is still enrolled, and the basis records that "
+        "existence rests on the site receipt's enumeration",
+        (f"obligations={len(obs)}, basis={obs[0]['contract_basis'][:52] if obs else None}"),
+        ok)
+
+
+def case_contracted_record_line_drift_stable_identity():
+    """A doc comment shifts the site +7 lines; the census record moves with it."""
+    contracts, boundaries, ledger = _enrollment_fixture()
+    moved = ENGINE_LINE + 7
+    contracts["contracted_operations"][0]["line"] = moved
+    boundaries[ENGINE_FILE][0]["line"] = ENGINE_LINE  # plan still names the old line
+    obs, _enr = cc.obligation_candidates(
+        contracts, {ENGINE_FILE}, boundaries, ledger)
+    want_stable = f"{ENGINE_FILE}::{ENGINE_KIND}::{ENGINE_ITEM}"
+    ok = (len(obs) == 1
+          and obs[0]["stable_id"] == want_stable
+          and obs[0]["line"] == moved
+          and obs[0]["site_receipt_line"] == ENGINE_LINE)
+    return _case(
+        "bm-contracted-record-line-drift-stable-identity",
+        "the site receipt and ledger name line 19 while the census contracted "
+        "record is at line 26 after a documentation prelude",
+        "build the queue by exact coordinate then by stable identity",
+        "the operation is enrolled once at the census coordinate, with the "
+        "same file+kind+item identity and the receipt line kept as provenance",
+        (f"obligations={len(obs)}, line={obs[0]['line'] if obs else None}, "
+         f"plan_line={obs[0]['site_receipt_line'] if obs else None}, "
+         f"stable_id={obs[0]['stable_id'] if obs else None}"),
+        ok)
+
+
+def case_plan_without_ledger_does_not_enroll():
+    contracts = {
+        "blockers": [],
+        "contracted_operations": [{
+            "file": ENGINE_FILE, "line": ENGINE_LINE, "kind": ENGINE_KIND,
+            "item": ENGINE_ITEM, "partition": "production",
+            "contract_basis": "attached # Safety / SAFETY: contract"}],
+        "per_file": {},
+    }
+    boundaries = {ENGINE_FILE: [{
+        "receipt": "p25-x-sites.json", "id": "X-1", "file": ENGINE_FILE,
+        "line": ENGINE_LINE, "kind": ENGINE_KIND, "operation": ENGINE_ITEM,
+        "mechanism": "C_ABI_CONTRACT", "disposition": "BLOCKED"}]}
+    ledger = {(ENGINE_FILE, 999, ENGINE_KIND): {
+        "file": ENGINE_FILE, "line": 999, "kind": ENGINE_KIND,
+        "mechanism": "C_ABI_CONTRACT", "operation": "other_op",
+        "basis": "fixture"}}
+    obs, enr = cc.obligation_candidates(
+        contracts, {ENGINE_FILE}, boundaries, ledger)
+    ok = (not obs
+          and enr["enrolled_count"] == 0
+          and len(enr["ledger_entries_without_site_plan"]) == 1)
+    return _case(
+        "bl-plan-without-ledger-does-not-enroll",
+        "a site receipt naming a documented operation that the persistent ledger "
+        "never recorded, plus a ledger entry with no site plan",
+        "build the obligation queue",
+        "the plan-only site does not grow the target set and the ledger-without-"
+        "plan gap is recorded explicitly",
+        (f"obligations={len(obs)}, gaps="
+         f"{len(enr['ledger_entries_without_site_plan'])}"),
+        ok)
+
+
 CASES = (
     case_identical_rebuild,
     case_layout_perturbation,
@@ -2322,6 +2532,14 @@ CASES = (
     case_admission_widens_to_unresolved,
     case_admission_disabled_control,
     case_admission_unconditional_control,
+    # v1.7: documentation state never removes an obligation from the queue
+    case_documented_obligation_persists,
+    case_documentation_stripped_obligation_persists,
+    case_new_unsafe_fn_enters,
+    case_removed_operation_leaves_with_reason,
+    case_legacy_inventory_documented_site_persists,
+    case_contracted_record_line_drift_stable_identity,
+    case_plan_without_ledger_does_not_enroll,
 )
 
 NOT_COVERED = [
