@@ -1,0 +1,355 @@
+{
+ "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "p25-slh-dsa-adrs-sites",
+ "subphase": "safe-c33 analyzer-corpus: SLH-DSA address function table (uncompressed 32-byte and compressed 22-byte ADRS accessors)",
+ "date": "2026-10-30",
+ "mechanism": "EVP_PKEY_PROVIDER",
+ "mechanism_registered": true,
+ "mechanism_registry": "forensics/tools/consumer_closure.py MECHANISM_RULES ^src/(?:...|slh_dsa|...)/ -> EVP_PKEY_PROVIDER",
+ "candidate": {
+  "branch": "stage/p25/analyzer-corpus",
+  "head": "6fa558f9c17cc218f52e76f33aaa06eb2a5f47d1",
+  "working_tree_dirty": true,
+  "working_tree_note": "uncommitted doc-only block in src/x509/v3_lib.rs; this receipt's files were not modified",
+  "inventory_path": "court/inventory/closure-ssh-s1b.json",
+  "inventory_source_head": "47beaa1a7caedfdd666ad026e41fafc25a8ce00a",
+  "line_number_basis": "closure obligation coordinates at the inventory source head; verified against the working tree at HEAD"
+ },
+ "authority": {
+  "id": "openssl-3.6.4-production",
+  "source": "forensics/authorities/src/openssl-3.6.4",
+  "header": "crypto/slh_dsa/slh_adrs.h:23-25,36,57-69",
+  "implementation": "crypto/slh_dsa/slh_adrs.c:68-184",
+  "note": "SLH_ADRS_SIZE=32 and SLH_ADRSC_SIZE=22; the table aliases set_tree_height/set_tree_index onto the chain/hash setters at the same offsets"
+ },
+ "summary": {
+  "files": 1,
+  "sites": 19,
+  "blocked": 19,
+  "discharged": 0,
+  "eliminated": 0,
+  "statement": "All 18 address accessors plus the table selector are enumerated with their buffer extent and aliasing preconditions. Every entry is BLOCKED."
+ },
+ "files": [
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "sites": 19,
+   "disposition": "BLOCKED"
+  }
+ ],
+ "defects": [],
+ "boundaries": [
+  {
+   "id": "P25-SLH-ADRS-001",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 119,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_layer_address",
+   "contract": "`slh_adrs_set_layer_address` (table slot `set_layer_address`, uncompressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRS_SIZE (32)` bytes; the body writes 4 bytes at offset 0, so every access is within that extent. There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-002",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 128,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_tree_address",
+   "contract": "`slh_adrs_set_tree_address` (table slot `set_tree_address`, uncompressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRS_SIZE (32)` bytes; the body writes 8 bytes at offset 8 (the 12-byte tree-address field), assuming its leading 4 bytes are already zero, so every access is within that extent. There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-003",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 134,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_type_and_clear",
+   "contract": "`slh_adrs_set_type_and_clear` (table slot `set_type_and_clear`, uncompressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRS_SIZE (32)` bytes; the body writes the 4-byte type at offset 16 and clears the 12 bytes at 20..32, so every access is within that extent. There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-004",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 147,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_keypair_address",
+   "contract": "`slh_adrs_set_keypair_address` (table slot `set_keypair_address`, uncompressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRS_SIZE (32)` bytes; the body writes 4 bytes at offset 20, so every access is within that extent. There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-005",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 154,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_copy_keypair_address",
+   "contract": "`slh_adrs_copy_keypair_address` (table slot `copy_keypair_address`, uncompressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRS_SIZE (32)` bytes; the body copies 4 bytes from src offset 20 to dst offset 20, so every access is within that extent. `src` must be readable for the same number of bytes and the two ranges must not overlap (`copy_nonoverlapping`). There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-006",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 166,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_chain_address",
+   "contract": "`slh_adrs_set_chain_address` (table slot `set_chain_address / set_tree_height`, uncompressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRS_SIZE (32)` bytes; the body writes 4 bytes at offset 24; the table aliases it as set_tree_height, so every access is within that extent. There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-007",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 172,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_hash_address",
+   "contract": "`slh_adrs_set_hash_address` (table slot `set_hash_address / set_tree_index`, uncompressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRS_SIZE (32)` bytes; the body writes 4 bytes at offset 28; the table aliases it as set_tree_index, so every access is within that extent. There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-008",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 178,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_zero",
+   "contract": "`slh_adrs_zero` (table slot `zero`, uncompressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRS_SIZE (32)` bytes; the body zeroes all 32 bytes, so every access is within that extent. There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-009",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 184,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_copy",
+   "contract": "`slh_adrs_copy` (table slot `copy`, uncompressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRS_SIZE (32)` bytes; the body copies 32 bytes from src to dst, so every access is within that extent. `src` must be readable for the same number of bytes and the two ranges must not overlap (`copy_nonoverlapping`). There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-010",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 193,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_layer_address",
+   "contract": "`slh_adrsc_set_layer_address` (table slot `set_layer_address`, compressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRSC_SIZE (22)` bytes; the body writes 1 byte at offset 0, so every access is within that extent. There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-011",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 200,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_tree_address",
+   "contract": "`slh_adrsc_set_tree_address` (table slot `set_tree_address`, compressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRSC_SIZE (22)` bytes; the body writes 8 bytes at offset 1, so every access is within that extent. There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-012",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 207,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_type_and_clear",
+   "contract": "`slh_adrsc_set_type_and_clear` (table slot `set_type_and_clear`, compressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRSC_SIZE (22)` bytes; the body writes the 1-byte type at offset 9 and clears the 12 bytes at 10..22, so every access is within that extent. There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-013",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 221,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_keypair_address",
+   "contract": "`slh_adrsc_set_keypair_address` (table slot `set_keypair_address`, compressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRSC_SIZE (22)` bytes; the body writes 4 bytes at offset 10, so every access is within that extent. There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-014",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 228,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_copy_keypair_address",
+   "contract": "`slh_adrsc_copy_keypair_address` (table slot `copy_keypair_address`, compressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRSC_SIZE (22)` bytes; the body copies 4 bytes from src offset 10 to dst offset 10, so every access is within that extent. `src` must be readable for the same number of bytes and the two ranges must not overlap (`copy_nonoverlapping`). There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-015",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 241,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_chain_address",
+   "contract": "`slh_adrsc_set_chain_address` (table slot `set_chain_address / set_tree_height`, compressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRSC_SIZE (22)` bytes; the body writes 4 bytes at offset 14; the table aliases it as set_tree_height, so every access is within that extent. There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-016",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 248,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_hash_address",
+   "contract": "`slh_adrsc_set_hash_address` (table slot `set_hash_address / set_tree_index`, compressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRSC_SIZE (22)` bytes; the body writes 4 bytes at offset 18; the table aliases it as set_tree_index, so every access is within that extent. There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-017",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 254,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_zero",
+   "contract": "`slh_adrsc_zero` (table slot `zero`, compressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRSC_SIZE (22)` bytes; the body zeroes all 22 bytes, so every access is within that extent. There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-018",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 260,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_copy",
+   "contract": "`slh_adrsc_copy` (table slot `copy`, compressed address): the ADRS pointer must be a caller-owned, writable, exclusively-borrowed buffer of at least `SLH_ADRSC_SIZE (22)` bytes; the body copies 22 bytes from src to dst, so every access is within that extent. `src` must be readable for the same number of bytes and the two ranges must not overlap (`copy_nonoverlapping`). There is no additional caller precondition. Caller closure: src/slh_dsa/wots.rs:206,263,330,493 and src/slh_dsa/xmss.rs:56-59,153 pass `.as_mut_ptr()` of a fixed `SlhAdrs` = `[u8; SLH_ADRS_SIZE_MAX]` local, so the extent and exclusivity are established by the local's static type.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the per-slot buffer extent is a documented table contract, not a typed one"
+   ]
+  },
+  {
+   "id": "P25-SLH-ADRS-019",
+   "file": "src/slh_dsa/adrs.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 269,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_slh_get_adrs_fn",
+   "contract": "`ossl_slh_get_adrs_fn(is_compressed)`: `is_compressed == 0` selects the uncompressed table, anything else the compressed one, matching the authority (`slh_adrs.c:153-184`). The body performs no unsafe operation: it returns `&METHODS[idx]` from a `const [SlhAdrsFunc; 2]` of function pointers. The `unsafe fn` marker is retained because it returns a raw `*const SlhAdrsFunc` table pointer (the ABI-adjacent raw table accessor). Caller closure: src/slh_dsa/hash_ctx.rs:252 stores the pointer in `(*key).adrs_func`; every later field dispatch (wots.rs, xmss.rs, dsa.rs) is an unsafe call whose obligation is the per-slot buffer contract enumerated above. The returned table is `'static` and must not be freed or written.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the table's raw pointer is a convention; its callers are not type-enforced"
+   ]
+  }
+ ],
+ "related_receipts": [],
+ "non_claims": [
+  "no site is SAFETY_DISCHARGED; every entry is BLOCKED",
+  "a receipt moves an obligation from UNKNOWN to BLOCKED only; documentation alone does not discharge an obligation (AGENTS.md \u00a77)",
+  "no family graduation or SAFE_COMPATIBLE claim is made",
+  "no Rust behaviour change was made by this batch"
+ ]
+}

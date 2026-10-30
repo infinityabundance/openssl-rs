@@ -1,0 +1,75 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/boundary-coverage/v1",
+  "recorded_utc": "2026-10-29",
+  "source_identity": {
+    "candidate_commit": "6fa558f9c",
+    "libcrypto_sha256": "199258d5dd0b75bda337e782bb7f2267c143c6f70dfb8913562e858d075b09e8",
+    "ssh_sha256": "f95c15ec…",
+    "tool_sha256": "c5f40baf47e868cd04c54674d1a34addcc669b2be7b41d4ffce09b42fede663f",
+    "closure_receipt_sha256": "e6c7d2882581170de78062e457b2a2eeb0f4303b4619782a9fd5d9be534d4afe"
+  },
+  "result": {
+    "verdict": "ACCEPTED",
+    "safe_compatible": false,
+    "refusals": [],
+    "boundary_receipts": {
+      "files_without_receipt_before": 46,
+      "files_without_receipt_after": 0,
+      "receipts": [
+        "p25-x509-v3-ext-slots-sites.json",
+        "p25-evp-legacy-md-init-sites.json",
+        "p25-engine-callback-sites.json",
+        "p25-cms-freefunc-sites.json",
+        "p25-vestigial-marker-sites.json",
+        "p25-slh-dsa-adrs-sites.json",
+        "p25-slh-dsa-hash-sites.json"
+      ]
+    },
+    "obligations": {
+      "total": 312,
+      "discharged": 90,
+      "blocked": 222,
+      "unknown": 0,
+      "change_from_previous": "90/107/115 -> 90/222/0; every move is UNKNOWN -> BLOCKED, none DISCHARGED"
+    },
+    "element_7": {
+      "status": "FAIL",
+      "reachable_unresolved": 141,
+      "target_bounded": 81,
+      "contract_bounded": 60,
+      "unclassified": 0,
+      "target_sets_remain_unbounded": true
+    },
+    "reachable_files": 624,
+    "reachable_functions_sha256": "8487ed72a70da4530eb8d2636456e61204af4fbf1041b9c833477aa67701d359",
+    "edge_records": 52022,
+    "edge_defects": 0,
+    "oracle_violations": 0
+  },
+  "x509_contract": {
+    "scope": "27 files, 64 assigned slot callbacks, 0 defects",
+    "slots": {
+      "i2s": "char *(*)(const X509V3_EXT_METHOD*, void*); v3_prn.c:96; result is one NUL-terminated block owned by the dispatcher",
+      "i2r": "int (*)(const X509V3_EXT_METHOD*, void *ext, BIO *out, int); ext is the dispatcher-decoded ext_struc and is non-NULL; nonzero success",
+      "i2v": "STACK_OF(CONF_VALUE) *(*)(const X509V3_EXT_METHOD*, void *ext, STACK_OF(CONF_VALUE) *extlist); extlist is an optional sink and borrowed; ext is dispatcher-owned",
+      "v2i": "void *(*)(const X509V3_EXT_METHOD*, X509V3_CTX *ctx, STACK_OF(CONF_VALUE) *values); values is borrowed (parse_list or an NCONF section); returns a fresh ext_struc owned by the dispatcher",
+      "r2i": "void *(*)(const X509V3_EXT_METHOD*, X509V3_CTX *ctx, const char *str); str is borrowed; ctx/db/db_meth are guaranteed non-NULL by the dispatcher",
+      "table": "every slot may be None and is tested before use; print precedence i2s -> i2v -> i2r; config precedence v2i -> s2i -> r2i; usr_data is the row's immutable name table, never the extension"
+    },
+    "authority": "forensics/authorities/src/openssl-3.6.4-production (x509v3.h.in:49-61, v3_prn.c:86-135, v3_conf.c:96-134)",
+    "doc_location": "src/x509/v3_lib.rs: X509V3ExtMethod slot contracts"
+  },
+  "residuals": [
+    "Every receipt disposes BLOCKED; no mechanism is advanced and nothing is discharged.",
+    "Element 7 remains FAIL: 81 target-bounded sites (base-slot-partial 50, reg-top 19, reg-value-partial[int] 12).",
+    "eng_list_cleanup carries an explicit lifetime concern: the Acquire load of the list head is outside ENGINE_remove's own critical section; the authority has the same shape.",
+    "Independent BOUNDARY review is absent for every site (author == analyst); the receipts are not a discharge.",
+    "The receipt's ACCEPTED verdict means the closure is complete and self-consistent, not that the consumer is SAFE_COMPATIBLE; safe_compatible is false."
+  ],
+  "non_claims": [
+    "SAFE_COMPATIBLE remains 0/33.",
+    "No obligation moved to DISCHARGED in this batch.",
+    "The 222 BLOCKED obligations are a work queue backed by contracts, not a claim of safety.",
+    "The X.509 conformance check is a source-and-authority comparison, not a runtime proof; per-file Miri/sanitizer evidence remains outstanding."
+  ]
+}
