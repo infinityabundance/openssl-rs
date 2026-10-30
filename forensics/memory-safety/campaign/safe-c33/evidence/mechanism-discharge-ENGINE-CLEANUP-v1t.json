@@ -12,7 +12,9 @@
   "freeze_sha256": "508d3251c3af0511886dddbe9bec55265a5f76514650d68deeb8ebc0a9095aef",
   "checkout": "clean detached checkout court/tmp/sprime-v1t at afcfdc47e",
   "src_changed_by_this_subphase": false,
-  "src_identity": "src/ is byte-identical between afcfdc47e and the evidence-worktree HEAD; git diff afcfdc47e HEAD -- src/ is empty",
+  "src_identity": "Production src/ is byte-identical between afcfdc47e and this working tree. The only src/ change after afcfdc47e is the test-only C1 control in the test module of src/engine/eng_table.rs; no production source, unsafe operation, signature or layout changes. The nine sites remain BLOCKED.",
+  "observation_commit_for_reused_tests": "cc7762e5d",
+  "observation_note": "C3/C4/C5/C8 were observed at cc7762e5d, not at afcfdc47e. The delta from cc7762e5d to afcfdc47e is documentation-only in the nine files; an independent byte comparison of src/engine/eng_table.rs and src/engine/eng_lib.rs at the two commits was performed during the review. Every reused measurement in this receipt is identity-bound to cc7762e5d.",
   "artifacts": {
    "libcrypto_so_3_sha256": "d720727aa4b9a59fa7618dc5a5130b30d2554c97776cf55ce2ab7a605a573837",
    "ssh_sha256": "7a76fa32066d8bcebee96c30e7826cda81e774c507315d3ca3849dc9844d4ddb",
@@ -23,6 +25,15 @@
  "mechanism_state_after": "UNSAFE_OPEN (unchanged; this is a site-scoped discharge only)",
  "boundary_id": "B45",
  "boundary_artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B45.json",
+ "authority_divergences": [
+  {
+   "id": "B45-D1",
+   "section": "AGENTS.md section 17",
+   "divergence": "The pinned authority's engine_cleanup_int (crypto/engine/eng_lib.c:175-184) calls CRYPTO_THREAD_lock_free(global_engine_lock) and sets global_engine_lock = NULL after invoking the cleanup stack; the candidate never frees the engine lock. GLOBAL_ENGINE_LOCK is stored once and never freed.",
+   "effect": "The 'initialised, never freed' premise behind precondition (1) of the nine contracts holds only while engine_cleanup_int is unlanded. Landing engine_cleanup_int would free and NULL the lock, invalidating that premise (a subsequent cleanup becomes the documented no-op/leak and the free is a new boundary), and must re-open the nine sites.",
+   "disposition": "CONSERVED BY WITHHOLDING engine_cleanup_int at this identity; recorded, not silently reproduced"
+  }
+ ],
  "discharged_boundaries": [
   "B45-ENG-CB-001",
   "B45-ENG-CB-002",
@@ -124,7 +135,7 @@
  "what_was_established": [
   "Each callback is an `unsafe extern \"C\" fn()` taking no arguments, stored as EngineCleanupCb and registered by engine_table_register(Some(cb)) at two sites in its own file.",
   "The engine lock is initialised before the callback can run: every path that reaches registration (ENGINE_new / ENGINE_by_id / ENGINE_get_first / ENGINE_get_last; RawEngine::new is private) runs the lock init, and GLOBAL_ENGINE_LOCK is stored once and never freed.",
-  "The lock is not held when the callback runs: engine_cleanup_cb_free invokes cb() unlocked, and the sole registration path runs through the public engine API.",
+  "The lock is not held when the callback runs: engine_cleanup_cb_free's body (the registration/enqueue path reached only through engine_cleanup_add_first) invokes cb() without holding the engine lock, and the pinned authority's engine_cleanup_int (crypto/engine/eng_lib.c:175-184) runs that body while the lock is free. The discharge is conditional on engine_cleanup_int staying unlanded in the candidate: it does not exist in src/ at this identity, so no callback executes and the invocation-time lock state is authority-derived, not exercised. Landing it must re-open the nine sites and re-establish the precondition against the landed body.",
   "The callback runs only after registration through that API; the callback body reads only its own module's `&'static EngineTableSlot`, so there is no caller-supplied pointer, extent, alignment or initialisation precondition.",
   "The shared callee engine_table_cleanup takes the write lock itself; its initialised-lock precondition is documented at its `# Safety` (B20-TBL-3).",
   "Sole invocation path is the withheld engine_cleanup_int; no call executes at afcfdc47e, so the invocation-path assumptions are derived from the pinned authority."
@@ -134,7 +145,15 @@
   "test": "engine::eng_table::tests::uninitialised_engine_lock_makes_cleanup_a_documented_no_op",
   "kind": "court functional test, fresh child process, --exact --test-threads=1",
   "observation": "with global_engine_lock() NULL, engine_table_cleanup returns before the swap and slot.load() still equals the lhash (documented no-op/leak), not UB and not a panic",
-  "review_finding": "FAIL: not mutation-sensitive to either guard individually (review check 4). Superseded by condition C1."
+  "review_finding": "FAIL: not mutation-sensitive to either guard individually (review check 4). Superseded by the C1 control below."
+ },
+ "c1_negative_control": {
+  "id": "C1",
+  "test": "engine::eng_table::tests::cleanup_preserves_the_table_when_the_write_lock_acquisition_fails",
+  "kind": "court functional test; this thread already holds the engine write lock, so CRYPTO_THREAD_write_lock answers 0 without a second thread or a deadlock",
+  "observation": "with the engine write lock held by this thread, engine_table_cleanup returns before the swap: slot.load() still equals the lhash and release_probe records no pile release. After the unlock, the retried cleanup empties the slot and releases the pile block exactly once; a third cleanup releases nothing.",
+  "mutation_result": "with the acquisition check reduced to `let _ = CRYPTO_THREAD_write_lock(lock);`, the test failed at src/engine/eng_table.rs:1012 with `assertion left == right failed: a failed write-lock acquisition leaves the slot untouched` (left 0x0, right 0x7fa134000f50); test result 0 passed / 1 failed. The guard was restored byte-for-byte (sha256 dadacd4ecfd16e67fe640e42598b549ff53dae90b0c8124d7f911280f2e442d6).",
+  "null_guard_note": "Removing the lock.is_null() guard alone is behaviourally undetectable: CRYPTO_THREAD_write_lock(NULL) already returns 0, so the acquisition check still refuses. The is_null guard is redundant defence-in-depth; this control and its evidence do not claim to detect its removal."
  },
  "closure_counts": {
   "ssh": {

@@ -68,28 +68,33 @@
       "detail": "B20-TBL-3 with B20-R2/R3, unreachable callbacks, third-party provider destructor null contract, and Miri/ASan/TSan/dudect NOT_RUN are recorded; C_ABI_CONTRACT remains UNSAFE_OPEN; eng_list.rs:97 and eng_dyn.rs:401 remain BLOCKED. Reused test results are not identity-bound to the commit that observed them (see C4)."
     }
   ],
+  "condition_closure_note": "C1-C4 are closed by the working-tree control and receipt updates recorded in boundary-sweep-B45.json and mechanism-discharge-ENGINE-CLEANUP-v1t.json. The historical verdict, disposition and check results above are unchanged; C5 (evidence commit E and freeze) remains OPEN because this session is instructed not to commit. B45 stays NOT_APPLIED and the nine sites stay BLOCKED until the closure is adjudicated at a freeze.",
   "conditions": [
     {
       "id": "C1",
-      "status": "OPEN",
+      "status": "CLOSED",
+      "closed_by": "src/engine/eng_table.rs::tests::cleanup_preserves_the_table_when_the_write_lock_acquisition_fails (mutation-sensitive; the observed failure when the acquisition check is removed is recorded in boundary-sweep-B45.json#/c1_negative_control). The lock.is_null() guard is recorded as redundant defence-in-depth and is not claimed to be detected.",
       "requirement": "Add a mutation-sensitive control for the acquisition-failure arm: call engine_table_cleanup with the engine lock already held by the same thread so CRYPTO_THREAD_write_lock returns 0, and assert the slot is unchanged. The control must fail if the acquisition check is removed.",
       "why": "check 4 FAIL: the cited negative control does not fire for either guard individually"
     },
     {
       "id": "C2",
-      "status": "OPEN",
+      "status": "CLOSED",
+      "closed_by": "boundary-sweep-B45.json: all nine contract fields now cite engine_cleanup_cb_free's body and the authority's engine_cleanup_int, and state that the discharge is conditional on engine_cleanup_int staying unlanded.",
       "requirement": "Correct the nine B45-ENG-CB-* contract fields. 'The sole registration path runs through the public engine API' does not establish invocation-time lock state. Cite engine_cleanup_cb_free's body and the authority's engine_cleanup_int, and state that the discharge is conditional on engine_cleanup_int staying unlanded.",
       "why": "the boundary contract prose overstates what the registration path establishes"
     },
     {
       "id": "C3",
-      "status": "OPEN",
+      "status": "CLOSED",
+      "closed_by": "boundary-sweep-B45.json and mechanism-discharge-ENGINE-CLEANUP-v1t.json: authority_divergences/B45-D1 records that the authority's engine_cleanup_int frees and NULLs global_engine_lock while the candidate never frees it, and that landing it must re-open the nine sites.",
       "requirement": "Record the AGENTS.md section 17 divergence: the authority's engine_cleanup_int frees and NULLs global_engine_lock, while the candidate never frees it. Landing engine_cleanup_int invalidates the 'initialised, never freed' premise and must re-open the nine.",
       "why": "an unrecorded authority divergence underlying the contract"
     },
     {
       "id": "C4",
-      "status": "OPEN",
+      "status": "CLOSED",
+      "closed_by": "boundary-sweep-B45.json and mechanism-discharge-ENGINE-CLEANUP-v1t.json: candidate.observation_commit_for_reused_tests = cc7762e5d with the doc-only delta to afcfdc47e; every reused C3/C4/C5/C8 measurement is identity-bound to cc7762e5d.",
       "requirement": "Name the observation commit for the reused C3/C4/C5/C8 results (cc7762e5d) and the doc-only delta to afcfdc47e. 'Reviewed package' alone is insufficient identity under sections 6(4) and 22.",
       "why": "evidence identity is incomplete for reused measurements"
     },
