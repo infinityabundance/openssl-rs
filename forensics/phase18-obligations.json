@@ -57,10 +57,10 @@
         "closure": "the `HOSTILE-BOUNDARY-REGISTER` court passes",
         "findings": [],
         "findings_present": false,
-        "measurement_state": "complete",
-        "observation": "HOSTILE-BOUNDARY-REGISTER is pass",
+        "measurement_state": "not_measured",
+        "observation": "HOSTILE-BOUNDARY-REGISTER is fail",
         "property_status": "not_claimed",
-        "state": "implemented",
+        "state": "open",
         "surface": "artifacts/phase18/COURTS.json",
         "unit": "hostile-boundary-register",
         "what": "the register that records what is hardened, what is measured and what is explicitly not claimed, and that fails the stratum if a recorded boundary drifts from its evidence"
@@ -71,8 +71,8 @@
       "contract_units": 5,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 5,
-      "open_in_this_stratum": 0,
+      "implemented": 4,
+      "open_in_this_stratum": 1,
       "owned": 5,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -113,7 +113,7 @@
     {
       "name": "phase-18-courts",
       "path": "artifacts/phase18/COURTS.json",
-      "sha256": "21f5a9d612a47d317dac345d1c1729fc9f2888493971e6492db2166bbca5996d"
+      "sha256": "3d417926d09e4f3db74d582d630101a3b29609c3c33c15ed07d138421fa79a75"
     }
   ],
   "kind": "phase18-obligations",

@@ -1,5 +1,12 @@
 # Phase 20 — the 3.6.4 custodian seal stratum: seal
 
+> **Gate status (2026-10-28).** The phrase "`complete`" below is a **phase-state predicate**
+> derived from artefact existence (`forensics/tools/phase_state.py`), **not** independent
+> verification. The repository's **required CI check is red** for phase 20 and for `main`, and it
+> is red for phases 17, 18, 23, 24 and 25 (stale `0.0.27` identities, FRF claims, ratchet records,
+> P1000 counts and custodian/multitrack re-derivation). Phases 7 and 8 are green. No sentence in
+> this seal is a green CI result.
+
 **STATUS: derived.** This status is not typed; it is the state `forensics/tools/phase_state.py`
 derives from artefact existence. The stratum's obligation ledger is empty of open rows —
 `forensics/phase20-obligations.json` reads `open_in_this_stratum: 0`, all five contract units

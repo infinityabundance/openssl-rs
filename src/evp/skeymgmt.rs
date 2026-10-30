@@ -313,8 +313,9 @@ impl OwnedSkey {
     /// authority's destructor body and the block release at `EVP_SKEY_free`'s `:225`.
     ///
     /// # Safety
-    /// `ptr` is NULL or a live, fully built key a previous `into_raw` gave up and `Drop` has not
-    /// released.
+    /// `ptr` is NULL or a live key `evp_skey_alloc` fully built -- its method, lock and reference
+    /// are set -- whether or not its `keydata` member has since been assigned -- and `Drop` has not
+    /// released it. `keydata` may be NULL: the import/generate failure arms release such a key.
     unsafe fn reclaim(ptr: *mut EvpSkey) -> Option<OwnedSkey> {
         ptr::NonNull::new(ptr).map(|ptr| OwnedSkey {
             ptr,
@@ -327,17 +328,24 @@ impl OwnedSkey {
 impl Drop for OwnedSkey {
     fn drop(&mut self) {
         // SAFETY: `self.ptr` is the block this handle allocated (or `reclaim` took) and `Drop` runs
-        // once; the destructor body runs only for a fully built key, and this is its single release.
+        // once; the destructor body runs only for a key `evp_skey_alloc` fully built (method, lock
+        // and reference set, `keydata` possibly still NULL), and this is its single release.
         unsafe {
             if self.destruct {
                 let p = self.ptr.as_ptr();
                 // The authority's `EVP_SKEY_free` order: the key data, then the method, then the
-                // lock, then the block. The key-data test is the authority's own: a key whose
-                // import/generate failed before producing data still reaches this destructor, and
-                // the provider's mandatory `free` must not be called with a NULL it never saw.
-                if !(*p).keydata.is_null() {
-                    evp_skeymgmt_freedata((*p).skeymgmt, (*p).keydata);
-                }
+                // lock, then the block. `EVP_SKEY_free` calls
+                // `evp_skeymgmt_freedata(skey->skeymgmt, skey->keydata)` with **no key-data test**
+                // (`s_lib.c:207-226`), and `evp_skeymgmt_freedata` calls
+                // `skeymgmt->free(keydata)` unconditionally because the slot is mandatory
+                // (`skeymgmt_meth.c:42-46`). The import/generate failure arms therefore reach
+                // this destructor with `keydata == NULL` and the provider free is called with
+                // NULL. **The previous `!keydata.is_null()` guard here was wrong**: its stated
+                // premise -- that the authority guards the pointer -- is not in the authority,
+                // and skipping the call diverged from the documented behaviour. The guard is
+                // gone; a NULL-tolerant provider free (the authority's own builtin
+                // `generic_free` is one) is the contract every provider must meet.
+                evp_skeymgmt_freedata((*p).skeymgmt, (*p).keydata);
                 EVP_SKEYMGMT_free((*p).skeymgmt);
                 CRYPTO_THREAD_lock_free((*p).lock);
             }
@@ -844,8 +852,11 @@ pub(crate) unsafe fn evp_skeymgmt_export(
 /// `void evp_skeymgmt_freedata(const EVP_SKEYMGMT *skeymgmt, void *keydata)`.
 ///
 /// # Safety
-/// `skeymgmt` must be a live `EvpSkeyMgmt` whose `free` is non-NULL; `keydata` the key it produced
-/// and not already released.
+/// `skeymgmt` must be a live `EvpSkeyMgmt` whose `free` is non-NULL. `keydata` is **NULL or a live
+/// provider key produced by this `skeymgmt`** and not already released: the authority calls this
+/// unconditionally from `EVP_SKEY_free` (`s_lib.c:207-226`), including the failure arms of
+/// `EVP_SKEY_import`/`EVP_SKEY_generate` where no key data was produced, so a NULL argument is part
+/// of the contract and the provider's mandatory `free` must tolerate it.
 pub(crate) unsafe fn evp_skeymgmt_freedata(skeymgmt: *const EvpSkeyMgmt, keydata: *mut c_void) {
     // SAFETY: `skeymgmt` is live and its `free` is non-NULL per the contract.
     let f = unsafe { (*skeymgmt).free };
@@ -1230,6 +1241,10 @@ pub unsafe extern "C" fn EVP_SKEY_up_ref(skey: *mut EvpSkey) -> c_int {
 /// block. A transcription that freed the method first would leave `evp_skeymgmt_freedata` reading a
 /// released method.
 ///
+/// A key whose `keydata` was never produced -- the `err:` arms of `EVP_SKEY_import` and
+/// `EVP_SKEY_generate` -- is still live and is released here; the provider's mandatory free
+/// receives NULL, as it does in the authority (`s_lib.c:207-226`).
+///
 /// # Safety
 /// `skey` must be NULL or a live `EvpSkey`.
 #[no_mangle]
@@ -1501,10 +1516,13 @@ mod tests {
     static SKEY_TARGET: AtomicUsize = AtomicUsize::new(0);
     static SKEY_REENTERS: AtomicUsize = AtomicUsize::new(0);
     static SKEY_KEY_FREES: AtomicUsize = AtomicUsize::new(0);
+    static SKEY_LAST_KEYDATA: AtomicUsize = AtomicUsize::new(0);
 
-    /// Counts key-destructor calls; the fixture's key data is never dereferenced.
-    unsafe extern "C" fn counting_key_free(_keydata: *mut c_void) {
+    /// Counts key-destructor calls and records the pointer it was handed; the fixture's key data is
+    /// never dereferenced.
+    unsafe extern "C" fn counting_key_free(keydata: *mut c_void) {
         SKEY_KEY_FREES.fetch_add(1, Ordering::SeqCst);
+        SKEY_LAST_KEYDATA.store(keydata as usize, Ordering::SeqCst);
     }
 
     /// The method's `free(keydata)` hook is provider-controlled. Re-entering `EVP_SKEY_free`
@@ -1539,11 +1557,13 @@ mod tests {
         }
     }
 
-    /// A key whose import/generate failed before producing any key data is released without asking
-    /// the provider to free NULL: the authority guards `skey->keydata != NULL` and so must this
-    /// destructor, because the provider's `free` is a callback it does not control.
+    /// A key whose import/generate failed before producing any key data still calls the provider's
+    /// mandatory `free` with NULL: the authority's `EVP_SKEY_free` calls `evp_skeymgmt_freedata`
+    /// with no key-data test (`s_lib.c:207-226`) and `evp_skeymgmt_freedata` calls
+    /// `skeymgmt->free(keydata)` unconditionally (`skeymgmt_meth.c:42-46`). The previous inverse
+    /// assertion was based on a premise the authority does not contain and is superseded here.
     #[test]
-    fn a_failed_key_without_data_does_not_call_the_provider_destructor() {
+    fn a_failed_key_without_data_still_calls_the_provider_destructor_with_null() {
         // SAFETY: the method is a live stack object and `evp_skey_alloc` takes its own
         // reference; the key's `keydata` stays NULL.
         unsafe {
@@ -1553,8 +1573,10 @@ mod tests {
             assert!(!key.is_null());
             assert!((*key).keydata.is_null());
             SKEY_KEY_FREES.store(0, Ordering::SeqCst);
+            SKEY_LAST_KEYDATA.store(usize::MAX, Ordering::SeqCst);
             EVP_SKEY_free(key);
-            assert_eq!(SKEY_KEY_FREES.load(Ordering::SeqCst), 0);
+            assert_eq!(SKEY_KEY_FREES.load(Ordering::SeqCst), 1);
+            assert_eq!(SKEY_LAST_KEYDATA.load(Ordering::SeqCst), 0);
         }
     }
 

@@ -561,6 +561,19 @@ faults).** Fix: restore the authority's guard. The existing re-entrancy
 test was updated to give its fixture non-NULL key data, and a new test
 pins that a data-less key does not reach the provider destructor.
 
+**Correction (2026-10-28) — M8-D1's premise was false.**
+The authority's `EVP_SKEY_free` has **no** `skey->keydata != NULL`
+guard: it calls `evp_skeymgmt_freedata(skey->skeymgmt, skey->keydata)`
+unconditionally (`s_lib.c:207-226`), and `evp_skeymgmt_freedata` calls the
+mandatory `skeymgmt->free(keydata)` (`skeymgmt_meth.c:42-46`). The M8-D1
+"fix" therefore introduced a parity regression rather than restoring the
+authority. It is superseded by
+`atlas-refresh/skey-free-parity-correction.json`; the historical M8 entry
+above is retained unedited with a `corrected_by` pointer. The restored
+unconditional call is courted by `RT-EVP-SKEY` (pass, 97 observations) and
+pinned by
+`evp::skeymgmt::tests::a_failed_key_without_data_still_calls_the_provider_destructor_with_null`.
+
 **M8-D2 — `src/bn/bignum.rs:496-509` (pre-fix).**
 `BN_copy` formed `(as_mut(a), as_ref(b))` before testing identity; the
 authority returns `a` for `a == b` (`bn_lib.c:341-342`). A C-valid

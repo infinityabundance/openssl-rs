@@ -22,10 +22,10 @@
           "3 cross-check residual(s): context-tokenizer/out_of_scope; lexical/out_of_scope; geiger/evidence_missing"
         ],
         "findings_present": true,
-        "measurement_state": "complete",
-        "observation": "MS-SOURCE-CENSUS is pass",
+        "measurement_state": "not_measured",
+        "observation": "MS-SOURCE-CENSUS is fail",
         "property_status": "not_claimed",
-        "state": "implemented",
+        "state": "open",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "source-census",
         "what": "one compiler-derived row per shipped first-party source/build file, with the unsafe operations the **compiler** establishes rather than a regex or a LOC projection, so the primary unit is a compiler-derived unsafe operation and LOC is a secondary projection"
@@ -38,10 +38,10 @@
           "6 residual(s): census:FFI_EXPORT/out_of_scope; census:EXTERN_FUNCTION_CALL/out_of_scope; census:C_VARIADIC_BOUNDARY/out_of_scope; strict-compile/evidence_missing; strict-compile/evidence_missing; strict-compile/evidence_missing"
         ],
         "findings_present": true,
-        "measurement_state": "complete",
-        "observation": "MS-NON-RUST-TCB is pass",
+        "measurement_state": "not_measured",
+        "observation": "MS-NON-RUST-TCB is fail",
         "property_status": "not_claimed",
-        "state": "implemented",
+        "state": "open",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "non-rust-tcb",
         "what": "the non-Rust part of the trusted computing base: the first-party C sources and headers, the inline assembly, the exported FFI boundaries, the C adapters and the variadic boundaries, each classified and given a safety contract"
@@ -65,14 +65,14 @@
       {
         "closure": "the `MS-OWNERSHIP-PLANES` court passes",
         "findings": [
-          "187 FREES edge(s) are in a file with no ALLOCATES/RETURNS_OWNERSHIP edge: the release cannot be paired to a creation in the same translation unit, so a free of a caller-owned pointer, of a value created elsewhere, or a double free is structurally possible; recorded, never asserted as a defect",
-          "368 object family/-ies carry a DECREMENTS_REFCOUNT edge with no INCREMENTS_REFCOUNT edge in the plane: a release below the object's initial refcount of one, or an over-release, is structurally possible; recorded",
-          "35 context(s) name two or more deallocating families: a double free of the same block, or a free of two aliases of it, is structurally possible; recorded",
+          "65 FREES edge(s) are in a file with no ALLOCATES/RETURNS_OWNERSHIP edge: the release cannot be paired to a creation in the same translation unit, so a free of a caller-owned pointer, of a value created elsewhere, or a double free is structurally possible; recorded, never asserted as a defect",
+          "517 object family/-ies carry a DECREMENTS_REFCOUNT edge with no INCREMENTS_REFCOUNT edge in the plane: a release below the object's initial refcount of one, or an over-release, is structurally possible; recorded",
+          "11 context(s) name two or more deallocating families: a double free of the same block, or a free of two aliases of it, is structurally possible; recorded",
           "0 allocation edge(s) name an allocator with no known deallocator: a leak is structurally possible; recorded",
           "0 manual unsafe Send/Sync impl(s) carry no source-stated justification: an unexplained unsafe impl is an unexplained reachable unsoundness; recorded",
-          "25 MUTABLE_UNSYNCHRONIZED global(s) carry no source-stated safety contract: an unsynchronized mutable global with no contract is an unexplained reachable data race; recorded",
-          "5080 exported C-ABI function(s) are UNKNOWN: the body contains no guard_ffi/catch_unwind and no explicit unwind token, so whether it can unwind across the C ABI is not measured here; an UNKNOWN class blocks the seal rather than passing it (the panic-injection measurement belongs to a later subphase)",
-          "150 callback(s) are recorded as possibly outliving their registrar (process-global allocation/async/bio-method/provider-dispatch hooks); the lifetime is a structural classification, not an observed one"
+          "18 MUTABLE_UNSYNCHRONIZED global(s) carry no source-stated safety contract: an unsynchronized mutable global with no contract is an unexplained reachable data race; recorded",
+          "5078 exported C-ABI function(s) are UNKNOWN: the body contains no guard_ffi/catch_unwind and no explicit unwind token, so whether it can unwind across the C ABI is not measured here; an UNKNOWN class blocks the seal rather than passing it (the panic-injection measurement belongs to a later subphase)",
+          "154 callback(s) are recorded as possibly outliving their registrar (process-global allocation/async/bio-method/provider-dispatch hooks); the lifetime is a structural classification, not an observed one"
         ],
         "findings_present": true,
         "measurement_state": "complete",
@@ -106,7 +106,7 @@
           "127219 census site(s) are `NOT_OBSERVED`: 18756 have no Phase-22 authority unit (the 25.5 residual) and 108463 are mapped to a unit no measured consumer imports; recorded, never dropped",
           "the join speaks for 6 measured consumer(s) of 1000 fingerprinted famil(ies): only the families the 24.3 usage census fingerprinted carry symbol-level import evidence, so a counted family without a fingerprint is not counted as reaching any site",
           "the top consumers by reachable-site count are haproxy=34751, curl=22181, openssh=19051; 44872 site(s) are DOWNSTREAM_RUNTIME_OBSERVED and 0 DOWNSTREAM_IMPORT_OBSERVED",
-          "2 imported symbol(s) (HMAC, SHA256) have no clean Phase-22 entity mapping and are recorded as join_evidence_missing residuals; 2 runtime-observed family/-ies without a fingerprint cannot be attributed to a site and are recorded too",
+          "2 imported symbol(s) (HMAC, SHA256) have no clean Phase-22 entity mapping and are recorded as join_evidence_missing residuals; 217 runtime-observed family/-ies without a fingerprint cannot be attributed to a site and are recorded too",
           "reaching a site is import evidence, not execution: 44872 site(s) are reached by a measured consumer's symbol table, and a runtime observation covers the measured workload only"
         ],
         "findings_present": true,
@@ -122,9 +122,9 @@
         "closure": "the `MS-EXPOSURE-CLASSIFICATION` court passes",
         "findings": [
           "172091 census site(s) carry exactly one exposure class: 5881 are network-reachable (3543 server, 2338 client), 154344 are externally reachable, 0 are `UNREACHABLE_PROFILE` and 17747 carry `UNKNOWN_REACHABILITY`. Every unreachable site carries a justified exclusion witness; an unknown is the site whose 25.5 mapping is missing, and an unknown is not a zero and not an unreachability claim",
-          "16755 site(s) are attacker-input reachable across 17 of 18 route(s); the largest are PROVIDER_PARAMETERS=4815, X509_CERTIFICATE=4289, DER=1340. The routes are a rule over committed parser identities, not a dynamic taint result",
-          "37973 externally reachable buffer operation(s) are censused by buffer origin, pointer origin and capacity origin; the length origin, the integer-conversion path and the copy primitive are `NOT_MEASURED` and are the dynamic subphases' subject",
-          "the risk tiers are a review priority: S0=0, SU=17747, S1=116371, S2=36236, S3=0, S4=1737; an unknown exposure is SU, not S0, so 17747 unknown site(s) stay eligible for high-priority investigation; 3 network site(s) are named as the review head",
+          "16524 site(s) are attacker-input reachable across 17 of 18 route(s); the largest are PROVIDER_PARAMETERS=4712, X509_CERTIFICATE=4256, DER=1304. The routes are a rule over committed parser identities, not a dynamic taint result",
+          "37544 externally reachable buffer operation(s) are censused by buffer origin, pointer origin and capacity origin; the length origin, the integer-conversion path and the copy primitive are `NOT_MEASURED` and are the dynamic subphases' subject",
+          "the risk tiers are a review priority: S0=0, SU=17747, S1=116800, S2=35819, S3=0, S4=1725; an unknown exposure is SU, not S0, so 17747 unknown site(s) stay eligible for high-priority investigation; 3 network site(s) are named as the review head",
           "the Phase-22 closure's `protocol` family is unpopulated, so a network class is grounded in the parser's committed role (the module or authority unit the peer drives) and is recorded as an `evidence_missing` residual, never read as a wire observation"
         ],
         "findings_present": true,
@@ -161,10 +161,10 @@
           "{'category': 'MIRI_MODEL_DISAGREEMENT', 'column': 0, 'detail': \"the Stacked Borrows run crate-unit-stacked and the Tree Borrows run crate-unit-tree disagree on harness crate-unit: ('FAIL', (('src/aes.rs', 376), ('src/modes/wrap.rs', 69), ('src/modes/wrap.rs', 69))) vs ('FAIL', (('src/modes/wrap.rs', 129), ('src/aes.rs', 1052))); a review item, not a resolved verdict\", 'disposition': 'FIXED', 'file': '', 'finding_id': 'mf-model-disagreement-crate-unit', 'line': 0, 'run_id': 'crate-unit-stacked'}"
         ],
         "findings_present": true,
-        "measurement_state": "complete",
-        "observation": "MS-MIRI is pass",
+        "measurement_state": "not_measured",
+        "observation": "MS-MIRI is fail",
         "property_status": "not_claimed",
-        "state": "implemented",
+        "state": "open",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "miri",
         "what": "the Miri results over the claimed profile, each with its tool state (pass, fail, not-reachable or unsupported) and its unsupported reason where it could not express the question, so an unsupported target is never read as a pass"
@@ -208,10 +208,10 @@
       {
         "closure": "the `MS-PHASE18-FUZZ-CROSSWALK` court passes",
         "findings": [
-          "7416 of 16755 externally reachable buffer-operation site(s) are on a Phase-18 hostile-fuzz route across 2 hostile-fuzz target(s) (RT-HOSTILE-TLS=1470, RT-HOSTILE-X509=5946); 9339 are on an attacker-input route no Phase-18 corpus drives and are recorded as `evidence_missing` residuals, never zeroed",
+          "7332 of 16524 externally reachable buffer-operation site(s) are on a Phase-18 hostile-fuzz route across 2 hostile-fuzz target(s) (RT-HOSTILE-TLS=1461, RT-HOSTILE-X509=5871); 9192 are on an attacker-input route no Phase-18 corpus drives and are recorded as `evidence_missing` residuals, never zeroed",
           "the 2 Phase-18 hostile-fuzz target(s) carry 220 corpus entr(ies) and 0 crash/OOM/timeout finding(s) (the bounded mutational screen adds 0); a finding is carried here rather than dropped with the run",
           "5 of 18 attacker-input route(s) are driven by a Phase-18 hostile-fuzz target and 13 are not; 3 of 5 register group(s) are not hostile-input fuzz targets and are `out_of_scope`",
-          "155336 census site(s) are on no attacker-input route: they are not externally reachable buffer operations, so no fuzz target is expected to exercise them, and this is said rather than read as covered",
+          "155567 census site(s) are on no attacker-input route: they are not externally reachable buffer operations, so no fuzz target is expected to exercise them, and this is said rather than read as covered",
           "a Phase-18 `PASS` is a bounded result over the corpus it drove, not a coverage or memory-safety claim: a site under a passing corpus is exercised by that corpus's classes, never proven safe"
         ],
         "findings_present": true,
@@ -228,7 +228,7 @@
         "findings": [
           "44872 of 154344 externally reachable compiler-derived unsafe site(s) are observed by a Phase-24 downstream run across 6 runtime-observed measured consumer(s) (curl=22181, haproxy=34751, monit=11122, openssh=19051, pure-ftpd=6268, redis=9828); 109472 are externally reachable but observed by no downstream run and are recorded as `evidence_missing` residuals (CLI_INPUT_REACHABLE=65250, CONFIG_REACHABLE=1636, LOCAL_API_REACHABLE=2107, LOCAL_FILE_INPUT_REACHABLE=34907, NETWORK_CLIENT_REACHABLE=2338, NETWORK_SERVER_REACHABLE=3234), never zeroed",
           "the unreduced universe is the live census's 172091 site(s), tied to 25.8's post-reduction `sites_after`=172091 and its 50 ELIMINATED operation(s); 17747 site(s) are outside the externally reachable set and are `out_of_scope`, never read as observed",
-          "the runtime-functional atlas records 8 functional candidate run(s) and the p1000 ladder 33 `DROP_IN_PASS` family(ies); 6 of the 1000 frozen families carry a committed usage fingerprint, so a run family without one is a `join_evidence_missing` residual rather than a site attribution",
+          "the runtime-functional atlas records 223 functional candidate run(s) and the p1000 ladder 33 `DROP_IN_PASS` family(ies); 6 of the 1000 frozen families carry a committed usage fingerprint, so a run family without one is a `join_evidence_missing` residual rather than a site attribution",
           "the coverage is a post-freeze measurement over the frozen population (holdout status `opened`: 800 development + 200 holdout) and selects nothing by a holdout label",
           "a downstream observation is a bounded result over the workload it drove, not a coverage or memory-safety claim: a site observed by a passing run is exercised by that run's surface classes, never proven safe"
         ],
@@ -297,7 +297,7 @@
       {
         "closure": "the `MS-RED-TEAM` court passes",
         "findings": [
-          "13 red-team attack(s) were run across 7 method(s) over 1252718 site(s): by outcome INCONCLUSIVE=1, NO_GAP=12; by method coverage_join=2, exposure_witness=3, fuzz_corpus=2, mechanism_witness=2, phase22_typed_edges=2, reduction_join=1, tool_witness=1",
+          "13 red-team attack(s) were run across 7 method(s) over 1252487 site(s): by outcome INCONCLUSIVE=1, NO_GAP=12; by method coverage_join=2, exposure_witness=3, fuzz_corpus=2, mechanism_witness=2, phase22_typed_edges=2, reduction_join=1, tool_witness=1",
           "0 genuine gap(s) were found and 1 attack(s) are inconclusive; the attacks that found nothing are recorded as 'no gap found under method X', which is never proof of absence",
           "the inconclusive attack(s) are named rather than smoothed over: rt-phase22-unwitnessed-external",
           "a genuine gap is a property finding and a residual, never suppressed: none was found, so no residual is owed to a gap",
@@ -345,9 +345,9 @@
         "findings": [
           "the record set is 22 Phase-25 contract unit(s): 22 joined to their committed evidence and generator, 0 pending with the subphase that lands them and 0 orphaned",
           "the FRF chain owes 0 receipt(s) and the stratum's 22 court obligation(s) join their committed evidence (22 joined, 0 owing a receipt, 0 orphaned), so no receipt/challenge/claim that names a Phase-25 court is orphaned",
-          "the residual census disposes 483 of 483 residual record(s) from the closed disposition vocabulary and records 11 light cross-check leftover(s); 449 residual(s) are open and 0 undisposed",
+          "the residual census disposes 698 of 698 residual record(s) from the closed disposition vocabulary and records 11 light cross-check leftover(s); 664 residual(s) are open and 0 undisposed",
           "1 residual(s) carry a class from a plane's own vocabulary rather than memory_safety_schemas.RESIDUAL_CLASSES (evidence_not_reproducible=1); each is recorded with its disposition rather than read as an undisposed leftover",
-          "the open residual(s) are named rather than smoothed to a zero (a bounded sample of 8 per plane; the full set is in the cited plane): clean-regeneration=1, cve-replay=4, exposure-classification=1, historical-cve-census=8, mechanism-reconciliation=4, phase18-fuzz-crosswalk=8, phase22-crosswalk=8, phase24-crosswalk=5, phase24-safety-coverage=8, red-team=1",
+          "the open residual(s) are named rather than smoothed to a zero (a bounded sample of 8 per plane; the full set is in the cited plane): clean-regeneration=1, cve-replay=4, exposure-classification=1, historical-cve-census=8, mechanism-reconciliation=4, phase18-fuzz-crosswalk=8, phase22-crosswalk=8, phase24-crosswalk=8, phase24-safety-coverage=8, red-team=1",
           "a passing MS-FRF-CLOSURE is an instrument, not a property: the stratum's chain entry is vacuous (no Phase-25 court is declarable) and the atlas carries open residuals, so the closure records property_status NOT_CLAIMED rather than a chain that ran"
         ],
         "findings_present": true,
@@ -362,8 +362,8 @@
       {
         "closure": "the `MS-SEAL` court passes",
         "findings": [
-          "the seal consolidates 21 Phase-25 court result(s): 21 pass, 0 fail, each joined to its committed artefact and digest",
-          "the residual census classifies and disposes 483 residual record(s) plus 11 light cross-check leftover(s); 449 are open and 0 undisposed",
+          "the seal re-derives 21 non-`MS-SEAL` Phase-25 court result(s) from their committed planes: 18 pass, 3 fail (MS-MIRI, MS-NON-RUST-TCB, MS-SOURCE-CENSUS); the runner's registry `artifacts/phase25/COURTS.json` records 22 court row(s), 19 pass and 3 fail, and is not the seal's input, so the two records disagree and this ledger states both rather than adopting the registry's verdicts",
+          "the residual census classifies and disposes 698 residual record(s) plus 11 light cross-check leftover(s); 664 are open and 0 undisposed",
           "the seal records passed=false because 183 externally reachable site(s) carry tool state UNSUPPORTED; UNSUPPORTED is never PASS (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
           "the open items are named rather than smoothed to a zero: census-geiger-unavailable, census-unresolved-reachability, cve-replay-unknown, externally-reachable-fail, externally-reachable-unsupported, mechanism-reconciliation-open, rt-phase22-unwitnessed-external",
           "the bounded claim is the inventory of a fixed candidate's first-party surface in the claimed profile; it is NOT 'no memory-safety bug can exist' and NOT '100% memory safe'",
@@ -385,8 +385,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 22,
-      "open_in_this_stratum": 0,
+      "implemented": 19,
+      "open_in_this_stratum": 3,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -427,7 +427,7 @@
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "f770e6ff7f5d1c12da44ed74ef324fe858fd76b6fcb19784eab0a9793e991135"
+      "sha256": "1a189c6a5819e6c361f668188cf31f388c5624e3ad81f56a7280f3a7f3d6fa9f"
     },
     {
       "name": "phase25-guard",

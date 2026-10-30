@@ -1,5 +1,11 @@
 # Phase 15 — QUIC / ECH and modern SSL surface (`quic.h`): seal
 
+> **Historical identity (2026-10-28).** Sentences below such as "the identity is the current
+> 0.0.27 release" describe this seal's state when it was written; they are **historical**. The
+> current candidate is `openssl-rs 0.0.43`, which is **not published**; the published release is
+> `0.0.42` (2026-10-27, crates.io checksum `b9a542cf…`). Read every `0.0.27` identity in this
+> document as historical evidence, never as the current release.
+
 **STATUS: derived.** This status is not typed; it is the state `forensics/tools/phase_state.py`
 derives from artefact existence. The stratum's export ledger is empty of open rows —
 `forensics/phase15-obligations.json:9` reads `open_in_this_stratum: 0` — the stratum ships no

@@ -219,13 +219,13 @@
       "name": "divergence-register",
       "note": "the prose register this table transcribes",
       "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-      "sha256": "ee06d4b9630de98060fc7e23fdc98dfe22c3d9df728682c289b8cd28ae9f06f7"
+      "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379"
     },
     {
       "name": "phase-8-seal",
       "note": "says which of §5's entries are Phase 8's and how D-EC-2 and D372 read",
       "path": "docs/PHASE-8-CRYPTO-SEAL.md",
-      "sha256": "f74d262edfb4e2e8be37ae06b6e1f6f81e33c584979a24e114b95bd818345cfb"
+      "sha256": "e3a3acc26821e257ea444edd3a481cda52308fc6e6234e3e78c6c2bc2a059e67"
     },
     {
       "name": "phase-9-seal",
@@ -237,13 +237,13 @@
       "name": "phase-8-obligations",
       "note": "the Phase 8 ledger, whose open_in_this_stratum is what a freeing row would move",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "0b4c743244b0cd732f6ba4d86fa1c4c21e85dd220524e721b89035b3c0427383"
+      "sha256": "3029008bc44662690aba944b01305dea098956a729fd86fd5a91a159e6295289"
     },
     {
       "name": "phase-9-obligations",
       "note": "the Phase 9 ledger, whose open_in_this_stratum is what a freeing row would move",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "68f4e2fcc6b3ff85ad15ebfb9084f33a573bfc45440d52ee9f15d84af9657b0a"
+      "sha256": "93cc54afe35783a1e8cbd1865f54c234cd774924a76789aba4ab67df284d11ea"
     },
     {
       "name": "provider-algorithms",

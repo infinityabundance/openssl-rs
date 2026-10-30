@@ -1,0 +1,183 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/evidence/s2-s3-s4-witnesses/v1",
+  "generated_utc": "2026-10-29T18:20:47Z",
+  "subject": "ssh",
+  "source_head": "d650139fe86c9c672018b27ddc11d3f26143bdd5",
+  "branch": "stage/p25/analyzer-corpus",
+  "tool": {
+    "path": "forensics/tools/consumer_closure.py",
+    "sha256": "17f7d189c2783c6e9b02f54e308fb509ec3a1ce1363daba29e0fd912c08e7414"
+  },
+  "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1q-candidate-freeze.json",
+  "artifact": "court/tmp/openssh-closure/client-v1q/openssh-9.9p1/ssh",
+  "artifact_sha256": "f95c15ecdaa49d1ad0fe811ed6b6f72ee0a5caa6c986d9ae4cd88dd4db50e1f0",
+  "precision_totals": {
+    "indirect_sites": 52022,
+    "resolved_sites": 51782,
+    "unresolved_sites": 240,
+    "reachable_unresolved_sites": 194,
+    "reachable_target_bounded_unresolved_sites": 134,
+    "reachable_contract_bounded_sites": 60,
+    "unclassified_reachable_sites": 0,
+    "resolved_by_reachable_caller": 1
+  },
+  "element_7": {
+    "established": false,
+    "status": "FAIL",
+    "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+    "reachable_unresolved_sites": 194,
+    "target_bounded_unresolved_sites": 134,
+    "contract_bounded_sites": 60,
+    "contract_bounded_by_class": {
+      "ABI_CONTRACT_EXPORT_CALLBACK": 46,
+      "ABI_CONTRACT_PROVIDER": 14
+    },
+    "unclassified_reachable_sites": 0,
+    "target_sets_remain_unbounded": true,
+    "why": "134 reachable unresolved site(s) are not contract-bounded, and/or an unclassified site is reachable"
+  },
+  "evidence_classes": {
+    "libcrypto.so.3": {
+      "R2_resolved": 318,
+      "RCB_reachable_caller_unresolved": 78,
+      "S2_export_callback_contract_bounded": 66,
+      "unmatched": 160,
+      "S6_triaged_not_absorbed": 1,
+      "S2_export_callback_unresolved": 18,
+      "S3_fetch_slot_contract_bounded": 12,
+      "T_in_image_slot_resolved": 14,
+      "A2_resolved": 11,
+      "R3_resolved": 6,
+      "RCB_reachable_caller_resolved": 1,
+      "T_local_fptr_resolved": 4,
+      "A1_contract_bounded": 2,
+      "T_semantic_store_resolved": 9
+    }
+  },
+  "mechanisms": [
+    {
+      "id": "S3-fetch-slot",
+      "class": "ABI_CONTRACT_PROVIDER",
+      "location": "forensics/tools/consumer_closure.py: fetch_slot_witness / FETCH_FAMILIES",
+      "applied": 12,
+      "kind": "contract-bounded, target set unbounded",
+      "witness": [
+        "base register is the family fetch return",
+        "slot offset is a declared #[repr(C)] field",
+        "OSSL_FUNC_* id names the field",
+        "one source assignment in the family from_algorithm"
+      ]
+    },
+    {
+      "id": "S2-export-callback",
+      "class": "ABI_CONTRACT_EXPORT_CALLBACK",
+      "location": "forensics/tools/consumer_closure.py: export_callback_witness",
+      "applied": 46,
+      "kind": "contract-bounded, target set unbounded",
+      "witness": [
+        "operand is exactly entry parameter N",
+        "all in-image chains forward the same parameter",
+        "root is in .dynsym",
+        "header declares the parameter as a function-pointer typedef",
+        "finite private chain deferred to reachable-caller-target"
+      ]
+    },
+    {
+      "id": "S4-local-fptr",
+      "class": "local-function-pointer",
+      "location": "forensics/tools/consumer_closure.py: local_fptr_witness",
+      "applied": 4,
+      "kind": "resolved finite target set",
+      "targets": [
+        "0x3e0020",
+        "0x3e0040",
+        "0x3e0070",
+        "0x3e00a0"
+      ],
+      "witness": [
+        "closure by reference through parameter 3",
+        "frame slot rebuilt from 4 lea assignments",
+        "no other reaching store"
+      ]
+    }
+  ],
+  "s6_triage": {
+    "msblob2key_decode": {
+      "is_evp_pkey_asn1_method": false,
+      "finding": "static #[repr(C)] KeytypeDesc dispatch (src/provider/decode_msblob2key.rs)",
+      "disposition": "target-bounded; belongs to the deferred S1 static-table batch"
+    },
+    "do_PVK_key_bio": {
+      "is_evp_pkey_asn1_method": false,
+      "finding": "genuine pem_password_cb parameter (src/pem/pvkfmt.rs:1679)",
+      "disposition": "ABI_CONTRACT_EXPORT_CALLBACK; roots b2i_PVK_bio/b2i_PVK_bio_ex"
+    }
+  },
+  "refusals": [
+    {
+      "condition": "base is not the fetch return",
+      "effect": "site stays target-bounded"
+    },
+    {
+      "condition": "slot offset outside the declared fields",
+      "effect": "site stays target-bounded"
+    },
+    {
+      "condition": "more than one source assignment / wrong writer",
+      "effect": "site stays target-bounded"
+    },
+    {
+      "condition": "operand is not exactly entry parameter N",
+      "effect": "site stays target-bounded"
+    },
+    {
+      "condition": "header declares a non-callback",
+      "effect": "site stays target-bounded"
+    },
+    {
+      "condition": "no exported root (finite in-image callers)",
+      "effect": "deferred to reachable-caller-target"
+    },
+    {
+      "condition": "any path leaves the local slot unwritten or writes a non-function",
+      "effect": "site stays target-bounded"
+    }
+  ],
+  "mutation_matrix": [
+    [
+      "fetch-base-not-return",
+      "negative accepted when the check is removed"
+    ],
+    [
+      "fetch-slot-outside",
+      "negative accepted when the check is removed"
+    ],
+    [
+      "fetch-source-writer",
+      "negative accepted when the check is removed"
+    ],
+    [
+      "export-not-param",
+      "negative accepted when the check is removed"
+    ],
+    [
+      "export-header-non-callback",
+      "negative accepted when the check is removed"
+    ],
+    [
+      "export-no-root",
+      "negative accepted when the check is removed"
+    ],
+    [
+      "local-non-function",
+      "negative accepted when the check is removed"
+    ]
+  ],
+  "non_claims": [
+    "contract-bounded sites are NOT resolved; their target set remains unbounded",
+    "the reduction is in target-bounded unresolved sites, not in total unresolved sites",
+    "element 7 remains FAIL",
+    "no obligation was adjudicated in this batch",
+    "the S1 static-table instance dispatch (next batch) was not attempted"
+  ]
+}

@@ -1,0 +1,286 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/closure-input-completeness/v1",
+  "recorded_utc": "2026-10-29",
+  "claim": "P0 input-completeness closure for the v1p OpenSSH candidate: the analysis identity now binds the data/relocation inputs the derivation reads, and every symbolic residual-bound target carries exactly one disposition.",
+  "candidate": {
+    "source_head_at_run": "86393abe39995e9237702b6fafcccd9b1dceb2f1",
+    "source_branch": "stage/p25/analyzer-corpus",
+    "tracked_tree_dirty_at_run": true,
+    "note": "the run records the working-tree tool digest below; it is not a frozen S commit (AGENTS.md section 22)",
+    "tool": {
+      "path": "forensics/tools/consumer_closure.py",
+      "sha256": "d1d80b43a0579c1d3e3334752e9f99aa4d3725b616606d2288e65fc92ab7c0de",
+      "version": 5
+    },
+    "artifact": {
+      "path": "court/tmp/openssh-closure/client-v1p/openssh-9.9p1/ssh",
+      "sha256": "0cab1198609b53a38737febbb0bea3a02d470b3c35b83764d25156e40ff9c5db"
+    },
+    "install": "artifacts/phase2/install",
+    "libcrypto_sha256": "dadb0263f1eab453dc8717a9c1851772ffed7660eeeced29d79d7b206cec7fb3",
+    "inventory": "court/closure/v1p-rebuild-candidate-freeze.json",
+    "inventory_source_head": "ad5913099732821d2e95d03823dd38e501d73481",
+    "receipt": "court/closure/closure-ssh-input-complete.json",
+    "edge_records": "court/closure/edge-records-input-complete.jsonl"
+  },
+  "run": {
+    "rc": 1,
+    "verdict": "REFUSED",
+    "refusal_codes": [
+      "MISSING_BOUNDARY_RECEIPT",
+      "UNKNOWN_OBLIGATION",
+      "UNKNOWN_MECHANISM",
+      "HASH_RULE_MISMATCH"
+    ],
+    "symbol_refusal_present": false,
+    "closure_rounds": 2,
+    "converged": true,
+    "round_sizes": [2606, 8764, 8764],
+    "sites_scanned_per_round": [0, 9, 202],
+    "reachable_files": 626,
+    "reachable_production_obligations": 315,
+    "discharged": 90,
+    "blocked": 106,
+    "unknown": 119,
+    "reachable_functions_count": 8672,
+    "reachable_functions_sha256": "bef874a515bcb41011bf011fd350d62f2d05d2db13288ae8ec26928581c286c9",
+    "reachable_functions_raw_name_sha256": "ea2095d234cd93085e651d8518171042fbbb74eb04f24d8620f1494d05b3839a",
+    "crypto_cbc128_encrypt_reachable": true,
+    "crypto_cbc128_encrypt_address": "0x350d30",
+    "element_7": {
+      "established": false,
+      "status": "FAIL",
+      "reachable_unresolved_sites": 202,
+      "target_bounded_unresolved_sites": 200,
+      "contract_bounded_sites": 2,
+      "contract_bounded_by_class": {"ABI_CONTRACT_PROVIDER": 2},
+      "unclassified_reachable_sites": 0
+    },
+    "edge_records": {
+      "count": 52004,
+      "sha256": "028a165f0d8a85cb1e83c73fede65bcdca00971a490227a844409a11374fbc11",
+      "dispositions": {
+        "CONTRACT_BOUNDED": 2,
+        "PROVED_TARGET_SET": 51173,
+        "UNRESOLVED": 829
+      }
+    }
+  },
+  "analysis_identity": {
+    "schema": "openssl-rs/campaign/safe-c33/analysis-identity/v2",
+    "digest": "3bdf2a60a6a37be1224386fde20f9c5340669caa6dcd3064aaed57a6d5798b7f",
+    "basis": "sha256 over, in module-name order, each module name and a canonical JSON input record: every allocated (SHF_ALLOC) section's (name, ELF type, virtual address, size, sha256 of its bytes), the sorted relocation table (section, section-relative offset, type, canonical symbol, addend), the sorted [name, addr, size, kind] defined-symbol rows, the sorted dynamic-symbol rows, and the loader entries (SONAME/NEEDED/RUNPATH/RPATH). Required minimum sections: .text, .plt, .plt.got, .init, .fini, .rodata, .data, .data.rel.ro, .data.rel.ro.local, .got, .got.plt, .init_array, .fini_array; NOBITS sections (address/size only): .bss. Excluded: .debug_*, .zdebug_*, .comment, .note*, .gnu_debuglink, .gnu_debugaltlink, .gnu.build.attributes, every non-allocated section (SHF_ALLOC is absent). ``.llvm.<hash>`` and ``@@VERSION`` suffixes are canonicalised as in the symbol table; the DSO file digest is recorded as a non-identity.",
+    "included_sections": [".bss", ".data", ".data.rel.ro", ".dynamic", ".dynstr", ".dynsym", ".eh_frame", ".eh_frame_hdr", ".fini", ".fini_array", ".gcc_except_table", ".gnu.hash", ".gnu.version", ".gnu.version_d", ".gnu.version_r", ".got", ".got.plt", ".init", ".init_array", ".plt", ".plt.got", ".rela.dyn", ".rela.plt", ".rodata", ".tbss", ".tdata", ".text"],
+    "module": {
+      "name": "libcrypto.so.3",
+      "text_sha256": "812e078b856793fc654ec4bb6638466ea0a0818a19d96c2b2d2628d3852b9d75",
+      "text_size": 4962638,
+      "symbol_rows": 30239,
+      "symbol_table_sha256": "690ab530a9d6aeda7eb10caa6d7aa21e35b948fc93d84859c93c85dd8936d4e7",
+      "dynamic_symbol_rows": 5906,
+      "dynamic_symbol_table_sha256": "155edd471ac0ef89e37b4333bdef84ed404d1677e889ac3e2cbc5b3b078f81bc",
+      "relocations": 46110,
+      "relocation_table_sha256": "c07461f1cbfd385b58c22220c0583061a5eb066c8bede61f97d9b62de7ae9252",
+      "dynamic_entries_sha256": "edcd4c39f7b03233903772ffe07cf9624b503ec88f3dba8d9c2c4e45857a0e1a",
+      "input_sha256": "25bdc4717a6272e2a947857b66e823b7046cd951846a95e010c07f39730221c5",
+      "dso_sha256": "dadb0263f1eab453dc8717a9c1851772ffed7660eeeced29d79d7b206cec7fb3",
+      "dso_sha256_is_analysis_identity": false
+    }
+  },
+  "bound_evidence_sources": {
+    "module": "libcrypto.so.3",
+    "taken_code": 739,
+    "taken_data": 3706,
+    "slot_func_targets": 4596,
+    "dynamic_reloc_targets": 1384,
+    "address_taken_union": 6587,
+    "field_store_values": 2287,
+    "unknown_call_arg_targets": 1117,
+    "bound_values": 8504,
+    "bound_nodes": 6690,
+    "non_code_values": 1789,
+    "symbol_values": 5,
+    "resolved_symbol_values": 5,
+    "external_contract_symbol_values": 0,
+    "unresolved_symbol_values": 0,
+    "unresolved_sites": 246,
+    "sites_with_site_targets": 0
+  },
+  "symbol_dispositions": {
+    "summary": {
+      "schema": "openssl-rs/campaign/safe-c33/symbol-disposition/v1",
+      "resolution_order": [
+        "exact-export",
+        "version-stripped-export",
+        "names-at",
+        "dynamic-symbol-table",
+        "soname-qualified-import",
+        "plt-stub"
+      ],
+      "resolved": 5,
+      "external-contract": 0,
+      "blocking": 0
+    },
+    "rows": [
+      {
+        "symbol": "CRYPTO_128_unwrap@@OPENSSL_3.0.0",
+        "module": "libcrypto.so.3",
+        "slot_offsets": ["0x894da8"],
+        "disposition": "resolved",
+        "path": "version-stripped-export",
+        "target": ["libcrypto.so.3", "0x2d8cd0"],
+        "why_exact_lookup_missed": "the bound value carries the @@OPENSSL_3.0.0 suffix from readelf -rW; export_index is keyed by the version-stripped name (defined_symbols splits '@'), so export_index.get(versioned) is None and export_index.get(base) is the target"
+      },
+      {
+        "symbol": "CRYPTO_128_unwrap_pad@@OPENSSL_3.0.0",
+        "module": "libcrypto.so.3",
+        "slot_offsets": ["0x894438"],
+        "disposition": "resolved",
+        "path": "version-stripped-export",
+        "target": ["libcrypto.so.3", "0x2d8d80"],
+        "why_exact_lookup_missed": "same version-suffix mismatch; the symbol is exported by libcrypto under OPENSSL_3.0.0"
+      },
+      {
+        "symbol": "CRYPTO_128_wrap@@OPENSSL_3.0.0",
+        "module": "libcrypto.so.3",
+        "slot_offsets": ["0x891fa0"],
+        "disposition": "resolved",
+        "path": "version-stripped-export",
+        "target": ["libcrypto.so.3", "0x2d9260"],
+        "why_exact_lookup_missed": "same version-suffix mismatch; the symbol is exported by libcrypto under OPENSSL_3.0.0"
+      },
+      {
+        "symbol": "CRYPTO_128_wrap_pad@@OPENSSL_3.0.0",
+        "module": "libcrypto.so.3",
+        "slot_offsets": ["0x892d28"],
+        "disposition": "resolved",
+        "path": "version-stripped-export",
+        "target": ["libcrypto.so.3", "0x2d9270"],
+        "why_exact_lookup_missed": "same version-suffix mismatch; the symbol is exported by libcrypto under OPENSSL_3.0.0"
+      },
+      {
+        "symbol": "PEM_def_callback@@OPENSSL_3.0.0",
+        "module": "libcrypto.so.3",
+        "slot_offsets": ["0x8943e8"],
+        "disposition": "resolved",
+        "path": "version-stripped-export",
+        "target": ["libcrypto.so.3", "0x45b860"],
+        "why_exact_lookup_missed": "same version-suffix mismatch; the symbol is exported by libcrypto under OPENSSL_3.0.0"
+      }
+    ]
+  },
+  "input_enumeration": {
+    "note": "byte ranges and structural facts the DsoGraph derivation reads; the identity binds every allocated (SHF_ALLOC) section, not only the sections the code names explicitly",
+    "all_allocated_note": "section_of is unconstrained in cstring_at and switch_targets, so the identity binds every allocated section; the explicit lists below name the sections the derivation reads directly.  The v1p module's actual bound set is the 27 names in analysis_identity.included_sections.",
+    "executable_bytes": {
+      "sections": [".text", ".plt", ".plt.got", ".init", ".fini"],
+      "consumed_by": "objdump -d: direct call/jmp edges, address-taken lea/mov comments, indirect-site detection, compiler switch-bound decoding"
+    },
+    "data_bytes": {
+      "sections": [".rodata", ".data", ".data.rel.ro", ".data.rel.ro.local",
+                   ".got", ".got.plt", ".init_array", ".fini_array"],
+      "consumed_by": "8-byte pointer scan (taken_data), static_slot reads, relative jump tables, dlsym string literals, loader roots"
+    },
+    "nobits": {
+      "sections": [".bss"],
+      "consumed_by": "section_of address range; a .bss slot is a zero value"
+    },
+    "tables": [
+      "defined-symbol table (nm -S --defined-only): function starts, aliases, sizes, kinds",
+      "dynamic-symbol table (nm -D --defined-only): export_index, resolver exports, dynamic-reloc widening",
+      "relocation table (readelf -rW): R_X86_64_RELATIVE addends, GLOB_DAT/JUMP_SLOT symbols, R_X86_64_64 symbol+addend",
+      "ELF section header table: section names, types, virtual addresses, sizes",
+      ".dynamic entries: SONAME/NEEDED/RUNPATH/RPATH (loader/module selection)"
+    ],
+    "excluded": [
+      ".debug_*", ".zdebug_*", ".comment", ".note*", ".gnu_debuglink",
+      ".gnu_debugaltlink", ".gnu.build.attributes",
+      "every non-allocated section (SHF_ALLOC is absent), including .symtab/.strtab/.shstrtab and the debug sections"
+    ]
+  },
+  "controls": {
+    "negative": {
+      "file": "court/closure/negative-control-result.json",
+      "verdict": "PASS",
+      "patch": {
+        "slot": "0x7b7e08",
+        "section": ".data.rel.ro",
+        "relocation_addend_file_offset": "0x52dc0",
+        "old_addend": "0x493990",
+        "new_addend": "0x160c80",
+        "new_target_names": [
+          "_RNvMs4_NtCs6i54tJFfzR_5alloc7raw_vecINtB5_6RawVecNtNtNtCs3iYjyFzWfzV_10openssl_rs2ec8curve4486PnielsE8grow_oneBR_"
+        ]
+      },
+      "unchanged": {
+        "text_sha256": "812e078b856793fc654ec4bb6638466ea0a0818a19d96c2b2d2628d3852b9d75",
+        "text_equal": true,
+        "symbol_table_sha256": "690ab530a9d6aeda7eb10caa6d7aa21e35b948fc93d84859c93c85dd8936d4e7",
+        "symbol_table_equal": true
+      },
+      "identity": {
+        "original": "3bdf2a60a6a37be1224386fde20f9c5340669caa6dcd3064aaed57a6d5798b7f",
+        "patched": "b3313c941d8286267ea125c1d074b8d06571c6065d82883135bbfe529ff9684c",
+        "changed": true,
+        "relocation_table_changed": true,
+        "data_rel_ro_raw_changed": false
+      },
+      "reachability": {
+        "root": "0x166340",
+        "original_count": 8569,
+        "patched_count": 8570,
+        "original_has_patched_target": false,
+        "patched_has_patched_target": true,
+        "added": ["0x160c80"],
+        "removed": []
+      },
+      "scope": "targeted DsoGraph + production build_graph comparison with the precision resolver run on both images; not the full 25-minute closure"
+    },
+    "positive": {
+      "file": "court/closure/neutral-identity.json",
+      "pair": ["court/neutral/a", "court/neutral/b"],
+      "verdict": "PASS",
+      "identity_a": "3bdf2a60a6a37be1224386fde20f9c5340669caa6dcd3064aaed57a6d5798b7f",
+      "identity_b": "3bdf2a60a6a37be1224386fde20f9c5340669caa6dcd3064aaed57a6d5798b7f",
+      "equal": {
+        "analysis_identity": true,
+        "text": true,
+        "symbol_table": true,
+        "relocation_table": true,
+        "dynamic_symbol_table": true,
+        "sections": true,
+        "dso_digest_differs": true
+      },
+      "note": "the closures were not re-run; the old reachable-set evidence in neutral-control.json is retained"
+    }
+  },
+  "comparison_to_v1p_admission": {
+    "previous_receipt": "forensics/memory-safety/campaign/safe-c33/evidence/closure-ssh-fixpoint-v1p-admission.json",
+    "reachable_functions_count": "unchanged (8672)",
+    "reachable_functions_sha256": "unchanged (bef874a5...)",
+    "edge_records_sha256": "unchanged (028a165f...)",
+    "reachable_files": "unchanged (626)",
+    "obligations": "unchanged (315: 90/106/119)",
+    "analysis_identity": "changed b8f0b873.../v1 -> 3bdf2a60.../v2 because the identity now binds data sections, relocations, the dynamic symbol table and loader entries",
+    "symbol_values": "the five symbolic values that v1 counted as unresolved are now dispositioned; all five resolve through the version-stripped export",
+    "interpretation": "the P0 fixes change the identity and the disposition evidence, not the reachable set on this candidate; the five symbols were already reachable through other evidence, so no target was added or dropped"
+  },
+  "residuals": {
+    "hidden_unsafe_obligations": 0,
+    "unaccounted_symbols": [],
+    "unbound_inputs": [
+      "the disassembler/parser binaries (objdump, nm, readelf) are provided by the pinned court image; their versions are an environment input to the derivation and are not hashed into the analysis identity.  The tool digest and court image identity are recorded separately; a toolchain change requires re-measurement."
+    ],
+    "note": "all five symbolic values and every allocated section are accounted for; the remaining unbound input is the external toolchain, not an ELF input"
+  },
+  "non_claims": [
+    "The identity is not a proof of input completeness: it binds the enumerated inputs of the current derivation. A future derivation that starts reading another section must extend the enumeration.",
+    "No target was dropped to improve a count. The five symbols are exported by libcrypto; they are resolved through the version-stripped export, not marked external to clear a refusal.",
+    "The external-contract table is exact-name and cited; no symbol in this run used it, and it is not a wildcard or a refusal-clearing device.",
+    "The reachability algorithm did not change: the reachable-function digest and the edge-record sidecar digest are identical to the v1p admission run.",
+    "No obligation is newly discharged: the run remains REFUSED and no SAFE_COMPATIBLE claim is made.",
+    "The targeted negative control is not the full closure; it exercises one dispatch slot through the production DsoGraph and build_graph code paths without consumer roots or obligation adjudication.",
+    "The run was made from a dirty working tree at 86393abe3; it is not a frozen S commit and its tool digest is the one recorded above.",
+    "The analysis identity binds module inputs, not the objdump/nm/readelf toolchain; toolchain identity is recorded separately and a toolchain change requires re-measurement."
+  ]
+}

@@ -1573,9 +1573,15 @@ static void rt_modes_blocks(void)
  *   * the returned length, which is `inlen + 8` for a wrap and `inlen - 8` for an unwrap;
  *   * the refusal arms: a length that is not a multiple of eight, an out-of-range length,
  *     a mismatched IV, and a corrupted AIV or padding. On every refusal the authority
- *     returns 0 and **cleanses** the destination over the length it would have written,
- *     so the destination is pre-filled with a sentinel and printed whole: the zeroed
- *     region and the untouched sentinel are both evidence.
+ *     returns 0 and **cleanses `inlen` octets** (`crypto/modes/wrap128.c:291,303,317,327`),
+ *     while its own documented output minimum is `inlen - 8` (`padded_len`). The extra
+ *     eight octets are past anything the call could have written -- the CVE-2026-63072
+ *     over-write mechanism -- and the candidate deliberately cleanses only the written
+ *     extent (`src/modes/wrap.rs:277-286`). The destination is pre-filled with a sentinel
+ *     and printed whole, so the zeroed region and the untouched sentinel are both
+ *     evidence; the nine `*.badaiv.out`/`*.badicv.out` lines therefore differ from the
+ *     authority by exactly those eight octets and are recorded in the runner's
+ *     `ACCEPTED_DIVERGENCES`.
  *   * the RFC 5649 single-block special case, where a padded plaintext of exactly eight
  *     octets takes the ECB path rather than the wrap loop.
  */
@@ -8238,6 +8244,110 @@ static void rt_deflt_gmac(void)
  * not, because EVP chooses those arguments), and what this arm adds is the EVP layer's own
  * contribution to the queue -- including the `EVP_R_UPDATE_ERROR` a wrap row's oversized `outl`
  * produces when EVP checks the length it was handed. */
+static void rt_deflt_gcm_tls_iv_fixed(void)
+{
+    /*
+     * `EVP_CTRL_AEAD_SET_IV_FIXED` has one documented negative sentinel: `arg == -1` restores the
+     * whole IV (`crypto/evp/e_aes.c:1508-1514`, `ciphercommon_gcm.c.in:519-527`). OpenSSH's
+     * AES-GCM handshake is the caller that exposed a provider arm refusing it, so both the
+     * sentinel's return value and the record it produces are recorded. The normal four-byte fixed
+     * field and a length that is genuinely invalid (3, below the fixed-field minimum) follow: the
+     * first must succeed, the second must still answer 0. A negative value below -1 is *not* put
+     * here: the authority turns it into a `SIZE_MAX`-scale `memcpy`, so it would crash the
+     * authority side; the crate's refusal of it is pinned by a unit test instead (§17).
+     */
+    static const unsigned char key[16] = {
+        0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65, 0x73, 0x1c,
+        0x6d, 0x6a, 0x8f, 0x94, 0x67, 0x30, 0x83, 0x08
+    };
+    static const unsigned char iv12[12] = {
+        0xca, 0xfe, 0xba, 0xbe, 0xfa, 0xce, 0xdb, 0xad,
+        0xde, 0xca, 0xf8, 0x88
+    };
+    static const unsigned char plain[32] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+        0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+    };
+    EVP_CIPHER *cipher = EVP_CIPHER_fetch(NULL, "AES-128-GCM", NULL);
+    EVP_CIPHER_CTX *ctx;
+    unsigned char out[64], tag[16];
+    int outl = 0, finl = 0, ans = 0;
+
+    printf("defltgcmiv.fetched=%d\n", cipher != NULL);
+    if (cipher == NULL)
+        return;
+
+    /* The sentinel: install the whole IV, then the key, then encrypt one GCM message. */
+    ctx = EVP_CIPHER_CTX_new();
+    ERR_clear_error();
+    if (ctx != NULL && EVP_EncryptInit_ex2(ctx, cipher, NULL, NULL, NULL) == 1) {
+        ans = EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IV_FIXED, -1, (void *)iv12);
+        printf("defltgcmiv.m1=%d\n", ans);
+        if (ans == 1 && EVP_EncryptInit_ex2(ctx, NULL, key, NULL, NULL) == 1) {
+            printf("defltgcmiv.enc=%d\n",
+                   EVP_EncryptUpdate(ctx, out, &outl, plain, (int)sizeof(plain)));
+            printf("defltgcmiv.fin=%d\n", EVP_EncryptFinal_ex(ctx, out + outl, &finl));
+            printf("defltgcmiv.outl=%d.%d\n", outl, finl);
+            EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, tag);
+            rt_hex("defltgcmiv.ct", out, (size_t)outl);
+            rt_hex("defltgcmiv.tag", tag, 16);
+        }
+    } else {
+        printf("defltgcmiv.m1=%d\n", ans);
+    }
+    rt_errq("defltgcmiv_m1");
+    if (ctx != NULL)
+        EVP_CIPHER_CTX_free(ctx);
+
+    /* A normal length succeeds; a below-minimum length must still be refused. */
+    {
+        static const int args[2] = {4, 3};
+        static const char *const names[2] = {"defltgcmiv.len4", "defltgcmiv.len3"};
+        size_t k;
+
+        for (k = 0; k < 2; k++) {
+            ctx = EVP_CIPHER_CTX_new();
+            ERR_clear_error();
+            ans = 0;
+            if (ctx != NULL && EVP_EncryptInit_ex2(ctx, cipher, NULL, NULL, NULL) == 1)
+                ans = EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IV_FIXED, args[k],
+                                          (void *)iv12);
+            printf("%s=%d\n", names[k], ans);
+            rt_errq(names[k]);
+            if (ctx != NULL)
+                EVP_CIPHER_CTX_free(ctx);
+        }
+    }
+
+    /* CCM shares the command number but takes only its four-byte fixed field: -1 must fail. */
+    {
+        EVP_CIPHER *ccm = EVP_CIPHER_fetch(NULL, "AES-128-CCM", NULL);
+
+        printf("defltgcmiv.ccm.fetched=%d\n", ccm != NULL);
+        if (ccm != NULL) {
+            ctx = EVP_CIPHER_CTX_new();
+            ERR_clear_error();
+            ans = 0;
+            if (ctx != NULL && EVP_EncryptInit_ex2(ctx, ccm, NULL, NULL, NULL) == 1)
+                ans = EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IV_FIXED, -1, (void *)iv12);
+            printf("defltgcmiv.ccm.m1=%d\n", ans);
+            rt_errq("defltgcmiv_ccm_m1");
+            if (ctx != NULL)
+                EVP_CIPHER_CTX_free(ctx);
+            EVP_CIPHER_free(ccm);
+        }
+    }
+
+    EVP_CIPHER_free(cipher);
+}
+
+/* The same refusals reached the way an application reaches them, through `EVP_*`. Four of the
+ * six named paths are reachable here (the invalid key length and the too-small output buffer are
+ * not, because EVP chooses those arguments), and what this arm adds is the EVP layer's own
+ * contribution to the queue -- including the `EVP_R_UPDATE_ERROR` a wrap row's oversized `outl`
+ * produces when EVP checks the length it was handed. */
 static void rt_deflt_errors(void)
 {
     unsigned char key[32], iv[16], in[32], out[64];
@@ -8787,6 +8897,7 @@ int main(void)
     rt_deflt_siphash();
     rt_deflt_hmac();
     rt_deflt_gmac();
+    rt_deflt_gcm_tls_iv_fixed();
     rt_deflt_blake2_mac();
     rt_deflt_poly1305();
     rt_deflt_kmac();

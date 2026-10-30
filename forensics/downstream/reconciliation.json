@@ -161,18 +161,18 @@
       "coverage_symbols": 600,
       "distinct_stressors": 3,
       "failures_hostility": 2,
-      "failures_p1000": 3601,
-      "failures_p1000_preserved": 3601,
-      "failures_preserved": 3603,
+      "failures_p1000": 3094,
+      "failures_p1000_preserved": 3094,
+      "failures_preserved": 3096,
       "families": 1000,
       "marginal_consumers": 6,
       "measurable_families": 33,
       "not_applicable_families": 967,
       "phase22_reachable_entities": 35432,
-      "residuals_total": 11046,
+      "residuals_total": 10539,
       "residuals_unclassified": 0,
       "residuals_unknown": 0,
-      "residuals_unresolved": 10503,
+      "residuals_unresolved": 9489,
       "status": {
         "FAIL": 0,
         "NOT_APPLICABLE": 967,
@@ -263,29 +263,33 @@
           "runtime-functional-atlas"
         ],
         "by_disposition": {
-          "out-of-scope": 2,
-          "venue-limited": 3599
+          "candidate-specific": 2,
+          "out-of-scope": 62,
+          "venue-limited": 3030
         },
         "by_failure_class": {
-          "acquire-failure": 3572,
-          "configure-failure": 2,
-          "functional-failure": 1,
-          "harness-failure": 2,
-          "link-failure": 22,
-          "load-failure": 2
+          "acquire-failure": 2774,
+          "authority-build-failure": 35,
+          "candidate-build-failure": 35,
+          "configure-failure": 44,
+          "functional-failure": 4,
+          "harness-failure": 62,
+          "link-failure": 132,
+          "load-failure": 5,
+          "runtime-failure": 3
         },
         "by_residual_class": {
-          "functional-divergence": 1,
-          "out-of-scope": 2,
-          "runtime-failure": 2,
-          "unavailable": 3572,
-          "unbuildable": 2,
-          "unlinked": 22
+          "functional-divergence": 4,
+          "out-of-scope": 62,
+          "runtime-failure": 8,
+          "unavailable": 2772,
+          "unbuildable": 116,
+          "unlinked": 132
         },
-        "candidate_specific": 0,
-        "divergences": 0,
-        "minimized": 0,
-        "preserved": 3601,
+        "candidate_specific": 2,
+        "divergences": 35,
+        "minimized": 2,
+        "preserved": 3094,
         "sample": [
           {
             "class": "acquire-failure",
@@ -343,7 +347,7 @@
           }
         ],
         "source": "forensics/downstream/failures.json",
-        "total": 3601
+        "total": 3094
       },
       "taxonomy": [
         "acquire-failure",
@@ -443,8 +447,8 @@
     "property_findings": [
       "967/1000 counted families are DROP_IN_NOT_APPLICABLE: the frozen venue admitted a pristine-source recipe and an authority-applicable baseline for only 33 of 1000, so the drop-in rate is measured over 33 families and is not a population-wide rate",
       "the measured set exercised 600/6499 exported symbols, 42/81 public headers and 39/152 API families, so the atlas speaks for a thin slice of the authority's public surface",
-      "3601 counted leftovers are classified and preserved (0 candidate-specific, so 0 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate",
-      "10503 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty"
+      "3094 counted leftovers are classified and preserved (2 candidate-specific, so 2 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate",
+      "9489 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty"
     ],
     "property_status": "NOT_CLAIMED",
     "rates": {
@@ -579,21 +583,22 @@
     "residuals": {
       "by_plane": {
         "build-link-atlas": {
-          "none": 204,
-          "unavailable": 1794,
-          "unbuildable": 2
+          "none": 490,
+          "unavailable": 1386,
+          "unbuildable": 116,
+          "unlinked": 8
         },
         "candidate-freeze": {
           "none": 3,
           "unavailable": 398
         },
         "failures": {
-          "functional-divergence": 1,
-          "out-of-scope": 2,
-          "runtime-failure": 2,
-          "unavailable": 3572,
-          "unbuildable": 2,
-          "unlinked": 22
+          "functional-divergence": 4,
+          "out-of-scope": 62,
+          "runtime-failure": 8,
+          "unavailable": 2772,
+          "unbuildable": 116,
+          "unlinked": 132
         },
         "high-value-tier": {
           "none": 16
@@ -609,12 +614,12 @@
           "unbuildable": 6
         },
         "runtime-functional-atlas": {
-          "functional-divergence": 1,
-          "none": 195,
-          "out-of-scope": 2,
-          "runtime-failure": 2,
-          "unavailable": 1778,
-          "unlinked": 22
+          "functional-divergence": 4,
+          "none": 416,
+          "out-of-scope": 62,
+          "runtime-failure": 8,
+          "unavailable": 1386,
+          "unlinked": 124
         }
       },
       "classes": [
@@ -632,67 +637,67 @@
       "histogram": {
         "authority-unsupported": 0,
         "candidate-patch-required": 0,
-        "functional-divergence": 3,
-        "none": 543,
-        "out-of-scope": 4,
-        "runtime-failure": 4,
-        "unavailable": 10437,
-        "unbuildable": 10,
+        "functional-divergence": 9,
+        "none": 1050,
+        "out-of-scope": 124,
+        "runtime-failure": 16,
+        "unavailable": 8837,
+        "unbuildable": 238,
         "unknown": 0,
-        "unlinked": 45
+        "unlinked": 265
       },
       "records": [
         {
           "class": "functional-divergence",
-          "detail": "prosody did not register/authenticate and answer the XMPP ping",
+          "detail": "the unrelated CA did not abort the IMAPS fetch",
           "disposition": "classified",
           "evidence": [
-            "family:family:prosody",
-            "recipe:recipe:prosody:0.12.4",
-            "artifact:.l7-prosody-harness",
+            "family:family:fdm",
+            "recipe:recipe:fdm:1.9+git20181219",
+            "artifact:fdm",
             "local_only:loopback"
           ],
           "residual_id": "residual:runtime-functional-atlas:run:functional-divergence",
-          "run_id": "run:runtime:authority:prosody"
+          "run_id": "run:runtime:authority:fdm"
         },
         {
           "class": "none",
           "detail": "a none residual is recorded in build-link-atlas",
           "disposition": "none",
           "evidence": [
-            "family:family:aircrack-ng",
-            "recipe:recipe:aircrack-ng:1.7",
-            "source:https://deb.debian.org/debian/pool/main/a/aircrack-ng/aircrack-ng_1.7.orig.tar.gz#05a704e3c8f7792a17315080a21214a4448fd2452c1b0dd5226a3a55f90b58c3",
-            "artifact:.libs/aircrack-ng"
+            "family:family:afflib",
+            "recipe:recipe:afflib:3.7.20",
+            "source:https://deb.debian.org/debian/pool/main/a/afflib/afflib_3.7.20.orig.tar.gz#7264d705ff53185f0847c69abdfce072779c0b907257e087a6372c7608108f65",
+            "artifact:lib/.libs/libafflib.so.0.0.0"
           ],
           "residual_id": "residual:build-link-atlas:run:none",
-          "run_id": "run:build-link:authority:aircrack-ng"
+          "run_id": "run:build-link:authority:afflib"
         },
         {
           "class": "out-of-scope",
-          "detail": "fastd's data path requires a TUN interface; the court container has no /dev/net/tun device and no CAP_NET_ADMIN (TUNSETIFF is refused), so the two-peer handshake workload cannot run in this venue",
+          "detail": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured",
           "disposition": "classified",
           "evidence": [
-            "family:family:fastd",
-            "recipe:recipe:fastd:22",
-            "artifact:b/src/fastd",
+            "family:family:bip",
+            "recipe:recipe:bip:0.9.3",
+            "artifact:src/bip",
             "local_only:loopback"
           ],
           "residual_id": "residual:runtime-functional-atlas:run:out-of-scope",
-          "run_id": "run:runtime:authority:fastd"
+          "run_id": "run:runtime:authority:bip"
         },
         {
           "class": "runtime-failure",
-          "detail": "the rebuilt pristine tree holds no program at src/fe-text/irssi",
+          "detail": "the rebuilt pristine tree holds no program at ewftools/.libs/ewfverify",
           "disposition": "classified",
           "evidence": [
-            "family:family:irssi",
-            "recipe:recipe:irssi:1.4.5",
-            "artifact:src/fe-text/irssi",
+            "family:family:ewftools",
+            "recipe:recipe:ewftools:20140813",
+            "artifact:ewftools/.libs/ewfverify",
             "local_only:loopback"
           ],
           "residual_id": "residual:runtime-functional-atlas:run:runtime-failure",
-          "run_id": "run:runtime:authority:irssi"
+          "run_id": "run:runtime:candidate:ewftools"
         },
         {
           "class": "unavailable",
@@ -706,32 +711,35 @@
         },
         {
           "class": "unbuildable",
-          "detail": "configure failed: [Errno 2] No such file or directory: './configure'",
+          "detail": "the build failed: make: *** [Make.rules:337: src/] Error 2",
           "disposition": "classified",
           "evidence": [
-            "family:family:lighttpd",
-            "recipe:recipe:lighttpd:1.4.76",
-            "source:https://download.lighttpd.net/lighttpd/releases-1.4.x/lighttpd-1.4.76.tar.gz#ba14a030889518194fd88b33e419d51cc38c8fe917126d5a7a965be79b53e995"
+            "family:family:apk-tools",
+            "recipe:recipe:apk-tools:2.14.4",
+            "source:https://gitlab.alpinelinux.org/alpine/apk-tools/-/archive/v2.14.4/apk-tools-v2.14.4.tar.gz#c8ad16bddfae988392ad067a244cfdaf643eb7d6761b73450739585ca76f9a25"
           ],
           "residual_id": "residual:build-link-atlas:run:unbuildable",
-          "run_id": "run:build-link:authority:lighttpd"
+          "run_id": "run:build-link:authority:apk-tools"
         },
         {
           "class": "unlinked",
-          "detail": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+          "detail": "the built artifact declares no libssl/libcrypto dependency, so the subject was not consumed",
           "disposition": "classified",
           "evidence": [
-            "family:family:appx-util"
+            "family:family:bind9",
+            "recipe:recipe:bind9:9.18.49",
+            "source:https://deb.debian.org/debian/pool/main/b/bind9/bind9_9.18.49.orig.tar.xz#c43ce4548ebed788cd9df63658a7de105ceafba43fcd63fa352b1093e525cd24",
+            "artifact:bin/named/named"
           ],
-          "residual_id": "residual:runtime-functional-atlas:run:unlinked",
-          "run_id": "run:runtime:authority:appx-util"
+          "residual_id": "residual:build-link-atlas:run:unlinked",
+          "run_id": "run:build-link:authority:bind9"
         }
       ],
-      "resolved": 543,
-      "total": 11046,
+      "resolved": 1050,
+      "total": 10539,
       "unclassified": 0,
       "unknown": 0,
-      "unresolved": 10503
+      "unresolved": 9489
     },
     "rule": {
       "clusters": "the marginal-consumer and usage-cluster analysis over the measured set, so the counted families are not read as that many independent stressors (the brief's sections 36 and 37)",
@@ -14761,7 +14769,7 @@
       }
     ]
   },
-  "body_hash": "d1967efbe79b5231b9de941c14b68dbdf8f5224862a7df199f25d6c12c269c38",
+  "body_hash": "60f8956918f8ce6335912f0cea95449db1f86aaf1030d1a853ed15023a977547",
   "generator": "forensics/tools/downstream_reconciliation.py",
   "inputs": [
     {
@@ -14777,17 +14785,17 @@
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "69cc1ce96e0e644d22ae09b387fcf3c08aee811623f0efc73f024d46af566587"
+      "sha256": "d2f93a4244ac02712cceac8c65efe67af7e28924e01d18fb2d26ce4b14cdb81c"
     },
     {
       "name": "runtime-functional-atlas",
       "path": "forensics/downstream/runtime-functional-atlas.json",
-      "sha256": "d93a611fba3ca1a44fbe8a28d24d0c70d506e5057c118ebd6b38777bd198ad16"
+      "sha256": "42be6e38fe004fdb0740949fa7baf73d603f7538e4fbd598e7c4336874de3dab"
     },
     {
       "name": "failures",
       "path": "forensics/downstream/failures.json",
-      "sha256": "a79aec5b39d5122bd5b503394aff532d97703e17d109c8a5c692bd6922e39bcf"
+      "sha256": "61999df74af61eb7e719ed667e9ea5df9e6e7777fd69fae11bb82e093dd5f450"
     },
     {
       "name": "high-value-tier",
@@ -14827,7 +14835,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "14ae930c271c6edd48c1b54f1339b356c35229474fa48aa7b5791176e8e9b145"
+      "sha256": "35d8a754bf4a256612a198c1e8cc0b9f9d24c0b5e9702f57ede87ea3323d5f51"
     },
     {
       "name": "symbol-ownership",

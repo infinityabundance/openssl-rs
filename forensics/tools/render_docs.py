@@ -16,7 +16,14 @@ Evidence inputs (no others):
 * ``forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-*.json``
 * ``forensics/memory-safety/campaign/safe-c33/atlas-refresh/test-baseline.json``
 * ``Cargo.toml`` and ``atlas-refresh/publish-*.json``
-* ``body.candidate_identity`` (candidate library hashes / commit)
+* ``atlas-refresh/build-<version>.json`` (the working-tree install identity: commit,
+  source-tree digest and library hashes)
+* ``body.candidate_identity`` (the identity the downstream atlas was measured at)
+
+The working-tree identity is the build receipt, not the atlas: the atlas records
+where its downstream rows were measured, which can be a different build.  Using
+the atlas for the README's "source identity" line published a version string
+next to hashes that build did not produce.
 
 Usage:
     render_docs.py --check   # exit 0 clean, 1 drift, 2 structural error
@@ -40,11 +47,13 @@ STATUS_JSON = CAMPAIGN / "CAMPAIGN-STATUS.json"
 TEST_BASELINE = CAMPAIGN / "atlas-refresh/test-baseline.json"
 SWEEP_GLOB = "boundary-sweep-*.json"
 PUBLISH_GLOB = "publish-*.json"
+BUILD_GLOB = "build-*.json"
 
 # Display names used in the rendered blocks (repo-relative, short).
 ATLAS_S = "forensics/downstream/runtime-functional-atlas.json"
 BUILD_LINK_S = "forensics/downstream/build-link-atlas.json"
 STATUS_S = "CAMPAIGN-STATUS.json"
+BUILD_S = "atlas-refresh/build-"
 CENSUS_S = "atlas-refresh/unsafe-census.json"
 DELTA_S = "atlas-refresh/post-census-delta.json"
 TEST_BASELINE_S = "atlas-refresh/test-baseline.json"
@@ -97,6 +106,50 @@ def candidate_identity(atlas: dict) -> dict:
     if not commit and not libs:
         raise RenderError("atlas body.candidate_identity records neither commit nor hashes")
     return {"commit": commit, "libs": libs}
+
+
+def build_identity(refresh: Path, version: str) -> dict:
+    """The working-tree install identity, from ``build-<version>.json``.
+
+    A build receipt names the source commit, the source-tree digest and every
+    library digest of the build the working tree produces.  It is required: a
+    missing receipt is a structural error, because falling back to the atlas
+    would bind the current version string to a different build's hashes.  The
+    receipt is not a publish receipt, so a published version never claims the
+    working tree produced the published bytes unless the hashes match.
+    """
+    matches = []
+    for path in sorted(refresh.glob(BUILD_GLOB)):
+        data = load_json(path)
+        if str(data.get("version")) == version:
+            matches.append((path, data))
+    if not matches:
+        raise RenderError(
+            f"no build receipt for crate version {version} under atlas-refresh/"
+        )
+    path, data = matches[-1]
+    source = data.get("source_identity") or {}
+    artefacts = data.get("artefacts") or {}
+    libs = []
+    for name in ("libcrypto.so.3", "libssl.so.3"):
+        digest = str((artefacts.get(name) or {}).get("sha256") or "")
+        if not digest:
+            raise RenderError(f"build receipt {path.name} has no {name} digest")
+        libs.append((name, digest))
+    commit = str(source.get("measured_source_commit") or "")
+    tree = str(source.get("build_source_tree_digest") or "")
+    measured_tree = str(source.get("measured_source_tree_digest") or "")
+    if not commit or not tree:
+        raise RenderError(
+            f"build receipt {path.name} records no source commit or build source-tree digest"
+        )
+    return {
+        "commit": commit,
+        "tree": tree,
+        "measured_tree": measured_tree,
+        "libs": libs,
+        "source": f"atlas-refresh/{path.name}",
+    }
 
 
 def cargo_version(root: Path) -> str:
@@ -447,10 +500,11 @@ class Evidence:
         self.sweeps = load_sweeps(refresh)
         self.candidate = candidate_identity(self.atlas)
         self.version = cargo_version(root)
+        self.build = build_identity(refresh, self.version)
         self.families, self.cand_only, self.auth_only = family_names(self.atlas)
         self.partition = census_partition(self.census, self.delta)
-        self.tests = test_baseline(root, self.candidate)
-        self.publish = publish_identity(refresh, root, self.version, self.candidate)
+        self.tests = test_baseline(root, self.build)
+        self.publish = publish_identity(refresh, root, self.version, self.build)
         self.boundaries = boundary_evidence(self.sweeps, self.status)
         self.stop_defects = stop_class_defects(self.sweeps)
         self.mechanisms = [
@@ -563,9 +617,16 @@ class Evidence:
         )
 
     def identity_text(self) -> str:
-        bits = []
-        if self.candidate["commit"]:
-            bits.append(f"candidate commit `{self.candidate['commit']}`")
+        bits = [
+            f"candidate commit `{self.build['commit']}`",
+            f"build source-tree digest `{self.build['tree']}`",
+        ]
+        if self.build["measured_tree"] and self.build["measured_tree"] != self.build["tree"]:
+            bits.append(
+                "measured source at that commit `"
+                f"{self.build['measured_tree']}`; the build tree differs only in the "
+                "`Cargo.toml`/`Cargo.lock` release-metadata fields"
+            )
         if self.publish["is_candidate"]:
             bits.append(
                 f"crate version `{self.version}` (**published** "
@@ -577,7 +638,7 @@ class Evidence:
                 "at this candidate identity**)"
             )
         bits.extend(
-            f"`{name}` sha256 `{digest}`" for name, digest in self.candidate["libs"]
+            f"`{name}` sha256 `{digest}`" for name, digest in self.build["libs"]
         )
         return "; ".join(bits)
 
@@ -728,14 +789,22 @@ class Evidence:
         """The published release, and whether it is the candidate tree itself.
 
         The published version and the tree version are separate facts. When a
-        receipt names the tree version, the tree is released and the row must say
-        so instead of repeating a stale "not published" claim.
+        publish receipt names the tree version *and* the build receipt's
+        library hashes are the receipt's, the tree is released and the row says
+        so instead of repeating a stale "not published" claim.  The row also
+        states what the crate payload contains: source and documentation only.
+        The install-tree hashes describe a repository build, never the payload.
         """
         published = (
             f"**Published: {self.publish['version']}** on crates.io "
             f"({self.publish['date']}), checksum `{self.publish['checksum']}…`, "
-            f"artefacts `libcrypto.so.3` `{self.publish['libcrypto']}…` / "
+            f"install-tree artefacts `libcrypto.so.3` `{self.publish['libcrypto']}…` / "
             f"`libssl.so.3` `{self.publish['libssl']}…`."
+        )
+        payload = (
+            " The published crate ships **source and documentation only, with no "
+            "binaries**; those install-tree hashes describe the repository build "
+            "recorded in the receipt, not the crate payload."
         )
         previous = (
             f" {self.publish['previous']} remains the previous release."
@@ -744,12 +813,12 @@ class Evidence:
         )
         if self.publish["is_candidate"]:
             return (
-                f"{published} This evidence is bound to the {self.version} tree, "
-                f"which is the published {self.publish['version']} crate.{previous}"
+                f"{published}{payload} This evidence is bound to the {self.version} "
+                f"tree, which is the published {self.publish['version']} crate.{previous}"
             )
         return (
-            f"{published} **Working tree: {self.version} — not the published "
-            "artefact.** This evidence is bound to the "
+            f"{published}{payload} **Working tree: {self.version} — the candidate, "
+            "not yet published.** This evidence is bound to the "
             f"{self.version} tree, not to the published "
             f"{self.publish['version']} crate.{previous}"
         )
@@ -993,7 +1062,7 @@ class Evidence:
                 "| item | current value | source |",
                 "|---|---|---|",
                 f"| candidate identity | {self.identity_text()} | "
-                f"`{ATLAS_S}` (`body.candidate_identity`); `Cargo.toml` |",
+                f"`{self.build['source']}`; `Cargo.toml` |",
                 "| working-tree version | "
                 + (
                     f"**{self.version}** — **published** on crates.io "
@@ -1006,9 +1075,10 @@ class Evidence:
                 ),
                 "| published release | "
                 f"**{self.publish['version']}** on crates.io ({self.publish['date']}, "
-                f"checksum `{self.publish['checksum']}…`), artefacts "
+                f"checksum `{self.publish['checksum']}…`), install-tree artefacts "
                 f"`libcrypto.so.3` `{self.publish['libcrypto']}…` / "
-                f"`libssl.so.3` `{self.publish['libssl']}…` | "
+                f"`libssl.so.3` `{self.publish['libssl']}…`; the crate payload is "
+                "source and documentation only, with no binaries | "
                 f"`{self.publish['source']}` |",
                 "| evidence binding | "
                 + (

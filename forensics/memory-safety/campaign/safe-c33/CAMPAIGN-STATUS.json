@@ -1,11 +1,11 @@
 {
  "schema": "openssl-rs/safe-c33/campaign-status/v1",
  "kind": "safe-c33-campaign-status",
- "generated_date": "2026-10-27",
- "branch": "stage/p25/rcb-v1f",
- "source_head": "e92a0720e",
- "source_head_subject": "evidence(campaign): element 7's PASS was an artefact of the linker's choice",
- "source_head_note": "Measurements in this ledger were produced across cef757e09..e92a0720e. Receipt map: adversarial-review-v1f.json (v1f contract-predicate refutation); v1g-candidate-freeze.json (corrected census, 325 production blockers); freeze-S-prime.json and openssh-closure-v1h.json (S' 876900e47); openssh-closure-v1i.json and openssh-v1i-sites.json (v1i, 169 obligations); v1j-candidate-freeze.json, openssh-closure-v1j.json, openssh-v1j-sites.json and element7-regression-v1j.json (S'' bcafae7dc + the legacy_sha fix, 146 obligations); freeze-S-double-prime.json (S'' source-to-artefact-to-consumer freeze, 2213/0/52 test floor); and publish-0.0.42.json (0.0.42 release preparation from e92a0720e). HEAD e92a0720e adds only the element-7 evidence commit over 5163f564f (the legacy_sha fix); the 0.0.42 version bump, rebuilt artefacts and this reconciliation are uncommitted at the ledger's identity.",
+ "generated_date": "2026-10-30",
+ "branch": "stage/p25/analyzer-corpus",
+ "source_head": "0590d371d",
+ "source_head_subject": "evidence(openssh): re-freeze the closure at the GCM-fix install",
+ "source_head_note": "Measurements in this ledger are carried forward from cef757e09..ad5913099 and re-bound at the current candidate, 0590d371d (clean tracked tree; src/, Cargo.toml, Cargo.lock and build.rs are identical to 1c2bc4001). Receipt map: adversarial-review-v1f.json (v1f contract-predicate refutation); v1g-candidate-freeze.json (corrected census); freeze-S-prime.json and openssh-closure-v1h.json; openssh-closure-v1i.json and openssh-v1i-sites.json; v1j-candidate-freeze.json, openssh-closure-v1j.json, openssh-v1j-sites.json and element7-regression-v1j.json (S'' and the legacy_sha fix); freeze-S-double-prime.json (S'' source-to-artefact-to-consumer freeze); publish-0.0.42.json (0.0.42, PUBLISHED 2026-10-27); v1n/v1p-candidate-freeze.json (the two pre-repair closure candidates); closure-monotonicity-finding.json (the finding the repair supersedes); closure-fixpoint-repair.json (the implemented repair and its measurements); v1r-candidate-freeze.json (the frozen candidate and committed install); evidence/closure-ssh-v1r.json and evidence/inventory-sshd-v1r.json (the accepted closure); build-0.0.43.json (the rebound 0.0.43 install identity); legacy-md-init-fix.json (the extended legacy digest NULL-deref repair). v1n is c63fc23de (libcrypto 3901731a) and v1p is ad5913099 (libcrypto c335ac3c): 313 -> 321 reachable files, 155 -> 171 obligations in the pre-repair bound, and neither count is carriable. The repaired bound, accepted at v1r on the GCM-fix install (libcrypto 23ec6944), measures 624 ssh / 623 sshd reachable files and 312 obligations (90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN); element 7 remains FAIL on 81 target-bounded sites.",
  "binding_note": "This status reconciles the campaign summary with the individual receipts. It makes no new discharge or compatibility claim. Mechanism-level and scoped-boundary discharges are recorded separately and are never summed into a consumer graduation.",
  "census": {
   "pinned_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
@@ -1121,15 +1121,17 @@
    "source": "atlas-refresh/openssh-seal-prep.json task_c_seal_gate.fmt_clippy records PASS: cargo clippy --all-targets -- -D warnings (rc 0); atlas-refresh/openssh-final-close.json gates.clippy records the same PASS."
   },
   "library_tests": {
-   "passed": 2213,
+   "passed": 2230,
    "failed": 0,
    "ignored": 52,
-   "total": 2265,
-   "source": "freeze-S-double-prime.json gates.rust_suite and openssh-closure-v1j.json gates.rust_suite: 2213 passed / 0 failed / 52 ignored / 2265 total, cargo test --lib -- --test-threads=4, run after the legacy_sha fix at S''. FLOOR, not a run at the 0.0.42 artefact identity.",
-   "parallel": "2213 passed; 0 failed; 52 ignored; 2265 total (cargo test --lib -- --test-threads=4, S'').",
-   "serial": "NOT_RUN at S'' or at the 0.0.42 identity: the S'' subphase recorded only --test-threads=4. The last serial floor is 2204 passed / 0 failed / 52 ignored at the seal-prep identity, which is not this tree.",
-   "ignored_note": "The 52 ignored tests are probes run separately by design; no test was newly ignored and none was removed (+5 tests over the 2260/52 floor).",
-   "source_tree_note": "2213/0/52/2265 is a floor for the 0.0.42 tree, not a measurement at its artefact identity (libcrypto 247803f1 / libssl 3ca46e32). No full suite was rerun after the version bump; the subphase instruction was not to rerun the already-run suite."
+   "total": 2282,
+   "command": "cargo test --lib -- --test-threads=4",
+   "thread_count": 4,
+   "source": "measured at 0590d371d (0.0.43 candidate, src/ identical to the 1c2bc4001 install): 2230 passed / 0 failed / 52 ignored / 2282 total, cargo test --lib -- --test-threads=4. Current count, not a floor: atlas-refresh/test-baseline.json.",
+   "parallel": "2230 passed; 0 failed; 52 ignored; 2282 total (cargo test --lib -- --test-threads=4, 0.0.43 candidate).",
+   "serial": "NOT_RUN at 0590d371d: only --test-threads=4 was recorded. The last serial floor is 2204 passed / 0 failed / 52 ignored at the seal-prep identity, which is not this tree.",
+   "ignored_note": "The 52 ignored tests are probes run separately by design; no test was newly ignored and none was removed (+8 tests over the 2274-total record).",
+   "source_tree_note": "The run, the committed install and the v1r closure all use the same src/, Cargo.toml, Cargo.lock and build.rs; the GCM sentinel fix (1c2bc4001) re-emitted the install but changed no test definition."
   },
   "phase2_abi_courts": {
    "courts_total": 11,
@@ -1137,7 +1139,15 @@
    "all_pass": true,
    "artifact": "artifacts/phase2/COURTS.json",
    "source": "s-release-0.0.40 rebuilt the Phase-2 install from the exact 0.0.40 source and re-ran the Phase-2 ABI courts; 11/11 pass including ABI-SUBSTITUTION, ABI-INSTALL-LAYOUT and libcrypto-contamination at libcrypto 26ba36ff / libssl 1e7a9e8f.",
-   "candidate_identity": "libcrypto 26ba36ff / libssl 1e7a9e8f"
+   "candidate_identity": "libcrypto 26ba36ff / libssl 1e7a9e8f",
+   "current_at_0_0_43": {
+    "courts_total": 11,
+    "passed": 11,
+    "all_pass": true,
+    "artifact": "artifacts/phase2/COURTS.json",
+    "candidate_identity": "libcrypto 23ec6944 / libssl 493795c2 / legacy 8c5961e8 / openssl 205ca6f0",
+    "source": "0.0.43 GCM-fix install from 1c2bc4001 with forensics/tools/build_phase2.sh; atlas-refresh/build-0.0.43.json. Export sets unchanged (5906/608, 0 added, 0 removed)."
+   }
   },
   "boundary_gate": {
    "state": "NOT_RUN",
@@ -1173,7 +1183,8 @@
     "dudect/ctgrind for any constant-time path, and Miri/ASan/Loom/TSan at the S'' boundaries",
     "a downstream re-measurement at the 0.0.42 identity; every downstream row remains carried forward",
     "registry verification of 0.0.42 (the orchestrator publishes next)"
-   ]
+   ],
+   "release_readiness_0_0_43": "0.0.43 is the CANDIDATE and is NOT published. Its rebound install identity is atlas-refresh/build-0.0.43.json: libcrypto 23ec6944 / libssl 493795c2 / legacy 8c5961e8 / openssl 205ca6f0, export sets unchanged (5906/608, 0 added, 0 removed), 11/11 Phase-2 ABI courts, Phase-7 courts recorded all pass, Phase-8 courts all pass with 11 accepted divergences (re-run by the GCM fix). The package size figure is carried from the pre-GCM-fix package receipt and was not re-measured at this install; the crate payload remains source and documentation only, with no binaries. The GCM SET_IV_FIXED -1 sentinel fix (1c2bc4001) is the only behavioural change since the prior install."
   }
  },
  "consumers": {
@@ -1181,7 +1192,7 @@
   "l7_functional": 33,
   "l4_only": 0,
   "safe_compatible": 0,
-  "note": "The 33-family cohort is a selection, not the 1000-family corpus. All 33 cohort families are L7-functional in the current atlas. The post-CMS no-reuse run at dc17cfdd / 75cc3979 measured 207 candidate / 209 authority L7 over 223 loaded families and 307 recipes; later releases carried every recipe-backed row forward at candidate_identity_match=false and upgraded no family. Each family still needs its whole dependency closure SAFETY_DISCHARGED before any consumer claim. SAFE_COMPATIBLE remains 0/33: the openssh closure at S'' is REFUSED with 146 obligations (62 DISCHARGED / 55 BLOCKED / 29 UNKNOWN, openssh-closure-v1j.json), and element 7 is FAIL.",
+  "note": "The 33-family cohort is a selection, not the 1000-family corpus. All 33 cohort families are L7-functional in the current atlas. The post-CMS no-reuse run at dc17cfdd / 75cc3979 measured 207 candidate / 209 authority L7 over 223 loaded families and 307 recipes; later releases carried every recipe-backed row forward at candidate_identity_match=false and upgraded no family. Each family still needs its whole dependency closure SAFETY_DISCHARGED before any consumer claim. SAFE_COMPATIBLE remains 0/33: the v1r closure is ACCEPTED with zero refusals and measures 312 obligations (90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN) over 624 ssh / 623 sshd reachable files, but element 7 is FAIL on 81 target-bounded reachable sites, so the closure cannot graduate.",
   "l7_families": [
    "curl",
    "cyrus-sasl",
@@ -1749,6 +1760,55 @@
    }
   }
  },
+ "closure": {
+  "receipt": "evidence/closure-ssh-v1r.json; evidence/inventory-sshd-v1r.json",
+  "candidate_tag": "v1r",
+  "generated_utc": "2026-10-30T04:54:23Z",
+  "verdict": "ACCEPTED",
+  "safe_compatible": false,
+  "refusals": 0,
+  "reachable_files": {"ssh": 624, "sshd": 623},
+  "obligations": {"total": 312, "DISCHARGED": 90, "BLOCKED": 222, "UNKNOWN": 0},
+  "edge_records": 52022,
+  "edge_record_defects": 0,
+  "oracle_violations": 0,
+  "reachable_functions": {"ssh": 8686, "sshd": 8652},
+  "closure_rounds": 2,
+  "converged": true,
+  "admission_passes": 1,
+  "admitted_by_refutation": 27,
+  "symbol_dispositions": {"resolved": 5, "external_contract": 0, "blocking": 0},
+  "analysis_identity": {
+   "schema": "openssl-rs/campaign/safe-c33/analysis-identity/v2",
+   "digest": "cede10d6b60959e58ecd46e2522adabc5319bcecd46d00ec3678843b572c4e51"
+  },
+  "element_7": {
+   "status": "FAIL",
+   "reachable_unresolved_sites": 141,
+   "target_bounded_unresolved_sites": 81,
+   "contract_bounded_sites": 60,
+   "contract_bounded_by_class": {"ABI_CONTRACT_EXPORT_CALLBACK": 46, "ABI_CONTRACT_PROVIDER": 14},
+   "unclassified_reachable_sites": 0
+  },
+  "boundary_coverage": {"reachable_files_with_receipt": 92, "reachable_files_without_receipt": 0},
+  "downstream_corpus": {
+   "status": "GREEN",
+   "candidate": "0.0.43",
+   "court": "RT-DOWNSTREAM-CORPUS",
+   "families": ["curl", "git", "haproxy", "nginx", "openssh", "python"],
+   "openssh": "31/31",
+   "receipt": "courts/phase17/downstream; artifacts/phase17/COURTS.json",
+   "remeasured_at": "f8f366298 (0.0.43 corpus) and 1c2bc4001 (GCM-fix OpenSSH re-run)",
+   "note": "all six families pass and RT-DOWNSTREAM-CORPUS validates the recorded corpus"
+  },
+  "gcm_sentinel_fix": {
+   "commit": "1c2bc4001",
+   "defect": "EVP_CTRL_GCM_SET_IV_FIXED -1 was rejected by the dispatch guard added in 49cff7886, so the documented whole-IV sentinel never reached the provider",
+   "fix": "the guard is `arg < -1`; -1 becomes SIZE_MAX exactly as the authority's size_t, and the provider copies ctx->ivlen and returns 1",
+   "consequence": "OpenSSH AES-GCM handshake restored; the v1r closure is dispositionally identical to the accepted v1q run"
+  },
+  "note": "The closure is ACCEPTED because no refusal condition fired: the repaired bound is monotone, the admission is a least fixed point, every unresolved symbol is dispositioned, and every reachable file carries a receipt. It does not graduate any family: 222 obligations are contracted but BLOCKED and element 7 is FAIL on 81 target-bounded sites, so SAFE_COMPATIBLE stays 0/33."
+ },
  "remaining_obligations": [
   "BOUNDARY and SEAL remain NOT_RUN for the S16-S61 cluster. S27-S30, S34, S39-S41, S49-S51, S56-S58 and S61 are FAST/BATCH; S31/S33/S35/S36/S42/S44/S46/S52/S53/S59/S60 are compatibility measurements; S45 is a distribution/linkage change, S48/S55/S62 are release rebuilds, and S54 is documentation. None of S48-S62 is a BOUNDARY or SEAL gate.",
   "S49 retained: `&mut *s` is formed from the C ABI pointer, so liveness and exclusive ownership are caller contracts; OutBuf::from_raw's writable extent and non-overlap are caller obligations; Sink::slot hands a raw writable region whose non-aliasing is argued from the internal call structure (index, not pointer), not type-enforced; BIO_read/BIO_write and the AEAD sinks keep their own liveness/extent contracts; allocation-failure injection was not run (the allocator latch is one-way).",
@@ -1793,7 +1853,8 @@
   "The thirteen legacy_sha update/final/ctrl callbacks still dereference md_data without a check (openssh-v1j-sites.json OSSH-V1J-001..018 retained); they remain reachable through EVP_MD_meth_get_update/get_final/get_ctrl with a C-valid fresh context. BLOCKED.",
   "SEAL at S'' and independent adjudication: freeze-S-double-prime.json records no independent review, Miri, ASan, Loom, mutation test, dudect or Wycheproof/ACVP evidence at S''. NOT_RUN.",
   "0.0.42 is prepared but not published; registry verification is UNKNOWN and 0.0.41 remains the latest published release (publish-0.0.42.json).",
-  "The latest full library suite is 2213 passed / 0 failed / 52 ignored / 2265 total at S'' (--test-threads=4); no serial 2213 run and no full run at the 0.0.42 artefact identity exist."
+  "The latest full library suite is 2213 passed / 0 failed / 52 ignored / 2265 total at S'' (--test-threads=4); no serial 2213 run and no full run at the 0.0.42 artefact identity exist.",
+  "CORRECTION (2026-10-28): 0.0.42 WAS published on crates.io on 2026-10-27 (checksum b9a542cf900c5073fc6a4d5d92f5749a84adc47a968b85c903b26d724e2ede5f; publish-0.0.42.json), so the earlier `0.0.42 is prepared but not published` entry above is superseded. The current candidate is 0.0.43, which is not published (atlas-refresh/build-0.0.43.json)."
  ],
  "non_claims": [
   "No consumer family is SAFE_COMPATIBLE; consumers remain 0/33.",
@@ -1826,7 +1887,8 @@
   "The v1f zero-reachable-obligation result and its ACCEPTED openssh verdict were withdrawn: the contract predicate accepted a neighbouring function's SAFETY comment (adversarial-review-v1f.json). The corrected census is 325 production blockers at v1g and 320 at v1j.",
   "The v1h element-7 PASS was an artefact of which symbol the linker kept; element 7 remains FAIL at S'' with 9 resolvable-in-principle sites and 0 genuinely unbounded sites (element7-regression-v1j.json).",
   "Reachability is non-monotone: 19 of 19 v1h -> v1j reachable-file changes are unexplained by the source diff, so 169 -> 146 obligations is not a progress measurement.",
-  "SAFE_COMPATIBLE remains 0/33 and is further away than the earlier deltas implied; the openssh closure still REFUSES and no consumer family graduates."
+  "SAFE_COMPATIBLE remains 0/33 and is further away than the earlier deltas implied; the openssh closure still REFUSES and no consumer family graduates.",
+  "CORRECTION (2026-10-28): the `0.0.42 is PREPARED, not published` non-claim above is superseded; 0.0.42 was published 2026-10-27 and 0.0.43 is the unpublished candidate. Publishing remains not a memory-safety result."
  ],
  "reduction_census": {
   "artifact": "atlas-refresh/s19-reduction-census.json",
@@ -2069,6 +2131,14 @@
  },
  "known_gaps": [
   {
+   "id": "CLOSURE-NON-MONOTONE",
+   "status": "REPAIRED",
+   "detail": "The non-monotone bound is repaired and measured: the residual admission is now a class-independent superset of every class the resolver may admit, the closure is iterated to a least fixed point with an explicit non-convergence refusal, and the reachable set is bound to an analysis identity (v2) rather than the DSO digest. closure-fixpoint-repair.json records the repair, its self-test and the 67/67 metamorphic corpus; the v1r closure on the GCM-fix install is ACCEPTED with zero refusals at 312 obligations (90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN). The historical finding is superseded but remains the reason the old v1n/v1p counts were never carriable.",
+   "evidence": "atlas-refresh/closure-fixpoint-repair.json; evidence/closure-ssh-v1r.json; evidence/inventory-sshd-v1r.json",
+   "repair_receipt": "atlas-refresh/closure-fixpoint-repair.json",
+   "blocks": []
+  },
+  {
    "id": "S21-O1",
    "status": "CLOSED",
    "detail": "The ml_dsa Vector typed-accessor-over-uninitialised-storage defect is closed by construction (PolyBlock zero-initialises before into_raw); S22 also closed the four sibling sites.",
@@ -2107,13 +2177,13 @@
   {
    "id": "DOWNSTREAM-HARNESS-FIXTURE",
    "status": "76 CARRIED S59-S60 BLOCKERS + 25 NEW VENUE/BUILD BLOCKERS",
-   "detail": "The 101 recipe-backed families below L7 are not candidate runtime implementation failures except for the unresolved bind9 build asymmetry. The S59/S60 carried cohort accounts for 76 (40 FIXTURE + 25 HARNESS + 10 ENVIRONMENT + 1 SOURCE_EXTRACTION); the 25 newly admitted rows are blocked by venue dependency or recipe build failure, with bind9 as the single candidate build asymmetry. Every row keeps its measured level and no assertion was weakened.",
+   "detail": "The 100 recipe-backed families below L7 are not candidate runtime implementation failures except for the unresolved bind9 build asymmetry. The S59/S60 carried cohort accounts for 76 (40 FIXTURE + 25 HARNESS + 10 ENVIRONMENT + 1 SOURCE_EXTRACTION); the 25 newly admitted rows are blocked by venue dependency or recipe build failure, with bind9 as the single candidate build asymmetry. Every row keeps its measured level and no assertion was weakened.",
    "evidence": "atlas-refresh/s59-reverify-all.json (non_l7_classification); atlas-refresh/s60-corpus-batch.json (new_families_below_l7, remaining_below_l7_old)"
   },
   {
    "id": "DOWNSTREAM-BELOW-L7",
-   "status": "101 FAMILIES",
-   "detail": "101 of the 307 recipe-backed families remain below L7: 33 L1-admitted-source, 22 L2-configured, 7 L3-built, 24 L4-linked, 13 L5-loaded and 2 L6-runtime (206 L7-functional, 221 loaded). Implementation-attributable runtime non-L7 is zero; bind9 is a candidate build asymmetry below L4. The other 693 counted families have no admitted recipe. S60 added 30 families (7 honest new L7), and S61 lifted charybdis from L5 to L7.",
+   "status": "100 FAMILIES",
+   "detail": "100 of the 307 recipe-backed families remain below L7: 33 L1-admitted-source, 21 L2-configured, 8 L3-built, 22 L4-linked, 14 L5-loaded and 2 L6-runtime (207 L7-functional, 223 loaded). Implementation-attributable runtime non-L7 is zero; bind9 is a candidate build asymmetry below L4. The other 693 counted families have no admitted recipe. Previous record: 101 families / 206 L7 / 221 loaded at the pre-S61 plane; the current atlas is 207 / 223.",
    "evidence": "forensics/downstream/runtime-functional-atlas.json; atlas-refresh/s59-reverify-all.json; atlas-refresh/s60-corpus-batch.json; atlas-refresh/s61-charybdis.json"
   },
   {
@@ -2181,6 +2251,24 @@
    "status": "OTHER CALLBACK ARMS REMAIN PERMISSIVE",
    "detail": "The S61 repair covers the version floor only. The other SSL_SECOP_* arms remain exactly as S58 recorded; implementing them changes cipher/sigalg availability and is a separate boundary. No Miri/ASan/Loom, full serial suite or independent reviewer ran for S61.",
    "evidence": "atlas-refresh/s61-charybdis.json (grading.residuals)"
+  },
+  {
+   "id": "ELEMENT-7-PRECISION",
+   "status": "OPEN — FAIL",
+   "detail": "Element 7 remains FAIL: 141 reachable unresolved indirect sites, of which 81 are target-bounded (no contract establishes the target set) and 60 are contract-bounded (46 ABI_CONTRACT_EXPORT_CALLBACK + 14 ABI_CONTRACT_PROVIDER); 0 are unclassified. The 194 -> 81 target-bounded reduction is real, but 81 sites still lack a bounded target set, so element 7 cannot be ESTABLISHED and no family graduates.",
+   "evidence": "evidence/inventory-sshd-v1r.json (element_7, precision_totals); evidence/closure-ssh-v1r.json (precision)"
+  },
+  {
+   "id": "CONTRACTED-OBLIGATIONS-BLOCKED",
+   "status": "222 BLOCKED",
+   "detail": "The accepted v1r closure carries 312 reachable production obligations: 90 DISCHARGED, 222 contracted but BLOCKED, 0 UNKNOWN. Every reachable file now carries a receipt (92 files, 0 unreceipted), so the 222 are not missing-boundary refusals; they are mechanisms whose safety contracts are recorded but not discharged. SAFE_COMPATIBLE remains 0/33 until they are discharged within each family's dependency closure.",
+   "evidence": "evidence/closure-ssh-v1r.json (counts); evidence/inventory-sshd-v1r.json (boundary_coverage)"
+  },
+  {
+   "id": "RELEASE-EVIDENCE-DEBT",
+   "status": "OPEN",
+   "detail": "The release-evidence planes are stale relative to 0.0.43 and were not re-measured in this documentation pass: FRF still carries 143 manifests at 0.0.27; the Phase-18 unsafe-bounds ratchet is +3,017 real sites and needs a reviewable re-base; the Phase-24 candidate freeze and P1000 counts are pinned to 0.0.27; the Phase-25 planes carry 47k per-file hashes and four Miri findings from the 0.0.27 candidate; and 892 prerequisite findings are correctly gated until the stale strata seal. The required `main` CI check is red. No gate in this list may be read as passed.",
+   "evidence": "forensics/phase-state.json; forensics/atlas/prerequisite-gate.json; docs/PHASE-24-DOWNSTREAM-1000-SEAL.md; docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md"
   }
  ],
  "unsafe_count": {

@@ -1,0 +1,135 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/closure-monotonicity-finding/v1",
+  "recorded_utc": "2026-10-28",
+  "severity": "blocking",
+  "state": "OPEN",
+  "blocks": ["SAFE_COMPATIBLE", "obligation-campaign", "candidate-freeze-carriage"],
+  "authority": [
+    "AGENTS.md section 7: SAFETY_DISCHARGED requires that no safe caller can cause UB and that every remaining unsafe operation has an explicit validity contract; SAFE_COMPATIBLE requires the whole dependency closure discharged",
+    "AGENTS.md section 8: compatibility, safety and cryptography are separate evidence axes",
+    "AGENTS.md section 22: evidence is bound to a frozen candidate and a dependent measurement must be re-derived, not carried"
+  ],
+
+  "one_sentence": "The consumer closure's reachable set is not a conservative over-approximation: when a site loses resolution its admitted target set can shrink, so reachability can be lost without any code-level edge being removed, and the same bound is the oracle that justifies every negative exclusion.",
+
+  "candidates": {
+    "v1n": {
+      "source_commit": "c63fc23de2048533f634adbcd00fd12c34487d13",
+      "libcrypto_sha256": "3901731a7731fbc7c23306a249b85d1a29908784c38b007116315748a73d304d",
+      "ssh_sha256": "d2fe8357a83d0cd7c4214ad1498929ca3b264cadf3856507609d80f5e8d10c1f",
+      "indirect_sites": 52025,
+      "reachable_files": 313,
+      "obligations": 155,
+      "discharged": 77,
+      "blocked": 60,
+      "unknown": 18,
+      "reachable_unresolved": 4,
+      "target_bounded_unresolved": 2,
+      "element_7": "FAIL",
+      "edge_records": 52025,
+      "edge_defects": 0,
+      "oracle_violations": 0
+    },
+    "v1p": {
+      "source_commit": "ad5913099732821d2e95d03823dd38e501d73481",
+      "libcrypto_sha256": "c335ac3c7f04b694f62ec27906a094cfbea319eb4b6efbeb4cc661d76e6aa36b",
+      "ssh_sha256": "0cab1198609b53a38737febbb0bea3a02d470b3c35b83764d25156e40ff9c5db",
+      "indirect_sites": 52033,
+      "reachable_files": 321,
+      "obligations": 171,
+      "discharged": 78,
+      "blocked": 63,
+      "unknown": 30,
+      "reachable_unresolved": 3,
+      "target_bounded_unresolved": 1,
+      "element_7": "FAIL",
+      "edge_records": 52033,
+      "edge_defects": 0,
+      "oracle_violations": 0
+    },
+    "source_delta": "74 insertions / 21 deletions in src/evp/skeymgmt.rs and src/provider/skeymgmt.rs (authority-parity fix), plus tests, court tools, court artefacts and the rebuilt install tree"
+  },
+
+  "measurements": {
+    "consumer_invariance": "The ssh consumer's .text, .data and .data.rel.ro are byte-identical between v1n and v1p; only .note.gnu.build-id (18 bytes) and .debug_line_str (2 bytes, the build directory name) differ. The reachability movement therefore cannot be caused by the consumer binary.",
+    "layout_movement": "libcrypto .text 4,970,942 -> 4,951,534 bytes; 20 function symbols change size (DES_set_key -4,381, DES_set_key_checked -4,381, DES_random_key -4,334, DES_is_weak_key -4,320, digest_to_nid::ossl_digest_get_approved_nid -708, ENGINE_register_all_complete -561, rsa_item_sign -449). The DES sizes are explained by LLVM inlining DES_is_weak_key into its callers in v1n and not in v1p; DES_set_key_unchecked is unchanged and all five symbols keep distinct addresses. This is semantically neutral codegen variance from thin-local-LTO/codegen-unit partitioning, not a semantic change.",
+    "reproducibility": "Each source tree is byte-reproducible in isolation (three builds each, including a fresh container and a touch-all cold recompile). The difference between v1n and v1p is source-induced at the build level and deterministic per tree.",
+    "analysis_identity": "A comment-only edit to src/evp/skeymgmt.rs yields a different libcrypto digest (af568abe...) with byte-identical .text, identical section sizes, identical function sizes and identical symbol addresses (only .llvm.<hash> name suffixes differ). Therefore the DSO digest is not an identity for the analysis input; the analysis identity must be canonicalised over .text and the symbol table."
+  },
+
+  "cbc_sites": {
+    "function": "CRYPTO_cbc128_encrypt",
+    "present_in_both": true,
+    "size_bytes": 810,
+    "instructions": 217,
+    "normalised_body_identical": true,
+    "v1n_address": "0x4a4d90",
+    "v1p_address": "0x3c13a0",
+    "got_slot_references": "25 call/jump instructions from 21 enclosing functions, identical sets in both DSOs (aes_cbc_cipher, provider::cipher::aes_cbc_run, camellia_cbc_run, ossl_cipher_hw_chunked_cbc, ossl_cipher_hw_generic_cbc, e_seed/e_aria/e_camellia/e_sm4 cbc ciphers, CRYPTO_cts128_encrypt_block, CRYPTO_nistcts128_encrypt_block, AES_cbc_encrypt, SEED_cbc_encrypt, Camellia_cbc_encrypt, ...)",
+    "lost_edge": {
+      "v1n": "site 0x5f4f7a in core::fmt::Formatter::pad, `jmp *%rax`, PROVED_TARGET_SET with 2 targets {CRYPTO_cbc128_encrypt, std::panicking::panic_count::finished_panic_hook}",
+      "v1p": "site 0x5effaa, same instruction at the same position, UNRESOLVED, no targets",
+      "classification": "resolver target-set classification changed for a site whose code did not change; not a removed call edge, not a caller becoming unreachable, not ICF aliasing",
+      "note": "The v1n admission is itself implausible as a real call: a Formatter::pad tail jump cannot legitimately target a CBC block function. The bound is therefore noisy in both directions, not merely narrowing."
+    },
+    "v1p_status": "The edge records are still emitted for every site of every closed DSO (52,033 records); the two CRYPTO_cbc128_encrypt records remain UNRESOLVED with missing_property reg-value-partial[int]. What changed is that the closure no longer counts the function as reachable, so the sites left reachable_residual_sites and the element-7 target-bounded count fell from 2 to 1. The disappearance is not silent at the record level, but it is unexplained at the graph level."
+  },
+
+  "root_cause": {
+    "statement": "The unresolved-site admission is a class-specific set (taken_code, field-store values in start_set, unknown-call-argument targets in start_set) rather than a superset of everything the resolver may have admitted. A site that becomes less precise can therefore admit strictly fewer targets.",
+    "evidence": "Across the two sidecars, matching records by (normalised function, role, operand shape): 50,986 PROVED->PROVED, 771 UNRESOLVED->UNRESOLVED, 74 UNRESOLVED->PROVED, 59 PROVED->UNRESOLVED. The 59 losses drop whole evaluated unions (923 -> 0, 912 -> 0, ...). 3,462 sites show target churn. The largest movers are BIO_puts, BIO_ctrl, ASN1_sign and ec::mult ossl_ec_wNAF_pre, each losing a ~923-target union.",
+    "file_losses": [
+      {"file": "src/x509/x509_ext.rs", "admitting_targets": "x509_ext::free_x509_extension", "v1n_admitting_sites": 1580, "v1p_admitting_sites": 0},
+      {"file": "src/evp/legacy_md4.rs", "admitting_targets": "legacy_md4::{md4_init,md4_update,md4_final}", "v1n_admitting_sites": "~204 each", "v1p_admitting_sites": 0},
+      {"file": "src/evp/e_rc4.rs", "admitting_targets": "e_rc4::{rc4_cipher,rc4_init_key}", "v1n_admitting_sites": "~204 each", "v1p_admitting_sites": 0},
+      {"file": "src/bn/gf2m.rs", "admitting_targets": "bn::gf2m::to_array", "v1n_admitting_sites": 1, "v1p_admitting_sites": 0},
+      {"file": "src/ssl/t1_trce.rs", "admitting_targets": "ssl::t1_trce::ssl_print_cert_request", "v1n_admitting_sites": 1, "v1p_admitting_sites": 0},
+      {"file": "src/provider/mac.rs", "admitting_targets": "unattributed (direct-edge cascade)", "note": "121 symbols present in both DSOs under identical names; no target set names any of them. The reachable function set is not persisted, so the lost direct edge cannot be named from the receipt."}
+    ],
+    "is_semantics": false,
+    "is_codegen": "The DSO layout change is codegen (inlining/partitioning). The reachability loss is not entailed by codegen alone; it is the non-monotone bound interacting with resolver classification."
+  },
+
+  "why_it_blocks": [
+    "A dependency closure is only meaningful if the reachable set is an over-approximation. If reachability can be lost while the consumer is byte-identical, then 'not reachable' is not established, and the closure is not a proof of what the consumer can execute.",
+    "The same set is the negative-claim oracle introduced in edge-record v1.4. Every exclusion justified by 'not in the final upper bound' inherits this defect: the oracle check is necessary but not sufficient until the bound is sound.",
+    "Obligation counts are not carriable across candidates: 155 -> 171 obligations, 77 -> 78 discharged, 60 -> 63 blocked, 18 -> 30 unknown, 13 -> 17 missing boundary receipts, with no semantic change in the moved files. A discharge computed at S cannot be carried to S' (AGENTS section 22), and here it cannot even be reproduced across two candidates of the same semantic source.",
+    "Provider-implemented cipher/MAC coverage is incidental: those implementations are reached only when an unrelated evidence-class union happens to include them, because ABI_CONTRACT_PROVIDER is contract-bounded with an unbounded target set. That is not a principled reachability route."
+  ],
+
+  "required_remedy": [
+    "Make the bound monotone: an unresolved site must admit at least the union of every evidence class it could satisfy and every target the resolver considered at that site; a class-specific set may refine reporting precision but must be proved a superset of the resolved set before it may bound reachability.",
+    "Add an executable invariant over a pair of sidecars: for every site keyed semantically, unresolved_bound(site) must be a superset of proved_bound(site) and of the union of both candidates' admitted sets. A violation is a refusal.",
+    "Add a neutrality control to the freeze: build S, rebuild S, and rebuild S with a comment-only edit; require a canonical analysis identity (hash over .text bytes plus the symbol table) to be identical across all three, and record the DSO digests as non-identities.",
+    "Persist the reachable function set (canonical digest plus the set) in the receipt, so a movement can be adjudicated from the receipt rather than reconstructed from 1.3 GB sidecars.",
+    "Fix the STALE_HASH rule collision: the build record hashes the pristine source tree with sha256('openssl-rs/source-tree/v1\\0' + path\\0bytes\\0) while the atlas and consumer_closure compare canonical-JSON [[relpath,size,sha256]]. Both are recorded under the same field name, so the check always fails when provenance is supplied. Emit the canonical value as source_root_hash and the domain-separated value as source_tree_domain_hash, and compare like with like.",
+    "Re-run the ssh and sshd closures at the repaired bound, and publish the reachable-file and obligation diff, before any obligation is adjudicated or carried."
+  ],
+
+  "state_of_the_record_level_hardening": "Unaffected and still valid: 52,033 records, 0 record defects, 0 oracle violations, 0 unattributable admissions, and every exclusion carries a subject-bound, recomputable claim. The defect is in the graph the records are validated against, not in the record discipline.",
+
+  "non_claims": [
+    "This finding does not claim that any particular unsafe operation was missed or that any Rust code is unsound; it claims that the reachability bound cannot currently support a safety-relevant dependency closure.",
+    "No dynamic trace exists for ssh in either run (observed_trace.available = false), so whether ssh executes CRYPTO_cbc128_encrypt is not established either way.",
+    "Byte reproducibility across toolchains, machines or images is not established; only within the pinned court image.",
+    "SAFE_COMPATIBLE remains 0/33. No obligation discharge from v1n or v1p is carried forward by this receipt."
+  ],
+
+  "receipt_retention": {
+    "choice": "A",
+    "choice_statement": "Both candidate inventories are kept in the repository; the closure receipts they cite are identified by path, size and sha256 but are NOT committed, because they live under the gitignored `court/` scratch tree. This receipt therefore claims digest identity only, and explicitly does not claim that the closure can be reproduced from the repository.",
+    "inventories": [
+      {"candidate": "v1n", "path": "atlas-refresh/v1n-candidate-freeze.json", "tracked": "NOT_TRACKED_AT_RECORD_TIME (added by this batch)", "source_commit": "c63fc23de2048533f634adbcd00fd12c34487d13"},
+      {"candidate": "v1p", "path": "atlas-refresh/v1p-candidate-freeze.json", "tracked": "tracked", "source_commit": "ad5913099732821d2e95d03823dd38e501d73481"}
+    ],
+    "closure_receipts": [
+      {"candidate": "v1n", "subject": "ssh", "path": "court/freeze-v1n/closure-ssh-v1n.json", "size": 5600956, "sha256": "8079440e5b20162973f0fd44497e2ce86091045924f2c29ea32395b0b013aa90"},
+      {"candidate": "v1n", "subject": "sshd", "path": "court/freeze-v1n/closure-sshd-v1n.json", "size": 5394196, "sha256": "bf6543ef8835cef53479f585d1fe594d30d288ba8ff4db2419e53789054b6dcf"},
+      {"candidate": "v1p", "subject": "ssh", "path": "court/freeze-v1p/closure-ssh-v1p.json", "size": 5394675, "sha256": "3a7b0346b6d7005705a54620e4ae87be0aba2f13674db7da8e7d170024485d61"},
+      {"candidate": "v1p", "subject": "sshd", "path": "court/freeze-v1p/closure-sshd-v1p.json", "size": 5225495, "sha256": "1a2d6d813d2c6353ac28a4e37cdc6f4c55b3737cb34b884f9e42b4ce727550dc"}
+    ],
+    "receipt_retention": "digest_only_not_in_repository",
+    "reproducibility": "NOT_REPRODUCIBLE_FROM_REPOSITORY",
+    "note": "`court/` is gitignored (`.gitignore`: `/court/`), so the four receipts above are identified by digest and are not part of the repository. The inventories ARE committed, so the candidates (source commit, source-tree digest, install artefacts, consumer binaries) are reproducible as identities, but the closure sidecars and graphs are not. A reader can rebuild the candidates and re-run `forensics/tools/consumer_closure.py` from the inventories; that reproduction is a NEW measurement and must not be assumed to reproduce these digests. This is the same limitation the finding records for the bound itself."
+  }
+}

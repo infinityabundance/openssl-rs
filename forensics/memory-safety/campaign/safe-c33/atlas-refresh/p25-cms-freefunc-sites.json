@@ -1,0 +1,87 @@
+{
+ "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "p25-cms-freefunc-sites",
+ "subphase": "safe-c33 analyzer-corpus: CMS stack freefunc thunks (X509 / X509_CRL pop_free callbacks)",
+ "date": "2026-10-30",
+ "mechanism": "RAND_CMS_STORE_KEYFMT",
+ "mechanism_registered": true,
+ "mechanism_registry": "forensics/tools/consumer_closure.py MECHANISM_RULES ^src/(?:rand|cms|store|pem|pkcs7|pkcs12|cmp|crmf)/ -> RAND_CMS_STORE_KEYFMT",
+ "candidate": {
+  "branch": "stage/p25/analyzer-corpus",
+  "head": "6fa558f9c17cc218f52e76f33aaa06eb2a5f47d1",
+  "working_tree_dirty": true,
+  "working_tree_note": "uncommitted doc-only block in src/x509/v3_lib.rs; none of this receipt's files were modified",
+  "inventory_path": "court/inventory/closure-ssh-s1b.json",
+  "inventory_source_head": "47beaa1a7caedfdd666ad026e41fafc25a8ce00a",
+  "line_number_basis": "closure obligation coordinates at the inventory source head; verified against the working tree at HEAD"
+ },
+ "authority": {
+  "id": "openssl-3.6.4-production",
+  "source": "forensics/authorities/src/openssl-3.6.4",
+  "stack_contract": "crypto/stack/stack.c:184-201 OPENSSL_sk_pop_free (no per-element NULL check on the element itself; freefunc is void(*)(void*))",
+  "note": "the CMS get1_certs/get1_crls arms free the stack they built on a partial-construction failure"
+ },
+ "summary": {
+  "files": 1,
+  "boundaries": 2,
+  "blocked": 2,
+  "discharged": 0,
+  "eliminated": 0,
+  "statement": "Both CMS freefunc thunks are enumerated with their exact stacks and single-release obligation. They are freefunc callbacks whose element type is a registration convention, so both are BLOCKED."
+ },
+ "files": [
+  {
+   "file": "src/cms/cms_lib.rs",
+   "sites": 2,
+   "disposition": "BLOCKED"
+  }
+ ],
+ "defects": [],
+ "boundaries": [
+  {
+   "id": "P25-CMS-FREEFUNC-001",
+   "file": "src/cms/cms_lib.rs",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "disposition": "BLOCKED",
+   "line": 1378,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "x509_free_void",
+   "contract": "`void (*)(void *)` freefunc thunk `x509_free_void` passed to `OPENSSL_sk_pop_free`. Element-type contract: each `p` is a non-NULL, live, exclusively stack-owned `X509` (the stack's declared element type), released exactly once by `X509_free`. Registered on exactly these stacks: src/cms/cms_lib.rs:1204 (failure arm of ossl_cms_get1_certs_ex) and :1579 (test reserve/append assertions). The freefunc receives no length, count or type tag \u2014 the element type is a convention of each registration site, not a type-checked property, so the site stays BLOCKED (AGENTS.md \u00a79 freefunc/destructor-trait rule). In the two production failure arms only elements already pushed are drained and the slot is then nulled, so there is no double release and no partially constructed element is freed.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "element type is enforced by registration convention, not by the type system"
+   ]
+  },
+  {
+   "id": "P25-CMS-FREEFUNC-002",
+   "file": "src/cms/cms_lib.rs",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "disposition": "BLOCKED",
+   "line": 1384,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "x509_crl_free_void",
+   "contract": "`void (*)(void *)` freefunc thunk `x509_crl_free_void` passed to `OPENSSL_sk_pop_free`. Element-type contract: each `p` is a non-NULL, live, exclusively stack-owned `X509_CRL` (the stack's declared element type), released exactly once by `X509_CRL_free`. Registered on exactly these stacks: src/cms/cms_lib.rs:1264 (failure arm of ossl_cms_get1_crls_ex) and :1594 (test reserve/append assertions). The freefunc receives no length, count or type tag \u2014 the element type is a convention of each registration site, not a type-checked property, so the site stays BLOCKED (AGENTS.md \u00a79 freefunc/destructor-trait rule). In the two production failure arms only elements already pushed are drained and the slot is then nulled, so there is no double release and no partially constructed element is freed.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "element type is enforced by registration convention, not by the type system"
+   ]
+  }
+ ],
+ "related_receipts": [
+  {
+   "receipt": "cms-ownership-audit.json",
+   "relation": "related but NOT covering these sites: it audits ossl_cms_get1_certs_ex (cms_lib.rs:1180-1211) and ossl_cms_get1_crls_ex (:1238-1271) ownership/capacity, including the pop_free call sites, but it does not enumerate or contract the `x509_free_void`/`x509_crl_free_void` callback definitions at :1378/:1384."
+  }
+ ],
+ "non_claims": [
+  "no site is SAFETY_DISCHARGED; every entry is BLOCKED",
+  "a receipt moves an obligation from UNKNOWN to BLOCKED only; documentation alone does not discharge an obligation (AGENTS.md \u00a77)",
+  "no family graduation or SAFE_COMPATIBLE claim is made",
+  "no Rust behaviour change was made by this batch"
+ ]
+}

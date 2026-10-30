@@ -1550,11 +1550,18 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_set_padding(ctx: *mut EvpCipherCtx, pad:
 /// # Deliberate safety divergences from the authority (§17)
 ///
 /// The authority initialises `size_t sz = arg` and then hands `sz` to the provider as a buffer
-/// length. Five pointer-bearing commands (`randkey`, `tag` in both directions, `tlsivfixed`,
-/// `tlsaad`) have **no negative-length check**, so `arg < 0` becomes a `SIZE_MAX` length and the
-/// provider reads or writes that many bytes through the caller's pointer. Only `mackey` refuses a
-/// negative length (with -1). A negative length is never a valid call, so refusing it here cannot
-/// reject a valid one; it prevents the authority's fault rather than reproducing it.
+/// length. Four pointer-bearing commands (`randkey`, `tag` in both directions, `tlsaad`) have
+/// **no negative-length check**, so `arg < 0` becomes a `SIZE_MAX` length and the provider reads
+/// or writes that many bytes through the caller's pointer. Only `mackey` refuses a negative
+/// length (with -1). A negative length is never a valid call, so refusing it here cannot reject a
+/// valid one; it prevents the authority's fault rather than reproducing it.
+///
+/// `tlsivfixed` is **not** in that list: `arg == -1` is the documented "restore the whole IV"
+/// sentinel (`crypto/evp/e_aes.c:1508-1514`, `providers/implementations/ciphers/
+/// ciphercommon_gcm.c.in:519-527`). The authority passes it to the provider as `(size_t)-1`;
+/// here that is the same `arg as usize` conversion, and the provider recognises it before it
+/// reads `ptr`. Only values **below** -1 are refused, because none of them is a sentinel and the
+/// authority would turn each into a `SIZE_MAX`-scale length.
 ///
 /// `EVP_CTRL_TLS1_1_MULTIBLOCK_ENCRYPT` is the other asymmetry: the `_AAD` arm checks
 /// `arg >= sizeof(EVP_CTRL_TLS1_1_MULTIBLOCK_PARAM)` but the `_ENCRYPT` arm dereferences the same
@@ -1655,8 +1662,13 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_ctrl(
                     (*ctx).iv_len = -1;
                 }
                 EVP_CTRL_AEAD_SET_IV_FIXED => {
-                    // §17: no negative-length check in the authority; `sz` would be `SIZE_MAX`.
-                    if arg < 0 {
+                    // `arg == -1` is the documented "restore the whole IV" sentinel and reaches
+                    // the provider as `(size_t)-1`, exactly as the authority's `size_t sz = arg`
+                    // does; the provider copies `ivlen` bytes from `ptr`. Any other negative
+                    // value is not a sentinel: the authority would pass it as a `SIZE_MAX`-scale
+                    // length, so refuse it (§17), keeping the hazard guard for genuinely invalid
+                    // inputs.
+                    if arg < -1 {
                         return 0;
                     }
                     params[0] = OSSL_PARAM_construct_octet_string(c"tlsivfixed".as_ptr(), ptr_, sz);
@@ -4904,6 +4916,40 @@ mod tests {
         1
     }
 
+    /// What a recording `set_ctx_params` observed for the `tlsivfixed` parameter. Raw fields, so
+    /// `Default` is the null/zero state.
+    #[derive(Default)]
+    struct ObservedFixed {
+        called: bool,
+        data: *mut c_void,
+        data_size: usize,
+        key: *const c_char,
+    }
+
+    /// Records the `tlsivfixed` parameter the ctrl frame handed the provider, and answers 1. The
+    /// context's `algctx` is the test's own [`ObservedFixed`].
+    ///
+    /// # Safety
+    /// `algctx` must point to a live `ObservedFixed`; `params` must be the ctrl frame's own
+    /// terminated array.
+    unsafe extern "C" fn recording_set_ctx_params(
+        algctx: *mut c_void,
+        params: *const OsslParam,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let observed = &mut *algctx.cast::<ObservedFixed>();
+            observed.called = true;
+            let p = crate::params::OSSL_PARAM_locate_const(params, c"tlsivfixed".as_ptr());
+            if !p.is_null() {
+                observed.data = (*p).data;
+                observed.data_size = (*p).data_size;
+                observed.key = (*p).key;
+            }
+            1
+        }
+    }
+
     /// The get side answers the `MULTIBLOCK_ENCRYPT` length parameter with a recognisable value,
     /// so the test can tell a dispatch from a refusal, and records that it ran.
     unsafe extern "C" fn fake_get_ctx_params(algctx: *mut c_void, params: *mut OsslParam) -> c_int {
@@ -4926,7 +4972,8 @@ mod tests {
 
     /// §17 divergence: the authority turns a negative `arg` into `SIZE_MAX` on these
     /// pointer-bearing provider arms; each one must refuse before touching `ptr`. `SET_MAC_KEY`
-    /// keeps the authority's distinct -1.
+    /// keeps the authority's distinct -1. `SET_IV_FIXED` is excluded: its -1 is a documented
+    /// sentinel, covered by the tests below.
     #[test]
     fn control_refuses_negative_lengths_on_pointer_bearing_provider_arms() {
         let cipher = provider_control_cipher();
@@ -4938,7 +4985,6 @@ mod tests {
                 (EVP_CTRL_RAND_KEY, 0),
                 (EVP_CTRL_AEAD_GET_TAG, 0),
                 (EVP_CTRL_AEAD_SET_TAG, 0),
-                (EVP_CTRL_AEAD_SET_IV_FIXED, 0),
                 (EVP_CTRL_AEAD_TLS1_AAD, 0),
                 (EVP_CTRL_AEAD_SET_MAC_KEY, -1),
             ] {
@@ -4948,6 +4994,99 @@ mod tests {
                     "command {command:#x} must refuse a negative length"
                 );
             }
+        }
+    }
+
+    /// `EVP_CTRL_AEAD_SET_IV_FIXED` with `arg == -1` is the documented "restore the whole IV"
+    /// sentinel: the authority passes `(size_t)-1` to the provider, whose
+    /// `gcm_tls_iv_set_fixed` copies `ivlen` bytes from `ptr` (`e_aes.c:1508-1514`,
+    /// `ciphercommon_gcm.c.in:519-527`). The ctrl must dispatch it and answer 1, not refuse.
+    #[test]
+    fn aead_set_iv_fixed_passes_the_documented_minus_one_sentinel() {
+        let mut cipher = provider_control_cipher();
+        cipher.set_ctx_params = Some(recording_set_ctx_params);
+        let ctx = Ctx::new();
+        let mut observed = ObservedFixed::default();
+        let mut iv = [0u8; 12];
+        // SAFETY: `ctx.0` is live, the method outlives the call, and `observed` outlives the ctrl.
+        unsafe {
+            (*ctx.0).cipher = &cipher;
+            (*ctx.0).algctx = (&mut observed as *mut ObservedFixed).cast();
+            assert_eq!(
+                EVP_CIPHER_CTX_ctrl(
+                    ctx.0,
+                    EVP_CTRL_AEAD_SET_IV_FIXED,
+                    -1,
+                    iv.as_mut_ptr().cast()
+                ),
+                1,
+                "-1 is the sentinel, not a refusal"
+            );
+            assert!(observed.called, "the provider must see the parameter");
+            assert_eq!(observed.data, iv.as_mut_ptr().cast::<c_void>());
+            assert_eq!(
+                observed.data_size,
+                usize::MAX,
+                "the authority's (size_t)-1 sentinel reaches the provider"
+            );
+            assert_eq!(
+                core::ffi::CStr::from_ptr(observed.key).to_bytes(),
+                b"tlsivfixed"
+            );
+        }
+    }
+
+    /// A normal fixed-IV length is a plain buffer length: the ctrl dispatches it unchanged.
+    #[test]
+    fn aead_set_iv_fixed_passes_a_normal_length_unchanged() {
+        let mut cipher = provider_control_cipher();
+        cipher.set_ctx_params = Some(recording_set_ctx_params);
+        let ctx = Ctx::new();
+        let mut observed = ObservedFixed::default();
+        let mut iv = [0u8; 12];
+        // SAFETY: as in the sentinel test above.
+        unsafe {
+            (*ctx.0).cipher = &cipher;
+            (*ctx.0).algctx = (&mut observed as *mut ObservedFixed).cast();
+            assert_eq!(
+                EVP_CIPHER_CTX_ctrl(ctx.0, EVP_CTRL_AEAD_SET_IV_FIXED, 4, iv.as_mut_ptr().cast()),
+                1
+            );
+            assert!(observed.called);
+            assert_eq!(observed.data, iv.as_mut_ptr().cast::<c_void>());
+            assert_eq!(
+                observed.data_size, 4,
+                "the length is forwarded, not rewritten"
+            );
+        }
+    }
+
+    /// Every negative value other than the sentinel is invalid: the authority would hand it to
+    /// the provider as a `SIZE_MAX`-scale length, so the ctrl refuses before dispatching (§17).
+    #[test]
+    fn aead_set_iv_fixed_still_refuses_other_negative_lengths() {
+        let mut cipher = provider_control_cipher();
+        cipher.set_ctx_params = Some(recording_set_ctx_params);
+        let ctx = Ctx::new();
+        let mut observed = ObservedFixed::default();
+        let mut iv = [0u8; 12];
+        // SAFETY: as in the sentinel test above.
+        unsafe {
+            (*ctx.0).cipher = &cipher;
+            (*ctx.0).algctx = (&mut observed as *mut ObservedFixed).cast();
+            for arg in [-2, c_int::MIN] {
+                assert_eq!(
+                    EVP_CIPHER_CTX_ctrl(
+                        ctx.0,
+                        EVP_CTRL_AEAD_SET_IV_FIXED,
+                        arg,
+                        iv.as_mut_ptr().cast()
+                    ),
+                    0,
+                    "{arg} is not a sentinel and must be refused"
+                );
+            }
+            assert!(!observed.called, "no invalid length may reach the provider");
         }
     }
 
