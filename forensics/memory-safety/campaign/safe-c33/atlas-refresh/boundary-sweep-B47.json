@@ -1,0 +1,714 @@
+{
+ "receipt": "boundary-sweep-B47",
+ "date": "2026-10-30",
+ "campaign": "safe-c33 scoped mechanism discharge (SSL_SESSION S2/S3/S4: the remaining BLOCKED sites)",
+ "subphase": "B47: the eleven remaining BLOCKED SSL_SESSION UNSAFE_FN_DEF sites outside the seven B46 ConfCmdFn rows. This refresh keeps the fn-level # Safety contracts and the C3 canary, corrects the falsified min_max_proto write-order clause and the stale coordinates, and does not apply the discharge or edit CAMPAIGN-STATUS.json.",
+ "candidate": {
+  "base_commit": "a62adfb2a239aa336be81eb8974044d32a6edccb",
+  "base_commit_subject": "evidence(ssl): B46 and B47 rejected; a self-authored contract is not a witness",
+  "branch": "stage/p25/ssl-session-s1",
+  "working_tree": "dirty: the B46/B47 refresh, the B46-D2 in-use guard and three guard tests in src/ssl/ssl_conf.rs, plus the B47 fn-level contracts in src/ssl/{ssl_ciph,ssl_rsa,t1_trce,ssl_lib}.rs; nothing committed, nothing rebuilt into the install",
+  "src_sha256_final": "399096901c94dd2cc3c89dd17845da542cf7efd82b417645c0374d65021f16e7",
+  "src_sha256_final_scope": "sha256 over the sorted \"<sha256>  <path>\" lines of the five changed files; per-file hashes in files_sha256",
+  "files": [
+   "src/ssl/ssl_conf.rs",
+   "src/ssl/ssl_ciph.rs",
+   "src/ssl/ssl_rsa.rs",
+   "src/ssl/t1_trce.rs",
+   "src/ssl/ssl_lib.rs"
+  ],
+  "files_sha256": {
+   "src/ssl/ssl_conf.rs": "880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
+   "src/ssl/ssl_ciph.rs": "8d3d77be1fe724e4f15ce080fa76875c74930924638edfa8008f6a2acf7dd993",
+   "src/ssl/ssl_rsa.rs": "e757321bb8019b6357a339bd561d50bb31a594379aaedc2910da96c3057e7771",
+   "src/ssl/t1_trce.rs": "7a28ef67208e42c8870cab94414367711f7c5491fe99ddfdafa795077f5a51b1",
+   "src/ssl/ssl_lib.rs": "b221695b5657e04ebf1f259da7ca3fe100c528efc129b86c88f6e566bb0cf9c2"
+  },
+  "note": "No freeze tag was created and nothing was committed (per the subphase instruction). The obligation coordinates (line fields) are the V1 census coordinates and are retained as provenance; line_current and every embedded candidate line reference have been refreshed to the current working tree. Every quoted candidate line number is bound to these hashes. The ssl_conf.rs hash includes the B46-D2 guard; the eleven B47 sites themselves are unchanged apart from fn-level # Safety documentation."
+ },
+ "authority": {
+  "id": "openssl-3.5.9",
+  "source": "forensics/authorities/src/openssl-3.5.9",
+  "ssl_conf_c": "ssl/ssl_conf.c:26-190, 303-349, 970-1010",
+  "ssl_ciph_c": "ssl/ssl_ciph.c:1273-1421",
+  "ssl_rsa_c": "ssl/ssl_rsa.c:637-768",
+  "t1_trce_c": "ssl/t1_trce.c:663-1735",
+  "ssl_lib_c": "ssl/ssl_lib.c:6529-6581, 6714-6738",
+  "directive": "doc/man3/SSL_CONF_cmd.pod:12-22, 700-780",
+  "ssl_ctx_new_pod": "doc/man3/SSL_CTX_new.pod:97-99 (SSL_CTX must not be changed from multiple threads concurrently; the implementation provides no serialization)",
+  "quic_multi_stream_pod": "doc/man7/ossl-guide-quic-multi-stream.pod:51-53 (the same SSL object cannot be used on two threads at once without application-level locking)",
+  "note": "The authority documentation states no rule for SSL_CONF_CTX itself and performs no overlap check in ssl/ssl_conf.c. It does state an application obligation for SSL/SSL_CTX (ssl_ctx_new_pod, quic_multi_stream_pod), in advisory wording. The candidate restates that obligation in the exported SSL_CONF_cmd/SSL_CONF_cmd_argv contracts (B46-D1) and, for same-thread overlap of the SSL_CONF_CTX, refuses deterministically with 0 via the in-use guard (B46-D2). For the callbacks in this receipt the authority supplies the ABI signature and the pointer contracts: CONF_parse_list element pointers, custom-extension parse/add callbacks, and the CT validation callback."
+ },
+ "scope": {
+  "aggregation": "python3: [o for o in closure-ssh-v1u.obligations if o['mechanism']=='SSL_SESSION' and o['status']=='BLOCKED']",
+  "raw_blocked_count": 18,
+  "s1_covered_count": 7,
+  "s1_receipt": "boundary-sweep-B46.json (the seven ssl_conf.rs ConfCmdFn rows)",
+  "selected_count": 11,
+  "selected_basis": "every remaining BLOCKED SSL_SESSION obligation: ssl_conf.rs:240/274/379 (helpers outside the seven ConfCmdFn rows), ssl_ciph.rs:741/851, ssl_rsa.rs:1007/1033/1046, t1_trce.rs:1064/1077, ssl_lib.rs:8845",
+  "note": "18 = 7 (B46) + 11 (this receipt); no BLOCKED SSL_SESSION obligation is left unassigned."
+ },
+ "boundaries": [
+  {
+   "id": "B47-SSL-CONF-001",
+   "file": "src/ssl/ssl_conf.rs",
+   "line": 240,
+   "line_current": 332,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ssl_match_option",
+   "mechanism": "SSL_SESSION",
+   "signature": "unsafe fn(*mut SslConfCtx, &SslFlagTbl, *const c_char, c_int, c_int) -> bool",
+   "disposition": "SAFETY_DISCHARGED (scope: ssl_match_option and its dispatch path; src/ssl/ssl_conf.rs:240)",
+   "contract": "`ssl_match_option` is a private helper whose only caller is `ssl_set_option_list` (`src/ssl/ssl_conf.rs:424`), inside the `CONF_parse_list` parse started by `parse_option_list` (`:542`; callback installed at `:558`). Preconditions: (1) `cctx` is non-NULL, aligned, live, initialised and exclusively accessible: it comes from `SSL_CONF_cmd` (`:1516`, dispatch `:1473`), which refuses NULL at `:1522` and whose public `# Safety` (`:1489`) requires exclusivity; on a match this function calls `ssl_set_option` (`:361`), which takes `&mut *cctx` and writes one field of the referenced `SSL`/`SSL_CTX`. (2) `tbl` is a safe `&SslFlagTbl`; the caller borrows it from `cctx.tbl`, which `parse_option_list` points at a frame-local table for the duration and clears at `:566-567`. (3) `elem` is readable for `len` bytes when `len >= 0` and NUL-terminated when `len == -1`, exactly `CONF_parse_list`'s element contract; `onoff` is an integer. (4) No pointer is retained.",
+   "callers": [
+    {
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 424,
+     "role": "sole caller: ssl_set_option_list loop"
+    },
+    {
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 361,
+     "role": "ssl_set_option, reached on a match; takes &mut *cctx"
+    },
+    {
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 558,
+     "role": "parse_option_list installs ssl_set_option_list with cctx as usr"
+    }
+   ],
+   "canary": "C2/option_list test exercises the valid multi-element path; a malformed (elem,len) is NOT_RUN: no candidate caller supplies one and the element contract is authority-derived",
+   "established": [
+    "cctx live/exclusive from the SSL_CONF_cmd dispatch path (:1522, :1473; public # Safety :1489)",
+    "tbl/ntbl denote the frame-local table installed by parse_option_list (:549-550) and cleared at :566-567",
+    "elem/len are supplied by CONF_parse_list (call at :554-561)",
+    "onoff is an integer toggle with no pointer obligation"
+   ],
+   "authority_derived": [
+    "CONF_parse_list element pointer/length contract (`elem` readable for `len`, NUL-terminated at -1) is the authority's",
+    "the authority documents no exclusivity for the configuration context; the candidate requires it (B46-D1)"
+   ],
+   "asserted_not_established": [
+    "a malformed (elem,len) or unaligned cctx is not rejected by a runtime check; it is outside the stated contract"
+   ]
+  },
+  {
+   "id": "B47-SSL-CONF-002",
+   "file": "src/ssl/ssl_conf.rs",
+   "line": 274,
+   "line_current": 384,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ssl_set_option_list",
+   "mechanism": "SSL_SESSION",
+   "signature": "unsafe extern \"C\" fn(*const c_char, c_int, *mut c_void) -> c_int",
+   "disposition": "SAFETY_DISCHARGED (scope: ssl_set_option_list and its dispatch path; src/ssl/ssl_conf.rs:274)",
+   "contract": "`ssl_set_option_list` is the `CONF_parse_list` element callback, installed only by `parse_option_list` (`src/ssl/ssl_conf.rs:558`) with `usr = cctx` (`:559`). Preconditions: (1) `usr` is non-NULL and points to a live, initialised, exclusively accessible `SslConfCtx`; the callback reads `tbl`/`ntbl` at `:417` (installed at `:549-550`) and on a match reaches `ssl_match_option` (`:424`) -> `ssl_set_option` (`:361`), which takes `&mut *cctx`. (2) `cctx.tbl` is NULL or a live array of `ntbl` `SslFlagTbl` values that outlives the callback; `parse_option_list` installs a frame-local table and clears it before returning (`:566-567`). (3) `elem` is NULL or readable for `len` bytes (`len >= 0`) or NUL-terminated (`len == -1`); a NULL `elem` returns 0 at `:394`. (4) `CONF_parse_list` invokes synchronously and retains nothing, and the callback stores no pointer.",
+   "callers": [
+    {
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 542,
+     "role": "parse_option_list; sets tbl/ntbl and starts the parse"
+    },
+    {
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 558,
+     "role": "the only installer of this callback, with usr = cctx (:559)"
+    },
+    {
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 424,
+     "role": "ssl_match_option call on a matching element"
+    }
+   ],
+   "canary": "ssl::ssl_conf::tests::option_list_applies_leading_matches_and_reports_failures exercises the callback through SSL_CONF_cmd; a NULL/aliased usr is NOT_RUN because CONF_parse_list is the only invoker and always supplies cctx",
+   "established": [
+    "usr = cctx is installed by parse_option_list (:558-559)",
+    "tbl/ntbl are the frame-local table installed at :549-550 and cleared at :566-567",
+    "elem/len follow CONF_parse_list; NULL elem returns 0",
+    "no borrow of *cctx is held across the ssl_match_option loop (tbl/ntbl copied at :417)"
+   ],
+   "authority_derived": [
+    "the authority's CONF_parse_list callback ABI is relied on, not revalidated",
+    "the authority documents no exclusivity; the candidate requires it (B46-D1)"
+   ],
+   "asserted_not_established": [
+    "a caller that bypasses parse_option_list and supplies a different usr is outside the contract"
+   ]
+  },
+  {
+   "id": "B47-SSL-CONF-003",
+   "file": "src/ssl/ssl_conf.rs",
+   "line": 379,
+   "line_current": 514,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "min_max_proto",
+   "mechanism": "SSL_SESSION",
+   "signature": "unsafe fn(*mut SslConfCtx, *const c_char, *mut c_int) -> c_int",
+   "disposition": "SAFETY_DISCHARGED (scope: min_max_proto and its dispatch path; src/ssl/ssl_conf.rs:379)",
+   "contract": "`min_max_proto` is called only by `cmd_MinProtocol` (`src/ssl/ssl_conf.rs:853`) and `cmd_MaxProtocol` (`:885`), `ConfCmdFn` rows stored by `commands()` (`:990`; rows `:1067`/`:1068`) and reached only through the single dispatch `f(cctx, value)` in `SSL_CONF_cmd` (`:1473`). Preconditions: (1) `cctx` is live, initialised and exclusively accessible (public `# Safety` `:1489`; dispatch guard `:1522`). (2) `cctx.ctx` (live `SSL_CTX`) or `cctx.ssl` (live `SSL`) is selected; its `method`/`defltmeth` is a live non-NULL method table established by `SSL_CTX_new`/`SSL_new`. (3) `value` is non-NULL and NUL-terminated: the dispatch refuses NULL for a typed row at `:1490`, and the body reads it with `CStr::from_ptr` at `:527`. (4) `bound` is never NULL at a dereference: it is the live, aligned `min_proto_version`/`max_proto_version` field supplied from `cctx`. `SSL_CONF_CTX_set_ssl` (`:1795`, assigns `:1812-1813`) and `SSL_CONF_CTX_set_ssl_ctx` (`:1839`, assigns `:1856-1857`) set it whenever `ctx`/`ssl` is non-NULL; when both are NULL the body returns 0 at `:524` before reading `value` or `bound`, so the NULL case is never dereferenced. (5) An unrecognised protocol name returns 0 at `:530`. The accepted `None` name parses to version 0, which `ssl_set_version_bound` writes at `:470-473` before any range test; a nonzero accepted version is range-checked before its write; the method-mismatch `_` arm accepts without writing.",
+   "callers": [
+    {
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 853,
+     "role": "cmd_MinProtocol call"
+    },
+    {
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 885,
+     "role": "cmd_MaxProtocol call"
+    },
+    {
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 1473,
+     "role": "sole dispatch f(cctx, value) in SSL_CONF_cmd"
+    },
+    {
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 1839,
+     "role": "set_ssl_ctx supplies bound (:1856-1857); set_ssl at :1795 (:1812-1813)"
+    }
+   ],
+   "canary": "C3: ssl::ssl_conf::tests::conf_cmd_min_max_protocol_bounds_are_range_checked (mutation-sensitive; see negative_control)",
+   "established": [
+    "cctx and value non-NULL on the dispatch path (:1522, :1490)",
+    "bound is live when ctx/ssl is non-NULL (set_ssl/set_ssl_ctx contracts :1795/:1839)",
+    "both-null returns 0 before reading value or bound (:524)",
+    "a rejected name is refused by protocol_from_string/ssl_set_version_bound (C3); version 0 (`None`) is written before any range test at `:470-473`, while a nonzero accepted version is range-checked before its write"
+   ],
+   "authority_derived": [
+    "the authority's protocol table and version-range/method-match rules (ssl/ssl_conf.c:303-349, ssl/statem/statem_lib.c:2107-2156) are behaviour, not pointer preconditions",
+    "the live non-NULL method table rests on SSL_CTX_new/SSL_new"
+   ],
+   "asserted_not_established": [
+    "the DTLS method-version and method-mismatch arms are not exercised by C3"
+   ]
+  },
+  {
+   "id": "B47-CIPH-001",
+   "file": "src/ssl/ssl_ciph.rs",
+   "line": 741,
+   "line_current": 756,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "update_cipher_list_by_id",
+   "mechanism": "SSL_SESSION",
+   "signature": "unsafe fn(*mut *mut OpenSslStack, *mut OpenSslStack) -> bool",
+   "disposition": "SAFETY_DISCHARGED (scope: update_cipher_list_by_id and its dispatch path; src/ssl/ssl_ciph.rs:741)",
+   "contract": "`update_cipher_list_by_id` is a private helper with two callers: `update_cipher_list` (`src/ssl/ssl_ciph.rs:828`) and `ssl_create_cipher_list` (`:1208`). Preconditions: (1) `cipher_list_by_id` is non-NULL, points to a writable slot exclusively accessible to the call, and holds NULL or a live stack owned by the same `SSL_CTX`/`SSL`; the old value is freed at `:767`. (2) `cipherstack` is a live stack of NULL-or-live `*const SSL_CIPHER` entries owned by the caller; the body duplicates it at `:761` and never frees it. (3) The installed comparator is `ssl_cipher_ptr_id_cmp` (`:769`), whose own `# Safety` requires each element to be NULL or a table-row cipher. (4) No other reference to the slot or the installed stack is live for the call. Both callers pass a slot reached from a live `SSL_CTX`.",
+   "callers": [
+    {
+     "file": "src/ssl/ssl_ciph.rs",
+     "line": 828,
+     "role": "update_cipher_list, from a live SSL_CTX"
+    },
+    {
+     "file": "src/ssl/ssl_ciph.rs",
+     "line": 1208,
+     "role": "ssl_create_cipher_list, passes &mut (*ctx).cipher_list_by_id"
+    }
+   ],
+   "canary": "NOT_RUN: no dedicated test for this helper; the cipher-list caller paths are exercised only indirectly",
+   "established": [
+    "cipher_list_by_id is a slot of a live SSL_CTX/SSL at both callers",
+    "cipherstack is a live stack the caller owns and the helper duplicates",
+    "the comparator is this module's ssl_cipher_ptr_id_cmp"
+   ],
+   "authority_derived": [
+    "the authority's slot/stack ownership split (ssl_ciph.c:1325-1341)",
+    "the cipher elements are the static table rows, per ssl_cipher_ptr_id_cmp's contract"
+   ],
+   "asserted_not_established": [
+    "no runtime test exercises a NULL/dangling cipher_list_by_id or a non-stack cipherstack"
+   ]
+  },
+  {
+   "id": "B47-CIPH-002",
+   "file": "src/ssl/ssl_ciph.rs",
+   "line": 851,
+   "line_current": 880,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "set_ciphersuites",
+   "mechanism": "SSL_SESSION",
+   "signature": "unsafe fn(*mut *mut OpenSslStack, *const c_char) -> bool",
+   "disposition": "SAFETY_DISCHARGED (scope: set_ciphersuites and its dispatch path; src/ssl/ssl_ciph.rs:851)",
+   "contract": "`set_ciphersuites` is a private helper called by `SSL_CTX_set_ciphersuites` (`src/ssl/ssl_ciph.rs:1638`) and `SSL_set_ciphersuites` (`:1668`). Preconditions: (1) `currciphers` is non-NULL, points to a writable slot owned by a live `SSL_CTX`/`SSL` that the call exclusively accesses, and holds NULL or a stack the object owns; the old value is freed at `:907-908`. (2) `str_` is NULL or a NUL-terminated byte string readable for the whole call; the NULL arm is the authority's empty-list behaviour, and `CONF_parse_list` (call at `:891-897`) retains no pointer. (3) The parse callback `ciphersuite_cb` receives a fresh, exclusively owned stack as `arg`. (4) No other reference to the object or its stack slot is live.",
+   "callers": [
+    {
+     "file": "src/ssl/ssl_ciph.rs",
+     "line": 1638,
+     "role": "SSL_CTX_set_ciphersuites, passes &mut (*ctx).tls13_ciphersuites"
+    },
+    {
+     "file": "src/ssl/ssl_ciph.rs",
+     "line": 1668,
+     "role": "SSL_set_ciphersuites, passes &mut (*s).tls13_ciphersuites"
+    }
+   ],
+   "canary": "NOT_RUN: no dedicated test for this helper; only the exported setter paths exercise it",
+   "established": [
+    "currciphers is a slot of a live object at both callers",
+    "str_ is NULL or NUL-terminated per the exported setters' contracts",
+    "a fresh stack is allocated (:882) and installed only after a successful parse (:907-908)"
+   ],
+   "authority_derived": [
+    "the authority's empty-list/NULL-str_ behaviour (ssl_ciph.c:1304-1323)",
+    "CONF_parse_list's element callback contract"
+   ],
+   "asserted_not_established": [
+    "no runtime test exercises a NULL currciphers or a non-NUL-terminated str_"
+   ]
+  },
+  {
+   "id": "B47-RSA-001",
+   "file": "src/ssl/ssl_rsa.rs",
+   "line": 1007,
+   "line_current": 1021,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "serverinfoex_srv_parse_cb",
+   "mechanism": "SSL_SESSION",
+   "signature": "unsafe extern \"C\" fn(*mut Ssl, c_uint, c_uint, *const u8, usize, *mut X509, usize, *mut c_int, *mut c_void) -> c_int",
+   "disposition": "SAFETY_DISCHARGED (scope: serverinfoex_srv_parse_cb and its dispatch path; src/ssl/ssl_rsa.rs:1007)",
+   "contract": "`serverinfoex_srv_parse_cb` is installed by `serverinfo_process_buffer` (`src/ssl/ssl_rsa.rs:1176`) as an `SSL_custom_ext_parse_cb_ex` and is never invoked at this identity: `src/ssl/statem/extensions_cust.rs` stores the erased pointer and records that this slice calls neither callback. The discharge is therefore ABI-only. If an invocation path is added, the preconditions are: `s` is a live connection; `in` is NULL or readable for `inlen` bytes; `al` is non-NULL and points to a writable `int` (the body writes `*al = SSL_AD_DECODE_ERROR` at `:1034` whenever `inlen != 0`). `ext_type`, `context`, `x`, `chainidx` and `arg` are unread.",
+   "callers": [
+    {
+     "file": "src/ssl/ssl_rsa.rs",
+     "line": 1123,
+     "role": "serverinfo_process_buffer, the installer"
+    },
+    {
+     "file": "src/ssl/ssl_rsa.rs",
+     "line": 1176,
+     "role": "installation through SSL_CTX_add_custom_ext with arg = NULL"
+    },
+    {
+     "file": "src/ssl/statem/extensions_cust.rs",
+     "line": 193,
+     "role": "erased add_cb/parse_cb slots; this slice never invokes them"
+    }
+   ],
+   "canary": "NOT_RUN: installed but never invoked at this identity, so there is no invocation path to test",
+   "established": [
+    "the callback is installed only by serverinfo_process_buffer (:1176)",
+    "the candidate has no invocation site for custom_ext parse callbacks",
+    "the body reads no pointer except al, and only when inlen != 0"
+   ],
+   "authority_derived": [
+    "the SSL_custom_ext_parse_cb_ex signature and al/in contract (ssl.h:337, ssl/ssl_rsa.c:637-650)",
+    "the authority raises the decode error through al"
+   ],
+   "asserted_not_established": [
+    "future invocation must re-open this boundary and establish s/in/al"
+   ]
+  },
+  {
+   "id": "B47-RSA-002",
+   "file": "src/ssl/ssl_rsa.rs",
+   "line": 1033,
+   "line_current": 1057,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "serverinfo_srv_parse_cb",
+   "mechanism": "SSL_SESSION",
+   "signature": "unsafe extern \"C\" fn(*mut Ssl, c_uint, *const u8, usize, *mut c_int, *mut c_void) -> c_int",
+   "disposition": "SAFETY_DISCHARGED (scope: serverinfo_srv_parse_cb and its dispatch path; src/ssl/ssl_rsa.rs:1033)",
+   "contract": "`serverinfo_srv_parse_cb` is installed by `serverinfo_process_buffer` (`src/ssl/ssl_rsa.rs:1165`) as the old-style `custom_ext_parse_cb` and is never invoked at this identity. The discharge is ABI-only. If an invocation path is added, `s` must be live, `in` NULL or readable for `inlen`, and `al` non-NULL and writable; the body forwards every pointer unchanged to `serverinfoex_srv_parse_cb` (`:1066`), so the ex-callback's contract applies.",
+   "callers": [
+    {
+     "file": "src/ssl/ssl_rsa.rs",
+     "line": 1123,
+     "role": "serverinfo_process_buffer, the installer"
+    },
+    {
+     "file": "src/ssl/ssl_rsa.rs",
+     "line": 1165,
+     "role": "installation through SSL_CTX_add_server_custom_ext"
+    },
+    {
+     "file": "src/ssl/ssl_rsa.rs",
+     "line": 1066,
+     "role": "forwarding call to serverinfoex_srv_parse_cb"
+    }
+   ],
+   "canary": "NOT_RUN: installed but never invoked at this identity, so there is no invocation path to test",
+   "established": [
+    "the callback is installed only by serverinfo_process_buffer (:1165)",
+    "the body forwards unchanged to serverinfoex_srv_parse_cb (:1066)",
+    "no invocation site exists in this slice"
+   ],
+   "authority_derived": [
+    "the custom_ext_parse_cb signature (ssl.h:321) and the forwarded ex-callback contract",
+    "the authority's forwarding shape (ssl/ssl_rsa.c:652-658)"
+   ],
+   "asserted_not_established": [
+    "future invocation must re-open this boundary"
+   ]
+  },
+  {
+   "id": "B47-RSA-003",
+   "file": "src/ssl/ssl_rsa.rs",
+   "line": 1046,
+   "line_current": 1082,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "serverinfoex_srv_add_cb",
+   "mechanism": "SSL_SESSION",
+   "signature": "unsafe extern \"C\" fn(*mut Ssl, c_uint, c_uint, *mut *const u8, *mut usize, *mut X509, usize, *mut c_int, *mut c_void) -> c_int",
+   "disposition": "SAFETY_DISCHARGED (scope: serverinfoex_srv_add_cb and its dispatch path; src/ssl/ssl_rsa.rs:1046)",
+   "contract": "`serverinfoex_srv_add_cb` is installed by `serverinfo_process_buffer` (`src/ssl/ssl_rsa.rs:1173`) as an `SSL_custom_ext_add_cb_ex` and is never invoked at this identity. Its body ignores `s`, `out`, `outlen`, `x`, `al` and `arg` and returns 0 (`:1083-1089`), so no caller-supplied pointer is dereferenced. The obligation is the ABI: it may only be installed as the ex-style add callback of `SSL_CTX_add_custom_ext`.",
+   "callers": [
+    {
+     "file": "src/ssl/ssl_rsa.rs",
+     "line": 1123,
+     "role": "serverinfo_process_buffer, the installer"
+    },
+    {
+     "file": "src/ssl/ssl_rsa.rs",
+     "line": 1173,
+     "role": "installation through SSL_CTX_add_custom_ext with arg = NULL"
+    },
+    {
+     "file": "src/ssl/statem/extensions_cust.rs",
+     "line": 187,
+     "role": "erased add_cb slot; this slice never invokes it"
+    }
+   ],
+   "canary": "NOT_RUN: installed but never invoked at this identity; the body ignores every argument",
+   "established": [
+    "the callback is installed only by serverinfo_process_buffer (:1173)",
+    "the body reads no argument and returns 0",
+    "no invocation site exists in this slice"
+   ],
+   "authority_derived": [
+    "the SSL_custom_ext_add_cb_ex signature (ssl.h:394); the reduced body follows ssl/ssl_rsa.c:660-696 only as far as refusing to publish serverinfo"
+   ],
+   "asserted_not_established": [
+    "future invocation must re-open this boundary"
+   ]
+  },
+  {
+   "id": "B47-TRACE-001",
+   "file": "src/ssl/t1_trce.rs",
+   "line": 1064,
+   "line_current": 1075,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "is_tls13",
+   "mechanism": "SSL_SESSION",
+   "signature": "unsafe fn(*const Ssl) -> bool",
+   "disposition": "SAFETY_DISCHARGED (scope: is_tls13 and its dispatch path; src/ssl/t1_trce.rs:1064)",
+   "contract": "`is_tls13` is a private trace predicate called only from the trace printers (`src/ssl/t1_trce.rs:2357`, `:2395`, `:2429`, `:2533`, `:2662`, `:2712`, `:2742`) and from `is_dtls`-guarded code. Preconditions: `sc` is non-NULL, aligned and points to a live `Ssl` that is not concurrently written for the call; its `method` field is NULL or a live method table. The body only reads `method`/`version` (`:1077-1085`) and calls `is_dtls` (`:1058`). Each printing caller's `# Safety` requires `sc` live (for example `ssl_print_certificates` at `:2344`, `ssl_print_signature` at `:1255`).",
+   "callers": [
+    {
+     "file": "src/ssl/t1_trce.rs",
+     "line": 2357,
+     "role": "trace printer caller"
+    },
+    {
+     "file": "src/ssl/t1_trce.rs",
+     "line": 2395,
+     "role": "trace printer caller"
+    },
+    {
+     "file": "src/ssl/t1_trce.rs",
+     "line": 2429,
+     "role": "trace printer caller"
+    },
+    {
+     "file": "src/ssl/t1_trce.rs",
+     "line": 2533,
+     "role": "trace printer caller"
+    },
+    {
+     "file": "src/ssl/t1_trce.rs",
+     "line": 2662,
+     "role": "trace printer caller"
+    },
+    {
+     "file": "src/ssl/t1_trce.rs",
+     "line": 2712,
+     "role": "trace printer caller"
+    },
+    {
+     "file": "src/ssl/t1_trce.rs",
+     "line": 2742,
+     "role": "trace printer caller"
+    }
+   ],
+   "canary": "NOT_RUN: exercised only indirectly by the trace printers; no dedicated mutation test",
+   "established": [
+    "sc is live at every caller (trace-printer # Safety)",
+    "method is NULL or a live table; NULL returns false",
+    "the body is read-only"
+   ],
+   "authority_derived": [
+    "the authority predicate SSL_CONNECTION_IS_TLS13 (ssl_local.h:265-267)"
+   ],
+   "asserted_not_established": [
+    "a caller that violates the trace printers' live-sc contract is outside the contract"
+   ]
+  },
+  {
+   "id": "B47-TRACE-002",
+   "file": "src/ssl/t1_trce.rs",
+   "line": 1077,
+   "line_current": 1098,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "use_sigalgs",
+   "mechanism": "SSL_SESSION",
+   "signature": "unsafe fn(*const Ssl) -> bool",
+   "disposition": "SAFETY_DISCHARGED (scope: use_sigalgs and its dispatch path; src/ssl/t1_trce.rs:1077)",
+   "contract": "`use_sigalgs` is a private trace predicate called only from `ssl_print_signature` (`src/ssl/t1_trce.rs:1267`) and one further trace printer (`:2566`). Preconditions: `sc` is non-NULL, aligned and points to a live `Ssl` that is not concurrently written for the call; its `method` field is NULL or a live method table. The body only reads `method`/`enc_flags` (`:1101-1105`) and dereferences nothing else.",
+   "callers": [
+    {
+     "file": "src/ssl/t1_trce.rs",
+     "line": 1267,
+     "role": "ssl_print_signature caller"
+    },
+    {
+     "file": "src/ssl/t1_trce.rs",
+     "line": 2566,
+     "role": "trace printer caller"
+    }
+   ],
+   "canary": "NOT_RUN: exercised only indirectly by the trace printers; no dedicated mutation test",
+   "established": [
+    "sc is live at both callers (trace-printer # Safety)",
+    "method is NULL or a live table; NULL returns false",
+    "the body is read-only"
+   ],
+   "authority_derived": [
+    "the authority predicate SSL_USE_SIGALGS (ssl_local.h:284-285)"
+   ],
+   "asserted_not_established": [
+    "a caller that violates the trace printers' live-sc contract is outside the contract"
+   ]
+  },
+  {
+   "id": "B47-CT-001",
+   "file": "src/ssl/ssl_lib.rs",
+   "line": 8845,
+   "line_current": 8857,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ct_permissive",
+   "mechanism": "SSL_SESSION",
+   "signature": "unsafe extern \"C\" fn(*const c_void, *const c_void, *mut c_void) -> c_int",
+   "disposition": "SAFETY_DISCHARGED (scope: ct_permissive and its dispatch path; src/ssl/ssl_lib.rs:8845)",
+   "contract": "`ct_permissive` is installed by `SSL_CTX_enable_ct` (`src/ssl/ssl_lib.rs:8897`) and `SSL_enable_ct` (`:8920`) as an `ssl_ct_validation_cb` and is never invoked at this identity: the callback is stored in `ct_validation_callback` and copied on `SSL_new`/`SSL_dup`, but no candidate path calls it. Its body ignores `_ctx`, `_scts` and `_arg` and returns 1 (`:8858-8860`), so no caller-supplied pointer is dereferenced. The obligation is the ABI: it may only be installed as the `SSL_CTX_set_ct_validation_callback`/`SSL_set_ct_validation_callback` callback.",
+   "callers": [
+    {
+     "file": "src/ssl/ssl_lib.rs",
+     "line": 8897,
+     "role": "SSL_CTX_enable_ct installs it with arg = NULL"
+    },
+    {
+     "file": "src/ssl/ssl_lib.rs",
+     "line": 8920,
+     "role": "SSL_enable_ct installs it with arg = NULL"
+    },
+    {
+     "file": "src/ssl/ssl_lib.rs",
+     "line": 1579,
+     "role": "the stored callback slot; no invocation path in this slice"
+    }
+   ],
+   "canary": "NOT_RUN: installed but never invoked at this identity; the body ignores every argument",
+   "established": [
+    "the callback is installed only by SSL_CTX_enable_ct/SSL_enable_ct (:8897/:8920)",
+    "the body reads no argument and returns 1",
+    "no invocation site exists in this slice"
+   ],
+   "authority_derived": [
+    "the ssl_ct_validation_cb signature and return value (ssl/ssl_lib.c:6529-6533)"
+   ],
+   "asserted_not_established": [
+    "future invocation must re-open this boundary"
+   ]
+  }
+ ],
+ "supersedes": [
+  {
+   "receipt": "boundary-sweep-B46.json",
+   "field": "retained_blocked",
+   "entries": [
+    "src/ssl/ssl_conf.rs:240 ssl_match_option",
+    "src/ssl/ssl_conf.rs:274 ssl_set_option_list",
+    "src/ssl/ssl_conf.rs:379 min_max_proto"
+   ],
+   "effect": "B47 contracts these three; the B46 retained_blocked entries are superseded by B47-SSL-CONF-001..003"
+  }
+ ],
+ "caller_closure": [
+  {
+   "file": "src/ssl/ssl_conf.rs",
+   "caller": "SSL_CONF_cmd (:1516; # Safety :1489; guards :1522/:1490; dispatch :1473)",
+   "disposition": "supplies cctx/value and the only ConfCmdFn dispatch; now states exclusivity (Part A)",
+   "evidence": "single read of every relevant body"
+  },
+  {
+   "file": "src/ssl/ssl_conf.rs",
+   "caller": "parse_option_list (:542 -> CONF_parse_list :554-561)",
+   "disposition": "installs ssl_set_option_list with usr=cctx and a frame-local table",
+   "evidence": "tbl/ntbl set :549-550, cleared :566-567"
+  },
+  {
+   "file": "src/ssl/ssl_conf.rs",
+   "caller": "SSL_CTX_set_ssl (:1795) / SSL_CONF_CTX_set_ssl_ctx (:1839)",
+   "disposition": "supply bound = &mut object.min/max_proto_version",
+   "evidence": "assignments :1812-1813 / :1856-1857"
+  },
+  {
+   "file": "src/ssl/ssl_ciph.rs",
+   "caller": "update_cipher_list (:828) / ssl_create_cipher_list (:1208)",
+   "disposition": "pass slots of live SSL_CTX objects",
+   "evidence": "both callers are in-crate and take a live ctx"
+  },
+  {
+   "file": "src/ssl/ssl_ciph.rs",
+   "caller": "SSL_CTX_set_ciphersuites (:1638) / SSL_set_ciphersuites (:1668)",
+   "disposition": "pass &mut object.tls13_ciphersuites",
+   "evidence": "both exported setters require a live object"
+  },
+  {
+   "file": "src/ssl/ssl_rsa.rs",
+   "caller": "serverinfo_process_buffer (:1123)",
+   "disposition": "installs the three serverinfo callbacks; never invokes them",
+   "evidence": "installations :1162/:1165/:1173/:1176; extensions_cust stores erased pointers"
+  },
+  {
+   "file": "src/ssl/ssl_lib.rs",
+   "caller": "SSL_CTX_enable_ct (:8893) / SSL_enable_ct (:8916)",
+   "disposition": "install ct_permissive; never invoke it",
+   "evidence": "installs :8897/:8920; the callback is only stored/copied"
+  }
+ ],
+ "evidence": {
+  "fast": {
+   "fmt": "cargo fmt --all -- --check: PASS (exit 0, no output) in the court container at the candidate hashes above",
+   "clippy": "cargo clippy --all-targets -- -D warnings: PASS (Finished dev profile in 15.50s) at the same source",
+   "focused_tests": "cargo test --lib -- ssl:: -- --test-threads=4: PASS, 348 passed / 0 failed / 16 ignored (1926 filtered out), including C2, C3 and the three B46-D2 guard tests"
+  },
+  "mutation": {
+   "canary": "C3(ssl::ssl_conf::tests::conf_cmd_min_max_protocol_bounds_are_range_checked)",
+   "guarded_check": "protocol_from_string's unrecognised-name return (`-1` at src/ssl/ssl_conf.rs:448)",
+   "pre_mutation_sha256": "880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
+   "mutation": "replaced the `-1` return with `t::TLS1_2_VERSION as c_int`",
+   "command": "cargo test --lib -- ssl::ssl_conf::tests::conf_cmd_min_max_protocol_bounds_are_range_checked -- --exact --test-threads=1",
+   "observed": "FAILED: panicked at src/ssl/ssl_conf.rs:2046:9: assertion `left == right` failed: an unrecognised protocol name is refused; left: 2, right: 0; test result 0 passed / 1 failed",
+   "restore": "restored from the snapshot with `cp`; `sha256sum -c` reported OK for 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
+   "later_comment_only_edits": "none after the mutation run; the restored file is byte-identical to the measured identity"
+  },
+  "bounded_reuse": "These eleven census lines had no prior SAFETY_DISCHARGED receipt. B46 listed ssl_conf.rs:240/274/379 as retained_blocked/out of scope; B47 supersedes those three entries. No measurement is reused from a different boundary."
+ },
+ "negative_control": {
+  "id": "C3",
+  "name": "ssl::ssl_conf::tests::conf_cmd_min_max_protocol_bounds_are_range_checked",
+  "kind": "court functional test, lib unittest",
+  "result": "PASS",
+  "observation": "SSL_CONF_cmd('MinProtocol','TLSv1.2') returns 2 and writes TLS1_2_VERSION into a real SSL_CTX's min_proto_version; ('MinProtocol','TLSv1.4') returns 0 and leaves the bound; ('MaxProtocol',NULL) returns -3 and leaves max_proto_version at 0.",
+  "mutation_sensitive": true,
+  "fails_if": "protocol_from_string's unrecognised-name answer is changed from -1 to a valid version: observed left 2 / right 0 at src/ssl/ssl_conf.rs:2046 (see evidence.mutation)",
+  "limits": "Does not exercise the DTLS method-version arm, the method-mismatch arm that accepts without writing, a malformed/non-NUL-terminated value, or exclusivity (not observable from safe test code)."
+ },
+ "hidden_obligations": 0,
+ "hidden_obligations_note": "No hidden obligation was found within these eleven sites. Every retained precondition is stated either in the fn-level # Safety or as an authority-derived note. The four installed-but-never-invoked callbacks are a conditional residual, recorded openly, not a hidden obligation. The B46-R1 exclusivity split (cross-thread authority obligation; same-thread in-use guard) is reported in boundary-sweep-B46.json and is not an obligation of these eleven sites.",
+ "new_unsafe_assumptions": 0,
+ "new_unsafe_assumptions_note": "For the eleven B47 sites themselves: only fn-level # Safety documentation and one test were added; no production unsafe operation, signature, layout or exported symbol changed at these sites. The shared src/ssl/ssl_conf.rs hash also carries the B46-D2 guard, which is accounted for in boundary-sweep-B46.json.",
+ "unsafe_operations_removed": 0,
+ "unsafe_operations_introduced": 0,
+ "test_only_unsafe_added": 1,
+ "boundary_size": "Eleven sites: three private helpers in ssl_conf.rs, two private cipher helpers in ssl_ciph.rs, three installed custom-extension callbacks in ssl_rsa.rs, two trace predicates in t1_trce.rs, and one installed CT callback in ssl_lib.rs. The eleven site bodies are unchanged apart from fn-level # Safety docs; C3 adds test-only unsafe blocks. The ssl_conf.rs hash additionally carries the B46-D2 guard, which is B46 scope.",
+ "safe_callers_can_cause_ub": false,
+ "safe_callers_can_cause_ub_note": "All eleven are private `unsafe fn`/`unsafe extern \"C\"` bodies or function-pointer slots. The exported entry points that reach them remain `unsafe extern \"C\"` with stated contracts, so no safe-Rust caller can install or invoke one.",
+ "retained_blocked": [],
+ "retained_blocked_note": "No BLOCKED obligation remains in scope. The three serverinfo callbacks and ct_permissive are conditionally discharged: their ABI contracts are stated, but adding an invocation path must re-open them (B47-R1).",
+ "residuals": [
+  {
+   "id": "B47-R1",
+   "severity": "medium",
+   "disposition": "CONDITIONAL",
+   "description": "serverinfoex_srv_parse_cb, serverinfo_srv_parse_cb, serverinfoex_srv_add_cb and ct_permissive are installed but have no invocation path at this identity. Their discharge is ABI-only and must be re-opened when an invocation path is added."
+  },
+  {
+   "id": "B47-R2",
+   "severity": "low",
+   "disposition": "AUTHORITY-DERIVED",
+   "description": "CONF_parse_list's element pointer/length contract (elem readable for len, or NUL-terminated at -1) is the authority's; the candidate relies on it and does not revalidate."
+  },
+  {
+   "id": "B47-R3",
+   "severity": "low",
+   "disposition": "NOT_RUN",
+   "description": "No malformed (elem,len), unaligned cctx, or non-NUL-terminated value is exercised by a runtime test; the contract is documentation, not a runtime check."
+  },
+  {
+   "id": "B47-R4",
+   "severity": "low",
+   "disposition": "NOT_RUN",
+   "description": "No Miri, ASan, TSan, dudect or authority differential was run for these sites."
+  },
+  {
+   "id": "B47-R5",
+   "severity": "low",
+   "disposition": "AUTHORITY-PARITY",
+   "description": "The min/max bound is written only for version 0 and the matching TLS_ANY/DTLS_ANY arm; the method-mismatch arm returns true without writing. C3 pins the refusal/acceptance path, not every method-version combination."
+  }
+ ],
+ "not_run": [
+  {
+   "gate": "Miri (Stacked/Tree Borrows)",
+   "blocker": "not invoked in B47; the changed sites are C ABI callbacks and private predicates with no new aliasing model claim"
+  },
+  {
+   "gate": "ASan / TSan / dudect",
+   "blocker": "no instrument run in B47; none of the changed sites is a secret-dependent operation"
+  },
+  {
+   "gate": "authority differential",
+   "blocker": "no differential court run; semantics are read from the pinned authority and the candidate"
+  },
+  {
+   "gate": "full library suite",
+   "blocker": "only the ssl:: filter was run (345 passed / 0 failed / 16 ignored); the full library suite is a BATCH/SEAL gate"
+  },
+  {
+   "gate": "consumer closure and CAMPAIGN-STATUS application",
+   "blocker": "deliberately not run; the subphase establishes the receipt, not the discharge"
+  }
+ ],
+ "non_claims": [
+  "B47 scopes the claim to the eleven named sites and their dispatch paths only; the SSL_SESSION mechanism stays OWNERSHIP_RECONSTRUCTED.",
+  "The B47 dispositions are receipts, not applied adjudications: consumer_closure was not run and CAMPAIGN-STATUS.json was not edited.",
+  "No sanitizer, Miri, dudect or authority differential was run; no cryptographic or constant-time claim is made.",
+  "The four installed-but-never-invoked callbacks are ABI-only discharges; the absence of an invocation path is a finding of this identity, not a permanent property.",
+  "Cross-thread mutation of the wrapped SSL/SSL_CTX and NUL-termination remain obligations on the exported SSL_CONF_cmd/SSL_CONF_cmd_argv caller; they are not mechanically enforced. Same-thread overlap of the two dispatch entry points IS refused by the B46-D2 guard (B46 scope).",
+  "Every candidate line number is bound to candidate.files_sha256; any source edit invalidates these coordinates and the receipt.",
+  "Part A is a contract narrowing (B46-D1); the B46-D2 guard is a behaviour change only for an overlapping invocation on the same dispatch entry point (returns 0 where the authority would proceed). No non-overlapping return value or state transition changed."
+ ],
+ "review": {
+  "reviewer": "independent adversarial reviewer (not the author)",
+  "verdict": "REJECT",
+  "applied": false,
+  "date": "2026-10-30",
+  "decisive_reason": "B46-R1 does not close. AGENTS.md 7 requires the precondition to be established by callers or by an external ABI contract, and both 7 and 21 state that documentation alone does not discharge an obligation. A candidate-authored # Safety is our own record of a divergence (B46-D1), not an external witness, and nothing establishes or enforces exclusive access at run time. The pinned authority's SSL_CONF_cmd.pod and ssl_conf.c impose neither exclusivity nor a no-concurrent-mutation rule.",
+  "secondary_failures": [
+   "min_max_proto clause 'an accepted name is range-checked before any write' is false for the accepted name None (version 0): ssl_set_version_bound writes *bound at ssl_conf.rs:399-401 before any range test; the bound clause also reads as permitting NULL where the body dereferences it.",
+   "receipt integrity: hidden_obligations 0 and 'R1 closed' contradict the preserved REJECT verdict and failing_checks.exclusivity_gap; callers[].role table refs are off by six; boundary_size omits ssl_set_option_list/ssl_match_option/ssl_set_option; boundary-001 repeats the false CONF_parse_list return wording; the candidate block is stale against the commit that contains the receipt."
+  ],
+  "passing_checks": [
+   "scope exactness: all dispositions parse to one file and one range; the union equals the 18 BLOCKED SSL_SESSION ids at v1u census coordinates, reconciled to current source 18/18",
+   "conditional ABI-only sites are handled correctly: no root invocation, no safe-Rust caller can install or invoke them, and re-opening on a new invocation path is stated",
+   "the min/max protocol canary is mutation-sensitive: replacing protocol_from_string's -1 with TLS1_2_VERSION makes the refusal assertion fail"
+  ],
+  "prohibition": [
+   "Do not apply B46 or B47. All 18 sites stay BLOCKED and SSL_SESSION stays OWNERSHIP_RECONSTRUCTED.",
+   "Do not substitute our own documentation for an external witness, and do not widen a disposition range to move a count."
+  ]
+ }
+}
