@@ -435,6 +435,29 @@ unsafe fn parse_option_list(
 }
 
 /// `cmd_Protocol` — `ssl_conf.c:280-296`.
+///
+/// # Safety
+///
+/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx`
+/// that this call exclusively accesses for its duration: the handler writes the
+/// context's `tbl`/`ntbl` and the option word of the `ctx`/`ssl` it references, so
+/// neither object may be concurrently read or written. `value` must be non-NULL and
+/// point to a NUL-terminated byte string readable for the whole call; the handler
+/// stores no copy of the pointer. ABI: the `ConfCmdFn`
+/// (`int (*)(SSL_CONF_CTX *, const char *)`) signature the command table stores.
+///
+/// Established by the sole caller, `SSL_CONF_cmd` (`src/ssl/ssl_conf.rs:1318`): it
+/// refuses a NULL `cctx` at `:1290` and a NULL `value` for a typed row at `:1311`
+/// before the indirect call. `cctx` provenance is `SSL_CONF_CTX_new` (`:1438`), and
+/// `SSL_CONF_CTX_set_ssl`/`_set_ssl_ctx` (`:1561`/`:1605`) establish `ctx`/`ssl` as
+/// NULL or live in-crate objects. The dispatch holds no shared `&SslConfCtx` across
+/// `:1318` (the `&*cctx` at `:1302` ends with the lookup), but `SSL_CONF_cmd`'s
+/// public `# Safety` (`:1281`) says only "live", so a foreign caller's
+/// no-concurrent-access obligation is authority-derived, not enforced by an
+/// executing candidate path. Returns 1 on a match, otherwise 0; `SSL_CONF_cmd` maps
+/// `>0` to 2 and every other value to 0. `parse_option_list` clears
+/// `cctx.tbl`/`ntbl` on the normal and `guard_ffi`-caught paths, so an error leaves
+/// no frame-local pointer behind.
 unsafe extern "C" fn cmd_Protocol(cctx: *mut SslConfCtx, value: *const c_char) -> c_int {
     let table = [
         flag_inv(b"ALL", t::SSL_OP_NO_SSL_MASK),
@@ -452,6 +475,28 @@ unsafe extern "C" fn cmd_Protocol(cctx: *mut SslConfCtx, value: *const c_char) -
 }
 
 /// `cmd_Options` — `ssl_conf.c:375-416`.
+///
+/// # Safety
+///
+/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx`
+/// with exclusive access for its duration; the handler writes `cctx.tbl`/`ntbl` and
+/// the option word of the referenced `ctx`/`ssl`, so neither object may be
+/// concurrently read or written. `value` must be non-NULL and point to a
+/// NUL-terminated byte string readable for the whole call; the handler stores no
+/// copy of the pointer. ABI: the `ConfCmdFn` signature the command table stores.
+///
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1318`): NULL `cctx` is refused
+/// at `:1290` and a NULL `value` for a typed row at `:1311` before the call; `cctx`
+/// provenance is `SSL_CONF_CTX_new` (`:1438`) with `set_ssl`/`set_ssl_ctx`
+/// (`:1561`/`:1605`) supplying NULL-or-live members. Exclusivity is established by
+/// construction inside the dispatch but only asserted by `SSL_CONF_cmd`'s public
+/// `# Safety` (`:1281`), which says "live" without forbidding concurrent access;
+/// that part is authority-derived for a foreign caller. This handler additionally
+/// tolerates a NULL `value` by returning `-3` (authority `ssl_conf.c:411-412`); that
+/// arm is unreachable through `SSL_CONF_cmd`, which refuses NULL first, and the
+/// dispatch maps `-3` to 0. Returns 1 on a match, otherwise 0, on the parse path;
+/// `parse_option_list` clears `cctx.tbl`/`ntbl` before returning on every path, so a
+/// rejected list leaves no frame-local pointer behind.
 unsafe extern "C" fn cmd_Options(cctx: *mut SslConfCtx, value: *const c_char) -> c_int {
     let table = [
         flag_inv(b"SessionTicket", t::SSL_OP_NO_TICKET),
@@ -508,6 +553,27 @@ unsafe extern "C" fn cmd_Options(cctx: *mut SslConfCtx, value: *const c_char) ->
 }
 
 /// `cmd_VerifyMode` — `ssl_conf.c:418-436`.
+///
+/// # Safety
+///
+/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx`
+/// with exclusive access for its duration; the handler writes `cctx.tbl`/`ntbl` and
+/// the verify-mode word of the referenced `ctx`/`ssl`, so neither object may be
+/// concurrently read or written. `value` must be non-NULL and point to a
+/// NUL-terminated byte string readable for the whole call; the handler stores no
+/// copy of the pointer. ABI: the `ConfCmdFn` signature the command table stores.
+///
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1318`): NULL `cctx` is refused
+/// at `:1290` and a NULL `value` for a typed row at `:1311`; `cctx` provenance is
+/// `SSL_CONF_CTX_new` (`:1438`) with `set_ssl`/`set_ssl_ctx` (`:1561`/`:1605`)
+/// supplying NULL-or-live members. Exclusivity is established by construction in
+/// the dispatch but only asserted by `SSL_CONF_cmd`'s public `# Safety` (`:1281`),
+/// which says "live" without forbidding concurrent access; that part is
+/// authority-derived for a foreign caller. This handler additionally tolerates a
+/// NULL `value` by returning `-3` (authority `ssl_conf.c:432-433`); that arm is
+/// unreachable through `SSL_CONF_cmd`, which refuses NULL first, and the dispatch
+/// maps `-3` to 0. Returns 1 on a match, otherwise 0, on the parse path;
+/// `parse_option_list` clears `cctx.tbl`/`ntbl` before returning on every path.
 unsafe extern "C" fn cmd_VerifyMode(cctx: *mut SslConfCtx, value: *const c_char) -> c_int {
     let table = [
         flag_vfy_cli(b"Peer", t::SSL_VERIFY_PEER),
@@ -534,6 +600,30 @@ unsafe extern "C" fn cmd_VerifyMode(cctx: *mut SslConfCtx, value: *const c_char)
 }
 
 /// `cmd_CipherString` — `ssl_conf.c:258-267`.
+///
+/// # Safety
+///
+/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx`
+/// with exclusive access for its duration; `ctx`/`ssl` must each be NULL or a live
+/// context/connection of this crate that the cipher-list setters may mutate and
+/// that is not concurrently accessed. `value` must point to a NUL-terminated byte
+/// string readable for the call (the setters tolerate NULL as a failure, but the
+/// dispatch refuses it first); the setters parse it into fresh stacks and retain no
+/// reference. ABI: the `ConfCmdFn` signature the command table stores.
+///
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1318`): NULL `cctx` is refused
+/// at `:1290` and a NULL `value` for a typed row at `:1311`; `cctx` provenance is
+/// `SSL_CONF_CTX_new` (`:1438`) with `set_ssl`/`set_ssl_ctx` (`:1561`/`:1605`)
+/// supplying NULL-or-live members. Exclusivity is established by construction in
+/// the dispatch but only asserted by `SSL_CONF_cmd`'s public `# Safety` (`:1281`),
+/// which says "live" without forbidding concurrent access; that part is
+/// authority-derived for a foreign caller. Returns 1 when the last applied setter
+/// succeeded and 0 otherwise. A `NULL` result from `ssl_create_cipher_list` leaves
+/// the previous lists untouched, but the authority's zero-TLS1.2-cipher arm returns
+/// 0 after `ssl_create_cipher_list` has already published new
+/// `cipher_list`/`cipher_list_by_id` stacks (`ssl_lib.c:3367-3379`), so a 0 return
+/// can leave the new list installed. That published state is fully initialised and
+/// owned by the object: the error path leaves no partial or dangling list.
 unsafe extern "C" fn cmd_CipherString(cctx: *mut SslConfCtx, value: *const c_char) -> c_int {
     let mut rv = 1;
     // SAFETY: `cctx` is live; the pointers are NULL or live.
@@ -549,6 +639,29 @@ unsafe extern "C" fn cmd_CipherString(cctx: *mut SslConfCtx, value: *const c_cha
 }
 
 /// `cmd_Ciphersuites` — `ssl_conf.c:269-278`.
+///
+/// # Safety
+///
+/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx`
+/// with exclusive access for its duration; `ctx`/`ssl` must each be NULL or a live
+/// context/connection of this crate that the ciphersuite setters may mutate and
+/// that is not concurrently accessed. `value` must point to a NUL-terminated byte
+/// string readable for the call (the setters tolerate NULL as a failure, but the
+/// dispatch refuses it first); the setters parse it and retain no reference. ABI:
+/// the `ConfCmdFn` signature the command table stores.
+///
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1318`): NULL `cctx` is refused
+/// at `:1290` and a NULL `value` for a typed row at `:1311`; `cctx` provenance is
+/// `SSL_CONF_CTX_new` (`:1438`) with `set_ssl`/`set_ssl_ctx` (`:1561`/`:1605`)
+/// supplying NULL-or-live members. Exclusivity is established by construction in
+/// the dispatch but only asserted by `SSL_CONF_cmd`'s public `# Safety` (`:1281`),
+/// which says "live" without forbidding concurrent access; that part is
+/// authority-derived for a foreign caller. Returns 1 when the last applied setter
+/// succeeded and 0 otherwise. `set_ciphersuites` does not replace the TLS 1.3 list
+/// on a parse failure, but the authority's `update_cipher_list` arm
+/// (`ssl_ciph.c:1381-1385`) can return 0 after the TLS 1.3 list and the paired
+/// lists have already been published, so a 0 return can leave fully initialised,
+/// object-owned lists installed; no partial or dangling state is retained.
 unsafe extern "C" fn cmd_Ciphersuites(cctx: *mut SslConfCtx, value: *const c_char) -> c_int {
     let mut rv = 1;
     // SAFETY: `cctx` is live; the pointers are NULL or live.
@@ -564,12 +677,56 @@ unsafe extern "C" fn cmd_Ciphersuites(cctx: *mut SslConfCtx, value: *const c_cha
 }
 
 /// `cmd_MinProtocol` — `ssl_conf.c:358-361`.
+///
+/// # Safety
+///
+/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx`
+/// with exclusive access for its duration; the callee reads `ctx`/`ssl` and their
+/// method version and writes `(*cctx).min_version`'s target on success, so neither
+/// object may be concurrently accessed. `value` must be non-NULL and point to a
+/// NUL-terminated byte string readable for the call: `min_max_proto` reads it with
+/// `CStr::from_ptr`, so a NULL value while `ctx` or `ssl` is live is undefined
+/// behaviour. ABI: the `ConfCmdFn` signature the command table stores.
+///
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1318`): NULL `cctx` is refused
+/// at `:1290` and a NULL `value` for a typed row at `:1311` before the call; `cctx`
+/// provenance is `SSL_CONF_CTX_new` (`:1438`) with `set_ssl`/`set_ssl_ctx`
+/// (`:1561`/`:1605`) supplying NULL-or-live members and a live `min_version`
+/// whenever `ctx` or `ssl` is non-NULL (when both are NULL, `min_max_proto` returns
+/// 0 before reading `value` or the bound). Exclusivity is established by
+/// construction in the dispatch but only asserted by `SSL_CONF_cmd`'s public
+/// `# Safety` (`:1281`), which says "live" without forbidding concurrent access;
+/// that part is authority-derived for a foreign caller. Returns 1 when
+/// `ssl_set_version_bound` accepts the name, otherwise 0; the bound is written only
+/// on acceptance, so a rejected name leaves it untouched.
 unsafe extern "C" fn cmd_MinProtocol(cctx: *mut SslConfCtx, value: *const c_char) -> c_int {
     // SAFETY: `cctx` is live.
     unsafe { min_max_proto(cctx, value, (*cctx).min_version) }
 }
 
 /// `cmd_MaxProtocol` — `ssl_conf.c:370-373`.
+///
+/// # Safety
+///
+/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx`
+/// with exclusive access for its duration; the callee reads `ctx`/`ssl` and their
+/// method version and writes `(*cctx).max_version`'s target on success, so neither
+/// object may be concurrently accessed. `value` must be non-NULL and point to a
+/// NUL-terminated byte string readable for the call: `min_max_proto` reads it with
+/// `CStr::from_ptr`, so a NULL value while `ctx` or `ssl` is live is undefined
+/// behaviour. ABI: the `ConfCmdFn` signature the command table stores.
+///
+/// Established by the sole caller, `SSL_CONF_cmd` (`:1318`): NULL `cctx` is refused
+/// at `:1290` and a NULL `value` for a typed row at `:1311` before the call; `cctx`
+/// provenance is `SSL_CONF_CTX_new` (`:1438`) with `set_ssl`/`set_ssl_ctx`
+/// (`:1561`/`:1605`) supplying NULL-or-live members and a live `max_version`
+/// whenever `ctx` or `ssl` is non-NULL (when both are NULL, `min_max_proto` returns
+/// 0 before reading `value` or the bound). Exclusivity is established by
+/// construction in the dispatch but only asserted by `SSL_CONF_cmd`'s public
+/// `# Safety` (`:1281`), which says "live" without forbidding concurrent access;
+/// that part is authority-derived for a foreign caller. Returns 1 when
+/// `ssl_set_version_bound` accepts the name, otherwise 0; the bound is written only
+/// on acceptance, so a rejected name leaves it untouched.
 unsafe extern "C" fn cmd_MaxProtocol(cctx: *mut SslConfCtx, value: *const c_char) -> c_int {
     // SAFETY: `cctx` is live.
     unsafe { min_max_proto(cctx, value, (*cctx).max_version) }
@@ -1552,5 +1709,61 @@ mod tests {
             cctx.tbl.is_null() && cctx.ntbl == 0,
             "the context retained a pointer to the handler's stack table"
         );
+    }
+
+    /// C2 control for the `ConfCmdFn` dispatch boundary: `SSL_CONF_cmd` reaches
+    /// `cmd_Options` through the `SslConfCmdTbl.cmd` slot with a live `SslConfCtx`
+    /// and a NUL-terminated value, applies two independent effects, clears the
+    /// frame-local table, and refuses a NULL value before the indirect call. The
+    /// direct call pins the handler's own NULL arm, which the dispatch never
+    /// supplies. Mutating `cmd_Options`'s `value.is_null()` guard makes the final
+    /// assertion fail (recorded in the B46 receipt).
+    #[test]
+    fn conf_cmd_dispatch_feeds_a_live_ctx_and_does_not_retain_the_value() {
+        let mut options: u64 = 0;
+        // SAFETY: all-zero is the authority's `OPENSSL_zalloc` state and every field
+        // is a raw pointer, `usize` or integer.
+        let mut cctx: SslConfCtx = unsafe { core::mem::zeroed() };
+        cctx.flags = (t::SSL_CONF_FLAG_FILE | t::SSL_CONF_FLAG_CLIENT) as c_uint;
+        cctx.poptions = &raw mut options;
+
+        // SAFETY: `cctx` is this frame's live context; both literals are
+        // NUL-terminated. File mode recognises the row by its `Options` spelling.
+        let set = unsafe { SSL_CONF_cmd(&raw mut cctx, c"Options".as_ptr(), c"Bugs".as_ptr()) };
+        assert_eq!(set, 2, "the handler accepted the option");
+        assert_ne!(
+            options & t::SSL_OP_ALL,
+            0,
+            "the callback wrote the live option word"
+        );
+        assert!(
+            cctx.tbl.is_null() && cctx.ntbl == 0,
+            "the context retained a pointer to the handler's stack table"
+        );
+
+        // A second dispatch with a different value must take effect independently.
+        // SAFETY: as above; both strings are distinct NUL-terminated literals.
+        let cleared =
+            unsafe { SSL_CONF_cmd(&raw mut cctx, c"Options".as_ptr(), c"-Bugs".as_ptr()) };
+        assert_eq!(cleared, 2, "the second handler call accepted the option");
+        assert_eq!(
+            options & t::SSL_OP_ALL,
+            0,
+            "the callback retained state from the first value"
+        );
+
+        // SAFETY: as above. The dispatch refuses NULL before the indirect call and
+        // answers the authority's `bad_value` result (`-3`).
+        let null = unsafe { SSL_CONF_cmd(&raw mut cctx, c"Options".as_ptr(), ptr::null()) };
+        assert_eq!(null, -3, "a NULL value is refused as a bad value");
+        assert_eq!(
+            options & t::SSL_OP_ALL,
+            0,
+            "a refused value changes no state"
+        );
+
+        // SAFETY: `cctx` is live and the NULL arm returns before any dereference.
+        let direct = unsafe { cmd_Options(&raw mut cctx, ptr::null()) };
+        assert_eq!(direct, -3, "the handler's own NULL arm returns -3");
     }
 }

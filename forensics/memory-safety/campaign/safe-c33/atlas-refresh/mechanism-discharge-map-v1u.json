@@ -1,0 +1,77 @@
+{
+  "receipt": "mechanism-discharge-map-v1u",
+  "date": "2026-10-30",
+  "candidate": {
+    "tag": "v1u",
+    "source_head": "9eccc7e9",
+    "closure": "evidence/closure-ssh-v1u.json",
+    "closure_state": "ACCEPTED, 0 refusals, 314 = 99 DISCHARGED / 215 BLOCKED / 0 UNKNOWN"
+  },
+  "purpose": "Decide which mechanism to discharge next, on measured counts rather than on the size of a file list. Aggregated from the applied v1u closure; no site bodies were re-audited here, so every figure is a work-planning figure, not a safety result.",
+  "blocked_by_mechanism": [
+    {"mechanism": "EVP_PKEY_PROVIDER", "blocked": 101, "total": 145, "files": 25, "state": "OWNERSHIP_RECONSTRUCTED", "families_measured": "5/32", "mechanism_files": 371},
+    {"mechanism": "X509_VERIFY_POLICY", "blocked": 75, "total": 80, "files": 31, "state": "OWNERSHIP_RECONSTRUCTED", "families_measured": "4/31", "mechanism_files": 97},
+    {"mechanism": "SSL_SESSION", "blocked": 18, "total": 18, "files": 5, "state": "OWNERSHIP_RECONSTRUCTED", "families_measured": "5/25", "mechanism_files": 41},
+    {"mechanism": "RAND_CMS_STORE_KEYFMT", "blocked": 13, "total": 45, "files": 4, "state": "OWNERSHIP_RECONSTRUCTED", "families_measured": "6/33", "mechanism_files": 96},
+    {"mechanism": "RUNTIME_CONCURRENCY", "blocked": 4, "total": 4, "files": 2, "state": "OWNERSHIP_RECONSTRUCTED", "families_measured": "5/25", "mechanism_files": 9},
+    {"mechanism": "C_ABI_CONTRACT", "blocked": 2, "total": 19, "files": 2, "state": "UNSAFE_OPEN", "families_measured": "n/a", "mechanism_files": null},
+    {"mechanism": "BIO", "blocked": 2, "total": 2, "files": 1, "state": "UNSAFE_OPEN", "families_measured": "5/32", "mechanism_files": 40}
+  ],
+  "no_mechanism_wide_discharge_exists": true,
+  "existing_mechanism_discharges": ["RC-1", "OB-1", "OB-2", "OB-3", "ERR-1", "GEN-1"],
+  "uniform_blocking_cause": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary does not cover the site (covers_site=false); contract_basis is 'block-level SAFETY present but no # Safety fn contract'. Every blocked site is UNSAFE_FN_DEF.",
+  "clusters": [
+    {"id": "E1", "size": 32, "abstraction": "SLH-DSA Adrs + hash state over exclusive &mut", "files": "slh_dsa/adrs.rs, slh_dsa/hash.rs"},
+    {"id": "E2", "size": 36, "abstraction": "legacy provider digest init/update/final vtables", "files": "legacy_* 10 modules"},
+    {"id": "E3", "size": 11, "abstraction": "EC keymgmt dispatch", "files": "ec_kmgmt.rs"},
+    {"id": "E4", "size": 7, "abstraction": "MAC legacy keymgmt dispatch", "files": "mac_legacy_kmgmt.rs"},
+    {"id": "E5", "size": 15, "abstraction": "decoder/encoder + digest/MAC misc thunks", "files": "11 files"},
+    {"id": "X1", "size": 75, "abstraction": "X.509 v3 extension codecs; per-extension semantics, >=8 signature families", "files": "31 src/x509/v3_*.rs"},
+    {"id": "S1", "size": 7, "abstraction": "one ConfCmdFn signature and one SslConfCmdTbl.cmd slot", "files": "ssl_conf.rs"},
+    {"id": "S2", "size": 3, "abstraction": "SSL_CONF option-list / min-max helpers over SslConfCtx", "files": "ssl_conf.rs"},
+    {"id": "S3", "size": 3, "abstraction": "serverinfo parse/add callbacks (*mut SSL)", "files": "ssl_rsa.rs"},
+    {"id": "S4", "size": 5, "abstraction": "cipher-list accessors; trace/CT helpers", "files": "ssl_ciph.rs, t1_trce.rs, ssl_lib.rs"},
+    {"id": "R1", "size": 6, "abstraction": "CMS ASN.1 item callbacks", "files": "cms_asn1.rs"},
+    {"id": "R2", "size": 4, "abstraction": "DRBG context construction/release", "files": "rand_lib.rs"},
+    {"id": "R3", "size": 2, "abstraction": "CMS freefunc slots", "files": "cms_lib.rs"},
+    {"id": "R4", "size": 1, "abstraction": "PKCS7 ri_cb", "files": "pk7_asn1.rs"},
+    {"id": "N1", "size": 2, "abstraction": "namemap legacy name tables", "files": "context/namemap.rs"},
+    {"id": "N2", "size": 2, "abstraction": "thread lock release", "files": "runtime/thread.rs"},
+    {"id": "A1", "size": 1, "abstraction": "dynamic engine freefunc", "files": "eng_dyn.rs"},
+    {"id": "A2", "size": 1, "abstraction": "engine list cleanup", "files": "eng_list.rs"},
+    {"id": "B1", "size": 2, "abstraction": "vestigial readbuffer write path", "files": "bf_readbuff.rs"}
+  ],
+  "recommendation": {
+    "mechanism": "SSL_SESSION",
+    "first-cluster": "S1",
+    "why": "Smallest self-contained mechanism (41 files, all under src/ssl); 13 of 18 blocked sites fall in two genuine callback abstractions (S1 and S2/S3); S1 needs one reusable proof (valid exclusive SslConfCtx for the callback duration, valid NUL-terminated value, no retention after return); highest security consequence among the tractable mechanisms (protocol version, cipher suite, verification mode, session policy).",
+    "scope_caveat": "The narrow defensible scope is the 18 reachable sites / 5 files; the broad scope is the 41-file state.json mechanism set. The claim must name one; the effort rises roughly 8x if the broad scope is chosen. AGENTS.md section 22 forbids silently substituting a narrower scope."
+  },
+  "rejections": [
+    {"mechanism": "RUNTIME_CONCURRENCY", "why": "section 7 clause 3 cannot be established without measured concurrency evidence; no Loom/TSan evidence exists. A static contract would be documentation-only."},
+    {"mechanism": "BIO", "why": "a mechanism-wide record would assert coverage of 40 src/runtime/bio files while 73 SSL BIO sites remain unaudited; false coverage is forbidden by section 7."},
+    {"mechanism": "EVP_PKEY_PROVIDER", "why": "371 files / 90,830 unsafe ops / 5 of 32 families measured, and at least four distinct ownership interiors; mechanism-wide cost dwarfs the 101-site benefit."},
+    {"mechanism": "X509_VERIFY_POLICY", "why": "75 sites across 31 per-extension codecs with distinct types and i2r/v2i/i2v/s2i/i2s/print/audit semantics; a shared template comment would not satisfy a per-operation validity contract."},
+    {"mechanism": "RAND_CMS_STORE_KEYFMT", "why": "the residual 13 split across CMS ASN.1 callbacks, DRBG construction, a CMS freefunc and a PKCS7 callback in three subsystems; one record would conflate four interiors."},
+    {"mechanism": "C_ABI_CONTRACT", "why": "cross-cutting ABI class with no file-count scope; mechanism-wide discharge would be a crate-wide unsafe extern \"C\" claim. Its 17 existing records are correctly scoped boundaries."}
+  ],
+  "evidence_required_for_recommendation": [
+    "frozen identity S plus a separate evidence commit E; rebuild once and bind the downstream executable digest",
+    "fn-level # Safety on all 18 blocked unsafe fns and on every other unsafe op in the declared scope; per-site receipt for S1-S4; hidden = 0",
+    "caller/edge closure: every write of SslConfCmdTbl.cmd, every dispatch site, SslConfCtx provenance and exclusivity, reentrancy analysis, per-call-site witnesses",
+    "safe-surface proof over SSL_CONF_cmd / _cmd_argv / _cmd_value_type",
+    "three independent axes: ABI/functional differential, Rust soundness (Miri Stacked and Tree Borrows), crypto/security policy decisions",
+    "independent adjudication by a reviewer who is not the author"
+  ],
+  "negative_controls": [
+    "aliasing canary across the callback; Miri Stacked and Tree Borrows must fire, or an ASan harness with a poisoned sentinel",
+    "use-after-free/reentrancy canary: handler stashes the ctx, a second command after SSL_CONF_CTX_free; ASan must fire",
+    "wrong-release canary at the owner seam; allocator-seam canary must fire",
+    "confirm each canary actually fires on an intentionally vulnerable build; a silent instrument fails the claim"
+  ],
+  "non_claims": [
+    "These are work-planning counts from the applied v1u closure, not safety results.",
+    "No mechanism is discharged by this map; SAFE_COMPATIBLE remains 0/33.",
+    "File counts come from state.json's mechanism file sets; reachability differs from file membership and the distinction is load-bearing for section 7 scope."
+  ]
+}
