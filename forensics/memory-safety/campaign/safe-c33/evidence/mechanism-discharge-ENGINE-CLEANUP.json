@@ -1,0 +1,1367 @@
+{
+ "schema": "safe-c33/mechanism-discharge/v1",
+ "package_id": "ENGINE-CLEANUP",
+ "mechanism": "C_ABI_CONTRACT",
+ "mechanism_sub_scope": "zero-argument engine static-table cleanup thunks (`engine_unregister_all_*`) registered on the engine cleanup stack",
+ "mechanism_state_at_candidate": "UNSAFE_OPEN",
+ "mechanism_state_source": "state.json#/mechanisms[id=C_ABI_CONTRACT]",
+ "scope": {
+  "in_scope": [
+   "V1:src/engine/tb_asnmth.rs:72:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_cipher.rs:55:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_dh.rs:51:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_digest.rs:66:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_dsa.rs:51:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_eckey.rs:51:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_pkmeth.rs:53:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_rand.rs:51:UNSAFE_FN_DEF",
+   "V1:src/engine/tb_rsa.rs:52:UNSAFE_FN_DEF"
+  ],
+  "boundary_ids": [
+   "P25-ENGINE-CB-001",
+   "P25-ENGINE-CB-002",
+   "P25-ENGINE-CB-003",
+   "P25-ENGINE-CB-004",
+   "P25-ENGINE-CB-005",
+   "P25-ENGINE-CB-006",
+   "P25-ENGINE-CB-007",
+   "P25-ENGINE-CB-008",
+   "P25-ENGINE-CB-009"
+  ],
+  "site_count": 9,
+  "out_of_scope": [
+   "src/engine/eng_list.rs:90 (P25-ENGINE-CB-000, engine_list_cleanup): retained BLOCKED \u2014 lifetime/ordering of the unlocked Acquire load and the list-removal reference transition is unproven; distinct callback.",
+   "src/engine/eng_dyn.rs:401 (dynamic_data_ctx_free_func): retained BLOCKED \u2014 CRYPTO_EX_free hook with caller-supplied pointer; distinct ownership interior.",
+   "all other C_ABI_CONTRACT sites (look_str_cb, ui/conf callbacks, async shims): not enumerated here; the mechanism is NOT mechanism-wide discharged."
+  ],
+  "statement": "This is a scoped mechanism package for nine mechanically identical cleanup thunks, not a discharge of C_ABI_CONTRACT as a whole."
+ },
+ "source_identity": {
+  "repo": "/mnt/1tb_kingston/openssl-rs",
+  "branch": "stage/p25/base-slot-partial",
+  "head": "adceec2049f2a42b76f95d946214f36cd2bea064",
+  "head_subject": "feat(analyzer): qualify the context object for static-table dispatch",
+  "tracked_tree": "clean",
+  "closure": "forensics/memory-safety/campaign/safe-c33/evidence/closure-ssh-bsp.json",
+  "closure_sha256": "ce5d33a60af1eb93b2553644bdf99ee1e2efd28e9c52634dd79a8c9079578411",
+  "state_json_sha256": "508095bcb91f439fc126cf964d31a4f0f656f997587234d5bfbb07ec0cbc8273",
+  "campaign_status_sha256": "7fc7ed23f0ab542cfe75345d8a19700b7cf9cff7d29fb7cce83712f7849fb003",
+  "tool": {
+   "path": "forensics/tools/consumer_closure.py",
+   "sha256": "7da237dab00c86cc45cda21432da541e9c2471962995034ed2b0c98bc0099535",
+   "version": 5
+  },
+  "file_sha256": {
+   "src/engine/eng_lib.rs": "8a3552badf53330ff6127bdc6901742c3c79db062a178a35ad061373d81f80d7",
+   "src/engine/eng_table.rs": "354dfb8987ad07884079b03246cad0ef5e96643af19befbe113802154540316e",
+   "src/engine/eng_list.rs": "1f653c54be56a5b2a15cb5a5a2209610967a757c1322fef80db39466e8c81386",
+   "src/engine/eng_dyn.rs": "0044c618f70a001c6a54d92d925bfcd5c2a2f4c1bdd55ba1ca899f8e3eb2eae6",
+   "src/engine/tb_asnmth.rs": "e062dcb6e1677e6fee6848330514d967668d59b25d8fee2c99fefccdd512b012",
+   "src/engine/tb_cipher.rs": "373b02ec2b50c6063e241121ae4191d1bc60ef3ef0388bd5afe57f344f88c804",
+   "src/engine/tb_dh.rs": "70f98f0cedfdab4ebdc9d3b05059c9b49a2ce75d48679af7e69b886bf367f8cd",
+   "src/engine/tb_digest.rs": "76439b4fc13a83836495ebdecc90cac0295e0cfa3427f8145d3683e5429f086c",
+   "src/engine/tb_dsa.rs": "d370322b60d59a9b766199a172a6e0b696fee0b019c30aefdff74e9b8ddad9ec",
+   "src/engine/tb_eckey.rs": "665ced55eb9cda75b7089045ca5737b90b7545e63d0c83c3e902ce1ccd8b3115",
+   "src/engine/tb_pkmeth.rs": "b44ac95110b55fb0065edbc62ce315c302832000b4b9cd3713e14d6b8b952b2e",
+   "src/engine/tb_rand.rs": "4016f33b62e9099fd1dff3bf242c091684ebe4fa724868ee2954bf6618ca0f2b",
+   "src/engine/tb_rsa.rs": "6ea2faf372febe8e4abb80d3a1d4029e496fa5d65565b29c3d04f888ce77d67e"
+  }
+ },
+ "environment": {
+  "venue": "docker/openssl-rs-court.sh (minimal court container; host checkout at /work)",
+  "target": "x86_64-unknown-linux-gnu",
+  "rustc": "1.98.1 (48a229cea 2026-09-01)",
+  "cargo": "1.98.1 (797e8a9bc 2026-08-05)",
+  "miri": "NOT_RUN (not used for this package)",
+  "tsan": "NOT_RUN (B20 ran TSan on eng_table previously; not re-run here)"
+ },
+ "closure_input": {
+  "family": "openssh",
+  "production_obligations": 312,
+  "discharged": 90,
+  "blocked": 222,
+  "unknown": 0,
+  "blocked_by_mechanism": [
+   {
+    "mechanism": "EVP_PKEY_PROVIDER",
+    "count": 101,
+    "sites": [
+     {
+      "file": "src/decoder_pkey.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/digest/sha2.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/encoder_meth.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/evp/e_rc2.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/evp/legacy_blake2.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 4
+     },
+     {
+      "file": "src/evp/legacy_md4.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/evp/legacy_md5.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 6
+     },
+     {
+      "file": "src/evp/legacy_mdc2.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/evp/legacy_ripemd.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 13
+     },
+     {
+      "file": "src/evp/legacy_sha3.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 3
+     },
+     {
+      "file": "src/evp/legacy_wp.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/ml_kem/key.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/property/store.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/provider/cipher.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/provider/conf.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/provider/decode_pvk2key.rs",
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "count": 1
+     },
+     {
+      "file": "src/provider/ec_kmgmt.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 11
+     },
+     {
+      "file": "src/provider/ecx_kmgmt.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 3
+     },
+     {
+      "file": "src/provider/eddsa_sig.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/provider/mac_legacy_kmgmt.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 7
+     },
+     {
+      "file": "src/provider/mlx_kmgmt.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/slh_dsa/adrs.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 19
+     },
+     {
+      "file": "src/slh_dsa/hash.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 13
+     },
+     {
+      "file": "src/sm3/legacy_sm3.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     }
+    ]
+   },
+   {
+    "mechanism": "X509_VERIFY_POLICY",
+    "count": 75,
+    "sites": [
+     {
+      "file": "src/x509/v3_aaa.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 3
+     },
+     {
+      "file": "src/x509/v3_asid.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 3
+     },
+     {
+      "file": "src/x509/v3_audit_id.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/x509/v3_battcons.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/x509/v3_bcons.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/x509/v3_bitst.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/x509/v3_cpols.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/x509/v3_enum.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/x509/v3_extku.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/x509/v3_group_ac.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 4
+     },
+     {
+      "file": "src/x509/v3_ia5.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/x509/v3_ind_iss.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 4
+     },
+     {
+      "file": "src/x509/v3_info.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/x509/v3_int.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/x509/v3_iobo.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/x509/v3_ist.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/x509/v3_lib.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/x509/v3_no_ass.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 4
+     },
+     {
+      "file": "src/x509/v3_no_rev_avail.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 4
+     },
+     {
+      "file": "src/x509/v3_pcons.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/x509/v3_pku.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/x509/v3_pmaps.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/x509/v3_sda.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/x509/v3_single_use.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 4
+     },
+     {
+      "file": "src/x509/v3_skid.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/x509/v3_soa_id.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 4
+     },
+     {
+      "file": "src/x509/v3_sxnet.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/x509/v3_timespec.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 9
+     },
+     {
+      "file": "src/x509/v3_tlsf.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/x509/v3_usernotice.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/x509/v3_utf8.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     }
+    ]
+   },
+   {
+    "mechanism": "SSL_SESSION",
+    "count": 16,
+    "sites": [
+     {
+      "file": "src/ssl/ssl_ciph.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/ssl/ssl_conf.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 10
+     },
+     {
+      "file": "src/ssl/ssl_lib.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/ssl/ssl_rsa.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 3
+     }
+    ]
+   },
+   {
+    "mechanism": "RAND_CMS_STORE_KEYFMT",
+    "count": 13,
+    "sites": [
+     {
+      "file": "src/cms/cms_asn1.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 6
+     },
+     {
+      "file": "src/cms/cms_lib.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/pkcs7/pk7_asn1.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/rand/rand_lib.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 4
+     }
+    ]
+   },
+   {
+    "mechanism": "C_ABI_CONTRACT",
+    "count": 11,
+    "sites": [
+     {
+      "file": "src/engine/eng_dyn.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/engine/eng_list.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/engine/tb_asnmth.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/engine/tb_cipher.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/engine/tb_dh.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/engine/tb_digest.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/engine/tb_dsa.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/engine/tb_eckey.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/engine/tb_pkmeth.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/engine/tb_rand.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     },
+     {
+      "file": "src/engine/tb_rsa.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 1
+     }
+    ]
+   },
+   {
+    "mechanism": "RUNTIME_CONCURRENCY",
+    "count": 4,
+    "sites": [
+     {
+      "file": "src/context/namemap.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     },
+     {
+      "file": "src/runtime/thread.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     }
+    ]
+   },
+   {
+    "mechanism": "BIO",
+    "count": 2,
+    "sites": [
+     {
+      "file": "src/runtime/bio/bf_readbuff.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "count": 2
+     }
+    ]
+   }
+  ]
+ },
+ "choice": {
+  "chosen": {
+   "mechanism": "C_ABI_CONTRACT",
+   "sub_scope": "the nine `engine_unregister_all_*` zero-argument cleanup thunks",
+   "criterion_applied": "Every unsafe operation is one enumerated call to `engine_table_cleanup(<module-static slot>)`; the caller set is a single internal cleanup-stack walk with no caller-supplied pointer; the nine are one mechanically identical class and the pattern is reusable for engine static-table cleanup.",
+   "why_not_count": "The 9 are chosen for enumerability and caller-contract establishability, not because they are few. Their caller contract is the smallest in the closure that is still a real, reusable ABI edge."
+  },
+  "rejected_alternatives": [
+   {
+    "mechanism": "X509_VERIFY_POLICY",
+    "blocked": 75,
+    "reason": "31 extension files with heterogeneous callback signatures and per-extension ownership; every unsafe op and caller contract cannot be enumerated in one auditable package with the available evidence. The p25-x509 receipt still records 64 BLOCKED boundaries."
+   },
+   {
+    "mechanism": "EVP_PKEY_PROVIDER",
+    "blocked": 101,
+    "reason": "Spans provider key management, legacy digest init, SLH-DSA (32 sites) and multiple distinct ownership interiors. Largest volume and not a single reusable caller contract."
+   },
+   {
+    "mechanism": "RUNTIME_CONCURRENCY",
+    "blocked": 4,
+    "reason": "Smallest by count but not one mechanism (namemap vs thread). Establishing it requires concurrency evidence (Miri/Loom/TSan) that is NOT_RUN for those units; count alone is explicitly not the criterion."
+   },
+   {
+    "mechanism": "BIO",
+    "blocked": 2,
+    "reason": "The mechanism is CONTRACTED with 73 unaudited SSL BIO call sites; the two closure sites cannot support a mechanism-scope discharge."
+   },
+   {
+    "mechanism": "RAND_CMS_STORE_KEYFMT / SSL_SESSION",
+    "blocked": "13 / 16",
+    "reason": "Heterogeneous sub-mechanisms (DRBG vs CMS vs store; session ciph/conf/rsa) that each need per-site ownership analysis. Deferred, not rejected on principle."
+   }
+  ]
+ },
+ "caller_contract_shared": {
+  "invocation_path": "ENGINE_register_* or ENGINE_set_default_* -> engine_table_register (src/engine/eng_table.rs:273-296) -> engine_cleanup_add_first(cleanup) only when the table slot was NULL -> CLEANUP_STACK -> [withheld engine_cleanup_int] -> engine_cleanup_cb_free(item) -> cb() (src/engine/eng_lib.rs:684-694).",
+  "registration_cardinality": "At most one cleanup item per table slot lifetime: `engine_cleanup_add_first` runs only when `table.load().is_null()` (the `added` arm), and the slot is only returned to NULL by the cleanup that is currently unreachable. A second register/set_default on the same slot does not enqueue again.",
+  "caller_preconditions": [
+   "Zero arguments: no caller-supplied pointer, extent, alignment or initialisation state.",
+   "The cleanup item stores the module's own function item (`Some(engine_unregister_all_*)`); no other writer targets CLEANUP_STACK with these nine (CALLER_SET/STATIC_PAIRING controls PASS).",
+   "The engine lock is initialised and not held by this thread at invocation (authority eng_lib.c:169-184: callbacks run before CRYPTO_THREAD_lock_free; the callback takes the write lock itself).",
+   "No re-entrant engine API is active on this thread (B20 external contract: engine init/finish/destroy hooks must not re-enter; recursive write acquisition is refused)."
+  ],
+  "implementation_may_assume": [
+   "The slot is the module's own process-global `&'static EngineTableSlot`.",
+   "The lhash and EnginePile nodes are owned by the slot and released exactly once by `engine_table_cleanup` under the write lock.",
+   "A second invocation observes NULL and is a no-op."
+  ],
+  "not_assumed": "No caller-provided table, key, pointer or length. There is no wrong-arity, wrong-extent or uninitialised-argument obligation on this class."
+ },
+ "dispositions": [
+  {
+   "obligation_id": "V1:src/engine/tb_asnmth.rs:72:UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "file": "src/engine/tb_asnmth.rs",
+   "line": 72,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_pkey_asn1_meths",
+   "unsafe_operation": "`unsafe extern \"C\" fn engine_unregister_all_pkey_asn1_meths()` whose body is `unsafe { engine_table_cleanup(pkey_asn1_meth_table_slot()) }` (src/engine/tb_asnmth.rs:73-75).",
+   "table_identity": {
+    "slot_static": "PKEY_ASN1_METH_TABLE",
+    "slot_accessor": "pkey_asn1_meth_table_slot",
+    "accessor_line": 52,
+    "registered_at": [
+     99,
+     145
+    ],
+    "register_functions": [
+     "ENGINE_register_pkey_asn1_meths",
+     "ENGINE_set_default_pkey_asn1_meths"
+    ]
+   },
+   "authority": "crypto/engine/tb_asnmth.c:33",
+   "caller_contract": {
+    "who_may_call": "Only `engine_cleanup_cb_free` (src/engine/eng_lib.rs:684-694), as the `sk_*_pop_free` callback of `engine_cleanup_int` (`engine_cleanup_cb_free(item)` -> `cb()`). `engine_cleanup_int` is withheld (src/engine/eng_lib.rs:696-700), so no invocation executes at this identity. `engine_cleanup_add_first` is the only writer that enqueues this pointer, and only `engine_table_register` reaches it (src/engine/eng_table.rs:294-296).",
+    "preconditions_the_caller_must_establish": [
+     "The pointer stored in the cleanup item is exactly this module's function item (guaranteed by `Some(cb)` at the two registration sites and by no other writer; CALLER_SET/STATIC_PAIRING controls PASS).",
+     "Zero arguments: there is no pointer, extent, alignment or initialisation state supplied by the caller.",
+     "The engine read/write lock is initialised and is not held by this thread when `cb()` runs (authority crypto/engine/eng_lib.c:169-184 runs the callbacks before `CRYPTO_THREAD_lock_free`; `engine_table_cleanup` takes the write lock itself).",
+     "No re-entrant engine API is active on this thread; B20 records the external contract that engine init/finish/destroy hooks must not re-enter (the crate refuses recursive write acquisition)."
+    ],
+    "what_the_implementation_may_assume": [
+     "The slot is this module's own process-global `&'static EngineTableSlot`; no caller can substitute another table.",
+     "The lhash in the slot and its EnginePile nodes are owned by the slot and released exactly once by `engine_table_cleanup` under the write lock.",
+     "A repeated invocation observes the swapped-out NULL slot and performs no release (idempotent by construction)."
+    ]
+   },
+   "ownership_lifetime": "Slot: process-global static owned by the module. Table lhash and EnginePile nodes: owned by the slot, released by `engine_table_cleanup` under the engine write lock (`OPENSSL_LH_doall` + `OPENSSL_LH_free`). Cleanup item: owned by CLEANUP_STACK until `engine_cleanup_cb_free` releases it. The callback borrows no caller data and returns no value.",
+   "failure_semantics": "No return value. If `CRYPTO_THREAD_write_lock` fails (including an uninitialised/NULL lock), `engine_table_cleanup` returns before `swap`, leaving the slot populated and the table unreleased (leak/no-op, not UB). If the lock is acquired, the slot is swapped to NULL before any release, so a second call is a no-op. No path performed by this callback can double-free or use-after-free.",
+   "evidence": [
+    "src/engine/tb_asnmth.rs:72-75 (definition and body)",
+    "src/engine/tb_asnmth.rs:99,145 (the only `Some(engine_unregister_all_pkey_asn1_meths)` writers)",
+    "src/engine/eng_lib.rs:542 (EngineCleanupCb), :632-652 (add_first), :684-694 (invocation), :696-700 (engine_cleanup_int withheld)",
+    "src/engine/eng_table.rs:259-296 (register/cleanup-add), :512-535 (cleanup body), :141-170 (EnginePile CtxDestroy)",
+    "atlas-refresh/p25-engine-callback-sites.json#B16-ASN1-1 (site-enumerating receipt, BLOCKED)",
+    "atlas-refresh/boundary-sweep-B20.json#B20-TBL-3 (callee CONTRACTED; residuals B20-R2/B20-R3)",
+    "crypto/engine/tb_asnmth.c:33 (authority)"
+   ],
+   "residual_obligation": "Shared callee dependency only: `engine_table_cleanup` (B20-TBL-3) is CONTRACTED, not SAFETY_DISCHARGED, and its `# Safety` does not state the lock-initialised precondition that the failing control exposes. The wrapper itself has no caller-supplied pointer obligation.",
+   "disposition": "CONTRACT_ESTABLISHED_DISCHARGE_BLOCKED",
+   "blockers": [
+    "callee lock-init precondition undocumented (newly exposed hidden obligation, B20-TBL-3)",
+    "double-call/idempotence control FAILS in isolation at this candidate",
+    "callee boundary B20-TBL-3 is CONTRACTED with B20-R2/R3 open",
+    "callback unreachable (engine_cleanup_int withheld): invocation path is authority-derived, not exercised",
+    "no Miri/TSan for this scope"
+   ],
+   "would_discharge_if": [
+    "`engine_table_cleanup` # Safety states (and/or the code enforces) the engine-lock-initialised precondition",
+    "`cleanup_nulls_the_slot_and_a_second_cleanup_is_a_no_op` initialises the engine lock and passes in isolation",
+    "an independent BOUNDARY reviewer re-runs the controls and accepts the callee dependency",
+    "the registry uses the scoped-boundary path (see registry_change_proposal), not a mechanism-state flip"
+   ]
+  },
+  {
+   "obligation_id": "V1:src/engine/tb_cipher.rs:55:UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "file": "src/engine/tb_cipher.rs",
+   "line": 55,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_ciphers",
+   "unsafe_operation": "`unsafe extern \"C\" fn engine_unregister_all_ciphers()` whose body is `unsafe { engine_table_cleanup(cipher_table_slot()) }` (src/engine/tb_cipher.rs:56-58).",
+   "table_identity": {
+    "slot_static": "CIPHER_TABLE",
+    "slot_accessor": "cipher_table_slot",
+    "accessor_line": 40,
+    "registered_at": [
+     81,
+     126
+    ],
+    "register_functions": [
+     "ENGINE_register_ciphers",
+     "ENGINE_set_default_ciphers"
+    ]
+   },
+   "authority": "crypto/engine/tb_cipher.c:22",
+   "caller_contract": {
+    "who_may_call": "Only `engine_cleanup_cb_free` (src/engine/eng_lib.rs:684-694), as the `sk_*_pop_free` callback of `engine_cleanup_int` (`engine_cleanup_cb_free(item)` -> `cb()`). `engine_cleanup_int` is withheld (src/engine/eng_lib.rs:696-700), so no invocation executes at this identity. `engine_cleanup_add_first` is the only writer that enqueues this pointer, and only `engine_table_register` reaches it (src/engine/eng_table.rs:294-296).",
+    "preconditions_the_caller_must_establish": [
+     "The pointer stored in the cleanup item is exactly this module's function item (guaranteed by `Some(cb)` at the two registration sites and by no other writer; CALLER_SET/STATIC_PAIRING controls PASS).",
+     "Zero arguments: there is no pointer, extent, alignment or initialisation state supplied by the caller.",
+     "The engine read/write lock is initialised and is not held by this thread when `cb()` runs (authority crypto/engine/eng_lib.c:169-184 runs the callbacks before `CRYPTO_THREAD_lock_free`; `engine_table_cleanup` takes the write lock itself).",
+     "No re-entrant engine API is active on this thread; B20 records the external contract that engine init/finish/destroy hooks must not re-enter (the crate refuses recursive write acquisition)."
+    ],
+    "what_the_implementation_may_assume": [
+     "The slot is this module's own process-global `&'static EngineTableSlot`; no caller can substitute another table.",
+     "The lhash in the slot and its EnginePile nodes are owned by the slot and released exactly once by `engine_table_cleanup` under the write lock.",
+     "A repeated invocation observes the swapped-out NULL slot and performs no release (idempotent by construction)."
+    ]
+   },
+   "ownership_lifetime": "Slot: process-global static owned by the module. Table lhash and EnginePile nodes: owned by the slot, released by `engine_table_cleanup` under the engine write lock (`OPENSSL_LH_doall` + `OPENSSL_LH_free`). Cleanup item: owned by CLEANUP_STACK until `engine_cleanup_cb_free` releases it. The callback borrows no caller data and returns no value.",
+   "failure_semantics": "No return value. If `CRYPTO_THREAD_write_lock` fails (including an uninitialised/NULL lock), `engine_table_cleanup` returns before `swap`, leaving the slot populated and the table unreleased (leak/no-op, not UB). If the lock is acquired, the slot is swapped to NULL before any release, so a second call is a no-op. No path performed by this callback can double-free or use-after-free.",
+   "evidence": [
+    "src/engine/tb_cipher.rs:55-58 (definition and body)",
+    "src/engine/tb_cipher.rs:81,126 (the only `Some(engine_unregister_all_ciphers)` writers)",
+    "src/engine/eng_lib.rs:542 (EngineCleanupCb), :632-652 (add_first), :684-694 (invocation), :696-700 (engine_cleanup_int withheld)",
+    "src/engine/eng_table.rs:259-296 (register/cleanup-add), :512-535 (cleanup body), :141-170 (EnginePile CtxDestroy)",
+    "atlas-refresh/p25-engine-callback-sites.json#P25-ENGINE-CB-002 (site-enumerating receipt, BLOCKED)",
+    "atlas-refresh/boundary-sweep-B20.json#B20-TBL-3 (callee CONTRACTED; residuals B20-R2/B20-R3)",
+    "crypto/engine/tb_cipher.c:22 (authority)"
+   ],
+   "residual_obligation": "Shared callee dependency only: `engine_table_cleanup` (B20-TBL-3) is CONTRACTED, not SAFETY_DISCHARGED, and its `# Safety` does not state the lock-initialised precondition that the failing control exposes. The wrapper itself has no caller-supplied pointer obligation.",
+   "disposition": "CONTRACT_ESTABLISHED_DISCHARGE_BLOCKED",
+   "blockers": [
+    "callee lock-init precondition undocumented (newly exposed hidden obligation, B20-TBL-3)",
+    "double-call/idempotence control FAILS in isolation at this candidate",
+    "callee boundary B20-TBL-3 is CONTRACTED with B20-R2/R3 open",
+    "callback unreachable (engine_cleanup_int withheld): invocation path is authority-derived, not exercised",
+    "no Miri/TSan for this scope"
+   ],
+   "would_discharge_if": [
+    "`engine_table_cleanup` # Safety states (and/or the code enforces) the engine-lock-initialised precondition",
+    "`cleanup_nulls_the_slot_and_a_second_cleanup_is_a_no_op` initialises the engine lock and passes in isolation",
+    "an independent BOUNDARY reviewer re-runs the controls and accepts the callee dependency",
+    "the registry uses the scoped-boundary path (see registry_change_proposal), not a mechanism-state flip"
+   ]
+  },
+  {
+   "obligation_id": "V1:src/engine/tb_dh.rs:51:UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "file": "src/engine/tb_dh.rs",
+   "line": 51,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_dh",
+   "unsafe_operation": "`unsafe extern \"C\" fn engine_unregister_all_dh()` whose body is `unsafe { engine_table_cleanup(dh_table_slot()) }` (src/engine/tb_dh.rs:52-54).",
+   "table_identity": {
+    "slot_static": "DH_TABLE",
+    "slot_accessor": "dh_table_slot",
+    "accessor_line": 36,
+    "registered_at": [
+     70,
+     105
+    ],
+    "register_functions": [
+     "ENGINE_register_DH",
+     "ENGINE_set_default_DH"
+    ]
+   },
+   "authority": "crypto/engine/tb_dh.c:23",
+   "caller_contract": {
+    "who_may_call": "Only `engine_cleanup_cb_free` (src/engine/eng_lib.rs:684-694), as the `sk_*_pop_free` callback of `engine_cleanup_int` (`engine_cleanup_cb_free(item)` -> `cb()`). `engine_cleanup_int` is withheld (src/engine/eng_lib.rs:696-700), so no invocation executes at this identity. `engine_cleanup_add_first` is the only writer that enqueues this pointer, and only `engine_table_register` reaches it (src/engine/eng_table.rs:294-296).",
+    "preconditions_the_caller_must_establish": [
+     "The pointer stored in the cleanup item is exactly this module's function item (guaranteed by `Some(cb)` at the two registration sites and by no other writer; CALLER_SET/STATIC_PAIRING controls PASS).",
+     "Zero arguments: there is no pointer, extent, alignment or initialisation state supplied by the caller.",
+     "The engine read/write lock is initialised and is not held by this thread when `cb()` runs (authority crypto/engine/eng_lib.c:169-184 runs the callbacks before `CRYPTO_THREAD_lock_free`; `engine_table_cleanup` takes the write lock itself).",
+     "No re-entrant engine API is active on this thread; B20 records the external contract that engine init/finish/destroy hooks must not re-enter (the crate refuses recursive write acquisition)."
+    ],
+    "what_the_implementation_may_assume": [
+     "The slot is this module's own process-global `&'static EngineTableSlot`; no caller can substitute another table.",
+     "The lhash in the slot and its EnginePile nodes are owned by the slot and released exactly once by `engine_table_cleanup` under the write lock.",
+     "A repeated invocation observes the swapped-out NULL slot and performs no release (idempotent by construction)."
+    ]
+   },
+   "ownership_lifetime": "Slot: process-global static owned by the module. Table lhash and EnginePile nodes: owned by the slot, released by `engine_table_cleanup` under the engine write lock (`OPENSSL_LH_doall` + `OPENSSL_LH_free`). Cleanup item: owned by CLEANUP_STACK until `engine_cleanup_cb_free` releases it. The callback borrows no caller data and returns no value.",
+   "failure_semantics": "No return value. If `CRYPTO_THREAD_write_lock` fails (including an uninitialised/NULL lock), `engine_table_cleanup` returns before `swap`, leaving the slot populated and the table unreleased (leak/no-op, not UB). If the lock is acquired, the slot is swapped to NULL before any release, so a second call is a no-op. No path performed by this callback can double-free or use-after-free.",
+   "evidence": [
+    "src/engine/tb_dh.rs:51-54 (definition and body)",
+    "src/engine/tb_dh.rs:70,105 (the only `Some(engine_unregister_all_dh)` writers)",
+    "src/engine/eng_lib.rs:542 (EngineCleanupCb), :632-652 (add_first), :684-694 (invocation), :696-700 (engine_cleanup_int withheld)",
+    "src/engine/eng_table.rs:259-296 (register/cleanup-add), :512-535 (cleanup body), :141-170 (EnginePile CtxDestroy)",
+    "atlas-refresh/p25-engine-callback-sites.json#P25-ENGINE-CB-003 (site-enumerating receipt, BLOCKED)",
+    "atlas-refresh/boundary-sweep-B20.json#B20-TBL-3 (callee CONTRACTED; residuals B20-R2/B20-R3)",
+    "crypto/engine/tb_dh.c:23 (authority)"
+   ],
+   "residual_obligation": "Shared callee dependency only: `engine_table_cleanup` (B20-TBL-3) is CONTRACTED, not SAFETY_DISCHARGED, and its `# Safety` does not state the lock-initialised precondition that the failing control exposes. The wrapper itself has no caller-supplied pointer obligation.",
+   "disposition": "CONTRACT_ESTABLISHED_DISCHARGE_BLOCKED",
+   "blockers": [
+    "callee lock-init precondition undocumented (newly exposed hidden obligation, B20-TBL-3)",
+    "double-call/idempotence control FAILS in isolation at this candidate",
+    "callee boundary B20-TBL-3 is CONTRACTED with B20-R2/R3 open",
+    "callback unreachable (engine_cleanup_int withheld): invocation path is authority-derived, not exercised",
+    "no Miri/TSan for this scope"
+   ],
+   "would_discharge_if": [
+    "`engine_table_cleanup` # Safety states (and/or the code enforces) the engine-lock-initialised precondition",
+    "`cleanup_nulls_the_slot_and_a_second_cleanup_is_a_no_op` initialises the engine lock and passes in isolation",
+    "an independent BOUNDARY reviewer re-runs the controls and accepts the callee dependency",
+    "the registry uses the scoped-boundary path (see registry_change_proposal), not a mechanism-state flip"
+   ]
+  },
+  {
+   "obligation_id": "V1:src/engine/tb_digest.rs:66:UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "file": "src/engine/tb_digest.rs",
+   "line": 66,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_digests",
+   "unsafe_operation": "`unsafe extern \"C\" fn engine_unregister_all_digests()` whose body is `unsafe { engine_table_cleanup(digest_table_slot()) }` (src/engine/tb_digest.rs:67-69).",
+   "table_identity": {
+    "slot_static": "DIGEST_TABLE",
+    "slot_accessor": "digest_table_slot",
+    "accessor_line": 51,
+    "registered_at": [
+     93,
+     139
+    ],
+    "register_functions": [
+     "ENGINE_register_digests",
+     "ENGINE_set_default_digests"
+    ]
+   },
+   "authority": "crypto/engine/tb_digest.c:22",
+   "caller_contract": {
+    "who_may_call": "Only `engine_cleanup_cb_free` (src/engine/eng_lib.rs:684-694), as the `sk_*_pop_free` callback of `engine_cleanup_int` (`engine_cleanup_cb_free(item)` -> `cb()`). `engine_cleanup_int` is withheld (src/engine/eng_lib.rs:696-700), so no invocation executes at this identity. `engine_cleanup_add_first` is the only writer that enqueues this pointer, and only `engine_table_register` reaches it (src/engine/eng_table.rs:294-296).",
+    "preconditions_the_caller_must_establish": [
+     "The pointer stored in the cleanup item is exactly this module's function item (guaranteed by `Some(cb)` at the two registration sites and by no other writer; CALLER_SET/STATIC_PAIRING controls PASS).",
+     "Zero arguments: there is no pointer, extent, alignment or initialisation state supplied by the caller.",
+     "The engine read/write lock is initialised and is not held by this thread when `cb()` runs (authority crypto/engine/eng_lib.c:169-184 runs the callbacks before `CRYPTO_THREAD_lock_free`; `engine_table_cleanup` takes the write lock itself).",
+     "No re-entrant engine API is active on this thread; B20 records the external contract that engine init/finish/destroy hooks must not re-enter (the crate refuses recursive write acquisition)."
+    ],
+    "what_the_implementation_may_assume": [
+     "The slot is this module's own process-global `&'static EngineTableSlot`; no caller can substitute another table.",
+     "The lhash in the slot and its EnginePile nodes are owned by the slot and released exactly once by `engine_table_cleanup` under the write lock.",
+     "A repeated invocation observes the swapped-out NULL slot and performs no release (idempotent by construction)."
+    ]
+   },
+   "ownership_lifetime": "Slot: process-global static owned by the module. Table lhash and EnginePile nodes: owned by the slot, released by `engine_table_cleanup` under the engine write lock (`OPENSSL_LH_doall` + `OPENSSL_LH_free`). Cleanup item: owned by CLEANUP_STACK until `engine_cleanup_cb_free` releases it. The callback borrows no caller data and returns no value.",
+   "failure_semantics": "No return value. If `CRYPTO_THREAD_write_lock` fails (including an uninitialised/NULL lock), `engine_table_cleanup` returns before `swap`, leaving the slot populated and the table unreleased (leak/no-op, not UB). If the lock is acquired, the slot is swapped to NULL before any release, so a second call is a no-op. No path performed by this callback can double-free or use-after-free.",
+   "evidence": [
+    "src/engine/tb_digest.rs:66-69 (definition and body)",
+    "src/engine/tb_digest.rs:93,139 (the only `Some(engine_unregister_all_digests)` writers)",
+    "src/engine/eng_lib.rs:542 (EngineCleanupCb), :632-652 (add_first), :684-694 (invocation), :696-700 (engine_cleanup_int withheld)",
+    "src/engine/eng_table.rs:259-296 (register/cleanup-add), :512-535 (cleanup body), :141-170 (EnginePile CtxDestroy)",
+    "atlas-refresh/p25-engine-callback-sites.json#P25-ENGINE-CB-004 (site-enumerating receipt, BLOCKED)",
+    "atlas-refresh/boundary-sweep-B20.json#B20-TBL-3 (callee CONTRACTED; residuals B20-R2/B20-R3)",
+    "crypto/engine/tb_digest.c:22 (authority)"
+   ],
+   "residual_obligation": "Shared callee dependency only: `engine_table_cleanup` (B20-TBL-3) is CONTRACTED, not SAFETY_DISCHARGED, and its `# Safety` does not state the lock-initialised precondition that the failing control exposes. The wrapper itself has no caller-supplied pointer obligation.",
+   "disposition": "CONTRACT_ESTABLISHED_DISCHARGE_BLOCKED",
+   "blockers": [
+    "callee lock-init precondition undocumented (newly exposed hidden obligation, B20-TBL-3)",
+    "double-call/idempotence control FAILS in isolation at this candidate",
+    "callee boundary B20-TBL-3 is CONTRACTED with B20-R2/R3 open",
+    "callback unreachable (engine_cleanup_int withheld): invocation path is authority-derived, not exercised",
+    "no Miri/TSan for this scope"
+   ],
+   "would_discharge_if": [
+    "`engine_table_cleanup` # Safety states (and/or the code enforces) the engine-lock-initialised precondition",
+    "`cleanup_nulls_the_slot_and_a_second_cleanup_is_a_no_op` initialises the engine lock and passes in isolation",
+    "an independent BOUNDARY reviewer re-runs the controls and accepts the callee dependency",
+    "the registry uses the scoped-boundary path (see registry_change_proposal), not a mechanism-state flip"
+   ]
+  },
+  {
+   "obligation_id": "V1:src/engine/tb_dsa.rs:51:UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "file": "src/engine/tb_dsa.rs",
+   "line": 51,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_dsa",
+   "unsafe_operation": "`unsafe extern \"C\" fn engine_unregister_all_dsa()` whose body is `unsafe { engine_table_cleanup(dsa_table_slot()) }` (src/engine/tb_dsa.rs:52-54).",
+   "table_identity": {
+    "slot_static": "DSA_TABLE",
+    "slot_accessor": "dsa_table_slot",
+    "accessor_line": 36,
+    "registered_at": [
+     70,
+     105
+    ],
+    "register_functions": [
+     "ENGINE_register_DSA",
+     "ENGINE_set_default_DSA"
+    ]
+   },
+   "authority": "crypto/engine/tb_dsa.c:23",
+   "caller_contract": {
+    "who_may_call": "Only `engine_cleanup_cb_free` (src/engine/eng_lib.rs:684-694), as the `sk_*_pop_free` callback of `engine_cleanup_int` (`engine_cleanup_cb_free(item)` -> `cb()`). `engine_cleanup_int` is withheld (src/engine/eng_lib.rs:696-700), so no invocation executes at this identity. `engine_cleanup_add_first` is the only writer that enqueues this pointer, and only `engine_table_register` reaches it (src/engine/eng_table.rs:294-296).",
+    "preconditions_the_caller_must_establish": [
+     "The pointer stored in the cleanup item is exactly this module's function item (guaranteed by `Some(cb)` at the two registration sites and by no other writer; CALLER_SET/STATIC_PAIRING controls PASS).",
+     "Zero arguments: there is no pointer, extent, alignment or initialisation state supplied by the caller.",
+     "The engine read/write lock is initialised and is not held by this thread when `cb()` runs (authority crypto/engine/eng_lib.c:169-184 runs the callbacks before `CRYPTO_THREAD_lock_free`; `engine_table_cleanup` takes the write lock itself).",
+     "No re-entrant engine API is active on this thread; B20 records the external contract that engine init/finish/destroy hooks must not re-enter (the crate refuses recursive write acquisition)."
+    ],
+    "what_the_implementation_may_assume": [
+     "The slot is this module's own process-global `&'static EngineTableSlot`; no caller can substitute another table.",
+     "The lhash in the slot and its EnginePile nodes are owned by the slot and released exactly once by `engine_table_cleanup` under the write lock.",
+     "A repeated invocation observes the swapped-out NULL slot and performs no release (idempotent by construction)."
+    ]
+   },
+   "ownership_lifetime": "Slot: process-global static owned by the module. Table lhash and EnginePile nodes: owned by the slot, released by `engine_table_cleanup` under the engine write lock (`OPENSSL_LH_doall` + `OPENSSL_LH_free`). Cleanup item: owned by CLEANUP_STACK until `engine_cleanup_cb_free` releases it. The callback borrows no caller data and returns no value.",
+   "failure_semantics": "No return value. If `CRYPTO_THREAD_write_lock` fails (including an uninitialised/NULL lock), `engine_table_cleanup` returns before `swap`, leaving the slot populated and the table unreleased (leak/no-op, not UB). If the lock is acquired, the slot is swapped to NULL before any release, so a second call is a no-op. No path performed by this callback can double-free or use-after-free.",
+   "evidence": [
+    "src/engine/tb_dsa.rs:51-54 (definition and body)",
+    "src/engine/tb_dsa.rs:70,105 (the only `Some(engine_unregister_all_dsa)` writers)",
+    "src/engine/eng_lib.rs:542 (EngineCleanupCb), :632-652 (add_first), :684-694 (invocation), :696-700 (engine_cleanup_int withheld)",
+    "src/engine/eng_table.rs:259-296 (register/cleanup-add), :512-535 (cleanup body), :141-170 (EnginePile CtxDestroy)",
+    "atlas-refresh/p25-engine-callback-sites.json#P25-ENGINE-CB-005 (site-enumerating receipt, BLOCKED)",
+    "atlas-refresh/boundary-sweep-B20.json#B20-TBL-3 (callee CONTRACTED; residuals B20-R2/B20-R3)",
+    "crypto/engine/tb_dsa.c:23 (authority)"
+   ],
+   "residual_obligation": "Shared callee dependency only: `engine_table_cleanup` (B20-TBL-3) is CONTRACTED, not SAFETY_DISCHARGED, and its `# Safety` does not state the lock-initialised precondition that the failing control exposes. The wrapper itself has no caller-supplied pointer obligation.",
+   "disposition": "CONTRACT_ESTABLISHED_DISCHARGE_BLOCKED",
+   "blockers": [
+    "callee lock-init precondition undocumented (newly exposed hidden obligation, B20-TBL-3)",
+    "double-call/idempotence control FAILS in isolation at this candidate",
+    "callee boundary B20-TBL-3 is CONTRACTED with B20-R2/R3 open",
+    "callback unreachable (engine_cleanup_int withheld): invocation path is authority-derived, not exercised",
+    "no Miri/TSan for this scope"
+   ],
+   "would_discharge_if": [
+    "`engine_table_cleanup` # Safety states (and/or the code enforces) the engine-lock-initialised precondition",
+    "`cleanup_nulls_the_slot_and_a_second_cleanup_is_a_no_op` initialises the engine lock and passes in isolation",
+    "an independent BOUNDARY reviewer re-runs the controls and accepts the callee dependency",
+    "the registry uses the scoped-boundary path (see registry_change_proposal), not a mechanism-state flip"
+   ]
+  },
+  {
+   "obligation_id": "V1:src/engine/tb_eckey.rs:51:UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "file": "src/engine/tb_eckey.rs",
+   "line": 51,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_ec",
+   "unsafe_operation": "`unsafe extern \"C\" fn engine_unregister_all_ec()` whose body is `unsafe { engine_table_cleanup(ec_table_slot()) }` (src/engine/tb_eckey.rs:52-54).",
+   "table_identity": {
+    "slot_static": "EC_TABLE",
+    "slot_accessor": "ec_table_slot",
+    "accessor_line": 36,
+    "registered_at": [
+     70,
+     105
+    ],
+    "register_functions": [
+     "ENGINE_register_EC",
+     "ENGINE_set_default_EC"
+    ]
+   },
+   "authority": "crypto/engine/tb_eckey.c:23",
+   "caller_contract": {
+    "who_may_call": "Only `engine_cleanup_cb_free` (src/engine/eng_lib.rs:684-694), as the `sk_*_pop_free` callback of `engine_cleanup_int` (`engine_cleanup_cb_free(item)` -> `cb()`). `engine_cleanup_int` is withheld (src/engine/eng_lib.rs:696-700), so no invocation executes at this identity. `engine_cleanup_add_first` is the only writer that enqueues this pointer, and only `engine_table_register` reaches it (src/engine/eng_table.rs:294-296).",
+    "preconditions_the_caller_must_establish": [
+     "The pointer stored in the cleanup item is exactly this module's function item (guaranteed by `Some(cb)` at the two registration sites and by no other writer; CALLER_SET/STATIC_PAIRING controls PASS).",
+     "Zero arguments: there is no pointer, extent, alignment or initialisation state supplied by the caller.",
+     "The engine read/write lock is initialised and is not held by this thread when `cb()` runs (authority crypto/engine/eng_lib.c:169-184 runs the callbacks before `CRYPTO_THREAD_lock_free`; `engine_table_cleanup` takes the write lock itself).",
+     "No re-entrant engine API is active on this thread; B20 records the external contract that engine init/finish/destroy hooks must not re-enter (the crate refuses recursive write acquisition)."
+    ],
+    "what_the_implementation_may_assume": [
+     "The slot is this module's own process-global `&'static EngineTableSlot`; no caller can substitute another table.",
+     "The lhash in the slot and its EnginePile nodes are owned by the slot and released exactly once by `engine_table_cleanup` under the write lock.",
+     "A repeated invocation observes the swapped-out NULL slot and performs no release (idempotent by construction)."
+    ]
+   },
+   "ownership_lifetime": "Slot: process-global static owned by the module. Table lhash and EnginePile nodes: owned by the slot, released by `engine_table_cleanup` under the engine write lock (`OPENSSL_LH_doall` + `OPENSSL_LH_free`). Cleanup item: owned by CLEANUP_STACK until `engine_cleanup_cb_free` releases it. The callback borrows no caller data and returns no value.",
+   "failure_semantics": "No return value. If `CRYPTO_THREAD_write_lock` fails (including an uninitialised/NULL lock), `engine_table_cleanup` returns before `swap`, leaving the slot populated and the table unreleased (leak/no-op, not UB). If the lock is acquired, the slot is swapped to NULL before any release, so a second call is a no-op. No path performed by this callback can double-free or use-after-free.",
+   "evidence": [
+    "src/engine/tb_eckey.rs:51-54 (definition and body)",
+    "src/engine/tb_eckey.rs:70,105 (the only `Some(engine_unregister_all_ec)` writers)",
+    "src/engine/eng_lib.rs:542 (EngineCleanupCb), :632-652 (add_first), :684-694 (invocation), :696-700 (engine_cleanup_int withheld)",
+    "src/engine/eng_table.rs:259-296 (register/cleanup-add), :512-535 (cleanup body), :141-170 (EnginePile CtxDestroy)",
+    "atlas-refresh/p25-engine-callback-sites.json#P25-ENGINE-CB-006 (site-enumerating receipt, BLOCKED)",
+    "atlas-refresh/boundary-sweep-B20.json#B20-TBL-3 (callee CONTRACTED; residuals B20-R2/B20-R3)",
+    "crypto/engine/tb_eckey.c:23 (authority)"
+   ],
+   "residual_obligation": "Shared callee dependency only: `engine_table_cleanup` (B20-TBL-3) is CONTRACTED, not SAFETY_DISCHARGED, and its `# Safety` does not state the lock-initialised precondition that the failing control exposes. The wrapper itself has no caller-supplied pointer obligation.",
+   "disposition": "CONTRACT_ESTABLISHED_DISCHARGE_BLOCKED",
+   "blockers": [
+    "callee lock-init precondition undocumented (newly exposed hidden obligation, B20-TBL-3)",
+    "double-call/idempotence control FAILS in isolation at this candidate",
+    "callee boundary B20-TBL-3 is CONTRACTED with B20-R2/R3 open",
+    "callback unreachable (engine_cleanup_int withheld): invocation path is authority-derived, not exercised",
+    "no Miri/TSan for this scope"
+   ],
+   "would_discharge_if": [
+    "`engine_table_cleanup` # Safety states (and/or the code enforces) the engine-lock-initialised precondition",
+    "`cleanup_nulls_the_slot_and_a_second_cleanup_is_a_no_op` initialises the engine lock and passes in isolation",
+    "an independent BOUNDARY reviewer re-runs the controls and accepts the callee dependency",
+    "the registry uses the scoped-boundary path (see registry_change_proposal), not a mechanism-state flip"
+   ]
+  },
+  {
+   "obligation_id": "V1:src/engine/tb_pkmeth.rs:53:UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "file": "src/engine/tb_pkmeth.rs",
+   "line": 53,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_pkey_meths",
+   "unsafe_operation": "`unsafe extern \"C\" fn engine_unregister_all_pkey_meths()` whose body is `unsafe { engine_table_cleanup(pkey_meth_table_slot()) }` (src/engine/tb_pkmeth.rs:54-56).",
+   "table_identity": {
+    "slot_static": "PKEY_METH_TABLE",
+    "slot_accessor": "pkey_meth_table_slot",
+    "accessor_line": 38,
+    "registered_at": [
+     79,
+     124
+    ],
+    "register_functions": [
+     "ENGINE_register_pkey_meths",
+     "ENGINE_set_default_pkey_meths"
+    ]
+   },
+   "authority": "crypto/engine/tb_pkmeth.c:23",
+   "caller_contract": {
+    "who_may_call": "Only `engine_cleanup_cb_free` (src/engine/eng_lib.rs:684-694), as the `sk_*_pop_free` callback of `engine_cleanup_int` (`engine_cleanup_cb_free(item)` -> `cb()`). `engine_cleanup_int` is withheld (src/engine/eng_lib.rs:696-700), so no invocation executes at this identity. `engine_cleanup_add_first` is the only writer that enqueues this pointer, and only `engine_table_register` reaches it (src/engine/eng_table.rs:294-296).",
+    "preconditions_the_caller_must_establish": [
+     "The pointer stored in the cleanup item is exactly this module's function item (guaranteed by `Some(cb)` at the two registration sites and by no other writer; CALLER_SET/STATIC_PAIRING controls PASS).",
+     "Zero arguments: there is no pointer, extent, alignment or initialisation state supplied by the caller.",
+     "The engine read/write lock is initialised and is not held by this thread when `cb()` runs (authority crypto/engine/eng_lib.c:169-184 runs the callbacks before `CRYPTO_THREAD_lock_free`; `engine_table_cleanup` takes the write lock itself).",
+     "No re-entrant engine API is active on this thread; B20 records the external contract that engine init/finish/destroy hooks must not re-enter (the crate refuses recursive write acquisition)."
+    ],
+    "what_the_implementation_may_assume": [
+     "The slot is this module's own process-global `&'static EngineTableSlot`; no caller can substitute another table.",
+     "The lhash in the slot and its EnginePile nodes are owned by the slot and released exactly once by `engine_table_cleanup` under the write lock.",
+     "A repeated invocation observes the swapped-out NULL slot and performs no release (idempotent by construction)."
+    ]
+   },
+   "ownership_lifetime": "Slot: process-global static owned by the module. Table lhash and EnginePile nodes: owned by the slot, released by `engine_table_cleanup` under the engine write lock (`OPENSSL_LH_doall` + `OPENSSL_LH_free`). Cleanup item: owned by CLEANUP_STACK until `engine_cleanup_cb_free` releases it. The callback borrows no caller data and returns no value.",
+   "failure_semantics": "No return value. If `CRYPTO_THREAD_write_lock` fails (including an uninitialised/NULL lock), `engine_table_cleanup` returns before `swap`, leaving the slot populated and the table unreleased (leak/no-op, not UB). If the lock is acquired, the slot is swapped to NULL before any release, so a second call is a no-op. No path performed by this callback can double-free or use-after-free.",
+   "evidence": [
+    "src/engine/tb_pkmeth.rs:53-56 (definition and body)",
+    "src/engine/tb_pkmeth.rs:79,124 (the only `Some(engine_unregister_all_pkey_meths)` writers)",
+    "src/engine/eng_lib.rs:542 (EngineCleanupCb), :632-652 (add_first), :684-694 (invocation), :696-700 (engine_cleanup_int withheld)",
+    "src/engine/eng_table.rs:259-296 (register/cleanup-add), :512-535 (cleanup body), :141-170 (EnginePile CtxDestroy)",
+    "atlas-refresh/p25-engine-callback-sites.json#P25-ENGINE-CB-007 (site-enumerating receipt, BLOCKED)",
+    "atlas-refresh/boundary-sweep-B20.json#B20-TBL-3 (callee CONTRACTED; residuals B20-R2/B20-R3)",
+    "crypto/engine/tb_pkmeth.c:23 (authority)"
+   ],
+   "residual_obligation": "Shared callee dependency only: `engine_table_cleanup` (B20-TBL-3) is CONTRACTED, not SAFETY_DISCHARGED, and its `# Safety` does not state the lock-initialised precondition that the failing control exposes. The wrapper itself has no caller-supplied pointer obligation.",
+   "disposition": "CONTRACT_ESTABLISHED_DISCHARGE_BLOCKED",
+   "blockers": [
+    "callee lock-init precondition undocumented (newly exposed hidden obligation, B20-TBL-3)",
+    "double-call/idempotence control FAILS in isolation at this candidate",
+    "callee boundary B20-TBL-3 is CONTRACTED with B20-R2/R3 open",
+    "callback unreachable (engine_cleanup_int withheld): invocation path is authority-derived, not exercised",
+    "no Miri/TSan for this scope"
+   ],
+   "would_discharge_if": [
+    "`engine_table_cleanup` # Safety states (and/or the code enforces) the engine-lock-initialised precondition",
+    "`cleanup_nulls_the_slot_and_a_second_cleanup_is_a_no_op` initialises the engine lock and passes in isolation",
+    "an independent BOUNDARY reviewer re-runs the controls and accepts the callee dependency",
+    "the registry uses the scoped-boundary path (see registry_change_proposal), not a mechanism-state flip"
+   ]
+  },
+  {
+   "obligation_id": "V1:src/engine/tb_rand.rs:51:UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "file": "src/engine/tb_rand.rs",
+   "line": 51,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_rand",
+   "unsafe_operation": "`unsafe extern \"C\" fn engine_unregister_all_rand()` whose body is `unsafe { engine_table_cleanup(rand_table_slot()) }` (src/engine/tb_rand.rs:52-54).",
+   "table_identity": {
+    "slot_static": "RAND_TABLE",
+    "slot_accessor": "rand_table_slot",
+    "accessor_line": 36,
+    "registered_at": [
+     70,
+     105
+    ],
+    "register_functions": [
+     "ENGINE_register_RAND",
+     "ENGINE_set_default_RAND"
+    ]
+   },
+   "authority": "crypto/engine/tb_rand.c:23",
+   "caller_contract": {
+    "who_may_call": "Only `engine_cleanup_cb_free` (src/engine/eng_lib.rs:684-694), as the `sk_*_pop_free` callback of `engine_cleanup_int` (`engine_cleanup_cb_free(item)` -> `cb()`). `engine_cleanup_int` is withheld (src/engine/eng_lib.rs:696-700), so no invocation executes at this identity. `engine_cleanup_add_first` is the only writer that enqueues this pointer, and only `engine_table_register` reaches it (src/engine/eng_table.rs:294-296).",
+    "preconditions_the_caller_must_establish": [
+     "The pointer stored in the cleanup item is exactly this module's function item (guaranteed by `Some(cb)` at the two registration sites and by no other writer; CALLER_SET/STATIC_PAIRING controls PASS).",
+     "Zero arguments: there is no pointer, extent, alignment or initialisation state supplied by the caller.",
+     "The engine read/write lock is initialised and is not held by this thread when `cb()` runs (authority crypto/engine/eng_lib.c:169-184 runs the callbacks before `CRYPTO_THREAD_lock_free`; `engine_table_cleanup` takes the write lock itself).",
+     "No re-entrant engine API is active on this thread; B20 records the external contract that engine init/finish/destroy hooks must not re-enter (the crate refuses recursive write acquisition)."
+    ],
+    "what_the_implementation_may_assume": [
+     "The slot is this module's own process-global `&'static EngineTableSlot`; no caller can substitute another table.",
+     "The lhash in the slot and its EnginePile nodes are owned by the slot and released exactly once by `engine_table_cleanup` under the write lock.",
+     "A repeated invocation observes the swapped-out NULL slot and performs no release (idempotent by construction)."
+    ]
+   },
+   "ownership_lifetime": "Slot: process-global static owned by the module. Table lhash and EnginePile nodes: owned by the slot, released by `engine_table_cleanup` under the engine write lock (`OPENSSL_LH_doall` + `OPENSSL_LH_free`). Cleanup item: owned by CLEANUP_STACK until `engine_cleanup_cb_free` releases it. The callback borrows no caller data and returns no value.",
+   "failure_semantics": "No return value. If `CRYPTO_THREAD_write_lock` fails (including an uninitialised/NULL lock), `engine_table_cleanup` returns before `swap`, leaving the slot populated and the table unreleased (leak/no-op, not UB). If the lock is acquired, the slot is swapped to NULL before any release, so a second call is a no-op. No path performed by this callback can double-free or use-after-free.",
+   "evidence": [
+    "src/engine/tb_rand.rs:51-54 (definition and body)",
+    "src/engine/tb_rand.rs:70,105 (the only `Some(engine_unregister_all_rand)` writers)",
+    "src/engine/eng_lib.rs:542 (EngineCleanupCb), :632-652 (add_first), :684-694 (invocation), :696-700 (engine_cleanup_int withheld)",
+    "src/engine/eng_table.rs:259-296 (register/cleanup-add), :512-535 (cleanup body), :141-170 (EnginePile CtxDestroy)",
+    "atlas-refresh/p25-engine-callback-sites.json#P25-ENGINE-CB-008 (site-enumerating receipt, BLOCKED)",
+    "atlas-refresh/boundary-sweep-B20.json#B20-TBL-3 (callee CONTRACTED; residuals B20-R2/B20-R3)",
+    "crypto/engine/tb_rand.c:23 (authority)"
+   ],
+   "residual_obligation": "Shared callee dependency only: `engine_table_cleanup` (B20-TBL-3) is CONTRACTED, not SAFETY_DISCHARGED, and its `# Safety` does not state the lock-initialised precondition that the failing control exposes. The wrapper itself has no caller-supplied pointer obligation.",
+   "disposition": "CONTRACT_ESTABLISHED_DISCHARGE_BLOCKED",
+   "blockers": [
+    "callee lock-init precondition undocumented (newly exposed hidden obligation, B20-TBL-3)",
+    "double-call/idempotence control FAILS in isolation at this candidate",
+    "callee boundary B20-TBL-3 is CONTRACTED with B20-R2/R3 open",
+    "callback unreachable (engine_cleanup_int withheld): invocation path is authority-derived, not exercised",
+    "no Miri/TSan for this scope"
+   ],
+   "would_discharge_if": [
+    "`engine_table_cleanup` # Safety states (and/or the code enforces) the engine-lock-initialised precondition",
+    "`cleanup_nulls_the_slot_and_a_second_cleanup_is_a_no_op` initialises the engine lock and passes in isolation",
+    "an independent BOUNDARY reviewer re-runs the controls and accepts the callee dependency",
+    "the registry uses the scoped-boundary path (see registry_change_proposal), not a mechanism-state flip"
+   ]
+  },
+  {
+   "obligation_id": "V1:src/engine/tb_rsa.rs:52:UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "file": "src/engine/tb_rsa.rs",
+   "line": 52,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_rsa",
+   "unsafe_operation": "`unsafe extern \"C\" fn engine_unregister_all_rsa()` whose body is `unsafe { engine_table_cleanup(rsa_table_slot()) }` (src/engine/tb_rsa.rs:53-55).",
+   "table_identity": {
+    "slot_static": "RSA_TABLE",
+    "slot_accessor": "rsa_table_slot",
+    "accessor_line": 37,
+    "registered_at": [
+     71,
+     106
+    ],
+    "register_functions": [
+     "ENGINE_register_RSA",
+     "ENGINE_set_default_RSA"
+    ]
+   },
+   "authority": "crypto/engine/tb_rsa.c:23",
+   "caller_contract": {
+    "who_may_call": "Only `engine_cleanup_cb_free` (src/engine/eng_lib.rs:684-694), as the `sk_*_pop_free` callback of `engine_cleanup_int` (`engine_cleanup_cb_free(item)` -> `cb()`). `engine_cleanup_int` is withheld (src/engine/eng_lib.rs:696-700), so no invocation executes at this identity. `engine_cleanup_add_first` is the only writer that enqueues this pointer, and only `engine_table_register` reaches it (src/engine/eng_table.rs:294-296).",
+    "preconditions_the_caller_must_establish": [
+     "The pointer stored in the cleanup item is exactly this module's function item (guaranteed by `Some(cb)` at the two registration sites and by no other writer; CALLER_SET/STATIC_PAIRING controls PASS).",
+     "Zero arguments: there is no pointer, extent, alignment or initialisation state supplied by the caller.",
+     "The engine read/write lock is initialised and is not held by this thread when `cb()` runs (authority crypto/engine/eng_lib.c:169-184 runs the callbacks before `CRYPTO_THREAD_lock_free`; `engine_table_cleanup` takes the write lock itself).",
+     "No re-entrant engine API is active on this thread; B20 records the external contract that engine init/finish/destroy hooks must not re-enter (the crate refuses recursive write acquisition)."
+    ],
+    "what_the_implementation_may_assume": [
+     "The slot is this module's own process-global `&'static EngineTableSlot`; no caller can substitute another table.",
+     "The lhash in the slot and its EnginePile nodes are owned by the slot and released exactly once by `engine_table_cleanup` under the write lock.",
+     "A repeated invocation observes the swapped-out NULL slot and performs no release (idempotent by construction)."
+    ]
+   },
+   "ownership_lifetime": "Slot: process-global static owned by the module. Table lhash and EnginePile nodes: owned by the slot, released by `engine_table_cleanup` under the engine write lock (`OPENSSL_LH_doall` + `OPENSSL_LH_free`). Cleanup item: owned by CLEANUP_STACK until `engine_cleanup_cb_free` releases it. The callback borrows no caller data and returns no value.",
+   "failure_semantics": "No return value. If `CRYPTO_THREAD_write_lock` fails (including an uninitialised/NULL lock), `engine_table_cleanup` returns before `swap`, leaving the slot populated and the table unreleased (leak/no-op, not UB). If the lock is acquired, the slot is swapped to NULL before any release, so a second call is a no-op. No path performed by this callback can double-free or use-after-free.",
+   "evidence": [
+    "src/engine/tb_rsa.rs:52-55 (definition and body)",
+    "src/engine/tb_rsa.rs:71,106 (the only `Some(engine_unregister_all_rsa)` writers)",
+    "src/engine/eng_lib.rs:542 (EngineCleanupCb), :632-652 (add_first), :684-694 (invocation), :696-700 (engine_cleanup_int withheld)",
+    "src/engine/eng_table.rs:259-296 (register/cleanup-add), :512-535 (cleanup body), :141-170 (EnginePile CtxDestroy)",
+    "atlas-refresh/p25-engine-callback-sites.json#P25-ENGINE-CB-009 (site-enumerating receipt, BLOCKED)",
+    "atlas-refresh/boundary-sweep-B20.json#B20-TBL-3 (callee CONTRACTED; residuals B20-R2/B20-R3)",
+    "crypto/engine/tb_rsa.c:23 (authority)"
+   ],
+   "residual_obligation": "Shared callee dependency only: `engine_table_cleanup` (B20-TBL-3) is CONTRACTED, not SAFETY_DISCHARGED, and its `# Safety` does not state the lock-initialised precondition that the failing control exposes. The wrapper itself has no caller-supplied pointer obligation.",
+   "disposition": "CONTRACT_ESTABLISHED_DISCHARGE_BLOCKED",
+   "blockers": [
+    "callee lock-init precondition undocumented (newly exposed hidden obligation, B20-TBL-3)",
+    "double-call/idempotence control FAILS in isolation at this candidate",
+    "callee boundary B20-TBL-3 is CONTRACTED with B20-R2/R3 open",
+    "callback unreachable (engine_cleanup_int withheld): invocation path is authority-derived, not exercised",
+    "no Miri/TSan for this scope"
+   ],
+   "would_discharge_if": [
+    "`engine_table_cleanup` # Safety states (and/or the code enforces) the engine-lock-initialised precondition",
+    "`cleanup_nulls_the_slot_and_a_second_cleanup_is_a_no_op` initialises the engine lock and passes in isolation",
+    "an independent BOUNDARY reviewer re-runs the controls and accepts the callee dependency",
+    "the registry uses the scoped-boundary path (see registry_change_proposal), not a mechanism-state flip"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "id": "C1",
+   "name": "STATIC_PAIRING_CONTROL",
+   "kind": "static (read-only python)",
+   "result": "PASS",
+   "detail": "For each of the nine: code occurrences of the callback name = 3 (definition + two `Some(cb)` registrations, comments excluded); `Some(cb)` count = 2; body calls `engine_table_cleanup(<matching slot accessor>())`; the slot static is declared in the same file and the accessor returns `&'static EngineTableSlot { &<STATIC> }`. All 9/9 OK.",
+   "fails_if": "a callback body uses another module's slot, a registration names a different callback, or an extra writer stores the pointer."
+  },
+  {
+   "id": "C2",
+   "name": "CALLER_SET_CONTROL",
+   "kind": "static (grep -rl over src/)",
+   "result": "PASS",
+   "detail": "Each of the nine callback names occurs in exactly one source file: its owning tb_*.rs. No other module names them.",
+   "fails_if": "another module registers or invokes one of the nine pointers."
+  },
+  {
+   "id": "C3",
+   "name": "engine::eng_table::tests::cleanup_nulls_the_slot_and_a_second_cleanup_is_a_no_op",
+   "kind": "court functional test, --test-threads=1",
+   "result": "FAIL",
+   "exact_output": "panicked at src/engine/eng_table.rs:930: the first cleanup empties the slot; test result: FAILED. 0 passed; 1 failed (isolated); in the module filter: 8 passed; 1 failed",
+   "root_cause": "The test creates a slot and lhash directly but never calls `run_engine_lock_init`. `global_engine_lock()` is NULL, `CRYPTO_THREAD_write_lock(NULL)` returns 0, and `engine_table_cleanup` returns before swapping the slot. The passing sibling `register_select_and_cleanup_round_trip_through_the_slot` calls `ENGINE_new`, which runs the lock init.",
+   "classification": "Test-isolation/functional defect; no UB observed. It exposes an unstated precondition of the shared callee (lock initialised), not a caller-supplied-pointer defect in the nine wrappers.",
+   "fails_if": "the callee stops swapping the slot before release, or the lock precondition is not established."
+  },
+  {
+   "id": "C4",
+   "name": "engine::eng_table::tests::concurrent_select_and_cleanup_serialise_on_the_engine_lock",
+   "kind": "court functional test",
+   "result": "PASS",
+   "detail": "It calls `run_engine_lock_init` itself. This is the serialisation control for slot access under the engine lock; it is not a TSan result."
+  },
+  {
+   "id": "C5",
+   "name": "engine::eng_table::tests::register_select_and_cleanup_round_trip_through_the_slot",
+   "kind": "court functional test",
+   "result": "PASS",
+   "detail": "Register -> select -> cleanup through the typed slot; cleanup empties the slot."
+  },
+  {
+   "id": "C6",
+   "name": "arity/type control",
+   "kind": "compile-time (rustc)",
+   "result": "PASS",
+   "detail": "The two `Some(cb)` sites compile as `Option<EngineCleanupCb>` where `EngineCleanupCb = unsafe extern \"C\" fn()` (src/engine/eng_lib.rs:542). A wrong-arity function item would not coerce; the targeted test build compiled."
+  },
+  {
+   "id": "C7",
+   "name": "reentrancy / lock-state control",
+   "kind": "NONE (NOT_RUN)",
+   "result": "NOT_RUN",
+   "detail": "No TSan/Miri run for this scope. The contract rests on the authority cleanup path and B20's documented external contract; it is not machine-checked here."
+  }
+ ],
+ "controls_limits": [
+  "C1/C2 prove pointer and table identity statically, not runtime invocation.",
+  "The nine wrappers are unreachable at this identity (`engine_cleanup_int` withheld), so no functional test can exercise the wrapper bodies directly.",
+  "C3 fails, so the double-call/idempotence control is NOT established at this candidate.",
+  "No Miri, no TSan, no ASan for this package. Absence of detected leakage is not proof."
+ ],
+ "registry_change_proposal": {
+  "applied": false,
+  "state_json_change": "NONE. Do not change `state.json#/mechanisms[id=C_ABI_CONTRACT].state`. A value of SAFETY_DISCHARGED is not scope-aware and would be consumed as a mechanism-wide claim.",
+  "why_state_flip_is_inadmissible": "`consumer_closure.py` loads mechanism states from state.json (build_receipt, ~12617-12630) and overlays CAMPAIGN-STATUS `mechanism_discharges` whose id prefix matches. In `adjudicate()` (12374-12399), a SAFETY_DISCHARGED mechanism is DISCHARGED only when the hard-coded `err_scope` (mechanism-discharge-ERR.json, mechanism ERR) covers the exact file/line. For C_ABI_CONTRACT the scope test cannot match, so every C_ABI_CONTRACT obligation would be set to UNKNOWN \u2014 a regression from BLOCKED, not a discharge. The 11 BLOCKED and 8 DISCHARGED C_ABI sites would all be re-opened as UNKNOWN.",
+  "supported_path": "Use the existing scoped-boundary path (`adjudicate()` step 2, 12402-12420): a site-enumerating receipt whose boundary `disposition` names the exact `src/file:line`, plus a CAMPAIGN-STATUS `scoped_boundary_discharges` entry listing those boundary ids. This is how `openssh-discharge` scoped 8 C_ABI sites without changing the mechanism state.",
+  "proposed_receipt_name": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/engine-cleanup-discharge-sites.json",
+  "proposed_receipt_kind": "site-enumerating-boundary-receipt",
+  "proposed_boundary_dispositions": [
+   "P25-ENGINE-CB-001: SAFETY_DISCHARGED (scope: src/engine/tb_asnmth.rs:72)",
+   "P25-ENGINE-CB-002: SAFETY_DISCHARGED (scope: src/engine/tb_cipher.rs:55)",
+   "P25-ENGINE-CB-003: SAFETY_DISCHARGED (scope: src/engine/tb_dh.rs:51)",
+   "P25-ENGINE-CB-004: SAFETY_DISCHARGED (scope: src/engine/tb_digest.rs:66)",
+   "P25-ENGINE-CB-005: SAFETY_DISCHARGED (scope: src/engine/tb_dsa.rs:51)",
+   "P25-ENGINE-CB-006: SAFETY_DISCHARGED (scope: src/engine/tb_eckey.rs:51)",
+   "P25-ENGINE-CB-007: SAFETY_DISCHARGED (scope: src/engine/tb_pkmeth.rs:53)",
+   "P25-ENGINE-CB-008: SAFETY_DISCHARGED (scope: src/engine/tb_rand.rs:51)",
+   "P25-ENGINE-CB-009: SAFETY_DISCHARGED (scope: src/engine/tb_rsa.rs:52)"
+  ],
+  "proposed_campaign_status_entry": {
+   "receipt": "engine-cleanup-discharge-sites",
+   "scope": "C_ABI_CONTRACT engine static-table cleanup thunks (nine engine_unregister_all_* zero-argument callbacks)",
+   "base_head": "CANDIDATE_S_PRIME_AFTER_REPAIRS",
+   "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+   "retained_boundaries": [
+    "P25-ENGINE-CB-000",
+    "eng_dyn.rs:401"
+   ],
+   "retained_state": "BLOCKED",
+   "hidden_obligations": 0,
+   "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/engine-cleanup-discharge-sites.json"
+  },
+  "per_obligation_list": [
+   {
+    "id": "V1:src/engine/tb_asnmth.rs:72:UNSAFE_FN_DEF",
+    "boundary": "P25-ENGINE-CB-001",
+    "file": "src/engine/tb_asnmth.rs",
+    "line": 72
+   },
+   {
+    "id": "V1:src/engine/tb_cipher.rs:55:UNSAFE_FN_DEF",
+    "boundary": "P25-ENGINE-CB-002",
+    "file": "src/engine/tb_cipher.rs",
+    "line": 55
+   },
+   {
+    "id": "V1:src/engine/tb_dh.rs:51:UNSAFE_FN_DEF",
+    "boundary": "P25-ENGINE-CB-003",
+    "file": "src/engine/tb_dh.rs",
+    "line": 51
+   },
+   {
+    "id": "V1:src/engine/tb_digest.rs:66:UNSAFE_FN_DEF",
+    "boundary": "P25-ENGINE-CB-004",
+    "file": "src/engine/tb_digest.rs",
+    "line": 66
+   },
+   {
+    "id": "V1:src/engine/tb_dsa.rs:51:UNSAFE_FN_DEF",
+    "boundary": "P25-ENGINE-CB-005",
+    "file": "src/engine/tb_dsa.rs",
+    "line": 51
+   },
+   {
+    "id": "V1:src/engine/tb_eckey.rs:51:UNSAFE_FN_DEF",
+    "boundary": "P25-ENGINE-CB-006",
+    "file": "src/engine/tb_eckey.rs",
+    "line": 51
+   },
+   {
+    "id": "V1:src/engine/tb_pkmeth.rs:53:UNSAFE_FN_DEF",
+    "boundary": "P25-ENGINE-CB-007",
+    "file": "src/engine/tb_pkmeth.rs",
+    "line": 53
+   },
+   {
+    "id": "V1:src/engine/tb_rand.rs:51:UNSAFE_FN_DEF",
+    "boundary": "P25-ENGINE-CB-008",
+    "file": "src/engine/tb_rand.rs",
+    "line": 51
+   },
+   {
+    "id": "V1:src/engine/tb_rsa.rs:52:UNSAFE_FN_DEF",
+    "boundary": "P25-ENGINE-CB-009",
+    "file": "src/engine/tb_rsa.rs",
+    "line": 52
+   }
+  ],
+  "mechanism_for_note": "`mechanism_for()` (12229-12242) already resolves each of the nine through `state.json#/obligation_mechanisms` by (file,line,kind), before the directory rule. No registry change is needed for mechanism assignment; only the discharge scope is missing.",
+  "optional_tool_extension": "A generic mechanism-scope plane would require generalising `discharge_plane()` (12304-12324) beyond the hard-coded ERR file and teaching `adjudicate()` to leave out-of-scope obligations at their prior state. That changes a build-relevant verification tool, invalidates the freeze (\u00a722), and requires a new candidate S' plus BOUNDARY review. NOT proposed for this package.",
+  "admissibility": "NOT ADMISSIBLE until every blocker in `residuals` is cleared and an independent reviewer re-runs C1-C6. If applied now, the correct consumption would still be the scoped-boundary path, not a state flip."
+ },
+ "residuals": [
+  {
+   "id": "R1",
+   "severity": "high",
+   "disposition": "DISCHARGE BLOCKER",
+   "description": "The shared callee `engine_table_cleanup` (B20-TBL-3, CONTRACTED) requires an initialised engine lock but its `# Safety` states only \"the engine lock must not already be held\". C3 exposes the omission: with a NULL lock it returns before swapping the slot. In production the lock is initialised by `ENGINE_new` before any registration, and registration is the only way to enqueue the callback, so the precondition is established transitively \u2014 but it is undocumented and not independently verified. This is a newly exposed obligation in the callee boundary, not in the nine wrappers."
+  },
+  {
+   "id": "R2",
+   "severity": "high",
+   "disposition": "CONTROL FAILURE",
+   "description": "C3 fails in isolation at adceec204 and on integrate/safe-c33 (identical test and callee). The full suite hides it because an earlier test initialises the lock. The idempotence/double-call property is therefore NOT established at this candidate."
+  },
+  {
+   "id": "R3",
+   "severity": "medium",
+   "disposition": "DEPENDENCY OPEN",
+   "description": "B20-TBL-3 is CONTRACTED with residuals B20-R2 (table entries borrow ENGINE*, no reference) and B20-R3 (authority parity). The wrapper discharge would rest on a CONTRACTED, not SAFETY_DISCHARGED, dependency."
+  },
+  {
+   "id": "R4",
+   "severity": "medium",
+   "disposition": "UNREACHABLE",
+   "description": "`engine_cleanup_int` is withheld (src/engine/eng_lib.rs:696-700), so the nine callbacks never run at this identity. The invocation-path assumptions are derived from the pinned authority, not exercised by the candidate."
+  },
+  {
+   "id": "R5",
+   "severity": "low",
+   "disposition": "NOT_RUN",
+   "description": "No Miri/TSan/ASan for this scope. C4 is a functional serialisation test, not a race detector result."
+  },
+  {
+   "id": "R6",
+   "severity": "medium",
+   "disposition": "RETAINED BLOCKED",
+   "description": "eng_list.rs:90 (P25-ENGINE-CB-000) remains BLOCKED: unlocked Acquire load vs. list mutation, and the ENGINE_remove reference transition, are not proven. eng_dyn.rs:401 remains BLOCKED: CRYPTO_EX_free with a caller-supplied pointer."
+  }
+ ],
+ "hidden_obligations": {
+  "newly_exposed_this_pass": 1,
+  "newly_exposed": [
+   "B20-TBL-3 / engine_table_cleanup: the engine lock must be initialised (non-NULL) before the call; the # Safety omits it and a targeted control fails when it is not."
+  ],
+  "remaining_hidden": 0,
+  "statement": "Every obligation found in this pass is enumerated above. `remaining_hidden = 0` is a claim about this audit, not about the crate."
+ },
+ "non_claims": [
+  "No obligation is marked DISCHARGED in the registry or in any receipt; this package is a proposal.",
+  "No source, tool, state.json or CAMPAIGN-STATUS change was made.",
+  "C_ABI_CONTRACT is not discharged mechanism-wide; eng_list:90 and eng_dyn:401 and the other callbacks remain outside this scope.",
+  "The C3 failure is not claimed to be memory unsafety (UB); it is a no-op/leak and a contract-documentation defect.",
+  "No consumer SAFE_COMPATIBLE claim; no family graduation; no SEAL.",
+  "No Miri/TSan evidence is claimed."
+ ],
+ "recommendation": {
+  "verdict": "KEEP_BLOCKED",
+  "detail": "0 of 9 obligations are recommended for DISCHARGED at adceec204. 9 of 9 caller contracts are CONTRACT_ESTABLISHED. The discharge is blocked by R1 (undocumented callee lock precondition), R2 (failing idempotence control), R3 (CONTRACTED dependency) and R4 (unreachable path).",
+  "repair_sequence": [
+   "1. Amend `engine_table_cleanup` # Safety (src/engine/eng_table.rs:512-517) to state the engine-lock-initialised precondition, or make the failure explicit and documented.",
+   "2. Repair `cleanup_nulls_the_slot_and_a_second_cleanup_is_a_no_op` to call `run_engine_lock_init` (as its sibling does) so it exercises the contract; re-run it in isolation and in the module filter.",
+   "3. Freeze the repaired source as S'; regenerate the closure; confirm the nine remain the same obligations and C3 passes.",
+   "4. Add the scoped-boundary receipt + CAMPAIGN-STATUS entry (proposal above); re-run the closure and confirm 9 BLOCKED -> 9 DISCHARGED and no other obligation changes state.",
+   "5. Independent BOUNDARY review (reviewer is not the author): re-run C1-C6 at S', challenge the caller set, table identity, reentrancy, and safe-API reachability."
+  ]
+ },
+ "reviewer_challenges": [
+  "Caller-set completeness: verify no writer other than the two `Some(cb)` sites can enqueue these nine pointers, and that `engine_cleanup_add_first` is the only registration path (C2 only proves name occurrence, not pointer flow).",
+  "Table/pointer identity: verify each callback body's slot accessor and each registration's callback are the same module's pair, and that `EngineTableSlot` is a process-global static with no alternative writer.",
+  "Absence of reentrancy: verify the cleanup-stack walk does not hold the engine lock, and that an engine finish hook invoked under `engine_table_cleanup` cannot re-enter the engine API (B20 external contract; recursive write acquisition refused).",
+  "Safe-API reachability: confirm no safe Rust API invokes the nine outside `engine_cleanup_cb_free`, and that `engine_cleanup_int` remains withheld at the adjudicated candidate.",
+  "Callee dependency: decide whether a CONTRACTED B20-TBL-3 with B20-R2/R3 open can support a wrapper discharge, and whether the lock-init precondition is established by the registration path for every possible caller.",
+  "Control validity: independently reproduce C3's failure and confirm the root cause is the missing lock init, not a leaked lhash or a double free.",
+  "Identity: confirm the package's file hashes and closure hash match the candidate the reviewer runs; a source or tool change invalidates the package (\u00a722)."
+ ],
+ "review_status": "PENDING_INDEPENDENT_REVIEW"
+}
