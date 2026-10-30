@@ -1,0 +1,94 @@
+{
+  "receipt": "publish-0.0.44",
+  "date": "2026-10-30",
+  "crate": "openssl-rs",
+  "version": "0.0.44",
+  "registry": "crates-io",
+  "status": "PUBLISHED",
+  "source_identity": {
+    "commit": "1c8266cc0f7f798c575c493f4ca72a10d6df492d",
+    "commit_subject": "Merge pull request #89 from infinityabundance/release/0.0.44",
+    "note": "The published payload is the tree of 1c8266cc0 (PR #89 merged). It contains the 0.0.44 documentation/status truth pass over the S' candidate afcfdc47e. This is a packaging/documentation release: no Rust production source changed in it, no obligation is discharged, no gate is newly claimed, and the closure was not re-run at this identity.",
+    "working_tree": "clean at 1c8266cc0 at publish time",
+    "candidate_commit": "afcfdc47e",
+    "build_source_tree_digest": "22aef07a4b4bc4d02ee31149b1ef319816f4464b0ada00417370715a76662da9",
+    "release_tree_digest": "2def42175198830cb1c6dc9b72ffc8a7002b804133310dcf5f070c579d2dd2ed",
+    "tree_digest_note": "build_source_tree_digest is the S' build tree (Cargo.toml 0.0.43). release_tree_digest is this packaging tree (Cargo.toml/Cargo.lock 0.0.44). Within the digested build inputs they differ only in the release-metadata fields. Both are recorded so the packaging identity and the build identity stay separately checkable (AGENTS.md section 22)."
+  },
+  "artefacts": {
+    "libcrypto.so.3": "d720727aa4b9a59fa7618dc5a5130b30d2554c97776cf55ce2ab7a605a573837",
+    "libssl.so.3": "6baed3eddf1eb986c9a9bfc66ccfca2e6393db5715ab5ec8ee4b30d91279f4b3",
+    "legacy.so": "613a147ed5e4d4c9e78a944e7f5b3e77be1aee6b4d1249c6f05caf686a0f0f47",
+    "openssl": "9422139764e36c3d2cc605ea71fe8060f731b5c96cbe7eb8820505227fe50df7",
+    "note": "The S' install at afcfdc47e, recorded in atlas-refresh/build-0.0.44.json and v1s-candidate-freeze.json. The crate ships no binaries, so these hashes describe the repository build, not the crate payload, and they were not rebuilt at the bumped tree."
+  },
+  "packaging": {
+    "files": 1010,
+    "compressed_bytes": 8976949,
+    "uncompressed_mib": 41.0,
+    "limit_bytes": 10000000,
+    "local_crate_sha256": "ba87719cdfa6f094fadf486f2152567c903e098f8198741156276ad51c4a3238",
+    "note": "cargo publish: 'Packaged 1010 files, 41.0MiB (8.6MiB compressed)', 'Published openssl-rs v0.0.44 at registry crates-io'. A dry run against the identical tree was performed first; the upload reused the verified package with --no-verify rather than rebuilding. Packaging policy (Cargo.toml exclude): source, its constitution, tests and the small build-time authority bindings ship; forensics/memory-safety, forensics/atlas, tools, docker and court scaffolding do not."
+  },
+  "registry_verification": {
+    "endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.44",
+    "checksum": "ba87719cdfa6f094fadf486f2152567c903e098f8198741156276ad51c4a3238",
+    "checksum_prefix": "ba87719c",
+    "checksum_matches_local_package": true,
+    "crate_size": 8976949,
+    "published_at": "2026-10-30T09:57:39.743681Z",
+    "yanked": false,
+    "license": "Apache-2.0 OR MIT",
+    "documentation": "https://docs.rs/openssl-rs"
+  },
+  "evidence_shipped": {
+    "abi_courts": "11/11 passed on the S' install rebuild; export sets unchanged (libcrypto 5906, libssl 608)",
+    "library_tests": "2231 passed / 0 failed / 52 ignored (cargo test --lib -- --test-threads=4) at cc7762e5d. This is a floor, not a count at the release tree: the full suite was not re-run for 0.0.44.",
+    "closure": "ssh and sshd ACCEPTED with zero refusals at v1r: 312 obligations = 90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN; 52,022 edge records, 0 defects, 0 reachability-oracle violations; 624/623 reachable files. Not re-run at this identity.",
+    "element_7": "FAIL: 141 reachable unresolved (81 target-bounded, 60 contract-bounded). A pre-engine analyzer checkpoint reduced the target-bounded set to 71 (base-slot-partial 50 -> 39) at the pre-engine DSO; it is not re-measured here, and element 7 is still FAIL.",
+    "engine_cleanup": "The ENGINE-CLEANUP package is APPROVED_WITH_CONDITIONS and remains blocked. It discharges nothing. The nine obligations are still BLOCKED.",
+    "downstream": "307 of 307 recipe-backed families carried forward (candidate_identity_match=false); Safe-33 33/33 at L7-functional is carried-forward evidence, not a fresh 0.0.44 measurement.",
+    "boundary_coverage": "0 reachable files without an admitted boundary receipt; every receipt disposes BLOCKED, none DISCHARGED.",
+    "safe_compatible": "0 of 33 families. No family inherits safety from an accepted closure (AGENTS.md section 7)."
+  },
+  "safety_and_crypto_instruments_not_run": [
+    "Miri, ASan, TSan, Loom, dudect and any constant-time measurement: NOT_RUN at this identity",
+    "independent review of any mechanism discharge: NOT_RUN for this release",
+    "full forensic regeneration (Phase 25 seal): NOT_RUN at this identity"
+  ],
+  "release_process": {
+    "merge": "PR #89 was merged at the repository owner's explicit direction while the required checks were red for reasons that predate the branch. Required status checks were temporarily removed for the merge and restored immediately afterwards; the protection state was re-read from the API to confirm restoration (contexts: lints (clippy); static gates (build, tests, determinism, no-regression); every active stratum's courts, and the re-derived guard; strict=true; enforce_admins=true).",
+    "disclosure": "This is a PROCESS EXCEPTION, NOT A PRECEDENT. The 0.0.43 merge used the same relief. Two consecutive releases have now merged through red gates, and the next release is expected to pass them without relief.",
+    "truth_flip_merge": {
+      "pr": 90,
+      "note": "The post-release documentation flip (0.0.44 is published) merged through the same one-shot relief for the same pre-existing reasons. No production source changed in it. It exists because the crate payload is packaged before the registry responds, so the published 0.0.44 README necessarily states the pre-publish status; only a repository-side commit can carry the post-publish text."
+    },
+    "observed_red_checks_at_merge": {
+      "lints (clippy)": "SUCCESS",
+      "adversarial probes (allocator refusal / negative controls)": "SUCCESS",
+      "static gates (build, tests, determinism, no-regression)": "FAILURE at step 'Evidence determinism', which runs prerequisite_gate.py and aborts on 892 findings of kind unwired_function_in_the_current_stratum; steps 13-23 (phase completion predicate, symbol ownership, prerequisite coverage, plan reconciliation, prerequisite atlases, export prototypes, provider dispatch plane, FRF court declarations, evidence portability, regression guard) were consequently SKIPPED, so the generator fixed-point assertion and the regression guard did not run in the real pipeline.",
+      "every active stratum's courts, and the re-derived guard": "FAILURE: phases 17, 18, 20, 23, 24 and 25 exited 1; phase 2 and phases 3-16, 19, 21, 22 passed. phase 25 additionally reports a missing committed artefact artifacts/phase25/COURTS.json. Phase-23/24 planes also report security obligations whose recorded evidence hash for docs/SECURITY_DIVERGENCE_POLICY.md no longer matches the file."
+    },
+    "debt_characterisation": {
+      "prerequisite_findings_total": 892,
+      "by_owner_phase": {
+        "14": 674,
+        "17": 111,
+        "5": 53,
+        "3": 27,
+        "4": 25,
+        "16": 2
+      },
+      "kind": "unwired_function_in_the_current_stratum (direction B)",
+      "meaning": "An authority-internal function that a transcribed unit calls, where the crate has a module for the defining unit, that module does not mention the name, and the defining unit's stratum is in-progress. Each must be either wired/implemented or covered by a divergence record naming exactly that name with an evidence citation.",
+      "not_a_verdict": "These are not 892 memory-safety defects. They are 892 unproved dependency edges, concentrated in phase 14 (TLS) and phase 17. Resolving them by mass-suppression would defeat the gate; they require per-name disposition.",
+      "gate_was_not_weakened": "No threshold, rule, or exclusion was changed in this release."
+    }
+  },
+  "non_claims": [
+    "This is not a verification event, a graduation, or a compatibility claim.",
+    "The crate ships source and documentation only. No .so is distributed; the install-tree hashes describe a repository build.",
+    "No obligation is discharged by publishing. SAFE_COMPATIBLE remains 0/33.",
+    "A successful upload is not evidence that a required gate passed."
+  ]
+}
