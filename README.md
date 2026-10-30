@@ -39,12 +39,12 @@ Source identity: candidate commit `afcfdc47e`; build source-tree digest `22aef07
 | **Downstream drop-in, 1000-family corpus** | **207 / 1000 at `L7-functional`**; candidate 207 / authority 209 `L7-functional`; measured asymmetry: authority-only `ewftools`, `xilinx-bootgen`; **307 recipes, 253 built, 245 linked**; 223 loaded, 22 `L4-linked`, 7 failed, 755 not attempted (693 with no recipe); 307 of 307 recipe-backed rows carried forward | same atlas, `body.counts.by_subject`, `body.evidence_reuse`; `forensics/downstream/build-link-atlas.json` |
 | **Library test suite** | **2,231 passing, 0 failing, 52 ignored** at `cc7762e5d` — a **floor**, not the current count: later commits add tests without a further full run | `atlas-refresh/test-baseline.json` (`full-library-run`) |
 | **Memory safety: mechanisms** | **6 mechanisms discharged at mechanism scope** — RC-1 refcounting, OB-1 OwnedBuf release state, OB-2 OwnedStr string ownership, OB-3 OwnedCtx/RawCtx context ownership, ERR-1 ERR error-queue ownership and allocator file-coordinate seam, GEN-1 GENERAL_NAME selected-arm representation | `CAMPAIGN-STATUS.json` (`mechanism_discharges`) |
-| **Memory safety: boundaries** | 5 scoped boundary discharges (B23, B25, B27, B28, B29); **B39–B40 independently checked**; B41–B43 batch-checked; B44 author-evidenced | `atlas-refresh/boundary-sweep-*.json` |
+| **Memory safety: boundaries** | 6 scoped boundary discharges (B23, B25, B27, B28, B29, B45); **B39–B40 independently checked**; B41–B43 batch-checked; B44 author-evidenced | `atlas-refresh/boundary-sweep-*.json` |
 | **Memory safety: files converted / partial** | **877 files**: 92 `ZERO_UNSAFE`, 18 `BOUNDARY_COVERED`, 761 `PARTIAL` (audited 761/761), 6 `TEST_ONLY`, **0 unaccounted** | `atlas-refresh/unsafe-census.json`, `atlas-refresh/post-census-delta.json` |
 | **`SAFE_COMPATIBLE` consumers** | **0 / 33** — no family has a proven dependency closure | `CAMPAIGN-STATUS.json` (`consumers`) |
 | **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility for the S16–S61 cluster | `CAMPAIGN-STATUS.json` (`gates.boundary_gate`, `gates.seal_gate`) |
 | **Allocator / ABI invariants** | **preserved** — recorded invariant planes: `abi_courts`, `allocator_seam`, `exported_symbols`, `repr_c_layouts`, `unsafe_lints` | `CAMPAIGN-STATUS.json` (`structural_invariants`) |
-| **Known gaps** | `CLOSURE-NON-MONOTONE` REPAIRED; `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN AT THE MEASURED IDENTITY; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` CLOSED IN S61 (carried forward); `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 76 CARRIED S59-S60 BLOCKERS + 25 NEW VENUE/BUILD BLOCKERS; `DOWNSTREAM-BELOW-L7` 100 FAMILIES; `DOWNSTREAM-S42-SYMMETRIC-LOSSES` CLOSED IN S44; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 693 UNMEASURED; `DOWNSTREAM-MEDUSA` HARNESS; `DOWNSTREAM-S53-YIELD` 2 NEW L7 / 35 ADMITTED; `DOWNSTREAM-S60-YIELD` 7 NEW L7 / 30 ADMITTED; `S56-RESIDUALS` RETAINED; `S57-RACE` DATA-RACE FREEDOM NOT ESTABLISHED; `S58-SECURITY-CALLBACK` PERMISSIVE ARMS RETAINED; `S61-RESIDUALS` OTHER CALLBACK ARMS REMAIN PERMISSIVE; `ELEMENT-7-PRECISION` OPEN — FAIL; `CONTRACTED-OBLIGATIONS-BLOCKED` 222 BLOCKED; `RELEASE-EVIDENCE-DEBT` OPEN | `CAMPAIGN-STATUS.json` (`known_gaps`) |
+| **Known gaps** | `CLOSURE-NON-MONOTONE` REPAIRED; `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN AT THE MEASURED IDENTITY; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` CLOSED IN S61 (carried forward); `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 76 CARRIED S59-S60 BLOCKERS + 25 NEW VENUE/BUILD BLOCKERS; `DOWNSTREAM-BELOW-L7` 100 FAMILIES; `DOWNSTREAM-S42-SYMMETRIC-LOSSES` CLOSED IN S44; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 693 UNMEASURED; `DOWNSTREAM-MEDUSA` HARNESS; `DOWNSTREAM-S53-YIELD` 2 NEW L7 / 35 ADMITTED; `DOWNSTREAM-S60-YIELD` 7 NEW L7 / 30 ADMITTED; `S56-RESIDUALS` RETAINED; `S57-RACE` DATA-RACE FREEDOM NOT ESTABLISHED; `S58-SECURITY-CALLBACK` PERMISSIVE ARMS RETAINED; `S61-RESIDUALS` OTHER CALLBACK ARMS REMAIN PERMISSIVE; `ELEMENT-7-PRECISION` OPEN — FAIL; `CONTRACTED-OBLIGATIONS-BLOCKED` 215 BLOCKED at the applied v1u closure (222 at the historical v1r closure); `RELEASE-EVIDENCE-DEBT` OPEN | `CAMPAIGN-STATUS.json` (`known_gaps`) |
 | **Release** | **Published: 0.0.44** on crates.io (2026-10-30), checksum `ba87719c…`, install-tree artefacts `libcrypto.so.3` `d720727a…` / `libssl.so.3` `6baed3ed…`. The published crate ships **source and documentation only, with no binaries**; those install-tree hashes describe the repository build recorded in the receipt, not the crate payload. This evidence is bound to the 0.0.44 tree, which is the published 0.0.44 crate. 0.0.43 remains the previous release. | `atlas-refresh/publish-0.0.44.json`; `Cargo.toml` |
 
 Downstream evidence reuse: **307 of 307 recipe-backed families carried forward** (`committed-rows-carried-forward`); `candidate_identity_match` = `false`. A carried-forward row is compatibility evidence from the build recorded on that row, not a fresh measurement at the identity above. The Safe-33 cohort has 33/33 of its families in that set.
@@ -94,14 +94,14 @@ derived from the receipts:
 | Status | What it covers |
 |---|---|
 | **Discharged (mechanism scope)** | **6** — RC-1 shared reference counting; OB-1 OwnedBuf release state; OB-2 OwnedStr string ownership; OB-3 OwnedCtx/RawCtx context ownership; ERR-1 ERR error-queue ownership and allocator file-coordinate seam; GEN-1 GENERAL_NAME selected-arm representation. Mechanism scope only; not a file-level or consumer-level graduation. |
-| **Discharged (scoped boundary)** | **5 receipts** — B23 (`B23-WPKT-1`, `B23-WPKT-2`), B25 (`B25-RL-4`, `B25-RL-5`), B27 (`B26-X1`), B28 (`B27-X2`), B29 (`B29-UI-1`, `B29-UI-2`, `B29-UI-3`). Retained boundaries stay `CONTRACTED`. |
+| **Discharged (scoped boundary)** | **6 receipts** — B23 (`B23-WPKT-1`, `B23-WPKT-2`), B25 (`B25-RL-4`, `B25-RL-5`), B27 (`B26-X1`), B28 (`B27-X2`), B29 (`B29-UI-1`, `B29-UI-2`, `B29-UI-3`), B45 (`B45-ENG-CB-001`, `B45-ENG-CB-002`, `B45-ENG-CB-003`, `B45-ENG-CB-004`, `B45-ENG-CB-005`, `B45-ENG-CB-006`, `B45-ENG-CB-007`, `B45-ENG-CB-008`, `B45-ENG-CB-009`). Retained boundaries stay `CONTRACTED`. |
 | **Independently checked (not discharged)** | B39–B40 boundary-checked (memory-BIO constructor/destructor, connect-BIO descriptor); B41–B43 batch-checked; B44 **author-evidenced only**. |
 | **Uninitialised-storage class** | **5 UNSOUND fixed** (4 owner-shaped + 1 frame-local), from 32 owner-shaped entries examined; 16 safe-by-construction and 12 misuse-resistant. CLOSED for the typed-accessor-over-uninitialised-storage class: both ml_dsa allocation surfaces and the scratch partition initialise before publication; the pkcs12 and bn owning-buffer accessors and the ssl t1_lib peer-sigalgs write no longer form a typed view over uninitialised storage. Retained: ml_dsa Vector::init / matrix_init remain safe constructors over caller raw pointers; they do not dereference, so no UB is reachable alone. Making them unsafe fn is the AGENTS.md section 1 end state, deferred because it touches about 20 call sites; x509::pcy_lib::tree_levels aliasing obligation (owner-derived borrow) remains retained; provider::cipher_gcm out-buffer slice formation was retained here in S22 and is now reconstructed: S40 eliminated getivgen's and gcm_tls_cipher's whole-extent typed slices over caller-writable output (OWNERSHIP_RECONSTRUCTED, not SAFETY_DISCHARGED) |
 | **STOP-class defects** | **0 open** — `B27-X2` (`STOP-CLASS`, B27) **closed by B28**; `NEO-ERR-1` (`STOP_LEVEL`, B33) **fixed in B33**. |
 | **Audited but not converted** | **761 `PARTIAL` files**; 761/761 audited, 0 remaining. Audit completion is not discharge. |
 | **Not discharged** | Receipt-backed mechanisms still open: `BIO`, `RUNTIME_ALLOC_OWNERSHIP`; `SAFE_COMPATIBLE` remains 0/33. |
 | **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — the S16–S61 cluster has no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility. |
-| **Known gaps** | `CLOSURE-NON-MONOTONE` REPAIRED; `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN AT THE MEASURED IDENTITY; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` CLOSED IN S61 (carried forward); `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 76 CARRIED S59-S60 BLOCKERS + 25 NEW VENUE/BUILD BLOCKERS; `DOWNSTREAM-BELOW-L7` 100 FAMILIES; `DOWNSTREAM-S42-SYMMETRIC-LOSSES` CLOSED IN S44; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 693 UNMEASURED; `DOWNSTREAM-MEDUSA` HARNESS; `DOWNSTREAM-S53-YIELD` 2 NEW L7 / 35 ADMITTED; `DOWNSTREAM-S60-YIELD` 7 NEW L7 / 30 ADMITTED; `S56-RESIDUALS` RETAINED; `S57-RACE` DATA-RACE FREEDOM NOT ESTABLISHED; `S58-SECURITY-CALLBACK` PERMISSIVE ARMS RETAINED; `S61-RESIDUALS` OTHER CALLBACK ARMS REMAIN PERMISSIVE; `ELEMENT-7-PRECISION` OPEN — FAIL; `CONTRACTED-OBLIGATIONS-BLOCKED` 222 BLOCKED; `RELEASE-EVIDENCE-DEBT` OPEN |
+| **Known gaps** | `CLOSURE-NON-MONOTONE` REPAIRED; `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN AT THE MEASURED IDENTITY; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` CLOSED IN S61 (carried forward); `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 76 CARRIED S59-S60 BLOCKERS + 25 NEW VENUE/BUILD BLOCKERS; `DOWNSTREAM-BELOW-L7` 100 FAMILIES; `DOWNSTREAM-S42-SYMMETRIC-LOSSES` CLOSED IN S44; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 693 UNMEASURED; `DOWNSTREAM-MEDUSA` HARNESS; `DOWNSTREAM-S53-YIELD` 2 NEW L7 / 35 ADMITTED; `DOWNSTREAM-S60-YIELD` 7 NEW L7 / 30 ADMITTED; `S56-RESIDUALS` RETAINED; `S57-RACE` DATA-RACE FREEDOM NOT ESTABLISHED; `S58-SECURITY-CALLBACK` PERMISSIVE ARMS RETAINED; `S61-RESIDUALS` OTHER CALLBACK ARMS REMAIN PERMISSIVE; `ELEMENT-7-PRECISION` OPEN — FAIL; `CONTRACTED-OBLIGATIONS-BLOCKED` 215 BLOCKED at the applied v1u closure (222 at the historical v1r closure); `RELEASE-EVIDENCE-DEBT` OPEN |
 | **`SAFE_COMPATIBLE` consumers** | **0 / 33** — no consumer family has a proven dependency closure. |
 <!-- END GENERATED: readme-memory-safety -->
 
@@ -133,7 +133,11 @@ unless a bullet says so.
   and 0 oracle violations, closure rounds 2 and converged, one admission pass
   with **27 refuted exclusions admitted**, and **5 symbolic values resolved,
   0 blocking**. Acceptance means no refusal condition fired; it is not a
-  graduation and carries no consumer claim.
+  graduation and carries no consumer claim. **This is the historical v1r
+  measurement.** The applied closure is at candidate v1u: accepted, 314
+  reachable production obligations = 99 DISCHARGED / 215 BLOCKED / 0 UNKNOWN
+  (see the B45 bullet below; the total is 314 because two `SSL_SESSION`
+  operations in `src/ssl/t1_trce.rs` are reachable in the relinked binary).
 - **The analyzer precision checkpoint reduced the target-bounded set**
   (`evidence/base-slot-partial-summary.json`): at the pre-engine DSO, reachable
   target-bounded unresolved sites moved **81 → 71** and base-slot-partial
@@ -145,16 +149,42 @@ unless a bullet says so.
   `evidence/mechanism-discharge-ENGINE-CLEANUP-review.json`):
   `engine_table_cleanup` documents and enforces the initialised-lock
   precondition, its idempotence test initialises the lock, and a new C8 pins the
-  NULL-lock no-op. The package is **APPROVED_WITH_CONDITIONS and still blocked**
-  — it discharges no obligation and the closure has not been re-run at S′. The
-  **90 / 222 / 0** split is unchanged.
+  NULL-lock no-op. That package alone discharged nothing; its five review
+  conditions are now closed and the discharge was applied separately as **B45**
+  (next bullet), at a candidate where the control and the claim share one
+  identity.
+- **One scoped discharge is now applied: B45**
+  (`atlas-refresh/boundary-sweep-B45.json`, review in
+  `evidence/mechanism-discharge-ENGINE-CLEANUP-B45-review.json`, application
+  record in `evidence/mechanism-discharge-ENGINE-CLEANUP-v1t.json`). Nine
+  zero-argument engine-table cleanup thunks in `src/engine/tb_*.rs` moved
+  BLOCKED → DISCHARGED at candidate **v1u** (`9eccc7e9`), for both `ssh` and
+  `sshd`, and nothing else moved: the applied closure is **314 obligations =
+  99 DISCHARGED / 215 BLOCKED / 0 UNKNOWN**, `ACCEPTED` with zero refusals
+  (`evidence/closure-ssh-v1u.json`, `evidence/inventory-sshd-v1u.json`;
+  `-B45-baseline` twins carry the pre-discharge 90 / 224 / 0). The count is 314,
+  not 312, because the relinked binary makes two `SSL_SESSION` operations in
+  `src/ssl/t1_trce.rs` reachable; that is an identity effect, not new work.
+  `mechanisms.C_ABI_CONTRACT` remains **`UNSAFE_OPEN`** — nine caller sites are
+  not a mechanism discharge — and `engine_list_cleanup` (`eng_list.rs`) and
+  `dynamic_data_ctx_free_func` (`eng_dyn.rs:401`) stay **BLOCKED**. The control
+  behind the boundary is a mutation-sensitive test: removing the acquisition
+  guard makes
+  `cleanup_preserves_the_table_when_the_write_lock_acquisition_fails` fail. The
+  redundant `lock.is_null()` guard is recorded as behaviourally undetectable, so
+  no claim rests on detecting its removal. Residuals stay OPEN and recorded:
+  `B20-TBL-3` `CONTRACTED` with `B20-R2`/`B20-R3`, Miri/ASan/TSan/dudect
+  `NOT_RUN`, third-party provider destructor null contract unverified, and
+  `B45-D1` (the authority frees and NULLs `global_engine_lock`; landing
+  `engine_cleanup_int` must re-open the nine).
 - **Element 7 is FAIL** (`element_7` in the same receipts): **141 reachable
   unresolved** indirect sites, **81 target-bounded** and 60 contract-bounded
   (46 `ABI_CONTRACT_EXPORT_CALLBACK` + 14 `ABI_CONTRACT_PROVIDER`), 0
   unclassified. A pre-engine analyzer checkpoint reduced target-bounded to
   **71** (base-slot-partial 50 → 39) but is **not re-measured at 0.0.44**.
-  `SAFE_COMPATIBLE` therefore stays **0/33**: 222 obligations are contracted but
-  BLOCKED, and no family inherits safety from an accepted closure alone
+  `SAFE_COMPATIBLE` therefore stays **0/33**: 215 obligations are contracted
+  but BLOCKED at the applied v1u closure (222 at the historical v1r closure),
+  and no family inherits safety from an accepted closure alone
   (`AGENTS.md` §7).
 - **The analyzer repair is implemented and measured**
   (`atlas-refresh/closure-fixpoint-repair.json`): the residual admission is now
@@ -204,10 +234,11 @@ unless a bullet says so.
   reachable sites. The pre-engine analyzer checkpoint reduced that to **71**
   (base-slot-partial 50 → 39), but it is **not re-measured at 0.0.44** and the
   sites still lack a bounded target set, so element 7 remains FAIL.
-- **222 contracted obligations awaiting discharge** (BLOCKED), inside each
-  family's dependency closure; `SAFE_COMPATIBLE` remains **0/33**. The
-  engine-cleanup package is APPROVED_WITH_CONDITIONS but still blocked, so it
-  contributes no discharge.
+- **215 contracted obligations awaiting discharge** (BLOCKED) at the applied
+  v1u closure (222 at the historical v1r closure), inside each family's
+  dependency closure; `SAFE_COMPATIBLE` remains **0/33**. Nine engine cleanup
+  callbacks were discharged as the scoped boundary **B45**; the remaining
+  engine-package sites stay BLOCKED and the mechanism stays `UNSAFE_OPEN`.
 - **Release-evidence debt**: FRF's 143 manifests are still `0.0.27`; the
   Phase-18 unsafe-bounds ratchet is +3,017 real sites and needs a reviewable
   re-base; the Phase-24 candidate freeze and P1000 counts are pinned to

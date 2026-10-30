@@ -535,10 +535,20 @@ pub(crate) unsafe fn engine_table_cleanup(table: &EngineTableSlot) {
     // `CRYPTO_THREAD_write_lock`: an uninitialised lock leaves the slot untouched and the
     // table unreleased, exactly as the authority's failed acquisition does. No panic, no
     // release, no behaviour change.
+    //
+    // This guard is redundant defence-in-depth, not an observable behaviour: deleting it alone
+    // changes nothing, because `CRYPTO_THREAD_write_lock(NULL)` already answers 0 and the
+    // acquisition check below refuses. The C1 control
+    // (`cleanup_preserves_the_table_when_the_write_lock_acquisition_fails`) therefore covers
+    // only the acquisition-failure arm; the evidence must not claim to detect removal of this
+    // NULL guard.
     if lock.is_null() {
         return;
     }
     // SAFETY: `lock` is the engine lock created by the run-once and is non-NULL per the check.
+    // A 0 answer is a real single-thread failure arm: the write lock refuses re-acquisition by
+    // the thread that already holds it (`state.writer_id == Some(current_id())`), so cleanup
+    // must leave the slot and the table untouched rather than deadlock or release them.
     if unsafe { CRYPTO_THREAD_write_lock(lock) } == 0 {
         return;
     }
@@ -967,6 +977,83 @@ mod tests {
 
             engine_table_cleanup(&slot);
             assert!(slot.load().is_null(), "the second cleanup is a no-op");
+        }
+    }
+
+    /// C1 (B45 review check 4): `engine_table_cleanup` must return without touching the slot
+    /// when `CRYPTO_THREAD_write_lock` answers 0. This thread already holding the write lock is
+    /// a real single-thread acquisition-failure arm -- the lock refuses re-acquisition when
+    /// `state.writer_id == Some(current_id())` (`src/runtime/thread.rs`) -- so the control needs
+    /// no second thread and cannot deadlock.
+    ///
+    /// The `lock.is_null()` guard that precedes the acquisition is deliberately *not* covered:
+    /// `CRYPTO_THREAD_write_lock(NULL)` already returns 0, so deleting that guard alone changes
+    /// no observable behaviour. This control fires only when the acquisition check itself is
+    /// removed (the cleanup then swaps and releases the table under a failed acquisition, and
+    /// the "slot untouched" assertion fails).
+    #[test]
+    fn cleanup_preserves_the_table_when_the_write_lock_acquisition_fails() {
+        // SAFETY: the once storage and init are `eng_lib.rs`'s.
+        assert!(unsafe { crate::engine::eng_lib::run_engine_lock_init() });
+        // SAFETY: the slot, the lhash and the pile are this test's; the retried cleanup is its
+        // single release and the failed acquisition observes them without touching either.
+        unsafe {
+            let slot = EngineTableSlot::new();
+            assert!(CRYPTO_THREAD_write_lock(global_engine_lock()) != 0);
+            let created = int_table_check(&slot, true);
+            CRYPTO_THREAD_unlock(global_engine_lock());
+            assert!(created, "the lhash is created");
+            let lh = slot.load();
+            assert!(!lh.is_null());
+            let pile = make_pile(0x3348);
+            OPENSSL_LH_insert(lh, pile.cast::<c_void>());
+
+            // No release has run yet; the pile's block address is the witness for the
+            // release that the succeeding cleanup must perform exactly once.
+            crate::runtime::release_probe::clear();
+
+            // Hold the write lock on this thread: the cleanup's acquisition now fails.
+            assert!(CRYPTO_THREAD_write_lock(global_engine_lock()) != 0);
+            engine_table_cleanup(&slot);
+            assert_eq!(
+                slot.load(),
+                lh,
+                "a failed write-lock acquisition leaves the slot untouched"
+            );
+            assert!(
+                crate::runtime::release_probe::take().is_none(),
+                "a failed write-lock acquisition must not release the table"
+            );
+
+            // Release and retry: the cleanup now acquires the lock, empties the slot and
+            // releases the pile block once.
+            CRYPTO_THREAD_unlock(global_engine_lock());
+            engine_table_cleanup(&slot);
+            assert!(
+                slot.load().is_null(),
+                "the succeeding cleanup empties the slot"
+            );
+            let call = crate::runtime::release_probe::take()
+                .expect("the succeeding cleanup releases the pile block");
+            assert_eq!(
+                call.ptr as usize, pile as usize,
+                "the release names the pile block this slot held"
+            );
+            assert!(
+                crate::runtime::release_probe::take().is_none(),
+                "the release happens exactly once"
+            );
+
+            // Idempotence: a third call observes the empty slot and releases nothing.
+            engine_table_cleanup(&slot);
+            assert!(
+                slot.load().is_null(),
+                "a third cleanup leaves the slot empty"
+            );
+            assert!(
+                crate::runtime::release_probe::take().is_none(),
+                "a third cleanup releases nothing"
+            );
         }
     }
 
