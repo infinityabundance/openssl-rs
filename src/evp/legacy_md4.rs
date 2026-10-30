@@ -68,8 +68,8 @@ unsafe fn init_md_data(
     if ctx.is_null() {
         return None;
     }
-    // SAFETY: `ctx` is NULL or live per the contract.
-    let md_data = unsafe { (*ctx).md_data };
+    // SAFETY: `ctx` is non-NULL and live per the contract.
+    let md_data = unsafe { md_data(ctx) };
     // SAFETY: as above.
     let digest = unsafe { (*ctx).digest };
     if md_data.is_null() || digest.is_null() {
@@ -188,16 +188,54 @@ unsafe extern "C" fn md4_init(ctx: *mut EvpMdCtx) -> c_int {
 }
 
 /// `md4_update` — `legacy_meth.h:15-18`.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `data` must be readable for `count` bytes
+/// when `count != 0`, and may be NULL only when `count == 0`. The callback refuses a context that
+/// does not establish a writable `Md4Ctx` — NULL, a fresh `EVP_MD_CTX_new()` (`md_data` and
+/// `digest` NULL), a NULL method, or a method with a smaller `ctx_size` — with `0` instead of
+/// dereferencing it (`docs/SECURITY_DIVERGENCE_POLICY.md`, `D-LEGACY-MD-CALLBACK-MD-DATA-1`). The
+/// context is borrowed exclusively for the duration of the call and no pointer is retained.
 unsafe extern "C" fn md4_update(ctx: *mut EvpMdCtx, data: *const c_void, count: usize) -> c_int {
-    // SAFETY: as above, and `data`/`count` are forwarded unchanged.
-    unsafe { MD4_Update(md_data(ctx).cast::<Md4Ctx>(), data, count) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `MD4_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(MD4_MD.0),
+            core::mem::size_of::<Md4Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `Md4Ctx`; `data`/`count` are the caller's.
+    unsafe { MD4_Update(block.cast::<Md4Ctx>(), data, count) }
 }
 
 /// `md4_final` — `legacy_meth.h:19-22`. The authority's macro is
 /// `fn##_Final(md, EVP_MD_CTX_get0_md_data(ctx))`, and `MD4_Final` takes the digest first.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `md` must be writable for
+/// `MD4_DIGEST_LENGTH` (16) bytes. The context precondition is the one [`md4_update`] states, and
+/// a context that does not establish a writable `Md4Ctx` is refused with `0` before `md` is
+/// touched.
 unsafe extern "C" fn md4_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
-    // SAFETY: as above.
-    unsafe { MD4_Final(md, md_data(ctx).cast::<Md4Ctx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `MD4_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(MD4_MD.0),
+            core::mem::size_of::<Md4Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `Md4Ctx`; `md` is writable per the contract.
+    unsafe { MD4_Final(md, block.cast::<Md4Ctx>()) }
 }
 
 /// `md4_md` — `legacy_md4.c:22-29`. `flags` is **0** and `md_ctrl` is **NULL**, both the authority's

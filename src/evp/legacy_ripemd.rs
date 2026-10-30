@@ -69,8 +69,8 @@ unsafe fn init_md_data(
     if ctx.is_null() {
         return None;
     }
-    // SAFETY: `ctx` is NULL or live per the contract.
-    let md_data = unsafe { (*ctx).md_data };
+    // SAFETY: `ctx` is non-NULL and live per the contract.
+    let md_data = unsafe { md_data(ctx) };
     // SAFETY: as above.
     let digest = unsafe { (*ctx).digest };
     if md_data.is_null() || digest.is_null() {
@@ -189,16 +189,55 @@ unsafe extern "C" fn ripe_init(ctx: *mut EvpMdCtx) -> c_int {
 }
 
 /// `ripe_update` — `legacy_meth.h:15-18`.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `data` must be readable for `count` bytes
+/// when `count != 0`, and may be NULL only when `count == 0`. The callback refuses a context that
+/// does not establish a writable `Ripemd160Ctx` — NULL, a fresh `EVP_MD_CTX_new()`, a NULL method,
+/// or a method with a smaller `ctx_size` — with `0` before any dereference
+/// (`docs/SECURITY_DIVERGENCE_POLICY.md`, `D-LEGACY-MD-CALLBACK-MD-DATA-1`). The context is
+/// borrowed exclusively for the duration of the call and no pointer is retained.
 unsafe extern "C" fn ripe_update(ctx: *mut EvpMdCtx, data: *const c_void, count: usize) -> c_int {
-    // SAFETY: as above, and `data`/`count` are forwarded unchanged.
-    unsafe { RIPEMD160_Update(md_data(ctx).cast::<Ripemd160Ctx>(), data, count) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `RIPEMD160_MD` is a live
+    // static method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(RIPEMD160_MD.0),
+            core::mem::size_of::<Ripemd160Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `Ripemd160Ctx`; `data`/`count` are the
+    // caller's.
+    unsafe { RIPEMD160_Update(block.cast::<Ripemd160Ctx>(), data, count) }
 }
 
 /// `ripe_final` — `legacy_meth.h:19-22`. The authority's macro is
 /// `fn##_Final(md, EVP_MD_CTX_get0_md_data(ctx))`, and `RIPEMD160_Final` takes the digest first.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `md` must be writable for
+/// `RIPEMD160_DIGEST_LENGTH` (20) bytes. The context precondition is the one [`ripe_update`]
+/// states, and a context without a writable block is refused with `0` before `md` is touched.
 unsafe extern "C" fn ripe_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
-    // SAFETY: as above.
-    unsafe { RIPEMD160_Final(md, md_data(ctx).cast::<Ripemd160Ctx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `RIPEMD160_MD` is a live
+    // static method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(RIPEMD160_MD.0),
+            core::mem::size_of::<Ripemd160Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `Ripemd160Ctx`; `md` is writable per the
+    // contract.
+    unsafe { RIPEMD160_Final(md, block.cast::<Ripemd160Ctx>()) }
 }
 
 /// `ripemd160_md` — `legacy_ripemd.c:22-30`. `flags` is **0** and `md_ctrl` is **NULL**, both the

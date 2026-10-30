@@ -142,8 +142,8 @@ unsafe fn init_keccak(
     if ctx.is_null() {
         return None;
     }
-    // SAFETY: `ctx` is NULL or live per the contract.
-    let md_data = unsafe { (*ctx).md_data };
+    // SAFETY: `ctx` is non-NULL and live per the contract.
+    let md_data = unsafe { md_data(ctx) };
     // SAFETY: as above.
     let digest = unsafe { (*ctx).digest };
     if md_data.is_null() || digest.is_null() {
@@ -274,25 +274,73 @@ unsafe extern "C" fn sha3_int_init(ctx: *mut EvpMdCtx) -> c_int {
 }
 
 /// `sha3_int_update` — `legacy_sha.c:34-37`.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `data` must be readable for `count` bytes
+/// when `count != 0`, and may be NULL only when `count == 0`. The callback refuses a context that
+/// does not establish a writable `KeccakCtx` and a positive `md_size` — NULL, a fresh
+/// `EVP_MD_CTX_new()`, a method that is not one of the six SHA-3/SHAKE tables and has a smaller
+/// `ctx_size` — with `0` before any dereference (`docs/SECURITY_DIVERGENCE_POLICY.md`,
+/// `D-LEGACY-MD-CALLBACK-MD-DATA-1`). The context is borrowed exclusively for the duration of the
+/// call and no pointer is retained.
 unsafe extern "C" fn sha3_int_update(
     ctx: *mut EvpMdCtx,
     data: *const c_void,
     count: usize,
 ) -> c_int {
-    // SAFETY: as above, and `data`/`count` are forwarded unchanged.
-    unsafe { ossl_sha3_update(md_data(ctx).cast::<KeccakCtx>(), data.cast::<u8>(), count) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and every owner is a live static
+    // method.
+    let Some((kctx, _md_size)) = (unsafe {
+        init_keccak(
+            ctx,
+            &[
+                core::ptr::addr_of!(SHA3_224_MD.0),
+                core::ptr::addr_of!(SHA3_256_MD.0),
+                core::ptr::addr_of!(SHA3_384_MD.0),
+                core::ptr::addr_of!(SHA3_512_MD.0),
+                core::ptr::addr_of!(SHAKE128_MD.0),
+                core::ptr::addr_of!(SHAKE256_MD.0),
+            ],
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_keccak` established a writable `KeccakCtx`; `data`/`count` are the caller's.
+    unsafe { ossl_sha3_update(kctx, data.cast::<u8>(), count) }
 }
 
 /// `sha3_int_final` — `legacy_sha.c:38-42`. The authority names the local `kctx` and passes
 /// `kctx->md_size` as the output length, **not** the digest size the caller asked for, which is why
 /// a `shake_ctrl`-set length is what `EVP_DigestFinal_ex` returns.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `md` must be writable for the context's
+/// current `md_size` bytes. The context precondition is the one [`sha3_int_update`] states, and a
+/// context without a writable block or a positive `md_size` is refused with `0` before `md` is
+/// touched.
 unsafe extern "C" fn sha3_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
-    // SAFETY: the caller's contract; the block is a live `KECCAK1600_CTX` and `md` is writable for
-    // its `md_size` bytes.
-    unsafe {
-        let kctx = md_data(ctx).cast::<KeccakCtx>();
-        ossl_sha3_final(kctx, md, (*kctx).md_size)
-    }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and every owner is a live static
+    // method.
+    let Some((kctx, _md_size)) = (unsafe {
+        init_keccak(
+            ctx,
+            &[
+                core::ptr::addr_of!(SHA3_224_MD.0),
+                core::ptr::addr_of!(SHA3_256_MD.0),
+                core::ptr::addr_of!(SHA3_384_MD.0),
+                core::ptr::addr_of!(SHA3_512_MD.0),
+                core::ptr::addr_of!(SHAKE128_MD.0),
+                core::ptr::addr_of!(SHAKE256_MD.0),
+            ],
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_keccak` established a writable `KeccakCtx`; `md` is writable for its `md_size`
+    // bytes per the contract.
+    unsafe { ossl_sha3_final(kctx, md, (*kctx).md_size) }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -329,6 +377,13 @@ unsafe extern "C" fn shake_init(ctx: *mut EvpMdCtx) -> c_int {
 /// into the sponge's `md_size` and answers `1`; every other command answers `0`, and a NULL context
 /// answers `0` before the command is even looked at. The authority writes `ctx = evp_ctx->md_data`
 /// directly rather than through `EVP_MD_CTX_get0_md_data`, which is why [`md_data`] is not used.
+///
+/// # Safety
+///
+/// `evp_ctx` must be NULL or point to a live `EVP_MD_CTX` whose `md_data` is either NULL or a
+/// writable `KeccakCtx`; `_p2` is not read and `p1` is an integer length. A NULL context or a NULL
+/// block answers `0` without a dereference (`docs/SECURITY_DIVERGENCE_POLICY.md`,
+/// `D-LEGACY-MD-CALLBACK-MD-DATA-1`); the authority would write through the NULL block.
 unsafe extern "C" fn shake_ctrl(
     evp_ctx: *mut EvpMdCtx,
     cmd: c_int,
@@ -340,6 +395,9 @@ unsafe extern "C" fn shake_ctrl(
     }
     // SAFETY: `evp_ctx` is non-NULL per the check above and is the live context.
     let raw = unsafe { (*evp_ctx).md_data };
+    if raw.is_null() {
+        return 0;
+    }
     let kctx = raw.cast::<KeccakCtx>();
 
     match cmd {
