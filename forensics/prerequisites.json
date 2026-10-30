@@ -234,6 +234,134 @@
         "evidence": "src/ssl/statem/statem_clnt.rs and src/ssl/statem/statem_srvr.rs module headers (the message-body boundary); docs/PHASE-16-SUBPHASES.md row 16.5 and section 3; forensics/atlas/transcription-edges.json (both modules are statem_clnt.c/statem_srvr.c's)",
         "note": "Phase 16.5 transcribes the read/write *transition* surface of ssl/statem/statem_clnt.c and statem_srvr.c -- the parser's decision that a message type can follow the current hand state, and the constructor's decision what to build next -- but not the message bodies those transitions select. The bodies (tls_process_server_hello and its siblings, the GOST/RPK/DTLS message helpers, and the five ossl_statem_{client,server}_* entry points the state machine calls) build and parse bytes through the record layer (ssl3_write_bytes/ssl3_read_bytes), the extension units (extensions_clnt.c/extensions_srvr.c) and the key schedule (t1_enc.c/tls13_enc.c), none of which is landed, so a full flight cannot be driven without a shared engine. The names are recorded here so the omitted bodies are a stated boundary rather than a silent gap; the landed transitions and the fresh-connection state they leave are compared by RT-STATEM-REMAINDER. This is the 'record the boundary rather than fabricate' disposition docs/PHASE-16-SUBPHASES.md section 4 names.",
         "owner_module": "src/ssl/statem/statem_clnt.rs, src/ssl/statem/statem_srvr.rs"
+      },
+      {
+        "class": "modelled_differently",
+        "covers": [
+          "OPENSSL_showfatal"
+        ],
+        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/cryptlib.c:236-246,:255; src/runtime/init.rs:1142-1186",
+        "note": "On the admitted non-Windows build the authority body is `vfprintf(stderr, fmta, ap)` (`crypto/cryptlib.c:236-246`) and its only caller is `OPENSSL_die` at `:255`; the helper is not exported. This crate folds the helper into `OPENSSL_die` (`src/runtime/init.rs:1165`), which renders the same `%s:%d: OpenSSL internal error: %s\\n` text, writes fd 2 directly and then calls `abort()`. There is no variadic helper left to expose and no second caller in the authority, so the name is answered by the inlined formatter.",
+        "owner_module": "src/runtime/init.rs"
+      },
+      {
+        "class": "named_differently",
+        "covers": [
+          "ossl_err_get_state_int",
+          "ossl_err_load_ERR_strings",
+          "ossl_err_string_int"
+        ],
+        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/err/err.c:268-274,:518-558,:665-708; src/runtime/err.rs:1017-1021,:1103-1127,:1283-1290,:2254-2290,:2367-2380; src/runtime/err_state.rs:12-18",
+        "note": "Three names answered by three differently named crate functions. `ossl_err_load_ERR_strings` (`crypto/err/err.c:268-274`) is `load_generic` (`src/runtime/err.rs:1017-1021`); `ossl_err_get_state_int` (`:665-708`) is the lazy accessor `with_state` (`src/runtime/err.rs:1103-1127`), whose C-facing form is `ERR_get_state` (`:1283-1290`); `ossl_err_string_int` (`:518-558`) is the shared renderer `error_string_body_func` (`src/runtime/err.rs:2271-2290`), called by `ERR_error_string_n` (`:2367-2380`). `err_state.rs:12-18` records the one structural difference: this crate reaches the state through `with_state`, the function that already performs the lazy creation, so a missing state is its `None` arm rather than a separate creator.",
+        "owner_module": "src/runtime/err.rs"
+      },
+      {
+        "class": "modelled_differently",
+        "covers": [
+          "err_shelve_state",
+          "err_unshelve_state"
+        ],
+        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/err/err.c:715-760; crypto/init.c:163-175,:195-201; src/runtime/err.rs:971-999,:1011-1021,:1103-1120; src/runtime/init.rs:754,:955-975",
+        "note": "The authority pair exists only to freeze the thread error state while `ossl_init_load_crypto_strings` runs, so error recording cannot re-enter the module (`crypto/err/err.c:715-760`; `crypto/init.c:163-175,195-201`). This crate has no sentinel because its load path has nothing to freeze: `load_generic` is a pure table install and does not call `OPENSSL_init_crypto`, and it runs under `StateAccessGuard` inside `with_state` (`src/runtime/err.rs:1112-1120`), so a re-entrant ERR access on the same thread is refused by `StateAccessGuard::enter` (`:971-999`). The freeze/restore condition is enforced by the guard and the non-reentrant loader rather than by a thread-local `(ERR_STATE *)-1`. The second authority caller, the DSO-pinning arm of `OPENSSL_atexit`, is also absent from this profile: `OPENSSL_USE_NODELETE` is defined, so that whole block is compiled out (`src/runtime/init.rs:955-975`).",
+        "owner_module": "src/runtime/err.rs"
+      },
+      {
+        "class": "modelled_differently",
+        "covers": [
+          "ossl_crypto_new_ex_data_ex",
+          "ossl_crypto_alloc_ex_data_intern",
+          "ossl_crypto_ex_data_get_ossl_lib_ctx",
+          "ossl_crypto_free_ex_index_ex",
+          "ossl_crypto_get_ex_new_index_ex"
+        ],
+        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/ex_data.c:142,:207,:265,:432,:504-507; src/runtime/ex_data.rs:131-138,:279-308,:316-341,:438-463,:612-650; src/runtime/ex_data.rs:60-64; src/context/mod.rs:97-106",
+        "note": "The authority public entry points are one-line calls into the `_ex`/`_intern` forms (`crypto/ex_data.c:142,207,265,432`), and `ossl_crypto_ex_data_get_ossl_lib_ctx` is the `ad->ctx` accessor (`:504-507`). This crate implements those bodies directly in the public C entry points -- `CRYPTO_get_ex_new_index` (`src/runtime/ex_data.rs:279-308`), `CRYPTO_free_ex_index` (`:316-341`), `CRYPTO_new_ex_data` (`:438-463`) and `CRYPTO_alloc_ex_data` (`:612-650`) -- with the `ctx = NULL` semantics the authority wrappers themselves pass. The ctx getter is folded into the layout-compatible `CryptoExData.ctx` field (`:131-138`), stored and copied verbatim. The per-`OSSL_LIB_CTX` registry that the `_ex` context parameter would select is absent and explicitly deferred (`src/runtime/ex_data.rs:60-64`; `src/context/mod.rs:97-106`); that deferral is left as two separate findings and is not claimed here.",
+        "owner_module": "src/runtime/ex_data.rs"
+      },
+      {
+        "class": "named_differently",
+        "covers": [
+          "ossl_to_hex"
+        ],
+        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/o_str.c:446-451; src/runtime/str.rs:29-33,:81-93,:481",
+        "note": "`ossl_to_hex` is the exported wrapper around the file static `to_hex` (`crypto/o_str.c:446-451`). The crate private `to_hex` (`src/runtime/str.rs:81-93`) carries the same body with the hex alphabet inlined and is used by `ossl_buf2hexstr_sep` (`:481`); the module header already records that this name is a private function here (`src/runtime/str.rs:29-33`).",
+        "owner_module": "src/runtime/str.rs"
+      },
+      {
+        "class": "named_differently",
+        "covers": [
+          "openssl_strerror_r"
+        ],
+        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/o_str.c:376-404; src/runtime/err.rs:2222-2249; src/runtime/str.rs:32-34",
+        "note": "`openssl_strerror_r` exists to paper over several `strerror_r` ABIs (`crypto/o_str.c:376-404`). On the admitted `_GNU_SOURCE` build the authority takes the GNU arm, and its only consumer is `ossl_err_string_int`; the crate reproduces exactly that consumption as `strerror_into` (`src/runtime/err.rs:2222-2249`), which declares the GNU `strerror_r`, copies the returned static string into the caller buffer as `OPENSSL_strlcpy` does, and reports success. `src/runtime/str.rs:32-34` records the reduction.",
+        "owner_module": "src/runtime/err.rs"
+      },
+      {
+        "class": "not_in_this_profile",
+        "covers": [
+          "ossl_trace_cleanup"
+        ],
+        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/trace.c:341-362; crypto/init.c:485-486; src/runtime/trace.rs:1-26",
+        "note": "The pinned profile is configured `no-trace`, measured and recorded at `src/runtime/trace.rs:1-26`. The entire body of `ossl_trace_cleanup` is inside `#ifndef OPENSSL_NO_TRACE` (`crypto/trace.c:341-362`), so on this build it releases only channel/prefix/suffix state that the channel-setting functions never set; the crate implements the authority no-trace answers exactly and has no such state to tear down.",
+        "owner_module": "src/runtime/trace.rs"
+      },
+      {
+        "class": "named_differently",
+        "covers": [
+          "BIO_ADDR_make",
+          "BIO_ADDR_sockaddr",
+          "BIO_ADDR_sockaddr_noconst",
+          "BIO_ADDR_sockaddr_size"
+        ],
+        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/bio/bio_addr.c:105,:337,:348,:359; src/runtime/bio/addr.rs:139-153,:271-308,:344-363",
+        "note": "Four internal accessors are private helpers with different names here: `BIO_ADDR_make` (`crypto/bio/bio_addr.c:105`) is `make_from_sockaddr` (`src/runtime/bio/addr.rs:271-308`), `BIO_ADDR_sockaddr` (`:337`) is `sockaddr` (`:357-363`), `BIO_ADDR_sockaddr_noconst` (`:348`) is `sockaddr_noconst` (`:344-351`), and `BIO_ADDR_sockaddr_size` (`:359`) is `sockaddr_size` (`:139-153`). All four are `pub(crate)` and called by the crate BIO modules; none is an exported symbol.",
+        "owner_module": "src/runtime/bio/addr.rs"
+      },
+      {
+        "class": "not_in_this_profile",
+        "covers": [
+          "BIO_ADDRINFO_sockaddr",
+          "BIO_ADDRINFO_sockaddr_size"
+        ],
+        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/bio/bio_addr.c:425-444; crypto/bio/bss_conn.c:423-430; include/internal/bio_tfo.h:140-150; src/runtime/bio/bss_conn.rs:44-51,:777; src/runtime/bio/addr_info.rs:88,:246",
+        "note": "The authority defines the two helpers in `bio_addr.c:425-444`, but the only callers in the pinned tree are the `OSSL_TFO_SENDTO` fast-open `sendto` path in `bss_conn.c:423-430`. The admitted build is configured `no-tfo`: the fast-open sendto is not compiled in (`include/internal/bio_tfo.h:140-150`; `src/runtime/bio/bss_conn.rs:44-51,777` records the measured `BIO_C_SET_TFO == 0` and that neither the fast-open sendto nor KTLS is built), so no admitted code reaches either name. The crate `BioAddrInfo` still stores `addrlen` and exposes `BIO_ADDRINFO_address` (`src/runtime/bio/addr_info.rs:88,246`).",
+        "owner_module": "src/runtime/bio/addr_info.rs"
+      },
+      {
+        "class": "not_in_this_profile",
+        "covers": [
+          "bio_lookup_lock"
+        ],
+        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/bio/bio_addr.c:35,:647-648,:716-772,:817,:964; src/runtime/bio/addr_info.rs:31-35",
+        "note": "The lock belongs to the non-`AI_PASSIVE` `gethostbyname`/`getservbyname` fallback: it is created and taken only inside that `#else` arm (`crypto/bio/bio_addr.c:716-772,817,964`). The admitted authority is a glibc build with `AI_PASSIVE` defined (`src/runtime/bio/addr_info.rs:31-35` records the measured configuration), so the whole fallback -- including `do_bio_lookup_init` -- is compiled out, the variable stays NULL, and the compiled-in `bio_cleanup` `CRYPTO_THREAD_lock_free(NULL)` is inert. There is no lock to reproduce in this profile.",
+        "owner_module": "src/runtime/bio/addr.rs"
+      },
+      {
+        "class": "modelled_differently",
+        "covers": [
+          "bio_free_ex_data"
+        ],
+        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/bio/bio_lib.c:937-940; src/runtime/bio/mod.rs:1062-1068,:1189-1195",
+        "note": "The authority helper is a one-line wrapper around `CRYPTO_free_ex_data(CRYPTO_EX_INDEX_BIO, bio, &bio->ex_data)` (`crypto/bio/bio_lib.c:937-940`). This crate calls `CRYPTO_free_ex_data` directly at the two places the authority does: the `BIO_free` teardown (`src/runtime/bio/mod.rs:1189-1195`) and the `create`-failure path (`:1062-1068`), so the name is answered by the inlined call.",
+        "owner_module": "src/runtime/bio/mod.rs"
+      },
+      {
+        "class": "modelled_differently",
+        "covers": [
+          "bio_type_count"
+        ],
+        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/bio/bio_meth.c:13-33; crypto/bio/bio_lib.c:949; src/runtime/bio/mod.rs:1939-1950",
+        "note": "The authority counter is a `CRYPTO_REF_COUNT` created by `RUN_ONCE` and incremented by `BIO_get_new_index` (`crypto/bio/bio_meth.c:13-33`). The crate models the same counter as a function-local `static NEXT: AtomicI32` in `BIO_get_new_index` (`src/runtime/bio/mod.rs:1939-1950`), starting at `BIO_TYPE_START`, using `fetch_add(1, AcqRel)` and refusing values above `BIO_TYPE_MASK` -- the same returned sequence and the same exhaustion answer.",
+        "owner_module": "src/runtime/bio/mod.rs"
+      },
+      {
+        "class": "not_in_this_profile",
+        "covers": [
+          "bio_sock_cleanup_int"
+        ],
+        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/bio/bio_sock.c:204-212; src/runtime/bio/bss_sock.rs:89-99",
+        "note": "The authority body is entirely under `#ifdef OPENSSL_SYS_WINDOWS` and only clears the process Winsock state (`crypto/bio/bio_sock.c:204-212`); on the admitted non-Windows profile it is an empty function. The crate has no Winsock state and its `BIO_sock_init` is the authority non-Windows `return 1` (`src/runtime/bio/bss_sock.rs:89-99`), so the cleanup has no profile body to reproduce.",
+        "owner_module": "src/runtime/bio/bss_sock.rs"
       }
     ],
     "rule": [
