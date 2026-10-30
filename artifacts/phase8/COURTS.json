@@ -111,9 +111,9 @@
           }
         ],
         "authority_exit_code": 0,
-        "authority_observations": 7291,
+        "authority_observations": 7308,
         "candidate_exit_code": 0,
-        "candidate_observations": 7291,
+        "candidate_observations": 7308,
         "candidate_stderr_tail": [],
         "court": "RT-CIPHER",
         "crashed": false,
@@ -38811,17 +38811,17 @@
       "name": "candidate-libcrypto-so-3",
       "note": "the DSO every probe links through -L artifacts/phase2 -lcrypto",
       "path": "artifacts/phase2/libcrypto.so.3",
-      "sha256": "dadb0263f1eab453dc8717a9c1851772ffed7660eeeced29d79d7b206cec7fb3"
+      "sha256": "23ec6944fb9d8f8b4037263ad8faff4170d561442d81a99a690c6dc083550409"
     },
     {
       "name": "candidate-source-commit",
       "note": "git rev-parse HEAD (provenance; the tree digest is the live binding)",
-      "sha256": "ce3d75ca0e44d99bb187513c2ad4a05ce52b3302"
+      "sha256": "f8f3662987781367e5bcc74d15477ebd359d8d2a"
     },
     {
       "name": "candidate-source-tree",
       "note": "sha256 over sorted (relpath, size, sha256) of src, Cargo.toml, Cargo.lock, build.rs; files=887",
-      "sha256": "6a07d7933154cae3642858cc982651df0668661d11ad9b4c0737e7a5d03ffdd9"
+      "sha256": "22a58468d5db58da90dd99044682a5303dbef0938ac2789be0eb5406cfb7d58d"
     },
     {
       "name": "probe",
@@ -38831,7 +38831,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "01f4ec0cedcda4ebd702a5cb03f382fd7bd3881ad0d8d2f2586d702dd9df40b0"
+      "sha256": "e1e6b34024a0d19ad10020c69a676fc01c53d41dda5d54cebf58474322bb9a3b"
     },
     {
       "name": "probe",
