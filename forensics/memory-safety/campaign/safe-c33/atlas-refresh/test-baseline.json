@@ -1,13 +1,15 @@
 {
   "command": "cargo test --lib -- --test-threads=4",
-  "source_commit": "5163f564f",
-  "source_commit_note": "the S'' working tree was bcafae7dc plus the legacy_sha md_data refusal fix; that fix is commit 5163f564f and is included in e92a0720e. The referenced run is freeze-S-double-prime.json gates.rust_suite (182.72s) and openssh-closure-v1j.json gates.rust_suite.",
-  "passed": 2213,
+  "thread_count": 4,
+  "source_commit": "0590d371d2a9b30a19f9d70dc3fee9e33f3a0d90",
+  "source_commit_note": "HEAD of stage/p25/analyzer-corpus at the run. The tracked tree is clean: 0590d371d adds only the v1r closure and inventory evidence; src/, Cargo.toml, Cargo.lock and build.rs are identical to 1c2bc4001 (the GCM SET_IV_FIXED sentinel fix that re-emitted the install).",
+  "measured_utc": "2026-10-30",
+  "passed": 2230,
   "failed": 0,
   "ignored": 52,
-  "total": 2265,
+  "total": 2282,
   "kind": "full-library-run",
-  "source_tree_unchanged": false,
-  "source_tree_unchanged_note": "e92a0720e adds only the element-7 evidence commit after the fix, and the 0.0.42 release preparation changes only the Cargo.toml/Cargo.lock version fields; no Rust source changed after the run. The 2213 count is a floor for the 0.0.42 tree, not a run at its artefact identity (libcrypto 247803f1 / libssl 3ca46e32), and no serial 2213 run is recorded.",
-  "note": "S'' full run (cargo test --lib -- --test-threads=4, 182.72s) recorded in freeze-S-double-prime.json and openssh-closure-v1j.json. Previous floor 2260 total / 52 ignored; now 2265 total / 52 ignored (+5 tests; none removed or newly ignored). S58's 2148/0/45 at 7bdc53d83 remains history."
+  "source_tree_unchanged": true,
+  "source_tree_unchanged_note": "2230 passed / 0 failed / 52 ignored is the current count at the 0.0.43 candidate, not a floor. The tree the suite ran on is the same src/, Cargo.toml, Cargo.lock and build.rs that the committed install (build-0.0.43.json, libcrypto 23ec6944 / libssl 493795c2, rebuilt at 1c2bc4001) describes.",
+  "note": "Current run: 2,230 passed / 0 failed / 52 ignored / 2,282 total (0 measured, 0 filtered out). Previous records: 2,222/0/52/2,274 at 2e90cbc6e (superseded); 2,213/0/52/2,265 at the S'' floor (superseded); the older documented floor 1,962/0/42 (commit a8676158f) is superseded by every later run. Growth is +8 tests against the 2,274 total with no removed test and no newly ignored test (0 newly ignored; 52 ignored, unchanged)."
 }

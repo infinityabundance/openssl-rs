@@ -124,6 +124,22 @@ def parse_nm_line(line: str):
     return addr, typ, name
 
 
+_LLVM_HASH_SUFFIX = re.compile(r"\.llvm\.[0-9A-Za-z_]+$")
+
+
+def canonical_symbol_name(name: str) -> str:
+    """Drop the compiler-generated content hash from a symbol name.
+
+    LLVM appends a hash of the module identity to private globals
+    (``.llvm.<hash>``).  The hash changes when an unrelated source line moves,
+    so it names no distinct analysis subject; the address, size and kind in
+    the same row keep two distinct symbols distinct.  The version suffix that
+    ``nm -D`` prints (``name@@OPENSSL_3.0.0``) is also dropped, matching
+    :func:`defined_symbols`.
+    """
+    return _LLVM_HASH_SUFFIX.sub(".llvm.<hash>", name.split("@")[0])
+
+
 # --------------------------------------------------------------------------- #
 # ELF / loader evidence
 # --------------------------------------------------------------------------- #
@@ -415,26 +431,186 @@ class DsoGraph:
             fh.seek(off)
             return fh.read(size)
 
+    def text_digest(self) -> tuple[str, int]:
+        """sha256 and size of the executable ``.text`` bytes.
+
+        This is the code half of the analysis identity (AGENTS.md section 22):
+        a comment-only or documentation-only source edit produces a different
+        DSO file digest while ``.text`` stays byte-identical.
+        """
+        blob = self._section_bytes(".text")
+        return hashlib.sha256(blob).hexdigest(), len(blob)
+
+    def symbol_table_rows(self) -> list:
+        """Defined symbols as ``[name, addr, size, kind]``, sorted.
+
+        The symbol table is the second half of the analysis identity.  Names
+        carry no address information, so a compiler-generated content hash
+        suffix is canonicalised (``.llvm.<hex>`` -> ``.llvm.<hash>``); the
+        address, size and kind keep two distinct subjects distinct.
+        """
+        rows = []
+        for line in run(["nm", "-S", "--defined-only", str(self.path)]).stdout.splitlines():
+            toks = line.split()
+            if len(toks) < 4:
+                continue
+            try:
+                addr = int(toks[0], 16)
+                size = int(toks[1], 16)
+            except ValueError:
+                continue
+            rows.append([canonical_symbol_name(toks[3]), addr, size, toks[2]])
+        rows.sort()
+        return rows
+
     def _elf_sections(self) -> dict:
         out = {}
+        self.section_types = {}
+        self.section_flags = {}
         for line in run(["readelf", "-SW", str(self.path)]).stdout.splitlines():
             toks = line.split()
             if not toks or not toks[0].startswith("["):
                 continue
             if toks[0] == "[":
-                name = toks[2]
+                name, sec_type = toks[2], toks[3]
                 try:
                     addr, off, size = int(toks[4], 16), int(toks[5], 16), int(toks[6], 16)
                 except (ValueError, IndexError):
                     continue
             else:
-                name = toks[1]
+                name, sec_type = toks[1], toks[2]
                 try:
                     addr, off, size = int(toks[3], 16), int(toks[4], 16), int(toks[5], 16)
                 except (ValueError, IndexError):
                     continue
             out[name] = (addr, off, size)
+            self.section_types[name] = sec_type
+            m = re.match(
+                r"^\s*\[\s*\d+\]\s+(\S+)\s+(\S+)\s+([0-9a-fA-F]+)\s+"
+                r"([0-9a-fA-F]+)\s+([0-9a-fA-F]+)\s+([0-9a-fA-F]+)\s+(\S+)",
+                line)
+            if m:
+                self.section_flags[name] = m.group(7)
         return out
+
+    # ------------------------------------------------------------------ #
+    # analysis-input identity (AGENTS.md section 22)
+    # ------------------------------------------------------------------ #
+    #
+    # ``analysis_identity`` must cover every input the graph derivation reads.
+    # These helpers expose the byte ranges and the structural tables in a
+    # canonical form; :func:`analysis_identity` hashes them.  A section that is
+    # present but analysis-irrelevant is named in ``excluded_sections`` and is
+    # not hashed.  Raw ``.symtab``/``.dynsym``/``.rela.*`` bytes are excluded
+    # because their parsed forms are hashed instead (see the basis string).
+
+    def analysis_section_descriptors(self) -> list:
+        """Each analysis-relevant section's canonical descriptor.
+
+        The derivation reads sections through ``section_of`` in more places
+        than a hand-maintained allowlist can safely cover: ``static_slot``
+        reads the GOT/data slots, ``switch_targets`` reads 4-byte entries from
+        the section that contains a code-materialised base, and ``cstring_at``
+        reads up to 257 bytes from the section that contains a dlsym-literal
+        address.  The identity therefore binds **every allocated (SHF_ALLOC)
+        section** and excludes only non-allocated metadata.  The required
+        minimum (``.text``, ``.rodata``, ``.data``, ``.data.rel.ro``, ``.got``,
+        ``.got.plt``) is necessarily a subset of that.
+        """
+        out = []
+        for name, (addr, _off, size) in self.sections.items():
+            flags = self.section_flags.get(name, "")
+            if "A" not in flags:
+                continue
+            if any(name.startswith(prefix)
+                   for prefix in ANALYSIS_IDENTITY_EXCLUDED_PREFIXES):
+                continue
+            sec_type = self.section_types.get(name)
+            if sec_type == "NOBITS":
+                digest = None
+            else:
+                digest = hashlib.sha256(self._section_bytes(name)).hexdigest()
+            out.append({
+                "name": name,
+                "type": sec_type,
+                "addr": addr,
+                "size": size,
+                "sha256": digest,
+            })
+        out.sort(key=lambda row: row["name"])
+        return out
+
+    def analysis_excluded_sections(self) -> list:
+        """Present sections that the identity deliberately excludes."""
+        included = {row["name"] for row in self.analysis_section_descriptors()}
+        return sorted(name for name in self.sections if name not in included)
+
+    def dynamic_symbol_rows(self) -> list:
+        """Sorted ``[canonical name, addr, kind]`` rows of ``.dynsym``.
+
+        ``export_index``, ``PrecisionResolver.exports`` and the dynamic-reloc
+        widening all read this table.  It is a different analysis input from
+        the full ``.symtab``: a version script can hide an in-image definition
+        from ``.dynsym`` while ``.symtab`` still names it.
+        """
+        rows = []
+        for line in run(["nm", "-D", "--defined-only", str(self.path)]).stdout.splitlines():
+            parsed = parse_nm_line(line)
+            if parsed is None:
+                continue
+            addr, typ, name = parsed
+            rows.append([canonical_symbol_name(name), addr, typ])
+        rows.sort()
+        return rows
+
+    def canonical_relocations(self) -> list:
+        """Sorted ``[section, offset_in_section, type, symbol, addend]`` rows.
+
+        The derivation's ``_build_slots`` reads the relocation addend and
+        symbol for ``R_X86_64_RELATIVE``, ``R_X86_64_GLOB_DAT``,
+        ``R_X86_64_JUMP_SLOT`` and ``R_X86_64_64``.  Offsets are made relative
+        to the containing section so that the row is canonical; the section's
+        virtual address is hashed in the section descriptor.
+        """
+        rows = []
+        for off, typ, sym, add, _symval in self.relocs:
+            section = self.section_of(off)
+            rel_off = off - self.sections[section][0] if section else off
+            rows.append([
+                section,
+                rel_off,
+                typ,
+                canonical_symbol_name(sym) if sym else None,
+                add,
+            ])
+        rows.sort(key=lambda row: (
+            row[0] or "", row[1], row[2], row[3] or "",
+            row[4] if row[4] is not None else -1))
+        return rows
+
+    def dynamic_entries(self) -> dict:
+        """The loader-relevant ``.dynamic`` entries (module selection input)."""
+        d = elf_dynamic(self.path)
+        return {
+            "soname": d["soname"],
+            "needed": sorted(d["needed"]),
+            "runpath": list(d["runpath"]),
+            "rpath": list(d["rpath"]),
+        }
+
+    def symbol_addresses_by_name(self) -> dict:
+        """Every defined name (version-stripped) -> sorted addresses.
+
+        ``names_at`` keeps every alias at an address (identical-code folding
+        gives several exported names one address).  Resolution through this
+        table must keep *all* addresses for a name: dropping one would narrow
+        the bound.
+        """
+        index = collections.defaultdict(set)
+        for addr, names in self.names_at.items():
+            for name in names:
+                index[name.split("@")[0]].add(addr)
+        return {name: sorted(addrs) for name, addrs in index.items()}
 
     def _elf_relocs(self) -> list:
         out = []
@@ -507,6 +683,28 @@ class DsoGraph:
         import bisect
         i = bisect.bisect_right(self.starts, addr) - 1
         return self.starts[i] if i >= 0 else None
+
+    def read_u32(self, addr: int):
+        """Raw little-endian u32 in an image section, or None."""
+        sec = self.section_of(addr)
+        if sec is None:
+            return None
+        a, _off, size = self.sections[sec]
+        rel = addr - a
+        if rel < 0 or rel + 4 > size:
+            return None
+        return struct.unpack_from("<I", self._section_bytes(sec), rel)[0]
+
+    def read_u64(self, addr: int):
+        """Raw little-endian u64 in an image section, or None."""
+        sec = self.section_of(addr)
+        if sec is None:
+            return None
+        a, _off, size = self.sections[sec]
+        rel = addr - a
+        if rel < 0 or rel + 8 > size:
+            return None
+        return struct.unpack_from("<Q", self._section_bytes(sec), rel)[0]
 
     def static_slot(self, addr: int):
         """Values fixed by load time (relocation, raw pointer, or BSS zero)."""
@@ -1791,8 +1989,32 @@ class PrecisionResolver:
         g.resolved_targets = {t for s in self.sites.values()
                               for t in s["targets"]}
         g.residual_sites = [s for s in self.sites.values() if s["unresolved"]]
+        # Dynamic-relocation targets: a ``R_X86_64_GLOB_DAT``/``JUMP_SLOT``
+        # slot whose symbol is *defined in this image* fixes a function address
+        # exactly as a ``R_X86_64_RELATIVE`` run does.  ``slot_funcs`` only
+        # holds the RELATIVE form, so without this widening a function reached
+        # through a GOT slot (for example CRYPTO_cbc128_encrypt, referenced by
+        # 25 slots from 21 callers) is absent from the module's
+        # materialised-address evidence and a sound residual bound cannot
+        # contain it.  Only symbol-defined addresses inside ``start_set`` are
+        # admitted; imported symbols resolve in another DSO and are reached
+        # through the export index instead.
+        by_name = {}
+        for addr, names in g.names_at.items():
+            for name in names:
+                by_name.setdefault(name.split("@")[0], addr)
+        g.dynamic_reloc_targets = set()
+        for names in g.slot_syms.values():
+            for name in names:
+                base = name.split("@")[0]
+                addr = g.dynamic_defs.get(base)
+                if addr is None:
+                    addr = by_name.get(base)
+                if addr in g.start_set:
+                    g.dynamic_reloc_targets.add(addr)
         g.address_taken_union = (set(g.taken_code) | set(g.taken_data)
-                                 | {v for vs in g.slot_funcs.values() for v in vs})
+                                 | {v for vs in g.slot_funcs.values() for v in vs}
+                                 | set(g.dynamic_reloc_targets))
         return g.sites
 
 
@@ -1871,7 +2093,15 @@ A2_REGISTRATION_SETTERS = frozenset({
 # resolved target set so a reader cannot mistake one for the other.
 ABI_CONTRACT_PROVIDER = "ABI_CONTRACT_PROVIDER"
 ABI_CONTRACT_ALLOCATOR = "ABI_CONTRACT_ALLOCATOR"
-ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR})
+# A callback that is exactly a parameter of an exported function.  This is a
+# contract about the *caller's* value, not about an in-image callback: the
+# header declares the parameter as a function-pointer type and .dynsym makes
+# the caller boundary external.  It never absorbs a finite in-image callback;
+# those are deferred to the reachable-caller-target rule (see
+# export_callback_witness).
+ABI_CONTRACT_EXPORT_CALLBACK = "ABI_CONTRACT_EXPORT_CALLBACK"
+ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
+                                  ABI_CONTRACT_EXPORT_CALLBACK})
 
 ABI_CONTRACTS = {
     ABI_CONTRACT_PROVIDER: {
@@ -1913,6 +2143,39 @@ ABI_CONTRACTS = {
             "application code not loaded as a provider; it is not a node in this "
             "closure",
             "in-image target completeness for the built-in provider path",
+        ],
+    },
+    ABI_CONTRACT_EXPORT_CALLBACK: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": "an exported C function's callback parameter",
+        "citation": [
+            "the exact prototype in the admitted install's include/openssl/*.h: "
+            "the parameter is declared with a function-pointer typedef, so the "
+            "value is supplied by the caller and the C ABI places no bound on it",
+            "the same symbol is defined in the image's .dynsym, so any process "
+            "that links libcrypto may call it with any callback",
+            "include/openssl/modes.h:25/69 -- typedef void (*block128_f)(const "
+            "unsigned char in[16], unsigned char out[16], const void *key); and "
+            "CRYPTO_cfb128_encrypt(..., int enc, block128_f block)",
+            "include/openssl/types.h:237 -- typedef int pem_password_cb(char *buf, "
+            "int size, int rwflag, void *userdata); pem.h:537 passes it as "
+            "b2i_PVK_bio_ex(BIO *in, pem_password_cb *cb, void *u, ...)",
+        ],
+        "covers": (
+            "the public seam through which a C caller supplies a callback to an "
+            "exported function; the function name, the parameter index and the "
+            "declared callback type are the documented interface"),
+        "does_not_cover": [
+            "the behaviour or lifetime of the application's callback, which is "
+            "the application's obligation once supplied",
+            "a NULL argument where the header does not admit one; that is a "
+            "C-invalid input, not a target",
+            "which callback (if any) an in-image caller installs; the target set "
+            "is unbounded",
+            "a private wrapper whose callers are all in-image and finite: the "
+            "witness defers it to reachable-caller-target instead",
+            "reachability from the two workloads, or that an external caller "
+            "exists at run time",
         ],
     },
     ABI_CONTRACT_ALLOCATOR: {
@@ -2169,8 +2432,24 @@ EDGE_TARGET_WITNESS_SCHEMA = (
 # Reachable-caller target bounding is a *narrowing of an unbounded target set*,
 # not an ABI contract.  It is deliberately absent from ABI_CONTRACT_CLASSES and
 # never attaches a WITNESS_SCHEMA record: the site becomes target-resolved.
+# v2 (round 4) records the per-call-site attribution of *every* caller row,
+# reachable or excluded, with the same argument interpreter that produced the
+# site's flat `arg_targets`.  The v1 fields are retained for compatibility.
 REACHABLE_CALLER_SCHEMA = (
-    "openssl-rs/consumer-closure/reachable-caller-target-bound/v1")
+    "openssl-rs/consumer-closure/reachable-caller-target-bound/v2")
+
+# Round-4 soundness direction.  Admitting a target is always safe for the upper
+# bound; excluding one requires (i) the caller/writer is absent from the
+# final-upper-bound oracle and (ii) the target is demonstrably produced by that
+# subject.  Per-caller attribution is analyzer-produced from the same argument
+# summary the flat site target set came from; record-level validation checks a
+# record against itself and the oracle, not against a re-derivation.
+UNATTRIBUTED_ADMISSION_REASON = (
+    "the candidate target is not attributed to any caller row (neither a "
+    "reachable caller nor an excluded caller); it is admitted, never dropped")
+ATTRIBUTION_INCOMPLETE_PROPERTY = (
+    "caller attribution incomplete: {n} candidate target(s) have no "
+    "attributable caller")
 
 EDGE_TARGET_SLOTS = (
     {
@@ -2666,9 +2945,25 @@ def _semantic_writer_sources(g: "DsoGraph", writer: int, offset: int) -> list:
     return out
 
 
+def _drop_s1_caches(g: "DsoGraph", *, all_caches: bool = True) -> None:
+    attrs = ["_s1_docs_cache", "_s1_module_index"]
+    if all_caches:
+        attrs += ["_s1_struct_cache", "_s1_layout_cache", "_s1_alias_cache",
+                  "_s1_fn_cache", "_s1_ctx_cache", "_s1_demangle_cache",
+                  "_s1_instance_cache", "_s1_dispatch_cache", "_s1_sym_index",
+                  "_s1_macro_static_cache"]
+    for attr in attrs:
+        if hasattr(g, attr):
+            setattr(g, attr, {} if attr not in
+                    ("_s1_docs_cache", "_s1_module_index") else None)
+
+
 def _semantic_provenance_resolver(g: "DsoGraph") -> "PrecisionResolver":
     r = getattr(g, "_semantic_precision", None)
     if r is None:
+        # The semantic pass is the largest single allocation in this phase.
+        # Release every S1 cache first; a later S1 site simply reloads them.
+        _drop_s1_caches(g, all_caches=True)
         r = PrecisionResolver(g)
         r.seed_entry_args = True
         r.capture_stack_args = True
@@ -2682,10 +2977,29 @@ def _semantic_call_index(g: "DsoGraph") -> dict:
     idx = getattr(g, "_semantic_call_index", None)
     if idx is not None:
         return idx
+    # The S1 source corpus and its indexes are the largest retained state at
+    # this point.  They are rebuilt lazily for a later S1 site, so release them
+    # before the call index, which is built while the semantic resolver is live.
+    _drop_s1_caches(g, all_caches=True)
     r = _semantic_provenance_resolver(g)
+    # The index reads only ``calls`` and ``call_stack_args``.  Release the
+    # interpreter's frames, store summaries and instruction maps before the
+    # index is built instead of after, so peak memory is the larger of the two
+    # rather than their sum.
+    r.sites = {}
+    r.store_slots.clear()
+    r.field_stores.clear()
+    r.field_open.clear()
+    r.summary.clear()
+    r.summary_open.clear()
+    r.returns.clear()
+    r.insns_by_func = {}
     idx = {}
     try:
-        for caller, callee, args, addr in r.calls:
+        for position, (caller, callee, args, addr) in enumerate(r.calls):
+            # Drop the consumed tuple: the call log is the largest single
+            # allocation at this point and the index grows as it shrinks.
+            r.calls[position] = None
             if callee is None:
                 continue
             row = idx.setdefault(callee, {})
@@ -3018,12 +3332,52 @@ def _semantic_method_free_derivation(g: "DsoGraph", spec: dict, reachable: set):
                 live_set.add(a)
     live = sorted(live_set)
     record["writers"] = writers
-    record["excluded_writers"] = [
-        {"fragment": w["fragment"], "address": w["address"],
-         "symbol": w["symbol"],
-         "reason": "absent from the image" if not w["present"]
-         else "writer not in the family's reachable set"}
-        for w in writers if not w["reachable"]]
+    # An excluded writer still carries a checkable witness: whether it is absent
+    # from the image or present but outside the family's reachable set, and --
+    # when its stored value is itself derivable -- which target it would store.
+    # Without the would-store target an omitted exclusion would be invisible to
+    # the accounting check below.
+    idx = _semantic_call_index(g)
+    excluded = []
+    for w in writers:
+        if w["reachable"]:
+            continue
+        row = {"fragment": w["fragment"], "address": w["address"],
+               "symbol": w["symbol"],
+               "reason": ("absent from the image" if not w["present"]
+                          else "writer not in the family's reachable set"),
+               "would_store_targets": None,
+               "would_store_failure": None}
+        if w["present"]:
+            addr = int(w["address"], 16)
+            sources = _semantic_writer_sources(g, addr, 0x20)
+            indices = sorted({s["argument_index"] for s in sources
+                              if s.get("argument_index") is not None})
+            if len(indices) == 1:
+                got, why = set(), None
+                for key in sorted((idx.get(addr) or {})):
+                    site_row = (idx.get(addr) or {})[key]
+                    value = _semantic_value(g, site_row, indices[0])
+                    for atom in _semantic_atom_rows(g, value):
+                        atom["func"] = site_row["caller"]
+                        t, why, _sub = _semantic_resolve(
+                            g, atom, reachable, MAX_PROVENANCE_DEPTH, set(), [])
+                        if why:
+                            break
+                        got |= t
+                    if why:
+                        break
+                if why:
+                    row["would_store_failure"] = why
+                else:
+                    row["would_store_targets"] = [
+                        hex(_semantic_canonical_target(g, t)[0])
+                        for t in sorted(got)]
+            else:
+                row["would_store_failure"] = (
+                    "the store is not fed by exactly one parameter")
+        excluded.append(row)
+    record["excluded_writers"] = excluded
     if not live:
         record.update({"resolved": False,
                        "refusal": "no reachable method-store writer"})
@@ -3052,7 +3406,6 @@ def _semantic_method_free_derivation(g: "DsoGraph", spec: dict, reachable: set):
     calls = []
     targets = set()
     failures = []
-    idx = _semantic_call_index(g)
     for writer in live:
         sites = idx.get(writer) or {}
         for key in sorted(sites):
@@ -3194,6 +3547,81 @@ def _reloc_names(g: "DsoGraph", symbol: str) -> bool:
     return False
 
 
+def _resolve_argument_summary(precision, caller: int, value):
+    """Resolve one caller-recorded argument through its argument summary.
+
+    This is the same summary expansion ``PrecisionResolver.resolve_set``
+    performs when it builds ``arg_targets``: a literal is itself, and a
+    forwarded parameter is replaced by the values that caller may pass.  The
+    site's flat ``arg_targets`` was produced by that expansion, so per-caller
+    attribution that uses it is recomputable rather than guessed.
+
+    Returns ``(resolved_values, open)``; ``open`` is true when the argument was
+    not recorded (a top or absent value), which is a reason to attribute
+    nothing, never a reason to invent a target.
+    """
+    if value is None or value.is_top():
+        return set(), True
+    out = set()
+    for b in value.s:
+        if isinstance(b, tuple) and b and b[0] == "arg":
+            out |= set(precision.summary_vals(caller, b[1]))
+        else:
+            out.add(b)
+    return out, False
+
+
+def _caller_attribution_rows(g, precision, caller: int, recs: dict, deps) -> tuple:
+    """Per-call-site contribution rows for one caller, reachable or excluded.
+
+    Every argument row carries the same shape used for reachable callers and
+    the address targets it was resolved to.  ``contributed_targets`` is exactly
+    the union of the per-call-site image targets, so the witness and the
+    contribution list in the record are mutually checkable (v1.4).
+    """
+    rows, contributed = [], set()
+    insns = getattr(precision, "insns_by_func", {}).get(caller, ())
+    for call_addr in sorted(recs):
+        args = recs[call_addr]
+        idx = next((j for j, (a, _t) in enumerate(insns)
+                    if a == call_addr), None)
+        witness = (PrecisionResolver._arg_witness(insns, idx)
+                   if idx is not None else {})
+        arg_rows = []
+        for k in deps:
+            if k >= len(args):
+                arg_rows.append({
+                    "argument_index": k, "targets": [], "value": [],
+                    "non_image_values": [], "unresolved": True,
+                    "witness_instruction": []})
+                continue
+            value = args[k]
+            resolved, open_ = _resolve_argument_summary(precision, caller, value)
+            image = sorted(v for v in resolved
+                           if isinstance(v, int) and v != 0
+                           and v in g.start_set)
+            non_image = sorted(str(v) for v in resolved
+                               if not (isinstance(v, int) and v != 0
+                                       and v in g.start_set))
+            literal = sorted(hex(v) for v in
+                             (() if value is None or value.is_top()
+                              else value.s)
+                             if isinstance(v, int))
+            w = witness.get(_ARGREGS[k]) if k < len(_ARGREGS) else None
+            arg_rows.append({
+                "argument_index": k,
+                "targets": [hex(v) for v in image],
+                "value": literal,
+                "non_image_values": non_image,
+                "unresolved": bool(open_),
+                "witness_instruction": (
+                    [{"addr": hex(w[0]), "text": w[1]}] if w else []),
+            })
+            contributed |= set(image)
+        rows.append({"call_site": hex(call_addr), "arguments": arg_rows})
+    return rows, contributed
+
+
 def _caller_exclusion(g: "DsoGraph", caller: int, import_addrs: set) -> dict:
     """Structured reason a caller is not part of the family's reachable set."""
     funcs = getattr(g, "funcs", {}) or {}
@@ -3237,9 +3665,17 @@ def reachable_caller_targets(g: "DsoGraph", site: dict, name: str,
     every caller of that function is known from in-image call records, and
     every caller in the family's reachable set passes a finite set of in-image
     function starts for that argument.  Callers outside the reachable set are
-    recorded, not admitted.  Any non-image argument from a reachable caller, a
-    caller whose reachability cannot be established, or a non-argument target
-    keeps the site unresolved.
+    recorded (with their own per-call-site attribution), not admitted.  Any
+    non-image argument from a reachable caller, a caller whose reachability
+    cannot be established, or a non-argument target keeps the site unresolved.
+
+    Soundness direction (round 4): admitting a target is always safe for the
+    upper bound; excluding one requires (i) the caller/writer is absent from the
+    final-upper-bound oracle and (ii) the target is demonstrably produced by
+    that subject.  The attribution is analyzer-produced from the same argument
+    summary the site's flat ``arg_targets`` came from; record-level validation
+    checks the record against itself and the oracle, not against a
+    re-derivation.
 
     Returns (record, None) or (None, refusal_reason).
     """
@@ -3265,6 +3701,12 @@ def reachable_caller_targets(g: "DsoGraph", site: dict, name: str,
             records[caller][call_addr] = args
     direct = getattr(g, "direct", {}) or {}
     direct_callers = {c for c, targets in direct.items() if fstart in targets}
+    # The rule's precondition is that every caller is known from in-image call
+    # records.  A direct caller without one -- reachable or excluded -- makes the
+    # flat candidate enumeration incomplete, so the site is not bounded.  The
+    # round-4 fallback handles an excluded caller whose *recorded* argument is
+    # unknown (its call-site row contributes nothing); it does not license a
+    # bound when the caller's call record is missing altogether.
     for caller in sorted(direct_callers):
         if not records.get(caller):
             return None, f"caller {hex(caller)} has no recorded call arguments"
@@ -3291,11 +3733,26 @@ def reachable_caller_targets(g: "DsoGraph", site: dict, name: str,
     import_addrs = (getattr(precision, "import_addrs", set()) or set()) \
         | (getattr(g, "import_addrs", set()) or set())
     bounded = set()
+    excluded_union = set()
     reachable_rows, excluded_rows = [], []
     for caller in sorted(callers):
         recs = records.get(caller) or {}
         if caller not in reachable:
-            excluded_rows.append(_caller_exclusion(g, caller, import_addrs))
+            row = _caller_exclusion(g, caller, import_addrs)
+            row["reachable"] = False
+            # Round 4: an excluded caller's contribution is recorded with the
+            # *same* per-call-site shape and the same argument-summary
+            # interpreter used for reachable callers.  A caller that forwards
+            # its own parameter therefore contributes exactly the values its
+            # summary admits -- which is where the site's flat `arg_targets`
+            # came from.  A caller with no recorded call arguments contributes
+            # nothing and its row is empty; nothing is inferred from its name.
+            call_rows, contributed = _caller_attribution_rows(
+                g, precision, caller, recs, deps)
+            row["call_sites"] = call_rows
+            row["contributed_targets"] = [hex(t) for t in sorted(contributed)]
+            excluded_union |= contributed
+            excluded_rows.append(row)
             continue
         if not recs:
             return None, (f"reachable caller {hex(caller)} has no recorded call "
@@ -3331,9 +3788,15 @@ def reachable_caller_targets(g: "DsoGraph", site: dict, name: str,
                                   + ", ".join(bad[:4]))
                 caller_targets |= set(vals)
                 w = witness.get(_ARGREGS[k]) if k < len(_ARGREGS) else None
+                # `argument`/`value` are the v1 fields (kept for compatibility);
+                # `argument_index`/`targets` are the v2 per-call-site shape.
                 arg_rows.append({
                     "argument": k,
+                    "argument_index": k,
                     "value": [hex(v) for v in sorted(vals)],
+                    "targets": [hex(v) for v in sorted(vals)],
+                    "non_image_values": [],
+                    "unresolved": False,
                     "witness_instruction": (
                         [{"addr": hex(w[0]), "text": w[1]}] if w else []),
                 })
@@ -3342,6 +3805,8 @@ def reachable_caller_targets(g: "DsoGraph", site: dict, name: str,
         reachable_rows.append({
             "function": hex(caller),
             "symbol": getattr(g, "funcs", {}).get(caller, "?"),
+            "reachable": True,
+            "reason": None,
             "call_sites": call_rows,
             "contributed_targets": [hex(t) for t in sorted(caller_targets)],
         })
@@ -3355,6 +3820,12 @@ def reachable_caller_targets(g: "DsoGraph", site: dict, name: str,
     if not excluded_rows:
         return None, ("no caller is excluded; the site is not narrowed from a "
                       "wider caller set")
+    # Candidates are the site's flat argument-target union.  A candidate that
+    # no caller row attributes is *not* droppable: it is admitted conservatively
+    # by the record builder (round 4).  Computing it here keeps the derivation
+    # and the record's `unattributed_targets` identical by construction.
+    attributed = bounded | excluded_union
+    unattributed = sorted(arg_targets - attributed)
     return {
         "schema": REACHABLE_CALLER_SCHEMA,
         "rule": "reachable-caller target bounding",
@@ -3365,6 +3836,8 @@ def reachable_caller_targets(g: "DsoGraph", site: dict, name: str,
         "reachable_callers": reachable_rows,
         "excluded_callers": excluded_rows,
         "bounded_targets": [hex(t) for t in sorted(bounded)],
+        "attributed_targets": [hex(t) for t in sorted(attributed)],
+        "unattributed_targets": [hex(t) for t in unattributed],
     }, None
 
 
@@ -3374,6 +3847,339 @@ def _image_defines(g: "DsoGraph", fragments) -> bool:
         fragments = (fragments,)
     names = set(g.all_syms.values()) if hasattr(g, "all_syms") else set()
     return any(fragment in (n or "") for fragment in fragments for n in names)
+
+
+def _switch_table_base(g: "DsoGraph", insns, i: int):
+    """The relative switch table base read by ``jmp *reg`` at index i, or None."""
+    for k in range(i - 1, max(-1, i - 14), -1):
+        mn, _rest, ops = _insn_parts(insns[k][1])
+        if mn != "movslq" or not ops:
+            continue
+        m = re.fullmatch(
+            r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+),(%r[a-z0-9]+),4\)",
+            ops[0])
+        if not m:
+            continue
+        base_reg = _canon(m.group(2))
+        for j in range(k - 1, max(-1, k - 8), -1):
+            jmn, _jrest, jops = _insn_parts(insns[j][1])
+            if not jops or _canon(jops[-1]) != base_reg:
+                continue
+            if jmn not in ("lea", "mov"):
+                continue
+            addr = _insn_comment_addr(insns[j][1])
+            if addr is not None and g.section_of(addr) is not None:
+                return addr
+    return None
+
+
+def _switch_entries(g: "DsoGraph", base: int, site_addr: int):
+    """Raw relative switch-table targets, using the compiler's own bound.
+
+    ``PrecisionResolver.switch_targets`` keeps only entries that are function
+    starts.  A CFG needs the interior block targets too, so this reads the same
+    bounded table without that filter.  No bound means no decoding.
+    """
+    count = getattr(g.precision, "switch_bounds", {}).get(site_addr)
+    if not count or count <= 0 or count > 4096:
+        return None
+    sec = g.section_of(base)
+    if sec is None:
+        return None
+    a, _off, _size = g.sections[sec]
+    data = g._section_bytes(sec)
+    start = base - a
+    out = set()
+    for k in range(count):
+        if start + 4 * k + 4 > len(data):
+            break
+        v = struct.unpack_from("<i", data, start + 4 * k)[0]
+        out.add(base + v)
+    return out
+
+
+def _function_cfg(g: "DsoGraph", fstart: int) -> dict:
+    """Basic blocks, successors and open (indirect-jump) blocks for one function.
+
+    The precision resolver tracks abstract values along linear paths; a witness
+    needs a reaching definition, so the path question has to be answered on the
+    CFG.  A block reached from an indirect jump is *open*: any register may
+    hold a value this image does not account for, and a query whose block is in
+    that forward closure is refused rather than guessed.
+    """
+    cache = getattr(g, "_fn_cfg_cache", None)
+    if cache is None:
+        cache = {}
+        g._fn_cfg_cache = cache
+    if fstart in cache:
+        return cache[fstart]
+    insns = g.precision.insns_by_func.get(fstart, ())
+    n = len(insns)
+    idx_of = {a: i for i, (a, _t) in enumerate(insns)}
+    switch_targets = {}
+    if n and getattr(g, "precision", None) is not None:
+        rec = getattr(g.precision, "_record_switch_bounds", None)
+        if rec is not None:
+            rec(insns)
+        for i, (a, text) in enumerate(insns):
+            mn, rest, _ops = _insn_parts(text)
+            if mn != "jmp" or not rest.startswith("*"):
+                continue
+            base = _switch_table_base(g, insns, i)
+            if base is None:
+                continue
+            ts = _switch_entries(g, base, a)
+            if not ts:
+                ts = {t for t in g.precision.switch_targets(base, a)
+                      if t in idx_of}
+            if ts:
+                switch_targets[i] = ts
+    leaders = {0} if n else set()
+    for i, (_a, text) in enumerate(insns):
+        mn, rest, _ops = _insn_parts(text)
+        if mn.startswith("j"):
+            m = re.match(r"^([0-9a-f]+)", rest)
+            if m and int(m.group(1), 16) in idx_of:
+                leaders.add(idx_of[int(m.group(1), 16)])
+            if i + 1 < n:
+                leaders.add(i + 1)
+        elif mn.startswith(("ret", "iret", "ud2")):
+            if i + 1 < n:
+                leaders.add(i + 1)
+    for ts in switch_targets.values():
+        for t in ts:
+            if t in idx_of:
+                leaders.add(idx_of[t])
+    leaders = sorted(leaders)
+    blocks, block_of = [], {}
+    for bi, lo in enumerate(leaders):
+        hi = leaders[bi + 1] if bi + 1 < len(leaders) else n
+        blocks.append((lo, hi))
+        for i in range(lo, hi):
+            block_of[i] = bi
+    succ, open_blocks = {}, set()
+    for bi, (_lo, hi) in enumerate(blocks):
+        mn, rest, _ops = _insn_parts(insns[hi - 1][1])
+        s = []
+        if mn == "jmp":
+            if rest.startswith("*"):
+                ts = switch_targets.get(hi - 1)
+                if ts:
+                    for t in ts:
+                        if t in idx_of:
+                            s.append(block_of[idx_of[t]])
+                        else:
+                            open_blocks.add(bi)
+                else:
+                    open_blocks.add(bi)
+            else:
+                m = re.match(r"^([0-9a-f]+)", rest)
+                if m and int(m.group(1), 16) in idx_of:
+                    s.append(block_of[idx_of[int(m.group(1), 16)]])
+                else:
+                    open_blocks.add(bi)
+        elif mn.startswith("j"):
+            m = re.match(r"^([0-9a-f]+)", rest)
+            if m and int(m.group(1), 16) in idx_of:
+                s.append(block_of[idx_of[int(m.group(1), 16)]])
+            else:
+                open_blocks.add(bi)
+            if hi < n:
+                s.append(block_of[hi])
+        elif mn.startswith(("ret", "iret", "ud2")):
+            pass
+        elif hi < n:
+            s.append(block_of[hi])
+        succ[bi] = sorted(set(s))
+    open_reach = set(open_blocks)
+    work = list(open_blocks)
+    while work:
+        bi = work.pop()
+        for s in succ.get(bi, ()):
+            if s not in open_reach:
+                open_reach.add(s)
+                work.append(s)
+    cfg = {"insns": insns, "blocks": blocks, "block_of": block_of,
+           "succ": succ, "open_reach": open_reach}
+    cache[fstart] = cfg
+    return cfg
+
+
+_ENTRY_DEF = -1
+_TOP_DEFS = None
+_NO_STORE = -2
+_COMPARE_MN = ("cmp", "test", "ucom", "comi", "ptest", "bt")
+
+
+def _defined_regs_at(text: str) -> set:
+    """Registers an instruction writes (a call writes the caller-saved set)."""
+    mn, _rest, ops = _insn_parts(text)
+    if mn.startswith("call"):
+        return set(_CALLER_SAVED)
+    if not ops or mn.startswith(_COMPARE_MN + ("j", "nop", "ret", "iret",
+                                              "push", "ud2")):
+        return set()
+    if mn.startswith("pop"):
+        dst = ops[0]
+        return {_canon(dst)} if (dst in _REGS or dst in _SUBREG) else set()
+    dst = ops[-1]
+    if dst in _REGS or dst in _SUBREG:
+        return {_canon(dst)}
+    return set()
+
+
+def _reaching_table(g: "DsoGraph", fstart: int, cfg: dict):
+    """Per-block reaching definitions (reg -> set of instruction indices).
+
+    ``_ENTRY_DEF`` means the incoming value is not defined in this function
+    (the entry parameter).  A ``None`` entry is TOP (an unresolved merge); the
+    enclosing query refuses it.
+    """
+    cache = getattr(g, "_reaching_cache", None)
+    if cache is None:
+        cache = {}
+        g._reaching_cache = cache
+    if fstart in cache:
+        return cache[fstart]
+    insns, blocks, succ = cfg["insns"], cfg["blocks"], cfg["succ"]
+    nb = len(blocks)
+    inb = [None] * nb
+    outb = [None] * nb
+    if nb:
+        inb[0] = {r: {_ENTRY_DEF} for r in _REGS}
+    spent = 0
+    changed = True
+    while changed and spent < 400:
+        spent += 1
+        changed = False
+        for bi, (lo, hi) in enumerate(blocks):
+            if inb[bi] is None:
+                continue
+            state = {r: set(v) for r, v in inb[bi].items()}
+            for i in range(lo, hi):
+                for r in _defined_regs_at(insns[i][1]):
+                    state[r] = {i}
+            outb[bi] = state
+            for s in succ.get(bi, ()):
+                if s in cfg["open_reach"]:
+                    continue
+                if inb[s] is None:
+                    inb[s] = {r: set(v) for r, v in state.items()}
+                    changed = True
+                else:
+                    for r, v in state.items():
+                        cur = inb[s].get(r)
+                        if cur is None:
+                            inb[s][r] = set(v)
+                            changed = True
+                        else:
+                            nv = cur | v
+                            if nv != cur:
+                                inb[s][r] = nv
+                                changed = True
+    if spent >= 400:
+        inb = [None] * nb
+    cache[fstart] = inb
+    return inb
+
+
+def _reaching_defs(g: "DsoGraph", fstart: int, idx: int, reg: str):
+    """Definitions of ``reg`` that reach instruction ``idx``.
+
+    Returns a set of instruction indices, ``_ENTRY_DEF``, or None for TOP.
+    """
+    cfg = _function_cfg(g, fstart)
+    bi = cfg["block_of"].get(idx)
+    if bi is None:
+        return None
+    lo, _hi = cfg["blocks"][bi]
+    # A definition in the site's own block needs no predecessor analysis, so it
+    # is still usable when the function has an indirect jump elsewhere (the
+    # block itself is only "open" if a predecessor is).
+    for k in range(idx - 1, lo - 1, -1):
+        if reg in _defined_regs_at(cfg["insns"][k][1]):
+            return {k}
+    if bi in cfg["open_reach"]:
+        return None
+    inb = _reaching_table(g, fstart, cfg)
+    if inb[bi] is None:
+        return None
+    return set(inb[bi].get(reg, {_ENTRY_DEF}))
+
+
+def _single_def(g: "DsoGraph", fstart: int, idx: int, reg: str):
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None or len(defs) != 1:
+        return None
+    return next(iter(defs))
+
+
+def _insn(g: "DsoGraph", fstart: int, idx: int) -> str:
+    insns = g.precision.insns_by_func.get(fstart, ())
+    return insns[idx][1] if 0 <= idx < len(insns) else ""
+
+
+def _containing(g: "DsoGraph", addr: int):
+    """Function start containing ``addr`` (synthetic graphs answer exactly)."""
+    if hasattr(g, "containing"):
+        return g.containing(addr)
+    return addr if addr in g.start_set else None
+
+
+def _direct_call_target(g: "DsoGraph", fstart: int, idx: int):
+    """(address, function-start) when instruction idx is a direct in-image call."""
+    mn, rest, _ops = _insn_parts(_insn(g, fstart, idx))
+    if mn != "call" or rest.startswith("*"):
+        return None
+    m = re.match(r"^([0-9a-f]+)", rest)
+    if not m:
+        return None
+    addr = int(m.group(1), 16)
+    target = _containing(g, addr)
+    if target is None and addr in g.start_set:
+        target = addr
+    return (addr, target) if target is not None else None
+
+
+def _stack_slot_abs(g: "DsoGraph", fstart: int, idx: int, opnd: str):
+    """Entry-relative offset of a frame operand, or None."""
+    m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%rsp|%rbp)\)", opnd.strip())
+    if not m:
+        return None
+    off = int(m.group(1), 16) if m.group(1) else 0
+    deltas = _semantic_rsp_deltas(g, fstart)
+    if m.group(2) == "%rsp":
+        delta = deltas[idx] if idx < len(deltas) else None
+        if delta is None:
+            delta = _prologue_delta(g, fstart)
+        return None if delta is None else delta + off
+    frame = _semantic_frame_base(g, fstart)
+    if frame is None:
+        return None
+    return frame[1] + off
+
+
+def _stack_slot_writes(g: "DsoGraph", fstart: int, target: int) -> list:
+    """Every store and every address materialisation of one frame slot."""
+    insns = g.precision.insns_by_func.get(fstart, ())
+    stores, escapes = [], []
+    for i, (_a, text) in enumerate(insns):
+        mn, _rest, ops = _insn_parts(text)
+        if not ops:
+            continue
+        dst = ops[-1]
+        if dst.endswith("(%rsp)") or dst.endswith("(%rbp)"):
+            abs_off = _stack_slot_abs(g, fstart, i, dst)
+            if abs_off == target and not mn.startswith(_COMPARE_MN + ("lea",)):
+                stores.append((i, ops[0], text))
+        if mn == "lea":
+            abs_off = _stack_slot_abs(g, fstart, i, ops[0]) if ops else None
+            if abs_off == target:
+                escapes.append((i, text))
+    return [{"kind": "store", "index": i, "source": src, "text": text}
+            for i, src, text in stores] + [
+            {"kind": "address", "index": i, "text": text}
+            for i, text in escapes]
 
 
 def _witness(cls: str, name: str, site: dict, *, slot: str, writer: str,
@@ -3408,6 +4214,3466 @@ def _internal_slot_note(name: str, offsets, seam=None) -> str:
             "provider interface that writes it")
 
 
+# --------------------------------------------------------------------------- #
+# source-backed witnesses for the S2/S3/S4 mechanisms
+# --------------------------------------------------------------------------- #
+#
+# These witnesses answer a narrower question than the resolver's abstract
+# interpreter: where did *this* value come from on the CFG path to this site?
+# The resolver's linear scan is deliberately cheap and can pick a write from a
+# non-dominating branch; a witness must not.  Every helper below therefore asks
+# the CFG for the reaching definition and refuses a merge it cannot enumerate.
+
+_EVIDENCE_ENV = {"repo": None, "install": None}
+# Test-only mutation switches (AGENTS.md section 16 negative controls).  A
+# mutation disables exactly one refusal so the matching negative fixture must
+# flip to accepted; nothing outside --self-test sets these.
+_MUTED = set()
+
+
+def _repo_root(g=None) -> Path | None:
+    root = getattr(g, "source_root", None) if g is not None else None
+    if root:
+        return Path(root)
+    if _EVIDENCE_ENV.get("repo"):
+        return Path(_EVIDENCE_ENV["repo"])
+    return None
+
+
+def _install_root(g=None) -> Path | None:
+    root = getattr(g, "install_prefix", None) if g is not None else None
+    if root:
+        return Path(root)
+    if _EVIDENCE_ENV.get("install"):
+        return Path(_EVIDENCE_ENV["install"])
+    return None
+
+
+def _has_insns(g: "DsoGraph") -> bool:
+    return (getattr(g, "precision", None) is not None
+            and hasattr(g.precision, "insns_by_func"))
+
+
+def _site_operand(site: dict) -> str:
+    text = site.get("text") or ""
+    body = text.split("#", 1)[0]
+    if "*" in body:
+        return body.split("*", 1)[1].strip()
+    return ""
+
+
+def _reg_origin(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                depth: int = 0):
+    """Single-provenance origin of a register at instruction ``idx``.
+
+    Returns ``{"kind": "param", "index": n}``, ``{"kind": "call",
+    "callee": n, "call_site": n}``, ``{"kind": "load", "offset": n,
+    "base_reg": r, "at": n}``, ``{"kind": "int", "value": n}`` or
+    ``{"kind": "unknown", "why": ...}``.  A value with more than one reaching
+    definition is refused; it is never unioned.
+    """
+    if depth > 8:
+        return {"kind": "unknown", "why": "provenance depth bound"}
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None:
+        return {"kind": "unknown", "why": "open or non-convergent CFG"}
+    if defs == {_ENTRY_DEF}:
+        if reg in _ENTRY_ARG_REGS:
+            return {"kind": "param", "index": _ENTRY_ARG_REGS[reg]}
+        return {"kind": "unknown", "why": f"entry value in {reg}"}
+    if len(defs) != 1:
+        return {"kind": "unknown",
+                "why": "multiple reaching definitions: "
+                       + ", ".join(hex(g.precision.insns_by_func[fstart][k][0])
+                                    for k in sorted(defs) if k >= 0)}
+    k = next(iter(defs))
+    mn, _rest, ops = _insn_parts(_insn(g, fstart, k))
+    addr = g.precision.insns_by_func[fstart][k][0]
+    if mn.startswith("call"):
+        direct = _direct_call_target(g, fstart, k)
+        if direct is None:
+            return {"kind": "unknown", "why": "indirect call result"}
+        return {"kind": "call", "callee": direct[1], "call_site": k,
+                "callee_addr": direct[0], "addr": addr}
+    if mn in ("xor", "sub") and len(ops) == 2 and ops[0] == ops[1]:
+        return {"kind": "int", "value": 0, "addr": addr}
+    if mn not in ("mov", "movq", "movl", "movzbl", "movzwl", "movslq",
+                  "lea", "and"):
+        return {"kind": "unknown", "why": f"unexpected writer {mn}"}
+    src = ops[0] if len(ops) >= 2 else ""
+    if not src:
+        return {"kind": "unknown", "why": "writer without source"}
+    if src.startswith("$"):
+        try:
+            return {"kind": "int", "value": int(src[1:], 16), "addr": addr}
+        except ValueError:
+            return {"kind": "unknown", "why": "bad immediate"}
+    if src in _REGS or src in _SUBREG:
+        return _reg_origin(g, fstart, k, _canon(src), depth + 1)
+    m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", src)
+    if m:
+        off = int(m.group(1), 16) if m.group(1) else 0
+        return {"kind": "load", "offset": off, "base_reg": m.group(2),
+                "at": k, "addr": addr}
+    return {"kind": "unknown", "why": "unsupported source " + src}
+
+
+def _param_of_operand(g: "DsoGraph", fstart: int, idx: int, opnd: str):
+    """The callback parameter this operand reads, with its single provenance.
+
+    Handles a register that still holds the entry argument, a register copied
+    from one, a reload from the entry spill slot, and a stack-passed argument.
+    A frame slot with any other writer is refused.
+    """
+    opnd = opnd.strip()
+    if opnd in _REGS or opnd in _SUBREG:
+        origin = _reg_origin(g, fstart, idx, _canon(opnd))
+        if origin.get("kind") == "param":
+            return {"kind": "param", "index": origin["index"],
+                    "provenance": [{"step": "entry-register",
+                                    "reg": _canon(opnd)}]}
+        if origin.get("kind") == "load":
+            stack = _stack_param(g, fstart, origin["at"], origin["offset"],
+                                 origin["base_reg"])
+            if stack is not None:
+                return stack
+        return {"kind": "unknown", "why": f"operand {opnd}: "
+                                                   + origin.get("why", origin["kind"])}
+    stack = _stack_param(g, fstart, idx, opnd, None)
+    if stack is not None:
+        return stack
+    return {"kind": "unknown", "why": f"operand {opnd} is not a parameter"}
+
+
+def _store_slot_at(g: "DsoGraph", fstart: int, idx: int, slot: int) -> bool:
+    """True when instruction idx writes the frame slot at ``slot``."""
+    mn, _rest, ops = _insn_parts(_insn(g, fstart, idx))
+    if not ops or mn.startswith(_COMPARE_MN + ("lea",)):
+        return False
+    dst = ops[-1]
+    if not (dst.endswith("(%rsp)") or dst.endswith("(%rbp)")):
+        return False
+    return _stack_slot_abs(g, fstart, idx, dst) == slot
+
+
+def _reaching_store_table(g: "DsoGraph", fstart: int, cfg: dict, slot: int):
+    """Per-block last store reaching the block end for one frame slot.
+
+    ``None`` is TOP (an open predecessor); an empty set means no store on any
+    analysed path, which is a direct stack argument rather than a spill.
+    """
+    cache = getattr(g, "_reaching_store_cache", None)
+    if cache is None:
+        cache = {}
+        g._reaching_store_cache = cache
+    key = (fstart, slot)
+    if key in cache:
+        return cache[key]
+    blocks, succ = cfg["blocks"], cfg["succ"]
+    nb = len(blocks)
+    inb = [None] * nb
+    outb = [None] * nb
+    if nb:
+        inb[0] = frozenset({_NO_STORE})
+    spent = 0
+    changed = True
+    while changed and spent < 400:
+        spent += 1
+        changed = False
+        for bi, (lo, hi) in enumerate(blocks):
+            if inb[bi] is None:
+                continue
+            last = None
+            for i in range(lo, hi):
+                if _store_slot_at(g, fstart, i, slot):
+                    last = i
+            out = frozenset({last}) if last is not None else inb[bi]
+            outb[bi] = out
+            for s in succ.get(bi, ()):
+                if s in cfg["open_reach"]:
+                    continue
+                if inb[s] is None:
+                    inb[s] = out
+                    changed = True
+                else:
+                    nv = inb[s] | out
+                    if nv != inb[s]:
+                        inb[s] = nv
+                        changed = True
+    if spent >= 400:
+        inb = [None] * nb
+    cache[key] = inb
+    return inb
+
+
+def _reaching_stores(g: "DsoGraph", fstart: int, idx: int, slot: int):
+    """Stores to a frame slot that reach instruction idx (set), or None."""
+    cfg = _function_cfg(g, fstart)
+    bi = cfg["block_of"].get(idx)
+    if bi is None:
+        return None
+    lo, _hi = cfg["blocks"][bi]
+    for k in range(idx - 1, lo - 1, -1):
+        if _store_slot_at(g, fstart, k, slot):
+            return {k}
+    if bi in cfg["open_reach"]:
+        return None
+    inb = _reaching_store_table(g, fstart, cfg, slot)
+    if inb is None or inb[bi] is None:
+        return None
+    return set(inb[bi])
+
+
+def _slot_address_taken(g: "DsoGraph", fstart: int, slot: int) -> bool:
+    """True when the frame slot's address is materialised anywhere."""
+    insns = g.precision.insns_by_func.get(fstart, ())
+    for i, (_a, text) in enumerate(insns):
+        mn, _rest, ops = _insn_parts(text)
+        if mn == "lea" and ops and _stack_slot_abs(g, fstart, i, ops[0]) == slot:
+            return True
+    return False
+
+
+def _slot_alias_in_block(g: "DsoGraph", fstart: int, idx: int, slot: int,
+                         allowed: set) -> bool:
+    """True when the site's own block materialises the slot outside ``allowed``.
+
+    A frame slot reused by an earlier block is not an alias of the value at the
+    site: only an address taken in the site's block can reach the site without
+    a call boundary.  The construction ``lea`` instructions are passed in
+    ``allowed``; any other one refuses the witness.
+    """
+    cfg = _function_cfg(g, fstart)
+    bi = cfg["block_of"].get(idx)
+    if bi is None:
+        return True
+    lo, _hi = cfg["blocks"][bi]
+    for i in range(lo, idx):
+        mn, _rest, ops = _insn_parts(_insn(g, fstart, i))
+        if mn != "lea" or not ops or i in allowed:
+            continue
+        if _stack_slot_abs(g, fstart, i, ops[0]) == slot:
+            return True
+    return False
+
+
+def _stack_param(g: "DsoGraph", fstart: int, idx: int, opnd, base_reg):
+    """A stack slot that is exactly a parameter or its entry spill."""
+    if base_reg is None:
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%rsp|%rbp)\)", opnd.strip())
+        if not m:
+            return None
+        base_reg = m.group(2)
+        abs_off = _stack_slot_abs(g, fstart, idx, opnd)
+    else:
+        if base_reg not in ("%rsp", "%rbp"):
+            return None
+        abs_off = _stack_slot_abs(g, fstart, idx,
+                                  (hex(opnd) if opnd else "") + "(" + base_reg + ")")
+    if abs_off is None:
+        return None
+    if _slot_alias_in_block(g, fstart, idx, abs_off, set()):
+        return None
+    writes = _reaching_stores(g, fstart, idx, abs_off)
+    if writes is None:
+        return None
+    if not writes:
+        return None
+    if writes == {_NO_STORE}:
+        # Incoming stack argument: entry rsp+8 is argument 6.
+        if abs_off >= 8 and (abs_off - 8) % 8 == 0:
+            return {"kind": "param", "index": 6 + (abs_off - 8) // 8,
+                    "stack_offset": abs_off,
+                    "provenance": [{"step": "stack-argument",
+                                    "offset": hex(abs_off)}]}
+        return None
+    if _NO_STORE in writes:
+        # One path does not write the slot; the value is not a single spill.
+        return None
+    indices = set()
+    provenance = []
+    for i in sorted(writes):
+        _mn, _rest, ops = _insn_parts(_insn(g, fstart, i))
+        src = ops[0] if ops else ""
+        if src not in _REGS and src not in _SUBREG:
+            return None
+        origin = _reg_origin(g, fstart, i, _canon(src))
+        if origin.get("kind") != "param":
+            return None
+        indices.add(origin["index"])
+        provenance.append({"step": "entry-spill",
+                           "addr": hex(g.precision.insns_by_func[fstart][i][0]),
+                           "text": _insn(g, fstart, i)})
+    if len(indices) != 1:
+        return None
+    return {"kind": "param", "index": next(iter(indices)),
+            "spill_site": str(provenance[0]["addr"]), "provenance": provenance}
+
+
+def _callers_of(g: "DsoGraph", callee: int) -> list:
+    """Direct in-image call sites of one function, scanned on demand.
+
+    A global caller index holds one tuple per direct call in the image; the
+    closure already sits close to its per-process data limit, so the index is
+    built per queried callee (there are only a few per witness) and cached.
+    """
+    cache = getattr(g, "_callers_cache", None)
+    if cache is None:
+        cache = {}
+        g._callers_cache = cache
+    if callee in cache:
+        return cache[callee]
+    out = []
+    for fstart, insns in g.precision.insns_by_func.items():
+        for i, (addr, text) in enumerate(insns):
+            mn, rest, _ops = _insn_parts(text)
+            if mn != "call" or rest.startswith("*"):
+                continue
+            m = re.match(r"^([0-9a-f]+)", rest)
+            if not m:
+                continue
+            if _containing(g, int(m.group(1), 16)) == callee:
+                out.append((fstart, i, addr))
+    cache[callee] = out
+    return out
+
+
+def _direct_call_index(g: "DsoGraph") -> dict:
+    idx = getattr(g, "_direct_call_index_cache", None)
+    if idx is not None:
+        return idx
+    idx = collections.defaultdict(list)
+    for fstart, insns in g.precision.insns_by_func.items():
+        for i, (addr, text) in enumerate(insns):
+            mn, rest, _ops = _insn_parts(text)
+            if mn != "call" or rest.startswith("*"):
+                continue
+            m = re.match(r"^([0-9a-f]+)", rest)
+            if not m:
+                continue
+            target = _containing(g, int(m.group(1), 16))
+            if target is not None:
+                idx[target].append((fstart, i, addr))
+    g._direct_call_index_cache = idx
+    return idx
+
+
+def _arg_origin_at_call(g: "DsoGraph", caller: int, call_idx: int, k: int):
+    """Origin of argument ``k`` at a direct call, as a parameter or a refusal."""
+    if k < len(_ARGREGS):
+        return _param_of_operand(g, caller, call_idx, _ARGREGS[k])
+    # Stack argument at entry offset 8 + 8*(k-6), expressed at this call.
+    delta = _semantic_rsp_deltas(g, caller)[call_idx]
+    if delta is None:
+        return {"kind": "unknown", "why": "stack offset after rsp change"}
+    abs_off = delta + 8 + 8 * (k - 6)
+    writes = _reaching_stores(g, caller, call_idx, abs_off)
+    if writes is None:
+        return {"kind": "unknown", "why": "open stack argument"}
+    if writes == {_NO_STORE}:
+        return {"kind": "param", "index": k}
+    if not writes or _NO_STORE in writes:
+        return {"kind": "unknown", "why": "stack argument has several origins"}
+    origins = []
+    for wi in sorted(writes):
+        _mn, _rest, ops = _insn_parts(_insn(g, caller, wi))
+        if not ops or ops[0] not in _REGS:
+            return {"kind": "unknown", "why": "stack argument has a writer"}
+        origins.append(_reg_origin(g, caller, wi, _canon(ops[0])))
+    if len(origins) == 1 and origins[0].get("kind") == "param":
+        return origins[0]
+    return {"kind": "unknown", "why": "stack argument has several origins"}
+
+
+def _export_name(g: "DsoGraph", fstart: int):
+    """The .dynsym name defining this exact function start, or None."""
+    for n in (getattr(g, "names_at", {}) or {}).get(fstart, ()):
+        base = (n or "").split("@")[0]
+        if base and getattr(g, "dynamic_defs", {}).get(base) == fstart:
+            return base
+    name = (getattr(g, "funcs", {}) or {}).get(fstart)
+    if name:
+        base = name.split("@")[0]
+        if getattr(g, "dynamic_defs", {}).get(base) == fstart:
+            return base
+    return None
+
+
+# ---- source-backed header / source checks ------------------------------- #
+
+def _header_texts(g: "DsoGraph"):
+    root = _install_root(g)
+    if root is None:
+        return []
+    hdr = Path(root) / "include" / "openssl"
+    if not hdr.is_dir():
+        return []
+    cache = getattr(g, "_header_text_cache", None)
+    if cache is not None:
+        return cache
+    out = []
+    for path in sorted(hdr.glob("*.h")):
+        try:
+            out.append((path, path.read_text(errors="replace")))
+        except OSError:
+            continue
+    g._header_text_cache = out
+    return out
+
+
+def _split_params(decl: str) -> list:
+    start = decl.find("(")
+    if start < 0:
+        return []
+    depth, cur, out = 0, [], []
+    for ch in decl[start + 1:]:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            if depth == 0:
+                break
+            depth -= 1
+        if ch == "," and depth == 0:
+            out.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+    if cur:
+        out.append("".join(cur).strip())
+    return [p for p in out if p and p != "void"]
+
+
+def _header_callback_param(g: "DsoGraph", symbol: str, index: int):
+    """The declared callback parameter, or a refusal string."""
+    texts = _header_texts(g)
+    if not texts:
+        return None, "no admitted install headers"
+    # Function typedefs: name -> (file, line, is_pointer).
+    fntypes = {}
+    for path, text in texts:
+        for m in re.finditer(
+                r"typedef\s+[^;{}]*?\(\s*\*\s*(\w+)\s*\)\s*\([^;{}]*\)\s*;",
+                text):
+            line = text.count("\n", 0, m.start()) + 1
+            fntypes[m.group(1)] = (path.name, line, True)
+        for m in re.finditer(
+                r"typedef\s+[^;{}()]*?\b(\w+)\s*\([^;{}]*\)\s*;", text):
+            line = text.count("\n", 0, m.start()) + 1
+            fntypes.setdefault(m.group(1), (path.name, line, False))
+    found = []
+    for path, text in texts:
+        for m in re.finditer(r"(?<![\w.])" + re.escape(symbol) + r"\s*\(", text):
+            # A declaration is preceded by a return type on the same line.
+            line_start = text.rfind("\n", 0, m.start()) + 1
+            prefix = text[line_start:m.start()].strip()
+            if not prefix or prefix.endswith(("=", ".", "->", ",")):
+                continue
+            depth, end = 0, None
+            for off, ch in enumerate(text[m.start():]):
+                if ch == "(":
+                    depth += 1
+                elif ch == ")":
+                    depth -= 1
+                    if depth == 0:
+                        end = m.start() + off + 1
+                        break
+            if end is None:
+                continue
+            decl = text[m.start():end]
+            params = _split_params(decl)
+            if index >= len(params):
+                continue
+            param = params[index]
+            line = text.count("\n", 0, m.start()) + 1
+            pname = None
+            mm = re.search(r"\(\s*\*\s*(\w+)\s*\)", param)
+            direct = bool(mm)
+            if mm:
+                pname = mm.group(1)
+            else:
+                ids = re.findall(r"[A-Za-z_]\w*", param)
+                if len(ids) >= 2:
+                    pname = ids[-1]
+            ftype = None
+            for name, info in fntypes.items():
+                if re.search(r"\b" + re.escape(name) + r"\b", param):
+                    ftype = (name, info)
+                    break
+            is_cb = direct or (ftype is not None
+                               and ("*" in param or ftype[1][2]))
+            found.append({
+                "symbol": symbol, "index": index, "name": pname,
+                "declaration": f"{path.name}:{line}",
+                "parameter_text": " ".join(param.split()),
+                "typedef": (f"{ftype[1][0]}:{ftype[1][1]}" if ftype else None),
+                "type_typedef": (ftype[0] if ftype else None),
+                "callback": is_cb,
+            })
+    if not found:
+        return None, "the symbol is not declared in the admitted headers"
+    cbs = [f for f in found if f["callback"]]
+    non = [f for f in found if not f["callback"]]
+    if non:
+        return None, "a declaration does not declare the parameter as a callback"
+    if not cbs:
+        return None, "the header declares the parameter as a non-callback"
+    if len({(c["type_typedef"], c["parameter_text"]) for c in cbs}) != 1:
+        return None, "inconsistent callback declarations"
+    return cbs[0], None
+
+
+def _source_field_assignments(g: "DsoGraph", relpath: str, field: str):
+    """Every ``.field = ...`` in one source file, with its enclosing function."""
+    root = _repo_root(g)
+    if root is None:
+        return None, "source root unavailable"
+    path = Path(root) / relpath
+    if not path.is_file():
+        return None, f"source file {relpath} is absent"
+    cache = getattr(g, "_source_cache", None)
+    if cache is None:
+        cache = {}
+        g._source_cache = cache
+    key = (relpath, field)
+    if key in cache:
+        return cache[key]
+    try:
+        lines = path.read_text(errors="replace").splitlines()
+    except OSError as e:
+        return None, f"cannot read {relpath}: {e}"
+    pat = re.compile(r"\." + re.escape(field) + r"\s*=")
+    hits = []
+    for i, line in enumerate(lines, 1):
+        if not pat.search(line) or line.lstrip().startswith("//"):
+            continue
+        fn = None
+        for j in range(i - 1, -1, -1):
+            m = re.search(r"\bfn\s+(\w+)", lines[j])
+            if m:
+                fn = m.group(1)
+                break
+        hits.append({"line": i, "function": fn,
+                     "text": line.strip()[:160]})
+    out = (hits, None)
+    cache[key] = out
+    return out
+
+
+# ---- S3: a fetched provider method-table slot --------------------------- #
+
+def _fields(offsets, source_line):
+    return {off: (field, fnid, source_line)
+            for off, field, fnid in offsets}
+
+
+FETCH_FAMILIES = (
+    {
+        "family": "EVP_KDF",
+        "fetch": ("EVP_KDF_fetch", "evp_kdf_fetch_from_prov",
+                  "inner_evp_generic_fetch"),
+        "writer": ("evp_kdf_from_algorithm", "kdf_from_algorithm"),
+        "object": "EvpKdf",
+        "source_file": "src/evp/kdf.rs",
+        "fields": {off: (field, fnid)
+                   for off, field, fnid in (
+                       (0x28, "newctx", "OSSL_FUNC_KDF_NEWCTX"),
+                       (0x30, "dupctx", "OSSL_FUNC_KDF_DUPCTX"),
+                       (0x38, "freectx", "OSSL_FUNC_KDF_FREECTX"),
+                       (0x40, "reset", "OSSL_FUNC_KDF_RESET"),
+                       (0x48, "derive", "OSSL_FUNC_KDF_DERIVE"),
+                       (0x50, "gettable_params", "OSSL_FUNC_KDF_GETTABLE_PARAMS"),
+                       (0x58, "gettable_ctx_params",
+                        "OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS"),
+                       (0x60, "settable_ctx_params",
+                        "OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS"),
+                       (0x68, "get_params", "OSSL_FUNC_KDF_GET_PARAMS"),
+                       (0x70, "get_ctx_params", "OSSL_FUNC_KDF_GET_CTX_PARAMS"),
+                       (0x78, "set_ctx_params", "OSSL_FUNC_KDF_SET_CTX_PARAMS"),
+                       (0x80, "set_skey", "OSSL_FUNC_KDF_SET_SKEY"),
+                       (0x88, "derive_skey", "OSSL_FUNC_KDF_DERIVE_SKEY"),
+                   )},
+        "interface": (
+            "the provider's returned OSSL_DISPATCH table -- "
+            "include/openssl/core.h:40-44 (function_id plus function pointer) "
+            "and include/openssl/core_dispatch.h's OSSL_FUNC_kdf_* ids; "
+            "src/evp/kdf.rs:209-244 is the #[repr(C)] EvpKdf the fetch builds"),
+    },
+    {
+        "family": "EVP_MAC",
+        "fetch": ("EVP_MAC_fetch", "evp_mac_fetch_from_prov",
+                  "inner_evp_generic_fetch"),
+        "writer": ("evp_mac_from_algorithm", "mac_from_algorithm"),
+        "object": "EvpMac",
+        "source_file": "src/evp/mac.rs",
+        "fields": {off: (field, fnid)
+                   for off, field, fnid in (
+                       (0x28, "newctx", "OSSL_FUNC_MAC_NEWCTX"),
+                       (0x30, "dupctx", "OSSL_FUNC_MAC_DUPCTX"),
+                       (0x38, "freectx", "OSSL_FUNC_MAC_FREECTX"),
+                       (0x40, "init", "OSSL_FUNC_MAC_INIT"),
+                       (0x48, "update", "OSSL_FUNC_MAC_UPDATE"),
+                       (0x50, "final", "OSSL_FUNC_MAC_FINAL"),
+                       (0x58, "gettable_params", "OSSL_FUNC_MAC_GETTABLE_PARAMS"),
+                       (0x60, "gettable_ctx_params",
+                        "OSSL_FUNC_MAC_GETTABLE_CTX_PARAMS"),
+                       (0x68, "settable_ctx_params",
+                        "OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS"),
+                       (0x70, "get_params", "OSSL_FUNC_MAC_GET_PARAMS"),
+                       (0x78, "get_ctx_params", "OSSL_FUNC_MAC_GET_CTX_PARAMS"),
+                       (0x80, "set_ctx_params", "OSSL_FUNC_MAC_SET_CTX_PARAMS"),
+                       (0x88, "init_skey", "OSSL_FUNC_MAC_INIT_SKEY"),
+                   )},
+        "interface": (
+            "the provider's returned OSSL_DISPATCH table -- "
+            "include/openssl/core.h:40-44 and core_dispatch.h's "
+            "OSSL_FUNC_mac_* ids; src/evp/mac.rs:237-281 is the #[repr(C)] "
+            "EvpMac the fetch builds"),
+    },
+    {
+        "family": "EVP_KEM",
+        "fetch": ("EVP_KEM_fetch", "evp_kem_fetch_from_prov",
+                  "inner_evp_generic_fetch"),
+        "writer": ("evp_kem_from_algorithm", "kem_from_algorithm"),
+        "object": "EvpKem",
+        "source_file": "src/evp/kem.rs",
+        "fields": {off: (field, fnid)
+                   for off, field, fnid in (
+                       (0x28, "newctx", "OSSL_FUNC_KEM_NEWCTX"),
+                       (0x30, "encapsulate_init", "OSSL_FUNC_KEM_ENCAPSULATE_INIT"),
+                       (0x38, "encapsulate", "OSSL_FUNC_KEM_ENCAPSULATE"),
+                       (0x40, "decapsulate_init", "OSSL_FUNC_KEM_DECAPSULATE_INIT"),
+                       (0x48, "decapsulate", "OSSL_FUNC_KEM_DECAPSULATE"),
+                       (0x50, "freectx", "OSSL_FUNC_KEM_FREECTX"),
+                       (0x58, "dupctx", "OSSL_FUNC_KEM_DUPCTX"),
+                       (0x60, "get_ctx_params", "OSSL_FUNC_KEM_GET_CTX_PARAMS"),
+                       (0x68, "gettable_ctx_params",
+                        "OSSL_FUNC_KEM_GETTABLE_CTX_PARAMS"),
+                       (0x70, "set_ctx_params", "OSSL_FUNC_KEM_SET_CTX_PARAMS"),
+                       (0x78, "settable_ctx_params",
+                        "OSSL_FUNC_KEM_SETTABLE_CTX_PARAMS"),
+                       (0x80, "auth_encapsulate_init",
+                        "OSSL_FUNC_KEM_AUTH_ENCAPSULATE_INIT"),
+                       (0x88, "auth_decapsulate_init",
+                        "OSSL_FUNC_KEM_AUTH_DECAPSULATE_INIT"),
+                   )},
+        "interface": (
+            "the provider's returned OSSL_DISPATCH table -- "
+            "include/openssl/core.h:40-44 and core_dispatch.h's "
+            "OSSL_FUNC_kem_* ids; src/evp/kem.rs:155-196 is the #[repr(C)] "
+            "EvpKem the fetch builds"),
+    },
+)
+
+
+def _fetch_family_by_callee(name: str):
+    for spec in FETCH_FAMILIES:
+        if any(f in (name or "") for f in spec["fetch"][:2]):
+            return spec
+    return None
+
+
+def _writer_reference(g: "DsoGraph", fstart: int, call_idx: int):
+    """The family writer materialised before an inner_evp_generic_fetch call."""
+    insns = g.precision.insns_by_func.get(fstart, ())
+    refs = set()
+    for k in range(call_idx - 1, max(-1, call_idx - 48), -1):
+        text = insns[k][1]
+        mn, _rest, _ops = _insn_parts(text)
+        if mn.startswith("call"):
+            break
+        addr = _insn_comment_addr(text)
+        if addr is None or addr not in g.start_set:
+            continue
+        nm = g.funcs.get(_containing(g, addr))
+        if nm:
+            refs.add((addr, nm))
+    return sorted(refs)
+
+
+def _base_fetch(g: "DsoGraph", fstart: int, idx: int, reg: str, depth=0):
+    """The fetch call whose return is in ``reg`` at ``idx``, or a refusal.
+
+    Returns ``(spec, fetch_index, evidence)``.  A merge is accepted only when
+    every reaching definition is the same family fetch; anything else refuses.
+    A zero definition is a NULL sentinel: a path that keeps it cannot reach the
+    indirect call without faulting on the dereference that reads the slot, so
+    it contributes no target to the call.
+    """
+    if depth > 4:
+        return None, "provenance depth bound"
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None:
+        return None, "open or non-convergent CFG"
+    if not defs or _ENTRY_DEF in defs:
+        return None, "the base value is not defined in this function"
+    out = []
+    nulls = 0
+    for k in sorted(defs):
+        if k < 0:
+            return None, "entry value reaches the base register"
+        mn, _rest, ops = _insn_parts(_insn(g, fstart, k))
+        if mn in ("xor", "sub") and len(ops) == 2 and ops[0] == ops[1]:
+            nulls += 1
+            continue
+        if mn in ("mov", "movq") and ops and ops[0] == "$0x0":
+            nulls += 1
+            continue
+        direct = _direct_call_target(g, fstart, k)
+        if mn == "call" and direct is not None:
+            cname = g.funcs.get(direct[1], "")
+            if "inner_evp_generic_fetch" in cname:
+                refs = _writer_reference(g, fstart, k)
+                matched = [spec for spec in FETCH_FAMILIES
+                           if any(any(w in (n or "") for w in spec["writer"])
+                                  for a, n in refs)]
+                if len(matched) != 1:
+                    return None, ("the generic fetch's construct callback does not "
+                                  "name exactly one family writer")
+                spec = matched[0]
+                matches = [(a, n) for a, n in refs
+                           if any(w in (n or "") for w in spec["writer"])]
+                out.append((spec, k, {"callee": cname,
+                                      "construct": matches[0][1]}))
+                continue
+            spec = _fetch_family_by_callee(cname)
+            if spec is None:
+                return None, f"base is the return of {cname or hex(direct[0])}"
+            out.append((spec, k, {"callee": cname}))
+            continue
+        if mn in ("mov", "movq") and ops and ops[-1] in _REGS + list(_SUBREG):
+            src = ops[0]
+            if src in _REGS or src in _SUBREG:
+                sub_spec, sub_why = _base_fetch(g, fstart, k, _canon(src), depth + 1)
+                if sub_spec is None:
+                    return None, sub_why
+                # A copy: the same fetch, one more provenance step.
+                spec, fi, ev = sub_spec
+                ev = dict(ev)
+                ev["copy"] = {"addr": hex(g.precision.insns_by_func[fstart][k][0]),
+                              "text": _insn(g, fstart, k)}
+                out.append((spec, fi, ev))
+                continue
+            m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%rsp|%rbp)\)", src)
+            if m:
+                stack = _stack_param(g, fstart, k, src, None)
+                if stack is not None:
+                    return None, "the base is a stack parameter, not a fetch return"
+                q = _stack_slot_abs(g, fstart, k, src)
+                if q is None:
+                    return None, "the base is a stack load with no frame offset"
+                writes = _reaching_stores(g, fstart, k, q)
+                if writes is None or len(writes) != 1 or _NO_STORE in writes:
+                    return None, "the base stack slot has several writers"
+                wi = next(iter(writes))
+                _wmn, _wrest, wops = _insn_parts(_insn(g, fstart, wi))
+                if not wops or wops[0] not in _REGS:
+                    return None, "the base stack slot holds a non-register"
+                sub_spec, sub_why = _base_fetch(
+                    g, fstart, wi, _canon(wops[0]), depth + 1)
+                if sub_spec is None:
+                    return None, sub_why
+                spec, fi, ev = sub_spec
+                out.append((spec, fi, ev))
+                continue
+        return None, f"the base writer is {mn}, not a fetch result"
+    specs = {o[0]["family"] for o in out}
+    if not out:
+        return None, "only NULL reaches the base register"
+    if len(specs) != 1:
+        return None, "the base merges different fetch families"
+    spec, fi, ev = out[0]
+    if nulls:
+        ev = dict(ev)
+        ev["null_paths"] = nulls
+    return (spec, fi, ev), None
+
+
+def fetch_slot_witness(g: "DsoGraph", site: dict, name: str):
+    """Witness for an in-image EVP method object's provider-dispatch slot.
+
+    The slot must be a field of the object the family fetch returns, and the
+    field must be the one the documented OSSL_FUNC_* id fills.  The writer is
+    checked against the source: exactly one assignment in the family file, in
+    the family's from_algorithm function.
+    """
+    if site.get("kind") not in ("call", "jmp"):
+        return None
+    if not _has_insns(g):
+        return None
+    fstart = site["func"]
+    idx = None
+    for i, (a, _t) in enumerate(g.precision.insns_by_func.get(fstart, ())):
+        if a == site["addr"]:
+            idx = i
+            break
+    if idx is None:
+        return None
+    opnd = _site_operand(site)
+    member_offset = None
+    base_reg = None
+    m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", opnd)
+    if m:
+        member_offset = int(m.group(1), 16) if m.group(1) else 0
+        base_reg = m.group(2)
+        base_at = idx
+    elif opnd in _REGS or opnd in _SUBREG:
+        reg = _canon(opnd)
+        origin = _reg_origin(g, fstart, idx, reg)
+        if origin.get("kind") != "load":
+            return None
+        member_offset = origin["offset"]
+        base_reg = origin["base_reg"]
+        base_at = origin["at"]
+    else:
+        return None
+    base_result, why = _base_fetch(g, fstart, base_at, _canon(base_reg))
+    if base_result is None:
+        if "fetch-base-not-return" in _MUTED:
+            base_result = (FETCH_FAMILIES[0], idx,
+                           {"callee": "mutation-forced"})
+        else:
+            return None
+    spec, fetch_idx, fetch_ev = base_result
+    fields = spec["fields"]
+    slot_fields = fields.get(member_offset)
+    if slot_fields is None:
+        if "fetch-slot-outside" in _MUTED:
+            slot_fields = ("forced_field", "forced_id")
+        else:
+            return None
+    field, fnid = slot_fields
+    hits, src_why = _source_field_assignments(g, spec["source_file"], field)
+    bad_writer = (hits is None or len(hits) != 1
+                  or not any(w in ((hits[0]["function"] or "")
+                                   if hits else "") for w in spec["writer"]))
+    if bad_writer:
+        if "fetch-source-writer" in _MUTED:
+            hits = hits or [{"line": 0, "function": spec["writer"][0],
+                             "text": "mutation-forced"}]
+        else:
+            return None
+    writer_fn = hits[0]["function"] or ""
+    fetch_addr = g.precision.insns_by_func[fstart][fetch_idx][0]
+    return {
+        "schema": WITNESS_SCHEMA,
+        "class": ABI_CONTRACT_PROVIDER,
+        "contract_bounded": True,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "operand": {"member_offset": hex(member_offset),
+                    "base_reg": _canon(base_reg)},
+        "fetch": {
+            "caller": name,
+            "call_site": hex(fetch_addr),
+            "callee": fetch_ev.get("callee"),
+            "construct": fetch_ev.get("construct"),
+            "method_family": spec["family"],
+        },
+        "object_slot": {
+            "object_offset": hex(member_offset),
+            "object": spec["object"],
+            "field": field,
+            "function_id": fnid,
+        },
+        "writer": (
+            f"{spec['source_file']}:{hits[0]['line']} in {writer_fn}: "
+            f"{hits[0]['text']}"),
+        "writer_sites": [{"file": spec["source_file"],
+                          "line": hits[0]["line"],
+                          "function": writer_fn,
+                          "text": hits[0]["text"]}],
+        "interface": spec["interface"],
+        "basis": (
+            "the indirect operand reads exactly this #[repr(C)] field of the "
+            "object the family fetch returns; the field is assigned exactly "
+            "once in the image, from the OSSL_DISPATCH entry the function id "
+            "names"),
+        "slot": (f"{spec['object']}.{field} (offset {member_offset:#x}, "
+                 f"{fnid})"),
+    }
+
+
+# ---- S2: an exported function's callback parameter ---------------------- #
+
+
+def export_callback_witness(g: "DsoGraph", site: dict, name: str):
+    """Witness for a callback that is exactly an exported parameter.
+
+    Returns ``(witness, refusal)``; a refusal may set ``defer`` so the caller
+    records the mandatory deferral to reachable-caller-target rather than
+    absorbing a finite in-image callback.  A value is accepted only when every
+    in-image call chain forwards the same parameter to an exported entry point.
+    """
+    if site.get("kind") not in ("call", "jmp"):
+        return None, None
+    if not _has_insns(g):
+        return None, None
+    fstart = site["func"]
+    idx = None
+    for i, (a, _t) in enumerate(g.precision.insns_by_func.get(fstart, ())):
+        if a == site["addr"]:
+            idx = i
+            break
+    if idx is None:
+        return None, None
+    opnd = _site_operand(site)
+    param = _param_of_operand(g, fstart, idx, opnd)
+    if param is None or param.get("kind") != "param":
+        if "export-not-param" in _MUTED:
+            param = {"kind": "param", "index": 3, "provenance": []}
+        else:
+            return None, None
+    index = param["index"]
+
+    export = _export_name(g, fstart)
+    chain = []
+    roots = set()
+    in_image = []
+    seen = set()
+    frontier = [(fstart, index)]
+    while frontier:
+        fn, k = frontier.pop()
+        if (fn, k) in seen:
+            continue
+        seen.add((fn, k))
+        ex = _export_name(g, fn)
+        if ex is not None:
+            roots.add((ex, k))
+            continue
+        callers = _callers_of(g, fn)
+        if not callers:
+            # A private function reached only through a table or an indirect
+            # call: its caller is not enumerable here.  It is recorded, never
+            # treated as a fixed value.
+            in_image.append({"function": g.funcs.get(fn), "param": k,
+                             "reason": "no in-image direct caller"})
+            continue
+        for caller, ci, _addr in callers:
+            origin = _arg_origin_at_call(g, caller, ci, k)
+            if origin.get("kind") != "param":
+                in_image.append({"function": g.funcs.get(caller),
+                                 "call_site": hex(_addr),
+                                 "reason": "passes a non-parameter value",
+                                 "origin": origin.get("kind")})
+                continue
+            chain.append({"callee": g.funcs.get(fn),
+                          "callee_param": k,
+                          "caller": g.funcs.get(caller),
+                          "caller_param": origin["index"],
+                          "call_site": hex(_addr)})
+            frontier.append((caller, origin["index"]))
+    if not roots:
+        if "export-no-root" in _MUTED:
+            roots.add(("CRYPTO_cfb128_encrypt", index))
+        else:
+            return None, {"defer": True,
+                          "refusal": "no exported entry point receives the "
+                                     "parameter; the callers are in-image and "
+                                     "finite",
+                          "in_image_callers": in_image}
+    root_indices = {k for _s, k in roots}
+    if len(root_indices) != 1:
+        return None, {"refusal": "exported entry points disagree on the parameter"}
+    root_index = next(iter(root_indices))
+    parsed = []
+    for symbol in sorted(s for s, _k in roots):
+        cb, why = _header_callback_param(g, symbol, root_index)
+        if cb is None:
+            if "export-header-non-callback" in _MUTED:
+                cb = {"symbol": symbol, "index": root_index, "name": "forced",
+                      "declaration": "forced:0", "parameter_text": "forced",
+                      "typedef": "forced:0", "type_typedef": "forced",
+                      "callback": True}
+            else:
+                return None, {"refusal": f"{symbol}: {why}"}
+        parsed.append((symbol, cb))
+    if len({(c["type_typedef"], c["parameter_text"]) for _s, c in parsed}) != 1:
+        return None, {"refusal": "exported declarations disagree on the callback"}
+    symbol, cb = parsed[0]
+    witness = {
+        "schema": WITNESS_SCHEMA,
+        "class": ABI_CONTRACT_EXPORT_CALLBACK,
+        "contract_bounded": True,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "operand": {"kind": "reg" if opnd.startswith("%") else "memory",
+                    "text": opnd},
+        "parameter": {
+            "name": cb["name"],
+            "index": root_index,
+            "declaration": cb["declaration"],
+            "type_typedef": cb["type_typedef"],
+            "typedef_declaration": cb["typedef"],
+            "parameter_text": cb["parameter_text"],
+        },
+        "site_parameter": index,
+        "export": {"symbol": symbol, "in_dynsym": True,
+                   "symbols": sorted(s for s, _k in roots)},
+        "provenance": param.get("provenance") or [],
+        "caller_chain": chain,
+        "in_image_callers": in_image,
+        "caller_boundary": ("external application; the target set is unbounded "
+                            "by the C ABI"),
+        "does_not_cover": [
+            "NULL where the header does not admit it -- a C-invalid input",
+            "the behaviour or lifetime of the application's callback",
+            "which callback an external caller supplies",
+        ],
+        "slot": (f"{symbol} parameter {root_index} ({cb['name']})"),
+        "writer": (
+            "the caller supplies the value at the exported C ABI boundary; "
+            "no in-image writer stores a different value into the parameter"),
+        "interface": (f"{cb['declaration']} declares {cb['name']} as "
+                      f"{cb['type_typedef']} ({cb['typedef']})"),
+        "basis": ("the operand is exactly this entry parameter (single linear "
+                  "provenance), every in-image call chain forwards it "
+                  "unchanged, and the root function is in .dynsym"),
+    }
+    return witness, None
+
+
+# ---- S4: a local function pointer with a finite assignment set ---------- #
+
+def _prologue_delta(g: "DsoGraph", fstart: int):
+    """Entry-relative rsp delta established by the prologue.
+
+    Used only when the CFG's rsp dataflow has a merge conflict (for example a
+    switch tail-call): the compiler's prologue is still a fixed frame, and the
+    query is a slot in a block that has not run an epilogue.
+    """
+    cache = getattr(g, "_prologue_delta_cache", None)
+    if cache is None:
+        cache = {}
+        g._prologue_delta_cache = cache
+    if fstart in cache:
+        return cache[fstart]
+    cur = 0
+    for _a, text in g.precision.insns_by_func.get(fstart, ()):
+        mn, _rest, ops = _insn_parts(text)
+        if mn == "push":
+            cur -= 8
+        elif mn == "pop":
+            cur += 8
+        elif mn in ("sub", "add") and len(ops) == 2 and ops[1] == "%rsp" \
+                and ops[0].startswith("$"):
+            try:
+                n = int(ops[0][1:], 16)
+            except ValueError:
+                break
+            cur = cur - n if mn == "sub" else cur + n
+        elif mn.startswith(("cmp", "test", "j", "call", "ret", "iret", "ud2")):
+            break
+    cache[fstart] = cur
+    return cur
+
+
+def _frame_abs(g: "DsoGraph", fstart: int, idx: int, off: int, base: str):
+    if base == "%rsp":
+        deltas = _semantic_rsp_deltas(g, fstart)
+        delta = deltas[idx] if idx < len(deltas) else None
+        if delta is None:
+            delta = _prologue_delta(g, fstart)
+        return None if delta is None else delta + off
+    if base == "%rbp":
+        frame = _semantic_frame_base(g, fstart)
+        return None if frame is None else frame[1] + off
+    return None
+
+
+def _stack_load_origin(g: "DsoGraph", fstart: int, idx: int, reg: str, depth=0):
+    """Origin of a register, following a spill/reload through one frame slot."""
+    if depth > 4:
+        return {"kind": "unknown", "why": "stack provenance depth bound"}
+    origin = _reg_origin(g, fstart, idx, reg)
+    if origin.get("kind") != "load" or origin.get("base_reg") not in ("%rsp", "%rbp"):
+        return origin
+    off = _frame_abs(g, fstart, origin["at"], origin["offset"], origin["base_reg"])
+    if off is None:
+        return {"kind": "unknown", "why": "frame offset after rsp change"}
+    writes = _reaching_stores(g, fstart, idx, off)
+    if writes is None or len(writes) != 1 or _NO_STORE in writes:
+        return {"kind": "unknown", "why": "frame slot has several writers"}
+    wi = next(iter(writes))
+    _mn, _rest, wops = _insn_parts(_insn(g, fstart, wi))
+    if not wops or wops[0] not in _REGS:
+        return {"kind": "unknown", "why": "frame slot holds a non-register"}
+    return _stack_load_origin(g, fstart, wi, _canon(wops[0]), depth + 1)
+
+
+def _lea_frame_offsets(g: "DsoGraph", fstart: int, idx: int, src: str):
+    """Frame slots a ``lea`` store source can denote (one distinct offset)."""
+    if src not in _REGS and src not in _SUBREG:
+        return None
+    defs = _reaching_defs(g, fstart, idx, _canon(src))
+    if defs is None or not defs or _ENTRY_DEF in defs:
+        return None
+    out = set()
+    for d in defs:
+        mn, _rest, ops = _insn_parts(_insn(g, fstart, d))
+        if mn != "lea" or not ops:
+            return None
+        off = _stack_slot_abs(g, fstart, d, ops[0])
+        if off is None:
+            return None
+        out.add(off)
+    return out if len(out) == 1 else None
+
+
+def _lea_functions(g: "DsoGraph", fstart: int, idx: int, src: str):
+    """Function starts a store source can denote; a partial set refuses."""
+    if src not in _REGS and src not in _SUBREG:
+        return None
+    defs = _reaching_defs(g, fstart, idx, _canon(src))
+    if defs is None or not defs or _ENTRY_DEF in defs:
+        return None
+    out = set()
+    for d in defs:
+        mn, _rest, ops = _insn_parts(_insn(g, fstart, d))
+        if mn != "lea" or not ops:
+            return None
+        taddr = _insn_comment_addr(_insn(g, fstart, d))
+        if taddr is None or taddr not in g.start_set:
+            return None
+        out.add((taddr, d))
+    return out or None
+
+
+def _lea_frame_offset(g: "DsoGraph", fstart: int, idx: int, src: str):
+    if src not in _REGS and src not in _SUBREG:
+        return None
+    d = _single_def(g, fstart, idx, _canon(src))
+    if d is None:
+        return None
+    mn, _rest, ops = _insn_parts(_insn(g, fstart, d))
+    if mn != "lea" or not ops:
+        return None
+    return _stack_slot_abs(g, fstart, d, ops[0])
+
+
+def _lea_function(g: "DsoGraph", fstart: int, idx: int, src: str):
+    if src not in _REGS and src not in _SUBREG:
+        return None
+    d = _single_def(g, fstart, idx, _canon(src))
+    if d is None:
+        return None
+    mn, _rest, ops = _insn_parts(_insn(g, fstart, d))
+    if mn != "lea" or not ops:
+        return None
+    taddr = _insn_comment_addr(_insn(g, fstart, d))
+    if taddr is None or taddr not in g.start_set:
+        return None
+    return (taddr, d)
+
+
+def local_fptr_witness(g: "DsoGraph", site: dict, name: str):
+    """Resolve a call through a closure/slot built from a finite address set.
+
+    Shape: ``call *0(reg)`` where ``reg`` is loaded from a pointer parameter
+    and every in-image caller builds the pointed-to slot from a finite set of
+    ``lea <function>`` stores.  The slot may be reached through one extra
+    pointer (a Rust closure passed by reference).  Every stored value must be
+    a function start and every writer must be accounted for; a partial set is
+    refused, never unioned.
+    """
+    if site.get("kind") != "call":
+        return None
+    if not _has_insns(g):
+        return None
+    fstart = site["func"]
+    idx = None
+    for i, (a, _t) in enumerate(g.precision.insns_by_func.get(fstart, ())):
+        if a == site["addr"]:
+            idx = i
+            break
+    if idx is None:
+        return None
+    opnd = _site_operand(site)
+    m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", opnd)
+    if not m:
+        return None
+    field_off = int(m.group(1), 16) if m.group(1) else 0
+    origin = _stack_load_origin(g, fstart, idx, _canon(m.group(2)))
+    if origin.get("kind") != "load":
+        return None
+    base_reg = origin["base_reg"]
+    base_origin = _stack_load_origin(g, fstart, origin["at"], _canon(base_reg))
+    outer_off = origin["offset"]
+    if base_origin.get("kind") == "param":
+        k = base_origin["index"]
+    elif base_origin.get("kind") == "load":
+        # One more object level: [param] holds the pointer that is read.
+        sub = _stack_load_origin(g, fstart, base_origin["at"],
+                                 _canon(base_origin["base_reg"]))
+        if sub.get("kind") != "param":
+            return None
+        k = sub["index"]
+        outer_off += base_origin["offset"]
+    else:
+        return None
+    callers = _callers_of(g, fstart)
+    if not callers:
+        return None
+    targets = set()
+    assignments = []
+    for caller, ci, _addr in callers:
+        if k >= len(_ARGREGS):
+            return None
+        origin_arg = _reg_origin(g, caller, ci, _ARGREGS[k])
+        if origin_arg.get("kind") != "load":
+            # A forwarded parameter would need its own caller chain; this
+            # mechanism resolves a locally built closure only.
+            return None
+        if origin_arg.get("base_reg") not in ("%rsp", "%rbp"):
+            return None
+        amn, _arest, _aops = _insn_parts(
+            _insn(g, caller, origin_arg["at"]))
+        if amn != "lea":
+            return None
+        arg_slot = _frame_abs(g, caller, origin_arg["at"],
+                              origin_arg["offset"], origin_arg["base_reg"])
+        if arg_slot is None:
+            return None
+        slot = arg_slot + outer_off
+        if _slot_alias_in_block(g, caller, ci, slot, {origin_arg["at"]}):
+            return None
+        wset = _reaching_stores(g, caller, ci, slot)
+        if wset is None or _NO_STORE in wset:
+            return None
+        stores = sorted(wset)
+        if not stores:
+            return None
+        direct, pointer = set(), set()
+        for si in stores:
+            _smn, _srest, sops = _insn_parts(_insn(g, caller, si))
+            src = sops[0] if sops else ""
+            if src not in _REGS:
+                return None
+            fns = _lea_functions(g, caller, si, src)
+            if fns:
+                for taddr, lea_i in fns:
+                    direct.add((taddr, si, lea_i))
+                continue
+            ptrs = _lea_frame_offsets(g, caller, si, src)
+            if not ptrs:
+                if "local-non-function" in _MUTED:
+                    continue
+                return None
+            pointer |= ptrs
+        if direct and pointer:
+            return None
+        caller_targets = set()
+        for taddr, store_i, lea_i in sorted(direct):
+            caller_targets.add(taddr)
+            assignments.append({
+                "caller": g.funcs.get(caller),
+                "store": hex(g.precision.insns_by_func[caller][store_i][0]),
+                "assignment": hex(g.precision.insns_by_func[caller][lea_i][0]),
+                "target": hex(taddr),
+                "target_symbol": g.funcs.get(taddr),
+            })
+        for inner in sorted(pointer):
+            inner_slot = inner + field_off
+            iset = _reaching_stores(g, caller, ci, inner_slot)
+            if iset is None or _NO_STORE in iset:
+                return None
+            istores = sorted(iset)
+            if not istores:
+                return None
+            for si in istores:
+                _imn, _irest, iops = _insn_parts(_insn(g, caller, si))
+                src = iops[0] if iops else ""
+                if src not in _REGS:
+                    return None
+                fns = _lea_functions(g, caller, si, src)
+                if not fns:
+                    if "local-non-function" in _MUTED:
+                        continue
+                    return None
+                for taddr, lea_i in fns:
+                    caller_targets.add(taddr)
+                    assignments.append({
+                        "caller": g.funcs.get(caller),
+                        "store": hex(g.precision.insns_by_func[caller][si][0]),
+                        "assignment": hex(g.precision.insns_by_func[caller][lea_i][0]),
+                        "target": hex(taddr),
+                        "target_symbol": g.funcs.get(taddr),
+                    })
+        targets |= caller_targets
+    if (not targets or not targets <= g.start_set) \
+            and "local-non-function" not in _MUTED:
+        return None
+    return {
+        "schema": "openssl-rs/consumer-closure/local-function-pointer/v1",
+        "class": "local-function-pointer",
+        "contract_bounded": False,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "slot": (f"closure field {field_off:#x} reached through parameter "
+                 f"{k} and a frame address"),
+        "assignments": assignments,
+        "targets": [hex(t) for t in sorted(targets)],
+        "no_other_write": True,
+        "basis": ("every in-image caller builds the slot from a finite set of "
+                  "in-image function addresses and no other store reaches it; "
+                  "all stored addresses are function starts"),
+    }
+
+
+# ---- S1: field-sensitive static-table instance dispatch ----------------- #
+#
+# Design note (AGENTS.md sections 7, 8, 10 and 22).
+#
+# The residual this class addresses is an indirect call through a *table
+# member* selected from a *pointer field of an object* whose pointer field is
+# written from a finite set of static tables.  The existing resolver records
+# global stores keyed by displacement only (``field_stores``); in this DSO
+# offset 0x8 alone has thousands of stores, so an offset-keyed completeness
+# claim is impossible.  S1 therefore uses the field-sensitive points-to
+# discipline: a store belongs to the key
+#
+#       (object type T, pointer-slot offset o, member offset m)
+#
+# only when T is established from the source signature (or the source cast that
+# introduces the context), o is established from the load that produces the
+# call's base register, and m is the member read by the call.  Each key has its
+# own writer set, which is restricted by the static dispatch table that pairs
+# the consumer with its constructor.  This is the type-qualified partitioning
+# of Andersen-style constraints discussed by Diwan/McKinley/Moss ("Type-based
+# alias analysis", 1998); no stronger claim is made here.
+#
+# The dispatch table gives the constructor pairing without a whole-program
+# field store database: an ``OsslDispatch`` table is an immutable array of
+# (function_id, pointer) entries, and the provider ABI pairs
+# OSSL_FUNC_CIPHER_NEWCTX with the cipher entry that consumes the context.  The
+# site function must be a table entry target or in the direct-call closure of
+# one; the writer set is the NEWCTX entry's direct-call closure; every other
+# cohort entry is checked for a store to the same field and refuses the site if
+# it stores anything else.  A reachable direct caller outside the cohort also
+# refuses the site (the context could have come from another constructor).
+#
+# Refusals are conjunctions, never unions: any one failure leaves the site
+# target-bounded.  A partially enumerated instance set is never unioned.
+
+S1_WITNESS_SCHEMA = "openssl-rs/consumer-closure/static-table-instance/v1"
+S1_IMMUTABLE_SECTIONS = (".data.rel.ro", ".data.rel.ro.local", ".rodata")
+_S1_SOURCE_SUFFIX = ".rs"
+
+
+def _s1_docs(g: "DsoGraph"):
+    """Every tracked source file, read once per candidate image."""
+    cache = getattr(g, "_s1_docs_cache", None)
+    if cache is not None:
+        return cache
+    docs = {}
+    root = _repo_root(g)
+    if root is not None:
+        for path in sorted((root / "src").rglob("*" + _S1_SOURCE_SUFFIX)):
+            try:
+                docs[path.relative_to(root).as_posix()] = path.read_text(
+                    errors="replace")
+            except OSError:
+                continue
+    g._s1_docs_cache = docs
+    return docs
+
+
+def _s1_brace_span(text: str, open_at: int):
+    """End index of the ``{...}`` starting at ``open_at``, or None."""
+    if open_at < 0 or open_at >= len(text) or text[open_at] != "{":
+        return None
+    depth, i, n = 0, open_at, len(text)
+    while i < n:
+        ch = text[i]
+        if ch == "/" and i + 1 < n and text[i + 1] == "/":
+            j = text.find("\n", i)
+            i = n if j < 0 else j + 1
+            continue
+        if ch == "/" and i + 1 < n and text[i + 1] == "*":
+            j = text.find("*/", i + 2)
+            i = n if j < 0 else j + 2
+            continue
+        if ch == '"':
+            i += 1
+            while i < n:
+                if text[i] == "\\":
+                    i += 2
+                    continue
+                if text[i] == '"':
+                    i += 1
+                    break
+                i += 1
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return i + 1
+        i += 1
+    return None
+
+
+def _s1_struct_defs(g: "DsoGraph", type_name: str):
+    """All ``struct type_name`` definitions, with their repr(C) status."""
+    cache = getattr(g, "_s1_struct_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_struct_cache = cache
+    key = ("defs", type_name)
+    if key in cache:
+        return cache[key]
+    pat = re.compile(
+        r"(?m)^[ \t]*(?:pub(?:\s*\([^)]*\))?\s+)?struct\s+"
+        + re.escape(type_name) + r"\b")
+    out = []
+    for path, text in _s1_docs(g).items():
+        for m in pat.finditer(text):
+            brace = text.find("{", m.end())
+            if brace < 0:
+                continue
+            # A tuple/unit struct has ``;`` before the body brace.
+            semi = text.find(";", m.end(), brace)
+            if semi >= 0:
+                continue
+            end = _s1_brace_span(text, brace)
+            if end is None:
+                continue
+            prefix = text[max(0, m.start() - 600):m.start()]
+            out.append({
+                "file": path,
+                "line": text.count("\n", 0, m.start()) + 1,
+                "body": text[brace + 1:end - 1],
+                "repr_c": bool(re.search(r"#\[repr\s*\(\s*C\b", prefix)),
+            })
+    cache[key] = out
+    return out
+
+
+def _s1_strip_field(chunk: str):
+    chunk = re.sub(r"(?m)^\s*///.*$", "", chunk)
+    chunk = re.sub(r"(?m)^\s*//!.*$", "", chunk)
+    chunk = re.sub(r"/\*.*?\*/", "", chunk, flags=re.S)
+    chunk = re.sub(r"(?m)^\s*//.*$", "", chunk)
+    chunk = re.sub(r"#\[[^\]]*\]", "", chunk)
+    return chunk.strip()
+
+
+def _s1_split_fields(body: str):
+    """Top-level comma split of a repr(C) struct body."""
+    chunks, cur = [], []
+    depth = 0
+    i, n = 0, len(body)
+    while i < n:
+        ch = body[i]
+        if ch == "/" and i + 1 < n and body[i + 1] == "/":
+            j = body.find("\n", i)
+            i = n if j < 0 else j
+            continue
+        if ch == "/" and i + 1 < n and body[i + 1] == "*":
+            j = body.find("*/", i + 2)
+            i = n if j < 0 else j + 2
+            continue
+        if ch in "([{<":
+            depth += 1
+        elif ch in ")]}>":
+            depth = max(0, depth - 1)
+        if ch == "," and depth == 0:
+            chunks.append("".join(cur))
+            cur = []
+        else:
+            cur.append(ch)
+        i += 1
+    if cur:
+        chunks.append("".join(cur))
+    out = []
+    for chunk in chunks:
+        text = _s1_strip_field(chunk)
+        if not text:
+            continue
+        m = re.match(r"(?:pub(?:\s*\([^)]*\))?\s+)?"
+                     r"([A-Za-z_]\w*)\s*:\s*(.+)$", text, re.S)
+        if not m:
+            continue
+        out.append((m.group(1), " ".join(m.group(2).split())))
+    return out
+
+
+def _s1_struct_fields(g: "DsoGraph", type_name: str):
+    """Field list of the unique repr(C) definition, or None."""
+    defs = _s1_struct_defs(g, type_name)
+    repr_defs = [d for d in defs if d["repr_c"]]
+    if len(repr_defs) != 1:
+        return None
+    fields = _s1_split_fields(repr_defs[0]["body"])
+    return (fields, repr_defs[0]) if fields else None
+
+
+def _s1_type_alias(g: "DsoGraph", name: str):
+    cache = getattr(g, "_s1_alias_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_alias_cache = cache
+    if name in cache:
+        return cache[name]
+    pat = re.compile(r"\btype\s+" + re.escape(name) + r"\s*=\s*([^;]+);")
+    hits = set()
+    for _path, text in _s1_docs(g).items():
+        for m in pat.finditer(text):
+            hits.add(" ".join(m.group(1).split()))
+    cache[name] = hits.pop() if len(hits) == 1 else None
+    return cache[name]
+
+
+def _s1_type_size(g: "DsoGraph", type_text: str, seen=()):
+    """(size, alignment) of a repr(C) field type, or None if not decidable."""
+    t = " ".join((type_text or "").split())
+    if not t:
+        return None
+    if t.startswith("Option<") and t.endswith(">"):
+        inner = t[len("Option<"):-1].strip()
+        if "fn" in inner:
+            return (8, 8)
+        return None
+    if "fn" in t:
+        return (8, 8)
+    if t.startswith("*const") or t.startswith("*mut"):
+        return (8, 8)
+    prim = {
+        "usize": (8, 8), "isize": (8, 8), "size_t": (8, 8),
+        "ssize_t": (8, 8), "u64": (8, 8), "i64": (8, 8),
+        "uint64_t": (8, 8), "int64_t": (8, 8), "c_ulong": (8, 8),
+        "c_long": (8, 8), "c_uint": (4, 4), "c_int": (4, 4),
+        "u32": (4, 4), "i32": (4, 4), "uint32_t": (4, 4),
+        "int32_t": (4, 4), "c_ushort": (2, 2), "u16": (2, 2),
+        "c_short": (2, 2), "c_uchar": (1, 1), "u8": (1, 1),
+        "i8": (1, 1), "c_char": (1, 1),
+    }
+    if t in prim:
+        return prim[t]
+    m = re.fullmatch(r"\[(.+);\s*([^\]]+)\]", t)
+    if m:
+        inner = _s1_type_size(g, m.group(1), seen)
+        try:
+            count = int(m.group(2).strip(), 0)
+        except ValueError:
+            return None
+        if inner is None:
+            return None
+        return (inner[0] * count, inner[1])
+    alias = _s1_type_alias(g, t)
+    if alias is not None and alias != t:
+        return _s1_type_size(g, alias, seen + (t,))
+    nested = _s1_struct_layout(g, t, seen)
+    if nested is None:
+        return None
+    return (nested["size"], nested["align"])
+
+
+def _s1_struct_layout(g: "DsoGraph", type_name: str, seen=()):
+    """Repr(C) layout of a source struct, or None."""
+    if type_name in seen or len(seen) > 6:
+        return None
+    cache = getattr(g, "_s1_layout_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_layout_cache = cache
+    if type_name in cache:
+        return cache[type_name]
+    defs = _s1_struct_defs(g, type_name)
+    if len(defs) != 1:
+        cache[type_name] = None
+        return None
+    fields = _s1_split_fields(defs[0]["body"])
+    if not fields:
+        cache[type_name] = None
+        return None
+    infos = []
+    for name, ftype in fields:
+        info = _s1_type_size(g, ftype, seen + (type_name,))
+        if info is None:
+            cache[type_name] = None
+            return None
+        size, falign = info
+        if falign <= 0 or falign & (falign - 1):
+            cache[type_name] = None
+            return None
+        infos.append((name, ftype, size, falign))
+    # A table struct without repr(C) is still layout-stable when every field
+    # has the same size and alignment: the offset *set* is then independent of
+    # field order.  Member *names* are recorded only for repr(C) because the
+    # compiler may reorder other structs.
+    homogeneous = (len({(s, a) for _n, _t, s, a in infos}) == 1
+                   and infos[0][2] == infos[0][3])
+    if not defs[0]["repr_c"] and not homogeneous:
+        cache[type_name] = None
+        return None
+    off, align = 0, 1
+    rows = []
+    for name, ftype, size, falign in infos:
+        off = (off + falign - 1) // falign * falign
+        rows.append({
+            "offset": off, "name": name, "type": ftype,
+            "option": ftype.startswith("Option<"),
+            "named": defs[0]["repr_c"],
+        })
+        off += size
+        align = max(align, falign)
+    size = (off + align - 1) // align * align
+    out = {"name": type_name, "size": size, "align": align,
+           "fields": rows, "file": defs[0]["file"],
+           "line": defs[0]["line"],
+           "repr_c": defs[0]["repr_c"],
+           "homogeneous": homogeneous}
+    cache[type_name] = out
+    return out
+
+
+def _s1_src_fn(g: "DsoGraph", relpath: str, fn_name: str):
+    """Header/body span of one source function, or None."""
+    cache = getattr(g, "_s1_fn_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_fn_cache = cache
+    key = (relpath, fn_name)
+    if key in cache:
+        return cache[key]
+    text = _s1_docs(g).get(relpath)
+    if text is None:
+        cache[key] = None
+        return None
+    pat = re.compile(r"\bfn\s+" + re.escape(fn_name) + r"\s*\(")
+    hits = []
+    for m in pat.finditer(text):
+        line_start = text.rfind("\n", 0, m.start()) + 1
+        line = text[line_start:m.start()].strip()
+        if line.startswith("///") or line.startswith("//"):
+            continue
+        open_paren = text.find("(", m.end() - 1)
+        depth, i = 0, open_paren
+        close_paren = None
+        while i < len(text):
+            if text[i] == "(":
+                depth += 1
+            elif text[i] == ")":
+                depth -= 1
+                if depth == 0:
+                    close_paren = i
+                    break
+            i += 1
+        if close_paren is None:
+            continue
+        brace = text.find("{", close_paren)
+        if brace < 0:
+            continue
+        # A ``;`` before the brace means a declaration, not a definition.
+        if text.find(";", close_paren, brace) >= 0:
+            continue
+        end = _s1_brace_span(text, brace)
+        if end is None:
+            continue
+        hits.append({
+            "file": relpath,
+            "line": text.count("\n", 0, m.start()) + 1,
+            "header": text[m.start():brace + 1],
+            "body": text[brace + 1:end - 1],
+        })
+    out = hits[0] if len(hits) == 1 else None
+    cache[key] = out
+    return out
+
+
+def _s1_demangled(g: "DsoGraph", fstart: int):
+    cache = getattr(g, "_s1_demangle_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_demangle_cache = cache
+    if fstart in cache:
+        return cache[fstart]
+    mangled = (getattr(g, "funcs", {}) or {}).get(fstart)
+    dm = None
+    if mangled:
+        lines = demangle([mangled])
+        dm = lines[0] if lines else None
+    cache[fstart] = dm
+    return dm
+
+
+def _s1_site_context(g: "DsoGraph", fstart: int):
+    """(source file, function name, context type) for the site function."""
+    cache = getattr(g, "_s1_ctx_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_ctx_cache = cache
+    if fstart in cache:
+        return cache[fstart]
+    dm = _s1_demangled(g, fstart)
+    out = None
+    if dm:
+        m = CRATE_NS.match(dm)
+        if m:
+            segs = m.group(1).split("::")
+            if len(segs) >= 2:
+                root = _repo_root(g)
+                fn_name = segs[-1]
+                relpath = None
+                if root is not None:
+                    fallback = getattr(g, "_s1_module_index", None)
+                    if fallback is None:
+                        fallback = build_module_index(root / "src")
+                        g._s1_module_index = fallback
+                    relpath = module_to_file("::".join(segs[:-1]),
+                                             root / "src", fallback)
+                if relpath:
+                    span = _s1_src_fn(g, relpath, fn_name)
+                    if span is not None:
+                        ctx = _s1_fn_context(span, fn_name)
+                        if ctx is not None:
+                            out = {"file": relpath, "function": fn_name,
+                                   "line": span["line"], **ctx}
+    cache[fstart] = out
+    return out
+
+
+def _s1_fn_context(span: dict, fn_name: str):
+    """The context parameter of a source function and its declared type."""
+    header = span["header"]
+    m = re.search(r"\(", header)
+    if not m:
+        return None
+    depth, i = 0, m.start()
+    end = None
+    while i < len(header):
+        if header[i] == "(":
+            depth += 1
+        elif header[i] == ")":
+            depth -= 1
+            if depth == 0:
+                end = i
+                break
+        i += 1
+    if end is None:
+        return None
+    params, cur, depth = [], [], 0
+    for ch in header[m.start() + 1:end]:
+        if ch in "([<":
+            depth += 1
+        elif ch in ")]>:":
+            depth = max(0, depth - 1)
+        if ch == "," and depth == 0:
+            params.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+    if cur:
+        params.append("".join(cur).strip())
+    if not params:
+        return None
+    first = params[0]
+    mm = re.match(r"([A-Za-z_]\w*)\s*:\s*(.+)$", first, re.S)
+    if not mm:
+        return None
+    var, ptype = mm.group(1), " ".join(mm.group(2).split())
+    tm = re.search(r"(?:\*\s*(?:const|mut)\s*|&\s*(?:mut\s*)?)([A-Za-z_]\w*)",
+                   ptype)
+    if not tm:
+        return None
+    typ = tm.group(1)
+    if typ in ("c_void", "void"):
+        body = span["body"]
+        cast = re.search(
+            r"(?:let\s+)?([A-Za-z_]\w*)\s*(?::[^=]*)?=\s*([A-Za-z_]\w*)"
+            r"\s*\.\s*cast\s*::\s*<\s*([A-Za-z_]\w*)\s*>", body)
+        if cast is None:
+            return None
+        return {"var": cast.group(1), "type": cast.group(3),
+                "param": var, "param_index": 0,
+                "declared": " ".join(first.split())}
+    return {"var": var, "type": typ, "param": var, "param_index": 0,
+            "declared": " ".join(first.split())}
+
+
+def _s1_cast_types(g: "DsoGraph", ctx_info: dict, field: str):
+    """Concrete source types the site function casts this object field to.
+
+    A cast is the source's own statement that the pointer stored in ``field``
+    denotes the target layout.  It is used only when the target is a decidable
+    struct layout and has declared static instances in this image, so the
+    field-sensitive conjunction is unchanged: the writers of the pointer slot
+    must still store exactly those declared instances.
+    """
+    span = _s1_src_fn(g, ctx_info["file"], ctx_info["function"])
+    if span is None:
+        return []
+    pat = re.compile(r"\b" + re.escape(field)
+                     + r"\s*\.\s*cast\s*::\s*<\s*([A-Za-z_]\w*)\s*>")
+    return sorted({m.group(1) for m in pat.finditer(span["body"])})
+
+
+def _s1_rust_last_segment(name: str):
+    """Last identifier of a legacy Rust mangled path, or None.
+
+    The path is a sequence of ``<decimal length><identifier>`` segments after
+    the crate disambiguator.  Parsing the declared lengths (rather than
+    guessing a suffix) keeps names such as ``SM4_GCM_HW`` and ``CAST5_CBC_HW``
+    intact: their internal digits are part of the identifier, not a length.
+    """
+    m = re.search(r"Cs[0-9A-Za-z]+_", name or "")
+    if not m:
+        return None
+    pos, last = m.end(), None
+    while pos < len(name):
+        n = re.match(r"\d+", name[pos:])
+        if not n:
+            return None
+        length = int(n.group(0))
+        ident_at = pos + len(n.group(0))
+        ident = name[ident_at:ident_at + length]
+        if len(ident) != length:
+            return None
+        last = ident
+        pos = ident_at + length
+    return last
+
+
+def _s1_symbol_index(g: "DsoGraph"):
+    cache = getattr(g, "_s1_sym_index", None)
+    if cache is not None:
+        return cache
+    exact, short = {}, {}
+    for addr, names in (getattr(g, "names_at", {}) or {}).items():
+        for raw in names:
+            name = (raw or "").split("@")[0]
+            if not name:
+                continue
+            exact[name] = addr
+            best = _s1_rust_last_segment(name)
+            if best:
+                short.setdefault(best, set()).add(addr)
+    cache = {"exact": exact, "short": short}
+    g._s1_sym_index = cache
+    return cache
+
+
+def _s1_symbol_address(g: "DsoGraph", name: str):
+    """Image address and mangled symbol name for a source static, or None."""
+    idx = _s1_symbol_index(g)
+    if name in idx["exact"]:
+        addr = idx["exact"][name]
+        return addr, name
+    cands = idx["short"].get(name) or set()
+    if len(cands) == 1:
+        addr = next(iter(cands))
+        for raw in (getattr(g, "names_at", {}) or {}).get(addr, ()):
+            sym = (raw or "").split("@")[0]
+            if sym.endswith(f"{len(name)}{name}"):
+                return addr, sym
+        return addr, name
+    return None
+
+
+def _s1_macro_static_names(g: "DsoGraph", table_type: str):
+    """Identifiers produced by ``macro_rules!`` bodies as ``static $x: T``."""
+    cache = getattr(g, "_s1_macro_static_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_macro_static_cache = cache
+    if table_type in cache:
+        return cache[table_type]
+    defs = {}
+    for _path, text in _s1_docs(g).items():
+        for m in re.finditer(r"macro_rules!\s*(\w+)\s*\{", text):
+            open_at = text.find("{", m.end() - 1)
+            end = _s1_brace_span(text, open_at)
+            if end is None:
+                continue
+            body = text[open_at:end]
+            names = set(re.findall(
+                r"\bstatic\s+\$(\w+)\s*:\s*" + re.escape(table_type) + r"\b",
+                body))
+            if not names:
+                continue
+            decl = re.search(r"\(([^()]*)\)\s*=>", body)
+            if decl is None:
+                continue
+            formal = [p.strip() for p in decl.group(1).split(",")]
+            defs[m.group(1)] = {"names": names, "formal": formal}
+    if not defs:
+        cache[table_type] = set()
+        return set()
+    out = set()
+    for _path, text in _s1_docs(g).items():
+        for macro, spec in defs.items():
+            pat = re.compile(r"\b" + re.escape(macro) + r"\s*!\s*([\(\[\{])")
+            for m in pat.finditer(text):
+                open_ch = m.group(1)
+                close_ch = {"(": ")", "[": "]", "{": "}"}[open_ch]
+                depth, i, close_at = 0, m.end() - 1, None
+                while i < len(text):
+                    if text[i] == open_ch:
+                        depth += 1
+                    elif text[i] == close_ch:
+                        depth -= 1
+                        if depth == 0:
+                            close_at = i
+                            break
+                    i += 1
+                if close_at is None:
+                    continue
+                raw = text[m.end():close_at]
+                args, cur, depth = [], [], 0
+                for ch in raw:
+                    if ch in "([{<":
+                        depth += 1
+                    elif ch in ")]}>":
+                        depth = max(0, depth - 1)
+                    if ch == "," and depth == 0:
+                        args.append("".join(cur).strip())
+                        cur = []
+                    else:
+                        cur.append(ch)
+                if cur:
+                    args.append("".join(cur).strip())
+                for formal, arg in zip(spec["formal"], args):
+                    pm = re.match(r"\$(\w+)\s*:", formal)
+                    am = re.fullmatch(r"(?:pub\s+)?([A-Za-z_]\w*)", arg)
+                    if pm and am and pm.group(1) in spec["names"]:
+                        out.add(am.group(1))
+    cache[table_type] = out
+    return out
+
+
+def _s1_declared_instances(g: "DsoGraph", table_type: str):
+    """Every source ``static NAME: table_type`` with an address in this image."""
+    cache = getattr(g, "_s1_instance_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_instance_cache = cache
+    if table_type in cache:
+        return cache[table_type]
+    pat = re.compile(r"\bstatic\s+([A-Za-z_]\w*)\s*:\s*"
+                     + re.escape(table_type) + r"\s*=")
+    found = []
+    for path, text in _s1_docs(g).items():
+        for m in pat.finditer(text):
+            found.append((m.group(1), path))
+    for name in sorted(_s1_macro_static_names(g, table_type)):
+        found.append((name, "macro_rules! (generated static)"))
+    out, absent = {}, []
+    for name, path in found:
+        hit = _s1_symbol_address(g, name)
+        if hit is None:
+            absent.append({"name": name, "file": path})
+            continue
+        addr, sym = hit
+        if addr in out:
+            continue
+        out[addr] = {"name": name, "symbol": sym, "addr": addr}
+    result = {"instances": out, "absent_from_image": absent}
+    cache[table_type] = result
+    return result
+
+
+# ---- S1 base-object qualification (2026-10-29) -------------------------- #
+#
+# A store ``mov value, off(base)`` is a cohort store only when ``base`` is
+# proven to designate an object of the type that declares the pointer field.
+# The admitted origins are an entry parameter of that type, a load of a
+# pointer-typed field of that type, an allocation/constructor whose result type
+# is that type, and a cast to that type.  A base proven to be a *different*
+# object is excluded with the reason recorded; an unknown base refuses the
+# site.  Nothing here trusts an offset alone: the DSO has 98,005 offset-keyed
+# stores, so a base-typing conjunct is what makes the store set field-sensitive.
+
+_S1_SCALAR_RET = re.compile(
+    r"(?:(?:c_)?(?:int|uint|char|short|long|size_t|ssize_t|void)"
+    r"|[ui](?:8|16|32|64|128|size)|f(?:32|64)|bool)$")
+_S1_ALLOC_SYM = re.compile(
+    r"(?:CRYPTO_)?(?:zalloc|malloc|calloc|realloc|memdup|secure_malloc|"
+    r"clear_malloc|clear_free)$")
+
+
+def _s1_pointee(type_text: str):
+    """Pointee name of a pointer/reference type, or None."""
+    t = " ".join((type_text or "").split())
+    m = re.search(r"(?:\*\s*(?:const|mut)|&\s*(?:mut\s+)?)\s*"
+                  r"([A-Za-z_]\w*)", t)
+    return m.group(1) if m else None
+
+
+def _s1_resolve_type(g: "DsoGraph", type_text: str):
+    """The named object type a source type string denotes, or None."""
+    t = " ".join((type_text or "").split())
+    if not t or t.startswith("Option<"):
+        return None
+    name = _s1_pointee(t)
+    if name is None:
+        ids = re.findall(r"[A-Za-z_]\w*", t)
+        name = ids[-1] if ids else None
+    if name is None:
+        return None
+    alias = _s1_type_alias(g, name)
+    if alias is not None and alias != name:
+        nxt = _s1_pointee(alias)
+        if nxt is None:
+            ids = re.findall(r"[A-Za-z_]\w*", alias)
+            nxt = ids[-1] if ids else None
+        if nxt:
+            name = nxt
+    return name
+
+
+def _s1_prefix_chain(g: "DsoGraph", type_name: str, base: str,
+                     depth: int = 0):
+    """``[T, ..., base]`` when base is T's first field, transitively.
+
+    Every step is a ``#[repr(C)]`` struct whose *first* field has offset zero,
+    so the base layout is a prefix of T's layout at the same offsets.
+    """
+    if not type_name:
+        return None
+    if type_name == base:
+        return [base]
+    if depth >= 5:
+        return None
+    fields = _s1_struct_fields(g, type_name)
+    layout = _s1_struct_layout(g, type_name)
+    if fields is None:
+        return None
+    if layout is not None and layout["fields"] \
+            and layout["fields"][0]["offset"] != 0:
+        return None
+    first_type = fields[0][0][1]
+    if (first_type.startswith("*") or first_type.startswith("&")
+            or first_type.startswith("Option<") or first_type.startswith("[")):
+        return None
+    inner = _s1_resolve_type(g, first_type)
+    if inner is None or inner == type_name:
+        return None
+    chain = _s1_prefix_chain(g, inner, base, depth + 1)
+    return None if chain is None else [type_name] + chain
+
+
+def _s1_type_compatible(g: "DsoGraph", type_text: str, base: str) -> dict:
+    """Whether a declared type is ``base`` or carries it as its first field."""
+    t = " ".join((type_text or "").split())
+    if not t or t.startswith("Option<"):
+        return {"admitted": False, "type": t or None,
+                "why": "Option/empty type is not the object type"}
+    resolved = _s1_resolve_type(g, t)
+    if resolved is None:
+        return {"admitted": False, "type": None, "why": "no type name"}
+    if resolved == base:
+        return {"admitted": True, "type": resolved, "exact": True,
+                "prefix": [base]}
+    chain = _s1_prefix_chain(g, resolved, base)
+    if chain:
+        return {"admitted": True, "type": resolved, "exact": False,
+                "prefix": chain}
+    return {"admitted": False, "type": resolved,
+            "why": (f"{resolved} is not {base} and does not carry it as "
+                    "its first field")}
+
+
+def _s1_signature(span: dict):
+    """Explicit parameter types and the return type of a source function."""
+    header = span.get("header") or ""
+    m = re.search(r"\(", header)
+    if not m:
+        return None
+    depth, end, i = 0, None, m.start()
+    while i < len(header):
+        if header[i] == "(":
+            depth += 1
+        elif header[i] == ")":
+            depth -= 1
+            if depth == 0:
+                end = i
+                break
+        i += 1
+    if end is None:
+        return None
+    inner = header[m.start() + 1:end]
+    params, cur, depth = [], [], 0
+    for ch in inner:
+        if ch in "([<":
+            depth += 1
+        elif ch in ")]>" :
+            depth = max(0, depth - 1)
+        if ch == "," and depth == 0:
+            params.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+    if cur:
+        params.append("".join(cur).strip())
+    ptypes = []
+    for p in params:
+        if not p:
+            continue
+        mm = re.match(r"[A-Za-z_]\w*\s*:\s*(.+)$", p, re.S)
+        ptypes.append(" ".join((mm.group(1) if mm else p).split()))
+    after = header[end + 1:]
+    at = after.find("->")
+    if at < 0:
+        ret = "()"
+    else:
+        ret = after[at + 2:].split("{", 1)[0]
+        ret = re.split(r"\bwhere\b", ret, maxsplit=1)[0]
+        ret = " ".join(ret.split()) or "()"
+    return {"params": ptypes, "ret": ret}
+
+
+def _s1_return_uses_sret(ret: str):
+    """Whether the return value is passed through a hidden first pointer."""
+    t = " ".join((ret or "").split())
+    if not t or t in ("()", "!"):
+        return False
+    if t.startswith("*") or t.startswith("&"):
+        return False
+    if t.startswith("Option<"):
+        inner = t[len("Option<"):-1].strip() if t.endswith(">") else ""
+        if (inner.startswith("*") or inner.startswith("&")
+                or inner.startswith("NonNull<")
+                or inner.startswith("NonZero")):
+            return False
+        return True
+    return not _S1_SCALAR_RET.match(t)
+
+
+def _s1_abi_types(sig: dict, idx: int):
+    """Declared types an entry argument register can carry."""
+    params = sig.get("params") or []
+    if _s1_return_uses_sret(sig.get("ret")):
+        if idx == 0:
+            return [{"role": "sret-return", "type": sig.get("ret")}]
+        j = idx - 1
+        return ([{"role": f"param{j}", "type": params[j]}]
+                if 0 <= j < len(params) else [])
+    return ([{"role": f"param{idx}", "type": params[idx]}]
+            if 0 <= idx < len(params) else [])
+
+
+def _s1_writer_source(g: "DsoGraph", wf: int):
+    """(file, span) of a writer's source function, or None."""
+    cache = getattr(g, "_s1_writer_src_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_writer_src_cache = cache
+    if wf in cache:
+        return cache[wf]
+    dm = _s1_demangled(g, wf)
+    name, out = None, None
+    if dm:
+        m = CRATE_NS.match(dm)
+        if m:
+            segs = m.group(1).split("::")
+            if len(segs) >= 2:
+                name = segs[-1]
+                root = _repo_root(g)
+                if root is not None:
+                    fallback = getattr(g, "_s1_module_index", None)
+                    if fallback is None:
+                        fallback = build_module_index(root / "src")
+                        g._s1_module_index = fallback
+                    relpath = module_to_file("::".join(segs[:-1]),
+                                             root / "src", fallback)
+                    if relpath:
+                        span = _s1_src_fn(g, relpath, name)
+                        if span is not None:
+                            out = {"file": relpath, "span": span,
+                                   "name": name, "via": "module"}
+        if name is None:
+            name = dm.split("::")[-1].strip()
+    if out is None and name:
+        hits = []
+        for path in sorted(_s1_docs(g)):
+            span = _s1_src_fn(g, path, name)
+            if span is not None:
+                hits.append({"file": path, "span": span,
+                             "name": name, "via": "unique-name"})
+        if len(hits) == 1:
+            out = hits[0]
+    cache[wf] = out
+    return out
+
+
+_S1_RUST_KEYWORDS = {
+    "unsafe", "extern", "fn", "let", "mut", "pub", "crate", "self",
+    "super", "use", "mod", "static", "const", "struct", "enum", "impl",
+    "trait", "type", "where", "if", "else", "match", "return", "break",
+    "continue", "while", "for", "in", "as", "loop", "move", "ref",
+    "true", "false", "core", "crate", "c_void", "c_int", "c_uint",
+    "c_uchar", "c_char", "usize", "isize", "u8", "u16", "u32", "u64",
+    "i8", "i16", "i32", "i64", "bool", "Option", "Some", "None",
+}
+
+
+def _s1_macro_sources(g: "DsoGraph", name: str):
+    """Function definitions a macro-generated writer expands to.
+
+    A macro-generated dispatch wrapper has no literal ``fn`` of its own.  The
+    constructor can be an identifier argument of the invocation, or it can be
+    called (with a fixed name) by the macro's own body -- both are followed, so
+    a macro that hard-codes its sub-constructor is not silently untyped.
+    """
+    cache = getattr(g, "_s1_macro_arg_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_macro_arg_cache = cache
+    if name in cache:
+        return cache[name]
+    out = []
+    seen = set()
+    tok = re.compile(r"\b" + re.escape(name) + r"\b")
+    idpat = re.compile(r"\b([A-Za-z_]\w*)\b")
+    docs = _s1_docs(g)
+
+    def _add(path, ident, via):
+        if ident in seen or ident in _S1_RUST_KEYWORDS:
+            return
+        span = _s1_src_fn(g, path, ident)
+        if span is not None:
+            seen.add(ident)
+            out.append({"file": path, "span": span, "name": ident,
+                        "via": via})
+
+    for path, text in docs.items():
+        if name not in text:
+            continue
+        for mm in re.finditer(r"\b([A-Za-z_]\w*)!\s*\(", text):
+            open_at = text.find("(", mm.end() - 1)
+            depth, i, end = 0, open_at, None
+            while i < len(text):
+                if text[i] == "(":
+                    depth += 1
+                elif text[i] == ")":
+                    depth -= 1
+                    if depth == 0:
+                        end = i
+                        break
+                i += 1
+            if end is None:
+                continue
+            args = text[open_at + 1:end]
+            if not tok.search(args):
+                continue
+            for arg in args.split(","):
+                am = re.match(r"\s*([A-Za-z_]\w*)", arg)
+                if am and am.group(1) != name:
+                    _add(path, am.group(1), "macro-arg")
+            macro_name = mm.group(1)
+            defs = getattr(g, "_s1_macro_def_cache", None)
+            if defs is None:
+                defs = {}
+                g._s1_macro_def_cache = defs
+            if macro_name not in defs:
+                hit = None
+                for dpath, dtext in docs.items():
+                    dm = re.search(r"macro_rules!\s*" + re.escape(macro_name)
+                                   + r"\s*\{", dtext)
+                    if not dm:
+                        continue
+                    brace = dtext.find("{", dm.start())
+                    bend = _s1_brace_span(dtext, brace)
+                    if bend is not None:
+                        hit = (dpath, dtext[brace + 1:bend - 1])
+                        break
+                defs[macro_name] = hit
+            hit = defs.get(macro_name)
+            if hit is not None:
+                for ident in sorted(set(idpat.findall(hit[1]))):
+                    _add(hit[0], ident, "macro-body")
+    cache[name] = out
+    return out
+
+
+def _s1_construct_witness(g: "DsoGraph", span: dict, base: str, via: str):
+    """The unique compatible allocation/constructor type in one function."""
+    body = span.get("body") or ""
+    hits = []
+    for m in re.finditer(r"Owned[A-Za-z_]*\s*::\s*<\s*([A-Za-z_]\w*)\s*>",
+                         body):
+        hits.append({"type": m.group(1), "kind": "owned-constructor",
+                     "witness": f"{span['file']}:{span['line']}",
+                     "via": via})
+    if not hits:
+        for m in re.finditer(
+                r"(?:\.\s*cast\s*::\s*<|as\s+\*\s*(?:const|mut)\s+)"
+                r"([A-Za-z_]\w*)", body):
+            hits.append({"type": m.group(1), "kind": "cast",
+                         "witness": f"{span['file']}:{span['line']}",
+                         "via": via})
+    comp = []
+    for h in hits:
+        c = _s1_type_compatible(g, h["type"], base)
+        if c.get("admitted"):
+            comp.append(dict(h, prefix=c.get("prefix"),
+                             exact=c.get("exact")))
+    owned = [h for h in comp if h["kind"] == "owned-constructor"]
+    pool = owned or comp
+    seen = {}
+    for h in pool:
+        seen.setdefault(h["type"], h)
+    if len(seen) == 1:
+        return next(iter(seen.values()))
+    if seen:
+        return {"ambiguous": sorted(seen)}
+    return None
+
+
+def _s1_writer_construct(g: "DsoGraph", wf: int, base: str):
+    """The allocation type a writer's base can denote, or None.
+
+    An ``Owned*::<T>`` allocation in the writer (or in the function a
+    macro-generated wrapper expands to) is preferred; a cast in the writer's
+    own literal source is the fallback.  A cast found in an unrelated function
+    that merely appears in a macro body is not evidence about this allocation
+    and is not used.
+    """
+    cache = getattr(g, "_s1_construct_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_construct_cache = cache
+    key = (wf, base)
+    if key in cache:
+        return cache[key]
+    sources = []
+    src = _s1_writer_source(g, wf)
+    if src is not None:
+        sources.append(src)
+    name = (src or {}).get("name")
+    if name is None:
+        dm = _s1_demangled(g, wf) or (g.funcs.get(wf) or "")
+        name = dm.split("::")[-1].split("@")[0].strip() if dm else None
+    if name:
+        sources.extend(_s1_macro_sources(g, name))
+    owned, casts, amb = [], [], set()
+    for s in sources:
+        w = _s1_construct_witness(g, s["span"], base, s["via"])
+        if not isinstance(w, dict):
+            continue
+        if w.get("ambiguous"):
+            amb.update(w["ambiguous"])
+            continue
+        if w.get("kind") == "owned-constructor":
+            owned.append(w)
+        elif w.get("kind") == "cast" and s.get("via") in ("module",
+                                                          "unique-name"):
+            casts.append(w)
+    pool = owned or casts
+    distinct = {}
+    for h in pool:
+        distinct.setdefault(h["type"], h)
+    if len(distinct) == 1:
+        cache[key] = next(iter(distinct.values()))
+        return cache[key]
+    if len(distinct) > 1:
+        cache[key] = {"ambiguous": sorted(distinct)}
+        return cache[key]
+    if amb:
+        cache[key] = {"ambiguous": sorted(amb)}
+        return cache[key]
+    cache[key] = None
+    return None
+
+
+def _s1_call_symbol(g: "DsoGraph", fstart: int, idx: int):
+    """Symbol a call instruction names, directly or through its GOT slot."""
+    text = _insn(g, fstart, idx)
+    if "#" in text:
+        m = re.search(r"<([A-Za-z_][\w]*)", text.split("#", 1)[1])
+        if m:
+            return m.group(1)
+    direct = _direct_call_target(g, fstart, idx)
+    if direct is not None:
+        return (g.funcs.get(direct[1]) or "").split("@")[0]
+    return None
+
+
+def _s1_call_def(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                 depth: int = 0):
+    """Index of the call that produced ``reg``, or None."""
+    if depth > 8:
+        return None
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None or len(defs) != 1 or defs == {_ENTRY_DEF}:
+        return None
+    k = next(iter(defs))
+    mn, _rest, ops = _insn_parts(_insn(g, fstart, k))
+    if mn.startswith("call"):
+        return k
+    if mn in ("mov", "movq") and len(ops) >= 2 and (ops[0] in _REGS
+                                                     or ops[0] in _SUBREG):
+        return _s1_call_def(g, fstart, k, _canon(ops[0]), depth + 1)
+    return None
+
+
+def _s1_store_base_witness_raw(g: "DsoGraph", wf: int, store: dict,
+                               decl_type: str, slot_off: int):
+    """Qualify, exclude, or refuse one store's base object."""
+    origin = _reg_origin(g, wf, store["index"], _canon(store["base"]))
+    kind = origin.get("kind")
+    rec = {"function": g.funcs.get(wf, hex(wf)),
+           "store_site": hex(store["addr"]), "origin_kind": kind}
+    if kind == "param":
+        src = _s1_writer_source(g, wf)
+        sig = _s1_signature(src["span"]) if src else None
+        if sig is None:
+            rec.update(qualified=False, unknown=True,
+                       reason="entry-parameter origin without a source "
+                              "signature")
+            return rec
+        cands = _s1_abi_types(sig, origin.get("index"))
+        if not cands:
+            rec.update(qualified=False, unknown=True,
+                       reason="entry index has no declared type")
+            return rec
+        compat = [(c, _s1_type_compatible(g, c["type"], decl_type))
+                  for c in cands]
+        admitted = [(c, t) for c, t in compat if t.get("admitted")]
+        if admitted and len(admitted) == len(compat):
+            c, t = admitted[0]
+            rec.update(qualified=True, origin="entry-parameter",
+                       declared_role=c["role"], declared_type=c["type"],
+                       prefix=t.get("prefix"), exact=t.get("exact"),
+                       witness=f"{src['file']}:{src['span']['line']}")
+            return rec
+        if not admitted:
+            if "s1-base-different" in _MUTED:
+                rec.update(qualified=False, unknown=True,
+                           reason="mutation: different-object base trusted")
+                return rec
+            rec.update(qualified=False, excluded=True,
+                       origin="entry-parameter",
+                       reason=("base is an entry value of declared type "
+                               + ", ".join(f"{c['role']}:{c['type']}"
+                                           for c, _t in compat)
+                               + f", not {decl_type}"))
+            return rec
+        rec.update(qualified=False, unknown=True,
+                   reason="ambiguous ABI parameter mapping across the "
+                          "return-slot shift")
+        return rec
+    if kind == "load":
+        outer = _reg_origin(g, wf, origin["at"],
+                            _canon(origin["base_reg"]))
+        if outer.get("kind") == "param":
+            src = _s1_writer_source(g, wf)
+            sig = _s1_signature(src["span"]) if src else None
+            cands = _s1_abi_types(sig, outer.get("index")) if sig else []
+            for c in cands:
+                owner = _s1_resolve_type(g, c["type"])
+                layout = _s1_struct_layout(g, owner) if owner else None
+                if layout is None:
+                    continue
+                row = next((r for r in layout["fields"]
+                            if r["offset"] == origin["offset"]), None)
+                if row is None:
+                    continue
+                comp = _s1_type_compatible(g, row["type"], decl_type)
+                if comp.get("admitted"):
+                    rec.update(qualified=True, origin="pointer-field-load",
+                               field_type=row["type"], owner=owner,
+                               prefix=comp.get("prefix"),
+                               exact=comp.get("exact"),
+                               witness=f"{src['file']}:{src['span']['line']}")
+                    return rec
+                if "s1-base-different" in _MUTED:
+                    continue
+                rec.update(qualified=False, excluded=True,
+                           origin="pointer-field-load",
+                           reason=(f"base is field {row['name']}:"
+                                   f"{row['type']} of {owner}, not a pointer "
+                                   f"to {decl_type}"))
+                return rec
+        rec.update(qualified=False, unknown=True,
+                   reason="load origin with no decidable owning type")
+        return rec
+    if kind in ("call", "unknown"):
+        if kind == "call":
+            call_idx = origin.get("call_site")
+            sym = ((g.funcs.get(origin.get("callee")) or "").split("@")[0]
+                   or _s1_call_symbol(g, wf, call_idx))
+            target = origin.get("callee")
+        elif "call" in str(origin.get("why") or ""):
+            call_idx = _s1_call_def(g, wf, store["index"],
+                                    _canon(store["base"]))
+            sym = _s1_call_symbol(g, wf, call_idx) if call_idx is not None \
+                else None
+            target = None
+        else:
+            rec.update(qualified=False, unknown=True,
+                       reason="unproven base origin: "
+                              + str(origin.get("why") or kind))
+            return rec
+        if target is not None and not (sym and _S1_ALLOC_SYM.search(sym)):
+            csrc = _s1_writer_source(g, target)
+            sig = _s1_signature(csrc["span"]) if csrc else None
+            if sig is not None:
+                comp = _s1_type_compatible(g, sig["ret"], decl_type)
+                if comp.get("admitted"):
+                    rec.update(qualified=True, origin="constructor-result",
+                               constructor_type=comp["type"],
+                               constructor_kind="return-type",
+                               prefix=comp.get("prefix"),
+                               exact=comp.get("exact"),
+                               witness=(f"{csrc['file']}:"
+                                        f"{csrc['span']['line']}"))
+                    return rec
+        if sym and _S1_ALLOC_SYM.search(sym):
+            w = _s1_writer_construct(g, wf, decl_type)
+            if isinstance(w, dict) and w.get("type"):
+                rec.update(qualified=True, origin="allocation-constructor",
+                           constructor_type=w["type"],
+                           constructor_kind=w["kind"],
+                           prefix=w.get("prefix"), exact=w.get("exact"),
+                           witness=w.get("witness"))
+                return rec
+            if isinstance(w, dict) and w.get("ambiguous"):
+                rec.update(qualified=False, unknown=True,
+                           reason="multiple compatible constructor types: "
+                                  + ", ".join(w["ambiguous"]))
+                return rec
+        rec.update(qualified=False, unknown=True,
+                   reason=("call origin "
+                           + (f"to {sym}" if sym else "with no resolvable "
+                              "symbol")
+                           + " without a typed constructor witness"))
+        return rec
+    rec.update(qualified=False, unknown=True,
+               reason="unproven base origin: " + str(origin.get("why") or kind))
+    return rec
+
+
+def _s1_store_base_witness(g: "DsoGraph", wf: int, store: dict,
+                           decl_type: str, slot_off: int):
+    """Base-object qualification with its mutation control."""
+    rec = _s1_store_base_witness_raw(g, wf, store, decl_type, slot_off)
+    if rec.get("unknown") and "s1-base-unknown" in _MUTED:
+        return dict(rec, unknown=False, excluded=True,
+                    reason="mutation: unknown base trusted as a different "
+                           "object")
+    return rec
+
+
+# ---- S1 prefix-compatible instance enumeration (2026-10-29) ------------- #
+#
+# A writer may store a concrete ``#[repr(C)]`` type T whose declared layout
+# begins with the field type B.  The instance set is then the union of the
+# declared statics of B and of every admitted T, and the union must account
+# for *every* cohort store.  A T whose first field is not B (or a layout-
+# identical first field with a source cast to B) is not admitted, so a store
+# of one refuses the site instead of silently widening it.
+
+
+def _s1_static_type(g: "DsoGraph", addr: int):
+    """The source type of the static at ``addr``, or None."""
+    cache = getattr(g, "_s1_static_type_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_static_type_cache = cache
+    if addr in cache:
+        return cache[addr]
+    out = None
+    for raw in (getattr(g, "names_at", {}) or {}).get(addr, ()):
+        short = _s1_rust_last_segment(raw) or (raw or "").split("@")[0]
+        if not short:
+            continue
+        pat = re.compile(r"\bstatic\s+" + re.escape(short)
+                         + r"\s*:\s*([A-Za-z_]\w*)\s*=")
+        hits = set()
+        for _path, text in _s1_docs(g).items():
+            for m in pat.finditer(text):
+                hits.add(m.group(1))
+        if len(hits) == 1:
+            out = hits.pop()
+            break
+    cache[addr] = out
+    return out
+
+
+def _s1_static_cast_witness(g: "DsoGraph", type_name: str, base: str):
+    """A source cast of a T static's first field to B, or None."""
+    cache = getattr(g, "_s1_static_cast_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_static_cast_cache = cache
+    key = (type_name, base)
+    if key in cache:
+        return cache[key]
+    inst = _s1_declared_instances(g, type_name).get("instances") or {}
+    names = {v["name"] for v in inst.values() if v.get("name")}
+    if not names:
+        return None
+    alt = "|".join(re.escape(n) for n in sorted(names))
+    pat = re.compile(r"addr_of!\s*\(\s*(?:" + alt + r")\b[^)]*\)\s*"
+                     r"\.cast::<\s*" + re.escape(base) + r"\s*>")
+    pat2 = re.compile(r"\(\s*(?:" + alt + r")\s+as\s+\*\s*const\s+"
+                      + re.escape(base) + r"\s*\)")
+    for path, text in _s1_docs(g).items():
+        m = pat.search(text) or pat2.search(text)
+        if m:
+            cache[key] = (f"{path}:"
+                          f"{text.count(chr(10), 0, m.start()) + 1}")
+            return cache[key]
+    cache[key] = None
+    return None
+
+
+def _s1_prefix_witness(g: "DsoGraph", type_name: str, base: str,
+                       used_offsets):
+    """Admit a concrete first-field-compatible type, with both witnesses."""
+    if type_name == base:
+        return None
+    fields = _s1_struct_fields(g, type_name)
+    layout = _s1_struct_layout(g, type_name)
+    blayout = _s1_struct_layout(g, base)
+    if fields is None or blayout is None or not fields[0]:
+        return None
+    if layout is not None and layout["fields"] \
+            and layout["fields"][0]["offset"] != 0:
+        return None
+    first_name, first_type = fields[0][0]
+    exact = _s1_resolve_type(g, first_type) == base
+    cast = None
+    prefix_object = base
+    if not exact:
+        inner = _s1_resolve_type(g, first_type)
+        flayout = _s1_struct_layout(g, inner) if inner else None
+        if flayout is None:
+            if "s1-prefix-first-field" not in _MUTED:
+                return None
+            flayout = blayout
+            prefix_object = base
+        else:
+            prefix_object = inner
+        offsets = set(used_offsets or ())
+        offsets |= {r["offset"] for r in blayout["fields"]}
+        if "s1-prefix-layout" not in _MUTED:
+            for off in offsets:
+                b = next((r for r in blayout["fields"]
+                          if r["offset"] == off), None)
+                f = next((r for r in flayout["fields"]
+                          if r["offset"] == off), None)
+                if b is None or f is None:
+                    return None
+                # The ABI slot is what matters: same offset and same
+                # size/alignment.  `Option<fn>` and `fn` occupy the same
+                # eight-byte pointer slot, and the concrete row is allowed
+                # to model a NULL the base type declares non-nullable.
+                if _s1_type_size(g, b["type"]) \
+                        != _s1_type_size(g, f["type"]):
+                    return None
+        cast = _s1_static_cast_witness(g, type_name, base)
+        if cast is None:
+            return None
+    return {
+        "type": type_name, "repr_c": True,
+        "first_field": {"name": first_name, "type": first_type,
+                        "offset": 0},
+        "first_field_is_base": bool(exact),
+        "prefix_object_type": prefix_object,
+        "source_witness": ((f"{layout.get('file')}:{layout.get('line')}")
+                           if layout is not None
+                           else f"{fields[1].get('file')}:"
+                                f"{fields[1].get('line')}"),
+        "layout_witness": {
+            "base_size": blayout["size"],
+            "type_size": (layout["size"] if layout is not None else None),
+            "offsets": sorted({hex(o) for o in (set(used_offsets or ())
+                                               | {r["offset"] for r in
+                                                  blayout["fields"]})}),
+            "extra_offsets": (sorted({hex(o) for o in
+                                      range(blayout["size"], layout["size"],
+                                            8)})
+                              if layout is not None else []),
+        },
+        "cast_witness": cast,
+    }
+
+
+def _s1_dispatch_tables(g: "DsoGraph"):
+    """Decode immutable ``OsslDispatch`` tables from the exact image."""
+    cache = getattr(g, "_s1_dispatch_cache", None)
+    if cache is not None:
+        return cache
+    sizes = getattr(g, "sym_sizes", {}) or {}
+    out, seen = [], set()
+    for addr, names in (getattr(g, "names_at", {}) or {}).items():
+        if addr in seen:
+            continue
+        sec = g.section_of(addr)
+        if sec not in S1_IMMUTABLE_SECTIONS:
+            continue
+        size = None
+        sym = None
+        for raw in names:
+            name = (raw or "").split("@")[0]
+            if name in sizes:
+                size, sym = sizes[name], name
+                break
+        if size is None or size < 32 or size > 0x1000 or size % 16:
+            continue
+        entries = []
+        valid = True
+        terminated = False
+        for k in range(size // 16):
+            fid = g.read_u32(addr + k * 16)
+            ptrs = g.static_slot(addr + k * 16 + 8)
+            ints = {x for x in (ptrs or ()) if isinstance(x, int)}
+            if fid is None or len(ints) != 1:
+                valid = False
+                break
+            ptr = next(iter(ints))
+            if fid == 0:
+                if ptr != 0:
+                    valid = False
+                terminated = True
+                break
+            if not (1 <= fid <= 14) or ptr == 0 or ptr not in g.start_set:
+                valid = False
+                break
+            entries.append({"id": fid, "target": ptr})
+        if not valid or not terminated or not entries:
+            continue
+        if not any(e["id"] == 1 for e in entries):
+            continue
+        seen.add(addr)
+        out.append({"addr": addr, "symbol": sym or g.all_syms.get(addr),
+                    "section": sec, "entries": entries})
+    g._s1_dispatch_cache = out
+    return out
+
+
+def _s1_closure(g: "DsoGraph", roots, depth: int = 2):
+    seen = set(roots)
+    frontier = set(roots)
+    for _ in range(depth):
+        nxt = set()
+        for f in frontier:
+            for callee in (getattr(g, "direct", {}) or {}).get(f, ()):
+                if callee not in seen:
+                    seen.add(callee)
+                    nxt.add(callee)
+        frontier = nxt
+    return seen
+
+
+def _s1_store_value(g: "DsoGraph", fstart: int, idx: int, src: str,
+                    slot_off: int):
+    """(value, kind) for a stored operand; kind ``identity`` means a reload."""
+    src = src.strip()
+    if src.startswith("$"):
+        try:
+            return int(src[1:], 16), "immediate"
+        except ValueError:
+            return None, "bad-immediate"
+    if src in _REGS or src in _SUBREG:
+        origin = _reg_origin(g, fstart, idx, _canon(src))
+        kind = origin.get("kind")
+        if kind == "int":
+            return origin.get("value"), "immediate"
+        if kind == "load":
+            if origin.get("offset") == slot_off:
+                return None, "identity"
+            insn = _insn(g, fstart, origin.get("at", -1))
+            addr = _insn_comment_addr(insn)
+            if addr is not None:
+                return addr, "static"
+            return None, "non-static-load"
+        return None, "origin:" + str(kind)
+    if re.fullmatch(r"-?0x[0-9a-f]+\(%rip\)", src):
+        # The objdump comment on the store carries the link address.
+        comment = _insn_comment_addr(_insn(g, fstart, idx))
+        return (comment, "static") if comment is not None else (None,
+                                                                "rip-slot")
+    return None, "unsupported-source"
+
+
+def _s1_scalar_stores(g: "DsoGraph", fstart: int, slot_off: int):
+    """Scalar 8-byte stores to ``slot_off(base)`` in one function."""
+    out = []
+    for i, (addr, text) in enumerate(
+            (getattr(g, "precision", None).insns_by_func.get(fstart, ())
+             if _has_insns(g) else ())):
+        body = text.split("#", 1)[0].strip()
+        m = re.fullmatch(
+            r"(mov|movq|movabs)\s+(.+),\s*(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)\s*",
+            body)
+        if not m:
+            continue
+        src = m.group(2).strip()
+        disp = m.group(3) or "0"
+        base = m.group(4)
+        try:
+            off = int(disp, 16)
+        except ValueError:
+            continue
+        if base in ("%rsp", "%rbp") or off != slot_off:
+            continue
+        out.append({"index": i, "addr": addr, "src": src, "base": base})
+    return out
+
+
+def _s1_null_guard(g: "DsoGraph", fstart: int, idx: int, member_off: int,
+                   base_reg: str):
+    """Guard address for a nullable member, or None."""
+    insns = g.precision.insns_by_func.get(fstart, ()) if _has_insns(g) else ()
+    lo = max(0, idx - 40)
+    member_reg = None
+    mem_pat = re.compile(r"(-?0x[0-9a-f]+)?\(%r[a-z0-9]+\)")
+    for k in range(idx - 1, lo - 1, -1):
+        text = insns[k][1].split("#", 1)[0].strip()
+        mm = re.fullmatch(r"mov(?:q)?\s+(%r[a-z0-9]+),\s*"
+                          r"(-?0x[0-9a-f]+)\((%r[a-z0-9]+)\)", text)
+        if mm and int(mm.group(2), 16) == member_off \
+                and mm.group(3) == base_reg:
+            member_reg = _canon(mm.group(1))
+            break
+        if mem_pat.search(text) and "test" in text:
+            return insns[k][0]
+    if member_reg is None and _canon(base_reg) not in _REGS:
+        return None
+    reg = member_reg or _canon(base_reg)
+    for k in range(idx - 1, lo - 1, -1):
+        text = insns[k][1].split("#", 1)[0].strip()
+        mn, rest, ops = _insn_parts(text)
+        if mn == "test" and len(ops) == 2 and _canon(ops[0]) == reg \
+                and _canon(ops[1]) == reg:
+            for j in range(k + 1, min(len(insns), k + 5)):
+                mn2, rest2, _o = _insn_parts(insns[j][1])
+                if mn2.startswith("j") and re.match(r"^[0-9a-f]+", rest2):
+                    return insns[k][0]
+                if mn2.startswith(("call", "ret")):
+                    break
+        if mn == "cmp" and len(ops) == 2 \
+                and ops[0] in ("$0x0", "$0") and _canon(ops[1]) == reg:
+            for j in range(k + 1, min(len(insns), k + 5)):
+                mn2, rest2, _o = _insn_parts(insns[j][1])
+                if mn2.startswith("j") and re.match(r"^[0-9a-f]+", rest2):
+                    return insns[k][0]
+                if mn2.startswith(("call", "ret")):
+                    break
+    return None
+
+
+def _s1_refusal(reason: str, **extra) -> dict:
+    rec = {"schema": S1_WITNESS_SCHEMA, "class": "static-table-instance",
+           "contract_bounded": False, "resolved": False,
+           "refusal": reason}
+    rec.update(extra)
+    return rec
+
+
+def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
+                                  reachable: set | None = None):
+    """Prove (or refuse) a field-sensitive static-table instance dispatch.
+
+    Returns None when this site is not a field-dispatch candidate at all; a
+    dict with ``resolved`` otherwise.  Every refusal is recorded and leaves the
+    site target-bounded -- callers must not fall through to a weaker class.
+    """
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    fstart = site.get("func")
+    insns = g.precision.insns_by_func.get(fstart, ())
+    idx = next((i for i, (a, _t) in enumerate(insns) if a == site.get("addr")),
+               None)
+    if idx is None:
+        return None
+    ctx_info = _s1_site_context(g, fstart)
+    if ctx_info is None:
+        return None
+    # Only the pointer fields of T are needed.  T itself need not have a
+    # fully decidable layout: the pointer-slot offset is read from the load
+    # that produces the call's base, and the table type U carries the layout
+    # that the member offsets are checked against.
+    tfields = _s1_struct_fields(g, ctx_info["type"])
+    if tfields is None:
+        return None
+    pointer_fields = []
+    for fname, ftype in tfields[0]:
+        m = re.match(r"\*\s*(?:const|mut)\s+([A-Za-z_]\w*)", ftype)
+        if not m:
+            continue
+        ulayout = _s1_struct_layout(g, m.group(1))
+        if ulayout is None:
+            continue
+        pointer_fields.append({"field": fname,
+                               "table_type": m.group(1), "layout": ulayout,
+                               "declaration": (f"{tfields[1]['file']}:"
+                                               f"{tfields[1]['line']}")})
+    if not pointer_fields:
+        return None
+
+    text = site.get("text") or ""
+    m = re.search(r"call\w*\s+\*(.+)$", text.split("#", 1)[0].strip())
+    if not m:
+        return None
+    operand = m.group(1).strip()
+    member_off = None
+    base_reg = None
+    chain = []
+    mo = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", operand)
+    if mo:
+        member_off = int(mo.group(1), 16) if mo.group(1) else 0
+        base_reg = mo.group(2)
+    elif operand in _REGS or operand in _SUBREG:
+        base_reg = _canon(operand)
+    else:
+        return None
+    origin = _reg_origin(g, fstart, idx, base_reg)
+    chain = []
+    if mo:
+        if origin.get("kind") != "load":
+            if "s1-base-not-table" not in _MUTED:
+                return None
+            # Mutation only: the call operand is not a field load.  Use the
+            # observed member offset so the rest of the checks still run.
+            slot_off = member_off
+            table_reg = base_reg
+            slot_load_idx = idx
+        else:
+            slot_off = origin["offset"]
+            table_reg = origin["base_reg"]
+            slot_load_idx = origin["at"]
+    else:
+        if origin.get("kind") != "load":
+            return None
+        member_off = origin["offset"]
+        table_reg = origin["base_reg"]
+        slot_load_idx = origin["at"]
+        slot_origin = _reg_origin(g, fstart, slot_load_idx, table_reg)
+        if slot_origin.get("kind") != "load":
+            if "s1-base-not-table" not in _MUTED:
+                return None
+            slot_off = member_off
+        else:
+            slot_off = slot_origin["offset"]
+            chain.append({"step": "load member",
+                          "addr": (hex(insns[slot_load_idx][0])
+                                   if slot_load_idx < len(insns) else None),
+                          "member_offset": hex(member_off)})
+            table_reg = slot_origin["base_reg"]
+            slot_load_idx = slot_origin["at"]
+    ctx_origin = _reg_origin(g, fstart, slot_load_idx,
+                             _canon(table_reg) if table_reg in _SUBREG else table_reg)
+    if ctx_origin.get("kind") != "param":
+        if "s1-base-not-table" not in _MUTED:
+            return None
+        ctx_origin = {"kind": "param", "index": ctx_info.get("param_index")}
+    if ctx_origin.get("index") != ctx_info.get("param_index"):
+        if "s1-base-not-table" not in _MUTED:
+            return None
+        ctx_origin = {"kind": "param", "index": ctx_info.get("param_index")}
+    slot_load_addr = (insns[slot_load_idx][0]
+                      if slot_load_idx < len(insns) else None)
+    chain.insert(0, {"step": "parameter ctx",
+                     "param": ctx_info.get("param"),
+                     "register": table_reg,
+                     "index": ctx_origin.get("index")})
+    chain.insert(1, {"step": "load pointer_slot",
+                     "addr": hex(slot_load_addr) if slot_load_addr else None,
+                     "offset": hex(slot_off)})
+
+    tables = [t for t in _s1_dispatch_tables(g)
+              if fstart in _s1_closure(g, [e["target"] for e in t["entries"]], 2)]
+    if not tables:
+        return None
+    cohort = set()
+    writers = set()
+    paired = []
+    for t in tables:
+        roots = [e["target"] for e in t["entries"] if e["id"] == 1]
+        if len(roots) != 1:
+            return _s1_refusal("dispatch-without-single-newctx", function=name,
+                               call_site=hex(site["addr"]),
+                               dispatch_tables=[hex(t["addr"])],
+                               chain=chain)
+        cohort |= _s1_closure(g, [e["target"] for e in t["entries"]], 2)
+        t_writers = _s1_closure(g, roots, 2)
+        writers |= t_writers
+        t["_writers"] = t_writers
+        paired.append({"table": t["symbol"], "addr": hex(t["addr"]),
+                       "newctx": g.funcs.get(roots[0], hex(roots[0]))})
+    if reachable is not None:
+        callers = _direct_call_index(g).get(fstart, [])
+        outside = sorted({c for c, _i, _a in callers
+                          if c in reachable and c not in cohort})
+        if outside and "s1-caller-outside-cohort" not in _MUTED:
+            return _s1_refusal("caller-outside-cohort", function=name,
+                               call_site=hex(site["addr"]),
+                               callers=[g.funcs.get(c, hex(c)) for c in outside],
+                               dispatch_tables=[hex(t["addr"]) for t in tables],
+                               chain=chain)
+
+    type_candidates = []
+    considered = []
+    for cand in pointer_fields:
+        type_candidates.append(cand)
+        for cast_type in _s1_cast_types(g, ctx_info, cand["field"]):
+            layout = _s1_struct_layout(g, cast_type)
+            if layout is None:
+                considered.append({"object": ctx_info["type"],
+                                   "field": cand["field"],
+                                   "table_type": cast_type,
+                                   "reason": "cast target has no decidable layout"})
+                continue
+            type_candidates.append({"field": cand["field"],
+                                    "table_type": cast_type,
+                                    "layout": layout,
+                                    "declaration": cand["declaration"],
+                                    "via_cast": True})
+    candidates = []
+    for cand in type_candidates:
+        if member_off not in {r["offset"] for r in cand["layout"]["fields"]}:
+            considered.append({"object": ctx_info["type"],
+                               "field": cand["field"],
+                               "table_type": cand["table_type"],
+                               "reason": ("member offset is not a field of "
+                                          "this layout")})
+            continue
+        base_union = _s1_declared_instances(g, cand["table_type"])
+        instances = dict(base_union["instances"])
+        used_offsets = [r["offset"] for r in cand["layout"]["fields"]]
+        found = {}
+        unaccounted = []
+        outside_writers = []
+        unproven_base = []
+        excluded_base = []
+        writer_rows = []
+        outside_rows = []
+        for wf in sorted(writers):
+            for store in _s1_scalar_stores(g, wf, slot_off):
+                bq = _s1_store_base_witness(g, wf, store,
+                                            ctx_info["type"], slot_off)
+                if bq.get("excluded"):
+                    excluded_base.append(bq)
+                    continue
+                if not bq.get("qualified"):
+                    unproven_base.append(bq)
+                    continue
+                value, kind = _s1_store_value(g, wf, store["index"],
+                                              store["src"], slot_off)
+                writer_rows.append((wf, store, value, kind, bq))
+        for cf in sorted(cohort - writers):
+            for store in _s1_scalar_stores(g, cf, slot_off):
+                bq = _s1_store_base_witness(g, cf, store,
+                                            ctx_info["type"], slot_off)
+                if bq.get("excluded"):
+                    excluded_base.append(bq)
+                    continue
+                if not bq.get("qualified"):
+                    unproven_base.append(bq)
+                    continue
+                value, kind = _s1_store_value(g, cf, store["index"],
+                                              store["src"], slot_off)
+                outside_rows.append((cf, store, value, kind, bq))
+        # Admit the concrete first-field-compatible types the writers store;
+        # the instance union is then the base's declared instances plus every
+        # admitted type's declared instances.  A stored type that is not
+        # admitted stays unaccounted and refuses the site: it is never
+        # silently unioned into the set.
+        seen_types = set()
+        for _f, _s, value, kind, _b in writer_rows + outside_rows:
+            if kind in ("immediate", "static") and isinstance(value, int):
+                st = _s1_static_type(g, value)
+                if st:
+                    seen_types.add(st)
+        prefix_types = {}
+        for tn in sorted(seen_types):
+            if "s1-prefix-types" in _MUTED:
+                break
+            w = _s1_prefix_witness(g, tn, cand["table_type"], used_offsets)
+            if w is None:
+                continue
+            prefix_types[tn] = w
+            more = _s1_declared_instances(g, tn).get("instances") or {}
+            for a, rec in more.items():
+                instances.setdefault(a, rec)
+        if not instances:
+            considered.append({"object": ctx_info["type"],
+                               "field": cand["field"],
+                               "table_type": cand["table_type"],
+                               "reason": ("no declared static instance in "
+                                          "this image")})
+            continue
+        for wf, store, value, kind, bq in writer_rows:
+            if kind == "identity":
+                found.setdefault((wf, store["addr"]), {
+                    "function": g.funcs.get(wf, hex(wf)),
+                    "store_site": hex(store["addr"]),
+                    "value": "identity(reload of the same slot)",
+                    "kind": kind})
+                continue
+            if value is None or kind not in ("immediate", "static"):
+                unaccounted.append({"function": g.funcs.get(wf, hex(wf)),
+                                    "store_site": hex(store["addr"]),
+                                    "reason": kind})
+                continue
+            if value not in instances:
+                if "s1-undeclared-store" not in _MUTED:
+                    unaccounted.append({"function": g.funcs.get(wf, hex(wf)),
+                                        "store_site": hex(store["addr"]),
+                                        "value": hex(value),
+                                        "reason": ("not a declared instance "
+                                                   "of an admitted type for "
+                                                   + cand["table_type"])})
+                continue
+            found[(wf, store["addr"])] = {
+                "function": g.funcs.get(wf, hex(wf)),
+                "store_site": hex(store["addr"]),
+                "value": hex(value), "kind": kind,
+                "base_origin": bq.get("origin"),
+                "base_witness": bq.get("witness")}
+        for cf, store, value, kind, bq in outside_rows:
+            if kind == "identity":
+                continue
+            if value is None or kind not in ("immediate", "static") \
+                    or value not in instances:
+                outside_writers.append({
+                    "function": g.funcs.get(cf, hex(cf)),
+                    "store_site": hex(store["addr"]),
+                    "value": (hex(value) if value is not None else kind)})
+            else:
+                found[(cf, store["addr"])] = {
+                    "function": g.funcs.get(cf, hex(cf)),
+                    "store_site": hex(store["addr"]),
+                    "value": hex(value), "kind": kind,
+                    "base_origin": bq.get("origin"),
+                    "base_witness": bq.get("witness")}
+        if unproven_base:
+            candidates.append({"candidate": cand, "ok": False,
+                               "unaccounted": unaccounted,
+                               "outside": outside_writers,
+                               "unproven_base": unproven_base,
+                               "excluded_base": excluded_base,
+                               "prefix_types": prefix_types,
+                               "instances": instances,
+                               "found": found})
+            continue
+        if unaccounted or outside_writers:
+            candidates.append({"candidate": cand, "ok": False,
+                               "unaccounted": unaccounted,
+                               "outside": outside_writers,
+                               "unproven_base": [],
+                               "excluded_base": excluded_base,
+                               "prefix_types": prefix_types,
+                               "instances": instances,
+                               "found": found})
+            continue
+        if not found:
+            candidates.append({"candidate": cand, "ok": False,
+                               "unaccounted": [], "outside": [],
+                               "unproven_base": [],
+                               "excluded_base": excluded_base,
+                               "prefix_types": prefix_types,
+                               "instances": instances, "found": {},
+                               "reason": "no-writer"})
+            continue
+        # Each matched dispatch table must contribute at least one declared
+        # instance.  A table whose constructor contributed nothing leaves the
+        # instance set partial; that is refused, never unioned.
+        per_table = []
+        for t in tables:
+            tw = t["_writers"]
+            vals = [v for (wf, _sa), v in found.items()
+                    if wf in tw and v["value"].startswith("0x")]
+            per_table.append(bool(vals))
+        if not all(per_table) and "s1-partial-instances" not in _MUTED:
+            candidates.append({"candidate": cand, "ok": False,
+                               "unaccounted": [], "outside": [],
+                               "unproven_base": [],
+                               "excluded_base": excluded_base,
+                               "prefix_types": prefix_types,
+                               "instances": instances,
+                               "found": found,
+                               "reason": "partial-instance-set"})
+            continue
+        candidates.append({"candidate": cand, "ok": True,
+                           "unaccounted": [], "outside": [],
+                           "unproven_base": [],
+                           "excluded_base": excluded_base,
+                           "prefix_types": prefix_types,
+                           "instances": instances,
+                           "found": found})
+
+    good = [c for c in candidates if c["ok"]]
+    if len(good) != 1:
+        if good:
+            reason = "ambiguous-field"
+        elif not candidates:
+            reason = "no-declared-instance-type"
+        elif any(c.get("unproven_base") for c in candidates):
+            # A store wrote the slot but its base object is not proven to be the
+            # declared context type.  It is neither a different object (which
+            # would be excluded) nor a member of the cohort: the writer set is
+            # open, so the site refuses.
+            reason = "unproven-cohort-store"
+        elif any(c.get("outside") for c in candidates):
+            # A reachable cohort function other than the constructor's closure
+            # stores to the same displacement; the store's base object is not
+            # established as the context type, so the writer set is open.
+            reason = "unproven-cohort-store"
+        elif any(c.get("unaccounted") for c in candidates):
+            # A writer stores a value that is not a declared instance of the
+            # effective table type (the base-typed, generic store case).
+            reason = "unaccounted-writer-store"
+        elif any(c.get("reason") == "partial-instance-set"
+                 for c in candidates):
+            reason = "partial-instance-set"
+        elif any(c.get("reason") == "no-writer" for c in candidates):
+            reason = "no-writer"
+        else:
+            reason = "no-complete-instance-candidate"
+        return _s1_refusal(reason, function=name, call_site=hex(site["addr"]),
+                           operand={"base_reg": base_reg,
+                                    "member_offset": hex(member_off)},
+                           chain=chain,
+                           dispatch_tables=[hex(t["addr"]) for t in tables],
+                           considered_types=considered,
+                           candidates=[{"object": ctx_info["type"],
+                                        "field": c["candidate"]["field"],
+                                        "table": c["candidate"]["table_type"],
+                                        "ok": c["ok"],
+                                        "unaccounted_table_pointers":
+                                            c.get("unaccounted", []),
+                                        "stores_outside_writers":
+                                            c.get("outside", []),
+                                        "unproven_base_stores":
+                                            c.get("unproven_base", []),
+                                        "excluded_different_object_stores":
+                                            c.get("excluded_base", []),
+                                        "prefix_compatible_types":
+                                            sorted(c.get("prefix_types", {})),
+                                        "reason": c.get("reason")}
+                                       for c in candidates])
+    chosen = good[0]
+    cand = chosen["candidate"]
+    ulayout = cand["layout"]
+    declared = _s1_declared_instances(g, cand["table_type"])
+    instances = chosen.get("instances") or declared["instances"]
+
+    instance_rows = []
+    targets = set()
+    unaccounted_tables = []
+    shape_failures = []
+    for addr in sorted({int(v["value"], 16) for v in chosen["found"].values()
+                        if v["value"].startswith("0x")}):
+        inst = instances.get(addr)
+        if inst is None:
+            continue
+        inst_type = _s1_static_type(g, addr)
+        is_prefix = (inst_type is not None
+                     and inst_type != cand["table_type"])
+        prefix_w = (chosen.get("prefix_types", {}).get(inst_type)
+                    if is_prefix else None)
+        obj_type = ((prefix_w or {}).get("prefix_object_type")
+                    or cand["table_type"])
+        olayout = _s1_struct_layout(g, obj_type) or ulayout
+        sec = g.section_of(addr)
+        if sec not in S1_IMMUTABLE_SECTIONS and "s1-mutable-table" not in _MUTED:
+            unaccounted_tables.append({"table": inst["name"],
+                                       "addr": hex(addr),
+                                       "section": sec})
+            continue
+        members = {}
+        derived_but_undeclared = []
+        declared_but_absent = []
+        for row in olayout["fields"]:
+            members[hex(row["offset"])] = None
+        size = None
+        for raw in (getattr(g, "names_at", {}) or {}).get(addr, ()):
+            sym = (raw or "").split("@")[0]
+            if sym in (getattr(g, "sym_sizes", {}) or {}):
+                size = g.sym_sizes[sym]
+                break
+        if size is None:
+            shape_failures.append({"table": inst["name"],
+                                   "reason": "no symbol size"})
+            continue
+        derived = [o for o in range(0, size, 8)]
+        declared_offs = [r["offset"] for r in olayout["fields"]]
+        if is_prefix and size > olayout["size"]:
+            # The instance's declared type carries the base as its first
+            # field: only the base prefix belongs to this field's layout.  The
+            # prefix's own offsets were checked against the base layout when
+            # the type was admitted, so compare the base prefix here and
+            # record the extra members rather than refusing them.
+            derived = [o for o in range(0, olayout["size"], 8)]
+        elif size != olayout["size"]:
+            derived_but_undeclared = [o for o in derived if o not in declared_offs]
+            declared_but_absent = [o for o in declared_offs if o not in derived]
+            if "s1-shape-mismatch" not in _MUTED:
+                shape_failures.append({
+                    "table": inst["name"],
+                    "derived_size": hex(size),
+                    "declared_size": hex(ulayout["size"]),
+                    "derived_but_undeclared": [hex(o) for o in derived_but_undeclared],
+                    "declared_but_absent": [hex(o) for o in declared_but_absent]})
+                continue
+        member_ok = True
+        for row in olayout["fields"]:
+            vals = g.static_slot(addr + row["offset"])
+            ints = {x for x in (vals or ()) if isinstance(x, int)}
+            if len(ints) != 1:
+                if "s1-shape-mismatch" not in _MUTED:
+                    member_ok = False
+                members[hex(row["offset"])] = None
+                continue
+            value = next(iter(ints))
+            if value == 0:
+                if not row["option"]:
+                    if "s1-member-not-function" not in _MUTED:
+                        member_ok = False
+                else:
+                    guard = _s1_null_guard(g, fstart, idx, row["offset"],
+                                           base_reg)
+                    if guard is None and "s1-null-no-guard" not in _MUTED:
+                        member_ok = False
+                    else:
+                        members[hex(row["offset"])] = {
+                            "value": None, "guard": hex(guard) if guard else None}
+                continue
+            if value not in g.start_set:
+                if "s1-member-not-function" not in _MUTED:
+                    member_ok = False
+                members[hex(row["offset"])] = {"value": hex(value),
+                                                "not_function": True}
+                continue
+            members[hex(row["offset"])] = {"value": hex(value),
+                                            "symbol": g.funcs.get(value)}
+            if row["offset"] == member_off:
+                targets.add(value)
+        if not member_ok:
+            shape_failures.append({"table": inst["name"],
+                                   "reason": "member not an in-image function start"})
+            continue
+        instance_rows.append({
+            "addr": hex(addr), "symbol": inst["symbol"],
+            "section": sec, "members": members,
+            "declared_type": inst_type or cand["table_type"],
+            "prefix_compatible": bool(is_prefix),
+            "extra_members_after_base": (
+                [hex(o) for o in range(olayout["size"], size, 8)]
+                if is_prefix and size > olayout["size"] else []),
+            "shape_ok": (not derived_but_undeclared and not declared_but_absent),
+        })
+    if unaccounted_tables or shape_failures:
+        return _s1_refusal("table-shape-or-section", function=name,
+                           call_site=hex(site["addr"]),
+                           pointer_slot={"object": ctx_info["type"],
+                                         "offset": hex(slot_off),
+                                         "field": cand["field"]},
+                           unaccounted_table_pointers=unaccounted_tables,
+                           shape_failures=shape_failures,
+                           chain=chain)
+    if not instance_rows or not targets:
+        return _s1_refusal("no-target-at-member", function=name,
+                           call_site=hex(site["addr"]),
+                           pointer_slot={"object": ctx_info["type"],
+                                         "offset": hex(slot_off),
+                                         "field": cand["field"]},
+                           member_offset=hex(member_off), chain=chain)
+    if len(instance_rows) != len({int(v["value"], 16)
+                                  for v in chosen["found"].values()
+                                  if v["value"].startswith("0x")}) \
+            and "s1-partial-instances" not in _MUTED:
+        return _s1_refusal("partial-instance-set", function=name,
+                           call_site=hex(site["addr"]),
+                           pointer_slot={"object": ctx_info["type"],
+                                         "offset": hex(slot_off),
+                                         "field": cand["field"]},
+                           instances=[r["addr"] for r in instance_rows],
+                           chain=chain)
+    if member_off == 0 and "s1-mutable-table" in _MUTED:
+        pass
+    return {
+        "schema": S1_WITNESS_SCHEMA,
+        "class": "static-table-instance",
+        "contract_bounded": False,
+        "resolved": True,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "operand": {"base_reg": base_reg, "member_offset": hex(member_off)},
+        "pointer_slot": {"object": ctx_info["type"],
+                         "offset": hex(slot_off),
+                         "field": cand["field"],
+                         "declaration": cand["declaration"]},
+        "member": next(({"offset": hex(r["offset"]), "name": r["name"],
+                          "type": r["type"]}
+                         for r in ulayout["fields"]
+                         if r["offset"] == member_off), None),
+        "effective_type": {
+            "table_type": cand["table_type"],
+            "via_cast": bool(cand.get("via_cast")),
+            "layout": {"file": ulayout.get("file"),
+                       "line": ulayout.get("line"),
+                       "size": hex(ulayout["size"])}},
+        "instances": instance_rows,
+        "stored_by": sorted(chosen["found"].values(),
+                            key=lambda r: (r["function"], r["store_site"])),
+        "chain": chain,
+        "dispatch_tables": paired,
+        "conditions": ([
+            "field-sensitive-key",
+            "base-object-qualified",
+            "single-newctx-per-table",
+            "caller-in-cohort",
+            "declared-instance-writers",
+            "instance-union-complete",
+        ] + (["prefix-compatible-base"]
+             if chosen.get("prefix_types") else [])),
+        "completeness": {
+            "unaccounted_table_pointers": [],
+            "unscanned_writers": [],
+            "base_object_qualified": True,
+            "excluded_different_object_stores":
+                chosen.get("excluded_base", []),
+            "prefix_compatible_types":
+                chosen.get("prefix_types", {}),
+        },
+        "targets": [hex(t) for t in sorted(targets)],
+        "basis": ("field-sensitive static-table instance dispatch: the base "
+                  "register is loaded from one pointer field of the documented "
+                  "context type, the dispatch table pairs its constructor, every "
+                  "scalar store to that field in the cohort writes a declared "
+                  "table, and every table member is an in-image function start"),
+    }
+
+
+# ---- S6: triage records (not a class) ---------------------------------- #
+
+S6_FUNCTIONS = {
+    "msblob2key_decode": {
+        "mechanism": "in-image #[repr(C)] KeytypeDesc dispatch",
+        "is_evp_pkey_asn1_method": False,
+        "finding": (
+            "the indirect operand is (*desc).read_private_key/read_public_key/"
+            "adjust_key of a static KeytypeDesc (src/provider/decode_msblob2key.rs"),
+        "disposition": "target-bounded; the right mechanism is the S1 static-table "
+                       "instance dispatch, deferred to the next batch",
+    },
+    "do_PVK_key_bio": {
+        "mechanism": "pem_password_cb application callback parameter",
+        "is_evp_pkey_asn1_method": False,
+        "finding": (
+            "%rbp is the pem_password_cb parameter (src/pem/pvkfmt.rs:1679), "
+            "forwarded from b2i_DSA_PVK_bio_ex/b2i_RSA_PVK_bio_ex/b2i_PVK_bio_ex"),
+        "disposition": "a genuine application callback; if the export-callback "
+                       "chain proves, ABI_CONTRACT_EXPORT_CALLBACK applies, "
+                       "otherwise it stays target-bounded",
+    },
+}
+
+
+def _s6_triage(name: str):
+    for frag, rec in S6_FUNCTIONS.items():
+        if frag in (name or ""):
+            return dict(rec, function=name)
+    return None
+
+
 def allocator_contract_witness(g: "DsoGraph", site: dict, name: str) -> dict | None:
     """Witness for the CRYPTO_set_mem_functions seam at this exact site."""
     seam = site.get("seam")
@@ -3432,6 +7698,9 @@ def allocator_contract_witness(g: "DsoGraph", site: dict, name: str) -> dict | N
 
 def provider_contract_witness(g: "DsoGraph", site: dict, name: str) -> dict | None:
     """Witness for an OSSL_provider_init dispatch slot at this exact site."""
+    fetch = fetch_slot_witness(g, site, name)
+    if fetch is not None:
+        return fetch
     offsets = site.get("field_offsets") or set()
     for spec in PROVIDER_SLOTS:
         if spec["function"] not in (name or ""):
@@ -3652,6 +7921,9 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
     rust = rust_runtime_targets(g)
     for (_fstart, _addr, _kind), site in g.sites.items():
         name = g.funcs.get(site["func"], "")
+        triage = _s6_triage(name)
+        if triage is not None:
+            site["s6_triage"] = triage
         # A pre-classified site is accepted only with its own witness.  A class
         # name, a private field or a comment is not evidence (AGENTS.md section
         # 22); a site that arrives without one is demoted, never inherited.
@@ -3745,6 +8017,49 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                 site["reason"] = "static-table-incomplete:" + table
                 stats["R3_unresolved"] += 1
             continue
+        # S1: a field-sensitive static-table instance dispatch.  The witness
+        # keys on (object type, pointer-slot offset, member offset), restricts
+        # the writer set by the static dispatch table that pairs the consumer
+        # with its constructor, and refuses the whole site on any failed
+        # condition.  A refused site never falls through to a weaker class.
+        s1 = static_table_instance_witness(g, site, name, reachable)
+        if getattr(g, "_semantic_precision", None) is not None:
+            # Once the semantic resolver exists the process is close to its
+            # data limit; do not retain the S1 source corpus across sites.
+            _drop_s1_caches(g, all_caches=False)
+        if s1 is not None:
+            if s1.get("resolved"):
+                targets = {int(t, 16) for t in s1["targets"]}
+                _resolve(g, site, targets | residual, "static-table-instance",
+                         ("field-sensitive static-table instance dispatch: "
+                          + s1["pointer_slot"]["object"] + "."
+                          + s1["pointer_slot"]["field"] + " at "
+                          + s1["pointer_slot"]["offset"] + " -> "
+                          + str(len(s1["instances"])) + " declared table(s)"))
+                site["static_instance_witness"] = s1
+                stats["S1_static_instance_resolved"] += 1
+            else:
+                site["static_instance_refusal"] = s1
+                site["reason"] = ("static-instance-refused:"
+                                  + str(s1.get("refusal")))
+                stats["S1_static_instance_refused"] += 1
+            continue
+        # A local function pointer built from a finite, fully enumerated set of
+        # in-image addresses.  This is a target claim (every stored value is a
+        # function start and every writer is accounted for), never a contract.
+        local = local_fptr_witness(g, site, name)
+        if local is not None:
+            targets = {int(t, 16) for t in local["targets"]}
+            if targets and targets <= g.start_set:
+                site["targets"] = set(targets)
+                site["unresolved"] = False
+                site["class"] = "local-function-pointer"
+                site["reason"] = ("local function-pointer assignment: "
+                                  f"{len(local['assignments'])} assignment(s), "
+                                  f"{len(targets)} target(s)")
+                site["local_fptr_witness"] = local
+                stats["T_local_fptr_resolved"] += 1
+                continue
         # In-image slot targets: the slot's writer is known in this image, so
         # the target set is resolved rather than contract-bounded.  This is a
         # target claim, not an ABI contract, and it never sets an
@@ -3773,7 +8088,14 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
         bound, refusal = reachable_caller_targets(g, site, name, reachable)
         if bound is not None:
             targets = {int(t, 16) for t in bound["bounded_targets"]}
-            site["targets"] = set(targets)
+            # Round 4: a candidate the complete caller mapping cannot attribute
+            # is admitted into the site's target set.  Admitting is monotone and
+            # safe for the upper bound; the closure and the record therefore
+            # agree, and the oracle covers what the record claims.  Excluding
+            # such a target would need a subject that demonstrably produces it.
+            unattributed = {int(t, 16)
+                            for t in (bound.get("unattributed_targets") or ())}
+            site["targets"] = set(targets) | unattributed
             site["unresolved"] = False
             site["class"] = "reachable-caller-target"
             site["reason"] = ("reachable-caller target bounding: callers "
@@ -3785,6 +8107,36 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
         if site.get("arg_deps"):
             site["reachable_caller_bound_refusal"] = refusal
             stats["RCB_reachable_caller_unresolved"] += 1
+        # S3: a fetched EVP method object's provider-dispatch slot.  This is
+        # the ABI_CONTRACT_PROVIDER class with a fetch-slot witness: the base
+        # is proven to be the family fetch's return and the offset is the
+        # documented field the OSSL_FUNC_* id fills.
+        fetch = fetch_slot_witness(g, site, name)
+        if fetch is not None:
+            site["targets"] |= residual
+            site["class"] = ABI_CONTRACT_PROVIDER
+            site["unresolved"] = True
+            site["reason"] = ("provider fetch-slot witness: "
+                              + fetch["slot"])
+            site["witness"] = fetch
+            stats["S3_fetch_slot_contract_bounded"] += 1
+            continue
+        # S2: a callback that is exactly an exported function's parameter.
+        # The mandatory deferral is enforced inside the witness: a private
+        # chain with finite in-image callers is refused and left to the
+        # reachable-caller-target rule.
+        export_cb, cb_refusal = export_callback_witness(g, site, name)
+        if export_cb is not None:
+            site["class"] = ABI_CONTRACT_EXPORT_CALLBACK
+            site["unresolved"] = True
+            site["reason"] = ("exported-callback ABI contract: "
+                              + export_cb["slot"])
+            site["witness"] = export_cb
+            stats["S2_export_callback_contract_bounded"] += 1
+            continue
+        if cb_refusal:
+            site["export_callback_refusal"] = cb_refusal
+            stats["S2_export_callback_unresolved"] += 1
         if _match(name, A1_FUNCTIONS):
             witness = contract_witness(ABI_CONTRACT_PROVIDER, g, site, name)
             if witness is not None:
@@ -3827,33 +8179,3032 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
             else:
                 stats["A2_no_targets"] += 1
             continue
+        triage = _s6_triage(name)
+        if triage is not None and site.get("unresolved"):
+            stats["S6_triaged_not_absorbed"] += 1
         stats["unmatched"] += 1
     g.evidence_classes.update(stats)
     g.residual_sites = [s for s in g.sites.values() if s["unresolved"]]
     g.resolved_targets = {t for s in g.sites.values() for t in s["targets"]}
     g.precision_counts = collections.Counter((s["class"], s["unresolved"])
                                              for s in g.sites.values())
+    # Witness caches are scoped to this classification pass.  They are dropped
+    # before the closure's admission and edge-record phases, which already run
+    # close to the court's per-process data limit.
+    for attr in ("_fn_cfg_cache", "_reaching_cache", "_reaching_store_cache",
+                 "_callers_cache", "_source_cache", "_prologue_delta_cache",
+                 "_direct_call_index_cache"):
+        if hasattr(g, attr):
+            setattr(g, attr, {})
+    # The source corpus and every S1 index are the largest allocations here;
+    # drop them as soon as the classification pass is over (the edge-record
+    # phase has its own budget).
+    _drop_s1_caches(g, all_caches=True)
+    if hasattr(g, "_header_text_cache"):
+        g._header_text_cache = None
     return dict(stats)
 
 
+# --------------------------------------------------------------------------- #
+# per-edge provenance records (AGENTS.md sections 7 and 22)
+# --------------------------------------------------------------------------- #
+#
+# Every indirect site the resolver classifies emits a record that separates what
+# the analysis proved from what it approximated.  The identity is semantic (the
+# source operation, defining function, call-site role and a per-target provenance
+# chain); a machine address is recorded only as an artifact-local witness.
+#
+# v1.2 makes every exclusion claim *self-witnessing*:
+#
+#   * the reason names the subject of the claim (the target, the callers, the
+#     writer, or the reachable caller set), and a `claim` object binds that
+#     subject to a closed claim kind and to the record's own module.  A blanket
+#     "not in the reachable set" no longer says what is supposed to be absent;
+#   * the candidate set is recomputed from `candidate_source`, a separate
+#     enumeration of how candidates were derived, rather than trusted from the
+#     accounting ledger;
+#   * the reachability oracle is the union of *every* name at every reachable
+#     address, so an identical-code-folding alias cannot escape a negative
+#     check, and an unknown module fails closed;
+#   * an empty admitted set is never claimed as proved, and a record whose
+#     defining function has no symbol is never proved or contract-bounded;
+#   * the population is streamed to a JSONL sidecar and validated on the fly, so
+#     the receipt is bounded in memory and size (v1.1 OOMed the ssh closure).
+
+EDGE_RECORD_SCHEMA = "openssl-rs/campaign/safe-c33/edge-record/v1.4"
+DISPOSITION_PROVED = "PROVED_TARGET_SET"
+DISPOSITION_CONTRACT = "CONTRACT_BOUNDED"
+DISPOSITION_UNRESOLVED = "UNRESOLVED"
+DISPOSITIONS = (DISPOSITION_PROVED, DISPOSITION_CONTRACT,
+                DISPOSITION_UNRESOLVED)
+# v1.3 splits the vocabulary by *row kind*.  A target drop and a subject-scoped
+# reachability claim are different claims and can no longer share a list: an
+# `exclusions[]` row is always a target drop, and an auxiliary caller/writer row
+# is always a subject claim.  This makes the v1.2 hole -- a caller/writer-scoped
+# label hiding a reachable dropped target inside `exclusions[]` -- inexpressible
+# rather than merely checked against.
+TARGET_DROP_REASONS = frozenset({
+    "target-not-in-reachable-set",            # subject: the excluded target
+    "not-contributed-by-reachable-callers",   # bound per caller in candidate_source
+    "declared-name-absent",                   # bound by evidence.targets
+    "no-reachable-writer",                    # bound to the writer subject rows
+    "provenance-unbounded",                   # subject: the value
+    "non-image-value",                        # subject: the value
+})
+SUBJECT_ROW_REASONS = frozenset({
+    "caller-not-in-reachable-set",            # subject: the named callers
+    "writer-not-in-reachable-set",            # subject: the method-store writer
+    "provenance-unbounded",                   # subject: the value
+})
+EXCLUSION_REASONS = TARGET_DROP_REASONS | SUBJECT_ROW_REASONS
+ROW_KINDS = frozenset({"target-drop", "subject"})
+ROW_KIND_VOCABULARY = {
+    "target-drop": TARGET_DROP_REASONS,
+    "subject": SUBJECT_ROW_REASONS,
+}
+# Reasons whose claim is a negative reachability statement about named subjects.
+REACHABILITY_CLAIM_KINDS = frozenset({
+    "target-not-in-reachable-set",
+    "caller-not-in-reachable-set",
+    "writer-not-in-reachable-set",
+})
+# `target_reachability` is derived from the disposition, never self-described:
+# a target set is claimed exactly when the disposition is PROVED_TARGET_SET.
+TARGET_REACHABILITY_VALUES = frozenset({"claimed", "not-claimed"})
+CANDIDATE_SOURCE_KINDS = frozenset({
+    "store-writer-call-sites", "argument-targets", "resolver-admitted-set",
+})
+# Closed vocabulary of derivation steps.  A derivation is evidence only when it
+# is built from these steps; a step name the checker does not know is a claim it
+# cannot interpret, and a step with no payload is a name without evidence.
+EDGE_CHAIN_STEPS = frozenset({
+    "store-writer", "call-site", "relocation", "argument",
+    "code-materialised", "field", "field-slot", "thunk",
+    "linkage", "abi-contract", "resolver", "unbounded",
+    # Round 4: the target is a candidate that no caller row attributes, so it
+    # is admitted conservatively instead of being dropped.  This is a widening
+    # of the upper bound, never a proof that the target is reachable.
+    "unattributed-admission",
+    # The sound bound reaches a subject the derivation excluded.  The exclusion
+    # was false, so the subject's contribution is admitted; this step names the
+    # refuting bound and never claims the target is reachable by itself.
+    "refutation-admission",
+})
+# A step that says the value could not be bounded.  A target claimed as proved
+# must never rest on one: "unbounded" records the absence of a derivation.
+# `unattributed-admission` is deliberately *not* here: it names a candidate the
+# enumeration already contains and that is admitted for the upper bound, so the
+# claimed set is still the complete candidate set.
+EDGE_UNPROVED_STEPS = frozenset({"unbounded"})
+# Each reason names the evidence that makes it checkable.  A free-text reason is
+# not a reason: the validator requires these fields to be present and non-null.
+EXCLUSION_EVIDENCE_KEYS = {
+    "target-not-in-reachable-set": ("reachable_set_member", "reachable_basis"),
+    "caller-not-in-reachable-set": ("reachable_set_member", "reachable_basis"),
+    "writer-not-in-reachable-set": ("reachable_set_member", "reachable_basis"),
+    "not-contributed-by-reachable-callers": ("reachable_basis",),
+    # `targets` is checked separately, not merely for presence: it is the
+    # structured mapping that replaces the free-text `target_derivation`.
+    "declared-name-absent": ("declared_name", "present"),
+    "no-reachable-writer": ("writer", "derived_targets", "reachable_writers"),
+    "provenance-unbounded": ("failure",),
+    "non-image-value": ("value", "in_image"),
+}
+# What each exclusion reason claims, in one checkable sentence.  The validator
+# refuses a claim whose evidence does not establish the sentence; a reason whose
+# meaning is only in prose has no validator.
+EXCLUSION_SEMANTICS = {
+    "target-not-in-reachable-set": (
+        "the excluded target itself is absent from the final upper-bound "
+        "reachable set"),
+    "caller-not-in-reachable-set": (
+        "every named caller is absent from the final upper-bound reachable set; "
+        "no claim is made about the target it would have contributed"),
+    "writer-not-in-reachable-set": (
+        "the named method-store writer is absent from the final upper-bound "
+        "reachable set; no claim is made about the target it would have stored"),
+    "not-contributed-by-reachable-callers": (
+        "the excluded target is contributed by an excluded caller and by no "
+        "reachable caller, recomputed from candidate_source; every excluded "
+        "caller is absent from the bound and every reachable caller is in it; "
+        "no claim is made that the target itself is unreachable"),
+    "declared-name-absent": (
+        "the declared symbol name is not defined by this image, and it is the "
+        "structured source of exactly the listed, candidate, unreachable target"),
+    "no-reachable-writer": (
+        "no reachable writer produces the excluded target"),
+    "provenance-unbounded": (
+        "the value's provenance could not be bounded to this image"),
+    "non-image-value": (
+        "the value is not an address defined in this image"),
+}
+# The only admissible basis for a negative reachability claim is a sound
+# over-approximation (the final upper bound).  The derivation-time oracle is the
+# pre-closure direct set, which is an under-approximation: it is retained as the
+# derivation input, never as evidence that something is unreachable.
+REACHABILITY_ORACLE_SCHEMA = (
+    "openssl-rs/campaign/safe-c33/reachability-oracle/v1")
+REACHABILITY_BASES = frozenset({"final-upper-bound", "pre-closure-direct"})
+EDGE_RECORD_SAMPLE_DEFAULT = 500
+EDGE_DEFECT_RENDER_LIMIT = 200
+EDGE_AUDIT_RENDER_LIMIT = 2000
+
+
+def _is_named_function(name) -> bool:
+    """A semantic identity needs a real defining function, not a placeholder."""
+    return isinstance(name, str) and name not in ("", "?")
+
+
+class ReachabilityOracle:
+    """The final upper-bound reachable set, per module, as the only admissible
+    evidence for a negative reachability claim.  A negative claim needs a sound
+    over-approximation; the pre-closure direct set is an under-approximation and
+    is therefore not acceptable as its own witness.
+
+    A reachable *address* contributes **every** name the image records for it
+    (`funcs`, `all_syms` and `names_at`).  Keeping one name per address lets an
+    identical-code-folding alias at a reachable address escape a negative
+    check, so the set is the union, not a representative.
+    """
+
+    schema = REACHABILITY_ORACLE_SCHEMA
+
+    def __init__(self, graphs: dict, upper_reach):
+        self._upper_nodes = {}
+        self._upper_symbols = {}
+        self._image_symbols = {}
+        for module, g in (graphs or {}).items():
+            nodes = frozenset((d, a) for d, a in (upper_reach or ())
+                              if d == module)
+            symbols = set()
+            for _d, addr in nodes:
+                names = set()
+                for table_name in ("funcs", "all_syms"):
+                    sym = (getattr(g, table_name, {}) or {}).get(addr)
+                    if sym:
+                        names.add(sym)
+                names.update((getattr(g, "names_at", {}) or {}).get(addr) or ())
+                for sym in names:
+                    if sym:
+                        symbols.add(str(sym).split("@")[0])
+            image = set()
+            for sym in (getattr(g, "all_syms", {}) or {}).values():
+                if sym:
+                    image.add(str(sym).split("@")[0])
+            for names in (getattr(g, "names_at", {}) or {}).values():
+                for sym in names:
+                    if sym:
+                        image.add(str(sym).split("@")[0])
+            self._upper_nodes[module] = nodes
+            self._upper_symbols[module] = frozenset(symbols)
+            self._image_symbols[module] = frozenset(image)
+
+    def knows(self, module) -> bool:
+        return module in self._upper_nodes
+
+    def upper_nodes(self, module):
+        """The (module, address) nodes of the final upper bound, or None."""
+        return self._upper_nodes.get(module)
+
+    def reachable_symbols(self, module):
+        """Every normalised name at every reached address, or None."""
+        return self._upper_symbols.get(module)
+
+    def image_symbols_for(self, module):
+        """Every normalised symbol name the module defines, or None."""
+        return self._image_symbols.get(module)
+
+    def is_reachable(self, module, symbol, address=None):
+        """(reachable, basis, checkable) for one enumerated subject.
+
+        ``checkable`` is False for a module the oracle does not cover: an
+        unknown module is not evidence that a subject is absent.
+        """
+        nodes = self._upper_nodes.get(module)
+        reach = self._upper_symbols.get(module)
+        if nodes is None or reach is None:
+            return None, "unavailable", False
+        if address is not None and (module, address) in nodes:
+            return True, "final-upper-bound", True
+        if isinstance(symbol, str) and symbol and symbol != "?" \
+                and symbol in reach:
+            return True, "final-upper-bound", True
+        return False, "final-upper-bound", True
+
+    def describe(self) -> dict:
+        return {
+            "schema": self.schema,
+            "modules": sorted(self._upper_nodes),
+            "upper_nodes": {m: len(self._upper_nodes[m])
+                            for m in sorted(self._upper_nodes)},
+        }
+
+
+def _oracle_observe(oracle, module, symbol, address=None):
+    """(observed, basis, checkable) for one negative reachability claim."""
+    if oracle is None:
+        return None, "pre-closure-direct", False
+    reachable, basis, checkable = oracle.is_reachable(module, symbol, address)
+    if not checkable:
+        return None, "pre-closure-direct", False
+    return reachable, basis, True
+
+
+def _reach_evidence(oracle, module, symbol, *, extra=None,
+                    symbols_checked=None, addresses=None) -> dict:
+    """Evidence for a negative reachability claim, honestly observed.
+
+    The module is fixed by the row's ``claim`` object, never by free text in
+    this evidence block; ``subject_addresses`` is an artifact-local fallback
+    for a subject that has no name.
+    """
+    evidence = {"reachable_set_member": False, "symbol": symbol,
+                "reachable_basis": "pre-closure-direct"}
+    if extra:
+        evidence.update(extra)
+    address = (addresses or {}).get(symbol)
+    observed, basis, _checkable = _oracle_observe(oracle, module, symbol,
+                                                  address)
+    if observed is not None:
+        evidence["reachable_set_member"] = observed
+    evidence["reachable_basis"] = basis
+    if symbols_checked is not None:
+        evidence["symbols_checked"] = list(symbols_checked)
+    if addresses:
+        evidence["subject_addresses"] = {
+            key: (hex(value) if isinstance(value, int) else value)
+            for key, value in addresses.items() if value is not None}
+    return evidence
+
+
+def _claim(kind: str, module: str, subjects, **extra) -> dict:
+    """A claim names its kind, the record module and its subjects."""
+    claim = {"kind": kind, "module": module, "subjects": list(subjects)}
+    claim.update(extra)
+    return claim
+
+
+def _edge_symbol(g, value) -> str:
+    """The semantic name of a target; an address is never the identity."""
+    if isinstance(value, tuple) and value and value[0] == "sym":
+        return str(value[1]).split("@")[0]
+    if isinstance(value, int):
+        sym = ((getattr(g, "funcs", {}) or {}).get(value)
+               or (getattr(g, "all_syms", {}) or {}).get(value))
+        return str(sym).split("@")[0] if sym else f"<{value:#x}>"
+    return str(value)
+
+
+def _addr_name(g, value) -> str:
+    """A semantic name for an address given as an int or a hex string."""
+    try:
+        addr = value if isinstance(value, int) else int(value, 16)
+    except (TypeError, ValueError):
+        return str(value)
+    return _edge_symbol(g, addr)
+
+
+def _edge_atom_step(g, atom: dict) -> dict:
+    kind = atom.get("kind")
+    if kind == "relocation":
+        return {"step": "relocation", "symbol": atom.get("symbol"),
+                "slot": atom.get("slot")}
+    if kind == "param":
+        return {"step": "argument", "index": atom.get("index")}
+    if kind == "int":
+        return {"step": "code-materialised",
+                "symbol": _edge_symbol(g, atom.get("value"))}
+    if kind == "field":
+        return {"step": "field", "offset": hex(atom.get("offset"))}
+    return {"step": "unbounded", "why": atom.get("why")}
+
+
+def _edge_chain_steps(g, node, out: list) -> None:
+    """Flatten a provenance record into store/argument/relocation/lea/thunk steps."""
+    if isinstance(node, list):
+        for item in node:
+            _edge_chain_steps(g, item, out)
+        return
+    if not isinstance(node, dict):
+        return
+    if isinstance(node.get("atom"), dict):
+        out.append(_edge_atom_step(g, node["atom"]))
+    if isinstance(node.get("value"), list):
+        for atom in node["value"]:
+            if isinstance(atom, dict) and "kind" in atom:
+                out.append(_edge_atom_step(g, atom))
+    if "field_slot" in node:
+        out.append({"step": "field-slot", "slot": node.get("field_slot"),
+                    "field_offset": node.get("field_offset"),
+                    "writer": node.get("writer"),
+                    "argument_index": node.get("argument_index")})
+    for key in ("chain", "chains"):
+        if isinstance(node.get(key), (list, dict)):
+            _edge_chain_steps(g, node[key], out)
+
+
+def _edge_role(site: dict) -> str:
+    if site.get("semantic_store_target") is not None:
+        return "method-store-slot"
+    if site.get("edge_target_witness"):
+        return "in-image-data-slot"
+    if site.get("reachable_caller_bound"):
+        return "argument-callback"
+    if site.get("class") in ABI_CONTRACT_CLASSES:
+        return "abi-contract-dispatch"
+    if site.get("unresolved"):
+        return "unresolved-dispatch"
+    return "value-flow"
+
+
+def _record_call_sites(g, rows) -> list:
+    """Project bound-level call sites into the record's name-bearing shape.
+
+    The addresses stay as artifact-local witnesses; ``targets`` is the semantic
+    name set that ``contributed_targets`` must equal, so a record cannot carry a
+    contribution its own call-site witness does not show.
+    """
+    out = []
+    for cs in rows or ():
+        args = []
+        for arg in cs.get("arguments") or ():
+            addresses = [hx for hx in (arg.get("targets") or ())]
+            args.append({
+                "argument_index": arg.get("argument_index",
+                                           arg.get("argument")),
+                "targets": sorted({_addr_name(g, hx) for hx in addresses}),
+                "target_addresses": sorted(addresses),
+                "witness_instruction": arg.get("witness_instruction") or [],
+            })
+        out.append({"call_site": cs.get("call_site"), "arguments": args})
+    return out
+
+
+def _edge_disposition(site: dict, name=None):
+    """(disposition, demotion, missing_property).
+
+    A target set is only "proved" when the resolver admitted at least one target
+    and the defining function has a symbol.  v1.1 silently proved an empty set
+    for 584 real records; an empty set is a resolver gap, not a proof, and is
+    demoted here (the demotion is counted in the receipt so the gap stays
+    visible).  A record with no defining symbol cannot be attributed to a
+    function and is never proved or contract-bounded.
+    """
+    contract = site.get("class") in ABI_CONTRACT_CLASSES
+    named = _is_named_function(name)
+    if contract:
+        if not named:
+            return (DISPOSITION_UNRESOLVED, "no-defining-symbol",
+                    "the containing function has no symbol, so the ABI "
+                    "contract cannot be attributed to a function")
+        return DISPOSITION_CONTRACT, None, None
+    if site.get("unresolved"):
+        return DISPOSITION_UNRESOLVED, None, None
+    if not named:
+        # The no-symbol rule takes precedence: the record cannot be attributed
+        # to a function at all, so that is the missing property to name.
+        return (DISPOSITION_UNRESOLVED, "no-defining-symbol",
+                "the containing function has no symbol, so a target set "
+                "cannot be attributed to a function")
+    if not (site.get("targets") or ()):
+        return (DISPOSITION_UNRESOLVED, "empty-target-set",
+                site.get("reason") or
+                "empty target set: the resolver admitted no target and "
+                "enumerated no candidates")
+    return DISPOSITION_PROVED, None, None
+
+
+def _edge_record(g, site: dict, ordinal: int, oracle=None, seen_ids=None) -> dict:
+    module = getattr(g, "name", None) or "?"
+    fstart = site.get("func", 0)
+    site_addr = site.get("addr", 0)
+    funcs = getattr(g, "funcs", {}) or {}
+    name = funcs.get(fstart, "?")
+    role = _edge_role(site)
+    disposition, demotion, demotion_property = _edge_disposition(site, name)
+    admitted = sorted(_edge_symbol(g, t) for t in (site.get("targets") or ()))
+    candidates = set(admitted)
+    enumeration = "resolver-admitted-set"
+    candidate_source = {"kind": "resolver-admitted-set",
+                        "class": site.get("class"),
+                        "reason": site.get("reason")}
+    exclusions = []
+    extra = {}
+    chains = collections.defaultdict(list)
+    refutation = site.get("refutation_admission") or {}
+    refutation_targets = set(refutation.get("targets") or ())
+    refutation_chains = {}
+    for row in refutation.get("admitted") or ():
+        if not isinstance(row, dict):
+            continue
+        step = {"step": "refutation-admission",
+                "subject": row.get("subject"),
+                "role": row.get("role"),
+                "basis": row.get("basis") or "final-upper-bound"}
+        for nm in row.get("targets") or ():
+            refutation_chains.setdefault(nm, []).append(step)
+    # Set only by the round-4 zero-attribution fallback: the record cannot emit
+    # a bounded set, so it becomes UNRESOLVED and names the incomplete property.
+    fallback_missing = None
+    unattributed = []
+
+    semantics = site.get("semantic_store_target")
+    edge_witness = site.get("edge_target_witness")
+    caller_bound = site.get("reachable_caller_bound")
+    if semantics is not None:
+        # Only a resolved derivation enumerates its candidates.  An unresolved
+        # row may contain a partial target set from rows that did not fail; it
+        # is not a candidate set and must not be reported as if it were.
+        resolved = bool(semantics.get("resolved"))
+        enumeration = "complete" if resolved else "not-applicable"
+        candidates = set()
+        source_rows = []
+        collapsed = set()
+        declared = []
+        stored_values = semantics.get("stored_values") or {}
+        for row in semantics.get("call_sites") or ():
+            caller = row.get("caller")
+            call_site = row.get("call_site")
+            base = [
+                {"step": "store-writer", "writer": row.get("writer"),
+                 "argument_index": row.get("argument_index")},
+                {"step": "call-site", "caller": caller,
+                 "call_site": call_site},
+            ]
+            sub = []
+            _edge_chain_steps(g, row.get("chain") or (), sub)
+            if row.get("included") is False:
+                extra.setdefault("excluded_callers", []).append({
+                    "target": caller or "?",
+                    "reason": "caller-not-in-reachable-set",
+                    "row_kind": "subject",
+                    "claim": _claim("caller-not-in-reachable-set", module,
+                                    [caller or "?"]),
+                    "evidence": _reach_evidence(
+                        oracle, module, caller,
+                        symbols_checked=[caller] if caller else []),
+                    "call_site": call_site,
+                })
+                source_rows.append({
+                    "caller": caller, "call_site": call_site,
+                    "included": False,
+                    "reason": "caller-not-in-reachable-set", "targets": []})
+                continue
+            if row.get("failure"):
+                extra.setdefault("unbounded_call_sites", []).append({
+                    "target": call_site or caller or "?",
+                    "reason": "provenance-unbounded",
+                    "row_kind": "subject",
+                    "claim": _claim("provenance-unbounded", module, []),
+                    "evidence": {"failure": row.get("failure")},
+                    "caller": caller,
+                })
+                source_rows.append({
+                    "caller": caller, "call_site": call_site,
+                    "included": False,
+                    "reason": "provenance-unbounded", "targets": []})
+                continue
+            names = set()
+            for hx in row.get("targets") or ():
+                nm = _addr_name(g, stored_values.get(hx, hx))
+                names.add(nm)
+                if resolved:
+                    candidates.add(nm)
+                    chains[nm].extend(base + sub)
+            source_rows.append({
+                "caller": caller, "call_site": call_site,
+                "included": True,
+                "targets": sorted(names) if resolved else []})
+        for collapse in semantics.get("thunk_collapses") or ():
+            nm = _addr_name(g, collapse.get("semantic"))
+            chains[nm].append({
+                "step": "thunk",
+                "from_symbol": _addr_name(g, collapse.get("stored")),
+                "to_symbol": nm,
+            })
+            if resolved:
+                candidates.add(nm)
+                collapsed.add(nm)
+        writer_rows = []
+        for w in semantics.get("excluded_writers") or ():
+            would = w.get("would_store_targets") or []
+            if not w.get("would_store_failure") and not would:
+                continue
+            declared_name = w.get("fragment")
+            writer_symbol = w.get("symbol") or "?"
+            writer_address = w.get("address")
+            writer_absent = (w.get("reason") == "absent from the image"
+                             and isinstance(declared_name, str)
+                             and bool(declared_name))
+            would_names = [_addr_name(g, hx) for hx in would]
+            # The excluded writer's would-store values are candidates: they are
+            # exactly what the exclusion accounts for, even when the overall
+            # derivation is unresolved.
+            candidates.update(would_names)
+            writer_rows.append({
+                "symbol": writer_symbol, "address": writer_address,
+                "included": False,
+                "reason": ("declared-name-absent" if writer_absent else
+                           "writer-not-in-reachable-set"),
+                "targets": sorted(set(would_names))})
+            if writer_absent:
+                # The declared writer is absent from the image.  The structured
+                # mapping is the list of targets it would store; a free-text
+                # derivation is never evidence (v1.2 R2).
+                for nm in would_names:
+                    exclusions.append({
+                        "target": nm,
+                        "reason": "declared-name-absent",
+                        "row_kind": "target-drop",
+                        "claim": _claim("declared-name-absent", module,
+                                        [declared_name]),
+                        "evidence": {"declared_name": declared_name,
+                                     "present": False,
+                                     "targets": sorted(set(would_names)),
+                                     "fragment": declared_name},
+                    })
+            else:
+                # The writer is present but outside this family's reachable set.
+                # The target drop and the writer subject are different claims and
+                # now live in different lists: `exclusions[]` is always a target
+                # drop, and the writer is a `writer-not-in-reachable-set` subject
+                # row bound to the site's targets by `would_store_targets`.
+                for nm in would_names:
+                    exclusions.append({
+                        "target": nm,
+                        "reason": "no-reachable-writer",
+                        "row_kind": "target-drop",
+                        "claim": _claim("no-reachable-writer", module, []),
+                        "evidence": {
+                            "writer": writer_symbol,
+                            "derived_targets": sorted(set(admitted)),
+                            "reachable_writers": [],
+                            "would_store_targets": sorted(set(would_names)),
+                            "writer_address": writer_address,
+                        },
+                    })
+                extra.setdefault("excluded_writers", []).append({
+                    "target": writer_symbol,
+                    "reason": "writer-not-in-reachable-set",
+                    "row_kind": "subject",
+                    "claim": _claim("writer-not-in-reachable-set", module,
+                                    [writer_symbol]),
+                    "evidence": _reach_evidence(
+                        oracle, module, writer_symbol,
+                        extra={"writer_address": writer_address,
+                               "would_store_targets": sorted(set(would_names)),
+                               "would_store": list(would)},
+                        symbols_checked=[writer_symbol],
+                        addresses={writer_symbol: writer_address}),
+                })
+            if w.get("would_store_failure"):
+                extra.setdefault("excluded_writers", []).append({
+                    "target": writer_symbol,
+                    "reason": "provenance-unbounded",
+                    "row_kind": "subject",
+                    "claim": _claim("provenance-unbounded", module, []),
+                    "evidence": {"failure": w["would_store_failure"]},
+                    "writer_address": writer_address,
+                })
+        cross = semantics.get("declared_cross_check") or {}
+        if resolved:
+            # `declared_but_absent` is a cross-check observation, not a target
+            # drop: there is no target to bind to the absent name.  It stays in
+            # the precision ledger (`declared_cross_check`) and is not emitted as
+            # an exclusion, because a target drop must name a candidate target.
+            deref = set(admitted)
+            for frag, info in (cross.get("declared_targets") or {}).items():
+                if not info.get("present"):
+                    continue
+                names = set()
+                for hx in info.get("addresses") or ():
+                    nm = _addr_name(g, hx)
+                    names.add(nm)
+                    candidates.add(nm)
+                    if nm not in deref:
+                        exclusions.append({
+                            "target": nm,
+                            "reason": "no-reachable-writer",
+                            "row_kind": "target-drop",
+                            "claim": _claim("no-reachable-writer", module, []),
+                            "evidence": {
+                                "writer": "the reachable method-store writers",
+                                "derived_targets": sorted(deref),
+                                "reachable_writers": [],
+                                "declared_name": frag,
+                                "address": hx},
+                        })
+                declared.append({"name": frag,
+                                 "targets": sorted(names)})
+        else:
+            extra["semantic_refusal"] = semantics.get("refusal")
+        extra["source_of_truth"] = "stored-value provenance"
+        extra["slot"] = semantics.get("slot")
+        candidate_source = {
+            "kind": "store-writer-call-sites",
+            "resolved": resolved,
+            "rows": source_rows,
+            "writers": writer_rows,
+            "collapsed": sorted(collapsed),
+            "declared": declared,
+        }
+        if refutation_targets:
+            candidate_source["refutation_targets"] = sorted(refutation_targets)
+    elif edge_witness is not None:
+        enumeration = "complete"
+        extra["witness_id"] = edge_witness.get("id")
+        for nm in admitted:
+            chains[nm] = [
+                {"step": "store-writer", "writer": edge_witness.get("writer")},
+                {"step": "linkage", "source": edge_witness.get("source"),
+                 "slot": edge_witness.get("slot")},
+            ]
+    elif caller_bound is not None:
+        # Caller-scoped narrowing.  A dropped target is very often reachable in
+        # its own right (the v1m provider case dropped 178 reachable targets);
+        # the sound claim is about the *callers*, never the target.  The record
+        # embeds the reachable and excluded caller sets so the drop is
+        # recomputable from the record alone.
+        enumeration = "complete"
+        candidates |= {_edge_symbol(g, t)
+                       for t in (site.get("arg_targets") or ())}
+        reachable_rows = []
+        reachable_contrib = set()
+        for row in caller_bound.get("reachable_callers") or ():
+            steps = []
+            if row.get("admitted_by_refutation"):
+                steps.append({"step": "refutation-admission",
+                              "subject": row.get("symbol"),
+                              "role": ADMISSION_ROLE_CALLER,
+                              "basis": "final-upper-bound"})
+            steps.append({"step": "argument", "caller": row.get("symbol")})
+            for cs in row.get("call_sites") or ():
+                for arg in cs.get("arguments") or ():
+                    for wi in arg.get("witness_instruction") or ():
+                        steps.append({"step": "code-materialised",
+                                      "instruction": wi.get("text")})
+            names = set()
+            for hx in row.get("contributed_targets") or ():
+                nm = _addr_name(g, hx)
+                names.add(nm)
+                chains[nm].extend(steps)
+            reachable_contrib |= names
+            rec_row = {
+                "symbol": row.get("symbol") or "?",
+                "address": row.get("function"),
+                "reachable": True,
+                "reason": None,
+                "call_sites": _record_call_sites(g, row.get("call_sites")),
+                "contributed_targets": sorted(names),
+            }
+            if row.get("admitted_by_refutation"):
+                rec_row["admitted_by_refutation"] = True
+            reachable_rows.append(rec_row)
+        excluded_callers = caller_bound.get("excluded_callers") or []
+        excluded_rows = []
+        excluded_addresses = {}
+        excluded_contrib = set()
+        for c in excluded_callers:
+            symbol = c.get("symbol") or "?"
+            excluded_addresses[symbol] = c.get("function")
+            names = sorted({_addr_name(g, hx)
+                            for hx in (c.get("contributed_targets") or ())})
+            excluded_contrib |= set(names)
+            excluded_rows.append({
+                "symbol": symbol,
+                "address": c.get("function"),
+                "reachable": False,
+                "reason": "caller-not-in-reachable-set",
+                "call_sites": _record_call_sites(g, c.get("call_sites")),
+                "contributed_targets": names,
+            })
+        excluded_symbols = sorted({r["symbol"] for r in excluded_rows})
+        # The candidates above are the site's flat argument-target union.  Every
+        # caller row is embedded with its own per-call-site witness, so the
+        # exclusion set is recomputable from the record.  A caller row may only
+        # widen the candidate set here (normally a no-op); a candidate that no
+        # row attributes is *admitted*, never dropped -- the conservative
+        # direction of round 4.
+        candidates |= reachable_contrib | excluded_contrib
+        attributed = (reachable_contrib | excluded_contrib) & candidates
+        attribution_fallback = bool(candidates) and not attributed
+        if attribution_fallback:
+            # No caller row attributes any candidate.  The narrowing has no
+            # support, so no bounded set may be emitted: the record is
+            # UNRESOLVED and names the incomplete attribution.
+            disposition = DISPOSITION_UNRESOLVED
+            demotion = None
+            fallback_missing = ATTRIBUTION_INCOMPLETE_PROPERTY.format(
+                n=len(candidates))
+            admitted = []
+            unattributed = sorted(candidates)
+        else:
+            unattributed = sorted(candidates - reachable_contrib
+                                  - excluded_contrib)
+            admitted_set = set(admitted)
+            for nm in unattributed:
+                admitted_set.add(nm)
+                chains[nm].append({
+                    "step": "unattributed-admission",
+                    "reason": UNATTRIBUTED_ADMISSION_REASON})
+            admitted = sorted(admitted_set)
+        if unattributed:
+            for nm in unattributed:
+                extra.setdefault("unattributed_admissions", []).append({
+                    "dso": module,
+                    "site": hex(site_addr),
+                    "function": name,
+                    "target": nm,
+                    "reason": (fallback_missing
+                               or UNATTRIBUTED_ADMISSION_REASON),
+                })
+        claim_callers = [{"symbol": r["symbol"],
+                          "address": r["address"],
+                          "contributed_targets": r["contributed_targets"]}
+                         for r in reachable_rows]
+        if not attribution_fallback:
+            for dropped in sorted(candidates - set(admitted)):
+                # Only an excluded caller's contribution can be dropped: a
+                # target attributed to a reachable caller is admitted by the
+                # derivation, and an unattributed one is admitted above.
+                exclusions.append({
+                    "target": dropped,
+                    "reason": "not-contributed-by-reachable-callers",
+                    "row_kind": "target-drop",
+                    "claim": _claim(
+                        "not-contributed-by-reachable-callers", module, [],
+                        reachable_callers=claim_callers,
+                        excluded_callers=excluded_symbols),
+                    "evidence": {
+                        "reachable_basis": ("final-upper-bound"
+                                            if oracle is not None
+                                            else "pre-closure-direct"),
+                        "subject_addresses": excluded_addresses,
+                    },
+                })
+        for c in excluded_callers:
+            symbol = c.get("symbol") or "?"
+            extra.setdefault("excluded_callers", []).append({
+                "target": symbol,
+                "reason": "caller-not-in-reachable-set",
+                "row_kind": "subject",
+                "claim": _claim("caller-not-in-reachable-set", module,
+                                [symbol]),
+                "evidence": _reach_evidence(
+                    oracle, module, symbol,
+                    extra={"in_image_attribution": c.get("contributed_targets"),
+                           "in_image_references":
+                           c.get("in_image_references")},
+                    symbols_checked=[symbol],
+                    addresses={symbol: c.get("function")}),
+            })
+        candidate_source = {
+            "kind": "argument-targets",
+            "callers": reachable_rows,
+            "excluded_callers": excluded_rows,
+            "argued_by": sorted({r["symbol"] for r in reachable_rows}
+                                | set(excluded_symbols)),
+            "targets": sorted(candidates),
+            "unattributed_targets": sorted(unattributed),
+        }
+        refuted_callers = sorted(
+            r["symbol"] for r in reachable_rows
+            if r.get("admitted_by_refutation"))
+        if refuted_callers:
+            candidate_source["refutation_admitted_callers"] = refuted_callers
+    elif site.get("class") in ABI_CONTRACT_CLASSES:
+        w = site.get("witness") or {}
+        extra["witness_id"] = (f"{site.get('class')}:{w.get('slot') or 'unknown'}")
+        extra["contract_bounded"] = True
+        for nm in admitted:
+            chains[nm] = [{"step": "abi-contract",
+                           "slot": w.get("slot"),
+                           "interface": w.get("interface")}]
+    else:
+        for nm in admitted:
+            chains[nm] = [{"step": "resolver", "class": site.get("class"),
+                           "reason": site.get("reason")}]
+
+    # A refuted exclusion's contribution is admitted with its witness.  The
+    # target is added to the candidate enumeration (it is a real candidate the
+    # derivation would have produced) and carries its own derivation step; a
+    # target that already has a chain from the widened derivation keeps it.
+    for nm in sorted(refutation_targets):
+        candidates.add(nm)
+        if nm not in chains:
+            chains[nm] = list(refutation_chains.get(nm) or [{
+                "step": "refutation-admission",
+                "role": "stored-value-provenance",
+                "basis": "final-upper-bound"}])
+    if refutation:
+        extra["refutation_admissions"] = refutation.get("admitted") or []
+        extra["refuted_exclusions"] = refutation.get("refuted") or []
+        if refutation.get("missing_property"):
+            extra["refutation_missing_property"] = refutation["missing_property"]
+
+    chain_rows = [{"target": nm, "derivation": chains[nm]}
+                  for nm in sorted(chains)]
+    admitted_set = set(admitted)
+    excluded_set = {e["target"] for e in exclusions if e.get("target")}
+    accounted = admitted_set | excluded_set
+    unattributed_set = set(unattributed)
+    unaccounted = (sorted(candidates - accounted - unattributed_set)
+                   if enumeration == "complete" else [])
+
+    # Derived, never self-described: a record claims a target set exactly when
+    # its disposition is PROVED_TARGET_SET.  v1.2 let an UNRESOLVED record say
+    # "claimed", which made the field an assertion rather than a consequence.
+    target_reachability = ("claimed" if disposition == DISPOSITION_PROVED
+                           else "not-claimed")
+
+    missing = None
+    if disposition == DISPOSITION_UNRESOLVED:
+        missing = (fallback_missing
+                   or demotion_property
+                   or (semantics or {}).get("refusal")
+                   or site.get("reason")
+                   or "the resolver recorded no target set and no reason")
+
+    base_id = (f"{module}::{name}::{site.get('kind')}::{role}::{ordinal}")
+    edge_id = base_id
+    if seen_ids is not None:
+        if edge_id in seen_ids:
+            digest = hashlib.sha256(json.dumps(
+                {"text": site.get("text"),
+                 "site_address": hex(site_addr),
+                 "chain": [c["target"] for c in chain_rows]},
+                sort_keys=True).encode()).hexdigest()[:16]
+            edge_id = f"{base_id}::{digest}"
+        seen_ids.add(edge_id)
+
+    return {
+        "schema": EDGE_RECORD_SCHEMA,
+        "edge_id": edge_id,
+        "semantic_identity": {
+            "source_operation": site.get("text"),
+            "operation_kind": site.get("kind"),
+            "defining_function": name,
+            "call_site_role": role,
+            "provenance_chain": chain_rows,
+            "artifact_local_witness": {
+                "module": module,
+                "function_address": hex(fstart),
+                "site_address": hex(site_addr),
+                "identity_note": ("addresses are artifact-local witnesses; "
+                                  "they are not the identity of the edge"),
+            },
+        },
+        "disposition": disposition,
+        "disposition_demotion": demotion,
+        "target_set": admitted if disposition == DISPOSITION_PROVED else [],
+        "target_set_claim": disposition == DISPOSITION_PROVED,
+        "target_reachability": target_reachability,
+        "witness_id": extra.get("witness_id"),
+        "missing_property": missing,
+        "exclusions": exclusions,
+        "candidate_source": candidate_source,
+        **{k: v for k, v in extra.items() if k not in ("witness_id",)},
+        "exclusion_accounting": {
+            "candidate_enumeration": enumeration,
+            "candidate_targets": sorted(candidates),
+            "admitted_targets": sorted(admitted_set),
+            "excluded_targets": sorted(excluded_set),
+            "unaccounted_targets": unaccounted,
+        },
+    }
+
+
+def iter_edge_records(graphs: dict, oracle=None):
+    """Yield one provenance record for every indirect site, in module order."""
+    for dso_name in sorted(graphs):
+        g = graphs[dso_name]
+        ordinals = collections.Counter()
+        seen_ids = set()
+        keys = sorted(getattr(g, "sites", {}) or {},
+                      key=lambda k: (k[0], k[1], str(k[2])))
+        for key in keys:
+            site = g.sites[key]
+            seed = (site.get("func"), _edge_role(site))
+            ordinals[seed] += 1
+            yield _edge_record(g, site, ordinals[seed], oracle, seen_ids)
+
+
+def build_edge_records(graphs: dict, oracle=None, sink=None):
+    """One provenance record per indirect site.
+
+    With ``sink`` the population is produced, handed to the sink and released;
+    only a compact summary is returned, so a 52k-record closure does not have to
+    hold the population in memory.  Without ``sink`` the list is returned (the
+    test and corpus callers).
+
+    When ``oracle`` is supplied, every negative reachability claim carries the
+    observation made against the final upper bound rather than the
+    derivation-time (pre-closure, under-approximating) reachable set.
+    """
+    if sink is None:
+        return list(iter_edge_records(graphs, oracle))
+    count = 0
+    for record in iter_edge_records(graphs, oracle):
+        sink(record)
+        count += 1
+    return {"schema": EDGE_RECORD_SCHEMA, "count": count}
+
+
+def _is_symbol_name(value) -> bool:
+    return isinstance(value, str) and bool(
+        re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.]*", value))
+
+
+def _subject_addresses(evidence) -> dict:
+    """Normalise a row's optional artifact-local subject addresses."""
+    raw = evidence.get("subject_addresses") if isinstance(evidence, dict) else None
+    if not isinstance(raw, dict):
+        return {}
+    out = {}
+    for key, value in raw.items():
+        try:
+            out[key] = value if isinstance(value, int) else int(value, 16)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def _absent_subject_defects(rid, where, reason, subjects, evidence,
+                            module, oracle):
+    """Shared checks for a claim that named subjects are absent from the bound."""
+    defects = []
+    member = evidence.get("reachable_set_member")
+    if member is not False:
+        defects.append(
+            f"{rid}: {where} ({reason}) asserts reachable_set_member="
+            f"{member!r}; a negative reachability claim requires exactly False")
+    basis = evidence.get("reachable_basis")
+    if basis not in REACHABILITY_BASES:
+        defects.append(f"{rid}: {where} ({reason}) has reachability basis "
+                       f"{basis!r}")
+    checked = evidence.get("symbols_checked")
+    if (not isinstance(checked, list) or not checked
+            or not all(isinstance(s, str) and s for s in checked)
+            or (bool(subjects) and set(checked) != set(subjects))):
+        # v1.1 accepted an empty list when a free `reachable_caller_count` was
+        # zero.  The count was not recomputable and had no production producer;
+        # the exemption is gone, so the covered symbols are mandatory and must
+        # be exactly the subjects.
+        defects.append(f"{rid}: {where} ({reason}) does not list the symbols "
+                       "its claim covers")
+    symbol = evidence.get("symbol")
+    if not isinstance(symbol, str) or not symbol:
+        defects.append(f"{rid}: {where} ({reason}) names no symbol")
+    if oracle is not None and module:
+        if basis != "final-upper-bound":
+            defects.append(
+                f"{rid}: {where} ({reason}) claims basis {basis!r}; an "
+                "oracle-backed negative claim requires final-upper-bound")
+        addresses = _subject_addresses(evidence)
+        for subject in subjects:
+            if not _is_symbol_name(subject) and subject not in addresses:
+                defects.append(
+                    f"{rid}: {where} ({reason}) subject {subject!r} is not a "
+                    "symbol and carries no address")
+                continue
+            observed, _basis, checkable = oracle.is_reachable(
+                module, subject, addresses.get(subject))
+            if not checkable:
+                defects.append(f"{rid}: {where} ({reason}) is not checkable: "
+                               f"the oracle does not cover module {module!r}")
+                break
+            if observed is not member:
+                defects.append(
+                    f"{rid}: {where} ({reason}) claims reachable_set_member="
+                    f"{member!r} but the final upper bound holds {observed} "
+                    f"for {subject!r}")
+    return defects
+
+
+def _row_kind_placement_defect(rid, where, row, expected_kind):
+    """A row belongs to exactly one list kind; the kind is part of the claim."""
+    kind = row.get("row_kind")
+    if kind not in ROW_KINDS:
+        return (f"{rid}: {where} has no row_kind from {sorted(ROW_KINDS)}")
+    if kind != expected_kind:
+        if expected_kind == "target-drop":
+            return (f"{rid}: {where} is in exclusions[] with row_kind {kind!r}; "
+                    "a target drop cannot be justified by a caller/writer claim")
+        return (f"{rid}: {where} is an auxiliary subject row with row_kind "
+                f"{kind!r}; a target drop cannot be recorded as a subject claim")
+    return None
+
+
+def _row_reason_vocab_defect(rid, where, reason, expected_kind):
+    """The reason must belong to the vocabulary of the row's list kind."""
+    vocabulary = ROW_KIND_VOCABULARY[expected_kind]
+    if reason not in vocabulary:
+        return (f"{rid}: {where} reason {reason!r} is not a "
+                f"{expected_kind} reason ({', '.join(sorted(vocabulary))})")
+    return None
+
+
+def _exclusion_row_defects(rid, where, row, module, oracle, rec,
+                           expected_kind):
+    """Per-reason checks for one exclusion or auxiliary claim row.
+
+    A reason is accepted only when the row's ``claim`` names the right subject
+    and its evidence establishes the sentence in ``EXCLUSION_SEMANTICS``.
+    Presence of a field is not the claim: booleans are compared with ``is``, and
+    a supplied oracle must corroborate every negative.
+    """
+    if not isinstance(row, dict):
+        return [f"{rid}: {where} is not an object"]
+    defects = []
+    target = row.get("target")
+    if not isinstance(target, str) or not target:
+        defects.append(f"{rid}: {where} names no target")
+        target = None
+    reason = row.get("reason")
+    if reason not in EXCLUSION_REASONS:
+        defects.append(f"{rid}: {where} has no checkable reason ({reason!r})")
+        return defects
+    kind_defect = _row_kind_placement_defect(rid, where, row, expected_kind)
+    if kind_defect:
+        return defects + [kind_defect]
+    vocab_defect = _row_reason_vocab_defect(rid, where, reason, expected_kind)
+    if vocab_defect:
+        return defects + [vocab_defect]
+    claim = row.get("claim")
+    if not isinstance(claim, dict):
+        return defects + [f"{rid}: {where} ({reason}) has no claim object"]
+    if claim.get("kind") != reason:
+        defects.append(
+            f"{rid}: {where} claim kind {claim.get('kind')!r} is not the "
+            f"reason {reason!r}")
+    cmodule = claim.get("module")
+    if not isinstance(cmodule, str) or not cmodule:
+        defects.append(f"{rid}: {where} claim names no module")
+    elif module and cmodule != module:
+        defects.append(
+            f"{rid}: {where} claim module {cmodule!r} is not the record's "
+            f"module {module!r}")
+    subjects = claim.get("subjects")
+    if not isinstance(subjects, list) or not all(
+            isinstance(s, str) and s for s in subjects):
+        defects.append(f"{rid}: {where} claim subjects are not a list of names")
+        subjects = []
+    evidence = row.get("evidence")
+    if not isinstance(evidence, dict) or not evidence:
+        return defects + [f"{rid}: {where} ({reason}) has no evidence"]
+    missing = [k for k in EXCLUSION_EVIDENCE_KEYS[reason]
+               if evidence.get(k) is None]
+    if missing:
+        defects.append(f"{rid}: {where} ({reason}) lacks evidence fields "
+                       + ", ".join(missing))
+    if oracle is not None and isinstance(cmodule, str) and cmodule \
+            and not oracle.knows(cmodule):
+        defects.append(f"{rid}: {where} ({reason}) is not checkable: the "
+                       f"oracle does not cover module {cmodule!r}")
+        oracle = None
+
+    if reason == "target-not-in-reachable-set":
+        # The claim is about the excluded target itself (H1).  v1.1 validated
+        # only the evidence's free `symbol`, so an exclusion of a reachable
+        # target whose evidence named a different, absent symbol validated.
+        if target and subjects != [target]:
+            defects.append(
+                f"{rid}: {where} ({reason}) must claim about exactly the "
+                f"excluded target {target!r}, not {subjects}")
+        symbol = evidence.get("symbol")
+        if target and symbol != target:
+            defects.append(
+                f"{rid}: {where} ({reason}) evidence names {symbol!r} but the "
+                f"excluded target is {target!r}")
+        defects.extend(_absent_subject_defects(
+            rid, where, reason, subjects or ([target] if target else []),
+            evidence, cmodule or module, oracle))
+    elif reason == "caller-not-in-reachable-set":
+        if not subjects:
+            defects.append(f"{rid}: {where} ({reason}) names no caller")
+        defects.extend(_absent_subject_defects(
+            rid, where, reason, subjects, evidence, cmodule or module, oracle))
+    elif reason == "writer-not-in-reachable-set":
+        if len(subjects) != 1:
+            defects.append(f"{rid}: {where} ({reason}) must name exactly one "
+                           f"writer, got {subjects}")
+        would = evidence.get("would_store_targets")
+        if not isinstance(would, list) or not all(
+                isinstance(t, str) and t for t in would):
+            defects.append(f"{rid}: {where} ({reason}) has no "
+                           "would_store_targets list binding the subject to "
+                           "the site's targets")
+        defects.extend(_absent_subject_defects(
+            rid, where, reason, subjects, evidence, cmodule or module, oracle))
+    elif reason == "not-contributed-by-reachable-callers":
+        # The per-caller mapping is not read here: it is recomputed from
+        # candidate_source by _argument_binding_defects.  This branch checks the
+        # claim's shape and the oracle membership of the named callers.
+        rows = claim.get("reachable_callers")
+        if not isinstance(rows, list) or not rows:
+            defects.append(f"{rid}: {where} ({reason}) embeds no reachable "
+                           "caller set")
+            rows = []
+        for entry in rows:
+            if not isinstance(entry, dict):
+                defects.append(f"{rid}: {where} ({reason}) caller row is not "
+                               "an object")
+                continue
+            symbol = entry.get("symbol")
+            if not isinstance(symbol, str) or not symbol:
+                defects.append(f"{rid}: {where} ({reason}) caller row names no "
+                               "caller")
+            targets = entry.get("contributed_targets")
+            if not isinstance(targets, list) or not all(
+                    isinstance(t, str) and t for t in targets):
+                defects.append(f"{rid}: {where} ({reason}) caller {symbol!r} "
+                               "has no contributed target list")
+        excluded = claim.get("excluded_callers")
+        if not isinstance(excluded, list) or not excluded or not all(
+                isinstance(s, str) and s for s in excluded):
+            defects.append(f"{rid}: {where} ({reason}) embeds no excluded "
+                           "caller list")
+            excluded = []
+        basis = evidence.get("reachable_basis")
+        if basis not in REACHABILITY_BASES:
+            defects.append(f"{rid}: {where} ({reason}) has reachability basis "
+                           f"{basis!r}")
+        if oracle is not None and cmodule:
+            if basis != "final-upper-bound":
+                defects.append(
+                    f"{rid}: {where} ({reason}) claims basis {basis!r}; an "
+                    "oracle-backed claim requires final-upper-bound")
+            for entry in rows:
+                symbol = entry.get("symbol") if isinstance(entry, dict) else None
+                if not isinstance(symbol, str) or not symbol:
+                    continue
+                address = entry.get("address")
+                try:
+                    address = int(address, 16) if isinstance(address, str) else address
+                except ValueError:
+                    address = None
+                observed, _basis, checkable = oracle.is_reachable(
+                    cmodule, symbol, address)
+                if not checkable or observed is not True:
+                    defects.append(
+                        f"{rid}: {where} ({reason}) embeds a caller {symbol!r} "
+                        "that is not established as reachable in the final "
+                        "upper bound")
+            addresses = _subject_addresses(evidence)
+            for symbol in excluded:
+                observed, _basis, checkable = oracle.is_reachable(
+                    cmodule, symbol, addresses.get(symbol))
+                if not checkable or observed is not False:
+                    defects.append(
+                        f"{rid}: {where} ({reason}) embeds an excluded caller "
+                        f"{symbol!r} that the final upper bound reaches or "
+                        "cannot check")
+    elif reason == "declared-name-absent":
+        name = evidence.get("declared_name")
+        if not isinstance(name, str) or not name:
+            defects.append(f"{rid}: {where} ({reason}) names no declared symbol")
+        elif subjects != [name]:
+            defects.append(
+                f"{rid}: {where} ({reason}) must claim about exactly the "
+                f"declared name {name!r}, not {subjects}")
+        if evidence.get("present") is not False:
+            defects.append(
+                f"{rid}: {where} ({reason}) asserts present="
+                f"{evidence.get('present')!r}; an absent name requires exactly "
+                "False")
+        listed = evidence.get("targets")
+        if not isinstance(listed, list) or not listed or not all(
+                isinstance(t, str) and t for t in listed):
+            # v1.2 accepted a free-text `target_derivation`; a string is never
+            # a structured mapping from a declared name to a dropped target.
+            defects.append(
+                f"{rid}: {where} ({reason}) has no structured evidence.targets "
+                "list; a free-text derivation is not evidence")
+            listed = []
+        if target and listed and target not in listed:
+            defects.append(
+                f"{rid}: {where} ({reason}) excludes target {target!r} but the "
+                f"declared mapping names {listed}")
+        if oracle is not None and cmodule and isinstance(name, str) and name:
+            image = oracle.image_symbols_for(cmodule)
+            if image is not None and name in image:
+                defects.append(f"{rid}: {where} ({reason}) claims {name!r} is "
+                               "absent but the image defines it")
+        if oracle is not None and cmodule and target:
+            observed, _basis, checkable = oracle.is_reachable(cmodule, target)
+            if not checkable or observed is not False:
+                defects.append(
+                    f"{rid}: {where} ({reason}) drops target {target!r} under an "
+                    "absent declared name although the final upper bound "
+                    "reaches it (or cannot check it)")
+    elif reason == "no-reachable-writer":
+        writer = evidence.get("writer")
+        if not isinstance(writer, str) or not writer:
+            defects.append(f"{rid}: {where} ({reason}) names no writer")
+        derived = evidence.get("derived_targets")
+        if not isinstance(derived, list):
+            defects.append(f"{rid}: {where} ({reason}) records no derived "
+                           "target list")
+        elif target and target in derived:
+            defects.append(
+                f"{rid}: {where} ({reason}) excludes {target!r} although its "
+                "own derived_targets contain it")
+        reachable = evidence.get("reachable_writers")
+        if not isinstance(reachable, list) or reachable:
+            defects.append(f"{rid}: {where} ({reason}) must record "
+                           "reachable_writers == [], the claim it makes")
+    elif reason == "provenance-unbounded":
+        failure = evidence.get("failure")
+        if not isinstance(failure, str) or not failure:
+            defects.append(f"{rid}: {where} ({reason}) records no failure")
+    elif reason == "non-image-value":
+        if evidence.get("in_image") is not False:
+            defects.append(
+                f"{rid}: {where} ({reason}) asserts in_image="
+                f"{evidence.get('in_image')!r}; a non-image claim requires "
+                "exactly False")
+        value = evidence.get("value")
+        if oracle is not None and cmodule and _is_symbol_name(value):
+            image = oracle.image_symbols_for(cmodule)
+            if image is not None and value in image:
+                defects.append(f"{rid}: {where} ({reason}) claims {value!r} is "
+                               "not an image symbol but the image defines it")
+    return defects
+
+
+def _candidate_source_defects(rid, rec, oracle, module):
+    """Recompute candidates from ``candidate_source``; return (set|None, defects).
+
+    ``None`` means "the candidates are exactly the admitted resolver set" (the
+    ``resolver-admitted-set`` kind).  A separate enumeration is mandatory:
+    v1.1 trusted the accounting ledger, so deleting an exclusion and its
+    candidate left no trace.
+    """
+    source = rec.get("candidate_source")
+    if not isinstance(source, dict):
+        return None, [f"{rid}: candidate_source is missing; the candidate set "
+                      "is not separately determined"]
+    kind = source.get("kind")
+    if kind not in CANDIDATE_SOURCE_KINDS:
+        return None, [f"{rid}: candidate_source kind {kind!r} is not checkable"]
+    defects = []
+    if kind == "store-writer-call-sites":
+        rows = source.get("rows")
+        if not isinstance(rows, list):
+            defects.append(f"{rid}: candidate_source rows are not a list")
+            rows = []
+        resolved = source.get("resolved") is True
+        names = set()
+        for row in rows:
+            if not isinstance(row, dict):
+                defects.append(f"{rid}: candidate_source row is not an object")
+                continue
+            caller = row.get("caller")
+            if not isinstance(caller, str) or not caller:
+                defects.append(f"{rid}: candidate_source row names no caller")
+            included = row.get("included")
+            if not isinstance(included, bool):
+                defects.append(f"{rid}: candidate_source row for {caller!r} "
+                               "does not say whether it is included")
+            targets = row.get("targets")
+            if not isinstance(targets, list) or not all(
+                    isinstance(t, str) and t for t in targets):
+                defects.append(f"{rid}: candidate_source row for {caller!r} "
+                               "has no target list")
+                targets = []
+            if included is True:
+                names.update(targets)
+            else:
+                reason = row.get("reason")
+                if reason == "caller-not-in-reachable-set":
+                    # H6: an excluded semantic call-site row is itself a claim,
+                    # separate from any auxiliary list.  The caller -- never
+                    # the target -- must be absent from the bound.
+                    if oracle is not None and module and caller:
+                        if not oracle.knows(module):
+                            pass  # record-level unknown-module defect
+                        else:
+                            observed, _b, checkable = oracle.is_reachable(
+                                module, caller, None)
+                            if not checkable or observed is not False:
+                                defects.append(
+                                    f"{rid}: candidate_source excludes caller "
+                                    f"{caller!r} but the final upper bound "
+                                    "reaches it (or cannot check it)")
+                elif reason != "provenance-unbounded":
+                    defects.append(
+                        f"{rid}: candidate_source row for {caller!r} is "
+                        f"excluded with reason {reason!r}, which is not a "
+                        "caller or provenance claim")
+        if not resolved and source.get("resolved") is not False:
+            defects.append(f"{rid}: candidate_source does not say whether the "
+                           "store-writer enumeration resolved")
+        collapsed = source.get("collapsed") or []
+        if not isinstance(collapsed, list) or not all(
+                isinstance(t, str) and t for t in collapsed):
+            defects.append(f"{rid}: candidate_source collapsed list is invalid")
+        else:
+            names.update(collapsed)
+        writers = source.get("writers") or []
+        if not isinstance(writers, list):
+            defects.append(f"{rid}: candidate_source writers list is invalid")
+            writers = []
+        for entry in writers:
+            if not isinstance(entry, dict):
+                defects.append(f"{rid}: candidate_source writer entry is not an "
+                               "object")
+                continue
+            reason = entry.get("reason")
+            if reason not in ("declared-name-absent",
+                              "writer-not-in-reachable-set"):
+                defects.append(f"{rid}: candidate_source writer entry has "
+                               f"reason {reason!r}, which is not a writer "
+                               "claim")
+            targets = entry.get("targets")
+            if not isinstance(targets, list) or not all(
+                    isinstance(t, str) and t for t in targets):
+                defects.append(f"{rid}: candidate_source writer entry has no "
+                               "target list")
+                continue
+            names.update(targets)
+        declared = source.get("declared") or []
+        if not isinstance(declared, list):
+            defects.append(f"{rid}: candidate_source declared list is invalid")
+            declared = []
+        for entry in declared:
+            if not isinstance(entry, dict):
+                defects.append(f"{rid}: candidate_source declared entry is not "
+                               "an object")
+                continue
+            targets = entry.get("targets")
+            if not isinstance(targets, list) or not all(
+                    isinstance(t, str) and t for t in targets):
+                defects.append(f"{rid}: candidate_source declared entry "
+                               "has no target list")
+                continue
+            names.update(targets)
+        # A refuted exclusion's contribution is a candidate the widened
+        # derivation produced (or the retained old targets it would have
+        # stored).  It is enumerated separately so the candidate set stays a
+        # separate source rather than being read back from the admitted set.
+        refuted_targets = source.get("refutation_targets") or []
+        if not isinstance(refuted_targets, list) or not all(
+                isinstance(t, str) and t for t in refuted_targets):
+            defects.append(f"{rid}: candidate_source refutation_targets is not "
+                           "a target-name list")
+        else:
+            names.update(refuted_targets)
+        return names, defects, {}
+    if kind == "argument-targets":
+        targets = source.get("targets")
+        if not isinstance(targets, list) or not targets or not all(
+                isinstance(t, str) and t for t in targets):
+            return (None, defects + [f"{rid}: argument-targets candidate source "
+                                     "has no target list"], {})
+        candidates = set(targets)
+        detail = {"kind": "argument-targets", "valid": False,
+                  "callers": {}, "excluded": {},
+                  "union_callers": set(), "union_excluded": set(),
+                  "callsite_union": {}, "unattributed": set(),
+                  "targets": candidates}
+        callers = source.get("callers")
+        excluded = source.get("excluded_callers")
+        refuted_callers = source.get("refutation_admitted_callers") or []
+        if not isinstance(refuted_callers, list) or not all(
+                isinstance(s, str) and s for s in refuted_callers):
+            defects.append(f"{rid}: argument-targets "
+                           "refutation_admitted_callers is not a name list")
+            refuted_callers = []
+        callers_ok = isinstance(callers, list) and bool(callers)
+        # A caller-bound narrowing used to require at least one excluded caller.
+        # After admission by refutation there may be none: every excluded caller
+        # was reached by the sound bound.  The empty set is not a negative claim
+        # when the record names the admitted callers and the validator confirms
+        # each of them is in the final upper bound; without that witness the
+        # shape is still refused.
+        excluded_ok = (isinstance(excluded, list)
+                       and (bool(excluded) or bool(refuted_callers)))
+        if not callers_ok:
+            # v1.2 let the claim's self-asserted `contributed_targets` stand in
+            # for the caller mapping.  Without an embedded mapping the drop is
+            # not recomputable, so no dependent check may run (and a fabricated
+            # claim list cannot supply one).
+            defects.append(f"{rid}: argument-targets candidate source embeds "
+                           "no caller mapping (symbol -> contributed_targets)")
+        if not excluded_ok:
+            defects.append(f"{rid}: argument-targets candidate source embeds "
+                           "no excluded-caller mapping "
+                           "(symbol -> contributed_targets)")
+        if not (callers_ok and excluded_ok):
+            return candidates, defects, {}
+        for label, rows in (("caller", callers),
+                            ("excluded caller", excluded)):
+            for entry in rows:
+                if not isinstance(entry, dict):
+                    defects.append(f"{rid}: argument-targets {label} entry is "
+                                   "not an object")
+                    continue
+                symbol = entry.get("symbol")
+                if not isinstance(symbol, str) or not symbol:
+                    defects.append(f"{rid}: argument-targets {label} entry "
+                                   "names no symbol")
+                    continue
+                contributed = entry.get("contributed_targets")
+                if not isinstance(contributed, list) or not all(
+                        isinstance(t, str) and t for t in contributed):
+                    defects.append(f"{rid}: argument-targets {label} "
+                                   f"{symbol!r} has no contributed_targets "
+                                   "list")
+                    contributed = []
+                mapping = detail["callers"] if label == "caller" \
+                    else detail["excluded"]
+                mapping[symbol] = set(contributed)
+                # Round 4: every caller row carries the per-call-site witness
+                # that produced its contribution.  `contributed_targets` must
+                # equal the union of the argument targets the row itself
+                # shows, so a contribution cannot be asserted without a
+                # witness (an empty call-site list can therefore contribute
+                # nothing).  This checks the record against itself; it is not a
+                # re-derivation from the image.
+                call_sites = entry.get("call_sites")
+                site_union = set()
+                if not isinstance(call_sites, list):
+                    defects.append(f"{rid}: argument-targets {label} "
+                                   f"{symbol!r} has no per-call-site witness "
+                                   "list")
+                else:
+                    for cs in call_sites:
+                        if not isinstance(cs, dict):
+                            defects.append(f"{rid}: argument-targets {label} "
+                                           f"{symbol!r} call-site is not an "
+                                           "object")
+                            continue
+                        args = cs.get("arguments")
+                        if not isinstance(args, list):
+                            defects.append(f"{rid}: argument-targets {label} "
+                                           f"{symbol!r} call-site has no "
+                                           "argument list")
+                            continue
+                        for arg in args:
+                            if not isinstance(arg, dict):
+                                defects.append(f"{rid}: argument-targets {label} "
+                                               f"{symbol!r} argument is not an "
+                                               "object")
+                                continue
+                            index = arg.get("argument_index")
+                            if not isinstance(index, int):
+                                defects.append(f"{rid}: argument-targets {label} "
+                                               f"{symbol!r} argument has no "
+                                               "argument_index")
+                            arg_targets = arg.get("targets")
+                            if not isinstance(arg_targets, list) or not all(
+                                    isinstance(t, str) and t
+                                    for t in arg_targets):
+                                defects.append(f"{rid}: argument-targets {label} "
+                                               f"{symbol!r} argument "
+                                               f"{index!r} has no target "
+                                               "list")
+                                continue
+                            site_union |= set(arg_targets)
+                detail["callsite_union"][symbol] = site_union
+                if site_union != set(contributed):
+                    defects.append(
+                        f"{rid}: argument-targets {label} {symbol!r} "
+                        "contributed_targets are not the union of its "
+                        "per-call-site targets")
+        detail["union_callers"] = set().union(
+            *detail["callers"].values()) if detail["callers"] else set()
+        detail["union_excluded"] = set().union(
+            *detail["excluded"].values()) if detail["excluded"] else set()
+        # The refutation-admitted callers are ordinary reachable caller rows.
+        # The list is evidence about *why* the excluded mapping may be empty, so
+        # every name must name such a row (it is then oracle-checked below with
+        # every other reachable caller).
+        for symbol in refuted_callers:
+            if symbol not in detail["callers"]:
+                defects.append(
+                    f"{rid}: refutation-admitted caller {symbol!r} has no "
+                    "reachable caller row")
+        detail["refuted_callers"] = set(refuted_callers)
+        argued_by = source.get("argued_by")
+        if not isinstance(argued_by, list) or not argued_by or not all(
+                isinstance(s, str) and s for s in argued_by):
+            defects.append(f"{rid}: argument-targets candidate source names no "
+                           "callers")
+        attributed = detail["union_callers"] | detail["union_excluded"]
+        invented = sorted(attributed - candidates)
+        if invented:
+            defects.append(f"{rid}: argument-targets attributes target(s) that "
+                           "are not candidates: " + ", ".join(invented[:8]))
+        # Round 4: candidate targets that no caller row attributes are admitted
+        # conservatively.  The record names them in both candidate_source and
+        # `unattributed_admissions`; the validator requires the two to agree and
+        # requires every name to be a genuine, non-attributed candidate.
+        un = source.get("unattributed_targets")
+        if un is None:
+            un = []
+        if not isinstance(un, list) or not all(
+                isinstance(t, str) and t for t in un):
+            defects.append(f"{rid}: argument-targets unattributed_targets is "
+                           "not a target-name list")
+            un = []
+        detail["unattributed"] = set(un)
+        outside = sorted(detail["unattributed"] - candidates)
+        if outside:
+            defects.append(f"{rid}: argument-targets names unattributed "
+                           "target(s) that are not candidates: "
+                           + ", ".join(outside[:8]))
+        detail["valid"] = not any("embeds no" in d for d in defects)
+        if oracle is not None and module and oracle.knows(module):
+            for symbol in detail["callers"]:
+                observed, _b, checkable = oracle.is_reachable(module, symbol)
+                if not checkable or observed is not True:
+                    defects.append(
+                        f"{rid}: argument-targets reachable caller {symbol!r} "
+                        "is not in the final upper bound")
+            for symbol in detail["excluded"]:
+                observed, _b, checkable = oracle.is_reachable(module, symbol)
+                if not checkable or observed is not False:
+                    defects.append(
+                        f"{rid}: argument-targets excluded caller {symbol!r} "
+                        "is reached by the final upper bound or cannot be "
+                        "checked")
+        return candidates, defects, detail
+    # resolver-admitted-set: the candidates are exactly the admitted set; an
+    # exclusion cannot hide here because admitted targets can never also be
+    # excluded.
+    if source.get("class") is None and source.get("reason") is None:
+        defects.append(f"{rid}: resolver-admitted-set candidate source names "
+                       "neither a class nor a reason")
+    return None, defects, {}
+
+
+def _argument_binding_defects(rid, rec, oracle, module, detail, acct_admitted,
+                             excluded, candidates):
+    """Recompute every caller-bound target drop from ``candidate_source``.
+
+    v1.2 read the claim's self-asserted ``contributed_targets``.  A record could
+    therefore omit the one reachable caller that contributes the dropped target
+    and still validate.  The mapping, the two contribution sets, the admitted
+    set and the candidate set are now recomputed from candidate_source; the
+    claim's mapping must equal the source's for the same symbols.
+
+    Round 4 adds the conservative direction: a candidate that no caller row
+    attributes is admitted, never dropped.  The record lists those admissions
+    in ``unattributed_admissions`` and ``candidate_source.unattributed_targets``,
+    and the two must agree.  A site whose *entire* candidate set is
+    unattributable must be UNRESOLVED with the named missing property; it may
+    not claim a bounded set.
+    """
+    defects = []
+    callers = detail["callers"]
+    excluded_map = detail["excluded"]
+    union_callers = detail["union_callers"]
+    union_excluded = detail["union_excluded"]
+    unattributed = set(detail.get("unattributed") or ())
+    disposition = rec.get("disposition")
+    ident = rec.get("semantic_identity") or {}
+    witness = ident.get("artifact_local_witness") or {}
+    attribution = union_callers | union_excluded
+    rows = [e for e in (rec.get("exclusions") or ()) if isinstance(e, dict)
+            and e.get("reason") == "not-contributed-by-reachable-callers"]
+    for row in rows:
+        claim = row.get("claim") or {}
+        claim_callers = claim.get("reachable_callers")
+        mapping = {}
+        if isinstance(claim_callers, list):
+            for entry in claim_callers:
+                if not isinstance(entry, dict):
+                    continue
+                symbol = entry.get("symbol")
+                targets = entry.get("contributed_targets")
+                if isinstance(symbol, str) and isinstance(targets, list):
+                    mapping[symbol] = {t for t in targets if isinstance(t, str)}
+        if mapping != callers:
+            defects.append(
+                f"{rid}: the claim's reachable-caller mapping does not equal "
+                f"candidate_source's (claim {sorted(mapping)}, source "
+                f"{sorted(callers)})")
+        claim_excluded = claim.get("excluded_callers")
+        if (not isinstance(claim_excluded, list)
+                or set(claim_excluded) != set(excluded_map)):
+            defects.append(
+                f"{rid}: the claim's excluded-caller set does not equal "
+                "candidate_source's")
+    for row in rows:
+        target = row.get("target")
+        if not isinstance(target, str) or not target:
+            continue
+        if target not in union_excluded:
+            defects.append(
+                f"{rid}: excluded target {target!r} is not contributed by any "
+                "excluded caller in candidate_source")
+        if target in union_callers:
+            defects.append(
+                f"{rid}: excluded target {target!r} is contributed by a "
+                "reachable caller in candidate_source")
+
+    # ---- round-4 unattributed admissions -------------------------------- #
+    admissions = rec.get("unattributed_admissions")
+    if admissions is None:
+        admissions = []
+    if not isinstance(admissions, list):
+        defects.append(f"{rid}: unattributed_admissions is not a list")
+        admissions = []
+    admitted_unattributed = set()
+    for entry in admissions:
+        if not isinstance(entry, dict):
+            defects.append(f"{rid}: unattributed admission is not an object")
+            continue
+        target = entry.get("target")
+        if not isinstance(target, str) or not target:
+            defects.append(f"{rid}: unattributed admission names no target")
+            continue
+        admitted_unattributed.add(target)
+        if entry.get("dso") != module:
+            defects.append(f"{rid}: unattributed admission for {target!r} "
+                           "names another module")
+        if entry.get("site") != witness.get("site_address"):
+            defects.append(f"{rid}: unattributed admission for {target!r} "
+                           "names another site")
+        if entry.get("function") != ident.get("defining_function"):
+            defects.append(f"{rid}: unattributed admission for {target!r} "
+                           "names another function")
+        if not entry.get("reason"):
+            defects.append(f"{rid}: unattributed admission for {target!r} "
+                           "carries no reason")
+    if admitted_unattributed != unattributed:
+        defects.append(
+            f"{rid}: unattributed_admissions {sorted(admitted_unattributed)} "
+            "are not candidate_source's unattributed_targets "
+            f"{sorted(unattributed)}")
+    for target in sorted(admitted_unattributed):
+        if target not in candidates:
+            defects.append(f"{rid}: unattributed admission {target!r} is not "
+                           "a candidate")
+        if target in attribution:
+            defects.append(f"{rid}: unattributed admission {target!r} is "
+                           "attributed to a caller row")
+        if target in excluded:
+            defects.append(f"{rid}: unattributed admission {target!r} is "
+                           "also excluded; an unattributable target is "
+                           "admitted, never dropped")
+        if disposition != DISPOSITION_UNRESOLVED \
+                and target not in acct_admitted:
+            defects.append(f"{rid}: unattributed admission {target!r} is not "
+                           "admitted")
+
+    # A caller-bound narrowing with *no* attributable candidate has no support
+    # for a bounded set: it must be UNRESOLVED and name the incomplete
+    # attribution, and it may not admit anything.
+    has_attribution = bool(attribution & candidates)
+    if candidates and not has_attribution:
+        if disposition != DISPOSITION_UNRESOLVED:
+            defects.append(
+                f"{rid}: a caller-bound record with no attributable candidate "
+                f"claims {disposition!r}")
+        else:
+            missing = rec.get("missing_property") or ""
+            if not missing.startswith("caller attribution incomplete:"):
+                defects.append(
+                    f"{rid}: the attribution-incomplete fallback does not "
+                    "name its missing property")
+            if acct_admitted:
+                defects.append(
+                    f"{rid}: the attribution-incomplete fallback admits "
+                    f"targets {sorted(acct_admitted)}")
+            if unattributed != candidates:
+                defects.append(
+                    f"{rid}: the attribution-incomplete fallback does not "
+                    "name every candidate as unattributed")
+
+    if has_attribution:
+        if oracle is not None and isinstance(module, str) and module \
+                and oracle.knows(module):
+            image = oracle.image_symbols_for(module)
+            expected = (union_callers & image) if image is not None \
+                else union_callers
+            expected = expected | unattributed
+            if acct_admitted != expected:
+                defects.append(
+                    f"{rid}: admitted_targets {sorted(acct_admitted)} are not "
+                    "the reachable callers' contributed image targets plus "
+                    "the unattributed admissions "
+                    f"{sorted(expected)}")
+        elif not acct_admitted <= (union_callers | unattributed):
+            defects.append(
+                f"{rid}: admitted_targets are not contributed by the "
+                "reachable callers or admitted as unattributed in "
+                "candidate_source")
+    if candidates is not None and candidates != (acct_admitted | excluded
+                                                 | unattributed):
+        defects.append(
+            f"{rid}: candidates {sorted(candidates)} are not admitted plus "
+            "excluded plus unattributed "
+            f"{sorted(acct_admitted | excluded | unattributed)}")
+    return defects
+
+
+def _derivation_defects(rid, chains):
+    """Validate every provenance row; return (defects, derived, unproved)."""
+    defects, derived, unproved = [], set(), set()
+    if not isinstance(chains, list):
+        return [f"{rid}: semantic identity has no provenance chain list"], derived, unproved
+    for row in chains:
+        if not isinstance(row, dict):
+            defects.append(f"{rid}: provenance chain row is not an object")
+            continue
+        target = row.get("target")
+        if not isinstance(target, str) or not target:
+            defects.append(f"{rid}: provenance chain row has no target name")
+            continue
+        derivation = row.get("derivation")
+        ok = True
+        if not isinstance(derivation, list) or not derivation:
+            defects.append(f"{rid}: provenance derivation for {target!r} is empty")
+            ok = False
+        else:
+            for step in derivation:
+                if not isinstance(step, dict):
+                    defects.append(f"{rid}: provenance step for {target!r} is not "
+                                   "an object")
+                    ok = False
+                    continue
+                name = step.get("step")
+                if name not in EDGE_CHAIN_STEPS:
+                    defects.append(f"{rid}: provenance step {name!r} for "
+                                   f"{target!r} is outside the closed vocabulary")
+                    ok = False
+                if not any(k != "step" and v is not None
+                           for k, v in step.items()):
+                    defects.append(f"{rid}: provenance step {name!r} for "
+                                   f"{target!r} carries no payload")
+                    ok = False
+        if ok:
+            derived.add(target)
+            if any(isinstance(s, dict) and s.get("step") in EDGE_UNPROVED_STEPS
+                   for s in derivation):
+                unproved.add(target)
+    return defects, derived, unproved
+
+
+def _validate_record(rec: dict, oracle=None) -> list:
+    """Every claim must be checkable; the record's ledgers are mutually
+    redundant and cross-checked against the graph-derived oracle."""
+    defects = []
+    rid = rec.get("edge_id", "?")
+    disposition = rec.get("disposition")
+    ident = rec.get("semantic_identity") or {}
+    witness = ident.get("artifact_local_witness") or {}
+    module = witness.get("module")
+    for field in ("source_operation", "defining_function", "call_site_role"):
+        if not ident.get(field):
+            defects.append(f"{rid}: semantic identity lacks {field}")
+    if not isinstance(module, str) or not module:
+        defects.append(f"{rid}: semantic identity names no module")
+    elif oracle is not None and not oracle.knows(module):
+        # Unknown module fails closed: "the oracle does not cover it" is a
+        # defect, never a pass.
+        defects.append(f"{rid}: the oracle does not cover the record's module "
+                       f"{module!r}; the claim is not checkable")
+    if disposition not in DISPOSITIONS:
+        defects.append(f"{rid}: unknown disposition {disposition!r}")
+        return defects
+    defining = ident.get("defining_function")
+    if disposition in (DISPOSITION_PROVED, DISPOSITION_CONTRACT) \
+            and not _is_named_function(defining):
+        defects.append(
+            f"{rid}: {disposition} has no defining function symbol "
+            f"({defining!r}); a target set cannot be attributed")
+    if disposition == DISPOSITION_PROVED and not rec.get("target_set"):
+        defects.append(f"{rid}: PROVED_TARGET_SET with an empty target set")
+    if disposition == DISPOSITION_CONTRACT and not rec.get("witness_id"):
+        defects.append(f"{rid}: CONTRACT_BOUNDED without a witness id")
+    if disposition == DISPOSITION_UNRESOLVED and not rec.get("missing_property"):
+        defects.append(f"{rid}: UNRESOLVED without a missing property")
+
+    target_reachability = rec.get("target_reachability", "claimed")
+    if target_reachability not in TARGET_REACHABILITY_VALUES:
+        defects.append(f"{rid}: target_reachability {target_reachability!r} is "
+                       "outside the closed vocabulary")
+    expected_reachability = ("claimed" if disposition == DISPOSITION_PROVED
+                             else "not-claimed")
+    if target_reachability != expected_reachability:
+        defects.append(
+            f"{rid}: target_reachability {target_reachability!r} is not derived "
+            f"from disposition {disposition!r} (expected "
+            f"{expected_reachability!r})")
+
+    exclusions = [e for e in (rec.get("exclusions") or ())
+                  if isinstance(e, dict)]
+    for ex in exclusions:
+        defects.extend(_exclusion_row_defects(
+            rid, f"exclusion {ex.get('target')!r}", ex, module, oracle, rec,
+            "target-drop"))
+    # These are exclusion claims outside the ``exclusions`` list; they get the
+    # same row shape and the same checks, otherwise a dropped target could hide
+    # in an auxiliary list.
+    aux_rows = []
+    for key in ("excluded_callers", "excluded_writers",
+                "unbounded_call_sites"):
+        rows = rec.get(key)
+        if rows is None:
+            continue
+        if not isinstance(rows, list):
+            defects.append(f"{rid}: {key} is not a list")
+            continue
+        for row in rows:
+            label = (row.get("target") if isinstance(row, dict) else "?")
+            defects.extend(_exclusion_row_defects(
+                rid, f"{key} entry {label!r}", row, module, oracle, rec,
+                "subject"))
+            if isinstance(row, dict):
+                aux_rows.append(row)
+
+    chain_defects, derived, unproved = _derivation_defects(
+        rid, ident.get("provenance_chain"))
+    defects.extend(chain_defects)
+
+    accounting = rec.get("exclusion_accounting")
+    if not isinstance(accounting, dict):
+        defects.append(f"{rid}: exclusion accounting is missing")
+        return defects
+    claimed = set(rec.get("target_set") or ())
+    acct_admitted = set(accounting.get("admitted_targets") or ())
+    excluded = {e.get("target") for e in exclusions
+                if isinstance(e.get("target"), str) and e.get("target")}
+    stored_excluded = set(accounting.get("excluded_targets") or ())
+    if stored_excluded != excluded:
+        defects.append(
+            f"{rid}: accounting excluded_targets {sorted(stored_excluded)} "
+            f"do not match the record's exclusions {sorted(excluded)}")
+
+    candidates_recomputed, source_defects, source_detail = \
+        _candidate_source_defects(rid, rec, oracle, module)
+    defects.extend(source_defects)
+    stored_candidates = set(accounting.get("candidate_targets") or ())
+    if candidates_recomputed is None:
+        candidates = stored_candidates
+        if candidates != acct_admitted:
+            defects.append(
+                f"{rid}: a resolver-admitted-set enumeration must equal the "
+                f"admitted set {sorted(acct_admitted)}, not "
+                f"{sorted(candidates)}")
+        if excluded:
+            defects.append(
+                f"{rid}: an exclusion cannot rest on the resolver-admitted-set "
+                "enumeration, which has no separate source")
+    else:
+        candidates = candidates_recomputed
+        if stored_candidates != candidates:
+            defects.append(
+                f"{rid}: candidate_targets do not match candidate_source "
+                f"(stored {sorted(stored_candidates)}, recomputed "
+                f"{sorted(candidates)})")
+    if not acct_admitted <= candidates:
+        defects.append(
+            f"{rid}: admitted target(s) are not candidates of the "
+            "enumeration: " + ", ".join(sorted(acct_admitted - candidates)[:8]))
+    # `declared-name-absent` no longer exempts a target from the candidate set:
+    # the target must be enumerated by candidate_source and bound by the row's
+    # structured evidence.targets.  A free-text `target_derivation` never was a
+    # candidate source.
+    invented = sorted(excluded - candidates)
+    if invented:
+        defects.append(
+            f"{rid}: exclusion target(s) are not candidates of the "
+            "enumeration: " + ", ".join(invented[:8]))
+    for row in exclusions:
+        if row.get("reason") == "declared-name-absent":
+            evidence = row.get("evidence") or {}
+            listed = evidence.get("targets")
+            if isinstance(listed, list):
+                outside = sorted({t for t in listed if isinstance(t, str)
+                                  and t not in candidates})
+                if outside:
+                    defects.append(
+                        f"{rid}: declared-name-absent evidence.targets are "
+                        "not candidates of the enumeration: "
+                        + ", ".join(outside[:8]))
+    for row in aux_rows:
+        if row.get("reason") == "writer-not-in-reachable-set":
+            would = (row.get("evidence") or {}).get("would_store_targets")
+            if isinstance(would, list):
+                outside = sorted({t for t in would if isinstance(t, str)
+                                  and t not in candidates})
+                if outside:
+                    defects.append(
+                        f"{rid}: writer-not-in-reachable-set "
+                        "would_store_targets are not candidates of the "
+                        "enumeration: " + ", ".join(outside[:8]))
+    if source_detail.get("kind") == "argument-targets" \
+            and source_detail.get("valid"):
+        defects.extend(_argument_binding_defects(
+            rid, rec, oracle, module, source_detail, acct_admitted, excluded,
+            candidates))
+
+    if disposition == DISPOSITION_PROVED:
+        if claimed != acct_admitted:
+            defects.append(
+                f"{rid}: target_set {sorted(claimed)} is not the accounted "
+                f"admitted set {sorted(acct_admitted)}")
+        both = sorted(claimed & excluded)
+        if both:
+            defects.append(f"{rid}: admitted target(s) also excluded: "
+                           + ", ".join(both[:8]))
+        missing = sorted(claimed - derived)
+        if missing:
+            defects.append(f"{rid}: PROVED target(s) without a derivation: "
+                           + ", ".join(missing[:8]))
+        unproved_claimed = sorted(claimed & unproved)
+        if unproved_claimed:
+            defects.append(
+                f"{rid}: claimed proved without an image-bounded derivation: "
+                + ", ".join(unproved_claimed[:8]))
+    elif disposition == DISPOSITION_CONTRACT:
+        if claimed:
+            defects.append(f"{rid}: CONTRACT_BOUNDED claims a target set")
+        missing = sorted(acct_admitted - derived)
+        if missing:
+            defects.append(f"{rid}: contract-bounded target(s) without a "
+                           "derivation: " + ", ".join(missing[:8]))
+        both = sorted(acct_admitted & excluded)
+        if both:
+            defects.append(f"{rid}: admitted target(s) also excluded: "
+                           + ", ".join(both[:8]))
+        unproved_admitted = sorted(acct_admitted & unproved)
+        if unproved_admitted:
+            defects.append(f"{rid}: contract-bounded target(s) rest on an "
+                           "unbounded step: "
+                           + ", ".join(unproved_admitted[:8]))
+    else:
+        if claimed:
+            defects.append(f"{rid}: UNRESOLVED claims a target set")
+        if rec.get("target_set_claim") is not False:
+            defects.append(f"{rid}: UNRESOLVED asserts target_set_claim")
+
+    if accounting.get("candidate_enumeration") == "complete":
+        # Recompute from the record itself rather than trusting the stored
+        # accounting block: a stale or edited block must not hide a dropped
+        # target.  Names are compared as sets: identical-code folding gives
+        # several names to one address, so list length is not evidence.  An
+        # unattributed admission (round 4) accounts for a candidate without
+        # claiming it reachable.
+        source_unattributed = (
+            set(source_detail.get("unattributed") or ())
+            if source_detail.get("kind") == "argument-targets" else set())
+        unaccounted = sorted(candidates - acct_admitted - excluded
+                             - source_unattributed)
+        if unaccounted:
+            defects.append(
+                f"{rid}: excluded target(s) without a reason: "
+                + ", ".join(unaccounted[:8]))
+        stored_unaccounted = accounting.get("unaccounted_targets") or []
+        if set(stored_unaccounted) != set(unaccounted):
+            defects.append(
+                f"{rid}: unaccounted_targets is stale: stored "
+                f"{sorted(stored_unaccounted)}, recomputed {unaccounted}")
+    return defects
+
+
+class EdgeRecordValidator:
+    """Stateful validator: per-record checks plus a duplicate-identity set."""
+
+    def __init__(self, oracle=None):
+        self.oracle = oracle
+        self.seen_ids = set()
+
+    def feed(self, rec) -> list:
+        if not isinstance(rec, dict):
+            return ["an edge record is not an object"]
+        rid = rec.get("edge_id", "?")
+        defects = []
+        if not isinstance(rid, str) or not rid:
+            defects.append("an edge record has no edge_id")
+        elif rid in self.seen_ids:
+            # v1.1 seeded ordinals by (function, role) but omitted the role
+            # from edge_id, so two records could share one identity.
+            defects.append(f"{rid}: duplicate edge_id (two records share one "
+                           "identity)")
+        else:
+            self.seen_ids.add(rid)
+        defects.extend(_validate_record(rec, self.oracle))
+        return defects
+
+
+def validate_edge_records(records: list, oracle=None) -> list:
+    """Every claim must be checkable; the record's ledgers are mutually
+    redundant and cross-checked against the graph-derived oracle.
+
+    The admitted set is derived from three places that must agree: the
+    ``target_set`` the record claims, the ``admitted_targets`` accounting block,
+    and the provenance chains.  The candidate set comes from
+    ``candidate_source``, separately from the accounting block.  With an
+    oracle, every negative reachability claim is additionally checked against
+    the final upper bound.
+    """
+    validator = EdgeRecordValidator(oracle)
+    defects = []
+    for rec in records:
+        defects.extend(validator.feed(rec))
+    return defects
+
+
+def edge_refusal_for(defects: list):
+    """The closure-level refusal for an uncheckable edge record."""
+    if not defects:
+        return None
+    return {
+        "code": "EDGE_RECORD_EXCLUSION_UNSOUND",
+        "detail": ("the edge provenance record is not checkable: "
+                   + "; ".join(defects[:8])),
+    }
+
+
+def edge_closure_refusal(records: list, oracle=None):
+    """Validate a record set and return (defects, refusal).  A refusal here is
+    the object `build_receipt` appends before emitting the closure."""
+    defects = validate_edge_records(records, oracle)
+    return defects, edge_refusal_for(defects)
+
+
+def _audit_observation(oracle, module, symbol, address=None):
+    if oracle is None:
+        return None, "unavailable", False
+    return oracle.is_reachable(module, symbol, address)
+
+
+def _audit_symbol(oracle, module, symbol, address=None):
+    """(in_final_upper_bound, basis) for one excluded symbol; unknown fails closed."""
+    reachable, basis, checkable = _audit_observation(oracle, module, symbol,
+                                                    address)
+    if not checkable:
+        return True, "unavailable"
+    return bool(reachable), basis
+
+
+def _audit_row(rec, oracle, claim_kind, target, symbol, expected,
+               address=None):
+    ident = rec.get("semantic_identity") or {}
+    witness = ident.get("artifact_local_witness") or {}
+    module = witness.get("module")
+    observed, basis, checkable = _audit_observation(oracle, module, symbol,
+                                                    address)
+    violation = (not checkable) or (bool(observed) != (expected == "present"))
+    return {
+        "module": module,
+        "edge_id": rec.get("edge_id"),
+        "site": witness.get("site_address"),
+        "function": ident.get("defining_function"),
+        "role": ident.get("call_site_role"),
+        "claim_kind": claim_kind,
+        "target": target,
+        "subject": symbol,
+        "expected": expected,
+        "in_final_upper_bound": bool(observed),
+        "oracle_basis": basis,
+        "checkable": bool(checkable),
+        "violation": violation,
+    }
+
+
+def _audit_record(rec, oracle) -> list:
+    """Audit every subject-scoped claim of one record against the bound.
+
+    v1.1 walked only site metadata: a semantic call-site row with
+    ``included: false`` and a caller-bound dropped target were never audited,
+    and ``exclusions[].target`` was never checked.  The audit now walks the
+    record, which is the object that actually carries the claims.
+    """
+    rows = []
+    if not isinstance(rec, dict):
+        return rows
+    all_rows = [e for e in (rec.get("exclusions") or ()) if isinstance(e, dict)]
+    for key in ("excluded_callers", "excluded_writers",
+                "unbounded_call_sites"):
+        all_rows.extend(r for r in (rec.get(key) or ()) if isinstance(r, dict))
+    for row in all_rows:
+        reason = row.get("reason")
+        claim = row.get("claim") or {}
+        evidence = row.get("evidence") or {}
+        target = row.get("target")
+        if reason in REACHABILITY_CLAIM_KINDS:
+            addresses = _subject_addresses(evidence)
+            for subject in claim.get("subjects") or ():
+                rows.append(_audit_row(rec, oracle, reason, target, subject,
+                                       "absent", addresses.get(subject)))
+        elif reason == "declared-name-absent":
+            # The declared name is checked by the validator; the *dropped
+            # target* is a negative reachability claim in its own right and is
+            # audited against the final upper bound here.
+            for listed in (evidence.get("targets") or ()):
+                rows.append(_audit_row(rec, oracle, reason, target, listed,
+                                       "absent"))
+        elif reason == "not-contributed-by-reachable-callers":
+            addresses = _subject_addresses(evidence)
+            for entry in claim.get("reachable_callers") or ():
+                if not isinstance(entry, dict):
+                    continue
+                address = entry.get("address")
+                try:
+                    address = (int(address, 16) if isinstance(address, str)
+                               else address)
+                except ValueError:
+                    address = None
+                rows.append(_audit_row(rec, oracle, reason, target,
+                                       entry.get("symbol"), "present", address))
+            for subject in claim.get("excluded_callers") or ():
+                rows.append(_audit_row(rec, oracle, reason, target, subject,
+                                       "absent", addresses.get(subject)))
+    source = rec.get("candidate_source") or {}
+    if isinstance(source, dict) and source.get("kind") == "store-writer-call-sites":
+        for row in source.get("rows") or ():
+            if not isinstance(row, dict):
+                continue
+            if row.get("included") is False \
+                    and row.get("reason") == "caller-not-in-reachable-set":
+                rows.append(_audit_row(rec, oracle, "candidate-source-caller",
+                                       None, row.get("caller"), "absent"))
+    return rows
+
+
+def reachability_exclusion_audit(graphs: dict, oracle, records=None) -> list:
+    """Every reachability-based exclusion, checked against the final upper bound.
+
+    The final upper bound is authoritative.  A claim that a caller, writer or
+    dropped target is unreachable is a violation when the bound contains it,
+    whichever branch of the derivation produced the claim.  An unknown module is
+    itself a violation: "not checkable" is never a pass.
+    """
+    if records is None:
+        records = build_edge_records(graphs, oracle)
+    rows = []
+    for rec in records:
+        rows.extend(_audit_record(rec, oracle))
+    return rows
+
+
+def edge_record_summary(records: list) -> dict:
+    counts = collections.Counter(r.get("disposition") for r in records)
+    reasons = collections.Counter(
+        e.get("reason") for r in records for e in (r.get("exclusions") or ()))
+    demotions = collections.Counter(r.get("disposition_demotion")
+                                    for r in records
+                                    if r.get("disposition_demotion"))
+    return {
+        "schema": EDGE_RECORD_SCHEMA,
+        "count": len(records),
+        "dispositions": dict(sorted(counts.items())),
+        "exclusion_reasons": dict(sorted(reasons.items())),
+        "demotions": dict(sorted(demotions.items())),
+    }
+
+
+def _sample_view(rec: dict, cap: int = 32) -> dict:
+    """A bounded projection of one record for the receipt.
+
+    The population is in the JSONL sidecar; the sample exists so a reader can
+    see the shape of every non-proved / exclusion-bearing / reachable-residual
+    record without embedding 52k records (or their full lists) in the receipt.
+    Exclusions are kept in full because they are the claims under review.
+    """
+    ident = dict(rec.get("semantic_identity") or {})
+    chain = list(ident.get("provenance_chain") or ())
+    ident["provenance_chain"] = chain[:cap]
+    ident["provenance_chain_count"] = len(chain)
+    accounting = dict(rec.get("exclusion_accounting") or {})
+    for key in ("candidate_targets", "admitted_targets"):
+        values = list(accounting.get(key) or ())
+        accounting[key] = values[:cap]
+        accounting[f"{key}_count"] = len(values)
+    source = dict(rec.get("candidate_source") or {})
+    if isinstance(source.get("rows"), list):
+        rows = []
+        for row in source["rows"][:cap]:
+            item = dict(row)
+            targets = list(item.get("targets") or ())
+            item["targets"] = targets[:cap]
+            item["target_count"] = len(targets)
+            rows.append(item)
+        source["rows"] = rows
+        source["row_count"] = len(rec["candidate_source"]["rows"])
+    if isinstance(source.get("targets"), list):
+        targets = list(source["targets"])
+        source["targets"] = targets[:cap]
+        source["target_count"] = len(targets)
+    return {
+        "schema": rec.get("schema"),
+        "edge_id": rec.get("edge_id"),
+        "semantic_identity": ident,
+        "disposition": rec.get("disposition"),
+        "disposition_demotion": rec.get("disposition_demotion"),
+        "target_set": rec.get("target_set"),
+        "target_set_claim": rec.get("target_set_claim"),
+        "target_reachability": rec.get("target_reachability"),
+        "witness_id": rec.get("witness_id"),
+        "missing_property": rec.get("missing_property"),
+        "exclusions": rec.get("exclusions") or [],
+        "excluded_callers": rec.get("excluded_callers") or [],
+        "excluded_writers": rec.get("excluded_writers") or [],
+        "unbounded_call_sites": rec.get("unbounded_call_sites") or [],
+        "candidate_source": source,
+        "exclusion_accounting": accounting,
+        "unattributed_admissions": (
+            list(rec.get("unattributed_admissions") or ())[:cap]),
+        "unattributed_admissions_count": len(
+            rec.get("unattributed_admissions") or ()),
+        "sample_list_cap": cap,
+    }
+
+
+class EdgeRecordStream:
+    """Validate, audit and persist edge records in one bounded pass.
+
+    v1.1 accumulated every record and then ``json.dumps(receipt)`` in memory,
+    which OOMed the ssh closure at the court's default 4 GiB.  The population is
+    streamed to a JSONL sidecar (one JSON object per line); the receipt keeps
+    counts, defects, audit rows and a bounded sample.
+    """
+
+    def __init__(self, oracle=None, path=None, sample_cap=None,
+                 reachable_residual=()):
+        self.oracle = oracle
+        self.validator = EdgeRecordValidator(oracle)
+        self.sample_cap = (EDGE_RECORD_SAMPLE_DEFAULT if sample_cap is None
+                           else int(sample_cap))
+        self.reachable_residual = set(reachable_residual)
+        self.count = 0
+        self.dispositions = collections.Counter()
+        self.reasons = collections.Counter()
+        self.demoted = collections.Counter()
+        self.demoted_sites = []
+        self.defects = []
+        self._priority_sample = []
+        self._other_sample = []
+        self.sample_eligible = 0
+        self.sample_truncated = False
+        self.audit_rows = []
+        self.audit_total = 0
+        self.violations = 0
+        self.violation_rows = []
+        self.unattributed_total = 0
+        self.unattributed_rows = []
+        self.refutation_admissions = 0
+        self.refuted_exclusions = collections.Counter()
+        self.path = Path(path) if path is not None else None
+        self.records_sha256 = None
+        self._hash = hashlib.sha256()
+        self._fh = open(self.path, "w") if self.path is not None else None
+        self._written = 0
+
+    def feed(self, record: dict) -> list:
+        self.count += 1
+        line = json.dumps(record, sort_keys=True) + "\n"
+        self._hash.update(line.encode())
+        if self._fh is not None:
+            self._fh.write(line)
+            self._written += 1
+            if self._written % 200 == 0:
+                self._fh.flush()
+        self.dispositions[record.get("disposition")] += 1
+        for row in record.get("exclusions") or ():
+            if isinstance(row, dict):
+                self.reasons[row.get("reason")] += 1
+        demotion = record.get("disposition_demotion")
+        if demotion:
+            self.demoted[demotion] += 1
+            if len(self.demoted_sites) < 40:
+                ident = record.get("semantic_identity") or {}
+                witness = ident.get("artifact_local_witness") or {}
+                self.demoted_sites.append({
+                    "module": witness.get("module"),
+                    "function": ident.get("defining_function"),
+                    "site": witness.get("site_address"),
+                    "demotion": demotion,
+                })
+        self.defects.extend(self.validator.feed(record))
+        admissions = record.get("unattributed_admissions") or ()
+        if isinstance(admissions, list):
+            self.unattributed_total += len(admissions)
+            for entry in admissions:
+                if len(self.unattributed_rows) < EDGE_AUDIT_RENDER_LIMIT:
+                    self.unattributed_rows.append(entry)
+        refuted = record.get("refuted_exclusions") or ()
+        if isinstance(refuted, list):
+            for entry in refuted:
+                if isinstance(entry, dict):
+                    self.refuted_exclusions[entry.get("role") or "?"] += 1
+        admitted = record.get("refutation_admissions") or ()
+        if isinstance(admitted, list):
+            self.refutation_admissions += len(admitted)
+        for row in _audit_record(record, self.oracle):
+            self.audit_total += 1
+            if row.get("violation"):
+                self.violations += 1
+                if len(self.violation_rows) < 8:
+                    self.violation_rows.append(row)
+            if len(self.audit_rows) < EDGE_AUDIT_RENDER_LIMIT:
+                self.audit_rows.append(row)
+        priority = self._sample_priority(record)
+        if priority is not None:
+            self.sample_eligible += 1
+            view = _sample_view(record)
+            if priority == 0:
+                # The claims under review (every exclusion-bearing record and
+                # every reachable residual site) are admitted first so a large
+                # UNRESOLVED population cannot crowd them out of the sample.
+                if len(self._priority_sample) < self.sample_cap:
+                    self._priority_sample.append(view)
+                    overflow = (len(self._priority_sample)
+                                + len(self._other_sample) - self.sample_cap)
+                    if overflow > 0:
+                        del self._other_sample[:overflow]
+                else:
+                    self.sample_truncated = True
+            elif len(self._priority_sample) + len(self._other_sample) \
+                    < self.sample_cap:
+                self._other_sample.append(view)
+            else:
+                self.sample_truncated = True
+        return record
+
+    __call__ = feed
+
+    def _sample_priority(self, record):
+        """0 = exclusion/reachable-residual, 1 = non-PROVED, None = other."""
+        ident = record.get("semantic_identity") or {}
+        witness = ident.get("artifact_local_witness") or {}
+        if record.get("exclusions"):
+            return 0
+        if (witness.get("module"), witness.get("site_address")) in \
+                self.reachable_residual:
+            return 0
+        if record.get("disposition") != DISPOSITION_PROVED:
+            return 1
+        return None
+
+    @property
+    def sample(self):
+        return self._priority_sample + self._other_sample
+
+    def close(self):
+        if self._fh is not None:
+            self._fh.flush()
+            self._fh.close()
+            self._fh = None
+        self.records_sha256 = self._hash.hexdigest()
+
+    def summary(self) -> dict:
+        return {
+            "schema": EDGE_RECORD_SCHEMA,
+            "count": self.count,
+            "dispositions": dict(sorted(self.dispositions.items())),
+            "exclusion_reasons": dict(sorted(self.reasons.items())),
+            "unattributed_admissions": {
+                "count": self.unattributed_total,
+                "truncated": self.unattributed_total
+                             > len(self.unattributed_rows),
+                "rule": ("a candidate target that no caller row attributes is "
+                         "admitted into the upper bound and never dropped; the "
+                         "list is the receipt's account of those admissions"),
+                "admissions": self.unattributed_rows,
+            },
+            "refutation_admissions": {
+                "count": self.refutation_admissions,
+                "refuted_exclusions_by_role": dict(
+                    sorted(self.refuted_exclusions.items())),
+                "rule": ("an exclusion the final upper bound refutes is "
+                         "admitted with its witness on the record that carries "
+                         "it; the subject and the admitted targets are named in "
+                         "the record's refutation_admissions"),
+            },
+        }
+
+
+def _tool_identity() -> dict:
+    """The exact validator identity bound into every receipt (AGENTS.md 22)."""
+    path = Path(__file__).resolve()
+    return {"path": TOOL, "version": 5,
+            "sha256": sha256_file(path),
+            "schema": EDGE_RECORD_SCHEMA}
+
+
+def _edge_records_path(args, repo: Path, artifact_sha: str,
+                       workdir: Path) -> Path:
+    """Where the record sidecar goes.
+
+    The default is always the (gitignored) workdir: a multi-hundred-MB sidecar
+    must never land beside ``--output`` by accident.  ``--edge-records`` is the
+    only way to choose another path, and it is explicit.
+    """
+    explicit = getattr(args, "edge_records", None)
+    if explicit:
+        path = Path(explicit)
+        if not path.is_absolute():
+            path = (repo / path).resolve()
+        return path
+    return workdir / f"edge-records.{artifact_sha[:16]}.jsonl"
+
+
+def _admissibility(tool_sha256: str, artifact_sha256: str,
+                   records_sha256, sidecar_lines: int) -> dict:
+    """The identity chain a reader must re-run to admit a record set.
+
+    Record-level validation cannot distinguish an analyzer-produced record from
+    a forged one that is internally consistent.  This block is the binding a
+    reader needs: the pinned validator digest, the record schema, the analysed
+    artefact, the sidecar digest and its line count.
+    """
+    return {
+        "validator_sha256": tool_sha256,
+        "record_schema": EDGE_RECORD_SCHEMA,
+        "artifact_sha256": artifact_sha256,
+        "records_sha256": records_sha256,
+        "sidecar_lines": sidecar_lines,
+    }
+
+
+ANALYSIS_IDENTITY_SCHEMA = "openssl-rs/campaign/safe-c33/analysis-identity/v2"
+UNRESOLVED_BOUND_SCHEMA = "openssl-rs/campaign/safe-c33/unresolved-site-bound/v1"
+
+# Sections the identity always binds when present (the required minimum from
+# the P0-A specification).  The implementation binds *every* SHF_ALLOC section,
+# so this list is documentation and a required-subset check, not the whole set.
+ANALYSIS_IDENTITY_SECTIONS = (
+    ".text",
+    ".plt",
+    ".plt.got",
+    ".init",
+    ".fini",
+    ".rodata",
+    ".data",
+    ".data.rel.ro",
+    ".data.rel.ro.local",
+    ".got",
+    ".got.plt",
+    ".init_array",
+    ".fini_array",
+)
+# SHT_NOBITS: the analysis reads the address/size (section_of) and treats a
+# .bss slot as zero; there are no file bytes to hash.
+ANALYSIS_IDENTITY_NOBITS_SECTIONS = (".bss",)
+
+# Non-allocated / metadata sections that are never an analysis input.  The
+# selection is "SHF_ALLOC minus these prefixes", so a new allocated section is
+# bound automatically rather than silently omitted.
+ANALYSIS_IDENTITY_EXCLUDED_PREFIXES = (
+    ".debug_",
+    ".zdebug_",
+    ".note",
+    ".comment",
+    ".gnu_debuglink",
+    ".gnu_debugaltlink",
+    ".gnu.build.attributes",
+)
+# Named for the receipt's basis string.
+ANALYSIS_IDENTITY_EXCLUDED_CLASSES = (
+    ".debug_*",
+    ".zdebug_*",
+    ".comment",
+    ".note*",
+    ".gnu_debuglink",
+    ".gnu_debugaltlink",
+    ".gnu.build.attributes",
+    "every non-allocated section (SHF_ALLOC is absent)",
+)
+
+
+def _analysis_identity_basis() -> str:
+    return (
+        "sha256 over, in module-name order, each module name and a canonical "
+        "JSON input record: every allocated (SHF_ALLOC) section's (name, ELF "
+        "type, virtual address, size, sha256 of its bytes), the sorted "
+        "relocation table (section, section-relative offset, type, canonical "
+        "symbol, addend), the sorted [name, addr, size, kind] defined-symbol "
+        "rows, the sorted dynamic-symbol rows, and the loader entries "
+        "(SONAME/NEEDED/RUNPATH/RPATH). Required minimum sections: "
+        + ", ".join(ANALYSIS_IDENTITY_SECTIONS)
+        + "; NOBITS sections (address/size only): "
+        + ", ".join(ANALYSIS_IDENTITY_NOBITS_SECTIONS)
+        + ". Excluded: "
+        + ", ".join(ANALYSIS_IDENTITY_EXCLUDED_CLASSES)
+        + ". ``.llvm.<hash>`` and ``@@VERSION`` suffixes are canonicalised as "
+        "in the symbol table; the DSO file digest is recorded as a non-identity."
+    )
+
+
+def reachable_function_entries(graphs: dict, upper_reach,
+                                *, canonical: bool = True) -> list:
+    """The sorted ``module:hex_address:name`` entries of the reachable set.
+
+    ``canonical`` applies the same name canonicalisation as
+    :func:`analysis_identity` (drop the compiler ``.llvm.<hash>`` suffix and the
+    symbol-version suffix).  Those suffixes are a function of the build
+    directory and source bytes, not of the analysis subject: a comment-only
+    edit changes every affected name hash while the address, size and kind do
+    not move.  A movement digest built from the raw names would therefore
+    report movement for a neutral rebuild.  The raw form is still available as
+    an explicitly non-identity observation.
+    """
+    entries = []
+    for dso_name, addr in upper_reach:
+        name = (getattr(graphs[dso_name], "funcs", {}) or {}).get(addr)
+        if name is None:
+            continue
+        if canonical:
+            name = canonical_symbol_name(name)
+        entries.append(f"{dso_name}:{addr:#x}:{name}")
+    return sorted(entries)
+
+
+def reachable_functions_digest(entries) -> str:
+    """sha256 over the newline-terminated sorted reachable-function entries."""
+    digest = hashlib.sha256()
+    for entry in entries:
+        digest.update(entry.encode() + b"\n")
+    return digest.hexdigest()
+
+
+def _canonical_json_digest(obj) -> str:
+    return hashlib.sha256(
+        json.dumps(obj, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def analysis_identity(graphs: dict) -> dict:
+    """A canonical identity for the *analysis input* (AGENTS.md section 22).
+
+    The DSO file digest is **not** an analysis identity: a comment-only source
+    edit changes the file digest (build paths, debug strings, the
+    ``.llvm.<hash>`` names) while the executable bytes and the symbol
+    addresses are unchanged.  The identity therefore hashes every input the
+    graph derivation consumes, per module:
+
+      * each analysis-relevant section's name, ELF type, virtual address, size
+        and byte digest (``DsoGraph.analysis_section_descriptors``);
+      * the canonical relocation table ``(section, offset, type, symbol,
+        addend)`` that supplies GOT/PLT and dispatch-slot targets;
+      * the sorted ``[name, addr, size, kind]`` defined-symbol rows;
+      * the sorted dynamic-symbol rows (the export set);
+      * the loader entries (SONAME/NEEDED/RUNPATH/RPATH).
+
+    Analysis-irrelevant metadata (``.debug_*``, ``.comment``, ``.note*``,
+    ``.gnu_debuglink``, the build-id note, and raw symbol/relocation section
+    bytes whose parsed forms are hashed) is excluded and named in ``basis``.
+    Two modules with the same identity have the same input to this analysis;
+    that is not a claim that the analysis is complete.
+    """
+    outer = hashlib.sha256()
+    outer.update(ANALYSIS_IDENTITY_SCHEMA.encode() + b"\0")
+    modules = {}
+    for name in sorted(graphs):
+        g = graphs[name]
+        text_sha, text_size = g.text_digest()
+        rows = g.symbol_table_rows()
+        sym_sha = _canonical_json_digest(rows)
+
+        section_fn = getattr(g, "analysis_section_descriptors", None)
+        sections = section_fn() if callable(section_fn) else []
+        excluded_fn = getattr(g, "analysis_excluded_sections", None)
+        excluded = excluded_fn() if callable(excluded_fn) else []
+
+        reloc_fn = getattr(g, "canonical_relocations", None)
+        relocs = reloc_fn() if callable(reloc_fn) else []
+        reloc_sha = _canonical_json_digest(relocs)
+
+        dynrows_fn = getattr(g, "dynamic_symbol_rows", None)
+        dynrows = dynrows_fn() if callable(dynrows_fn) else []
+        dyn_sha = _canonical_json_digest(dynrows)
+
+        entries_fn = getattr(g, "dynamic_entries", None)
+        entries = entries_fn() if callable(entries_fn) else {}
+        entries_sha = _canonical_json_digest(entries)
+
+        # The hashed record is the full canonical input.  The receipt keeps the
+        # digests and counts: the full relocation list is ~46k rows for the real
+        # libcrypto and would bloat the receipt without adding evidence beyond
+        # the digest and the negative control that exercises it.
+        input_record = {
+            "sections": sections,
+            "relocations": relocs,
+            "symbol_rows": rows,
+            "dynamic_symbol_rows": dynrows,
+            "dynamic_entries": entries,
+        }
+        input_sha = _canonical_json_digest(input_record)
+
+        modules[name] = {
+            "text_sha256": text_sha,
+            "text_size": text_size,
+            "symbol_rows": len(rows),
+            "symbol_table_sha256": sym_sha,
+            "dynamic_symbol_rows": len(dynrows),
+            "dynamic_symbol_table_sha256": dyn_sha,
+            "relocations": len(relocs),
+            "relocation_table_sha256": reloc_sha,
+            "dynamic_entries_sha256": entries_sha,
+            "sections": sections,
+            "excluded_sections": excluded,
+            "input_sha256": input_sha,
+            "dso_sha256": getattr(g, "sha256", None),
+            "dso_sha256_is_analysis_identity": False,
+        }
+        outer.update(name.encode() + b"\0" + input_sha.encode() + b"\0")
+    included_union = sorted({row["name"] for module in modules.values()
+                             for row in module["sections"]})
+    return {
+        "schema": ANALYSIS_IDENTITY_SCHEMA,
+        "basis": _analysis_identity_basis(),
+        "included_sections": included_union,
+        "required_sections": list(ANALYSIS_IDENTITY_SECTIONS),
+        "nobits_sections": list(ANALYSIS_IDENTITY_NOBITS_SECTIONS),
+        "excluded_classes": list(ANALYSIS_IDENTITY_EXCLUDED_CLASSES),
+        "digest": outer.hexdigest(),
+        "modules": modules,
+        "note": (
+            "the DSO file digest is recorded as a non-identity: it changes with "
+            "build paths and debug strings when the executable bytes do not. "
+            "Input completeness is not proved by this digest: it binds the "
+            "enumerated inputs, and a future analysis that reads another section "
+            "must extend the enumeration."),
+    }
+
+
+def unresolved_site_bound(g: "DsoGraph", site: dict) -> set:
+    """Every value a residual site may target -- **independent of its class**.
+
+    Soundness rule (why this is not the class-specific set): the reachable set
+    is a may-analysis, so it must be monotone under precision loss.  A site
+    that is re-classified from ``PROVED_TARGET_SET`` to ``UNRESOLVED`` must not
+    admit *fewer* targets than it did before.  The only way to guarantee that
+    against an arbitrary re-classification is to bound every residual site by
+    the union of *all* materialised-address evidence in the module:
+
+      * ``address_taken_union`` (code and data materialisations, relocated
+        function slots, and in-image dynamic-relocation targets),
+      * ``taken_code`` (kept explicitly so the source is named in the record),
+      * every integer stored into a field by reachable code,
+      * values passed at unresolved call sites,
+      * the site's own resolver ``targets`` and ``arg_targets``.
+
+    A class-specific set may still be reported as precision metadata (it is,
+    in ``precision.unresolved_by_class`` and the per-site class), but it is
+    never the sole bound.  A bound may be **widened** for soundness; it is
+    never narrowed by classification.
+    """
+    values = set()
+    values |= set(getattr(g, "address_taken_union", ()) or ())
+    values |= set(getattr(g, "taken_code", ()) or ())
+    for stored in (getattr(g, "field_stores", None) or {}).values():
+        values |= set(stored)
+    values |= set(getattr(g, "unknown_call_arg_targets", ()) or ())
+    values |= set(site.get("targets") or ())
+    values |= set(site.get("arg_targets") or ())
+    return values
+
+
+def _symbol_base(symbol: str) -> str:
+    """The version-stripped form of a relocation symbol name."""
+    return symbol.split("@", 1)[0]
+
+
+# Resolution order for a symbolic residual-bound value (P0-B).  The order is
+# fixed by the task and recorded in every disposition row, so a reader can see
+# which path actually resolved a symbol.
+SYMBOL_RESOLUTION_ORDER = (
+    "exact-export",
+    "version-stripped-export",
+    "names-at",
+    "dynamic-symbol-table",
+    "soname-qualified-import",
+    "plt-stub",
+)
+
+# A *documented* external interface may cover a symbol that is not defined by
+# the closed candidate DSO set.  This table is deliberately exact-name only and
+# deliberately small: an OpenSSL-shaped name, a name absent from the table, or a
+# name whose interface is not cited here is ``blocking``, never external.  It is
+# not a wildcard and it is not a way to clear a refusal.
+EXTERNAL_SYMBOL_CONTRACTS = {
+    "malloc": {
+        "interface": "ISO/IEC 9899:2018 7.22.3 malloc",
+        "why_outside": (
+            "the C library allocator is resolved by the process loader, not by "
+            "any candidate OpenSSL DSO; the consumer owns the allocator contract"),
+    },
+    "calloc": {
+        "interface": "ISO/IEC 9899:2018 7.22.3 calloc",
+        "why_outside": "C library allocator resolved by the process loader",
+    },
+    "realloc": {
+        "interface": "ISO/IEC 9899:2018 7.22.3 realloc",
+        "why_outside": "C library allocator resolved by the process loader",
+    },
+    "free": {
+        "interface": "ISO/IEC 9899:2018 7.22.3 free",
+        "why_outside": "C library allocator resolved by the process loader",
+    },
+    "memcpy": {
+        "interface": "ISO/IEC 9899:2018 7.24.2.1 memcpy",
+        "why_outside": "C library memory function resolved by the process loader",
+    },
+    "memmove": {
+        "interface": "ISO/IEC 9899:2018 7.24.2.2 memmove",
+        "why_outside": "C library memory function resolved by the process loader",
+    },
+    "memset": {
+        "interface": "ISO/IEC 9899:2018 7.24.6.1 memset",
+        "why_outside": "C library memory function resolved by the process loader",
+    },
+    "memcmp": {
+        "interface": "ISO/IEC 9899:2018 7.24.4.1 memcmp",
+        "why_outside": "C library memory function resolved by the process loader",
+    },
+    "strlen": {
+        "interface": "ISO/IEC 9899:2018 7.24.6.3 strlen",
+        "why_outside": "C library string function resolved by the process loader",
+    },
+    "strcmp": {
+        "interface": "ISO/IEC 9899:2018 7.24.4.2 strcmp",
+        "why_outside": "C library string function resolved by the process loader",
+    },
+    "__stack_chk_fail": {
+        "interface": "GNU C library stack-smashing protector runtime (libc)",
+        "why_outside": "libc runtime stub resolved by the process loader",
+    },
+    "dlopen": {
+        "interface": "POSIX.1-2017 dlopen",
+        "why_outside": "dynamic loader interface resolved by libc/ld.so",
+    },
+    "dlsym": {
+        "interface": "POSIX.1-2017 dlsym",
+        "why_outside": "dynamic loader interface resolved by libc/ld.so",
+    },
+    "dlclose": {
+        "interface": "POSIX.1-2017 dlclose",
+        "why_outside": "dynamic loader interface resolved by libc/ld.so",
+    },
+    "dlerror": {
+        "interface": "POSIX.1-2017 dlerror",
+        "why_outside": "dynamic loader interface resolved by libc/ld.so",
+    },
+    "deflate": {
+        "interface": "zlib manual, deflate()",
+        "why_outside": "zlib is a separate DSO resolved by the process loader",
+    },
+    "inflate": {
+        "interface": "zlib manual, inflate()",
+        "why_outside": "zlib is a separate DSO resolved by the process loader",
+    },
+    "deflateInit_": {
+        "interface": "zlib manual, deflateInit_()",
+        "why_outside": "zlib is a separate DSO resolved by the process loader",
+    },
+    "inflateInit_": {
+        "interface": "zlib manual, inflateInit_()",
+        "why_outside": "zlib is a separate DSO resolved by the process loader",
+    },
+    "deflateEnd": {
+        "interface": "zlib manual, deflateEnd()",
+        "why_outside": "zlib is a separate DSO resolved by the process loader",
+    },
+    "inflateEnd": {
+        "interface": "zlib manual, inflateEnd()",
+        "why_outside": "zlib is a separate DSO resolved by the process loader",
+    },
+    "crc32": {
+        "interface": "zlib manual, crc32()",
+        "why_outside": "zlib is a separate DSO resolved by the process loader",
+    },
+}
+
+
+def _plt_stub_targets(g, base: str, slot_offsets) -> list:
+    """PLT entries whose jump targets one of ``base``'s relocation slots.
+
+    ``objdump`` annotates a PLT stub's indirect jump with the GOT slot, e.g.
+    ``jmp *0x2f3d(%rip) # 895ff8 <malloc@GLIBC_2.2.5>``.  A stub is a valid
+    in-image function node for that slot; it is the last resolution path before
+    the symbol is declared blocking.
+    """
+    wanted = set(slot_offsets)
+    if not wanted:
+        return []
+    start_set = getattr(g, "start_set", set()) or set()
+    section_of = getattr(g, "section_of", None)
+    out = set()
+    for fstart, insns in getattr(g, "functions", ()) or ():
+        if fstart not in start_set or not callable(section_of):
+            continue
+        if section_of(fstart) not in (".plt", ".plt.got"):
+            continue
+        for _ins_addr, text in insns:
+            head = text.split("#", 1)[0]
+            if "jmp" not in head:
+                continue
+            m = re.search(r"#\s*([0-9a-f]+)\s+<", text)
+            if m and int(m.group(1), 16) in wanted:
+                out.add(fstart)
+                break
+    return sorted(out)
+
+
+def _resolve_symbolic_value(g, dso_name: str, symbol: str,
+                            export_index: dict) -> dict:
+    """Resolve one symbolic residual-bound value through the fixed order.
+
+    Returns a disposition row.  ``resolved`` carries every in-image target the
+    path found; ``external-contract`` names the documented interface; anything
+    else is ``blocking`` and is refused by :func:`closure_refusals`.
+    """
+    base = _symbol_base(symbol)
+    slot_offsets = sorted(
+        off for off, names in (getattr(g, "slot_syms", {}) or {}).items()
+        if any(_symbol_base(n) == base for n in names))
+    row = {
+        "symbol": symbol,
+        "base": base,
+        "module": dso_name,
+        "disposition": "blocking",
+        "path": None,
+        "targets": [],
+        "slot_offsets": [f"0x{off:x}" for off in slot_offsets],
+        "sites": [],
+        "reason": None,
+        "external_interface": None,
+        "external_justification": None,
+    }
+
+    def resolved(path: str, targets):
+        row.update(disposition="resolved", path=path,
+                   targets=[[m, a] for m, a in targets])
+        return row
+
+    # 1. exact export (bare name in the resolved candidate export index)
+    target = export_index.get(symbol)
+    if target:
+        return resolved("exact-export", [target])
+    # 2. version-stripped export
+    target = export_index.get(base)
+    if target:
+        return resolved("version-stripped-export", [target])
+    # 3. ICF/alias names: every address at which the defined symbol table
+    #    names this symbol.  Keep all addresses; an ICF alias is not one edge.
+    index_fn = getattr(g, "symbol_addresses_by_name", None)
+    if callable(index_fn):
+        by_name = index_fn()
+    else:
+        by_name = collections.defaultdict(list)
+        for addr, names in (getattr(g, "names_at", {}) or {}).items():
+            for name in names:
+                by_name[name.split("@")[0]].append(addr)
+    addrs = sorted(a for a in by_name.get(base, ())
+                   if a in (getattr(g, "start_set", set()) or set()))
+    if addrs:
+        return resolved("names-at", [(dso_name, a) for a in addrs])
+    # 4. dynamic-symbol table of this module
+    addr = (getattr(g, "dynamic_defs", {}) or {}).get(base)
+    if addr in (getattr(g, "start_set", set()) or set()):
+        return resolved("dynamic-symbol-table", [(dso_name, addr)])
+    # 5. SONAME-qualified import (``libcrypto.so.3:NAME``)
+    if ":" in symbol:
+        soname, _, rest = symbol.partition(":")
+        target = export_index.get(rest) or export_index.get(_symbol_base(rest))
+        if target and target[0] == soname:
+            return resolved("soname-qualified-import", [target])
+    # 6. PLT stub
+    stubs = _plt_stub_targets(g, base, slot_offsets)
+    if stubs:
+        return resolved("plt-stub", [(dso_name, a) for a in stubs])
+    # Documented external interface, or blocking.
+    contract = EXTERNAL_SYMBOL_CONTRACTS.get(base)
+    if contract:
+        row.update(disposition="external-contract", path="external-contract",
+                   external_interface=contract["interface"],
+                   external_justification=contract["why_outside"])
+        return row
+    row["reason"] = (
+        "no exact or version-stripped export, names-at alias, dynamic symbol, "
+        "SONAME-qualified import or PLT stub resolves this symbol, and no "
+        "documented external interface covers it")
+    return row
+
+
+def _bound_nodes(g, dso_name: str, values, export_index: dict,
+                 site: tuple | None = None) -> tuple[set, int, list]:
+    """Map bound values to reachable nodes, widening rather than narrowing.
+
+    An integer that is a defined function start is its own node.  An integer
+    that lies inside executable code is mapped to its enclosing function start
+    (a widening: a transfer into the middle of a function still reaches that
+    function).  Any other integer is not an executable address and cannot be a
+    function entry; it is counted, not silently discarded.  A symbolic target
+    is resolved through the fixed :data:`SYMBOL_RESOLUTION_ORDER`; every
+    symbolic value yields a disposition row, so none is counted and discarded.
+    """
+    nodes = set()
+    non_code = 0
+    symbols = []
+    start_set = getattr(g, "start_set", set()) or set()
+    section_of = getattr(g, "section_of", None)
+    containing = getattr(g, "containing", None)
+    for value in values:
+        if isinstance(value, tuple):
+            if len(value) == 2 and value[0] == "sym":
+                row = _resolve_symbolic_value(g, dso_name, value[1], export_index)
+                if site is not None:
+                    row["sites"] = sorted(set(row.get("sites") or [])
+                                          | {f"0x{site[1]:x}"})
+                for target in row.get("targets") or ():
+                    nodes.add((target[0], target[1]))
+                symbols.append(row)
+            continue
+        if not isinstance(value, int) or isinstance(value, bool):
+            continue
+        if value in start_set:
+            nodes.add((dso_name, value))
+            continue
+        section = section_of(value) if callable(section_of) else None
+        if section in (".text", ".plt", ".plt.got") and callable(containing):
+            base = containing(value)
+            if base is not None:
+                nodes.add((dso_name, base))
+                continue
+        non_code += 1
+    return nodes, non_code, symbols
+
+
 def build_graph(graphs: dict, roots: set, export_index: dict,
-                import_nodes: set | None = None) -> dict:
-    """Union reachability over all candidate DSOs, with per-site targets.
+                import_nodes: set | None = None,
+                max_rounds: int | None = None) -> dict:
+    """Union reachability over all candidate DSOs, as a least fixed point.
 
     Direct call edges come from the linked machine code.  Indirect sites carry
     the target set the precision resolver established.  A site whose value is
     genuinely data-dependent is admitted at its **evidence class** (a field
-    offset, an argument summary, or a code-materialised address), never from a
-    trace.  Only a site whose operand cannot be classified at all admits the
-    global address-taken union; the receipt records every such site.
+    offset, an argument summary, or a code-materialised address) for reporting,
+    but its reachability bound is the class-independent union in
+    :func:`unresolved_site_bound`.
+
+    Residual admission is iterated to convergence (chaotic/worklist iteration,
+    Kildall 1973; Cousot & Cousot 1977):
+
+        reach = walk(roots)
+        repeat: bound = union of unresolved_site_bound over every unresolved
+                site whose containing function is in reach;
+                reach' = walk(reach | bound);
+        until reach' == reach
+
+    Each round is monotone (the bound never shrinks and ``walk`` is a graph
+    closure), so the sequence is increasing in a finite lattice of function
+    nodes and terminates; ``max_rounds`` bounds the iteration and a failure to
+    converge is reported, never silently accepted.
     """
-    import_nodes = import_nodes or set()
+    import_nodes = {n for n in (import_nodes or ()) if n and n[0] in graphs}
     site_edges = collections.defaultdict(set)
-    sites_by_func = collections.defaultdict(list)
+    resolved_targets = set()
     for g in graphs.values():
         for key, s in getattr(g, "sites", {}).items():
             fstart = key[0]
-            sites_by_func[g.name].append((fstart, s))
             for t in s["targets"]:
                 node = None
                 if isinstance(t, int):
@@ -3862,15 +11213,23 @@ def build_graph(graphs: dict, roots: set, export_index: dict,
                     node = export_index.get(t[1])
                 if node is not None:
                     site_edges[(g.name, fstart)].add(node)
+                    resolved_targets.add(node)
 
-    def walk(initial, extra_for):
+    unresolved_by_func = collections.defaultdict(list)
+    for g in graphs.values():
+        for key, s in getattr(g, "sites", {}).items():
+            if s["unresolved"]:
+                unresolved_by_func[(g.name, key[0])].append(s)
+
+    def walk(initial):
         reach = set(initial)
         frontier = list(initial)
         while frontier:
             nxt = []
             for dso_name, addr in frontier:
-                g = graphs[dso_name]
-                targets = set(g.direct.get(addr, ()))
+                g = graphs.get(dso_name)
+                if g is None:
+                    continue
                 for t in g.direct.get(addr, ()):
                     node = (dso_name, t)
                     if node not in reach:
@@ -3889,44 +11248,727 @@ def build_graph(graphs: dict, roots: set, export_index: dict,
             frontier = nxt
         return reach
 
-    direct_reach = walk(roots, None)
+    # Module-global half of the bound.  Computed once: it does not depend on
+    # the site, only on the module's materialised-address evidence.  It is the
+    # production bound helper applied to an empty site, so the mutation control
+    # ("narrow the bound by class") exercises this exact code path.
+    module_values = {}
+    module_bound = {}
+    bound_sources = {}
+    # Every symbolic value in the bound gets exactly one disposition row
+    # (resolved / external-contract / blocking).  A site-extra occurrence adds
+    # its call-site address; the row is never dropped and a bare count is not
+    # the evidence.
+    symbol_dispositions = {}
 
-    # residual bounds, computed per DSO from evidence classes
-    residual_bound = set()
-    unclassified = set()
-    reachable_residual_sites = []
-    for dso_name, addr in direct_reach:
-        g = graphs[dso_name]
-        for fstart, s in sites_by_func.get(dso_name, ()):
-            if fstart != addr or not s["unresolved"]:
+    def merge_symbol(row, site=None):
+        key = (row["module"], row["symbol"])
+        cur = symbol_dispositions.get(key)
+        if cur is None:
+            cur = dict(row)
+            cur["targets"] = [list(t) for t in (row.get("targets") or [])]
+            cur["slot_offsets"] = list(row.get("slot_offsets") or [])
+            cur["sites"] = []
+            symbol_dispositions[key] = cur
+        for target in row.get("targets") or []:
+            if target not in cur["targets"]:
+                cur["targets"].append(list(target))
+        for off in row.get("slot_offsets") or []:
+            if off not in cur["slot_offsets"]:
+                cur["slot_offsets"].append(off)
+        if site is not None:
+            cur["sites"].append(f"0x{site[1]:x}")
+        cur["sites"] = sorted(set(cur["sites"]))
+        cur["slot_offsets"] = sorted(set(cur["slot_offsets"]))
+
+    for dso_name, g in graphs.items():
+        values = unresolved_site_bound(g, {})
+        module_values[dso_name] = values
+        nodes, non_code, symbol_rows = _bound_nodes(
+            g, dso_name, values, export_index)
+        for row in symbol_rows:
+            merge_symbol(row)
+        module_bound[dso_name] = nodes
+        field_values = {v for stored in (getattr(g, "field_stores", None)
+                                         or {}).values() for v in stored}
+        bound_sources[dso_name] = {
+            "module": dso_name,
+            "taken_code": len(getattr(g, "taken_code", ()) or ()),
+            "taken_data": len(getattr(g, "taken_data", ()) or ()),
+            "slot_func_targets": len(getattr(g, "slot_func_targets", ()) or ()),
+            "dynamic_reloc_targets": len(
+                getattr(g, "dynamic_reloc_targets", ()) or ()),
+            "address_taken_union": len(
+                getattr(g, "address_taken_union", ()) or ()),
+            "field_store_values": len(field_values),
+            "unknown_call_arg_targets": len(
+                getattr(g, "unknown_call_arg_targets", ()) or ()),
+            "bound_values": len(values),
+            "bound_nodes": len(nodes),
+            "non_code_values": non_code,
+            "symbol_values": len(symbol_rows),
+            "resolved_symbol_values": sum(
+                1 for r in symbol_rows if r["disposition"] == "resolved"),
+            "external_contract_symbol_values": sum(
+                1 for r in symbol_rows
+                if r["disposition"] == "external-contract"),
+            "unresolved_symbol_values": sum(
+                1 for r in symbol_rows if r["disposition"] == "blocking"),
+            "symbol_disposition_symbols": sorted(r["symbol"]
+                                                 for r in symbol_rows),
+        }
+
+    # Site-specific half: the site's own resolver targets, on top of the same
+    # module union.  Computed once.
+    site_extra = {}
+    for dso_name, sites in unresolved_by_func.items():
+        g = graphs.get(dso_name[0])
+        for s in sites:
+            if g is None:
+                site_extra[id(s)] = set()
                 continue
-            reachable_residual_sites.append((dso_name, addr, s))
-            if s["class"] == "unclassified":
-                unclassified.add((dso_name, addr, s["reason"]))
-                residual_bound |= {(dso_name, a) for a in g.address_taken_union}
-            else:
-                residual_bound |= {(dso_name, a) for a in g.taken_code}
-                for vals in getattr(g, "field_stores", {}).values():
-                    residual_bound |= {(dso_name, v) for v in vals
-                                      if isinstance(v, int) and v in g.start_set}
-                residual_bound |= {(dso_name, v) for v in
-                                   getattr(g, "unknown_call_arg_targets", ())
-                                   if v in g.start_set}
-    residual_bound |= {n for n in import_nodes if n[0] in graphs}
+            extra = unresolved_site_bound(g, s) - module_values[dso_name[0]]
+            if not extra:
+                site_extra[id(s)] = set()
+                continue
+            site = (dso_name[0], s.get("addr", dso_name[1]))
+            nodes, _non_code, symbol_rows = _bound_nodes(
+                g, dso_name[0], extra, export_index, site=site)
+            for row in symbol_rows:
+                merge_symbol(row, site=site)
+            site_extra[id(s)] = nodes
 
-    upper = walk(set(direct_reach) | residual_bound, None)
+    total_functions = sum(len(getattr(g, "funcs", {})) for g in graphs.values())
+    if max_rounds is None:
+        max_rounds = 4 * total_functions + 8
+    max_rounds = max(1, int(max_rounds))
+
+    direct_reach = walk(set(roots) | import_nodes)
+    reach = set(direct_reach)
+    round_sizes = [len(reach)]
+    sites_scanned_per_round = [0]
+    converged = False
+    rounds = 0
+    bound = set()
+    last_growth = None
+    for rnd in range(1, max_rounds + 1):
+        rounds = rnd
+        bound = set()
+        scanned = 0
+        for (dso_name, fstart), sites in unresolved_by_func.items():
+            if (dso_name, fstart) not in reach:
+                continue
+            bound |= module_bound[dso_name]
+            for s in sites:
+                scanned += 1
+                bound |= site_extra[id(s)]
+        nxt = walk(reach | bound | import_nodes)
+        round_sizes.append(len(nxt))
+        sites_scanned_per_round.append(scanned)
+        if nxt == reach:
+            converged = True
+            break
+        last_growth = len(nxt) - len(reach)
+        reach = nxt
+    if not converged:
+        reach = nxt
+
+    reachable_residual_sites = []
+    unclassified = set()
+    for (dso_name, fstart), sites in unresolved_by_func.items():
+        if (dso_name, fstart) not in reach:
+            continue
+        for s in sites:
+            reachable_residual_sites.append((dso_name, fstart, s))
+            if s["class"] == "unclassified":
+                unclassified.add((dso_name, fstart, s["reason"]))
+    reachable_residual_sites.sort(key=lambda r: (r[0], r[1], r[2].get("addr", 0)))
+
+    disposition_rows = sorted(symbol_dispositions.values(),
+                              key=lambda r: (r["module"], r["symbol"]))
+    disposition_summary = {
+        "schema": "openssl-rs/campaign/safe-c33/symbol-disposition/v1",
+        "resolution_order": list(SYMBOL_RESOLUTION_ORDER),
+        "resolved": sum(1 for r in disposition_rows
+                        if r["disposition"] == "resolved"),
+        "external-contract": sum(1 for r in disposition_rows
+                                 if r["disposition"] == "external-contract"),
+        "blocking": sum(1 for r in disposition_rows
+                        if r["disposition"] == "blocking"),
+        "rule": (
+            "every symbolic value in the module residual bound and in a "
+            "residual site's own bound is resolved through the fixed order "
+            "exact-export, version-stripped-export, names-at, "
+            "dynamic-symbol-table, soname-qualified-import, plt-stub; a "
+            "symbol covered by a cited documented external interface is "
+            "external-contract; every other symbol is blocking and is "
+            "refused, never counted and discarded"),
+    }
+
     return {
         "direct_reachable": direct_reach,
-        "upper_reachable": upper,
+        "upper_reachable": reach,
+        "converged": converged,
+        "closure_rounds": rounds,
+        "round_sizes": round_sizes,
+        "sites_scanned_per_round": sites_scanned_per_round,
+        "max_rounds": max_rounds,
+        "nonconvergent_detail": (None if converged else {
+            "round_cap": max_rounds,
+            "last_growth": last_growth,
+            "reach_size": len(reach),
+        }),
         "address_taken_union": {(g.name, a) for g in graphs.values()
-                                for a in g.address_taken_union},
-        "resolved_site_targets": {n for edges in site_edges.values() for n in edges},
-        "residual_bound": residual_bound,
+                                for a in getattr(g, "address_taken_union", ())},
+        "resolved_site_targets": resolved_targets,
+        "residual_bound": bound,
+        "residual_bound_nodes": len(bound),
+        "symbol_dispositions": disposition_rows,
+        "symbol_disposition_summary": disposition_summary,
+        "bound_evidence_sources": {
+            "schema": UNRESOLVED_BOUND_SCHEMA,
+            "rule": (
+                "a residual site's bound is address_taken_union plus taken_code "
+                "plus every field-store value plus every unresolved-call argument "
+                "target plus the site's own resolver targets and arg_targets; "
+                "it is independent of the site's class, so a precision loss can "
+                "only widen it"),
+            "modules": bound_sources,
+            "unresolved_sites": sum(len(v) for v in unresolved_by_func.values()),
+            "sites_with_site_targets": sum(
+                1 for sites in unresolved_by_func.values() for s in sites
+                if site_extra.get(id(s))),
+        },
         "reachable_residual_sites": reachable_residual_sites,
         "unclassified_sites": sorted(unclassified, key=lambda x: (x[0], x[1])),
-        "indirect_reachable_functions": len({f for dso_name, f, _s in
+        "indirect_reachable_functions": len({f for _d, f, _s in
                                              reachable_residual_sites}),
     }
+
+
+def closure_refusals(closure: dict) -> list:
+    """Closure refusals: non-convergence and unresolved symbolic targets.
+
+    A symbol in the residual bound that resolves by no path and is not covered
+    by a cited external interface can become a missing dependency.  It is a
+    refusal naming every blocking symbol and site, not a count.
+    """
+    refusals = []
+    if not closure.get("converged", True):
+        detail = closure.get("nonconvergent_detail") or {}
+        refusals.append({
+            "code": "CLOSURE_NONCONVERGENT",
+            "detail": (
+                "the residual-admission least fixed point did not converge within "
+                f"{detail.get('round_cap')} round(s); the last round added "
+                f"{detail.get('last_growth')} node(s) and the reachable set is "
+                f"{detail.get('reach_size')} node(s). The bound is partial and no "
+                "reachability claim may be drawn from it"),
+        })
+    blocking = [row for row in (closure.get("symbol_dispositions") or [])
+                if row.get("disposition") == "blocking"]
+    if blocking:
+        refusals.append({
+            "code": "CLOSURE_UNRESOLVED_SYMBOL",
+            "detail": (
+                f"{len(blocking)} symbolic target(s) in the residual bound "
+                "resolve by no documented path (exact export, version-stripped "
+                "export, names-at alias, dynamic symbol, SONAME-qualified "
+                "import, PLT stub) and are covered by no cited external "
+                "interface; a missing symbol can be a missing dependency"),
+            "symbols": [
+                {"symbol": row["symbol"],
+                 "module": row["module"],
+                 "slot_offsets": row.get("slot_offsets") or [],
+                 "sites": row.get("sites") or [],
+                 "reason": row.get("reason")}
+                for row in blocking
+            ],
+        })
+    return refusals
+
+
+# --------------------------------------------------------------------------- #
+# admission by refutation (AGENTS.md sections 7 and 22)
+# --------------------------------------------------------------------------- #
+#
+# Every exclusion in this analyzer was derived against the *pre-closure direct*
+# reachable set, which is an under-approximation.  The sound bound (the final
+# upper bound) reaches callers and writers that derivation excluded.  Refusing
+# every such site is honest but leaves the closure unusable; the sound
+# disposition is the opposite of the refusal: if the bound reaches an excluded
+# subject, the exclusion is false, so the targets it would have contributed are
+# admitted and the closure is recomputed.  Admission may only add targets; the
+# exclusions that survive the bound stay exclusions and remain validated.
+ADMISSION_SCHEMA = "openssl-rs/campaign/safe-c33/refutation-admission/v1"
+MAX_ADMISSION_PASSES = 4
+ADMISSION_SITE_RENDER_LIMIT = 200
+ADMISSION_ROW_RENDER_LIMIT = 2000
+ADMISSION_ROLE_CALLER = "reachable-caller"
+ADMISSION_ROLE_WRITER = "method-store-writer"
+ADMISSION_ROLE_CALLSITE = "method-store-callsite-caller"
+ADMISSION_ROLES = (ADMISSION_ROLE_CALLER, ADMISSION_ROLE_WRITER,
+                   ADMISSION_ROLE_CALLSITE)
+
+
+def _hex_addr(value):
+    """An artifact-local address from an int or a hex string, else None."""
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if isinstance(value, str) and value:
+        try:
+            return int(value, 16)
+        except ValueError:
+            return None
+    return None
+
+
+def _oracle_reaches(oracle, module, symbol, address=None) -> bool:
+    """True only when the sound bound positively reaches the subject.
+
+    ``checkable`` false (an unmodelled module) is not a refutation: an
+    unavailable oracle can never turn an exclusion into an admission.
+    """
+    if oracle is None:
+        return False
+    reachable, _basis, checkable = oracle.is_reachable(
+        module, symbol, _hex_addr(address))
+    return bool(checkable and reachable)
+
+
+def _oracle_module_addresses(oracle, g) -> set:
+    """Every address of ``g`` whose name the upper bound reaches.
+
+    The oracle answers by address *or* by name (an identical-code-folding
+    alias at another address contributes the name).  A re-derivation that used
+    only the reached node addresses could keep an exclusion the oracle
+    refutes, so the set is the union of the reached nodes and every address the
+    image records under a reached name.
+    """
+    module = getattr(g, "name", None)
+    nodes = oracle.upper_nodes(module) if oracle is not None else None
+    if nodes is None:
+        return set()
+    reach = set(oracle.reachable_symbols(module) or ())
+    addrs = {a for _m, a in nodes}
+    for table in ("funcs", "all_syms"):
+        for addr, name in (getattr(g, table, {}) or {}).items():
+            if name and str(name).split("@")[0] in reach:
+                addrs.add(addr)
+    for addr, names in (getattr(g, "names_at", {}) or {}).items():
+        if any(str(n).split("@")[0] in reach for n in (names or ())):
+            addrs.add(addr)
+    return addrs
+
+
+def _admission_targets(g, values) -> tuple[set, list]:
+    """(function-start addresses, rejected values) from hex/int targets."""
+    starts = getattr(g, "start_set", set()) or set()
+    accepted, rejected = set(), []
+    for value in values or ():
+        addr = _hex_addr(value)
+        if addr is None or addr not in starts:
+            rejected.append(str(value))
+            continue
+        accepted.add(addr)
+    return accepted, rejected
+
+
+def _caller_row_is_bounded(row) -> bool:
+    """True when an excluded caller's recorded contribution is finite.
+
+    A row with no recorded call site, an open (top) argument, or a non-image
+    value does not establish a finite target set.  The subject is still
+    reachable -- it is admitted as a reachable caller -- but the site cannot
+    keep a finite target set and must become UNRESOLVED.
+    """
+    call_sites = row.get("call_sites")
+    if not isinstance(call_sites, list) or not call_sites:
+        return False
+    for cs in call_sites:
+        args = cs.get("arguments") if isinstance(cs, dict) else None
+        if not isinstance(args, list) or not args:
+            return False
+        for arg in args:
+            if not isinstance(arg, dict):
+                return False
+            if arg.get("unresolved") or arg.get("non_image_values"):
+                return False
+    return True
+
+
+def _recompute_caller_bound(bound: dict, site: dict) -> None:
+    """Keep the bound's derived target lists equal to its caller rows.
+
+    Admission moves a caller from ``excluded_callers`` to
+    ``reachable_callers``; the reported ``bounded``/``attributed``/
+    ``unattributed`` sets are recomputed from the rows so the receipt does not
+    describe the pre-admission narrowing.
+    """
+    def union(rows):
+        out = set()
+        for row in rows or ():
+            for value in (row or {}).get("contributed_targets") or ():
+                addr = _hex_addr(value)
+                if addr is not None:
+                    out.add(addr)
+        return out
+
+    bounded = union(bound.get("reachable_callers"))
+    excluded = union(bound.get("excluded_callers"))
+    arg_targets = {a for a in (_hex_addr(t) for t in site.get("arg_targets") or ())
+                   if a is not None}
+    bound["bounded_targets"] = [hex(a) for a in sorted(bounded)]
+    bound["attributed_targets"] = [hex(a) for a in sorted(bounded | excluded)]
+    bound["unattributed_targets"] = [
+        hex(a) for a in sorted(arg_targets - bounded - excluded)]
+
+
+def _merge_refutation(site: dict, refuted: list, admitted: list,
+                      targets, unresolved: bool, missing_property) -> None:
+    """Accumulate one site's refutation record (admission is monotone)."""
+    current = site.get("refutation_admission")
+    if not isinstance(current, dict):
+        current = {"schema": ADMISSION_SCHEMA, "refuted": [], "admitted": [],
+                   "targets": [], "unresolved": False,
+                   "missing_property": None}
+    current["refuted"].extend(refuted)
+    current["admitted"].extend(admitted)
+    current["targets"] = sorted(set(current.get("targets") or ())
+                                | set(targets))
+    current["unresolved"] = bool(current.get("unresolved") or unresolved)
+    if missing_property:
+        current["missing_property"] = missing_property
+    site["refutation_admission"] = current
+
+
+def _admit_caller_bound(g, site: dict, bound: dict, oracle,
+                        module: str) -> tuple[bool, list, list]:
+    """Admit the excluded callers the sound bound reaches.
+
+    Returns (changed, admitted rows, refuted rows).  A moved caller becomes a
+    reachable caller (that is what the refutation establishes) and its recorded
+    ``contributed_targets`` are added to the site's target set.  A caller whose
+    contribution is not finite keeps its place as a reachable caller but makes
+    the site UNRESOLVED with a named property: the target set is no longer
+    finite, so a finite claim would be unsound.
+    """
+    excluded = list(bound.get("excluded_callers") or ())
+    moved, kept = [], []
+    for row in excluded:
+        if isinstance(row, dict) and _oracle_reaches(
+                oracle, module, row.get("symbol"), row.get("function")):
+            moved.append(row)
+        else:
+            kept.append(row)
+    if not moved:
+        return False, [], []
+    reachable_rows = bound.setdefault("reachable_callers", [])
+    was_unresolved = bool(site.get("unresolved"))
+    admitted, refuted = [], []
+    added_targets = set()
+    unbounded = []
+    for row in moved:
+        rec = dict(row)
+        rec["reachable"] = True
+        rec["reason"] = None
+        rec["admitted_by_refutation"] = True
+        reachable_rows.append(rec)
+        targets, rejected = _admission_targets(
+            g, rec.get("contributed_targets") or ())
+        bounded = _caller_row_is_bounded(rec)
+        if not bounded or rejected:
+            unbounded.append(rec.get("symbol") or "?")
+        added_targets |= targets
+        admitted.append({
+            "role": ADMISSION_ROLE_CALLER,
+            "subject": rec.get("symbol") or "?",
+            "address": rec.get("function"),
+            "targets": [_edge_symbol(g, t) for t in sorted(targets)],
+            "bounded": bool(bounded and not rejected),
+            "basis": "final-upper-bound",
+        })
+        refuted.append({
+            "role": ADMISSION_ROLE_CALLER,
+            "subject": rec.get("symbol") or "?",
+            "address": rec.get("function"),
+        })
+    site["targets"] = set(site.get("targets") or ()) | added_targets
+    bound["excluded_callers"] = kept
+    _recompute_caller_bound(bound, site)
+    if unbounded:
+        missing = ("refutation-unbounded: caller(s) reached by the final upper "
+                   "bound have no finite recorded image target set: "
+                   + ", ".join(sorted(unbounded)))
+        # A previously unresolved site stays unresolved: re-resolving it would
+        # remove the class-independent bound and could lose reachability.
+        site["unresolved"] = True
+        site["class"] = "reachable-caller-target (refutation-unbounded)"
+        site["reason"] = missing
+        _merge_refutation(site, refuted, admitted,
+                          [_edge_symbol(g, t) for t in sorted(added_targets)],
+                          True, missing)
+    else:
+        note = ("reachable-caller target bounding (refutation-widened): "
+                + ", ".join(r["subject"] for r in admitted)
+                + " are reached by the final upper bound")
+        site["class"] = "reachable-caller-target (refutation-widened)"
+        site["reason"] = note
+        site["unresolved"] = was_unresolved
+        _merge_refutation(site, refuted, admitted,
+                          [_edge_symbol(g, t) for t in sorted(added_targets)],
+                          False, note)
+    return True, admitted, refuted
+
+
+def _fresh_callsite_targets(fresh: dict, call_site, g):
+    """Targets the widened derivation now records for one call site."""
+    targets = set()
+    bounded = False
+    for row in fresh.get("call_sites") or ():
+        if not isinstance(row, dict) or row.get("included") is not True:
+            continue
+        if row.get("call_site") != call_site:
+            continue
+        if row.get("failure"):
+            continue
+        got, _rejected = _admission_targets(g, row.get("targets") or ())
+        targets |= got
+        bounded = True
+    return targets, bounded
+
+
+def _admit_semantic_store(g, site: dict, sem: dict, oracle, module: str,
+                          name: str, reachable_fn) -> tuple[bool, list, list]:
+    """Re-derive a stored-value site when the sound bound refutes an exclusion.
+
+    The derivation's exclusions were computed against the pre-closure direct
+    set.  Rather than guess what a refuted writer or writer-caller would have
+    stored, the derivation is recomputed with the sound bound's function set:
+    the refuted subject becomes an ordinary included row with its real
+    provenance chain, and every exclusion that survives is one the bound still
+    does not reach.  The old targets are retained (admission is monotone), and
+    a derivation that is no longer finite makes the site UNRESOLVED.
+    """
+    refuted = []
+    for row in sem.get("excluded_writers") or ():
+        if isinstance(row, dict) and _oracle_reaches(
+                oracle, module, row.get("symbol"), row.get("address")):
+            refuted.append({"role": ADMISSION_ROLE_WRITER,
+                            "subject": row.get("symbol") or "?",
+                            "address": row.get("address"),
+                            "_row": row})
+    for row in sem.get("call_sites") or ():
+        if isinstance(row, dict) and row.get("included") is False and \
+                _oracle_reaches(oracle, module, row.get("caller")):
+            refuted.append({"role": ADMISSION_ROLE_CALLSITE,
+                            "subject": row.get("caller") or "?",
+                            "address": row.get("call_site"),
+                            "_row": row})
+    if not refuted:
+        return False, [], []
+    fresh = semantic_method_free_targets(g, site, name, reachable_fn())
+    if fresh is None:
+        return False, [], []
+    old_targets = set(site.get("targets") or ())
+    was_unresolved = bool(site.get("unresolved"))
+    fresh_targets, fresh_rejected = _admission_targets(
+        g, fresh.get("targets") or ())
+    admitted, public_refuted = [], []
+    added = set()
+    unbounded = []
+    for entry in refuted:
+        row = entry.pop("_row")
+        public_refuted.append(dict(entry))
+        targets, bounded = set(), False
+        if entry["role"] == ADMISSION_ROLE_WRITER:
+            if row.get("would_store_failure"):
+                unbounded.append(entry["subject"])
+            elif row.get("would_store_targets") is not None:
+                targets, rejected = _admission_targets(
+                    g, row.get("would_store_targets") or ())
+                bounded = not rejected
+                if rejected:
+                    unbounded.append(entry["subject"])
+        else:
+            targets, bounded = _fresh_callsite_targets(
+                fresh, entry["address"], g)
+            if not bounded:
+                unbounded.append(entry["subject"])
+        added |= targets
+        admitted.append({
+            "role": entry["role"],
+            "subject": entry["subject"],
+            "address": entry["address"],
+            "targets": [_edge_symbol(g, t) for t in sorted(targets)],
+            "bounded": bool(bounded),
+            "basis": "final-upper-bound",
+        })
+    fresh_resolved = bool(fresh.get("resolved"))
+    if fresh_resolved:
+        added |= fresh_targets
+    else:
+        unbounded.append("the widened derivation")
+    if fresh_rejected:
+        unbounded.append("a widened target that is not a function start")
+    site["semantic_store_target"] = fresh
+    site["targets"] = old_targets | added
+    names = [_edge_symbol(g, t) for t in sorted(added)]
+    if unbounded or not fresh_resolved:
+        missing = ("refutation-unbounded: "
+                   + str(fresh.get("refusal") or ", ".join(sorted(unbounded)))
+                   + "; a subject reached by the final upper bound leaves the "
+                   "stored-value target set not finite")
+        site["unresolved"] = True
+        site["class"] = "semantic-store-target (refutation-unbounded)"
+        site["reason"] = missing
+        # An unresolved record enumerates no complete target set, so the
+        # retained targets must be named in candidate_source or the record's
+        # own accounting cannot bind them.  They are the stored-value targets
+        # the pre-widening derivation already produced.
+        names = [_edge_symbol(g, t) for t in sorted(site["targets"])]
+        _merge_refutation(site, public_refuted, admitted, names, True, missing)
+    else:
+        note = ("stored-value provenance:Method.free (offset 0x20), "
+                f"{len(fresh_targets)} target(s), refutation-widened")
+        site["class"] = "semantic-store-target (refutation-widened)"
+        site["reason"] = note
+        # Never narrow: a previously unresolved site stays unresolved.
+        site["unresolved"] = was_unresolved
+        _merge_refutation(site, public_refuted, admitted, names, False, note)
+    return True, admitted, public_refuted
+
+
+def admit_refuted_exclusions(graphs: dict, oracle) -> dict:
+    """One admission sweep: turn every bound-refuted exclusion into admission.
+
+    The pass is monotone by construction.  It only adds targets to a site and
+    removes a refuted row from an exclusion list; it never removes a target and
+    never turns an unresolved site into a resolved one.  The caller owns closure
+    recomputation (:func:`admission_fixpoint`) because grown target sets can
+    grow the reachable set and refute further exclusions.
+    """
+    report = {
+        "schema": ADMISSION_SCHEMA,
+        "changed": False,
+        "refuted_exclusions": {role: 0 for role in ADMISSION_ROLES},
+        "admitted_by_refutation": {"count": 0, "targets": [], "rows": []},
+        "sites": [],
+    }
+    for module in sorted(graphs):
+        g = graphs[module]
+        reachable_cache = []
+
+        def module_reachable():
+            if not reachable_cache:
+                reachable_cache.append(_oracle_module_addresses(oracle, g))
+            return reachable_cache[0]
+
+        for key in sorted(getattr(g, "sites", {}) or {},
+                          key=lambda k: (k[0], k[1], str(k[2]))):
+            site = g.sites[key]
+            name = (getattr(g, "funcs", {}) or {}).get(site.get("func", 0), "?")
+            site_admitted, site_refuted = [], []
+            changed = False
+            bound = site.get("reachable_caller_bound")
+            if isinstance(bound, dict):
+                step, admitted, refuted = _admit_caller_bound(
+                    g, site, bound, oracle, module)
+                changed |= step
+                site_admitted += admitted
+                site_refuted += refuted
+            sem = site.get("semantic_store_target")
+            if isinstance(sem, dict):
+                step, admitted, refuted = _admit_semantic_store(
+                    g, site, sem, oracle, module, name, module_reachable)
+                changed |= step
+                site_admitted += admitted
+                site_refuted += refuted
+            if not changed:
+                continue
+            report["changed"] = True
+            for entry in site_refuted:
+                report["refuted_exclusions"][entry["role"]] += 1
+            report["admitted_by_refutation"]["rows"].extend(
+                dict(entry, dso=module, function=name,
+                     call_site=hex(site.get("addr", 0)))
+                for entry in site_admitted)
+            report["sites"].append({
+                "dso": module,
+                "function": name,
+                "call_site": hex(site.get("addr", 0)),
+                "roles": sorted({e["role"] for e in site_admitted}),
+                "refuted": site_refuted,
+                "admitted": site_admitted,
+                "class": site.get("class"),
+                "unresolved": bool(site.get("unresolved")),
+                "reason": site.get("reason"),
+            })
+    rows = report["admitted_by_refutation"]["rows"]
+    report["admitted_by_refutation"]["count"] = len(rows)
+    report["admitted_by_refutation"]["targets"] = sorted({
+        target for row in rows for target in row.get("targets") or ()})
+    return report
+
+
+def admission_fixpoint(graphs: dict, close, *,
+                       max_passes: int = MAX_ADMISSION_PASSES) -> tuple[dict, dict]:
+    """Iterate admission and closure recomputation to a least fixed point.
+
+    ``close()`` returns a :func:`build_graph` result for the current site state.
+    Each admission sweep can only add targets, and the closure is a monotone
+    graph closure, so the sequence is increasing in a finite lattice and
+    terminates.  The cap is a safety property, not the termination argument: a
+    cap exhaustion is reported as ``ADMISSION_NONCONVERGENT`` by the caller and
+    no reachability claim may rest on it.
+    """
+    closure = close()
+    summary = {
+        "schema": ADMISSION_SCHEMA,
+        "passes": 0,
+        "max_passes": int(max_passes),
+        "converged": True,
+        "refuted_exclusions": {role: 0 for role in ADMISSION_ROLES},
+        "admitted_by_refutation": {"count": 0, "targets": [], "rows": []},
+        "sites": [],
+        "nonconvergent_detail": None,
+    }
+    rows: list = []
+    targets = set()
+    row_total = 0
+    while True:
+        oracle = ReachabilityOracle(graphs, closure["upper_reachable"])
+        step = admit_refuted_exclusions(graphs, oracle)
+        if not step["changed"]:
+            break
+        summary["passes"] += 1
+        for role, count in step["refuted_exclusions"].items():
+            summary["refuted_exclusions"][role] += count
+        for row in step["admitted_by_refutation"]["rows"]:
+            row_total += 1
+            rows.append(dict(row, pass_index=summary["passes"]))
+        targets |= set(step["admitted_by_refutation"]["targets"])
+        summary["sites"].extend(step["sites"])
+        if summary["passes"] > summary["max_passes"]:
+            summary["converged"] = False
+            summary["nonconvergent_detail"] = {
+                "pass_cap": summary["max_passes"],
+                "passes": summary["passes"],
+                "last_site_count": len(step["sites"]),
+                "reach_size": len(closure["upper_reachable"]),
+            }
+            break
+        closure = close()
+    if len(rows) > ADMISSION_ROW_RENDER_LIMIT:
+        summary["admitted_by_refutation"]["truncated"] = True
+        rows = rows[:ADMISSION_ROW_RENDER_LIMIT]
+    if len(summary["sites"]) > ADMISSION_SITE_RENDER_LIMIT:
+        summary["sites_truncated"] = True
+        summary["sites"] = summary["sites"][:ADMISSION_SITE_RENDER_LIMIT]
+    summary["admitted_by_refutation"]["count"] = row_total
+    summary["admitted_by_refutation"]["rows"] = rows
+    summary["admitted_by_refutation"]["targets"] = sorted(targets)
+    return closure, summary
 
 
 def direct_only_closure(graphs: dict, root_nodes: set, export_index: dict) -> set:
@@ -4358,9 +12400,107 @@ def git_blob_hashes(repo: Path, commit: str, files: list[str]) -> tuple[dict, st
 # engine
 # --------------------------------------------------------------------------- #
 
+SOURCE_ROOT_HASH_RULE_CANONICAL = (
+    "sha256(canonical_json(sorted [[relpath, size, sha256], ...])) over the "
+    "pristine source tree")
+SOURCE_ROOT_HASH_RULE_DOMAIN = (
+    "sha256('openssl-rs/source-tree/v1\\0' + for each sorted path under the "
+    "extracted tree: path + '\\0' + bytes + '\\0')")
+
+
+def hash_rule_class(rule) -> str | None:
+    """Classify a recorded source-tree hash rule by the digest it produces.
+
+    Two rules are in circulation under the field name ``source_root_hash``.
+    The build/link atlas (``downstream_build_link._source_root_hash``) emits the
+    canonical-JSON ``[[relpath, size, sha256]]`` digest; a rebuilt-downstream
+    build record emits the domain-separated ``openssl-rs/source-tree/v1``
+    digest.  They can never be equal, so comparing them is a rule collision,
+    not staleness.
+    """
+    if not rule:
+        return None
+    text = str(rule).lower()
+    if "canonical_json" in text or "canonical json" in text:
+        return "canonical-json-tree"
+    if "source-tree/v1" in text:
+        return "domain-separated-tree"
+    return "unrecognised"
+
+
+def source_root_hash_checks(record: dict, ledger: dict | None) -> tuple[dict, list]:
+    """Compare like with like, and never delete either digest check.
+
+    * equal rule classes -> compare ``source_root_hash``; a difference is
+      ``STALE_HASH``;
+    * different rule classes -> ``HASH_RULE_MISMATCH`` naming both rules (the
+      two values are not comparable, so neither is a staleness verdict);
+    * ``source_tree_domain_hash`` on both sides -> compare it directly.
+    """
+    checks = {}
+    refusals = []
+    record_rule = record.get("source_root_hash_rule")
+    ledger_rule = (ledger or {}).get("source_root_hash_rule")
+    record_class = hash_rule_class(record_rule)
+    ledger_class = hash_rule_class(ledger_rule)
+    if ledger_class is None and (ledger or {}).get("source_root_hash"):
+        # The atlas field is produced by downstream_build_link._source_root_hash,
+        # which hashes canonical JSON; the atlas carries no separate rule field.
+        ledger_class = "canonical-json-tree"
+        ledger_rule = ledger_rule or SOURCE_ROOT_HASH_RULE_CANONICAL
+    checks["source_root_hash_rule"] = {
+        "build_record": record_rule,
+        "build_record_class": record_class,
+        "atlas": ledger_rule,
+        "atlas_class": ledger_class,
+    }
+
+    record_hash = record.get("source_root_hash")
+    ledger_hash = (ledger or {}).get("source_root_hash")
+    if record_hash and ledger_hash:
+        if record_class and ledger_class and record_class != ledger_class:
+            checks["source_root_hash_matches_atlas"] = None
+            checks["hash_rule_matches"] = False
+            refusals.append({
+                "code": "HASH_RULE_MISMATCH",
+                "detail": (
+                    f"build record source_root_hash uses {record_rule!r} "
+                    f"({record_class}) but the atlas uses {ledger_rule!r} "
+                    f"({ledger_class}); the two digests are not comparable"),
+                "build_record_rule": record_rule,
+                "atlas_rule": ledger_rule,
+            })
+        else:
+            checks["hash_rule_matches"] = True
+            checks["source_root_hash_matches_atlas"] = record_hash == ledger_hash
+            if not checks["source_root_hash_matches_atlas"]:
+                refusals.append({
+                    "code": "STALE_HASH",
+                    "detail": "build record pristine source tree hash does not "
+                              "match the atlas row for the same recipe",
+                })
+
+    record_domain = record.get("source_tree_domain_hash")
+    ledger_domain = (ledger or {}).get("source_tree_domain_hash")
+    if record_domain and ledger_domain:
+        checks["source_tree_domain_hash_matches_atlas"] = (
+            record_domain == ledger_domain)
+        if not checks["source_tree_domain_hash_matches_atlas"]:
+            refusals.append({
+                "code": "STALE_HASH",
+                "detail": "build record domain-separated source tree hash does "
+                          "not match the atlas row for the same recipe",
+            })
+    return checks, refusals
+
+
 def build_receipt(args) -> dict:
     repo = Path(args.repo).resolve()
+    tool_identity = _tool_identity()
+    tool_sha = tool_identity["sha256"]
     install = (repo / args.install).resolve()
+    _EVIDENCE_ENV["repo"] = str(repo)
+    _EVIDENCE_ENV["install"] = str(install)
     artifact = Path(args.artifact)
     if not artifact.is_absolute():
         artifact = (repo / artifact).resolve()
@@ -4475,7 +12615,7 @@ def build_receipt(args) -> dict:
     if getattr(args, "skip_graph_on_refusal", False) and refusals:
         return {
             "schema": SCHEMA,
-            "tool": {"path": TOOL, "version": 3},
+            "tool": tool_identity,
             "generated_utc": now_utc(),
             "family": args.family,
             "artifact_identity": {
@@ -4550,38 +12690,94 @@ def build_receipt(args) -> dict:
             g, workload_imports, pre_reachable.get(g.name, set()))
 
     closure = build_graph(graphs, root_nodes, export_index, import_nodes)
+    # Admission by refutation (AGENTS.md section 22).  Inductive exclusions were
+    # derived against the pre-closure direct set; the sound upper bound may
+    # reach the callers/writers they excluded.  Refusing those sites leaves the
+    # closure unusable, so each refuted exclusion is admitted with its witness
+    # and the closure is recomputed until no admission grows the bound.  The
+    # pass is monotone and may only add targets.
+    closure, admission = admission_fixpoint(
+        graphs,
+        lambda: build_graph(graphs, root_nodes, export_index, import_nodes))
     direct_reach = closure["direct_reachable"]
     upper_reach = closure["upper_reachable"]
-
-    # Reachable-caller bounding uses the pre-closure reachable set, while the
-    # final upper bound can admit a few additional targets from evidence
-    # classes.  An "excluded" caller that the final upper bound admits would
-    # make the exclusion unsafe, so the closure refuses rather than accepting
-    # the narrowed set.
-    rcb_audit = []
-    for g in graphs.values():
-        for s in g.sites.values():
-            rcb = s.get("reachable_caller_bound")
-            if not rcb:
-                continue
-            for excluded in rcb["excluded_callers"]:
-                node = (g.name, int(excluded["function"], 16))
-                rcb_audit.append({
-                    "dso": g.name,
-                    "site": hex(s["addr"]),
-                    "excluded_caller": excluded["function"],
-                    "excluded_symbol": excluded["symbol"],
-                    "in_final_upper_bound": node in upper_reach,
-                })
-    rcb_violations = [r for r in rcb_audit if r["in_final_upper_bound"]]
-    if rcb_violations:
+    refusals.extend(closure_refusals(closure))
+    if not admission["converged"]:
+        detail = admission.get("nonconvergent_detail") or {}
         refusals.append({
-            "code": "RCB_EXCLUDED_CALLER_REACHABLE",
+            "code": "ADMISSION_NONCONVERGENT",
             "detail": (
-                "a caller excluded by reachable-caller target bounding is in "
-                "the final upper bound: "
-                + ", ".join(f"{r['excluded_symbol']} at {r['site']}"
-                             for r in rcb_violations)),
+                "refutation admission did not reach a fixed point within "
+                f"{detail.get('pass_cap')} pass(es); the last pass admitted "
+                f"{detail.get('last_site_count')} site(s) and the reachable set "
+                f"is {detail.get('reach_size')} node(s).  The target sets are "
+                "partial and no reachability claim may be drawn from them"),
+        })
+
+    # The reachable function set is persisted with the receipt, so a movement
+    # between candidates can be adjudicated from the receipt instead of the
+    # multi-gigabyte record sidecar (AGENTS.md section 22).  The entries and the
+    # digest use the analysis identity's name canonicalisation: the raw
+    # `.llvm.<hash>` suffix changes with the build directory and source bytes
+    # while the address set is identical, so hashing it would report movement
+    # for a neutral rebuild.  The raw digest is retained as a non-identity.
+    reachable_functions = reachable_function_entries(graphs, upper_reach)
+    _raw_functions = reachable_function_entries(graphs, upper_reach,
+                                                canonical=False)
+    reachable_functions_sha256 = reachable_functions_digest(reachable_functions)
+    reachable_functions_raw_sha256 = reachable_functions_digest(_raw_functions)
+    reachable_functions_canonicalised = sum(
+        1 for entry in _raw_functions
+        if canonical_symbol_name(entry.split(":", 2)[2]) != entry.split(":", 2)[2])
+    reachable_functions_per_module = collections.Counter(
+        entry.split(":", 1)[0] for entry in reachable_functions)
+    analysis_ident = analysis_identity(graphs)
+
+    # ---- edge provenance records ----------------------------------------- #
+    # Every indirect site emits a semantic record.  The *final upper bound* is
+    # the authoritative oracle for every negative reachability claim: the
+    # derivation-time reachable set is the pre-closure direct set, which is an
+    # under-approximation and cannot prove an absence.
+    oracle = ReachabilityOracle(graphs, upper_reach)
+    # The population is streamed to a sidecar and validated/audited in the same
+    # pass.  Nothing here retains 52k records: the receipt keeps counts, the
+    # defects, the audit rows and a bounded sample.  v1.1 kept the population
+    # and then json.dumps()ed it, which OOMed the ssh closure at 4 GiB.
+    records_path = _edge_records_path(args, repo, artifact_sha, workdir)
+    records_path.parent.mkdir(parents=True, exist_ok=True)
+    residual_sites = {(d, hex(s.get("addr", 0)))
+                      for d, _a, s in closure["reachable_residual_sites"]}
+    stream = EdgeRecordStream(
+        oracle, path=records_path,
+        sample_cap=getattr(args, "max_record_sample",
+                           EDGE_RECORD_SAMPLE_DEFAULT),
+        reachable_residual=residual_sites)
+    try:
+        build_edge_records(graphs, oracle, sink=stream)
+    finally:
+        stream.close()
+    edge_records = stream  # summary/counters live on the stream
+    edge_defects = stream.defects
+    edge_refusal = edge_refusal_for(edge_defects)
+    if edge_refusal is not None:
+        refusals.append(edge_refusal)
+
+    # Every reachability-based exclusion -- reachable-caller bounding,
+    # method-store writer exclusion, a dropped target, or a semantic call-site
+    # row -- is re-checked against the final upper bound as it streams.  An
+    # "excluded" subject that the bound admits makes the exclusion unsafe, so
+    # the closure refuses rather than accepting the narrowed set.
+    reachability_audit = stream.audit_rows
+    reachability_violations = stream.violation_rows
+    if stream.violations:
+        refusals.append({
+            "code": "REACHABILITY_EXCLUSION_UNSOUND",
+            "detail": (
+                "a reachability-based exclusion contradicts the final upper "
+                "bound (site, role, subject): "
+                + ", ".join(
+                    f"{r['site']} {r['role']} {r['subject']}"
+                    for r in reachability_violations)),
         })
 
     reachable_names = set()
@@ -4804,6 +13000,8 @@ def build_receipt(args) -> dict:
                     "recipe_id": row.get("recipe_id"),
                     "source_sha256": row.get("source_sha256"),
                     "source_root_hash": row.get("source_root_hash"),
+                    "source_root_hash_rule": row.get("source_root_hash_rule"),
+                    "source_tree_domain_hash": row.get("source_tree_domain_hash"),
                     "artifact_rel": (row.get("linkage") or {}).get("artifact_rel"),
                     "artifact_sha256_recorded": (row.get("linkage") or {}).get("artifact_sha256"),
                     "recorded_candidate_install": (body.get("candidate_identity") or {}).get(
@@ -4833,9 +13031,9 @@ def build_receipt(args) -> dict:
                 rec.get("artifact_sha256") in (None, artifact_sha))
             checks["install_prefix_matches"] = (
                 rec.get("install_prefix") in (None, rel(install, repo)))
-            if ledger and ledger.get("source_root_hash") and rec.get("source_root_hash"):
-                checks["source_root_hash_matches_atlas"] = (
-                    rec["source_root_hash"] == ledger["source_root_hash"])
+            source_checks, source_refusals = source_root_hash_checks(rec, ledger)
+            checks.update(source_checks)
+            refusals.extend(source_refusals)
             if not checks.get("artifact_sha256_matches", True):
                 refusals.append({"code": "STALE_HASH",
                                  "detail": "build record artefact digest does not match the "
@@ -4844,10 +13042,6 @@ def build_receipt(args) -> dict:
                 refusals.append({"code": "STALE_HASH",
                                  "detail": "build record install prefix does not match the "
                                            "admitted install"})
-            if checks.get("source_root_hash_matches_atlas") is False:
-                refusals.append({"code": "STALE_HASH",
-                                 "detail": "build record pristine source tree hash does not "
-                                           "match the atlas row for the same recipe"})
             build_record = {"path": rel(bp, repo), "record": rec, "checks": checks}
 
     # ---- 9. receipt ------------------------------------------------------- #
@@ -4859,7 +13053,7 @@ def build_receipt(args) -> dict:
     verdict_state = "REFUSED" if refusals else "ACCEPTED"
     receipt = {
         "schema": SCHEMA,
-        "tool": {"path": TOOL, "version": 3},
+        "tool": tool_identity,
         "generated_utc": now_utc(),
         "family": args.family,
         "source_identity": {
@@ -4913,12 +13107,81 @@ def build_receipt(args) -> dict:
                 "its evidence class; only a site with no class admits the global "
                 "address-taken union"),
             "upper_bound_rule": (
-                "direct edges + the resolver's per-site target sets + the residual class "
-                "(functions address-materialised in reachable code, consumer-imported "
-                "symbols, values stored into object fields by reachable code, and values "
-                "passed at unresolved call sites); the global address-taken union is "
-                "admitted only for an unclassified site, and any such site is listed "
-                "in precision.unclassified_reachable_sites"),
+                "least fixed point of a monotone transfer function (Kildall 1973; "
+                "Cousot & Cousot 1977): direct edges + the resolver's per-site "
+                "target sets +, for every unresolved site whose containing "
+                "function is reachable, the class-independent evidence union "
+                "(materialised addresses, relocated function slots including "
+                "in-image GLOB_DAT/JUMP_SLOT targets, field-store values and "
+                "unresolved-call argument targets) plus the site's own targets. "
+                "The union iterates until the reachable set stops growing; a "
+                "class-specific set is precision reporting only and can never "
+                "narrow the bound, so losing precision cannot lose reachability"),
+            "closure": {
+                "schema": UNRESOLVED_BOUND_SCHEMA,
+                "analysis_identity": analysis_ident,
+                "analysis_identity_basis": (
+                    "the DSO file digest is not an analysis identity: a "
+                    "comment-only edit changes it with byte-identical analysis "
+                    "sections and symbol addresses; the identity hashes every "
+                    "analysis-relevant section (name/type/address/size/bytes), "
+                    "the canonical relocation table, the defined- and dynamic-"
+                    "symbol tables and the loader entries, and excludes "
+                    "analysis-irrelevant metadata (basis string in "
+                    "analysis_identity.basis)"),
+                "closure_rounds": closure["closure_rounds"],
+                "max_rounds": closure["max_rounds"],
+                "round_sizes": closure["round_sizes"],
+                "sites_scanned_per_round": closure["sites_scanned_per_round"],
+                "converged": closure["converged"],
+                "nonconvergent_detail": closure["nonconvergent_detail"],
+                "refutation_admission": {
+                    "schema": admission["schema"],
+                    "passes": admission["passes"],
+                    "max_passes": admission["max_passes"],
+                    "converged": admission["converged"],
+                    "nonconvergent_detail": admission["nonconvergent_detail"],
+                    "refuted_exclusions": admission["refuted_exclusions"],
+                    "admitted_by_refutation": {
+                        "count": admission["admitted_by_refutation"]["count"],
+                        "targets": admission["admitted_by_refutation"]["targets"],
+                    },
+                    "rule": (
+                        "an exclusion derived against the pre-closure direct set "
+                        "that the sound upper bound reaches is false: the "
+                        "subject's contribution is admitted with a witness and "
+                        "the closure is recomputed, until no admission grows "
+                        "the bound (cap 4 passes; exhaustion is "
+                        "ADMISSION_NONCONVERGENT).  Admission may only add "
+                        "targets; exclusions the bound does not reach survive "
+                        "and remain validated"),
+                },
+                "residual_bound_nodes": closure["residual_bound_nodes"],
+                "symbol_dispositions": closure["symbol_dispositions"],
+                "symbol_disposition_summary": closure[
+                    "symbol_disposition_summary"],
+                "bound_evidence_sources": closure["bound_evidence_sources"],
+                "reachable_functions_count": len(reachable_functions),
+                "reachable_functions_sha256": reachable_functions_sha256,
+                "reachable_functions_sha256_rule": (
+                    "sha256 over the newline-terminated sorted "
+                    "'module:hex_address:canonical_name' entries; the name is "
+                    "canonicalised (compiler .llvm.<hash> and symbol-version "
+                    "suffix removed) exactly as the analysis identity "
+                    "canonicalises its symbol rows, so a comment-only rebuild "
+                    "cannot move the digest"),
+                "reachable_functions_raw_name_sha256": (
+                    reachable_functions_raw_sha256),
+                "reachable_functions_raw_name_sha256_rule": (
+                    "sha256 over the same entries with the raw nm name; it "
+                    "embeds the build-dependent .llvm.<hash> and is recorded "
+                    "as a non-identity, not as movement evidence"),
+                "reachable_functions_canonicalised_entries": (
+                    reachable_functions_canonicalised),
+                "reachable_functions_per_module": dict(
+                    sorted(reachable_functions_per_module.items())),
+                "reachable_functions": reachable_functions,
+            },
             "direct_reachable_functions": len(direct_reach),
             "upper_bound_reachable_functions": len(upper_reach),
             "address_taken_functions": len(closure["address_taken_union"]),
@@ -4966,6 +13229,15 @@ def build_receipt(args) -> dict:
                 "the resolver is an over-approximation: an unresolved site is admitted "
                 "at its evidence class, and every unclassified site is listed rather "
                 "than silently dropped",
+                "the residual bound is class-independent and therefore monotone, but "
+                "it is still a may-bound: a function that no materialised-address "
+                "source names is not admitted, so monotonicity is not completeness",
+                "the analysis identity binds the enumerated analysis inputs "
+                "(sections, relocations, defined and dynamic symbol tables, "
+                "loader entries); it is not a proof of input completeness: a "
+                "derivation that starts reading a new section must extend the "
+                "enumeration, and two candidates with identical enumerated "
+                "inputs but a different unenumerated fact would collide",
                 "a dynamic trace proves execution, not unreachability, and never "
                 "narrowed this graph",
                 "function-level reachability is not a proof that a site is safe; it "
@@ -5053,9 +13325,79 @@ def build_receipt(args) -> dict:
                 "observed remain reachable if any bound admits them.  The residual class "
                 "is a bound, not a claim that every listed function is called."),
             "residual_sites": [
-                {"dso": d, "function": hex(f), "reason": s["reason"],
+                {"dso": d, "function": hex(f),
+                 "call_site": hex(s.get("addr", 0)),
+                 "reason": s["reason"],
                  "class": s["class"], "text": s["text"][:160]}
-                for d, f, s in closure["reachable_residual_sites"][:80]],
+                for d, f, s in closure["reachable_residual_sites"][:200]],
+            "static_table_instance": {
+                "schema": S1_WITNESS_SCHEMA,
+                "rule": (
+                    "field-sensitive key (object type, pointer-slot offset, "
+                    "member offset); the effective table type is the declared "
+                    "pointer-field type or a source cast of that field to a "
+                    "decidable repr(C) layout; every scalar store to the slot "
+                    "in the dispatch table's constructor cohort must write a "
+                    "declared static instance of that type; every member read "
+                    "must be an in-image function start; a partial instance "
+                    "set or a mutable table refuses the site rather than "
+                    "unioning it"),
+                "summary": {
+                    "resolved": sum(
+                        1 for g in graphs.values() for s in g.sites.values()
+                        if s.get("static_instance_witness")),
+                    "refused": sum(
+                        1 for g in graphs.values() for s in g.sites.values()
+                        if s.get("static_instance_refusal")),
+                    "by_refusal": dict(sorted(collections.Counter(
+                        str((s.get("static_instance_refusal") or {}).get(
+                            "refusal"))
+                        for g in graphs.values() for s in g.sites.values()
+                        if s.get("static_instance_refusal")).items())),
+                },
+                "resolved_sites": [
+                    {"dso": name,
+                     "function": w.get("function"),
+                     "call_site": w.get("call_site"),
+                     "operator": s.get("text", "")[:160],
+                     "operand": w.get("operand"),
+                     "pointer_slot": w.get("pointer_slot"),
+                     "member": w.get("member"),
+                     "effective_type": w.get("effective_type"),
+                     "instances": [r.get("symbol") or r.get("addr")
+                                   for r in w.get("instances", [])],
+                     "instances_detail": [
+                         {"symbol": r.get("symbol"),
+                          "declared_type": r.get("declared_type"),
+                          "prefix_compatible": r.get("prefix_compatible")}
+                         for r in w.get("instances", [])],
+                     "conditions": w.get("conditions"),
+                     "prefix_compatible_types":
+                         (w.get("completeness") or {}).get(
+                             "prefix_compatible_types"),
+                     "excluded_different_object_stores":
+                         (w.get("completeness") or {}).get(
+                             "excluded_different_object_stores"),
+                     "targets": w.get("targets")}
+                    for name, g in graphs.items() for s in g.sites.values()
+                    for w in [s.get("static_instance_witness") or {}]
+                    if w],
+                "refused_sites": [
+                    {"dso": name,
+                     "function": w.get("function"),
+                     "call_site": w.get("call_site"),
+                     "operator": s.get("text", "")[:160],
+                     "refusal": w.get("refusal"),
+                     "operand": w.get("operand"),
+                     "pointer_slot": w.get("pointer_slot"),
+                     "dispatch_tables": w.get("dispatch_tables"),
+                     "considered_types": w.get("considered_types"),
+                     "candidates": w.get("candidates"),
+                     "chain": w.get("chain")}
+                    for name, g in graphs.items() for s in g.sites.values()
+                    for w in [s.get("static_instance_refusal") or {}]
+                    if w],
+            },
             "unclassified_reachable_sites": closure["unclassified_sites"],
             "evidence_classes": evidence_stats,
             "dlsym_literals": {
@@ -5162,9 +13504,14 @@ def build_receipt(args) -> dict:
                 "rule": (
                     "an indirect site whose target set was unbounded is bounded by "
                     "the argument values contributed by callers that are themselves "
-                    "in this family's reachable set; a non-image argument from any "
-                    "reachable caller, an unknown caller, or a non-argument target "
-                    "keeps the site unresolved"),
+                    "in this family's reachable set; every caller row -- reachable "
+                    "or excluded -- carries the per-call-site witness and the "
+                    "argument-summary attribution that produced its contribution; "
+                    "a non-image argument from any reachable caller, an unknown "
+                    "caller, or a non-argument target keeps the site unresolved; a "
+                    "candidate that no caller row attributes is admitted into the "
+                    "upper bound (never dropped) and is listed in "
+                    "unattributed_admissions"),
                 "schema": REACHABLE_CALLER_SCHEMA,
                 "not_a_contract_class": True,
                 "abi_contract_class": None,
@@ -5180,14 +13527,26 @@ def build_receipt(args) -> dict:
                      "excluded_callers": s["reachable_caller_bound"][
                          "excluded_callers"],
                      "bounded_targets": s["reachable_caller_bound"][
-                         "bounded_targets"]}
+                         "bounded_targets"],
+                     "attributed_targets": s["reachable_caller_bound"].get(
+                         "attributed_targets", []),
+                     "unattributed_targets": s["reachable_caller_bound"].get(
+                         "unattributed_targets", [])}
                     for name, g in graphs.items() for s in g.sites.values()
                     if s.get("reachable_caller_bound")],
                 "count": sum(
                     1 for g in graphs.values() for s in g.sites.values()
                     if s.get("reachable_caller_bound")),
-                "excluded_caller_audit": rcb_audit,
-                "excluded_caller_violations": rcb_violations,
+                "excluded_caller_audit": [
+                    {"dso": r["dso"], "site": r["site"],
+                     "excluded_caller": r["symbol_address"],
+                     "excluded_symbol": r["symbol"],
+                     "in_final_upper_bound": r["in_final_upper_bound"]}
+                    for r in reachability_audit
+                    if r["role"] == "reachable-caller"],
+                "excluded_caller_violations": [
+                    r for r in reachability_violations
+                    if r["role"] == "reachable-caller"],
             },
             "abi_contract_bounded": {
                 "allocator": {
@@ -5229,6 +13588,23 @@ def build_receipt(args) -> dict:
             },
             "predicate_element_7": evaluate_predicate_element_7(
                 closure["reachable_residual_sites"], closure["unclassified_sites"]),
+            "refutation_admission": {
+                "schema": admission["schema"],
+                "rule": (
+                    "each row names the exclusion subject the final upper bound "
+                    "reaches, the targets admitted with it, and whether the "
+                    "admission left the site's target set finite.  A site whose "
+                    "admitted caller/writer has no finite recorded contribution "
+                    "becomes UNRESOLVED with a named refutation-unbounded "
+                    "property rather than keeping an unsound finite claim"),
+                "admission_passes": admission["passes"],
+                "max_passes": admission["max_passes"],
+                "converged": admission["converged"],
+                "refuted_exclusions": admission["refuted_exclusions"],
+                "admitted_by_refutation": admission["admitted_by_refutation"],
+                "sites": admission["sites"],
+                "sites_truncated": admission.get("sites_truncated", False),
+            },
             "settled": (
                 ("every reachable unresolved site is contract-bounded (section 7 "
                  "criterion 2); no target-bounded unresolved site and no "
@@ -5240,6 +13616,98 @@ def build_receipt(args) -> dict:
                  "has no per-call-site witness for a documented ABI contract (for "
                  "example an internal Rust callback), or the site has no evidence "
                  "class and admits the global address-taken union")),
+        },
+        "edge_provenance": {
+            **stream.summary(),
+            "rule": (
+                "every indirect site emits a semantic identity (source "
+                "operation, defining function, call-site role, per-target "
+                "provenance chain) plus a disposition; an address is recorded "
+                "only as an artifact-local witness; every row carries a "
+                "row_kind from a closed vocabulary, so `exclusions[]` holds "
+                "only target drops and the auxiliary lists hold only subject "
+                "claims; every target drop is bound to a structured "
+                "subject-to-target mapping (candidate_source for caller-bound "
+                "drops, evidence.targets for declared-name drops, writer "
+                "would_store_targets for writer drops); a caller-bound drop is "
+                "recomputed from candidate_source's per-call-site witnesses, and "
+                "a candidate that no caller row attributes is admitted and "
+                "listed in unattributed_admissions; every claim is bound "
+                "to the record's own module; a chain step comes from a closed "
+                "vocabulary and carries a payload"),
+            "refusal_rule": (
+                "a row whose row_kind or reason belongs to the other list "
+                "kind, a target dropped without a checkable structured "
+                "mapping, a claim whose mapping disagrees with the "
+                "recomputed candidate_source, an exclusion whose subject "
+                "disagrees with its target or module, a claim that disagrees "
+                "with a mutually redundant ledger (target_set, "
+                "candidate_source, admitted_targets, derivation, disposition-"
+                "derived target_reachability), a duplicate edge identity, a "
+                "proved/contract record with an empty target or no defining "
+                "symbol, or a reachability exclusion that contradicts the "
+                "final upper bound refuses the closure with "
+                "EDGE_RECORD_EXCLUSION_UNSOUND / REACHABILITY_EXCLUSION_UNSOUND"),
+            "defects_total": len(edge_defects),
+            "defects": (edge_defects
+                        if len(edge_defects) <= EDGE_DEFECT_RENDER_LIMIT
+                        else edge_defects[:EDGE_DEFECT_RENDER_LIMIT]),
+            "defects_complete": len(edge_defects) <= EDGE_DEFECT_RENDER_LIMIT,
+            "demotions": {
+                "vacuous_target_sets_demoted":
+                    stream.demoted.get("empty-target-set", 0),
+                "no_symbol_function_demoted":
+                    stream.demoted.get("no-defining-symbol", 0),
+                "first_sites": stream.demoted_sites,
+                "note": (
+                    "an empty admitted set or a missing defining symbol is a "
+                    "resolver gap, not a proof; those records are demoted to "
+                    "UNRESOLVED so the gap stays visible instead of being "
+                    "counted as PROVED_TARGET_SET"),
+            },
+            "records_path": rel(records_path, repo),
+            "records_path_basis": (
+                "repo-relative when the sidecar is inside the repository, "
+                "otherwise absolute; the default is the gitignored workdir and "
+                "--edge-records is the only override"),
+            "records_sha256": stream.records_sha256,
+            "records_bytes": (records_path.stat().st_size
+                              if records_path.is_file() else None),
+            "sidecar_lines": stream.count,
+            "validator_sha256": tool_sha,
+            "admissibility": _admissibility(
+                tool_sha, artifact_sha, stream.records_sha256, stream.count),
+            "records_sample": stream.sample,
+            "records_sample_eligible": stream.sample_eligible,
+            "records_sample_truncated": stream.sample_truncated,
+            "sample_cap": stream.sample_cap,
+            "sample_policy": (
+                "records_sample is a bounded selection, not the population. "
+                "Exclusion-bearing records and reachable residual sites are "
+                "admitted first (every exclusion is a claim under review); "
+                "non-PROVED records then fill the remaining slots, in stream "
+                "order, up to sample_cap records in total.  Long per-record "
+                "lists are truncated to sample_list_cap entries and keep a "
+                "count; the complete population is the JSONL sidecar named by "
+                "records_path (digest records_sha256), one record per line"),
+            "reachability_oracle": {
+                "schema": REACHABILITY_ORACLE_SCHEMA,
+                "basis": "final-upper-bound",
+                "authoritative": True,
+                "audit": reachability_audit,
+                "audit_total": stream.audit_total,
+                "audit_truncated":
+                    stream.audit_total > len(reachability_audit),
+                "violations": stream.violations,
+                "violation_examples": reachability_violations,
+                "note": (
+                    "the final upper bound is authoritative for every "
+                    "reachability-based exclusion; a reachable address "
+                    "contributes every name the image records for it, an "
+                    "unknown module is a violation (never 'unavailable is "
+                    "fine'), and pre-closure direct reach is retained only as "
+                    "the derivation input"),
+            },
         },
         "obligations": obligations,
         "closure_scope": {
@@ -5285,7 +13753,21 @@ def build_receipt(args) -> dict:
             "tool did not re-audit, re-run or independently review that receipt.",
             "The upper bound is a function-level linked-code over-approximation, not a "
             "whole-program or source-level call graph.",
+            "Record-level validation proves internal consistency and agreement with "
+            "the graph-derived final upper bound.  It does not prove that a record "
+            "was produced by this analyzer rather than forged: a forged record that "
+            "is internally consistent is outside its power.  Admissibility needs "
+            "the identity chain in edge_provenance.admissibility (validator sha256, "
+            "record schema, artefact sha256, sidecar digest and line count) and a "
+            "re-run of the pinned validator over the pinned sidecar.",
             "No crate build, test, Miri, ASan or cryptographic court was run by this tool.",
+            "The residual bound is a monotone may-bound, not a completeness proof: it "
+            "cannot admit a target that no materialised-address evidence names, and "
+            "the fixpoint is over the linked image plus the resolved OpenSSL DSOs, not "
+            "a whole-program call graph.",
+            "The analysis identity is over .text and the symbol table.  It is not a "
+            "byte-for-byte reproducibility claim across toolchains and it does not "
+            "cover data-section contents.",
             "The dynamic-trace axis is absent unless a trace is supplied; its absence is "
             "recorded, not treated as evidence.",
         ],
@@ -5419,8 +13901,1303 @@ def self_test() -> int:
     narrow = build_graph({g.name: g}, {(g.name, 0x10)}, {})
     check("materialised class admits address-of set",
           (g.name, 0x20) in narrow["upper_reachable"], True)
-    check("materialised class does not admit global table entry",
-          (g.name, 0x30) in narrow["upper_reachable"], False)
+    # The monotone rule: a classified site is bounded by the class-independent
+    # union, never by its class set alone.  v1.4 admitted only taken_code for a
+    # non-unclassified site, so dropping from PROVED to UNRESOLVED could shrink
+    # the reachable set.  The class is still recorded as precision metadata.
+    check("a classified site is bounded by the class-independent union (monotone)",
+          (g.name, 0x30) in narrow["upper_reachable"], True)
+    check("the class remains available as precision metadata",
+          g.sites[(0x10, 0x11, "call")]["class"], "materialised")
+
+    # ---- least-fixed-point residual admission ----------------------------- #
+    # root -> dispatch A (unresolved) -> B -> dispatch B (unresolved) -> C.
+    # B has no direct predecessor: it is reached only through A's residual
+    # admission, so a single pass never scans B's own unresolved site.
+    class _NestedG:
+        name = "nested.so"
+        funcs = {0x10: "root", 0x20: "dispatch_a", 0x30: "b",
+                 0x40: "dispatch_b", 0x50: "c"}
+        start_set = set(funcs)
+        direct = {0x10: {0x20}, 0x20: set(), 0x30: {0x40}, 0x40: set(),
+                  0x50: set()}
+        taken_code = set()
+        taken_data = set()
+        address_taken_union = set()
+        field_stores = {}
+        unknown_call_arg_targets = set()
+        sites = {}
+
+    def _nested_graph():
+        g = _NestedG()
+        g.sites = {
+            (0x20, 0x21, "call"): {
+                "kind": "call", "func": 0x20, "addr": 0x21,
+                "text": "call *%rax", "targets": set(), "unresolved": True,
+                "reason": "reg-top", "class": "materialised",
+                "arg_targets": {0x30}},
+            (0x40, 0x41, "call"): {
+                "kind": "call", "func": 0x40, "addr": 0x41,
+                "text": "call *%rax", "targets": set(), "unresolved": True,
+                "reason": "reg-top", "class": "materialised",
+                "arg_targets": {0x50}},
+        }
+        return g
+
+    g = _nested_graph()
+    one_pass = build_graph({g.name: g}, {(g.name, 0x10)}, {}, max_rounds=1)
+    g = _nested_graph()
+    fixpoint = build_graph({g.name: g}, {(g.name, 0x10)}, {})
+    check("nested dispatch: B is not directly reachable",
+          (g.name, 0x30) in fixpoint["direct_reachable"], False)
+    check("nested dispatch: a one-pass closure omits C",
+          (g.name, 0x50) in one_pass["upper_reachable"], False)
+    check("nested dispatch: a one-pass closure does not converge",
+          one_pass["converged"], False)
+    check("nested dispatch: the fixpoint includes C",
+          (g.name, 0x50) in fixpoint["upper_reachable"], True)
+    check("nested dispatch: the fixpoint converges in three rounds",
+          (fixpoint["converged"], fixpoint["closure_rounds"]), (True, 3))
+    check("nested dispatch: round sizes record the growth",
+          fixpoint["round_sizes"], [2, 4, 5, 5])
+    check("nested dispatch: sites are scanned per round",
+          fixpoint["sites_scanned_per_round"], [0, 1, 2, 2])
+
+    nonconv = closure_refusals(one_pass)
+    check("non-convergence produces CLOSURE_NONCONVERGENT",
+          [r["code"] for r in nonconv], ["CLOSURE_NONCONVERGENT"])
+    check("the non-convergence refusal names the round cap and growth",
+          ("1 round" in nonconv[0]["detail"],
+           "added 2 node" in nonconv[0]["detail"],
+           one_pass["nonconvergent_detail"]["round_cap"]),
+          (True, True, 1))
+    check("a converged closure emits no refusal", closure_refusals(fixpoint), [])
+
+    # ---- monotone per-site bound ------------------------------------------ #
+    class _MonoG:
+        name = "monotone.so"
+        funcs = {0x10: "root", 0x20: "materialised_target",
+                 0x30: "field_target", 0x40: "argument_target",
+                 0x50: "got_target"}
+        start_set = set(funcs)
+        taken_code = {0x20}
+        taken_data = {0x30}
+        # 0x50 is admitted only by the dynamic-relocation widening (the real
+        # CRYPTO_cbc128_encrypt shape): the old class-specific bound could not
+        # contain it, so a PROVED->UNRESOLVED reclassification lost it.
+        address_taken_union = {0x20, 0x30, 0x50}
+        dynamic_reloc_targets = {0x50}
+        field_stores = {0x20: {0x30}}
+        unknown_call_arg_targets = {0x40}
+
+    mono = _MonoG()
+    proved_site = {"kind": "call", "func": 0x10, "addr": 0x11,
+                   "text": "call *%rax", "targets": {0x20, 0x50},
+                   "unresolved": False, "class": "PROVED_TARGET_SET",
+                   "arg_targets": set()}
+    proved_set = set(proved_site["targets"])
+    residual_site = {**proved_site, "unresolved": True,
+                     "class": "materialised", "targets": set()}
+    bound = unresolved_site_bound(mono, residual_site)
+    check("monotone bound contains the previously proved target set",
+          proved_set <= bound, True)
+    class_sets = {
+        "taken_code": set(mono.taken_code),
+        "taken_data": set(mono.taken_data),
+        "address_taken_union": set(mono.address_taken_union),
+        "dynamic_reloc_targets": set(mono.dynamic_reloc_targets),
+        "field_stores": {v for vs in mono.field_stores.values() for v in vs},
+        "unknown_call_arg_targets": set(mono.unknown_call_arg_targets),
+        "site_targets": set(proved_site["targets"])
+                        | set(proved_site["arg_targets"]),
+    }
+    check("monotone bound contains every class-specific set",
+          {k: v <= bound for k, v in class_sets.items()},
+          {k: True for k in class_sets})
+    # The residual site's own targets are empty (the resolver lost them), so
+    # the union -- not the site -- is what keeps 0x50 reachable.
+    check("the residual bound survives losing the site's own targets",
+          (residual_site["targets"], 0x50 in bound), (set(), True))
+
+    # ---- admission by refutation ----------------------------------------- #
+    # The exclusion was derived against the pre-closure direct set.  When the
+    # sound bound reaches the excluded caller, the exclusion is false: the
+    # caller's contribution is admitted and the closure recomputed.  A caller
+    # the bound does not reach keeps its exclusion, and an admitted caller
+    # whose contribution is not finite turns the site UNRESOLVED.
+    class _AdmissionG:
+        name = "admission-fixture.so"
+        funcs = {0x10: "site_func", 0x20: "target_ok",
+                 0x30: "excluded_caller", 0x40: "target_dropped",
+                 0x50: "reachable_caller"}
+        start_set = set(funcs)
+        all_syms = dict(funcs)
+        names_at = {a: {n} for a, n in funcs.items()}
+        taken_code = set()
+        taken_data = set()
+        address_taken_union = set()
+        dynamic_reloc_targets = set()
+        field_stores = {}
+        unknown_call_arg_targets = set()
+        slot_func_targets = set()
+        sites = {}
+
+        def __init__(self):
+            self.direct = {0x10: {0x50}}
+
+        def section_of(self, _a):
+            return ".text"
+
+        def containing(self, a):
+            return max(x for x in self.funcs if x <= a)
+
+        def static_slot(self, _a):
+            return None
+
+        def seam_symbol(self, _a):
+            return None
+
+        def cstring_at(self, _a):
+            return None
+
+        def is_data(self, _a):
+            return False
+
+    def _admission_fixture(*, reach_excluded, unbounded=False):
+        g = _AdmissionG()
+        if reach_excluded:
+            g.direct = {0x10: {0x50, 0x30}}
+        excluded_targets = [] if unbounded else ["0x40"]
+        excluded_args = [{
+            "argument_index": 0, "targets": list(excluded_targets),
+            "non_image_values": ["<top>"] if unbounded else [],
+            "unresolved": bool(unbounded), "witness_instruction": []}]
+        arg_targets = {0x20} | ({0x40} if not unbounded else set())
+        g.sites = {(0x10, 0x11, "call"): {
+            "kind": "call", "func": 0x10, "addr": 0x11,
+            "text": "call *%rax", "targets": {0x20},
+            "unresolved": False, "class": "reachable-caller-target",
+            "reason": "reachable-caller target bounding",
+            "field_offsets": set(), "arg_deps": {0}, "arg_targets": arg_targets,
+            "reachable_caller_bound": {
+                "reachable_callers": [{
+                    "function": "0x50", "symbol": "reachable_caller",
+                    "reachable": True, "reason": None,
+                    "call_sites": [{"call_site": "0x51", "arguments": [{
+                        "argument": 0, "argument_index": 0,
+                        "targets": ["0x20"], "non_image_values": [],
+                        "unresolved": False, "witness_instruction": []}]}],
+                    "contributed_targets": ["0x20"]}],
+                "excluded_callers": [{
+                    "function": "0x30", "symbol": "excluded_caller",
+                    "reachable": False, "reason": "not in this family's "
+                    "reachable set", "in_image_references": [],
+                    "call_sites": [{"call_site": "0x31",
+                                    "arguments": excluded_args}],
+                    "contributed_targets": excluded_targets}],
+                "bounded_targets": ["0x20"],
+                "attributed_targets": [hex(a) for a in sorted(arg_targets)],
+                "unattributed_targets": []}}}
+        return g
+
+    def _admission_run(g, *, admit=True):
+        close = lambda: build_graph({g.name: g}, {(g.name, 0x10)}, {})
+        if not admit:
+            return close(), None
+        return admission_fixpoint({g.name: g}, close)
+
+    g1 = _admission_fixture(reach_excluded=True)
+    closure1, report1 = _admission_run(g1)
+    site1 = g1.sites[(0x10, 0x11, "call")]
+    bound1 = site1["reachable_caller_bound"]
+    oracle1 = ReachabilityOracle({g1.name: g1}, closure1["upper_reachable"])
+    records1 = build_edge_records({g1.name: g1}, oracle1)
+    check("a refuted exclusion admits the caller's target",
+          (0x40 in site1["targets"],
+           (g1.name, 0x40) in closure1["upper_reachable"]), (True, True))
+    check("a refuted exclusion is removed and its caller is marked",
+          (bound1["excluded_callers"],
+           [r.get("admitted_by_refutation") for r in bound1["reachable_callers"]]),
+          ([], [None, True]))
+    check("admission reports its pass, role and targets",
+          (report1["passes"],
+           report1["refuted_exclusions"][ADMISSION_ROLE_CALLER],
+           report1["admitted_by_refutation"]["count"],
+           report1["admitted_by_refutation"]["targets"]),
+          (1, 1, 1, ["target_dropped"]))
+    check("the refutation-widened record validates against the sound bound",
+          validate_edge_records(records1, oracle1), [])
+    check("the refutation-widened record has no audit violation",
+          [r for r in reachability_exclusion_audit(
+              {g1.name: g1}, oracle1, records1) if r["violation"]], [])
+
+    g2 = _admission_fixture(reach_excluded=False)
+    closure2, report2 = _admission_run(g2)
+    site2 = g2.sites[(0x10, 0x11, "call")]
+    oracle2 = ReachabilityOracle({g2.name: g2}, closure2["upper_reachable"])
+    records2 = build_edge_records({g2.name: g2}, oracle2)
+    check("a caller the sound bound does not reach keeps its exclusion",
+          (site2["targets"],
+           len(site2["reachable_caller_bound"]["excluded_callers"]),
+           report2["passes"]), ({0x20}, 1, 0))
+    check("the surviving exclusion validates",
+          validate_edge_records(records2, oracle2), [])
+
+    g3 = _admission_fixture(reach_excluded=True, unbounded=True)
+    closure3, report3 = _admission_run(g3)
+    site3 = g3.sites[(0x10, 0x11, "call")]
+    oracle3 = ReachabilityOracle({g3.name: g3}, closure3["upper_reachable"])
+    records3 = build_edge_records({g3.name: g3}, oracle3)
+    check("an admitted caller with no finite contribution is UNRESOLVED",
+          (site3["unresolved"], "refutation-unbounded" in site3["reason"],
+           site3["reachable_caller_bound"]["excluded_callers"]),
+          (True, True, []))
+    check("the refutation-unbounded record names its missing property",
+          [(r["disposition"], bool(r["missing_property"]))
+           for r in records3], [(DISPOSITION_UNRESOLVED, True)])
+    check("the refutation-unbounded record validates",
+          validate_edge_records(records3, oracle3), [])
+
+    # ---- analysis identity is not the DSO digest --------------------------- #
+    class _IdG:
+        name = "identity.so"
+
+        def __init__(self, dso_sha, rows=None, *, data_sha="d" * 64,
+                     reloc_add=0x10, comment="c"):
+            self.sha256 = dso_sha
+            self._rows = rows or [["f", 0x10, 8, "T"], ["g", 0x20, 16, "T"]]
+            self._data_sha = data_sha
+            self._reloc_add = reloc_add
+            self._comment = comment
+
+        def text_digest(self):
+            return "a" * 64, 4096
+
+        def symbol_table_rows(self):
+            return list(self._rows)
+
+        def analysis_section_descriptors(self):
+            return [
+                {"name": ".text", "type": "PROGBITS", "addr": 0x1000,
+                 "size": 4096, "sha256": "a" * 64},
+                {"name": ".data.rel.ro", "type": "PROGBITS", "addr": 0x3000,
+                 "size": 64, "sha256": self._data_sha},
+            ]
+
+        def analysis_excluded_sections(self):
+            return [".comment", ".debug_info"]
+
+        def canonical_relocations(self):
+            return [[".data.rel.ro", 0x0, "R_X86_64_RELATIVE", None,
+                     self._reloc_add]]
+
+        def dynamic_symbol_rows(self):
+            return [["f", 0x10, "T"], ["g", 0x20, "T"]]
+
+        def dynamic_entries(self):
+            return {"soname": "identity.so", "needed": ["libc.so.6"],
+                    "runpath": [], "rpath": []}
+
+    id_a = analysis_identity({"identity.so": _IdG("0" * 64)})
+    id_b = analysis_identity({"identity.so": _IdG("f" * 64)})
+    id_c = analysis_identity({"identity.so": _IdG(
+        "0" * 64, [["f", 0x10, 8, "T"], ["g", 0x20, 24, "T"]])})
+    id_data = analysis_identity({"identity.so": _IdG(
+        "0" * 64, data_sha="e" * 64)})
+    id_reloc = analysis_identity({"identity.so": _IdG(
+        "0" * 64, reloc_add=0x20)})
+    id_comment = analysis_identity({"identity.so": _IdG(
+        "0" * 64, comment="z")})
+    check("analysis identity is unchanged by a DSO digest change",
+          (id_a["digest"] == id_b["digest"],
+           id_a["modules"]["identity.so"]["dso_sha256"]
+           != id_b["modules"]["identity.so"]["dso_sha256"]), (True, True))
+    check("analysis identity changes with a symbol-table change",
+          id_a["digest"] == id_c["digest"], False)
+    check("analysis identity changes with a data-section byte change "
+          "while .text and symbol rows stay identical",
+          (id_a["modules"]["identity.so"]["sections"]
+           != id_data["modules"]["identity.so"]["sections"],
+           id_a["modules"]["identity.so"]["text_sha256"]
+           == id_data["modules"]["identity.so"]["text_sha256"],
+           id_a["modules"]["identity.so"]["symbol_table_sha256"]
+           == id_data["modules"]["identity.so"]["symbol_table_sha256"],
+           id_a["digest"] != id_data["digest"]), (True, True, True, True))
+    check("analysis identity changes with a relocation addend change",
+          (id_a["modules"]["identity.so"]["relocation_table_sha256"]
+           != id_reloc["modules"]["identity.so"]["relocation_table_sha256"],
+           id_a["digest"] != id_reloc["digest"]), (True, True))
+    check("analysis identity ignores excluded metadata",
+          id_a["digest"] == id_comment["digest"], True)
+    check("the identity names the included and excluded inputs",
+          (".text" in id_a["included_sections"]
+           and ".data.rel.ro" in id_a["included_sections"]
+           and ".debug_*" in id_a["excluded_classes"]
+           and ".comment" in id_a["modules"]["identity.so"]["excluded_sections"]),
+          True)
+    check("the DSO digest is recorded as a non-identity",
+          id_a["modules"]["identity.so"]["dso_sha256_is_analysis_identity"],
+          False)
+    check("compiler-generated hash suffixes are canonicalised",
+          [canonical_symbol_name(n) for n in (
+              "_RNvCs123_4core3fmt8_$LT$T$u20$as$u20$X$GT$.llvm.1a2b3c4d",
+              "CRYPTO_cbc128_encrypt@@OPENSSL_3.0.0",
+              "plain_symbol")],
+          ["_RNvCs123_4core3fmt8_$LT$T$u20$as$u20$X$GT$.llvm.<hash>",
+           "CRYPTO_cbc128_encrypt", "plain_symbol"])
+
+    # The movement digest must be a function of the analysis identity, not of
+    # the build directory: two neutral builds differ only in the .llvm.<hash>
+    # suffix values, and the raw-name digest would report movement for a
+    # comment-only edit.
+    class _NameG:
+        name = "names.so"
+
+        def __init__(self, suffix):
+            self.funcs = {0x10: f"local_fn.llvm.{suffix}",
+                          0x20: "CRYPTO_export@@OPENSSL_3.0.0"}
+
+    reach_a = {("names.so", 0x10), ("names.so", 0x20)}
+    names_a = reachable_function_entries({"names.so": _NameG("111")}, reach_a)
+    names_b = reachable_function_entries({"names.so": _NameG("222")}, reach_a)
+    raw_a = reachable_function_entries({"names.so": _NameG("111")}, reach_a,
+                                       canonical=False)
+    raw_b = reachable_function_entries({"names.so": _NameG("222")}, reach_a,
+                                       canonical=False)
+    check("the reachable-function digest canonicalises build-dependent names",
+          (names_a == names_b,
+           reachable_functions_digest(names_a)
+           == reachable_functions_digest(names_b),
+           reachable_functions_digest(raw_a)
+           != reachable_functions_digest(raw_b)),
+          (True, True, True))
+
+    # ---- symbolic-target dispositions (P0-B) ------------------------------ #
+    # Every symbolic value in the bound gets exactly one disposition.  The
+    # blocking case must refuse; an alias-resolved case must not; an
+    # external-contract case must be recorded without a refusal; and disabling
+    # the refusal must make the blocking case fail.
+    class _SymbolG:
+        name = "symbol-disposition.so"
+        funcs = {0x10: "root", 0x20: "alias_target", 0x30: "dyn_target",
+                 0x40: "plt_stub"}
+        start_set = set(funcs)
+        direct = {}
+        taken_code = set()
+        taken_data = set()
+        field_stores = {}
+        unknown_call_arg_targets = set()
+        dynamic_reloc_targets = set()
+        slot_syms = {0x2000: {"plt_target"}}
+        names_at = {0x20: {"alias_target"}}
+        dynamic_defs = {"dyn_target": 0x30}
+        functions = [(0x40, [(0x40, "jmp *0x1000(%rip) # 2000 <plt_target@plt>")])]
+        sections = {".text": (0x0, 0, 0x100), ".plt": (0x40, 0, 0x10)}
+
+        def __init__(self, symbol):
+            self.address_taken_union = {("sym", symbol)}
+            self.sites = {(0x10, 0x11, "call"): {
+                "kind": "call", "func": 0x10, "addr": 0x11,
+                "text": "call *%rax", "targets": set(), "unresolved": True,
+                "reason": "test", "class": "unclassified",
+                "arg_targets": set()}}
+
+        def section_of(self, addr):
+            if addr == 0x40:
+                return ".plt"
+            return ".text" if 0 <= addr < 0x100 else None
+
+        def containing(self, addr):
+            base = [a for a in sorted(self.start_set) if a <= addr]
+            return base[-1] if base else None
+
+    def _symbol_closure(symbol, export_index=None):
+        g = _SymbolG(symbol)
+        closure = build_graph({g.name: g}, {(g.name, 0x10)},
+                              export_index or {})
+        return closure, g
+
+    blocking_closure, _ = _symbol_closure("no_such_symbol")
+    blocking_rows = [r for r in blocking_closure["symbol_dispositions"]
+                     if r["symbol"] == "no_such_symbol"]
+    check("an unresolved symbol gets a blocking disposition",
+          [(r["disposition"], r["path"]) for r in blocking_rows],
+          [("blocking", None)])
+    blocking_refusals = closure_refusals(blocking_closure)
+    check("an unresolved symbol produces CLOSURE_UNRESOLVED_SYMBOL",
+          [(r["code"], [s["symbol"] for s in r.get("symbols", [])])
+           for r in blocking_refusals],
+          [("CLOSURE_UNRESOLVED_SYMBOL", ["no_such_symbol"])])
+
+    alias_closure, _ = _symbol_closure("alias_target")
+    alias_rows = [r for r in alias_closure["symbol_dispositions"]
+                  if r["symbol"] == "alias_target"]
+    check("a names-at alias resolves and is not a refusal",
+          ([(r["disposition"], r["path"]) for r in alias_rows],
+           [a for _m, a in alias_rows[0]["targets"]],
+           closure_refusals(alias_closure)),
+          ([("resolved", "names-at")], [0x20], []))
+
+    dyn_closure, _ = _symbol_closure("dyn_target")
+    dyn_rows = [r for r in dyn_closure["symbol_dispositions"]
+                if r["symbol"] == "dyn_target"]
+    check("a dynamic-symbol-table target resolves",
+          [(r["disposition"], r["path"]) for r in dyn_rows],
+          [("resolved", "dynamic-symbol-table")])
+
+    plt_closure, _ = _symbol_closure("plt_target")
+    plt_rows = [r for r in plt_closure["symbol_dispositions"]
+                if r["symbol"] == "plt_target"]
+    check("a PLT-stub target resolves",
+          [(r["disposition"], r["path"], r["targets"]) for r in plt_rows],
+          [("resolved", "plt-stub", [["symbol-disposition.so", 0x40]])])
+
+    export_closure, _ = _symbol_closure(
+        "versioned_fn@@V", {"versioned_fn": ("symbol-disposition.so", 0x30)})
+    export_rows = [r for r in export_closure["symbol_dispositions"]
+                   if r["symbol"] == "versioned_fn@@V"]
+    check("a version-stripped export resolves",
+          [(r["disposition"], r["path"]) for r in export_rows],
+          [("resolved", "version-stripped-export")])
+
+    qual_closure, _ = _symbol_closure(
+        "symbol-disposition.so:qualified_fn",
+        {"qualified_fn": ("symbol-disposition.so", 0x30)})
+    qual_rows = [r for r in qual_closure["symbol_dispositions"]
+                 if r["symbol"].endswith("qualified_fn")]
+    check("a SONAME-qualified import resolves",
+          [(r["disposition"], r["path"]) for r in qual_rows],
+          [("resolved", "soname-qualified-import")])
+
+    external_closure, _ = _symbol_closure("malloc")
+    external_rows = [r for r in external_closure["symbol_dispositions"]
+                     if r["symbol"] == "malloc"]
+    check("an external-contract symbol is recorded without a refusal",
+          ([(r["disposition"], bool(r["external_interface"])) for r in external_rows],
+           closure_refusals(external_closure)),
+          ([("external-contract", True)], []))
+
+    _orig_symbol_refusals = globals()["closure_refusals"]
+
+    def _drop_symbol_refusal(closure):
+        return [r for r in _orig_symbol_refusals(closure)
+                if r["code"] != "CLOSURE_UNRESOLVED_SYMBOL"]
+
+    globals()["closure_refusals"] = _drop_symbol_refusal
+    try:
+        symbol_refusal_disabled_fails = not any(
+            r["code"] == "CLOSURE_UNRESOLVED_SYMBOL"
+            for r in closure_refusals(blocking_closure))
+    finally:
+        globals()["closure_refusals"] = _orig_symbol_refusals
+
+    # ---- mutation controls ------------------------------------------------- #
+    # Each mutation disables exactly one mechanism; the named case must then
+    # fail.  A PASS here is evidence that the case is sensitive to the
+    # mechanism, not that the mechanism is complete.
+    def _nested_reaches_c(max_rounds=None):
+        g = _nested_graph()
+        res = build_graph({g.name: g}, {(g.name, 0x10)}, {},
+                          max_rounds=max_rounds)
+        return (g.name, 0x50) in res["upper_reachable"]
+
+    def _narrow_bound_by_class(g, site):
+        if site.get("class") == "unclassified":
+            return set(getattr(g, "address_taken_union", ()) or ())
+        return (set(getattr(g, "taken_code", ()) or ())
+                | set(site.get("targets") or ()))
+
+    _orig_bound = globals()["unresolved_site_bound"]
+    globals()["unresolved_site_bound"] = _narrow_bound_by_class
+    try:
+        narrowed = unresolved_site_bound(mono, residual_site)
+    finally:
+        globals()["unresolved_site_bound"] = _orig_bound
+
+    _orig_refusals = globals()["closure_refusals"]
+    globals()["closure_refusals"] = lambda _closure: []
+    try:
+        no_refusal = closure_refusals(one_pass)
+    finally:
+        globals()["closure_refusals"] = _orig_refusals
+
+    # Admission mutations.  Disabling admission must make the refuted case
+    # fail (the target is not admitted and the record refuses); admitting
+    # unconditionally must make the surviving-exclusion case fail (the caller
+    # is moved even though the bound does not reach it, and the validator
+    # refuses the false positive claim).
+    g4 = _admission_fixture(reach_excluded=True)
+    closure4, _report4 = _admission_run(g4, admit=False)
+    site4 = g4.sites[(0x10, 0x11, "call")]
+    oracle4 = ReachabilityOracle({g4.name: g4}, closure4["upper_reachable"])
+    records4 = build_edge_records({g4.name: g4}, oracle4)
+    admission_disabled_fails = (
+        0x40 not in site4["targets"]
+        and bool(site4["reachable_caller_bound"]["excluded_callers"])
+        and bool(validate_edge_records(records4, oracle4)))
+
+    g5 = _admission_fixture(reach_excluded=False)
+    site5 = g5.sites[(0x10, 0x11, "call")]
+    bound5 = site5["reachable_caller_bound"]
+    moved = bound5["excluded_callers"].pop()
+    moved["admitted_by_refutation"] = True
+    bound5["reachable_callers"].append(moved)
+    site5["targets"] |= {0x40}
+    closure5 = build_graph({g5.name: g5}, {(g5.name, 0x10)}, {})
+    oracle5 = ReachabilityOracle({g5.name: g5}, closure5["upper_reachable"])
+    records5 = build_edge_records({g5.name: g5}, oracle5)
+    unconditional_admission_fails = (
+        not bound5["excluded_callers"]
+        and bool(validate_edge_records(records5, oracle5)))
+
+    mutation_matrix = [
+        {"mutation": "single-pass closure (no iteration)",
+         "case": "fixpoint-reaches-nested-unresolved",
+         "case_fails": not _nested_reaches_c(max_rounds=1),
+         "expected": True},
+        {"mutation": "class-narrowed bound",
+         "case": "monotone-bound-under-classification-loss",
+         "case_fails": not (proved_set <= narrowed),
+         "expected": True},
+        {"mutation": "non-convergence refusal removed",
+         "case": "closure-nonconvergent-refusal",
+         "case_fails": no_refusal == [],
+         "expected": True},
+        {"mutation": "refutation admission disabled",
+         "case": "admission-refuted-caller",
+         "case_fails": admission_disabled_fails,
+         "expected": True},
+        {"mutation": "unconditional admission (no bound check)",
+         "case": "admission-surviving-caller",
+         "case_fails": unconditional_admission_fails,
+         "expected": True},
+        {"mutation": "CLOSURE_UNRESOLVED_SYMBOL refusal removed",
+         "case": "unresolved-symbol-refusal",
+         "case_fails": symbol_refusal_disabled_fails,
+         "expected": True},
+    ]
+    check("mutation matrix: every mutation flips its named case",
+          [(row["case"], row["case_fails"] == row["expected"])
+           for row in mutation_matrix],
+          [(row["case"], True) for row in mutation_matrix])
+    print("[consumer-closure] mutation matrix: " + "; ".join(
+        f"{r['mutation']} -> {r['case']} "
+        f"{'fails as required' if r['case_fails'] else 'STILL PASSES'}"
+        for r in mutation_matrix))
+
+    # ---- source-backed witnesses: S2/S3/S4 (AGENTS.md section 22) ---------- #
+    class _WPrecision:
+        def __init__(self, insns):
+            self.insns_by_func = insns
+
+    class _WG:
+        def __init__(self, insns, funcs, dyn=(), source_root=None, install=None):
+            self.name = "witness.so"
+            self.funcs = dict(funcs)
+            self.start_set = set(funcs)
+            self.names_at = {a: {n} for a, n in funcs.items()}
+            self.dynamic_defs = {n: a for a, n in funcs.items() if n in dyn}
+            self.all_syms = dict(funcs)
+            self.precision = _WPrecision({f: list(v) for f, v in insns.items()})
+            self.source_root = source_root
+            self.install_prefix = install
+            self.sites = {}
+
+        def containing(self, addr):
+            best = None
+            for f in self.start_set:
+                if f <= addr and (best is None or f > best):
+                    best = f
+            return best
+
+    def _wrepo(td, text):
+        root = Path(td)
+        p = root / "src" / "evp"
+        p.mkdir(parents=True, exist_ok=True)
+        (p / "kdf.rs").write_text(text)
+        return root
+
+    def _winstall(td, header):
+        root = Path(td)
+        p = root / "include" / "openssl"
+        p.mkdir(parents=True, exist_ok=True)
+        (p / "modes.h").write_text(header)
+        return root
+
+    # S3: a fetched EvpKdf slot.  The base is the inner_evp_generic_fetch
+    # return, the offset is gettable_ctx_params, and the source assigns it once
+    # in evp_kdf_from_algorithm.
+    def _fetch_fixture(off=0x58, base_call=True, two_assign=False):
+        td = tempfile.mkdtemp()
+        src = ("fn evp_kdf_from_algorithm() {\n"
+               "    (*kdf).gettable_ctx_params = entry_function(fns);\n"
+               "    (*kdf).settable_ctx_params = entry_function(fns);\n"
+               "    (*kdf).forced_field = 1;\n"
+               "}\n")
+        if two_assign:
+            src += ("fn other() {\n    (*kdf).gettable_ctx_params = x;\n}\n")
+        repo = _wrepo(td, src)
+        insns = {0x100: [
+            (0x100, "lea    0x200(%rip),%r9        # 300 <evp_kdf_from_algorithm>"),
+            (0x105, "mov    %r9,0x30(%rsp)"),
+            (0x10a, "mov    %rsp,%rdi"),
+            (0x10f, "call   200 <inner_evp_generic_fetch>" if base_call
+                    else "mov    %rdi,%rax"),
+            (0x114, "mov    %rax,%rbx"),
+            (0x119, "test   %rbx,%rbx"),
+            (0x11c, "je     130 <target+0x30>"),
+            (0x120, f"mov    {hex(off)}(%rbx),%rax"),
+            (0x125, "test   %rax,%rax"),
+            (0x128, "je     130 <target+0x30>"),
+            (0x12a, "call   *%rax"),
+            (0x130, "ret"),
+        ]}
+        funcs = {0x100: "target", 0x200: "...inner_evp_generic_fetch",
+                 0x300: "...evp_kdf_from_algorithm", 0x400: "unused"}
+        g = _WG(insns, funcs, source_root=repo)
+        site = {"kind": "call", "func": 0x100, "addr": 0x12A,
+                "text": "call   *%rax", "arg_deps": set()}
+        return g, site
+
+    def _fetch_witness(off=0x58, base_call=True, two_assign=False):
+        g, site = _fetch_fixture(off, base_call, two_assign)
+        return fetch_slot_witness(g, site, "target")
+
+    w = _fetch_witness()
+    check("S3 fetch-slot witness applies", w is not None, True)
+    check("S3 fetch-slot names the OSSL_FUNC id",
+          (w or {}).get("slot"),
+          "EvpKdf.gettable_ctx_params (offset 0x58, "
+          "OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS)")
+    check("S3 fetch-slot records the family and fetch call",
+          ((w or {}).get("fetch") or {}).get("method_family"), "EVP_KDF")
+    check("S3 base not a fetch return is refused",
+          _fetch_witness(base_call=False), None)
+    check("S3 offset outside the declared fields is refused",
+          _fetch_witness(off=0x100), None)
+    check("S3 two source assignments are refused",
+          _fetch_witness(two_assign=True), None)
+
+    # S2: an exported function's callback parameter.
+    def _export_fixture(param=True, noncb=False, exported=True):
+        td = tempfile.mkdtemp()
+        header = ("typedef void (*block128_f)(const unsigned char in[16],\n"
+                  "    unsigned char out[16], const void *key);\n"
+                  "void CRYPTO_cfb128_encrypt(const unsigned char *in,\n"
+                  "    unsigned char *out, size_t len, "
+                  + ("int block" if noncb else "block128_f block") + ");\n")
+        install = _winstall(td, header)
+        insns = {0x500: [
+            (0x500, "push   %rbp"),
+            (0x501, "mov    %rdi,%rax"),
+            (0x504, "mov    %rcx,%r11" if param else "mov    $0x123,%rcx"),
+            (0x507, "call   *%rcx"),
+            (0x509, "ret"),
+        ]}
+        funcs = {0x500: "CRYPTO_cfb128_encrypt", 0x600: "unused"}
+        dyn = {"CRYPTO_cfb128_encrypt"} if exported else set()
+        g = _WG(insns, funcs, dyn=dyn, install=install)
+        site = {"kind": "call", "func": 0x500, "addr": 0x507,
+                "text": "call   *%rcx", "arg_deps": set()}
+        return g, site
+
+    def _export_witness(param=True, noncb=False, exported=True):
+        g, site = _export_fixture(param, noncb, exported)
+        return export_callback_witness(g, site, "CRYPTO_cfb128_encrypt")
+
+    w, why = _export_witness()
+    check("S2 export-callback witness applies", w is not None, True)
+    check("S2 export-callback records the header declaration",
+          (w or {}).get("parameter", {}).get("declaration"), "modes.h:3")
+    check("S2 export-callback records the typedef",
+          (w or {}).get("parameter", {}).get("type_typedef"), "block128_f")
+    check("S2 value not exactly the parameter is refused",
+          _export_witness(param=False)[0], None)
+    check("S2 header declaring a non-callback is refused",
+          _export_witness(noncb=True)[0], None)
+    w2, why2 = _export_witness(exported=False)
+    check("S2 finite in-image private chain is deferred",
+          (w2, (why2 or {}).get("defer")), (None, True))
+
+    # S4: a local closure built from a finite assignment set.
+    def _local_fixture(partial=False, extra=False):
+        callee = [(0x700, "mov    (%rcx),%r13"),
+                  (0x703, "call   *0x0(%r13)"),
+                  (0x705, "ret")]
+        caller = [
+            (0x800, "push   %rbp"),
+            (0x801, "sub    $0x20,%rsp"),
+            (0x805, "cmp    $0x0,%rdi"),
+            (0x809, "je     818 <caller+0x18>"),
+            (0x80b, "lea    0x100(%rip),%rax        # 900 <fnA>"),
+            (0x810, "mov    %rax,0x18(%rsp)"),
+            (0x815, "jmp    820 <caller+0x20>"),
+            (0x818, "lea    0x108(%rip),%rax        # 910 <fnB>"),
+            (0x81d, "mov    %rax,0x18(%rsp)"),
+            (0x820, "lea    0x18(%rsp),%rax"),
+            (0x825, "mov    %rax,0x8(%rsp)"),
+            (0x82a, "lea    0x8(%rsp),%rcx"),
+            (0x82f, "call   700 <traverse>"),
+            (0x834, "ret"),
+        ]
+        if partial:
+            caller[9] = (0x818, "mov    %rdi,%rax")
+            caller[10] = (0x81d, "jmp    820 <caller+0x20>")
+        if extra:
+            caller[7] = (0x818, "mov    %rdi,%rax")
+        funcs = {0x700: "traverse", 0x800: "caller", 0x900: "fnA",
+                 0x910: "fnB"}
+        g = _WG({0x700: callee, 0x800: caller}, funcs)
+        site = {"kind": "call", "func": 0x700, "addr": 0x703,
+                "text": "call   *0x0(%r13)", "arg_deps": set()}
+        return g, site
+
+    def _local_witness(partial=False, extra=False):
+        g, site = _local_fixture(partial, extra)
+        return local_fptr_witness(g, site, "traverse")
+
+    lw = _local_witness()
+    check("S4 local-fptr witness applies", lw is not None, True)
+    check("S4 local-fptr records the finite target set",
+          (lw or {}).get("targets"), ["0x900", "0x910"])
+    check("S4 a path with no store is refused",
+          _local_witness(partial=True), None)
+    check("S4 a non-function store is refused",
+          _local_witness(extra=True), None)
+
+    # S1: field-sensitive static-table instance dispatch.
+    def _s1_source(nullable=False, cast=False, cast_missing=False,
+                   prefix=False, prefix_nonbase=False, prefix_layout=False,
+                   prefix_cast=False, different_object=False,
+                   unknown_base=False):
+        cipher = ("unsafe extern \"C\" fn(*mut Wctx) -> c_int"
+                  if not nullable else
+                  "Option<unsafe extern \"C\" fn(*mut Wctx) -> c_int>")
+        fn = "unsafe extern \"C\" fn(*mut Wctx) -> c_int"
+        tail = ""
+        if different_object:
+            tail += (
+                "#[repr(C)]\n"
+                "pub(crate) struct WOther {\n"
+                "    pub tag: usize,\n"
+                "    pub slot: usize,\n"
+                "}\n"
+                "unsafe fn other_dup(p: *mut WOther, value: usize) {\n"
+                "    (*p).slot = value;\n"
+                "}\n")
+        if unknown_base:
+            tail += (
+                "unsafe fn unknown_store(\n"
+                "    p: *mut c_void,\n"
+                "    value: usize,\n"
+                ") -> *mut c_void {\n"
+                "    let f: unsafe extern \"C\" fn(*mut c_void) -> *mut c_void\n"
+                "        = core::mem::transmute(p);\n"
+                "    f(value as *mut c_void)\n"
+                "}\n")
+        if prefix or prefix_nonbase or prefix_layout or prefix_cast:
+            if prefix_nonbase:
+                rows = (
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WBase {\n"
+                    f"    pub init: {fn},\n"
+                    f"    pub cipher: {fn},\n"
+                    f"    pub fini: {fn},\n"
+                    "}\n"
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WRow {\n"
+                    "    pub tag: u64,\n"
+                    f"    pub cipher: {fn},\n"
+                    f"    pub fini: {fn},\n"
+                    "}\n")
+                inits = [f"WRow {{ tag: {k}, cipher: f{k}, fini: g{k} }}"
+                         for k in range(3)]
+            elif prefix_layout:
+                rows = (
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WBase {\n"
+                    f"    pub init: {fn},\n"
+                    f"    pub cipher: {fn},\n"
+                    f"    pub fini: {fn},\n"
+                    "}\n"
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WBadBase {\n"
+                    f"    pub init: {fn},\n"
+                    f"    pub cipher: {fn},\n"
+                    "}\n"
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WRow {\n"
+                    "    pub base: WBadBase,\n"
+                    f"    pub fini: {fn},\n"
+                    "}\n")
+                inits = [f"WRow {{ base: WBadBase {{ init: f{k}, "
+                         f"cipher: g{k} }}, fini: h{k} }}" for k in range(3)]
+            elif prefix_cast:
+                rows = (
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WBase {\n"
+                    f"    pub init: {fn},\n"
+                    f"    pub cipher: {fn},\n"
+                    f"    pub fini: {fn},\n"
+                    "}\n"
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WPrefix {\n"
+                    f"    pub init: {fn},\n"
+                    "    pub cipher: Option<unsafe extern \"C\" "
+                    "fn(*mut Wctx) -> c_int>,\n"
+                    "    pub fini: Option<unsafe extern \"C\" "
+                    "fn(*mut Wctx) -> c_int>,\n"
+                    "}\n"
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WRow {\n"
+                    "    pub base: WPrefix,\n"
+                    f"    pub extra: {fn},\n"
+                    "}\n")
+                inits = [f"WRow {{ base: WPrefix {{ init: f{k}, "
+                         f"cipher: Some(g{k}), fini: Some(h{k}) }}, "
+                         f"extra: f{k} }}" for k in range(3)]
+            else:
+                rows = (
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WBase {\n"
+                    f"    pub init: {fn},\n"
+                    f"    pub cipher: {fn},\n"
+                    f"    pub fini: {fn},\n"
+                    "}\n"
+                    "#[repr(C)]\n"
+                    "pub(crate) struct WRow {\n"
+                    "    pub base: WBase,\n"
+                    f"    pub extra: {fn},\n"
+                    "}\n")
+                inits = [f"WRow {{ base: WBase {{ init: f{k}, "
+                         f"cipher: g{k}, fini: h{k} }}, extra: f{k} }}"
+                         for k in range(3)]
+            body = (
+                rows
+                + "#[repr(C)]\n"
+                "pub(crate) struct Wctx {\n"
+                "    pub flags: c_uint,\n"
+                "    pub hw: *const WBase,\n"
+                "}\n"
+                + "".join(f"static TBL_{n}: WRow = {v};\n"
+                          for n, v in zip("ABC", inits))
+                + "unsafe fn site(ctx: *mut Wctx, out: *mut c_uchar) -> c_int {\n"
+                "    let hw = (*ctx).hw;\n"
+                "    ((*hw).cipher)(ctx, out)\n"
+                "}\n")
+            writers = "".join(
+                f"unsafe fn newctx_{n.lower()}(provctx: *mut c_void) "
+                "-> *mut c_void {\n"
+                "    let owner = OwnedCtx::<Wctx>::new();\n"
+                "    let ctx = owner.as_ptr();\n"
+                "    (*ctx).hw = core::ptr::addr_of!(TBL_" + n
+                + ").cast::<WBase>();\n"
+                "    owner.into_raw().cast()\n"
+                "}\n" for n in "ABC")
+            return body + writers + tail
+        # The exact and via-cast fixtures.
+        if cast or cast_missing:
+            target = "WMissing" if cast_missing else "WTable"
+            body = (
+                "#[repr(C)]\n"
+                "pub(crate) struct WBase {\n"
+                "    pub init: unsafe extern \"C\" fn(*mut Wctx) -> c_int,\n"
+                "}\n"
+                "#[repr(C)]\n"
+                "pub(crate) struct WTable {\n"
+                "    pub base: WBase,\n"
+                f"    pub cipher: {cipher},\n"
+                "    pub fini: unsafe extern \"C\" fn(*mut Wctx) -> c_int,\n"
+                "}\n"
+                "#[repr(C)]\n"
+                "pub(crate) struct Wctx {\n"
+                "    pub flags: c_uint,\n"
+                "    pub hw: *const WBase,\n"
+                "}\n"
+                "static TBL_A: WTable = WTable { base: WBase { init: f0 }, "
+                "cipher: f1, fini: f2 };\n"
+                "static TBL_B: WTable = WTable { base: WBase { init: g0 }, "
+                "cipher: g1, fini: g2 };\n"
+                "static TBL_C: WTable = WTable { base: WBase { init: h0 }, "
+                "cipher: h1, fini: h2 };\n"
+                "unsafe fn site(ctx: *mut Wctx, out: *mut c_uchar) -> c_int {\n"
+                f"    let hw = (*ctx).hw.cast::<{target}>();\n"
+                "    ((*hw).cipher)(ctx, out)\n"
+                "}\n")
+        else:
+            body = (
+                "#[repr(C)]\n"
+                "pub(crate) struct WTable {\n"
+                "    pub init: unsafe extern \"C\" fn(*mut Wctx) -> c_int,\n"
+                f"    pub cipher: {cipher},\n"
+                "    pub fini: unsafe extern \"C\" fn(*mut Wctx) -> c_int,\n"
+                "}\n"
+                "#[repr(C)]\n"
+                "pub(crate) struct Wctx {\n"
+                "    pub flags: c_uint,\n"
+                "    pub hw: *const WTable,\n"
+                "}\n"
+                "static TBL_A: WTable = WTable { init: f0, cipher: f1, fini: f2 };\n"
+                "static TBL_B: WTable = WTable { init: g0, cipher: g1, fini: g2 };\n"
+                "static TBL_C: WTable = WTable { init: h0, cipher: h1, fini: h2 };\n"
+                "unsafe fn site(ctx: *mut Wctx, out: *mut c_uchar) -> c_int {\n"
+                "    let hw = (*ctx).hw;\n"
+                "    ((*hw).cipher)(ctx, out)\n"
+                "}\n")
+        writers = "".join(
+            f"unsafe fn newctx_{n.lower()}(provctx: *mut c_void) "
+            "-> *mut c_void {\n"
+            "    let owner = OwnedCtx::<Wctx>::new();\n"
+            "    let ctx = owner.as_ptr();\n"
+            "    (*ctx).hw = &TBL_" + n + ";\n"
+            "    owner.into_raw().cast()\n"
+            "}\n" for n in "ABC")
+        return body + writers + tail
+
+    class _S1G:
+        def __init__(self, insns, funcs, data_syms, sizes, static_values,
+                     u32, sections, direct=None, source_root=None):
+            self.name = "s1.so"
+            self.funcs = dict(funcs)
+            self.start_set = set(funcs)
+            self.names_at = collections.defaultdict(set)
+            for a, n in funcs.items():
+                self.names_at[a].add(n)
+            for a, n in data_syms.items():
+                self.names_at[a].add(n)
+            self.all_syms = {a: sorted(ns)[0]
+                             for a, ns in self.names_at.items()}
+            self.sym_sizes = dict(sizes)
+            self.sections = dict(sections)
+            self.precision = _WPrecision({f: list(v) for f, v in insns.items()})
+            self.source_root = source_root
+            self.install_prefix = None
+            self.direct = collections.defaultdict(set, direct or {})
+            self._static_values = dict(static_values)
+            self._u32 = dict(u32)
+            self.sites = {}
+
+        def section_of(self, a):
+            for name, (base, _off, size) in self.sections.items():
+                if base <= a < base + size:
+                    return name
+            return None
+
+        def is_data(self, a):
+            sec = self.section_of(a)
+            return sec is not None and sec not in (".text", ".plt", ".plt.got")
+
+        def containing(self, a):
+            best = None
+            for f in self.start_set:
+                if f <= a and (best is None or f > best):
+                    best = f
+            return best
+
+        def static_slot(self, a):
+            return frozenset(self._static_values.get(a, {0}))
+
+        def read_u32(self, a):
+            return self._u32.get(a)
+
+    S1_SITE, S1_NEW_A, S1_NEW_B, S1_NEW_C = 0x1000, 0x1100, 0x1200, 0x1240
+    S1_ZALLOC, S1_ROGUE = 0x1500, 0x1300
+    S1_OTHER, S1_UNKNOWN = 0x1280, 0x12c0
+    S1_TBL = {0x3000: "A", 0x3100: "B", 0x3200: "C"}
+    S1_MEM = {0x3000: (0x2000, 0x2010, 0x2020),
+              0x3100: (0x2100, 0x2110, 0x2120),
+              0x3200: (0x2200, 0x2210, 0x2220)}
+    S1_FUNCS = {0x3400: "FUNCS_A", 0x3440: "FUNCS_B", 0x3480: "FUNCS_C"}
+
+    def _s1_sym(letter):
+        return ("_RNvNtNtCs3iYjyFzWfzV_10openssl_rs8provider10cipher_gcm5TBL_"
+                + letter)
+
+    def _s1_fixture(nullable=False, shape="memory", undeclared=False,
+                    bad_member=False, mutable=False, shape_extra=False,
+                    rogue=False, third_store=True, guard=True,
+                    null_member=False, cast=False, cast_missing=False,
+                    prefix=False, prefix_nonbase=False, prefix_layout=False,
+                    prefix_cast=False, different_object=False,
+                    unknown_base=False):
+        td = tempfile.mkdtemp()
+        repo = Path(td)
+        path = repo / "src" / "provider" / "cipher_gcm.rs"
+        path.parent.mkdir(parents=True)
+        path.write_text(_s1_source(
+            nullable, cast, cast_missing, prefix=prefix,
+            prefix_nonbase=prefix_nonbase, prefix_layout=prefix_layout,
+            prefix_cast=prefix_cast, different_object=different_object,
+            unknown_base=unknown_base))
+        funcs = {
+            S1_SITE: "_RNvNtNtCs3iYjyFzWfzV_10openssl_rs8provider10cipher_gcm4site",
+            S1_NEW_A: "newctx_a", S1_NEW_B: "newctx_b",
+            S1_NEW_C: "newctx_c", S1_ZALLOC: "zalloc",
+        }
+        for base in (0x2000, 0x2100, 0x2200):
+            for k in range(3):
+                funcs[base + k * 0x10] = f"member_{base:x}_{k}"
+        if rogue:
+            funcs[S1_ROGUE] = "rogue"
+        if different_object:
+            funcs[S1_OTHER] = "other_dup"
+        if unknown_base:
+            funcs[S1_UNKNOWN] = "unknown_store"
+        insns = {}
+        if shape == "memory":
+            insns[S1_SITE] = [(0x1000, "mov    0x8(%rdi),%r8"),
+                              (0x1004, "call   *0x8(%r8)"),
+                              (0x1008, "ret")]
+        elif shape == "register":
+            insns[S1_SITE] = [(0x1000, "mov    0x8(%rdi),%r8"),
+                              (0x1004, "mov    0x8(%r8),%rax")]
+            if guard:
+                insns[S1_SITE] += [(0x1008, "test   %rax,%rax"),
+                                   (0x100a, "je     1010 <site+0x10>")]
+            insns[S1_SITE] += [(0x100c if guard else 0x1008,
+                                "call   *%rax"),
+                               (0x1010 if guard else 0x100c, "ret")]
+        else:
+            insns[S1_SITE] = [(0x1000, "call   *0x8(%rdi)"),
+                              (0x1004, "ret")]
+        site_addr = next(a for a, t in insns[S1_SITE] if "call" in t)
+
+        def newctx(addr, table_addr, extra=None):
+            rows = [(addr, "mov    $0x40,%edi"),
+                    (addr + 5, "call   1500 <zalloc>"),
+                    (addr + 10, "mov    %rax,%rbx"),
+                    (addr + 15,
+                     f"lea    0x0(%rip),%rcx        # {table_addr:x} <table>"),
+                    (addr + 22, "mov    %rcx,0x8(%rbx)")]
+            if extra is not None:
+                rows += [(addr + 26,
+                          f"lea    0x0(%rip),%rdx        # {extra:x} <anon>"),
+                         (addr + 33, "mov    %rdx,0x8(%rbx)")]
+            rows += [(addr + 40, "ret")]
+            return rows
+
+        tbl_a = 0x5000 if mutable else 0x3000
+        insns[S1_NEW_A] = newctx(S1_NEW_A, tbl_a,
+                                 0x3f00 if undeclared else None)
+        insns[S1_NEW_B] = newctx(S1_NEW_B, 0x3100)
+        insns[S1_NEW_C] = (newctx(S1_NEW_C, 0x3200) if third_store
+                           else [(S1_NEW_C, "ret")])
+        if rogue:
+            insns[S1_ROGUE] = [(0x1300, "call   1000 <site>"),
+                               (0x1305, "ret")]
+        if different_object:
+            insns[S1_OTHER] = [(0x1280, "mov    %rsi,0x8(%rdi)"),
+                               (0x1284, "ret")]
+        if unknown_base:
+            insns[S1_UNKNOWN] = [(0x12c0, "call   *(%rdi)"),
+                                 (0x12c2, "mov    %rcx,0x8(%rax)"),
+                                 (0x12c7, "ret")]
+        static_values, u32, sizes = {}, {}, {}
+        data_syms = {}
+        for base, letter in S1_TBL.items():
+            addr = tbl_a if base == 0x3000 else base
+            data_syms[addr] = _s1_sym(letter)
+            sizes[_s1_sym(letter)] = (0x20 if (shape_extra and base == 0x3000)
+                                      else 0x18)
+            for k, member in enumerate(S1_MEM[base]):
+                value = member
+                if bad_member and base == 0x3000 and k == 1:
+                    value = 0x9999
+                if null_member and base == 0x3000 and k == 1:
+                    value = 0
+                static_values[addr + k * 8] = {value}
+        if shape_extra:
+            static_values[tbl_a + 0x18] = {0x2030}
+            funcs[0x2030] = "extra_member"
+        for i, (addr, name) in enumerate(sorted(
+                S1_FUNCS.items(), key=lambda kv: kv[0])):
+            sizes[name] = 0x30
+            data_syms[addr] = name
+            newctx_addr = (S1_NEW_A, S1_NEW_B, S1_NEW_C)[i]
+            u32[addr] = 1
+            static_values[addr + 8] = {newctx_addr}
+            u32[addr + 0x10] = 6
+            static_values[addr + 0x18] = {S1_SITE}
+            u32[addr + 0x20] = 0
+            static_values[addr + 0x28] = {0}
+        sections = {".text": (0x1000, 0, 0x1000),
+                    ".data.rel.ro": (0x3000, 0, 0x1000),
+                    ".data": (0x5000, 0, 0x1000)}
+        direct = {S1_ROGUE: {S1_SITE}} if rogue else {}
+        if different_object:
+            direct.setdefault(S1_SITE, set()).add(S1_OTHER)
+        if unknown_base:
+            direct.setdefault(S1_SITE, set()).add(S1_UNKNOWN)
+        g = _S1G(insns, funcs, data_syms, sizes, static_values, u32,
+                 sections, direct=direct, source_root=repo)
+        site = {"kind": "call", "func": S1_SITE, "addr": site_addr,
+                "text": next(t for a, t in insns[S1_SITE]
+                             if a == site_addr), "arg_deps": set()}
+        return g, site, funcs
+
+    def _s1_witness(**kw):
+        g, site, funcs = _s1_fixture(**kw)
+        reachable = set(funcs)
+        if not kw.get("rogue"):
+            reachable.discard(S1_ROGUE)
+        return static_table_instance_witness(g, site, "site", reachable)
+
+    sw = _s1_witness()
+    check("S1 field-sensitive witness applies", bool(sw and sw.get("resolved")),
+          True)
+    check("S1 witness records the pointer slot",
+          (sw or {}).get("pointer_slot", {}).get("object"), "Wctx")
+    check("S1 witness records three instances",
+          len((sw or {}).get("instances", [])), 3)
+    check("S1 witness unions only the requested member",
+          (sw or {}).get("targets"), ["0x2010", "0x2110", "0x2210"])
+    check("S1 witness records each writer",
+          sorted(r["function"] for r in (sw or {}).get("stored_by", [])),
+          ["newctx_a", "newctx_b", "newctx_c"])
+    sw2 = _s1_witness(shape="register", nullable=True, null_member=True,
+                      guard=True)
+    check("S1 Option<fn> NULL with a recorded guard resolves",
+          bool(sw2 and sw2.get("resolved")), True)
+    check("S1 Option<fn> NULL accepts only the other tables",
+          (sw2 or {}).get("targets"), ["0x2110", "0x2210"])
+    sw3 = _s1_witness(cast=True)
+    check("S1 source cast to the concrete table type resolves",
+          bool(sw3 and sw3.get("resolved")), True)
+    check("S1 cast witness records the effective type",
+          ((sw3 or {}).get("effective_type") or {}).get("via_cast"), True)
+    check("S1 cast witness unions the cast layout's member",
+          (sw3 or {}).get("targets"), ["0x2010", "0x2110", "0x2210"])
+    check("S1 cast to a type with no declared instance is refused",
+          (_s1_witness(cast_missing=True) or {}).get("refusal"),
+          "no-declared-instance-type")
+    check("S1 undeclared stored value is refused",
+          (_s1_witness(undeclared=True) or {}).get("resolved", False), False)
+    check("S1 non-function member is refused",
+          (_s1_witness(bad_member=True) or {}).get("resolved", False), False)
+    check("S1 mutable table section is refused",
+          (_s1_witness(mutable=True) or {}).get("resolved", False), False)
+    check("S1 unproven base register is refused",
+          (_s1_witness(shape="direct") or {}).get("resolved", False), False)
+    check("S1 reachable caller outside the cohort is refused",
+          (_s1_witness(rogue=True) or {}).get("resolved", False), False)
+    check("S1 derived/declared member mismatch is refused",
+          (_s1_witness(shape_extra=True) or {}).get("resolved", False), False)
+    check("S1 partial instance set is refused",
+          (_s1_witness(third_store=False) or {}).get("resolved", False), False)
+    check("S1 Option<fn> NULL without a guard is refused",
+          (_s1_witness(shape="register", nullable=True, null_member=True,
+                       guard=False) or {}).get("resolved", False), False)
+
+    # Base-object qualification: a store into a different object is excluded
+    # with its reason, and an unknown base origin still refuses.
+    sw4 = _s1_witness(different_object=True)
+    check("S1 same-offset store into an unrelated object is excluded",
+          bool(sw4 and sw4.get("resolved")), True)
+    check("S1 excluded store records its base type",
+          [r.get("origin") for r in
+           ((sw4 or {}).get("completeness") or {}).get(
+               "excluded_different_object_stores", [])],
+          ["entry-parameter"])
+    check("S1 unknown base origin still refuses",
+          (_s1_witness(unknown_base=True) or {}).get("refusal"),
+          "unproven-cohort-store")
+
+    # Prefix-compatible instance enumeration.
+    sw5 = _s1_witness(prefix=True)
+    check("S1 prefix-compatible instance type resolves",
+          bool(sw5 and sw5.get("resolved")), True)
+    ptypes = ((sw5 or {}).get("completeness") or {}).get(
+        "prefix_compatible_types", {}) or {}
+    check("S1 prefix witness records the first-field source witness",
+          bool((ptypes.get("WRow") or {}).get("source_witness")), True)
+    check("S1 prefix witness records the layout witness",
+          ((ptypes.get("WRow") or {}).get("layout_witness") or {}).get(
+              "offsets"), ["0x0", "0x10", "0x8"])
+    check("S1 prefix-compatible-base is in the conjunction",
+          "prefix-compatible-base" in ((sw5 or {}).get("conditions") or []),
+          True)
+    sw6 = _s1_witness(prefix_cast=True)
+    check("S1 layout-equivalent first field with a source cast resolves",
+          bool(sw6 and sw6.get("resolved")), True)
+    check("S1 first-field-incompatible type is refused",
+          (_s1_witness(prefix_nonbase=True) or {}).get("resolved", False),
+          False)
+    check("S1 layout-incompatible prefix type is refused",
+          (_s1_witness(prefix_layout=True) or {}).get("resolved", False),
+          False)
+
+    mut_rows = []
+
+    def _mutation(name, fn):
+        _MUTED.add(name)
+        try:
+            return fn()
+        finally:
+            _MUTED.discard(name)
+
+    mut_rows.append(("fetch-base-not-return",
+                     lambda: _fetch_witness(base_call=False)))
+    mut_rows.append(("fetch-slot-outside",
+                     lambda: _fetch_witness(off=0x100)))
+    mut_rows.append(("fetch-source-writer",
+                     lambda: _fetch_witness(two_assign=True)))
+    mut_rows.append(("export-not-param",
+                     lambda: _export_witness(param=False)[0]))
+    mut_rows.append(("export-header-non-callback",
+                     lambda: _export_witness(noncb=True)[0]))
+    mut_rows.append(("export-no-root",
+                     lambda: _export_witness(exported=False)[0]))
+    mut_rows.append(("local-non-function",
+                     lambda: _local_witness(extra=True)))
+
+    def _s1_accept(**kw):
+        w = _s1_witness(**kw)
+        return w if (w and w.get("resolved")) else None
+
+    mut_rows += [
+        ("s1-undeclared-store", lambda: _s1_accept(undeclared=True)),
+        ("s1-member-not-function", lambda: _s1_accept(bad_member=True)),
+        ("s1-mutable-table", lambda: _s1_accept(mutable=True)),
+        ("s1-base-not-table", lambda: _s1_accept(shape="direct")),
+        ("s1-caller-outside-cohort", lambda: _s1_accept(rogue=True)),
+        ("s1-shape-mismatch", lambda: _s1_accept(shape_extra=True)),
+        ("s1-partial-instances", lambda: _s1_accept(third_store=False)),
+        ("s1-null-no-guard",
+         lambda: _s1_accept(shape="register", nullable=True,
+                            null_member=True, guard=False)),
+    ]
+    check("witness mutation matrix: each refusal flips its negative",
+          [(name, _mutation(name, fn) is not None) for name, fn in mut_rows],
+          [(name, True) for name, _fn in mut_rows])
+    print("[consumer-closure] witness mutation matrix: " + "; ".join(
+        f"{name} -> negative accepted" for name, _fn in mut_rows))
+
+    # The base/prefix extensions have their own load-bearing mutations.  Some
+    # disable an exclusion (so the positive case must then refuse), some
+    # disable an admission (so the negative case must then resolve).
+    mut2 = [
+        ("s1-base-different", lambda: _s1_witness(different_object=True),
+         False, "unproven-cohort-store"),
+        ("s1-base-unknown", lambda: _s1_witness(unknown_base=True),
+         True, None),
+        ("s1-prefix-types", lambda: _s1_witness(prefix=True),
+         False, "no-declared-instance-type"),
+        ("s1-prefix-first-field", lambda: _s1_witness(prefix_nonbase=True),
+         True, None),
+        ("s1-prefix-layout", lambda: _s1_witness(prefix_layout=True),
+         True, None),
+    ]
+    mut2_results = []
+    for name, fn, _wr, _rf in mut2:
+        w = _mutation(name, fn) or {}
+        mut2_results.append((name, bool(w.get("resolved")),
+                             w.get("refusal")))
+    check("witness mutation matrix 2: base/prefix checks are load-bearing",
+          mut2_results,
+          [(name, wr, rf) for name, _fn, wr, rf in mut2])
+    print("[consumer-closure] witness mutation matrix 2: " + "; ".join(
+        f"{name} -> resolved={w} refusal={r}"
+        for name, w, r in mut2_results))
 
     # ---- evidence-class controls ------------------------------------------ #
     # R1: a non-literal dlsym argument must not be resolved.
@@ -5695,6 +15472,12 @@ def self_test() -> int:
         def __init__(self, calls, insns=None):
             self.calls = calls
             self.insns_by_func = insns or {}
+            self.summary = collections.defaultdict(
+                lambda: [set() for _ in _ARGREGS])
+
+        def summary_vals(self, f, k):
+            return (self.summary[f][k] if 0 <= k < len(_ARGREGS)
+                    else set())
 
     class _RCG:
         name = "control.so"
@@ -5741,8 +15524,12 @@ def self_test() -> int:
 
     g, s = _rcb_graph()
     apply_evidence_classes(g, set(), {0x10, 0x20, 0x40})
-    check("reachable fixed caller resolves the site", s["unresolved"], False)
-    check("reachable fixed caller bounds the target set", s["targets"], {0x50})
+    check("reachable fixed caller narrows the site", s["unresolved"], False)
+    # The excluded caller forwards its parameter but has no summary value, so
+    # its contribution is empty.  The flat candidate is therefore unattributed
+    # and is admitted (round 4), never dropped: the site keeps both targets.
+    check("unattributed candidate is admitted rather than dropped",
+          s["targets"], {0x50, 0x60})
     check("reachable-caller bound is not a contract class",
           s["class"] in ABI_CONTRACT_CLASSES, False)
     check("reachable-caller bound has no ABI witness",
@@ -5778,6 +15565,22 @@ def self_test() -> int:
     apply_evidence_classes(g, set(), None)
     check("no reachability evidence keeps caller bounding off",
           s["unresolved"], True)
+
+    # Round 4: an excluded caller that forwards its own parameter contributes
+    # exactly the values its argument summary admits -- the same expansion that
+    # produced the site's flat arg_targets.  With no summary values it
+    # contributes nothing (and the target is admitted, not dropped).
+    g, s = _rcb_graph()
+    g.precision.summary[0x30][1] = {0x60}
+    apply_evidence_classes(g, set(), {0x10, 0x20, 0x40})
+    exrow = s["reachable_caller_bound"]["excluded_callers"][0]
+    check("excluded caller attribution resolves a forwarded parameter",
+          (exrow["contributed_targets"],
+           exrow["call_sites"][0]["arguments"][0]["targets"]),
+          (["0x60"], ["0x60"]))
+    check("reachable caller row is marked reachable",
+          s["reachable_caller_bound"]["reachable_callers"][0]["reachable"],
+          True)
 
     # ---- stored-value provenance for Method.free (offset 0x20) ------------- #
     # The slot is bounded by the values reachable code stores, never by the
@@ -5815,6 +15618,12 @@ def self_test() -> int:
         def __init__(self, calls, insns):
             self.calls = calls
             self.insns_by_func = insns
+            self.summary = collections.defaultdict(
+                lambda: [set() for _ in _ARGREGS])
+
+        def summary_vals(self, f, k):
+            return (self.summary[f][k] if 0 <= k < len(_ARGREGS)
+                    else set())
 
     class _MG:
         name = "control.so"
@@ -5947,6 +15756,186 @@ def self_test() -> int:
     check("stored-value targets are not an ABI contract class",
           s4["class"] in ABI_CONTRACT_CLASSES, False)
 
+    # ---- per-edge provenance records (section 7 / section 22) -------------- #
+    # A valid record separates what was proved from what was approximated, and
+    # every dropped target carries a checkable reason.
+    g5, _s5 = _mg_graph()
+    apply_evidence_classes(g5, set(), _reach)
+    records = build_edge_records({g5.name: g5})
+    check("the edge record set validates", validate_edge_records(records), [])
+    check("every classified site emits a record", len(records), len(g5.sites))
+    rec0 = records[0]
+    check("the edge record identity is semantic, not an address",
+          (rec0["semantic_identity"]["defining_function"],
+           rec0["semantic_identity"]["call_site_role"]),
+          (_name, "method-store-slot"))
+    check("the address is recorded only as an artifact-local witness",
+          "site_address" in rec0["semantic_identity"]["artifact_local_witness"],
+          True)
+    check("the edge record disposition is PROVED_TARGET_SET",
+          rec0["disposition"], DISPOSITION_PROVED)
+    check("each proved target carries a derivation",
+          sorted(c["target"] for c in rec0["semantic_identity"]["provenance_chain"]),
+          rec0["target_set"])
+    check("the unreachable writer's target is excluded with a witness",
+          any(e.get("target") == "dead_target"
+              and e.get("reason") == "no-reachable-writer"
+              and e.get("row_kind") == "target-drop"
+              for e in rec0["exclusions"]), True)
+    check("the writer itself is a subject row, not a target drop",
+          any(w.get("target") == g5.funcs.get(0x500)
+              and w.get("reason") == "writer-not-in-reachable-set"
+              and w.get("row_kind") == "subject"
+              and w.get("evidence", {}).get("would_store_targets")
+              == ["dead_target"]
+              for w in rec0.get("excluded_writers") or ()), True)
+
+    # The refusal test required by this subphase: inject an exclusion with no
+    # reason and require the closure to refuse it.
+    bad = json.loads(json.dumps(rec0))
+    bad["exclusions"].append({"target": "OSSL_DECODER_free",
+                              "reason": None, "evidence": {}})
+    bad_defects, bad_refusal = edge_closure_refusal([bad])
+    check("an exclusion without a reason is a defect", bool(bad_defects), True)
+    check("the closure refuses an uncheckable exclusion",
+          bad_refusal["code"], "EDGE_RECORD_EXCLUSION_UNSOUND")
+
+    # A stale accounting block cannot hide a removed exclusion: the validator
+    # recomputes from the record.
+    omitted = json.loads(json.dumps(rec0))
+    omitted["exclusions"] = [e for e in omitted["exclusions"]
+                             if e.get("target") != "dead_target"]
+    check("dropping an exclusion is refused even with stale accounting",
+          bool(validate_edge_records([omitted])), True)
+
+    # An exclusion that names a reason but carries no evidence is also refused.
+    evidence_free = json.loads(json.dumps(rec0))
+    evidence_free["exclusions"].append({
+        "target": "OSSL_DECODER_free",
+        "reason": "not-in-reachable-set", "evidence": {}})
+    check("an exclusion without evidence is a defect",
+          bool(validate_edge_records([evidence_free])), True)
+
+    # ---- mutually redundant accounting, derivation and oracle controls ---- #
+    # Each control mutates exactly one ledger of an otherwise valid record and
+    # requires the validator to refuse it.  These are the canaries for the two
+    # defects this subphase fixes: an admitted set taken from the record's own
+    # accounting (A), and a reachability exclusion that its evidence does not
+    # establish (B).
+    def _mutated(mutator):
+        rec = json.loads(json.dumps(rec0))
+        mutator(rec)
+        return validate_edge_records([rec])
+
+    check("dropping a target from target_set only is refused",
+          bool(_mutated(lambda r: r["target_set"].pop())), True)
+    check("removing a provenance chain row for a claimed target is refused",
+          bool(_mutated(
+              lambda r: r["semantic_identity"]["provenance_chain"].pop())),
+          True)
+
+    def _set_first_step(step):
+        def apply(rec):
+            rec["semantic_identity"]["provenance_chain"][0]["derivation"][0] = step
+        return apply
+
+    check("an unknown derivation step is refused",
+          bool(_mutated(_set_first_step({"step": "trust-me"}))), True)
+    check("a derivation step with no payload is refused",
+          bool(_mutated(_set_first_step({"step": "resolver"}))), True)
+
+    def _exclude_admitted(rec):
+        name = rec["target_set"][0]
+        rec["exclusions"].append({
+            "target": name,
+            "reason": "target-not-in-reachable-set",
+            "row_kind": "target-drop",
+            "claim": {"kind": "target-not-in-reachable-set",
+                      "module": rec["semantic_identity"]
+                                ["artifact_local_witness"]["module"],
+                      "subjects": [name]},
+            "evidence": {"reachable_set_member": False, "symbol": name,
+                         "reachable_basis": "pre-closure-direct",
+                         "symbols_checked": [name]}})
+
+    check("an exclusion naming an admitted target is refused",
+          bool(_mutated(_exclude_admitted)), True)
+
+    def _flip_member(rec):
+        for row in rec.get("excluded_writers") or ():
+            if row.get("reason") == "writer-not-in-reachable-set":
+                row["evidence"]["reachable_set_member"] = True
+
+    check("flipping reachable_set_member to True is refused",
+          bool(_mutated(_flip_member)), True)
+    check("stale admitted_targets accounting is refused",
+          bool(_mutated(
+              lambda r: r["exclusion_accounting"]["admitted_targets"].pop())),
+          True)
+
+    # A `declared-name-absent` row is a target drop bound by a structured
+    # `evidence.targets` list.  The v1.2 fixture emitted a cross-check name as
+    # if it were a dropped target; that is no longer an exclusion.  The controls
+    # below use a crafted record so each new check is exercised directly.
+    check("the semantic fixture no longer emits a declared-name cross-check as "
+          "a target drop",
+          [e for e in rec0["exclusions"]
+           if e.get("reason") == "declared-name-absent"], [])
+
+    check("declared-name-absent with present=True is refused",
+          bool(_mutated(lambda r: r["exclusions"].append({
+              "target": r["target_set"][0],
+              "reason": "declared-name-absent",
+              "row_kind": "target-drop",
+              "claim": {"kind": "declared-name-absent",
+                        "module": r["semantic_identity"]
+                                  ["artifact_local_witness"]["module"],
+                        "subjects": ["absent_name"]},
+              "evidence": {"declared_name": "absent_name",
+                           "present": True, "targets": ["absent_name"]}}))), True)
+
+    # Issue-B control: an oracle that places the excluded writer in the final
+    # upper bound must make the record (and the audit) refuse.  The writer is
+    # excluded because it was outside the *pre-closure direct* set; the final
+    # upper bound admits it, so the negative claim is unsound.
+    dead_writer = [e for e in (rec0.get("excluded_writers") or ())
+                   if e.get("reason") == "writer-not-in-reachable-set"]
+    check("the fixture carries a reachability exclusion for the dead writer",
+          bool(dead_writer), True)
+    oracle_dead = ReachabilityOracle({g5.name: g5}, {(g5.name, 0x500)})
+    records_dead = build_edge_records({g5.name: g5}, oracle_dead)
+    dead_audit = [r for r in
+                  reachability_exclusion_audit({g5.name: g5}, oracle_dead,
+                                               records_dead)
+                  if r["claim_kind"] == "writer-not-in-reachable-set"]
+    check("an excluded writer the final upper bound reaches is refused",
+          (bool(validate_edge_records(records_dead, oracle_dead)),
+           any(r["in_final_upper_bound"] for r in dead_audit)),
+          (True, True))
+
+    # Positive control: the same records with an oracle that does not reach the
+    # writer validate cleanly, so the refusal above is caused by the oracle.
+    oracle_live = ReachabilityOracle({g5.name: g5},
+                                     {(g5.name, a) for a in _reach})
+    records_live = build_edge_records({g5.name: g5}, oracle_live)
+    check("a writer outside the upper bound validates cleanly (positive control)",
+          validate_edge_records(records_live, oracle_live), [])
+    check("the audit reports no violation when the writer is outside the bound",
+          [r for r in
+           reachability_exclusion_audit({g5.name: g5}, oracle_live,
+                                        records_live)
+           if r["violation"]], [])
+
+    # The oracle check has a separate role: a record whose evidence was
+    # built against a truthful oracle is still refused when the oracle used to
+    # validate it disagrees.  Without this check the record would pass on its
+    # own (internally consistent) account.
+    records_truth = build_edge_records({g5.name: g5}, oracle_live)
+    check("a record built against a truthful oracle validates",
+          validate_edge_records(records_truth, oracle_live), [])
+    check("the same record is refused by a disagreeing oracle",
+          bool(validate_edge_records(records_truth, oracle_dead)), True)
+
     # The provenance resolver seeds entry arguments and records outgoing stack
     # arguments, which is what lets a writer's parameter be followed.
     class _PG:
@@ -6078,6 +16067,502 @@ def self_test() -> int:
                         {"line": 999, "kind": "UNSAFE_FN_DEF"},
                         overrides)[0], None)
 
+    # ---- v1.2 hole controls (reviewer H1-H10) ----------------------------- #
+    # Every control below isolates one check: it is refused when the check is
+    # enabled and accepted when that check alone is disabled (see the
+    # mutation table in edge-validator-hardening.json).
+    MOD = "libfoo.so"
+
+    class _CallerG:
+        name = MOD
+        funcs = {0x700: "site_func", 0x1000: "target_ok",
+                 0x1100: "target_dropped", 0x1200: "excluded_caller",
+                 0x1300: "reachable_caller", 0x1400: "target_unreachable",
+                 0x2000: "alias_primary", 0x3000: "reachable_target"}
+        start_set = set(funcs)
+        all_syms = dict(funcs)
+        names_at = {a: {n} for a, n in funcs.items()}
+
+    def _caller_fixture():
+        g = _CallerG()
+        g.names_at = {a: set(n) for a, n in _CallerG.funcs.items()}
+        g.sites = {(0x700, 0x701, "call"): {
+            "kind": "call", "func": 0x700, "addr": 0x701,
+            "text": "call *%rax", "targets": {0x1000},
+            "unresolved": False, "reason": "reachable-caller target bounding",
+            "class": "reachable-caller-target", "field_offsets": set(),
+            "arg_deps": {0}, "arg_targets": {0x1100},
+            "reachable_caller_bound": {
+                "reachable_callers": [{
+                    "function": "0x1300", "symbol": "reachable_caller",
+                    "reachable": True, "reason": None,
+                    "call_sites": [{"call_site": "0x1301", "arguments": [{
+                        "argument": 0, "argument_index": 0,
+                        "value": ["0x1000"], "targets": ["0x1000"],
+                        "non_image_values": [], "unresolved": False,
+                        "witness_instruction": [
+                            {"addr": "0x12ff", "text": "lea"}]}]}],
+                    "contributed_targets": ["0x1000"]}],
+                "excluded_callers": [{
+                    "function": "0x1200", "symbol": "excluded_caller",
+                    "reachable": False,
+                    "in_reachable_set": False, "reason": "x",
+                    "in_image_references": [],
+                    "call_sites": [{"call_site": "0x1201", "arguments": [{
+                        "argument": 0, "argument_index": 0,
+                        "value": [], "targets": ["0x1100"],
+                        "non_image_values": [], "unresolved": True,
+                        "witness_instruction": [
+                            {"addr": "0x11ff", "text": "mov"}]}]}],
+                    "contributed_targets": ["0x1100"]}],
+                "bounded_targets": ["0x1000"]}}}
+        return g
+
+    def _caller_oracle(g):
+        return ReachabilityOracle(
+            {MOD: g},
+            {(MOD, a) for a in (0x700, 0x1000, 0x1100, 0x1300, 0x3000)})
+
+    def _caller_record(alias=False):
+        g = _caller_fixture()
+        if alias:
+            g.names_at[0x3000] = {"reachable_target", "alias_secondary"}
+        oracle = _caller_oracle(g)
+        rec = _edge_record(g, g.sites[(0x700, 0x701, "call")], 1, oracle)
+        return g, oracle, rec
+
+    def _clone(rec):
+        return json.loads(json.dumps(rec))
+
+    gC, oC, rC = _caller_record()
+    # H10 positive control: the v1m caller-bound shape.  The dropped target is
+    # reachable in its own right; the excluded caller is not.  The claim is
+    # caller-scoped, so this must validate cleanly with no audit violation.
+    check("H10 v1m caller-bound shape validates cleanly",
+          validate_edge_records([rC], oC), [])
+    check("H10 dropped target is reachable; the excluded caller is not",
+          (oC.is_reachable(MOD, "target_dropped")[0],
+           oC.is_reachable(MOD, "excluded_caller")[0]), (True, False))
+    check("H10 the audit reports no violation",
+          [r for r in reachability_exclusion_audit({MOD: gC}, oC, [rC])
+           if r["violation"]], [])
+
+    # ---- round-4 attribution controls ------------------------------------- #
+    def _bound_record(reachable_contrib, excluded_contrib, admitted):
+        """Build a record from a bound whose contributions we control."""
+        g = _caller_fixture()
+        site = g.sites[(0x700, 0x701, "call")]
+        bound = site["reachable_caller_bound"]
+        rrow = bound["reachable_callers"][0]
+        rrow["contributed_targets"] = list(reachable_contrib)
+        rrow["call_sites"][0]["arguments"][0]["targets"] = \
+            list(reachable_contrib)
+        erow = bound["excluded_callers"][0]
+        erow["contributed_targets"] = list(excluded_contrib)
+        erow["call_sites"][0]["arguments"][0]["targets"] = \
+            list(excluded_contrib)
+        site["targets"] = set(admitted)
+        oracle = _caller_oracle(g)
+        return g, oracle, _edge_record(g, site, 1, oracle)
+
+    # H11: no caller attributes target_dropped.  It is admitted (widening the
+    # upper bound), never dropped, and the record validates cleanly.
+    gI, oI, rI = _bound_record(["0x1000"], [], [0x1000])
+    check("H11 an unattributed candidate is admitted, not dropped",
+          ([e["target"] for e in rI["exclusions"]],
+           sorted(rI["exclusion_accounting"]["admitted_targets"]),
+           [a["target"] for a in (rI.get("unattributed_admissions") or ())],
+           validate_edge_records([rI], oI)),
+          ([], ["target_dropped", "target_ok"], ["target_dropped"], []))
+
+    # H12: no caller attributes *any* candidate.  No bounded set is emitted:
+    # the record is UNRESOLVED and names the incomplete attribution.
+    gZ, oZ, rZ = _bound_record([], [], [])
+    check("H12 a wholly unattributable bounding is unresolved",
+          (rZ["disposition"], rZ["target_set"],
+           rZ["missing_property"],
+           rZ["exclusion_accounting"]["admitted_targets"],
+           validate_edge_records([rZ], oZ)),
+          (DISPOSITION_UNRESOLVED, [],
+           ATTRIBUTION_INCOMPLETE_PROPERTY.format(n=1), [], []))
+
+    # H13: a contribution must be the union of its own call-site witness.  The
+    # excluded caller keeps its contribution but loses the call site that would
+    # witness it, so the drop is unsupported and only this check refuses it.
+    h13 = _clone(rC)
+    h13["candidate_source"]["excluded_callers"][0]["call_sites"] = []
+    check("H13 a contribution without its call-site witness is refused",
+          bool(validate_edge_records([h13], oC)), True)
+
+    # H14: an unattributed admission cannot name a contributed target.
+    h14 = _clone(rI)
+    if h14.get("unattributed_admissions"):
+        h14["unattributed_admissions"][0]["target"] = "target_ok"
+    check("H14 a forged unattributed admission is refused",
+          bool(validate_edge_records([h14], oI)), True)
+
+    # H15: a record with zero attribution cannot claim a bounded set.
+    h15 = _clone(rZ)
+    h15["disposition"] = DISPOSITION_PROVED
+    h15["target_set"] = sorted(rZ["candidate_source"]["targets"])
+    h15["target_set_claim"] = True
+    h15["target_reachability"] = "claimed"
+    h15["missing_property"] = None
+    h15["exclusion_accounting"]["admitted_targets"] = sorted(
+        rZ["candidate_source"]["targets"])
+    h15["semantic_identity"]["provenance_chain"] = [
+        {"target": t, "derivation": [{"step": "unattributed-admission",
+                                        "reason": "forged"}]}
+        for t in h15["target_set"]]
+    check("H15 a zero-attribution record cannot claim PROVED_TARGET_SET",
+          bool(validate_edge_records([h15], oZ)), True)
+
+    def _target_claim(target, subject, checked=None):
+        return {
+            "target": target,
+            "reason": "target-not-in-reachable-set",
+            "row_kind": "target-drop",
+            "claim": {"kind": "target-not-in-reachable-set", "module": MOD,
+                      "subjects": [subject]},
+            "evidence": {"reachable_set_member": False, "symbol": subject,
+                         "reachable_basis": "final-upper-bound",
+                         "symbols_checked": ([subject] if checked is None
+                                              else checked)}}
+
+    # H1: the exclusion target is a different, reachable symbol than the one
+    # the evidence names.  v1.1 validated only the evidence symbol.
+    h1 = _clone(rC)
+    h1["exclusions"] = [_target_claim("reachable_target", "excluded_caller")]
+    h1["candidate_source"]["targets"] = ["reachable_target", "target_ok"]
+    h1["exclusion_accounting"].update({
+        "candidate_targets": ["reachable_target", "target_ok"],
+        "excluded_targets": ["reachable_target"]})
+    check("H1 target/evidence binding",
+          bool(validate_edge_records([h1], oC)), True)
+
+    # H2: the claim is rebound to a different DSO that also reaches the named
+    # caller, so only the module-identity rule can catch it.
+    class _OtherG:
+        name = "libbar.so"
+        funcs = {0x1300: "reachable_caller", 0x9000: "other_func"}
+        start_set = set(funcs)
+        all_syms = dict(funcs)
+        names_at = {a: {n} for a, n in funcs.items()}
+
+    og = _OtherG()
+    o2 = ReachabilityOracle(
+        {MOD: gC, "libbar.so": og},
+        {(MOD, a) for a in (0x700, 0x1000, 0x1100, 0x1300, 0x3000)}
+        | {("libbar.so", 0x1300)})
+    h2 = _clone(rC)
+    for row in (h2["exclusions"] + (h2.get("excluded_callers") or [])):
+        row["claim"]["module"] = "libbar.so"
+    check("H2 claim module binding",
+          bool(validate_edge_records([h2], o2)), True)
+
+    # H3: an ICF alias at a reachable address.  The oracle must expose every
+    # name at the address, not one representative.
+    gA, oA, rA = _caller_record(alias=True)
+    h3 = _clone(rA)
+    h3["exclusions"] = [_target_claim("alias_secondary", "alias_secondary")]
+    h3["candidate_source"]["targets"] = ["alias_secondary", "target_ok"]
+    h3["exclusion_accounting"].update({
+        "candidate_targets": ["alias_secondary", "target_ok"],
+        "excluded_targets": ["alias_secondary"]})
+    check("H3 ICF alias at a reachable address",
+          bool(validate_edge_records([h3], oA)), True)
+
+    # H4: the removed caller-count exemption.  A forged count and an empty
+    # symbols_checked list do not excuse the claim; the field is not read (and
+    # is not produced), so the row is refused.
+    h4 = _clone(rC)
+    h4["exclusions"] = [_target_claim("excluded_caller", "excluded_caller",
+                                      checked=[])]
+    h4["exclusions"][0]["evidence"]["reachable_caller_count"] = 0
+    h4["candidate_source"]["targets"] = ["excluded_caller", "target_ok"]
+    h4["exclusion_accounting"].update({
+        "candidate_targets": ["excluded_caller", "target_ok"],
+        "excluded_targets": ["excluded_caller"]})
+    check("H4 forged caller count no longer exempts symbols_checked",
+          bool(validate_edge_records([h4], oC)), True)
+    check("H4 the caller-count exemption is structurally absent",
+          "reachable_caller_count" not in json.dumps(rC), True)
+
+    # H5a: no-reachable-writer whose own derived_targets contain the target.
+    h5 = _clone(rC)
+    h5["exclusions"] = [{
+        "target": "target_dropped", "reason": "no-reachable-writer",
+        "claim": {"kind": "no-reachable-writer", "module": MOD,
+                  "subjects": []},
+        "evidence": {"writer": "w",
+                     "derived_targets": ["target_dropped", "target_ok"],
+                     "reachable_writers": []}}]
+    check("H5 no-reachable-writer contradicting its own derived_targets",
+          bool(validate_edge_records([h5], oC)), True)
+
+    # H5b: declared-name-absent naming an unrelated absent symbol for a target
+    # whose mapping is not explained.
+    h5b = _clone(rC)
+    h5b["target_reachability"] = "not-claimed"
+    h5b["exclusions"] = [{
+        "target": "target_dropped", "reason": "declared-name-absent",
+        "claim": {"kind": "declared-name-absent", "module": MOD,
+                  "subjects": ["unrelated_absent_name"]},
+        "evidence": {"declared_name": "unrelated_absent_name",
+                     "present": False}}]
+    check("H5 declared-name-absent for an unrelated target",
+          bool(validate_edge_records([h5b], oC)), True)
+
+    # H6a: a semantic call-site row with included:false naming a reachable
+    # caller.  The auxiliary list is untouched, so only the candidate-source
+    # walk can catch it.  The record is built against the oracle so the
+    # pre-closure-basis defect cannot mask the control.
+    h6 = _clone(next(r for r in records_live
+                    if r["semantic_identity"]["call_site_role"]
+                    == "method-store-slot"))
+    h6["candidate_source"]["rows"].append({
+        "caller": g5.funcs[0x300], "call_site": "0x999",
+        "included": False, "reason": "caller-not-in-reachable-set",
+        "targets": []})
+    check("H6 semantic included:false caller row is audited",
+          bool(validate_edge_records([h6], oracle_live)), True)
+
+    # H6b: the claim omits the reachable caller's contribution.  The
+    # recomputable candidate_source still says the reachable caller contributes
+    # target_ok, so the claim's mapping disagrees with the source.
+    h6b = _clone(rC)
+    for row in h6b["exclusions"]:
+        if row["reason"] == "not-contributed-by-reachable-callers":
+            row["claim"]["reachable_callers"][0]["contributed_targets"] = []
+    check("H6 caller-bound dropped target contributed by a reachable caller",
+          bool(validate_edge_records([h6b], oC)), True)
+
+    # H7: delete the exclusion and its candidate from the accounting block.
+    # candidate_source still names it, so the deletion is refused.
+    h7 = _clone(rC)
+    h7["exclusions"] = []
+    h7["exclusion_accounting"].update({
+        "excluded_targets": [], "candidate_targets": ["target_ok"]})
+    check("H7 exclusion and candidate both deleted",
+          bool(validate_edge_records([h7], oC)), True)
+
+    # H8: an empty admitted set and a definition-less function are resolver
+    # gaps, never proofs.
+    class _EmptyG:
+        name = "empty.so"
+        funcs = {0x10: "empty_func", 0x20: "unused"}
+        start_set = set(funcs)
+        all_syms = dict(funcs)
+        names_at = {a: {n} for a, n in funcs.items()}
+        sites = {(0x10, 0x11, "call"): {
+            "kind": "call", "func": 0x10, "addr": 0x11,
+            "text": "call *%rax", "targets": set(), "unresolved": False,
+            "reason": None, "class": "field", "field_offsets": set(),
+            "seam": None, "arg_deps": set()}}
+
+    eG = _EmptyG()
+    eRec = build_edge_records({"empty.so": eG})[0]
+    check("H8 an empty target set is demoted",
+          (eRec["disposition"], eRec["disposition_demotion"]),
+          (DISPOSITION_UNRESOLVED, "empty-target-set"))
+
+    class _NoSymG:
+        name = "nosym.so"
+        funcs = {}
+        start_set = set()
+        all_syms = {}
+        names_at = {}
+        sites = {(0x10, 0x11, "call"): {
+            "kind": "call", "func": 0x10, "addr": 0x11,
+            "text": "call *%rax", "targets": {0x99}, "unresolved": False,
+            "reason": None, "class": "field", "field_offsets": set(),
+            "seam": None, "arg_deps": set()}}
+
+    nRec = build_edge_records({"nosym.so": _NoSymG()})[0]
+    check("H8 a definition-less function is demoted",
+          (nRec["disposition"], nRec["disposition_demotion"]),
+          (DISPOSITION_UNRESOLVED, "no-defining-symbol"))
+    badq = _clone(nRec)
+    badq["disposition"] = DISPOSITION_PROVED
+    badq["target_set"] = ["<0x99>"]
+    badq["target_set_claim"] = True
+    check("H8 the validator refuses a proved record with no defining symbol",
+          bool(validate_edge_records([badq])), True)
+
+    # H9: two records may not share an identity.  v1.1 seeded ordinals by
+    # (function, role) but omitted the role from edge_id.
+    check("H9 duplicate edge_id is refused",
+          bool(validate_edge_records([_clone(rC), _clone(rC)], oC)), True)
+
+    # ---- v1.3 row-kind, target-drop binding and identity controls ---------- #
+    # Every control below is isolated: the mutation table in
+    # edge-validator-hardening.json disables exactly the named check and requires
+    # this control (and only this control) to change verdict.
+
+    def _declared_rec(target="target_unreachable", listed=None,
+                      name="unrelated_absent_name", include_targets=True):
+        rec = _clone(rC)
+        listed = [target] if listed is None else listed
+        evidence = {"declared_name": name, "present": False}
+        if include_targets:
+            evidence["targets"] = list(listed)
+        rec["exclusions"] = [{
+            "target": target,
+            "reason": "declared-name-absent",
+            "row_kind": "target-drop",
+            "claim": {"kind": "declared-name-absent", "module": MOD,
+                      "subjects": [name]},
+            "evidence": evidence,
+        }]
+        rec["candidate_source"]["targets"] = sorted({"target_ok", target})
+        rec["candidate_source"]["excluded_callers"][0][
+            "contributed_targets"] = []
+        rec["candidate_source"]["excluded_callers"][0]["call_sites"] = []
+        rec["exclusion_accounting"].update({
+            "candidate_targets": rec["candidate_source"]["targets"],
+            "admitted_targets": ["target_ok"],
+            "excluded_targets": [target],
+            "unaccounted_targets": [],
+        })
+        return rec
+
+    c_rowkind = _clone(rC)
+    c_rowkind["exclusions"][0]["row_kind"] = "subject"
+    check("v1.3 exclusion row kind",
+          bool(validate_edge_records([c_rowkind], oC)), True)
+
+    c_vocab = _clone(rC)
+    c_vocab["exclusions"].append({
+        "target": "target_dropped",
+        "reason": "writer-not-in-reachable-set",
+        "row_kind": "target-drop",
+        "claim": {"kind": "writer-not-in-reachable-set", "module": MOD,
+                  "subjects": ["excluded_caller"]},
+        "evidence": {"reachable_set_member": False,
+                     "reachable_basis": "final-upper-bound",
+                     "symbol": "excluded_caller",
+                     "symbols_checked": ["excluded_caller"],
+                     "would_store_targets": ["target_dropped"]}})
+    check("v1.3 target-drop reason vocabulary",
+          bool(validate_edge_records([c_vocab], oC)), True)
+
+    c_decltext = _declared_rec(include_targets=False)
+    c_decltext["exclusions"][0]["claim"]["target_derivation"] = (
+        "a free-text claim is not a mapping")
+    check("v1.3 declared-name structured targets",
+          bool(validate_edge_records([c_decltext], oC)), True)
+
+    c_declmember = _declared_rec(listed=["target_ok"])
+    check("v1.3 declared-name target membership",
+          bool(validate_edge_records([c_declmember], oC)), True)
+
+    c_declreach = _declared_rec(target="target_dropped",
+                                listed=["target_dropped"])
+    check("v1.3 declared-name target unreachable",
+          bool(validate_edge_records([c_declreach], oC)), True)
+
+    c_declcand = _declared_rec(
+        listed=["target_unreachable", "invented_name"])
+    check("v1.3 declared-name targets are candidates",
+          bool(validate_edge_records([c_declcand], oC)), True)
+
+    c_argmap = _clone(rC)
+    del c_argmap["candidate_source"]["callers"]
+    check("v1.3 argument-target caller mapping required",
+          bool(validate_edge_records([c_argmap], oC)), True)
+
+    # R3: both the claim and candidate_source say a reachable caller
+    # contributes the dropped target.  The mapping agrees, but the target is
+    # then not droppable and the admitted set is not the reachable image set.
+    c_argrecomp = _clone(rC)
+    c_argrecomp["candidate_source"]["callers"][0]["contributed_targets"] = [
+        "target_ok", "target_dropped"]
+    c_argrecomp["candidate_source"]["callers"][0]["call_sites"][0][
+        "arguments"][0]["targets"] = ["target_ok", "target_dropped"]
+    for row in c_argrecomp["exclusions"]:
+        if row["reason"] == "not-contributed-by-reachable-callers":
+            row["claim"]["reachable_callers"][0]["contributed_targets"] = [
+                "target_ok", "target_dropped"]
+    check("v1.3 caller contributions recomputed",
+          bool(validate_edge_records([c_argrecomp], oC)), True)
+
+    c_argexcluded = _clone(rC)
+    c_argexcluded["candidate_source"]["excluded_callers"][0][
+        "contributed_targets"] = ["target_ok"]
+    c_argexcluded["candidate_source"]["excluded_callers"][0][
+        "call_sites"][0]["arguments"][0]["targets"] = ["target_ok"]
+    check("v1.3 dropped target attributed to an excluded caller",
+          bool(validate_edge_records([c_argexcluded], oC)), True)
+
+    c_argcand = _clone(rC)
+    c_argcand["exclusion_accounting"]["candidate_enumeration"] = "not-applicable"
+    c_argcand["candidate_source"]["targets"].append("extra_candidate")
+    c_argcand["exclusion_accounting"]["candidate_targets"].append(
+        "extra_candidate")
+    check("v1.3 candidates equal admitted plus excluded",
+          bool(validate_edge_records([c_argcand], oC)), True)
+
+    c_writerwould = _clone(rec0)
+    for row in c_writerwould.get("excluded_writers") or ():
+        if row.get("reason") == "writer-not-in-reachable-set":
+            row["evidence"].pop("would_store_targets", None)
+    check("v1.3 writer would_store_targets binding",
+          bool(validate_edge_records([c_writerwould])), True)
+
+    c_targetreach = _clone(rC)
+    c_targetreach["target_reachability"] = "not-claimed"
+    check("v1.3 target_reachability is derived",
+          bool(validate_edge_records([c_targetreach], oC)), True)
+
+    with tempfile.TemporaryDirectory() as td:
+        wd = Path(td) / "workdir"
+
+        class _A:
+            output = str(Path(td) / "receipt.json")
+            edge_records = None
+
+        resolved = _edge_records_path(_A(), Path(td), "ab" * 32, wd)
+        check("v1.3 sidecar default is under the workdir",
+              (resolved.parent == wd,
+               resolved.name.startswith("edge-records.")), (True, True))
+
+    tool_identity = _tool_identity()
+    check("v1.3 tool identity carries the validator sha256",
+          (len(tool_identity.get("sha256") or "") == 64,
+           tool_identity.get("schema") == EDGE_RECORD_SCHEMA), (True, True))
+
+    # ---- source-root hash rule collision (AGENTS.md section 22) ----------- #
+    # The build record and the build/link atlas both name a "source_root_hash"
+    # but hash different things.  Comparing them is a rule collision, not
+    # staleness.  The atlas has no rule field because its producer
+    # (downstream_build_link._source_root_hash) is canonical-JSON by
+    # construction.
+    atlas_h = {"source_root_hash": "a" * 64}
+    rec_domain = {"source_root_hash": "b" * 64,
+                  "source_root_hash_rule": SOURCE_ROOT_HASH_RULE_DOMAIN}
+    c1, r1 = source_root_hash_checks(rec_domain, atlas_h)
+    check("different source-root hash rules are HASH_RULE_MISMATCH, not STALE_HASH",
+          [r["code"] for r in r1], ["HASH_RULE_MISMATCH"])
+    check("the mismatch names both rules and their classes",
+          (c1["source_root_hash_rule"]["build_record_class"],
+           c1["source_root_hash_rule"]["atlas_class"]),
+          ("domain-separated-tree", "canonical-json-tree"))
+    rec_same = {"source_root_hash": "a" * 64,
+                "source_root_hash_rule": SOURCE_ROOT_HASH_RULE_CANONICAL}
+    c2, r2 = source_root_hash_checks(rec_same, atlas_h)
+    check("equal rules and equal digests pass",
+          (r2, c2["source_root_hash_matches_atlas"], c2["hash_rule_matches"]),
+          ([], True, True))
+    c3, r3 = source_root_hash_checks(
+        dict(rec_same, source_root_hash="c" * 64), atlas_h)
+    check("equal rules with different digests stay STALE_HASH",
+          [r["code"] for r in r3], ["STALE_HASH"])
+    c4, r4 = source_root_hash_checks(
+        dict(rec_domain, source_tree_domain_hash="e" * 64),
+        {"source_root_hash": "a" * 64, "source_tree_domain_hash": "d" * 64})
+    check("a domain-hash difference is STALE_HASH",
+          sorted(r["code"] for r in r4), ["HASH_RULE_MISMATCH", "STALE_HASH"])
+
     if failures:
         print("[consumer-closure] SELF-TEST FAILED")
         for f in failures:
@@ -6088,8 +16573,35 @@ def self_test() -> int:
           f"narrowing, unclassified-site negative control, R1/R2/R3/A2/O1 "
           f"evidence-class controls, the per-call-site witness rule "
           f"(AGENTS.md section 22), the in-image slot target rule "
-          f"(reachable-writer and static-initialiser negative controls), and "
-          f"reachable-caller target bounding (fixed-vs-parameter caller controls)")
+          f"(reachable-writer and static-initialiser negative controls), "
+          f"reachable-caller target bounding (fixed-vs-parameter caller controls), "
+          f"per-edge provenance records (unaccounted/unwitnessed exclusion "
+          f"refusal), mutually redundant target accounting, the closed "
+          f"derivation vocabulary, the final-upper-bound reachability oracle "
+          f"(writer-exclusion negative and positive controls), the v1.2 "
+          f"subject-scoped claim controls (H1 target/evidence binding, H2 module "
+          f"binding, H3 ICF aliases, H4 caller-count exemption removal, H5 "
+          f"self-contradicting evidence, H6 audit coverage, H7 candidate deletion, "
+          f"H8 vacuous-set demotion, H9 duplicate identities, H10 v1m "
+          f"caller-scoped positive control), the v1.3 row-kind and "
+          f"target-binding controls (row kind, reason vocabulary, structured "
+          f"declared targets, target attribution, recomputed caller "
+          f"contributions, candidate equality, writer would_store_targets, "
+          f"derived target_reachability, sidecar default and tool identity), the "
+          f"least-fixed-point residual admission (nested unresolved dispatch, "
+          f"non-convergence refusal), the monotone class-independent site bound, "
+          f"the analysis identity (DSO digest is not an identity; sections, "
+          f"relocations, defined and dynamic symbols and loader entries are "
+          f"bound), admission by refutation (refuted caller admitted and closure "
+          f"recomputed, surviving exclusion validated, infinite contribution "
+          f"demoted to UNRESOLVED), the symbolic-target dispositions "
+          f"(blocking refusal, names-at alias, dynamic symbol, PLT stub, "
+          f"external contract), and the mutation matrix (single pass, class-"
+          f"narrowed bound, refusal removed, admission disabled, unconditional "
+          f"admission, unresolved-symbol refusal removed), and the source-backed "
+          f"S2/S3/S4 witness controls (exported-callback parameter, fetched "
+          f"provider slot, local function-pointer assignment; every refusal "
+          f"condition is mutation-tested)")
     return 0
 
 
@@ -6122,6 +16634,15 @@ def main(argv=None) -> int:
     ap.add_argument("--skip-graph-on-refusal", action="store_true",
                     help="stop after identity/import refusals; used for negative controls")
     ap.add_argument("--output")
+    ap.add_argument("--edge-records",
+                    help="explicit JSONL sidecar path; the default is "
+                         "<workdir>/edge-records.<artifact_sha[:16]>.jsonl and "
+                         "is never written beside --output")
+    ap.add_argument("--max-record-sample", type=int,
+                    default=EDGE_RECORD_SAMPLE_DEFAULT,
+                    help="maximum records embedded in the receipt sample; the "
+                         "full population is always written to the JSONL "
+                         "sidecar")
     ap.add_argument("--summary", action="store_true")
     args = ap.parse_args(argv)
 
@@ -6156,6 +16677,12 @@ def main(argv=None) -> int:
         e7 = receipt["precision"]["predicate_element_7"]
         print(f"  element-7={e7['status']} "
               f"contract_bounded_by_class={e7['contract_bounded_by_class']}")
+        cl = receipt["graph"]["closure"]
+        print(f"  closure: rounds={cl['closure_rounds']} "
+              f"converged={cl['converged']} "
+              f"reachable_functions={cl['reachable_functions_count']} "
+              f"sha256={cl['reachable_functions_sha256']} "
+              f"analysis_identity={cl['analysis_identity']['digest']}")
         for r in receipt["refusals"]:
             print(f"  REFUSAL {r['code']}: {r['detail']}")
     return 0 if receipt["verdict"]["state"] == "ACCEPTED" else 1

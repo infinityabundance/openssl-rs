@@ -100,12 +100,25 @@
       },
       {
         "closure": "the `RT-HIGH-VALUE-TIER` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "complete",
-        "observation": "RT-HIGH-VALUE-TIER is pass",
+        "findings": [
+          "curl/authority: the carried row disagrees with the committed 24.7 row it cites ('run:runtime:authority:curl')",
+          "curl/candidate: the carried row disagrees with the committed 24.7 row it cites ('run:runtime:candidate:curl')",
+          "haproxy/authority: the carried row disagrees with the committed 24.7 row it cites ('run:runtime:authority:haproxy')",
+          "haproxy/candidate: the carried row disagrees with the committed 24.7 row it cites ('run:runtime:candidate:haproxy')",
+          "monit/authority: the carried row disagrees with the committed 24.7 row it cites ('run:runtime:authority:monit')",
+          "monit/candidate: the carried row disagrees with the committed 24.7 row it cites ('run:runtime:candidate:monit')",
+          "openssh/authority: the carried row disagrees with the committed 24.7 row it cites ('run:runtime:authority:openssh')",
+          "openssh/candidate: the carried row disagrees with the committed 24.7 row it cites ('run:runtime:candidate:openssh')",
+          "pure-ftpd/authority: the carried row disagrees with the committed 24.7 row it cites ('run:runtime:authority:pure-ftpd')",
+          "pure-ftpd/candidate: the carried row disagrees with the committed 24.7 row it cites ('run:runtime:candidate:pure-ftpd')",
+          "redis/authority: the carried row disagrees with the committed 24.7 row it cites ('run:runtime:authority:redis')",
+          "redis/candidate: the carried row disagrees with the committed 24.7 row it cites ('run:runtime:candidate:redis')"
+        ],
+        "findings_present": true,
+        "measurement_state": "not_measured",
+        "observation": "RT-HIGH-VALUE-TIER is fail",
         "property_status": "not_claimed",
-        "state": "implemented",
+        "state": "open",
         "surface": "artifacts/phase24/COURTS.json",
         "unit": "high-value-tier",
         "what": "the high-value deep tier: the families that depend on OpenSSL most deeply are measured past the shallow levels, to the functional level, where they can be"
@@ -124,24 +137,28 @@
       },
       {
         "closure": "the `RT-CANDIDATE-FREEZE` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "complete",
-        "observation": "RT-CANDIDATE-FREEZE is pass",
+        "findings": [
+          "the frozen candidate identity does not reproduce from the committed install: recorded identity_hash 'fe1db3e5e2a84059fa7a670ae2cf013901f8319e617e4e5f4b059d672e698d4e' vs derived 'de120fb66261a6c70888a1b5bda4f3362adc1206eebe1d9daaf6f04c00f042fa'"
+        ],
+        "findings_present": true,
+        "measurement_state": "not_measured",
+        "observation": "RT-CANDIDATE-FREEZE is fail",
         "property_status": "not_claimed",
-        "state": "implemented",
+        "state": "open",
         "surface": "artifacts/phase24/COURTS.json",
         "unit": "candidate-freeze",
         "what": "the candidate identity frozen and content-addressed, and the precommitted holdout run against it exactly once, so the holdout is a real out-of-sample measurement"
       },
       {
         "closure": "the `RT-P1000-RUN` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "complete",
-        "observation": "RT-P1000-RUN is pass",
+        "findings": [
+          "counts.recipe_backed_families 35 disagrees with the derived 307"
+        ],
+        "findings_present": true,
+        "measurement_state": "not_measured",
+        "observation": "RT-P1000-RUN is fail",
         "property_status": "not_claimed",
-        "state": "implemented",
+        "state": "open",
         "surface": "artifacts/phase24/COURTS.json",
         "unit": "p1000-run",
         "what": "the final full P1000 run over the frozen population at the frozen candidate, so every family's drop-in verdict is measured against the same candidate rather than a moving one"
@@ -151,8 +168,8 @@
         "findings": [
           "967/1000 counted families are DROP_IN_NOT_APPLICABLE: the frozen venue admitted a pristine-source recipe and an authority-applicable baseline for only 33 of 1000, so the drop-in rate is measured over 33 families and is not a population-wide rate",
           "the measured set exercised 600/6499 exported symbols, 42/81 public headers and 39/152 API families, so the atlas speaks for a thin slice of the authority's public surface",
-          "3918 counted leftovers are classified and preserved (0 candidate-specific, so 0 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate",
-          "11137 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty"
+          "3094 counted leftovers are classified and preserved (2 candidate-specific, so 2 minimized reproducer(s)); the separate hostility corpus adds 2 preserved candidate failures excluded from every P1000 rate",
+          "9489 unresolved residual(s) remain classified in the closed vocabulary (unknown is 0), so the residual set is accounted for but not empty"
         ],
         "findings_present": true,
         "measurement_state": "complete",
@@ -187,22 +204,24 @@
           "direct and transitive consumers are different evidence: the two are never summed into one rate"
         ],
         "findings_present": true,
-        "measurement_state": "complete",
-        "observation": "DOWNSTREAM-1000-SEAL is pass",
+        "measurement_state": "not_measured",
+        "observation": "DOWNSTREAM-1000-SEAL is fail",
         "property_status": "NOT_CLAIMED",
-        "state": "implemented",
+        "state": "open",
         "surface": "artifacts/phase24/COURTS.json",
         "unit": "downstream-1000-seal",
         "what": "the seal `docs/PHASE-24-DOWNSTREAM-1000-SEAL.md`, which closes the atlas as the stratum's claim and records the four non-claims it never exceeds"
       },
       {
         "closure": "the `RT-BLOCKER-LEVERAGE` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "complete",
-        "observation": "RT-BLOCKER-LEVERAGE is pass",
+        "findings": [
+          "docs/PHASE-24-BIGGEST-MOVERS.md does not reproduce from the committed analysis"
+        ],
+        "findings_present": true,
+        "measurement_state": "not_measured",
+        "observation": "RT-BLOCKER-LEVERAGE is fail",
         "property_status": "not_claimed",
-        "state": "implemented",
+        "state": "open",
         "surface": "artifacts/phase24/COURTS.json",
         "unit": "blocker-leverage",
         "what": "the biggest-mover shared-blocker analysis `forensics/downstream/shared-blockers.json`, which partitions the counted families by their deepest blocker, ranks the classes by their mover potential and per-fix leverage, and renders `docs/PHASE-24-BIGGEST-MOVERS.md`, the `README.md` block and the census's biggest-movers section so 24.17 can act on the biggest movers rather than on the largest class by breadth"
@@ -249,8 +268,8 @@
       "contract_units": 19,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 19,
-      "open_in_this_stratum": 0,
+      "implemented": 14,
+      "open_in_this_stratum": 5,
       "owned": 19,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -291,7 +310,7 @@
     {
       "name": "phase-24-courts",
       "path": "artifacts/phase24/COURTS.json",
-      "sha256": "522ef32307ce4575320ef371ee120ee2dbd27372ab0049a07525eb357be00a96"
+      "sha256": "d2fb5b5a35e7fb98c639647ad2d0c388636392fea472cb8e682a2c6a785b31b3"
     },
     {
       "name": "phase24-guard",

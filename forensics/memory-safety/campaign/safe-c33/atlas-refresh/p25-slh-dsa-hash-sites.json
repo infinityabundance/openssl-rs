@@ -1,0 +1,259 @@
+{
+ "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "p25-slh-dsa-hash-sites",
+ "subphase": "safe-c33 analyzer-corpus: SLH-DSA hash function table (SHAKE and SHA-2 arms)",
+ "date": "2026-10-30",
+ "mechanism": "EVP_PKEY_PROVIDER",
+ "mechanism_registered": true,
+ "mechanism_registry": "forensics/tools/consumer_closure.py MECHANISM_RULES ^src/(?:...|slh_dsa|...)/ -> EVP_PKEY_PROVIDER",
+ "candidate": {
+  "branch": "stage/p25/analyzer-corpus",
+  "head": "6fa558f9c17cc218f52e76f33aaa06eb2a5f47d1",
+  "working_tree_dirty": true,
+  "working_tree_note": "uncommitted doc-only block in src/x509/v3_lib.rs; this receipt's files were not modified",
+  "inventory_path": "court/inventory/closure-ssh-s1b.json",
+  "inventory_source_head": "47beaa1a7caedfdd666ad026e41fafc25a8ce00a",
+  "line_number_basis": "closure obligation coordinates at the inventory source head; verified against the working tree at HEAD"
+ },
+ "authority": {
+  "id": "openssl-3.6.4-production",
+  "source": "forensics/authorities/src/openssl-3.6.4",
+  "header": "crypto/slh_dsa/slh_hash.h SLH_HASH_FUNC",
+  "implementation": "crypto/slh_dsa/slh_hash.c:64-300",
+  "note": "six slots per table: h_msg, prf, prf_msg, f, h, t"
+ },
+ "summary": {
+  "files": 1,
+  "sites": 13,
+  "blocked": 13,
+  "discharged": 0,
+  "eliminated": 0,
+  "statement": "All 12 hash primitives plus the table selector are enumerated with their context/buffer preconditions. Every entry is BLOCKED."
+ },
+ "files": [
+  {
+   "file": "src/slh_dsa/hash.rs",
+   "sites": 13,
+   "disposition": "BLOCKED"
+  }
+ ],
+ "defects": [],
+ "boundaries": [
+  {
+   "id": "P25-SLH-HASH-001",
+   "file": "src/slh_dsa/hash.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 179,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_hmsg_shake",
+   "contract": "`slh_hmsg_shake` (table slot `h_msg`): `hctx` must be a live `*mut SlhDsaHashCtx` with a non-NULL `key`, whose `params` is live and whose `md_ctx`/`md` were initialised by src/slh_dsa/hash_ctx.rs:230-254. The input pointers must be readable for the lengths implied by `params` (n bytes for seeds and ADRS, msg_len for the message) and `out` must be writable for `out_len` (SHA-2 arms consume it) or the params-derived n/m (SHAKE arms ignore `out_len`). Returns 1 on success and 0 on failure. Caller closure: the table pointer is stored only in `(*key).hash_func` (hash_ctx.rs:253) and dispatched at src/slh_dsa/dsa.rs:87-88,302 and src/slh_dsa/wots.rs:118-119; a safe caller cannot reach a slot without a live key, and the key is owned by the hash context.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "input/output extents are derived from `params`, not expressed in the signature"
+   ]
+  },
+  {
+   "id": "P25-SLH-HASH-002",
+   "file": "src/slh_dsa/hash.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 212,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_prf_shake",
+   "contract": "`slh_prf_shake` (table slot `prf`): `hctx` must be a live `*mut SlhDsaHashCtx` with a non-NULL `key`, whose `params` is live and whose `md_ctx`/`md` were initialised by src/slh_dsa/hash_ctx.rs:230-254. The input pointers must be readable for the lengths implied by `params` (n bytes for seeds and ADRS, msg_len for the message) and `out` must be writable for `out_len` (SHA-2 arms consume it) or the params-derived n/m (SHAKE arms ignore `out_len`). Returns 1 on success and 0 on failure. Caller closure: the table pointer is stored only in `(*key).hash_func` (hash_ctx.rs:253) and dispatched at src/slh_dsa/dsa.rs:87-88,302 and src/slh_dsa/wots.rs:118-119; a safe caller cannot reach a slot without a live key, and the key is owned by the hash context.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "input/output extents are derived from `params`, not expressed in the signature"
+   ]
+  },
+  {
+   "id": "P25-SLH-HASH-003",
+   "file": "src/slh_dsa/hash.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 240,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_prf_msg_shake",
+   "contract": "`slh_prf_msg_shake` (table slot `prf_msg`): `hctx` must be a live `*mut SlhDsaHashCtx` with a non-NULL `key`, whose `params` is live and whose `md_ctx`/`md` were initialised by src/slh_dsa/hash_ctx.rs:230-254. The input pointers must be readable for the lengths implied by `params` (n bytes for seeds and ADRS, msg_len for the message) and `out` must be writable for `out_len` (SHA-2 arms consume it) or the params-derived n/m (SHAKE arms ignore `out_len`). Returns 1 on success and 0 on failure. Caller closure: the table pointer is stored only in `(*key).hash_func` (hash_ctx.rs:253) and dispatched at src/slh_dsa/dsa.rs:87-88,302 and src/slh_dsa/wots.rs:118-119; a safe caller cannot reach a slot without a live key, and the key is owned by the hash context.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "input/output extents are derived from `params`, not expressed in the signature"
+   ]
+  },
+  {
+   "id": "P25-SLH-HASH-004",
+   "file": "src/slh_dsa/hash.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 272,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_f_shake",
+   "contract": "`slh_f_shake` (table slot `f`): `hctx` must be a live `*mut SlhDsaHashCtx` with a non-NULL `key`, whose `params` is live and whose `md_ctx`/`md` were initialised by src/slh_dsa/hash_ctx.rs:230-254. The input pointers must be readable for the lengths implied by `params` (n bytes for seeds and ADRS, msg_len for the message) and `out` must be writable for `out_len` (SHA-2 arms consume it) or the params-derived n/m (SHAKE arms ignore `out_len`). Returns 1 on success and 0 on failure. Caller closure: the table pointer is stored only in `(*key).hash_func` (hash_ctx.rs:253) and dispatched at src/slh_dsa/dsa.rs:87-88,302 and src/slh_dsa/wots.rs:118-119; a safe caller cannot reach a slot without a live key, and the key is owned by the hash context.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "input/output extents are derived from `params`, not expressed in the signature"
+   ]
+  },
+  {
+   "id": "P25-SLH-HASH-005",
+   "file": "src/slh_dsa/hash.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 301,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_h_shake",
+   "contract": "`slh_h_shake` (table slot `h`): `hctx` must be a live `*mut SlhDsaHashCtx` with a non-NULL `key`, whose `params` is live and whose `md_ctx`/`md` were initialised by src/slh_dsa/hash_ctx.rs:230-254. The input pointers must be readable for the lengths implied by `params` (n bytes for seeds and ADRS, msg_len for the message) and `out` must be writable for `out_len` (SHA-2 arms consume it) or the params-derived n/m (SHAKE arms ignore `out_len`). Returns 1 on success and 0 on failure. Caller closure: the table pointer is stored only in `(*key).hash_func` (hash_ctx.rs:253) and dispatched at src/slh_dsa/dsa.rs:87-88,302 and src/slh_dsa/wots.rs:118-119; a safe caller cannot reach a slot without a live key, and the key is owned by the hash context.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "input/output extents are derived from `params`, not expressed in the signature"
+   ]
+  },
+  {
+   "id": "P25-SLH-HASH-006",
+   "file": "src/slh_dsa/hash.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 332,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_t_shake",
+   "contract": "`slh_t_shake` (table slot `t`): `hctx` must be a live `*mut SlhDsaHashCtx` with a non-NULL `key`, whose `params` is live and whose `md_ctx`/`md` were initialised by src/slh_dsa/hash_ctx.rs:230-254. The input pointers must be readable for the lengths implied by `params` (n bytes for seeds and ADRS, msg_len for the message) and `out` must be writable for `out_len` (SHA-2 arms consume it) or the params-derived n/m (SHAKE arms ignore `out_len`). Returns 1 on success and 0 on failure. Caller closure: the table pointer is stored only in `(*key).hash_func` (hash_ctx.rs:253) and dispatched at src/slh_dsa/dsa.rs:87-88,302 and src/slh_dsa/wots.rs:118-119; a safe caller cannot reach a slot without a live key, and the key is owned by the hash context.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "input/output extents are derived from `params`, not expressed in the signature"
+   ]
+  },
+  {
+   "id": "P25-SLH-HASH-007",
+   "file": "src/slh_dsa/hash.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 392,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_hmsg_sha2",
+   "contract": "`slh_hmsg_sha2` (table slot `h_msg`): `hctx` must be a live `*mut SlhDsaHashCtx` with a non-NULL `key`, whose `params` is live and whose `md_ctx`/`md` were initialised by src/slh_dsa/hash_ctx.rs:230-254. The input pointers must be readable for the lengths implied by `params` (n bytes for seeds and ADRS, msg_len for the message) and `out` must be writable for `out_len` (SHA-2 arms consume it) or the params-derived n/m (SHAKE arms ignore `out_len`). Returns 1 on success and 0 on failure. Caller closure: the table pointer is stored only in `(*key).hash_func` (hash_ctx.rs:253) and dispatched at src/slh_dsa/dsa.rs:87-88,302 and src/slh_dsa/wots.rs:118-119; a safe caller cannot reach a slot without a live key, and the key is owned by the hash context.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "input/output extents are derived from `params`, not expressed in the signature"
+   ]
+  },
+  {
+   "id": "P25-SLH-HASH-008",
+   "file": "src/slh_dsa/hash.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 442,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_prf_msg_sha2",
+   "contract": "`slh_prf_msg_sha2` (table slot `prf_msg`): `hctx` must be a live `*mut SlhDsaHashCtx` with a non-NULL `key`, whose `params` is live and whose `md_ctx`/`md` were initialised by src/slh_dsa/hash_ctx.rs:230-254. The input pointers must be readable for the lengths implied by `params` (n bytes for seeds and ADRS, msg_len for the message) and `out` must be writable for `out_len` (SHA-2 arms consume it) or the params-derived n/m (SHAKE arms ignore `out_len`). Returns 1 on success and 0 on failure. Caller closure: the table pointer is stored only in `(*key).hash_func` (hash_ctx.rs:253) and dispatched at src/slh_dsa/dsa.rs:87-88,302 and src/slh_dsa/wots.rs:118-119; a safe caller cannot reach a slot without a live key, and the key is owned by the hash context.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "input/output extents are derived from `params`, not expressed in the signature"
+   ]
+  },
+  {
+   "id": "P25-SLH-HASH-009",
+   "file": "src/slh_dsa/hash.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 531,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_prf_sha2",
+   "contract": "`slh_prf_sha2` (table slot `prf`): `hctx` must be a live `*mut SlhDsaHashCtx` with a non-NULL `key`, whose `params` is live and whose `md_ctx`/`md` were initialised by src/slh_dsa/hash_ctx.rs:230-254. The input pointers must be readable for the lengths implied by `params` (n bytes for seeds and ADRS, msg_len for the message) and `out` must be writable for `out_len` (SHA-2 arms consume it) or the params-derived n/m (SHAKE arms ignore `out_len`). Returns 1 on success and 0 on failure. Caller closure: the table pointer is stored only in `(*key).hash_func` (hash_ctx.rs:253) and dispatched at src/slh_dsa/dsa.rs:87-88,302 and src/slh_dsa/wots.rs:118-119; a safe caller cannot reach a slot without a live key, and the key is owned by the hash context.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "input/output extents are derived from `params`, not expressed in the signature"
+   ]
+  },
+  {
+   "id": "P25-SLH-HASH-010",
+   "file": "src/slh_dsa/hash.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 558,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_f_sha2",
+   "contract": "`slh_f_sha2` (table slot `f`): `hctx` must be a live `*mut SlhDsaHashCtx` with a non-NULL `key`, whose `params` is live and whose `md_ctx`/`md` were initialised by src/slh_dsa/hash_ctx.rs:230-254. The input pointers must be readable for the lengths implied by `params` (n bytes for seeds and ADRS, msg_len for the message) and `out` must be writable for `out_len` (SHA-2 arms consume it) or the params-derived n/m (SHAKE arms ignore `out_len`). Returns 1 on success and 0 on failure. Caller closure: the table pointer is stored only in `(*key).hash_func` (hash_ctx.rs:253) and dispatched at src/slh_dsa/dsa.rs:87-88,302 and src/slh_dsa/wots.rs:118-119; a safe caller cannot reach a slot without a live key, and the key is owned by the hash context.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "input/output extents are derived from `params`, not expressed in the signature"
+   ]
+  },
+  {
+   "id": "P25-SLH-HASH-011",
+   "file": "src/slh_dsa/hash.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 586,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_h_sha2",
+   "contract": "`slh_h_sha2` (table slot `h`): `hctx` must be a live `*mut SlhDsaHashCtx` with a non-NULL `key`, whose `params` is live and whose `md_ctx`/`md` were initialised by src/slh_dsa/hash_ctx.rs:230-254. The input pointers must be readable for the lengths implied by `params` (n bytes for seeds and ADRS, msg_len for the message) and `out` must be writable for `out_len` (SHA-2 arms consume it) or the params-derived n/m (SHAKE arms ignore `out_len`). Returns 1 on success and 0 on failure. Caller closure: the table pointer is stored only in `(*key).hash_func` (hash_ctx.rs:253) and dispatched at src/slh_dsa/dsa.rs:87-88,302 and src/slh_dsa/wots.rs:118-119; a safe caller cannot reach a slot without a live key, and the key is owned by the hash context.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "input/output extents are derived from `params`, not expressed in the signature"
+   ]
+  },
+  {
+   "id": "P25-SLH-HASH-012",
+   "file": "src/slh_dsa/hash.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 618,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_t_sha2",
+   "contract": "`slh_t_sha2` (table slot `t`): `hctx` must be a live `*mut SlhDsaHashCtx` with a non-NULL `key`, whose `params` is live and whose `md_ctx`/`md` were initialised by src/slh_dsa/hash_ctx.rs:230-254. The input pointers must be readable for the lengths implied by `params` (n bytes for seeds and ADRS, msg_len for the message) and `out` must be writable for `out_len` (SHA-2 arms consume it) or the params-derived n/m (SHAKE arms ignore `out_len`). Returns 1 on success and 0 on failure. Caller closure: the table pointer is stored only in `(*key).hash_func` (hash_ctx.rs:253) and dispatched at src/slh_dsa/dsa.rs:87-88,302 and src/slh_dsa/wots.rs:118-119; a safe caller cannot reach a slot without a live key, and the key is owned by the hash context.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "input/output extents are derived from `params`, not expressed in the signature"
+   ]
+  },
+  {
+   "id": "P25-SLH-HASH-013",
+   "file": "src/slh_dsa/hash.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "line": 649,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_slh_get_hash_fn",
+   "contract": "`ossl_slh_get_hash_fn(is_shake)`: nonzero selects the SHAKE table, zero the SHA-2 one, matching the authority (`slh_hash.c:283-300`). The body performs no unsafe operation: it returns `&METHODS[idx]` from a `const [SlhHashFunc; 2]`. The `unsafe fn` marker is retained because it returns a raw `*const SlhHashFunc` table pointer. Caller closure: src/slh_dsa/hash_ctx.rs:253 stores it in `(*key).hash_func`; the pointer is `'static` and must not be freed or written.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "the table's raw pointer is a convention; its callers are not type-enforced"
+   ]
+  }
+ ],
+ "related_receipts": [],
+ "non_claims": [
+  "no site is SAFETY_DISCHARGED; every entry is BLOCKED",
+  "a receipt moves an obligation from UNKNOWN to BLOCKED only; documentation alone does not discharge an obligation (AGENTS.md \u00a77)",
+  "no family graduation or SAFE_COMPATIBLE claim is made",
+  "no Rust behaviour change was made by this batch"
+ ]
+}

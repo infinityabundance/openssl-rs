@@ -193,5 +193,24 @@ dependency order and is the pre-commit check `docs/CI.md` names:
 bash docker/openssl-rs-court.sh exec bash forensics/tools/regen_all.sh
 ```
 
+**`render_docs.py` must run after it, and is not part of `regen_all.sh`.** The
+`README.md` and `STATUS-2026-10-20.md` generated blocks are rendered by
+`forensics/tools/render_docs.py`, which is not one of the generators that
+`evidence_determinism.py` drives. That absence is why those blocks drifted while
+every byte-compared artefact was clean. The full pre-commit sequence is therefore:
+
+```
+bash docker/openssl-rs-court.sh exec bash forensics/tools/regen_all.sh
+python3 forensics/tools/render_docs.py --write
+python3 forensics/tools/render_docs.py --check     # must exit 0
+```
+
+`--check` regenerates every marked block in memory and exits non-zero on any
+difference, so it is the gate; `--write` is only the repair. The generated blocks
+are listed in `render_docs.py`'s `BLOCKS` table. A documentation-only change still
+runs `--check`, because editing a *non*-generated sentence can break nothing there,
+but editing an input the blocks read must be followed by `--write` and a clean
+`--check`.
+
 Produced binaries are inspected with dynamic-loader tooling. A build that
 accidentally links a system `libcrypto` is a **hard failure**.

@@ -1,0 +1,267 @@
+{
+ "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "p25-engine-callback-sites",
+ "subphase": "safe-c33 analyzer-corpus: ENGINE cleanup callbacks (engine-callback-discharge.json converted to an admitted site receipt)",
+ "date": "2026-10-30",
+ "mechanism": "C_ABI_CONTRACT",
+ "mechanism_registered": true,
+ "mechanism_registry": "forensics/tools/consumer_closure.py MECHANISM_RULES: src/engine/* classified per-site by state.json obligation_mechanisms -> C_ABI_CONTRACT (authority prefix crypto/engine)",
+ "candidate": {
+  "branch": "stage/p25/analyzer-corpus",
+  "head": "6fa558f9c17cc218f52e76f33aaa06eb2a5f47d1",
+  "working_tree_dirty": true,
+  "working_tree_note": "uncommitted doc-only block in src/x509/v3_lib.rs; none of this receipt's files were modified",
+  "inventory_path": "court/inventory/closure-ssh-s1b.json",
+  "inventory_source_head": "47beaa1a7caedfdd666ad026e41fafc25a8ce00a",
+  "line_number_basis": "closure obligation coordinates at the inventory source head; verified against the working tree at HEAD"
+ },
+ "authority": {
+  "id": "openssl-3.6.4-production",
+  "source": "forensics/authorities/src/openssl-3.6.4",
+  "cleanup_stack": "crypto/engine/eng_lib.c:128-166",
+  "list_cleanup": "crypto/engine/eng_list.c:42-51",
+  "table_cleanup": "crypto/engine/eng_table.c:83-134",
+  "note": "the callbacks are stored as ENGINE_CLEANUP_CB; the lock/ownership discipline is the authority's engine_table_cleanup and engine_list_cleanup behaviour"
+ },
+ "summary": {
+  "files": 10,
+  "boundaries": 10,
+  "blocked": 10,
+  "discharged": 0,
+  "eliminated": 0,
+  "statement": "The nine engine_table unregister callbacks are enumerated per site with a zero-argument contract; eng_list.rs:90 is enumerated with an explicit, unresolved lifetime concern. Every entry is BLOCKED; this receipt does not inherit the superseded DISCHARGED classification in engine-callback-discharge.json."
+ },
+ "files": [
+  {
+   "file": "src/engine/eng_list.rs",
+   "sites": 1,
+   "disposition": "BLOCKED"
+  },
+  {
+   "file": "src/engine/tb_asnmth.rs",
+   "sites": 1,
+   "disposition": "BLOCKED"
+  },
+  {
+   "file": "src/engine/tb_cipher.rs",
+   "sites": 1,
+   "disposition": "BLOCKED"
+  },
+  {
+   "file": "src/engine/tb_dh.rs",
+   "sites": 1,
+   "disposition": "BLOCKED"
+  },
+  {
+   "file": "src/engine/tb_digest.rs",
+   "sites": 1,
+   "disposition": "BLOCKED"
+  },
+  {
+   "file": "src/engine/tb_dsa.rs",
+   "sites": 1,
+   "disposition": "BLOCKED"
+  },
+  {
+   "file": "src/engine/tb_eckey.rs",
+   "sites": 1,
+   "disposition": "BLOCKED"
+  },
+  {
+   "file": "src/engine/tb_pkmeth.rs",
+   "sites": 1,
+   "disposition": "BLOCKED"
+  },
+  {
+   "file": "src/engine/tb_rand.rs",
+   "sites": 1,
+   "disposition": "BLOCKED"
+  },
+  {
+   "file": "src/engine/tb_rsa.rs",
+   "sites": 1,
+   "disposition": "BLOCKED"
+  }
+ ],
+ "defects": [],
+ "boundaries": [
+  {
+   "id": "P25-ENGINE-CB-000",
+   "file": "src/engine/eng_list.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "BLOCKED",
+   "line": 90,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_list_cleanup",
+   "contract": "`static void engine_list_cleanup(void)` \u2014 zero-argument cleanup callback registered with `engine_cleanup_add_last(Some(engine_list_cleanup))` at src/engine/eng_list.rs:161, only when `engine_list_add` first makes the list non-empty. Body loops on the module-static `ENGINE_LIST_HEAD: AtomicPtr<Engine>` (`load(Acquire)`) and calls `ENGINE_remove(head)` until the list empties \u2014 the same call the authority makes (`crypto/engine/eng_list.c:42-51`). No caller arguments; the sole path is OPENSSL_cleanup -> engine_cleanup_int -> cb(), and engine_cleanup_int is withheld (src/engine/eng_lib.rs:696-700), so it is unreachable at this identity. LIFETIME/CONCURRENCY CONCERN (why this is BLOCKED, not discharged): the `load` and the following `ENGINE_remove(head)` are separate operations. `ENGINE_remove` acquires the global engine write lock internally (src/engine/eng_list.rs:536-562), but the Acquire load is outside that critical section, so a concurrent `ENGINE_remove`/`engine_free_util` that frees `head` between the load and the lock would leave `ENGINE_remove` with a dangling `*mut Engine`. Today this is prevented only by the process-exit single-threaded ordering assumption, which is not proven here. Node lifetime is also not tied to the callback: each Engine is released by `engine_free_util` inside `ENGINE_remove`.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "lifetime/ordering of the unlocked Acquire load is unproven",
+    "callback marker retained"
+   ]
+  },
+  {
+   "id": "P25-ENGINE-CB-001",
+   "file": "src/engine/tb_asnmth.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "BLOCKED",
+   "line": 72,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_pkey_asn1_meths",
+   "contract": "Zero-argument cleanup callback `engine_unregister_all_pkey_asn1_meths` stored as `EngineCleanupCb` (`unsafe extern \"C\" fn()`, src/engine/eng_lib.rs:542) and registered on the engine cleanup stack by `engine_table_register(Some(engine_unregister_all_pkey_asn1_meths))` at src/engine/tb_asnmth.rs:99. Body: `unsafe { engine_table_cleanup(pkey_asn1_meth_table_slot()) }`. CONTRACT: the callback takes no arguments and reads only this module's own `&'static EngineTableSlot` (`PKEY_ASN1_METH_TABLE`) via `pkey_asn1_meth_table_slot()`, so there is NO caller-supplied pointer, extent, alignment or initialisation precondition to establish. Engine write-lock ownership, slot exclusivity and single release of the pile are internal invariants of `engine_table_cleanup` and of the registration path (AGENTS.md \u00a71, \u00a79), not obligations the cleanup-stack caller can violate. Sole invocation path: ENGINE_register_* -> engine_table_register -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (src/engine/eng_lib.rs:632-652, 684-694); engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this source identity.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "callback marker (`unsafe extern \"C\" fn`) retained; typed conversion deferred"
+   ]
+  },
+  {
+   "id": "P25-ENGINE-CB-002",
+   "file": "src/engine/tb_cipher.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "BLOCKED",
+   "line": 55,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_ciphers",
+   "contract": "Zero-argument cleanup callback `engine_unregister_all_ciphers` stored as `EngineCleanupCb` (`unsafe extern \"C\" fn()`, src/engine/eng_lib.rs:542) and registered on the engine cleanup stack by `engine_table_register(Some(engine_unregister_all_ciphers))` at src/engine/tb_cipher.rs:81. Body: `unsafe { engine_table_cleanup(cipher_table_slot()) }`. CONTRACT: the callback takes no arguments and reads only this module's own `&'static EngineTableSlot` (`CIPHER_TABLE`) via `cipher_table_slot()`, so there is NO caller-supplied pointer, extent, alignment or initialisation precondition to establish. Engine write-lock ownership, slot exclusivity and single release of the pile are internal invariants of `engine_table_cleanup` and of the registration path (AGENTS.md \u00a71, \u00a79), not obligations the cleanup-stack caller can violate. Sole invocation path: ENGINE_register_* -> engine_table_register -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (src/engine/eng_lib.rs:632-652, 684-694); engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this source identity.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "callback marker (`unsafe extern \"C\" fn`) retained; typed conversion deferred"
+   ]
+  },
+  {
+   "id": "P25-ENGINE-CB-003",
+   "file": "src/engine/tb_dh.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "BLOCKED",
+   "line": 51,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_dh",
+   "contract": "Zero-argument cleanup callback `engine_unregister_all_dh` stored as `EngineCleanupCb` (`unsafe extern \"C\" fn()`, src/engine/eng_lib.rs:542) and registered on the engine cleanup stack by `engine_table_register(Some(engine_unregister_all_dh))` at src/engine/tb_dh.rs:70. Body: `unsafe { engine_table_cleanup(dh_table_slot()) }`. CONTRACT: the callback takes no arguments and reads only this module's own `&'static EngineTableSlot` (`DH_TABLE`) via `dh_table_slot()`, so there is NO caller-supplied pointer, extent, alignment or initialisation precondition to establish. Engine write-lock ownership, slot exclusivity and single release of the pile are internal invariants of `engine_table_cleanup` and of the registration path (AGENTS.md \u00a71, \u00a79), not obligations the cleanup-stack caller can violate. Sole invocation path: ENGINE_register_* -> engine_table_register -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (src/engine/eng_lib.rs:632-652, 684-694); engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this source identity.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "callback marker (`unsafe extern \"C\" fn`) retained; typed conversion deferred"
+   ]
+  },
+  {
+   "id": "P25-ENGINE-CB-004",
+   "file": "src/engine/tb_digest.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "BLOCKED",
+   "line": 66,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_digests",
+   "contract": "Zero-argument cleanup callback `engine_unregister_all_digests` stored as `EngineCleanupCb` (`unsafe extern \"C\" fn()`, src/engine/eng_lib.rs:542) and registered on the engine cleanup stack by `engine_table_register(Some(engine_unregister_all_digests))` at src/engine/tb_digest.rs:93. Body: `unsafe { engine_table_cleanup(digest_table_slot()) }`. CONTRACT: the callback takes no arguments and reads only this module's own `&'static EngineTableSlot` (`DIGEST_TABLE`) via `digest_table_slot()`, so there is NO caller-supplied pointer, extent, alignment or initialisation precondition to establish. Engine write-lock ownership, slot exclusivity and single release of the pile are internal invariants of `engine_table_cleanup` and of the registration path (AGENTS.md \u00a71, \u00a79), not obligations the cleanup-stack caller can violate. Sole invocation path: ENGINE_register_* -> engine_table_register -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (src/engine/eng_lib.rs:632-652, 684-694); engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this source identity.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "callback marker (`unsafe extern \"C\" fn`) retained; typed conversion deferred"
+   ]
+  },
+  {
+   "id": "P25-ENGINE-CB-005",
+   "file": "src/engine/tb_dsa.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "BLOCKED",
+   "line": 51,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_dsa",
+   "contract": "Zero-argument cleanup callback `engine_unregister_all_dsa` stored as `EngineCleanupCb` (`unsafe extern \"C\" fn()`, src/engine/eng_lib.rs:542) and registered on the engine cleanup stack by `engine_table_register(Some(engine_unregister_all_dsa))` at src/engine/tb_dsa.rs:70. Body: `unsafe { engine_table_cleanup(dsa_table_slot()) }`. CONTRACT: the callback takes no arguments and reads only this module's own `&'static EngineTableSlot` (`DSA_TABLE`) via `dsa_table_slot()`, so there is NO caller-supplied pointer, extent, alignment or initialisation precondition to establish. Engine write-lock ownership, slot exclusivity and single release of the pile are internal invariants of `engine_table_cleanup` and of the registration path (AGENTS.md \u00a71, \u00a79), not obligations the cleanup-stack caller can violate. Sole invocation path: ENGINE_register_* -> engine_table_register -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (src/engine/eng_lib.rs:632-652, 684-694); engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this source identity.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "callback marker (`unsafe extern \"C\" fn`) retained; typed conversion deferred"
+   ]
+  },
+  {
+   "id": "P25-ENGINE-CB-006",
+   "file": "src/engine/tb_eckey.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "BLOCKED",
+   "line": 51,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_ec",
+   "contract": "Zero-argument cleanup callback `engine_unregister_all_ec` stored as `EngineCleanupCb` (`unsafe extern \"C\" fn()`, src/engine/eng_lib.rs:542) and registered on the engine cleanup stack by `engine_table_register(Some(engine_unregister_all_ec))` at src/engine/tb_eckey.rs:70. Body: `unsafe { engine_table_cleanup(ec_table_slot()) }`. CONTRACT: the callback takes no arguments and reads only this module's own `&'static EngineTableSlot` (`EC_TABLE`) via `ec_table_slot()`, so there is NO caller-supplied pointer, extent, alignment or initialisation precondition to establish. Engine write-lock ownership, slot exclusivity and single release of the pile are internal invariants of `engine_table_cleanup` and of the registration path (AGENTS.md \u00a71, \u00a79), not obligations the cleanup-stack caller can violate. Sole invocation path: ENGINE_register_* -> engine_table_register -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (src/engine/eng_lib.rs:632-652, 684-694); engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this source identity.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "callback marker (`unsafe extern \"C\" fn`) retained; typed conversion deferred"
+   ]
+  },
+  {
+   "id": "P25-ENGINE-CB-007",
+   "file": "src/engine/tb_pkmeth.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "BLOCKED",
+   "line": 53,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_pkey_meths",
+   "contract": "Zero-argument cleanup callback `engine_unregister_all_pkey_meths` stored as `EngineCleanupCb` (`unsafe extern \"C\" fn()`, src/engine/eng_lib.rs:542) and registered on the engine cleanup stack by `engine_table_register(Some(engine_unregister_all_pkey_meths))` at src/engine/tb_pkmeth.rs:79. Body: `unsafe { engine_table_cleanup(pkey_meth_table_slot()) }`. CONTRACT: the callback takes no arguments and reads only this module's own `&'static EngineTableSlot` (`PKEY_METH_TABLE`) via `pkey_meth_table_slot()`, so there is NO caller-supplied pointer, extent, alignment or initialisation precondition to establish. Engine write-lock ownership, slot exclusivity and single release of the pile are internal invariants of `engine_table_cleanup` and of the registration path (AGENTS.md \u00a71, \u00a79), not obligations the cleanup-stack caller can violate. Sole invocation path: ENGINE_register_* -> engine_table_register -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (src/engine/eng_lib.rs:632-652, 684-694); engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this source identity.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "callback marker (`unsafe extern \"C\" fn`) retained; typed conversion deferred"
+   ]
+  },
+  {
+   "id": "P25-ENGINE-CB-008",
+   "file": "src/engine/tb_rand.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "BLOCKED",
+   "line": 51,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_rand",
+   "contract": "Zero-argument cleanup callback `engine_unregister_all_rand` stored as `EngineCleanupCb` (`unsafe extern \"C\" fn()`, src/engine/eng_lib.rs:542) and registered on the engine cleanup stack by `engine_table_register(Some(engine_unregister_all_rand))` at src/engine/tb_rand.rs:70. Body: `unsafe { engine_table_cleanup(rand_table_slot()) }`. CONTRACT: the callback takes no arguments and reads only this module's own `&'static EngineTableSlot` (`RAND_TABLE`) via `rand_table_slot()`, so there is NO caller-supplied pointer, extent, alignment or initialisation precondition to establish. Engine write-lock ownership, slot exclusivity and single release of the pile are internal invariants of `engine_table_cleanup` and of the registration path (AGENTS.md \u00a71, \u00a79), not obligations the cleanup-stack caller can violate. Sole invocation path: ENGINE_register_* -> engine_table_register -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (src/engine/eng_lib.rs:632-652, 684-694); engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this source identity.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "callback marker (`unsafe extern \"C\" fn`) retained; typed conversion deferred"
+   ]
+  },
+  {
+   "id": "P25-ENGINE-CB-009",
+   "file": "src/engine/tb_rsa.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "BLOCKED",
+   "line": 52,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_rsa",
+   "contract": "Zero-argument cleanup callback `engine_unregister_all_rsa` stored as `EngineCleanupCb` (`unsafe extern \"C\" fn()`, src/engine/eng_lib.rs:542) and registered on the engine cleanup stack by `engine_table_register(Some(engine_unregister_all_rsa))` at src/engine/tb_rsa.rs:71. Body: `unsafe { engine_table_cleanup(rsa_table_slot()) }`. CONTRACT: the callback takes no arguments and reads only this module's own `&'static EngineTableSlot` (`RSA_TABLE`) via `rsa_table_slot()`, so there is NO caller-supplied pointer, extent, alignment or initialisation precondition to establish. Engine write-lock ownership, slot exclusivity and single release of the pile are internal invariants of `engine_table_cleanup` and of the registration path (AGENTS.md \u00a71, \u00a79), not obligations the cleanup-stack caller can violate. Sole invocation path: ENGINE_register_* -> engine_table_register -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (src/engine/eng_lib.rs:632-652, 684-694); engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this source identity.",
+   "defects": [],
+   "residuals": [
+    "no independent BOUNDARY review for this site in this batch",
+    "no Miri/sanitizer run for this file in this batch",
+    "callback marker (`unsafe extern \"C\" fn`) retained; typed conversion deferred"
+   ]
+  }
+ ],
+ "related_receipts": [
+  {
+   "receipt": "engine-callback-discharge.json",
+   "relation": "prior adjudication of the nine tb_* callbacks; it is not an admitted `site-enumerating-boundary-receipt`, which is why the files still refused MISSING_BOUNDARY_RECEIPT. This receipt converts/attaches it, and downgrades the dispositions to BLOCKED (no discharge is inherited)."
+  },
+  {
+   "receipt": "boundary-sweep-B16.json",
+   "relation": "existing admitted receipt that already owns src/engine/tb_asnmth.rs and yields its BLOCKED status"
+  }
+ ],
+ "non_claims": [
+  "no site is SAFETY_DISCHARGED; every entry is BLOCKED",
+  "a receipt moves an obligation from UNKNOWN to BLOCKED only; documentation alone does not discharge an obligation (AGENTS.md \u00a77)",
+  "no family graduation or SAFE_COMPATIBLE claim is made",
+  "no Rust behaviour change was made by this batch"
+ ]
+}

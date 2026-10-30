@@ -1,5 +1,18 @@
 # Phase 25 — the memory-safety stratum, as subphases
 
+> **Status as of 2026-10-29 — planes stale relative to 0.0.43.** The current
+> candidate is `openssl-rs 0.0.43`, which is **not published**; the published
+> release is `0.0.42` (2026-10-27). The Phase-25 evidence planes and the
+> generated seal (`docs/PHASE-25-MEMORY-SAFETY-SEAL.md`) were measured at the
+> frozen `0.0.27` candidate and were **not** re-measured at 0.0.43. They must
+> not be read as a current-measurement claim. The blockers are: the Phase-24
+> candidate freeze and P1000 counts are pinned to `0.0.27`; the Phase-18
+> unsafe-bounds ratchet is +3,017 real sites and needs a reviewable re-base;
+> the census carries 47k per-file hashes from the stale candidate; four Miri
+> findings remain unresolved; and 892 prerequisite findings are correctly gated
+> until those strata seal. Re-running the planes is a separate, deliberately
+> scheduled measurement, not a documentation edit.
+
 ## 0. What this stratum is, and what it is not
 
 Phase 25 is the stratum `docs/RELEASE_GATES.md` §1 names "Memory-safety atlas, unsafe

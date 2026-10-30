@@ -14,7 +14,7 @@ LibreSSL, or `ring`.
 | OpenSSL authority | `openssl-3.6.4-production` (3.6.4) |
 | Platform | `linux-x86_64` |
 | Build profile | `linux-x86_64-default-shared-legacy-notests` |
-| Implementation | one first-party Rust crate, zero dependencies |
+| Implementation | one first-party Rust crate; zero runtime/build dependencies |
 
 > **Status:** the implementation state is generated, not typed here. `IMPLEMENTED`
 > (a symbol the crate's compiled output defines) and `SCAFFOLDED` (a shell-only
@@ -31,21 +31,21 @@ at. Every row names its own machine-readable evidence; none of them is a claim
 of completeness.
 
 <!-- BEGIN GENERATED: readme-achievements -->
-Source identity: working-tree crate version `0.0.42` (**not published at this candidate identity**); `libcrypto.so.3` sha256 `26ba36ffff2882845fa51d8f29d8239a51c15422629a31c216af8abafa163be0`; `libssl.so.3` sha256 `1e7a9e8f93495dbacdf5dad2f65e355f89248d6ab155704112be444c1abb0a9b`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
+Source identity: candidate commit `0590d371d2a9b30a19f9d70dc3fee9e33f3a0d90`; build source-tree digest `22a58468d5db58da90dd99044682a5303dbef0938ac2789be0eb5406cfb7d58d`; working-tree crate version `0.0.43` (**not published at this candidate identity**); `libcrypto.so.3` sha256 `23ec6944fb9d8f8b4037263ad8faff4170d561442d81a99a690c6dc083550409`; `libssl.so.3` sha256 `493795c2eae8496ce808006e86efff133f0ebb6c6a341536a6f5a20c9b8710a9`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
 
 | Dimension | Result | Evidence |
 |---|---|---|
 | **Downstream drop-in, Safe-33 cohort** | **33 / 33 families at `L7-functional`**, candidate and authority; **carried forward** — 33/33 cohort rows are in `evidence_reuse.reused_families` and `candidate_identity_match=false` | `forensics/downstream/runtime-functional-atlas.json` (`body.runs`); `CAMPAIGN-STATUS.json` (`consumers`) |
 | **Downstream drop-in, 1000-family corpus** | **207 / 1000 at `L7-functional`**; candidate 207 / authority 209 `L7-functional`; measured asymmetry: authority-only `ewftools`, `xilinx-bootgen`; **307 recipes, 253 built, 245 linked**; 223 loaded, 22 `L4-linked`, 7 failed, 755 not attempted (693 with no recipe); 307 of 307 recipe-backed rows carried forward | same atlas, `body.counts.by_subject`, `body.evidence_reuse`; `forensics/downstream/build-link-atlas.json` |
-| **Library test suite** | **2,213 passing, 0 failing, 52 ignored** at `5163f564f` — a **floor**, not the current count: later commits add tests without a further full run | `atlas-refresh/test-baseline.json` (`full-library-run`) |
+| **Library test suite** | **2,230 passing, 0 failing, 52 ignored** | `atlas-refresh/test-baseline.json` (`full-library-run`) |
 | **Memory safety: mechanisms** | **6 mechanisms discharged at mechanism scope** — RC-1 refcounting, OB-1 OwnedBuf release state, OB-2 OwnedStr string ownership, OB-3 OwnedCtx/RawCtx context ownership, ERR-1 ERR error-queue ownership and allocator file-coordinate seam, GEN-1 GENERAL_NAME selected-arm representation | `CAMPAIGN-STATUS.json` (`mechanism_discharges`) |
 | **Memory safety: boundaries** | 5 scoped boundary discharges (B23, B25, B27, B28, B29); **B39–B40 independently checked**; B41–B43 batch-checked; B44 author-evidenced | `atlas-refresh/boundary-sweep-*.json` |
 | **Memory safety: files converted / partial** | **877 files**: 92 `ZERO_UNSAFE`, 18 `BOUNDARY_COVERED`, 761 `PARTIAL` (audited 761/761), 6 `TEST_ONLY`, **0 unaccounted** | `atlas-refresh/unsafe-census.json`, `atlas-refresh/post-census-delta.json` |
 | **`SAFE_COMPATIBLE` consumers** | **0 / 33** — no family has a proven dependency closure | `CAMPAIGN-STATUS.json` (`consumers`) |
 | **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility for the S16–S61 cluster | `CAMPAIGN-STATUS.json` (`gates.boundary_gate`, `gates.seal_gate`) |
 | **Allocator / ABI invariants** | **preserved** — recorded invariant planes: `abi_courts`, `allocator_seam`, `exported_symbols`, `repr_c_layouts`, `unsafe_lints` | `CAMPAIGN-STATUS.json` (`structural_invariants`) |
-| **Known gaps** | `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN AT THE MEASURED IDENTITY; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` CLOSED IN S61 (carried forward); `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 76 CARRIED S59-S60 BLOCKERS + 25 NEW VENUE/BUILD BLOCKERS; `DOWNSTREAM-BELOW-L7` 101 FAMILIES; `DOWNSTREAM-S42-SYMMETRIC-LOSSES` CLOSED IN S44; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 693 UNMEASURED; `DOWNSTREAM-MEDUSA` HARNESS; `DOWNSTREAM-S53-YIELD` 2 NEW L7 / 35 ADMITTED; `DOWNSTREAM-S60-YIELD` 7 NEW L7 / 30 ADMITTED; `S56-RESIDUALS` RETAINED; `S57-RACE` DATA-RACE FREEDOM NOT ESTABLISHED; `S58-SECURITY-CALLBACK` PERMISSIVE ARMS RETAINED; `S61-RESIDUALS` OTHER CALLBACK ARMS REMAIN PERMISSIVE | `CAMPAIGN-STATUS.json` (`known_gaps`) |
-| **Release** | **Published: 0.0.42** on crates.io (2026-10-27), checksum `b9a542cf…`, artefacts `libcrypto.so.3` `247803f1…` / `libssl.so.3` `3ca46e32…`. **Working tree: 0.0.42 — not the published artefact.** This evidence is bound to the 0.0.42 tree, not to the published 0.0.42 crate. 0.0.41 remains the previous release. | `atlas-refresh/publish-0.0.42.json`; `Cargo.toml` |
+| **Known gaps** | `CLOSURE-NON-MONOTONE` REPAIRED; `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN AT THE MEASURED IDENTITY; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` CLOSED IN S61 (carried forward); `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 76 CARRIED S59-S60 BLOCKERS + 25 NEW VENUE/BUILD BLOCKERS; `DOWNSTREAM-BELOW-L7` 100 FAMILIES; `DOWNSTREAM-S42-SYMMETRIC-LOSSES` CLOSED IN S44; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 693 UNMEASURED; `DOWNSTREAM-MEDUSA` HARNESS; `DOWNSTREAM-S53-YIELD` 2 NEW L7 / 35 ADMITTED; `DOWNSTREAM-S60-YIELD` 7 NEW L7 / 30 ADMITTED; `S56-RESIDUALS` RETAINED; `S57-RACE` DATA-RACE FREEDOM NOT ESTABLISHED; `S58-SECURITY-CALLBACK` PERMISSIVE ARMS RETAINED; `S61-RESIDUALS` OTHER CALLBACK ARMS REMAIN PERMISSIVE; `ELEMENT-7-PRECISION` OPEN — FAIL; `CONTRACTED-OBLIGATIONS-BLOCKED` 222 BLOCKED; `RELEASE-EVIDENCE-DEBT` OPEN | `CAMPAIGN-STATUS.json` (`known_gaps`) |
+| **Release** | **Published: 0.0.42** on crates.io (2026-10-27), checksum `b9a542cf…`, install-tree artefacts `libcrypto.so.3` `247803f1…` / `libssl.so.3` `3ca46e32…`. The published crate ships **source and documentation only, with no binaries**; those install-tree hashes describe the repository build recorded in the receipt, not the crate payload. **Working tree: 0.0.43 — the candidate, not yet published.** This evidence is bound to the 0.0.43 tree, not to the published 0.0.42 crate. 0.0.41 remains the previous release. | `atlas-refresh/publish-0.0.42.json`; `Cargo.toml` |
 
 Downstream evidence reuse: **307 of 307 recipe-backed families carried forward** (`committed-rows-carried-forward`); `candidate_identity_match` = `false`. A carried-forward row is compatibility evidence from the build recorded on that row, not a fresh measurement at the identity above. The Safe-33 cohort has 33/33 of its families in that set.
 <!-- END GENERATED: readme-achievements -->
@@ -101,7 +101,7 @@ derived from the receipts:
 | **Audited but not converted** | **761 `PARTIAL` files**; 761/761 audited, 0 remaining. Audit completion is not discharge. |
 | **Not discharged** | Receipt-backed mechanisms still open: `BIO`, `RUNTIME_ALLOC_OWNERSHIP`; `SAFE_COMPATIBLE` remains 0/33. |
 | **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — the S16–S61 cluster has no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility. |
-| **Known gaps** | `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN AT THE MEASURED IDENTITY; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` CLOSED IN S61 (carried forward); `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 76 CARRIED S59-S60 BLOCKERS + 25 NEW VENUE/BUILD BLOCKERS; `DOWNSTREAM-BELOW-L7` 101 FAMILIES; `DOWNSTREAM-S42-SYMMETRIC-LOSSES` CLOSED IN S44; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 693 UNMEASURED; `DOWNSTREAM-MEDUSA` HARNESS; `DOWNSTREAM-S53-YIELD` 2 NEW L7 / 35 ADMITTED; `DOWNSTREAM-S60-YIELD` 7 NEW L7 / 30 ADMITTED; `S56-RESIDUALS` RETAINED; `S57-RACE` DATA-RACE FREEDOM NOT ESTABLISHED; `S58-SECURITY-CALLBACK` PERMISSIVE ARMS RETAINED; `S61-RESIDUALS` OTHER CALLBACK ARMS REMAIN PERMISSIVE |
+| **Known gaps** | `CLOSURE-NON-MONOTONE` REPAIRED; `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN AT THE MEASURED IDENTITY; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` CLOSED IN S61 (carried forward); `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 76 CARRIED S59-S60 BLOCKERS + 25 NEW VENUE/BUILD BLOCKERS; `DOWNSTREAM-BELOW-L7` 100 FAMILIES; `DOWNSTREAM-S42-SYMMETRIC-LOSSES` CLOSED IN S44; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 693 UNMEASURED; `DOWNSTREAM-MEDUSA` HARNESS; `DOWNSTREAM-S53-YIELD` 2 NEW L7 / 35 ADMITTED; `DOWNSTREAM-S60-YIELD` 7 NEW L7 / 30 ADMITTED; `S56-RESIDUALS` RETAINED; `S57-RACE` DATA-RACE FREEDOM NOT ESTABLISHED; `S58-SECURITY-CALLBACK` PERMISSIVE ARMS RETAINED; `S61-RESIDUALS` OTHER CALLBACK ARMS REMAIN PERMISSIVE; `ELEMENT-7-PRECISION` OPEN — FAIL; `CONTRACTED-OBLIGATIONS-BLOCKED` 222 BLOCKED; `RELEASE-EVIDENCE-DEBT` OPEN |
 | **`SAFE_COMPATIBLE` consumers** | **0 / 33** — no consumer family has a proven dependency closure. |
 <!-- END GENERATED: readme-memory-safety -->
 
@@ -115,34 +115,93 @@ and verification, then ML-DSA, then the remaining provider and algorithm cores.
 [`SEAL-CENSUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/SEAL-CENSUS.md) ·
 [`PARITY_MODEL.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/PARITY_MODEL.md)
 
-## Where the memory-safety campaign actually stands (2026-10-27)
+## Where the memory-safety campaign actually stands (2026-10-29)
 
 Receipts only. This is not a graduation and does not claim `SAFE_COMPATIBLE`,
 constant-time behaviour, or that the BOUNDARY/SEAL gates passed.
 
-- **The census correction** (`atlas-refresh/adversarial-review-v1f.json`, `v1g-candidate-freeze.json`): the earlier "60 production blockers / zero reachable obligations" was a measurement artifact. The old predicate accepted any `SAFETY` token within a 14-line lookback, including the previous function's comment; at least `src/engine/eng_fat.rs:197` and `src/apps/ciphers.rs:93` were falsely contracted. The structural attachment rule (a neighbouring item's `SAFETY` never transfers) recomputes **325 production blockers in 163 uncontracted files at v1g** (v1f: 60 blockers / 97 files; the v1g freeze table records 162 files, the closure receipt 163). At v1j the count is **320** (`v1j-candidate-freeze.json`).
-- **The legacy SHA-256 `md_data` defect** (`atlas-refresh/openssh-v1j-sites.json`, `freeze-S-double-prime.json`): five initialisers (SHA-256/384/512/512-224/512-256) wrote through a NULL `md_data` reachable from a fresh C-valid `EVP_MD_CTX_new()` via the exported `EVP_MD_meth_get_init`. They now call `init_md_data`, refuse with 0, and write nothing; 18/18 fault shapes refuse and a guard-removal canary reproduces SIGSEGV. Published 0.0.41 was cut from pre-fix source; 0.0.42 carries the fix. The 13 update/final/ctrl callbacks remain BLOCKED.
-- **The S'' freeze** (`atlas-refresh/freeze-S-double-prime.json`): source `add0d599` joins artefacts `libcrypto e87a85bd` / `libssl 82051ef8` / `legacy cc2044da` / `openssl 67718264` and consumers `ssh f2ca91f4` / `sshd ed0c7aa8`; 11/11 ABI courts; export sets 5906/608 with 0 added, 0 removed. 0.0.42 is prepared from this source and its rebuild is recorded in `atlas-refresh/publish-0.0.42.json`.
-- **The openssh closure** (`atlas-refresh/openssh-closure-v1j.json`): **146** reachable production obligations per binary: **62 DISCHARGED / 55 BLOCKED / 29 UNKNOWN**. Both verdicts are `REFUSED` on `STALE_HASH`, `MISSING_BOUNDARY_RECEIPT`, `UNKNOWN_OBLIGATION` and `UNKNOWN_MECHANISM`.
-- **Element 7 is NOT ESTABLISHED** (`atlas-refresh/element7-regression-v1j.json`): v1h's PASS was an artefact of which symbol the linker kept (`free_decoder` was emitted in v1h and inlined away in v1j), so the resolver discarded the whole target spec. All **9** sites are `RESOLVABLE_IN_PRINCIPLE`, **0** are genuinely unbounded, but the recorded verdict remains **FAIL**.
-- **Reachability is non-monotone** (`atlas-refresh/element7-regression-v1j.json`): the v1h -> v1j one-file rebuild removed 13 files and added 6; **19 of 19 changes are unexplained by the source diff**. The 319/309/169 and 312/302/146 counts are not a like-for-like delta.
-- **`SAFE_COMPATIBLE` is 0/33 and further away than the earlier deltas implied**: the closure refuses, two of the three trend numbers move under a one-file rebuild with no source call-graph change, and the five openssh adjudications remain REJECTED on identity binding (`atlas-refresh/graduation-openssh.json`, `AGENTS.md` §22).
+- **The consumer closure is ACCEPTED, with zero refusals**
+  (`evidence/closure-ssh-v1r.json`, `evidence/inventory-sshd-v1r.json`;
+  candidate `0590d371d`, committed install `libcrypto 23ec6944…` /
+  `libssl 493795c2…`, analysis identity `cede10d6…`). Both `ssh` and `sshd`
+  resolve against the repaired bound: **624 / 623 reachable files**, 8,686 /
+  8,652 reachable functions, **312 reachable production obligations = 90
+  DISCHARGED / 222 BLOCKED / 0 UNKNOWN**, 52,022 edge records with 0 defects
+  and 0 oracle violations, closure rounds 2 and converged, one admission pass
+  with **27 refuted exclusions admitted**, and **5 symbolic values resolved,
+  0 blocking**. Acceptance means no refusal condition fired; it is not a
+  graduation and carries no consumer claim.
+- **Element 7 is FAIL** (`element_7` in the same receipts): **141 reachable
+  unresolved** indirect sites, **81 target-bounded** and 60 contract-bounded
+  (46 `ABI_CONTRACT_EXPORT_CALLBACK` + 14 `ABI_CONTRACT_PROVIDER`), 0
+  unclassified. `SAFE_COMPATIBLE` therefore stays **0/33**: 222 obligations are
+  contracted but BLOCKED, and no family inherits safety from an accepted
+  closure alone (`AGENTS.md` §7).
+- **The analyzer repair is implemented and measured**
+  (`atlas-refresh/closure-fixpoint-repair.json`): the residual admission is now
+  a class-independent superset of every class the resolver may admit (monotone
+  bound), admission is iterated to a least fixed point with an explicit
+  non-convergence refusal, the reachable set is persisted under an analysis
+  identity that is not the DSO digest, every unresolved symbol carries a
+  disposition, and the result is a strict superset of the pre-repair reachable
+  set with `CRYPTO_cbc128_encrypt` restored. The precision classes moved from
+  **194 → 81** target-bounded sites after the source-backed GOT/static-table and
+  exported-callback proofs. `atlas-refresh/closure-monotonicity-finding.json`
+  remains the historical finding, superseded by this repair.
+- **Seven real defects were found by the campaign's instruments** — the static
+  closure analyser, its probes and the downstream corpus — not by a crash in
+  the field:
+  1. the non-monotone residual bound (`DEFECT-NONMONOTONE-BOUND`), which dropped
+     whole target sets under a byte-identical consumer;
+  2. the one-pass closure that never scanned a function reached only through
+     residual admission (`DEFECT-ONE-PASS-CLOSURE`);
+  3. unsound oracle inheritance that accepted the narrowed exclusions
+     (`DEFECT-ORACLE-INHERITANCE`) — all three in
+     `atlas-refresh/closure-fixpoint-repair.json`;
+  4. target sets derived from emitted symbol names instead of stored
+     GOT/static-table values (`atlas-refresh/element7-regression-v1j.json`,
+     commit `00d7fd8a3`);
+  5. the legacy SHA-256/384/512/512-224/512-256 NULL `md_data` write reachable
+     through the exported `EVP_MD_meth_get_init` (`ad5913099`);
+  6. the same NULL `md_data` write in MD4, RIPEMD-160 and Whirlpool, now refused
+     where the pinned authority SIGSEGVs
+     (`evidence/legacy-md-init-fix.json`, `D-LEGACY-MD-INIT-MD-DATA-1`);
+  7. the GCM `EVP_CTRL_GCM_SET_IV_FIXED -1` sentinel regression that broke
+     OpenSSH's AES-GCM handshake (commit `49cff7886` rejected the sentinel;
+     `1c2bc4001` forwards `SIZE_MAX` and copies `ivlen`, as the authority
+     returns 1).
+  The legacy digest crashes are **fixed** (5, 6); the fixed-point re-derivation
+  is **implemented** (1–3).
+- **The downstream corpus is green at 0.0.43** (`f8f366298`,
+  `courts/phase17/downstream`): all six families — curl, git, haproxy, nginx,
+  openssh, python — pass, `RT-DOWNSTREAM-CORPUS` passes, and OpenSSH is
+  restored to **31/31** after the GCM fix. The historic S'' freeze
+  (`atlas-refresh/freeze-S-double-prime.json`) still records the 0.0.42
+  source/artefact/consumer identity, and published 0.0.42 carries that source.
 
-**Outstanding debts**
+**Known open work**
 
-- Resolver target derivation: derive a slot's target set from the values stored by reachable code, not a list of emitted symbol names; return the resolvable subset when a fragment is absent (`element7-regression-v1j.json`, `fix_required`).
-- Reachability monotonicity: rebuild the same frozen candidate and require identical reachable sets, or refuse the closure.
-- The 13 `src/evp/legacy_sha.rs` update/final/ctrl callbacks still dereference `md_data` without a check (`openssh-v1j-sites.json`; BLOCKED).
-- SEAL at S'' and independent adjudication: no independent review, Miri, ASan, Loom, mutation, dudect or Wycheproof/ACVP evidence at S''.
-- Uncontracted production operations remain crate-wide: **320** at v1j (`v1j-candidate-freeze.json`), **325** at v1g; no fresh full census has been regenerated.
-- `CAMPAIGN-STATUS.json` lag (reconciled for 0.0.42 in this pass).
-- The court host checkout is bind-mounted read-write at `/work` (`AGENTS.md` §6).
-- `docker/openssl-rs-court.sh` is committed mode `100644`, with no executable bit.
-- S56/S57 races are not established; no faithful Loom model exists (`atlas-refresh/v3-boundary-instruments.json`, `s56_s57_loom`).
+- **Element-7 precision**: 81 target-bounded reachable sites still lack a
+  bounded target set, so element 7 remains FAIL.
+- **222 contracted obligations awaiting discharge** (BLOCKED), inside each
+  family's dependency closure; `SAFE_COMPATIBLE` remains **0/33**.
+- **Release-evidence debt**: FRF's 143 manifests are still `0.0.27`; the
+  Phase-18 unsafe-bounds ratchet is +3,017 real sites and needs a reviewable
+  re-base; the Phase-24 candidate freeze and P1000 counts are pinned to
+  `0.0.27`; the Phase-25 planes carry 47k per-file hashes and four Miri findings
+  from the stale candidate; 892 prerequisite findings are correctly gated until
+  those strata seal; and the required `main` CI check is red.
+- The 13 `src/evp/legacy_sha.rs` update/final/ctrl callbacks still dereference
+  `md_data` without a check (`atlas-refresh/openssh-v1j-sites.json`; BLOCKED).
+- S56/S57 races are not established; no faithful Loom model exists
+  (`atlas-refresh/v3-boundary-instruments.json`, `s56_s57_loom`).
+- The court host checkout is bind-mounted read-write at `/work` (`AGENTS.md`
+  §6); `docker/openssl-rs-court.sh` is committed mode `100644`, with no
+  executable bit.
 
 ## Where the conservation strata stand
 
-The twenty-two strata and their subjects are in `docs/RELEASE_GATES.md` §1. Their
+The twenty-six strata (0–25) and their subjects are in `docs/RELEASE_GATES.md` §1. Their
 **derived state** is generated in
 [`forensics/phase-state.md`](https://github.com/infinityabundance/openssl-rs/blob/main/forensics/phase-state.md)
 by `forensics/tools/phase_state.py` and rendered into
@@ -157,6 +216,9 @@ which strata are complete. For shape, the strata group as:
 | 18 | the hostile fuzz / security / side-channel hardening stratum |
 | 19–21 | performance / CPU dispatch, the 3.6.4 custodian seal, and the maintenance-delta machinery |
 | 22 | authority exhaustiveness and the whole-program compatibility atlas |
+| 23 | multitrack authority compatibility and OpenSSL lineage |
+| 24 | downstream-1000 replacement atlas and the empirical drop-in corpus |
+| 25 | memory-safety atlas, unsafe trusted-computing-base census, and the historical CVE extinction court |
 
 > **Safe-33 conversion status.** The generated blocker block below is frozen at
 > the Phase-24 derivation and is superseded for current counts by the generated
@@ -176,16 +238,14 @@ which strata are complete. For shape, the strata group as:
 Every one of the 1000 counted families, partitioned by its **deepest blocker** and the classes ranked by **mover potential**, with the feasible recipe queue, is in the
 [generated report](https://github.com/infinityabundance/openssl-rs/blob/main/docs/PHASE-24-BIGGEST-MOVERS.md) (`docs/PHASE-24-BIGGEST-MOVERS.md`); the same table is cited by
 `docs/SEAL-CENSUS.md`. This block is generated from
-`forensics/downstream/shared-blockers.json` (the frozen Phase-24 derivation);
-**do not edit it by hand.** Its figures describe that frozen plane; current
-corpus counts come from `forensics/downstream/runtime-functional-atlas.json`.
+`forensics/downstream/shared-blockers.json` — **do not edit it by hand.**
 
 | blocker class | families | mover potential | fixability | per-fix leverage |
 |---|---|---|---|---|
 | `no-admitted-recipe` | 965 | 965 | `recipe-admission` | 1.0 |
 | `recipe-build-system-unsupported` | 2 | 2 | `recipe-build-system` | 2.0 |
 
-**Frozen Phase-24 partition: 967 of the 1000 counted families are blocked; 33 are `DROP_IN_PASS`** (967 are `DROP_IN_NOT_APPLICABLE`, 33 measurable); of those 33, 25 were at L4-linked and 8 reached L5 or above in that plane. **Current atlas:** see the generated achievement block at the top of this page for the current candidate and authority `L7-functional` counts, the loaded and not-attempted split, and the cohort figure (`runtime-functional-atlas.json`, `body.counts.by_subject`; restated in `STATUS-2026-10-20.md`). The `drop-in-pass` figure is a baseline-normalized verdict count, not a rung.
+**967 of the 1000 counted families are blocked; 33 are `DROP_IN_PASS`** (967 are `DROP_IN_NOT_APPLICABLE`, 33 measurable). The `drop-in-pass` figure is a baseline-normalized verdict count, not a rung: of the 33 drop-in passes, 25 are at L4-linked with no admitted runtime workload for those families and 8 reach L5 or above.
 
 * a selected population is not a random sample: the 1,000 counted families are selected from frozen ranking evidence, so their blocker shares do not generalise to all downstream software
 * 1000/1000 is not a security proof: a full pass is not a guarantee that any consumer is safe, and the analysis makes no statement about an unmeasured consumer
@@ -253,8 +313,8 @@ bash docker/openssl-rs-court.sh verify
 # admit and build the pinned authorities, then generate the atlas
 bash docker/openssl-rs-court.sh exec bash forensics/tools/build_atlas.sh
 
-# build and test the implementation crate (fmt + clippy + tests)
-bash docker/openssl-rs-court.sh exec sh -c 'cd /work && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test'
+# build and test the implementation crate (the local gate; one heavy command at a time)
+bash docker/openssl-rs-court.sh exec sh -c 'cd /work && CARGO_BUILD_JOBS=4 cargo fmt --all -- --check && cargo clippy --all-targets -- -D warnings && cargo test --lib -- --test-threads=4'
 
 # long-lived evidence and sensitivity testing use a second, separately pinned
 # tooling container (see docs/REPRODUCIBILITY.md §1.2 for why)
@@ -266,11 +326,36 @@ The court applies hard resource caps (`--memory=8g --memory-swap=8g`,
 `--pids-limit=2048`, `--cpus=8`, `--restart=no`) so a runaway court OOM-kills
 inside the container rather than pressuring the host.
 
+The local gate is exactly:
+
+```
+cargo fmt --all -- --check && cargo clippy --all-targets -- -D warnings && cargo test --lib -- --test-threads=4
+```
+
+The last full library run on record is **2,230 passed, 0 failed, 52 ignored**
+(`cargo test --lib -- --test-threads=4`; `atlas-refresh/test-baseline.json`). The
+floor the campaign previously quoted, 1,962 passed / 42 ignored, is superseded by
+that run; the rule is no unexplained removals and no newly ignored tests, not a
+frozen literal. The `cargo test` line above is the library gate only: it is not
+the differential courts, which run in the court against the pinned authority.
+
 ## Architecture
 
 One Cargo package. One first-party implementation crate. No workspace, no
 component crates, and no implementation dependencies: everything the product
 does is implemented here. Internal modules may be arbitrarily numerous.
+
+Zero runtime and zero build dependencies. The only dependency in the manifest is
+one `cfg(loom)` dev-dependency, `loom 0.7`, enabled only when a test build sets
+`--cfg loom`; ordinary builds and ordinary test runs never link it.
+
+The export sets are unchanged across the candidates this page names. Counting
+rule: `nm -D --defined-only <file> | wc -l`, which **includes** the
+linker-emitted version-node definition symbols and gives **5,906** for
+`libcrypto.so.3` and **608** for `libssl.so.3`. The owned-export rule, which
+strips those definitions, gives **5,896** and **603**. Both rule totals are
+identical at v1p and at the 0.0.43 rebuild, with 0 added and 0 removed
+(`atlas-refresh/build-0.0.43.json`).
 
 The single implementation still emits the multiple runtime artifacts the
 distribution contract requires, with their own symbol namespaces, SONAMEs and
@@ -307,11 +392,11 @@ are under [`docs/`](https://github.com/infinityabundance/openssl-rs/tree/main/do
 - **Memory safety is measured, not established.** The memory-safety benefit of
   Rust is not asserted here: the crate still carries a large `unsafe` surface,
   measured per module by `forensics/tools/unsafe_footprint.py` and rendered in
-  `forensics/STATUS.md` (58,767 unsafe sites and 10,860 `extern "C" fn` at the
-  Phase 18 revision, 90.1% of them in the parser/algorithm modules rather than a
-  boundary shim). `docs/UNSAFE.md` cites the generated table and the
-  `UNSAFE-FOOTPRINT` growth ceiling; the count is a footprint, not a proof that
-  the unsafe code is correct.
+  `forensics/STATUS.md`: **61,454 unsafe sites, 10,980 `extern "C" fn`, 877
+  files, 858,173 lines, 89.4% of the unsafe sites in the parser/algorithm core
+  rather than a boundary shim**. `docs/UNSAFE.md` cites the generated table and
+  the `UNSAFE-FOOTPRINT` growth ceiling; the count is a footprint, not a proof
+  that the unsafe code is correct.
 - **No universal claims from finite evidence.** Every claim names its authority,
   profile and platform.
 - **Unknown is a research result.** `UNKNOWN` is reported, not traded for

@@ -984,37 +984,44 @@ authority and the candidate for this function, and there was never supposed to b
 - **When it changes:** it does not. The authority's behaviour is a fault in 3.6.3 and 3.6.4
   alike; the boundary is permanent and the claim stays narrowed.
 
-### D-LEGACY-MD-INIT-MD-DATA-1 — the legacy SHA-1/SHA-224/MD5 initialisers write through a
-### NULL `md_data`
+### D-LEGACY-MD-INIT-MD-DATA-1 — the legacy SHA-1/SHA-224/MD5 and MD4/RIPEMD-160/Whirlpool
+### initialisers write through a NULL `md_data`
 
 - **Obligation:** `sha1_init`, `sha224_init` and `md5_init`, emitted by
   `IMPLEMENT_LEGACY_EVP_MD_METH` (`crypto/evp/legacy_meth.h:10-22`), are
-  `return fn##_Init(EVP_MD_CTX_get0_md_data(ctx));` with no test on the block. The exported
+  `return fn##_Init(EVP_MD_CTX_get0_md_data(ctx));` with no test on the block. The same shape is
+  emitted for `md4_init` (`crypto/evp/legacy_md4.c`), `ripe_init` (`crypto/evp/legacy_ripemd.c`)
+  and `wp_init` (`crypto/evp/legacy_wp.c`). The exported
   `EVP_MD_meth_get_init` (`crypto/evp/evp_lib.c`; `artifacts/phase2/libcrypto.ld:1886`) hands the
   callback to any C caller, and its documented contract only says that the getter retrieves the
   data supplied to `EVP_MD_meth_set_*` (`doc/man3/EVP_MD_meth_new.pod`). A caller can therefore
   pass a fresh `EVP_MD_CTX_new()` — zero-filled, `md_data == NULL` — or a NULL context.
-- **Authority:** **measured**. Six probes, each run in its own process against
-  `forensics/authorities/prefix/openssl-3.6.4-production` (the three digests × {fresh context,
-  NULL context}). Each prints the method, callback and context (`md_data=(nil)` for the fresh
-  shape) and then dies with **exit 139** (SIGSEGV) at the `*_Init` write. The fault is the
-  measurement, so there is nothing to compare past it.
-- **Crate:** the three callbacks validate the context through `init_md_data` before writing. A
-  NULL context, a NULL `md_data`, a NULL method, or a method whose `ctx_size` is smaller than the
+- **Authority:** **measured**. Nine probes, each run in its own process against
+  `forensics/authorities/prefix/openssl-3.6.4-production`: the original three digests ×
+  {fresh context, NULL context}, and MD4/RIPEMD-160/Whirlpool with a fresh context. Each prints
+  the method, callback and context (`md_data=(nil)` for the fresh shape) and then dies with
+  **exit 139** (SIGSEGV) at the `*_Init` write. The fault is the measurement, so there is nothing
+  to compare past it.
+- **Crate:** the six callbacks validate the context through `init_md_data` before writing
+  (`md4_init`, `ripe_init` and `wp_init` gained it on the same terms as `md5_init`). A NULL
+  context, a NULL `md_data`, a NULL method, or a method whose `ctx_size` is smaller than the
   digest context all answer `0` — the C initialise failure value — and touch no memory. A context
   bound to the callback's own table object, or to another method with a sufficient `ctx_size`,
   still calls the authority's `*_Init` and returns its value (`1`). No error is raised, because
   the authority raises nothing on this path; it does not return.
 - **Reason:** `D-MD-NULL-CALLBACK-1`'s: a write through a NULL pointer is not a contract to
-  reproduce (AGENTS.md §3). The getter's documented contract says nothing about the context's
-  `md_data`, so the writable-block precondition cannot be discharged by the ABI; the callback must
-  establish it itself.
+  reproduce (AGENTS.md §3 and §17: UB in the C authority is not reproduced). The getter's
+  documented contract says nothing about the context's `md_data`, so the writable-block
+  precondition cannot be discharged by the ABI; the callback must establish it itself.
 - **Claim removed:** calling the exported initialiser pointer with a fresh or NULL context is not
-  claimed compatible — both fault in the authority. On a context that establishes a writable
+  claimed compatible — all six fault in the authority. On a context that establishes a writable
   digest block the digest maths and the result are unchanged
   (`legacy_sha1_init_refuses_context_without_md_data_and_inits_bound_context`,
-  `legacy_sha224_init_refuses_context_without_md_data_and_inits_bound_context` and
-  `legacy_md5_init_refuses_context_without_md_data_and_inits_bound_context`).
+  `legacy_sha224_init_refuses_context_without_md_data_and_inits_bound_context`,
+  `legacy_md5_init_refuses_context_without_md_data_and_inits_bound_context`,
+  `legacy_md4_init_refuses_context_without_md_data_and_inits_bound_context`,
+  `legacy_ripemd160_init_refuses_context_without_md_data_and_inits_bound_context` and
+  `legacy_whirlpool_init_refuses_context_without_md_data_and_inits_bound_context`).
 - **When it changes:** it does not. 3.6.3 and 3.6.4 both fault; the boundary is permanent and the
   claim stays narrowed.
 
@@ -1728,3 +1735,31 @@ D334's state, when the column was recorded as a NULL rather than resolved.
   authority, so the claim removed above is restored to the compatible set. The machine-readable row
   is `disposition: "fixed"` with the row-publishing units and `RT-CODEC` as its `evidence`, and
   `docs/PHASE-10-KEYFORMATS-SEAL.md` §9's owed retirement is what this paragraph discharges.
+
+### D-WRAP-PAD-CLEANSE-1 — `CRYPTO_128_unwrap_pad` cleanses `padded_len`, not the authority's `inlen`, because the authority's extent is CVE-2026-63072's write primitive
+
+- **Obligation:** the failure paths of `CRYPTO_128_unwrap_pad` (`src/modes/wrap.rs:245-286`), which
+  cleanse the unwrapped plaintext before returning 0.
+- **Authority:** `crypto/modes/wrap128.c:291,303,317,327` call `OPENSSL_cleanse(out, inlen)`. The
+  output a caller must provide is `inlen - 8` octets, not `inlen`: the CMS key-unwrap caller sizes
+  its buffer from the queried unwrapped-key length and declares `inlen - 8` writable
+  (`crypto/cms/cms_env.c:995`), so the authority's cleanse writes eight octets past the caller's
+  allocation. That is the mechanism recorded as CVE-2026-63072.
+- **Crate:** cleanses `padded_len` — `8` for the sixteen-byte special case, `inlen - 8` otherwise —
+  which is exactly the extent the function can have written and the extent the caller declared.
+- **Reason:** `AGENTS.md` §17 says a known vulnerability mechanism is eliminated and the
+  compatibility consequence recorded, not imitated; §5.1 says cleansing must cover the actual
+  secret-bearing storage, and an unvalidated larger length is not that storage. The divergence is
+  in the safe direction and is narrow: the input-length refusals, the returned length, the error
+  queue and the decrypted bytes are the authority's.
+- **Compatibility consequence:** after a failed unwrap, the bytes between `inlen - 8` and `inlen`
+  are unchanged where the authority would have zeroed them. That region is outside the documented
+  output extent, so a conforming caller does not read it; a caller that does observes the
+  difference. No other observable moves.
+- **Evidence:** nine pinned arms in `forensics/tools/phase8_courts.py`'s `ACCEPTED_DIVERGENCES` —
+  `wrap.pad{1,7,8,9,16,17,20,24}.badaiv.out` and `wrap.pad.badicv.out` — each carrying the exact
+  authority and candidate hex, so a different candidate value at the same key still fails. The
+  negative control `src/cms/cms_env.rs:3950-3982`
+  (`cve_2026_63072_wrap_pad_cleanse_stops_at_the_queried_extent`) reproduces the CMS allocation
+  with eight guard bytes and asserts they survive. Decision record: `docs/DECISIONS.md` D566.
+- **Trigger:** none planned: this is a permanent, deliberate safety divergence.

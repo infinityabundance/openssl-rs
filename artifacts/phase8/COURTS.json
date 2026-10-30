@@ -27,8 +27,80 @@
         "verdict": "pass"
       },
       {
-        "accepted_divergence_count": 1,
+        "accepted_divergence_count": 10,
         "accepted_divergences": [
+          {
+            "authority": "00000000000000000000000000000000cccccccccccccccccccccccccccccccc",
+            "candidate": "0000000000000000cccccccccccccccccccccccccccccccccccccccccccccccc",
+            "class": "value",
+            "disposition": "intentional_safe_divergence",
+            "observation": "wrap.pad1.badaiv.out",
+            "witness": "src/modes/wrap.rs:277-286 (the failure cleanse stops at `padded_len`, the extent CMS declared writable); crypto/modes/wrap128.c:291,303,317,327 (the authority cleanses `inlen`, eight octets past that extent, the CVE-2026-63072 over-write mechanism); src/cms/cms_env.rs:3950-3982 (the CMS allocation `inlen - 8` and the negative control that the guard bytes survive)."
+          },
+          {
+            "authority": "00000000000000000000000000000000cccccccccccccccccccccccccccccccc",
+            "candidate": "0000000000000000cccccccccccccccccccccccccccccccccccccccccccccccc",
+            "class": "value",
+            "disposition": "intentional_safe_divergence",
+            "observation": "wrap.pad7.badaiv.out",
+            "witness": "src/modes/wrap.rs:277-286; crypto/modes/wrap128.c:291,303,317,327; CVE-2026-63072; src/cms/cms_env.rs:3950-3982."
+          },
+          {
+            "authority": "00000000000000000000000000000000cccccccccccccccccccccccccccccccc",
+            "candidate": "0000000000000000cccccccccccccccccccccccccccccccccccccccccccccccc",
+            "class": "value",
+            "disposition": "intentional_safe_divergence",
+            "observation": "wrap.pad8.badaiv.out",
+            "witness": "src/modes/wrap.rs:277-286; crypto/modes/wrap128.c:291,303,317,327; CVE-2026-63072; src/cms/cms_env.rs:3950-3982."
+          },
+          {
+            "authority": "000000000000000000000000000000000000000000000000cccccccccccccccc",
+            "candidate": "00000000000000000000000000000000cccccccccccccccccccccccccccccccc",
+            "class": "value",
+            "disposition": "intentional_safe_divergence",
+            "observation": "wrap.pad9.badaiv.out",
+            "witness": "src/modes/wrap.rs:277-286; crypto/modes/wrap128.c:291,303,317,327; CVE-2026-63072; src/cms/cms_env.rs:3950-3982."
+          },
+          {
+            "authority": "000000000000000000000000000000000000000000000000cccccccccccccccc",
+            "candidate": "00000000000000000000000000000000cccccccccccccccccccccccccccccccc",
+            "class": "value",
+            "disposition": "intentional_safe_divergence",
+            "observation": "wrap.pad16.badaiv.out",
+            "witness": "src/modes/wrap.rs:277-286; crypto/modes/wrap128.c:291,303,317,327; CVE-2026-63072; src/cms/cms_env.rs:3950-3982."
+          },
+          {
+            "authority": "0000000000000000000000000000000000000000000000000000000000000000",
+            "candidate": "000000000000000000000000000000000000000000000000cccccccccccccccc",
+            "class": "value",
+            "disposition": "intentional_safe_divergence",
+            "observation": "wrap.pad17.badaiv.out",
+            "witness": "src/modes/wrap.rs:277-286; crypto/modes/wrap128.c:291,303,317,327; CVE-2026-63072; src/cms/cms_env.rs:3950-3982."
+          },
+          {
+            "authority": "0000000000000000000000000000000000000000000000000000000000000000",
+            "candidate": "000000000000000000000000000000000000000000000000cccccccccccccccc",
+            "class": "value",
+            "disposition": "intentional_safe_divergence",
+            "observation": "wrap.pad20.badaiv.out",
+            "witness": "src/modes/wrap.rs:277-286; crypto/modes/wrap128.c:291,303,317,327; CVE-2026-63072; src/cms/cms_env.rs:3950-3982."
+          },
+          {
+            "authority": "0000000000000000000000000000000000000000000000000000000000000000",
+            "candidate": "000000000000000000000000000000000000000000000000cccccccccccccccc",
+            "class": "value",
+            "disposition": "intentional_safe_divergence",
+            "observation": "wrap.pad24.badaiv.out",
+            "witness": "src/modes/wrap.rs:277-286; crypto/modes/wrap128.c:291,303,317,327; CVE-2026-63072; src/cms/cms_env.rs:3950-3982."
+          },
+          {
+            "authority": "00000000000000000000000000000000cccccccccccccccccccccccccccccccc",
+            "candidate": "0000000000000000cccccccccccccccccccccccccccccccccccccccccccccccc",
+            "class": "value",
+            "disposition": "intentional_safe_divergence",
+            "observation": "wrap.pad.badicv.out",
+            "witness": "src/modes/wrap.rs:277-286; crypto/modes/wrap128.c:291,303,317,327; CVE-2026-63072; src/cms/cms_env.rs:3950-3982."
+          },
           {
             "authority": "6fc14133bfd7cb8f6323569ae39a0efbe194df2db803a18b429f8b14c07a0a08",
             "candidate": "0",
@@ -39,15 +111,69 @@
           }
         ],
         "authority_exit_code": 0,
-        "authority_observations": 7291,
+        "authority_observations": 7308,
         "candidate_exit_code": 0,
-        "candidate_observations": 7291,
+        "candidate_observations": 7308,
         "candidate_stderr_tail": [],
         "court": "RT-CIPHER",
         "crashed": false,
         "probe": "courts/phase8/rt_cipher_probe.c",
-        "residual_count": 1,
+        "residual_count": 10,
         "residuals": [
+          {
+            "authority": "00000000000000000000000000000000cccccccccccccccccccccccccccccccc",
+            "candidate": "0000000000000000cccccccccccccccccccccccccccccccccccccccccccccccc",
+            "class": "value",
+            "observation": "wrap.pad1.badaiv.out"
+          },
+          {
+            "authority": "00000000000000000000000000000000cccccccccccccccccccccccccccccccc",
+            "candidate": "0000000000000000cccccccccccccccccccccccccccccccccccccccccccccccc",
+            "class": "value",
+            "observation": "wrap.pad7.badaiv.out"
+          },
+          {
+            "authority": "00000000000000000000000000000000cccccccccccccccccccccccccccccccc",
+            "candidate": "0000000000000000cccccccccccccccccccccccccccccccccccccccccccccccc",
+            "class": "value",
+            "observation": "wrap.pad8.badaiv.out"
+          },
+          {
+            "authority": "000000000000000000000000000000000000000000000000cccccccccccccccc",
+            "candidate": "00000000000000000000000000000000cccccccccccccccccccccccccccccccc",
+            "class": "value",
+            "observation": "wrap.pad9.badaiv.out"
+          },
+          {
+            "authority": "000000000000000000000000000000000000000000000000cccccccccccccccc",
+            "candidate": "00000000000000000000000000000000cccccccccccccccccccccccccccccccc",
+            "class": "value",
+            "observation": "wrap.pad16.badaiv.out"
+          },
+          {
+            "authority": "0000000000000000000000000000000000000000000000000000000000000000",
+            "candidate": "000000000000000000000000000000000000000000000000cccccccccccccccc",
+            "class": "value",
+            "observation": "wrap.pad17.badaiv.out"
+          },
+          {
+            "authority": "0000000000000000000000000000000000000000000000000000000000000000",
+            "candidate": "000000000000000000000000000000000000000000000000cccccccccccccccc",
+            "class": "value",
+            "observation": "wrap.pad20.badaiv.out"
+          },
+          {
+            "authority": "0000000000000000000000000000000000000000000000000000000000000000",
+            "candidate": "000000000000000000000000000000000000000000000000cccccccccccccccc",
+            "class": "value",
+            "observation": "wrap.pad24.badaiv.out"
+          },
+          {
+            "authority": "00000000000000000000000000000000cccccccccccccccccccccccccccccccc",
+            "candidate": "0000000000000000cccccccccccccccccccccccccccccccccccccccccccccccc",
+            "class": "value",
+            "observation": "wrap.pad.badicv.out"
+          },
           {
             "authority": "6fc14133bfd7cb8f6323569ae39a0efbe194df2db803a18b429f8b14c07a0a08",
             "candidate": "0",
@@ -38682,6 +38808,22 @@
       "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
     },
     {
+      "name": "candidate-libcrypto-so-3",
+      "note": "the DSO every probe links through -L artifacts/phase2 -lcrypto",
+      "path": "artifacts/phase2/libcrypto.so.3",
+      "sha256": "23ec6944fb9d8f8b4037263ad8faff4170d561442d81a99a690c6dc083550409"
+    },
+    {
+      "name": "candidate-source-commit",
+      "note": "git rev-parse HEAD (provenance; the tree digest is the live binding)",
+      "sha256": "f8f3662987781367e5bcc74d15477ebd359d8d2a"
+    },
+    {
+      "name": "candidate-source-tree",
+      "note": "sha256 over sorted (relpath, size, sha256) of src, Cargo.toml, Cargo.lock, build.rs; files=887",
+      "sha256": "22a58468d5db58da90dd99044682a5303dbef0938ac2789be0eb5406cfb7d58d"
+    },
+    {
       "name": "probe",
       "path": "courts/phase8/rt_digest_probe.c",
       "sha256": "dbae243915ff7f39b685a575a94bcf504234be4fd43273490cc3f34c59986fa1"
@@ -38689,7 +38831,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "90625eb34fe39f316e4a90d94f7c64f8487eba1ac0959b7b163d51e0754e6fd6"
+      "sha256": "e1e6b34024a0d19ad10020c69a676fc01c53d41dda5d54cebf58474322bb9a3b"
     },
     {
       "name": "probe",

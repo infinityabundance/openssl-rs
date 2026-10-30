@@ -1,0 +1,165 @@
+{
+  "schema": "safe-c33/atlas-refresh/skey-free-parity-correction/v1",
+  "kind": "parity-correction",
+  "receipt": "RT-EVP-SKEY-FREE-CORRECTION",
+  "finding_id": "RT-EVP-SKEY",
+  "date": "2026-10-28",
+  "candidate": {
+    "branch": "stage/p25/analyzer-corpus",
+    "source_head": "c63fc23de2048533f634adbcd00fd12c34487d13",
+    "tree_state": "dirty; this correction is uncommitted by instruction (no commit, no push)",
+    "source_tree_paths": ["src", "Cargo.toml", "Cargo.lock", "build.rs"],
+    "source_tree_file_count": 887,
+    "source_tree_sha256": "a1d8c9fc642b9f4c97e325e4f876a5e50b8a0a9406cb23f5ec59b397d5092bc2",
+    "install_prefix": "artifacts/phase2/install",
+    "libcrypto_so_3_sha256": "c335ac3c7f04b694f62ec27906a094cfbea319eb4b6efbeb4cc661d76e6aa36b",
+    "libssl_so_3_sha256": "292ba997c7bded396b98e531791f68f0166ec91fb9a6651dd795d30f41018631",
+    "phase2_court_artefact": "artifacts/phase2/COURTS.json",
+    "phase2_court_all_pass": true,
+    "rebuild_recipe": "OPENSSL_RS_COURT_NAME=openssl-rs-court-expand OPENSSL_RS_COURT_IMAGE=openssl-rs-court-expand:1 bash docker/openssl-rs-court.sh exec env CARGO_BUILD_JOBS=4 bash forensics/tools/build_phase2.sh",
+    "court_recipe": "bash docker/openssl-rs-court.sh exec python3 forensics/tools/phase7_courts.py"
+  },
+  "what_was_wrong": {
+    "summary": "OwnedSkey::drop skipped the provider's mandatory free when keydata was NULL. The guard was introduced by 4a088a9fb on the stated premise that the authority's EVP_SKEY_free guards keydata != NULL. That premise is false: the authority calls evp_skeymgmt_freedata unconditionally, and the failure arms of EVP_SKEY_import and EVP_SKEY_generate reach it with keydata == NULL.",
+    "pre_fix_behaviour": "src/evp/skeymgmt.rs OwnedSkey::drop (pre-fix ~:338-340) wrapped the call in `if !(*p).keydata.is_null()`, so the provider free was not called on a failed import/generate.",
+    "authority_behaviour": "EVP_SKEY_free(skey) down-references, then calls evp_skeymgmt_freedata(skey->skeymgmt, skey->keydata) with no key-data test, then EVP_SKEYMGMT_free, CRYPTO_THREAD_lock_free and OPENSSL_free. evp_skeymgmt_freedata calls skeymgmt->free(keydata) unconditionally because the slot is mandatory. EVP_SKEY_import's `err:` label and EVP_SKEY_generate's `err:` label both call EVP_SKEY_free before any keydata was assigned.",
+    "authority_citation": [
+      "forensics/authorities/src/openssl-3.6.4/crypto/evp/s_lib.c:207-226 (EVP_SKEY_free; the evp_skeymgmt_freedata call has no keydata test)",
+      "forensics/authorities/src/openssl-3.6.4/crypto/evp/skeymgmt_meth.c:42-46 (evp_skeymgmt_freedata calls skeymgmt->free(keydata) unconditionally)",
+      "forensics/authorities/src/openssl-3.6.4/crypto/evp/s_lib.c:86-99 (EVP_SKEY_import failure reaches EVP_SKEY_free with skey->keydata still NULL)",
+      "forensics/authorities/src/openssl-3.6.4/crypto/evp/s_lib.c:127-141 (EVP_SKEY_generate failure reaches EVP_SKEY_free with skey->keydata still NULL)",
+      "forensics/authorities/src/openssl-3.6.4/providers/implementations/skeymgmt/aes_skmgmt.c:20-35 (the builtin provider's free is generic_free; the authority's generic_free opens with a NULL return, per generic.c:25-34)"
+    ]
+  },
+  "provider_free_audit": {
+    "question": "Is the candidate's own OSSL_FUNC_skeymgmt_free implementation NULL-safe before the unconditional call is restored?",
+    "found": [
+      "src/provider/skeymgmt.rs:generic_free is the only provider skeymgmt free implementation. It is installed in both the AES table (src/provider/skeymgmt.rs:358-362) and the GENERIC-SECRET table (:333-337), and src/provider/legacyprov.rs reuses GENERIC_SKEYMGMT_FUNCTIONS for the legacy provider.",
+      "There is no Box::from_raw and no NonNull::new_unchecked in the free path. generic_free delegates to OwnedCtx::<ProvSkey>::from_raw, which maps NULL to None (src/runtime/bio/owned.rs:180-205); drop(None) is a no-op. The free was therefore already NULL-safe."
+    ],
+      "changed": [
+      "src/provider/skeymgmt.rs:148-160 now writes the authority's own first line explicitly (`if keydata.is_null() { return; }`) so the NULL tolerance is visible at the dispatch boundary rather than inferred from OwnedCtx::from_raw.",
+      "src/provider/skeymgmt.rs:413-429 adds provider::skeymgmt::tests::the_builtin_provider_free_tolerates_null, which calls generic_free(NULL) under the normal library suite."
+    ],
+    "why_ub_safe": "The NULL argument is rejected before any dereference, cast-to-reference or adoption. For a non-NULL key the existing OwnedCtx path releases the secret member with CRYPTO_clear_free and then the block; it does not free the enclosing allocation twice."
+  },
+  "the_change": [
+    {
+      "file": "src/evp/skeymgmt.rs",
+      "lines": "328-359 (OwnedSkey::drop)",
+      "change": "Removed the `if !(*p).keydata.is_null()` guard and call evp_skeymgmt_freedata((*p).skeymgmt, (*p).keydata) unconditionally on the last release, restoring the authority's order and call."
+    },
+    {
+      "file": "src/evp/skeymgmt.rs",
+      "lines": "313-326 (reclaim), 852-867 (evp_skeymgmt_freedata), 1237-1265 (EVP_SKEY_free)",
+      "change": "Widened the # Safety contracts to `keydata` is NULL or a live provider key produced by this skeymgmt, and recorded that NULL is part of the authority's call contract on the failure arms."
+    },
+    {
+      "file": "src/evp/skeymgmt.rs",
+      "lines": "1560-1580 (test)",
+      "change": "Inverted and renamed the test to a_failed_key_without_data_still_calls_the_provider_destructor_with_null; it now asserts the free count is 1 and the pointer observed by the provider is NULL."
+    },
+    {
+      "file": "src/provider/skeymgmt.rs",
+      "lines": "139-160 (generic_free), 413-429 (test)",
+      "change": "Explicit NULL guard plus the NULL-tolerance test, as recorded in provider_free_audit."
+    }
+  ],
+  "tests": {
+    "library_suite": {
+      "command": "cargo test --lib -- --test-threads=4",
+      "result": "2222 passed; 0 failed; 52 ignored; 0 measured; 0 filtered out",
+      "note": "The ignored count is the branch's pre-existing 52, not a new ignore in this change."
+    },
+    "focused": [
+      {
+        "name": "evp::skeymgmt::tests::a_failed_key_without_data_still_calls_the_provider_destructor_with_null",
+        "result": "ok"
+      },
+      {
+        "name": "provider::skeymgmt::tests::the_builtin_provider_free_tolerates_null",
+        "result": "ok"
+      }
+    ],
+    "gates": {
+      "cargo_fmt_all_check": "pass",
+      "cargo_clippy_all_targets_deny_warnings": "pass"
+    }
+  },
+  "court_result": {
+    "court": "RT-EVP-SKEY",
+    "runner": "forensics/tools/phase7_courts.py",
+    "verdict": "pass",
+    "authority_observations": 97,
+    "candidate_observations": 97,
+    "residual_count": 0,
+    "accepted_divergence_count": 0,
+    "unexplained_residual_count": 0,
+    "artefact": "artifacts/phase7/COURTS.json",
+    "artefact_inputs_bind_candidate": true,
+    "candidate_inputs": [
+      "candidate-libcrypto-so-3 sha256 c335ac3c7f04b694f62ec27906a094cfbea319eb4b6efbeb4cc661d76e6aa36b",
+      "candidate-source-commit c63fc23de2048533f634adbcd00fd12c34487d13",
+      "candidate-source-tree sha256 a1d8c9fc642b9f4c97e325e4f876a5e50b8a0a9406cb23f5ec59b397d5092bc2 (887 files)"
+    ]
+  },
+  "supersedes": [
+    {
+      "source": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/mechanism-sweep-M8.json#/defects/0/description",
+      "false_statement": "The authority's EVP_SKEY_free guards keydata != NULL. The import/generate failure paths free a key whose keydata was never produced, so a mandatory provider free(NULL) was invoked in a state the authority never invokes.",
+      "correction": "The authority has no such guard at s_lib.c:207-226 and does invoke the mandatory free with NULL on exactly those failure paths."
+    },
+    {
+      "source": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/mechanism-sweep-M8.json#/defects/0/fix",
+      "false_statement": "Restored the authority's keydata != NULL guard in Drop.",
+      "correction": "There was no authority guard to restore. The guard has been removed and the unconditional call restored."
+    },
+    {
+      "source": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/mechanism-sweep-M8.json#/unsafe_operations_removed/0",
+      "false_statement": "The provider free callback is no longer invoked with NULL key data on the failed import/generate path.",
+      "correction": "The provider free callback IS invoked with NULL on that path, as the authority does; the obligation moved to the provider, whose mandatory free must tolerate NULL and whose builtin implementation now states and tests that."
+    },
+    {
+      "source": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/mechanism-sweep-M8.json#/defects/0/witness",
+      "false_statement": "evp::skeymgmt::tests::a_failed_key_without_data_does_not_call_the_provider_destructor",
+      "correction": "That test asserted the wrong behaviour and is replaced by evp::skeymgmt::tests::a_failed_key_without_data_still_calls_the_provider_destructor_with_null."
+    },
+    {
+      "source": "forensics/memory-safety/campaign/safe-c33/PERFILE-INDEX.md:546-562",
+      "false_statement": "M8-D1 records that EVP_SKEY_free guards `skey->keydata != NULL` and that this destructor must do the same.",
+      "correction": "The M8-D1 entry is retained as historical record, with a correction pointer to this receipt; the authority does not contain that guard."
+    }
+  ],
+  "obligations": {
+    "eliminated": [
+      "the false premise that the authority guards keydata before the provider free"
+    ],
+    "relocated": [
+      "NULL-tolerance of the mandatory provider free is now an explicit provider obligation, stated in generic_free and inherited by every provider that reuses it"
+    ],
+    "hidden": 0,
+    "retained": [
+      "the provider free slot is mandatory and must not be NULL; evp_skeymgmt_freedata still dereferences skeymgmt and calls the slot (an ABI contract)"
+    ]
+  },
+  "residuals": [
+    {
+      "id": "RT-EVP-SKEY.NULL-PROVIDER-FREE",
+      "disposition": "CLOSED",
+      "detail": "The candidate now calls the provider free with NULL on the import/generate failure path, matching the authority; the builtin provider tolerates NULL and a library test pins it."
+    }
+  ],
+  "identity_binding": {
+    "finding": "artifacts/phase7/COURTS.json and artifacts/phase8/COURTS.json bound only probes and the authority symbol table, so a candidate change could not invalidate them.",
+    "change": [
+      "forensics/tools/phase7_courts.py:88-130 and forensics/tools/phase8_courts.py:107-149 add `candidate-libcrypto-so-3`, `candidate-source-commit` and `candidate-source-tree` InputRefs.",
+      "forensics/tools/run_courts.py:187-203 excludes only the `candidate-source-commit` digest from the committed/fresh comparison; the DSO and source-tree digests remain compared. This follows AGENTS.md section 22 (provenance vs candidate identity) and downstream_candidate_freeze.py's exclusion of source_commit."
+    ],
+    "negative_control": "A commit-only mutation produces no comparison difference; a source-tree or DSO mutation produces an `.inputs[i].sha256` difference. Observed: identical=[]; commit-only=[]; tree-only=[.inputs[3].sha256 ...]; dso-only=[.inputs[1].sha256 ...]."
+  },
+  "non_claims": [
+    "The historical M8 receipt was not rewritten; it carries an additive corrected_by pointer only.",
+    "This correction does not discharge the provider-callback boundary for third-party providers: one that dereferences its keydata unconditionally would still fault on NULL, exactly as it would against the authority.",
+    "The library suite is not a Miri run; the NULL path's absence of a dereference is established by source structure and the explicit early return, not by a model checker."
+  ]
+}

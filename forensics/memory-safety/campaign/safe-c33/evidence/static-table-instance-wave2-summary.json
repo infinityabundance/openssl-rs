@@ -1,0 +1,69 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/static-table-instance/v1",
+  "recorded_utc": "2026-10-29",
+  "source_identity": {
+    "candidate_commit": "37046bc15",
+    "libcrypto_sha256": "199258d5dd0b75bda337e782bb7f2267c143c6f70dfb8913562e858d075b09e8",
+    "ssh_sha256": "f95c15ec…",
+    "tool_sha256": "730b5791e217ead4418052ecf8f4fe98e38397ec53ea95720c8cbe1586153fd8",
+    "analysis_identity": "628b1f76",
+    "closure_receipt_sha256": "9cb088f5ae585def5f2948ac2de450ac60f54dc4dcb209a18f2971dbd40d6aa0"
+  },
+  "mechanism": {
+    "class": "static-table-instance",
+    "rule": "A two-level dispatch: an object field holds a pointer to a static table from a finite declared cohort; the indirect call selects a member at a fixed offset; every cohort store must be a declared table address, every selected member must be an in-image function start, the table must be immutable after relocation, and the writer set must be complete.",
+    "field_sensitivity": "keyed by (object type, pointer-slot offset, member offset), never by offset alone; the DSO has 98,005 offset-keyed stores over 1,709 offsets, so an offset-keyed completeness claim is impossible",
+    "via_cast": "when the field's declared type has no decidable member at the call offset, a .cast::<T>() applied to that field in the same source function is accepted only if T has a decidable repr(C) layout and declared static instances in the exact image",
+    "refusals": [
+      "unproven-cohort-store",
+      "unaccounted-writer-store",
+      "partial-instance-set",
+      "no-writer",
+      "no-declared-instance-type",
+      "member-not-function",
+      "mutable-table",
+      "base-not-table",
+      "writer-outside-cohort",
+      "shape-mismatch",
+      "null-member-without-guard"
+    ]
+  },
+  "measured": {
+    "indirect_sites": 52022,
+    "reachable_unresolved_before": 194,
+    "reachable_unresolved_after": 147,
+    "reachable_target_bounded_before": 134,
+    "reachable_target_bounded_after": 87,
+    "reachable_contract_bounded": 60,
+    "s1_resolved": 48,
+    "s1_refused": 6,
+    "unclassified_reachable": 0,
+    "reachable_files": 624,
+    "obligations": 312,
+    "discharged_blocked_unknown": [90, 107, 115],
+    "reachable_functions_sha256": "8487ed72a70da4530eb8d2636456e61204af4fbf1041b9c833477aa67701d359",
+    "element_7": "FAIL",
+    "target_sets_remain_unbounded": true,
+    "reachability_movement": "none"
+  },
+  "s1_refusal_inventory": [
+    {"function": "provider::cipher::ossl_aes_gcm_siv_cipher", "site": "0x255e19", "reason": "unproven-cohort-store", "blocking": "outside writer runtime::err::dup_c store 0x4daf97 into its own sret slot"},
+    {"function": "provider::cipher::ossl_aes_gcm_siv_dupctx", "site": "0x255ed6", "reason": "unproven-cohort-store", "blocking": "same writer"},
+    {"function": "provider::cipher::ossl_aes_gcm_siv_stream_final", "site": "0x25b43c", "reason": "unproven-cohort-store", "blocking": "same writer"},
+    {"function": "provider::cipher::ossl_cipher_generic_cipher", "site": "0x258654", "reason": "unaccounted-writer-store", "blocking": "field declared *const ProvCipherHw, written with concrete repr(C) subtypes that share the base as first field"},
+    {"function": "provider::cipher::cipher_generic_init_internal", "site": "0x259c0b", "reason": "unaccounted-writer-store", "blocking": "same"},
+    {"function": "provider::cipher::ossl_cipher_generic_stream_update", "site": "0x25e229", "reason": "unaccounted-writer-store", "blocking": "same"}
+  ],
+  "remaining_target_bounded": {
+    "count": 87,
+    "s1_refusals": 6,
+    "other_classes": "81 belong to the pre-existing field/materialised classes (base-slot-partial, reg-value-partial[int], reg-top, stack-slot-open) and are not S1 refusals"
+  },
+  "non_claims": [
+    "No obligation was adjudicated or discharged; SAFE_COMPATIBLE remains 0/33.",
+    "Element 7 remains FAIL; 147 reachable unresolved sites survive (87 target-bounded, 60 contract-bounded).",
+    "Contract-bounded sites are not resolved and their target sets remain unbounded.",
+    "The class does not change reachability; the reachable-function digest is identical.",
+    "The witness analysis is not an independent proof of store-graph completeness; the mutation matrix is sensitivity evidence only."
+  ]
+}

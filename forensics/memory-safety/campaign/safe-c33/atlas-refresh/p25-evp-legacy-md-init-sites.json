@@ -1,0 +1,61 @@
+{
+ "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "p25-evp-legacy-md-init-sites",
+ "subphase": "safe-c33 analyzer-corpus: repaired legacy MD init boundaries (MD4/RIPEMD-160/Whirlpool)",
+ "date": "2026-10-30",
+ "mechanism": "EVP_PKEY_PROVIDER",
+ "mechanism_registered": true,
+ "mechanism_registry": "forensics/tools/consumer_closure.py MECHANISM_RULES ^src/(?:evp|provider|...)/ -> EVP_PKEY_PROVIDER",
+ "candidate": {
+  "branch": "stage/p25/analyzer-corpus",
+  "head": "6fa558f9c17cc218f52e76f33aaa06eb2a5f47d1",
+  "inventory_path": "court/inventory/closure-ssh-s1b.json",
+  "inventory_source_head": "47beaa1a7caedfdd666ad026e41fafc25a8ce00a",
+  "line_number_basis": "update/final coordinates are the inventory's; init coordinates are the working tree at HEAD 6fa558f9c",
+  "working_tree_dirty": false
+ },
+ "authority": {
+  "id": "openssl-3.6.4-production",
+  "legacy_macro": "crypto/evp/legacy_meth.h:10-22",
+  "note": "the authority's IMPLEMENT_LEGACY_EVP_MD_METH expands to init/update/final that write/read md_data(ctx) without testing it; a fresh EVP_MD_CTX_new() has md_data == NULL, so the exported init crashes (SIGSEGV). The crate deliberately diverges: D-LEGACY-MD-INIT-MD-DATA-1."
+ },
+ "evidence": {
+  "fix_record": "forensics/memory-safety/campaign/safe-c33/evidence/legacy-md-init-fix.json",
+  "decision": "D-LEGACY-MD-INIT-MD-DATA-1",
+  "divergence_policy": "docs/SECURITY_DIVERGENCE_POLICY.md:987",
+  "defect": "md4_init/ripe_init/wp_init called *_Init(md_data(ctx)) with no test on ctx->md_data; a fresh zero-filled context hands a C caller a NULL write (measured: court/triage/probe.candidate exited 139 for md4, ripemd160, whirlpool).",
+  "fix": "a private unsafe fn init_md_data(ctx, owner, size) -> Option<*mut c_void>: NULL ctx -> None; NULL md_data or digest -> None; digest == owner -> Some; else ctx_size >= size -> Some, else None. The initialiser returns 0 on None and casts only a block it established.",
+  "measured_after": "candidate exits 0 for all three where the authority SIGSEGVs",
+  "gate": "cargo fmt --check pass; clippy --all-targets -D warnings pass; cargo test --lib -- --test-threads=4 2225 passed, 0 failed, 52 ignored",
+  "tests": [
+   "evp::legacy_md4::tests::legacy_md4_init_refuses_context_without_md_data_and_inits_bound_context",
+   "evp::legacy_ripemd::tests::legacy_ripemd160_init_refuses_context_without_md_data_and_inits_bound_context",
+   "evp::legacy_wp::tests::legacy_whirlpool_init_refuses_context_without_md_data_and_inits_bound_context"
+  ]
+ },
+ "summary": {
+  "files": 3,
+  "sites": 9,
+  "blocked": 9,
+  "discharged": 0,
+  "statement": "The three initialisers are repaired and measured, but the update/final caller contract is unchanged and no independent BOUNDARY review exists; all nine sites remain BLOCKED."
+ },
+ "boundaries": [
+  {"id": "P25-EVP-LEGACY-MD-001", "file": "src/evp/legacy_md4.rs", "mechanism": "EVP_PKEY_PROVIDER", "disposition": "BLOCKED", "line": 174, "kind": "UNSAFE_FN_DEF", "operation": "md4_init", "contract": "md4_init(ctx): ctx is NULL or a live EVP_MD_CTX. Returns 0 (the C failure value) when ctx, ctx->md_data or ctx->md is NULL, or when the context's block is smaller than Md4Ctx; otherwise the block is a writable Md4Ctx and MD4_Init runs. Diverges from the authority, which writes through md_data(ctx) unconditionally (D-LEGACY-MD-INIT-MD-DATA-1).", "defects": [], "residuals": ["the divergence is recorded, not independently reviewed", "no Miri/sanitizer run for this file in this batch"]},
+  {"id": "P25-EVP-LEGACY-MD-002", "file": "src/evp/legacy_md4.rs", "mechanism": "EVP_PKEY_PROVIDER", "disposition": "BLOCKED", "line": 191, "kind": "UNSAFE_FN_DEF", "operation": "md4_update", "contract": "md4_update(ctx, data, count): requires a context whose md4_init returned 1, so ctx->md_data is a writable Md4Ctx; data/count describe a readable buffer of count bytes. Forwards to MD4_Update (legacy_meth.h:15-18). Not guarded — the caller contract remains.", "defects": [], "residuals": ["caller contract requires a successful init and is not enforced by the callback", "no Miri/sanitizer run for this file in this batch"]},
+  {"id": "P25-EVP-LEGACY-MD-003", "file": "src/evp/legacy_md4.rs", "mechanism": "EVP_PKEY_PROVIDER", "disposition": "BLOCKED", "line": 198, "kind": "UNSAFE_FN_DEF", "operation": "md4_final", "contract": "md4_final(ctx, md): requires a context whose init returned 1 and md writable for the digest length. Forwards to MD4_Final(md, md_data) (legacy_meth.h:19-22). Not guarded — the caller contract remains.", "defects": [], "residuals": ["caller contract requires a successful init and is not enforced by the callback", "no Miri/sanitizer run for this file in this batch"]},
+  {"id": "P25-EVP-LEGACY-MD-004", "file": "src/evp/legacy_ripemd.rs", "mechanism": "EVP_PKEY_PROVIDER", "disposition": "BLOCKED", "line": 175, "kind": "UNSAFE_FN_DEF", "operation": "ripe_init", "contract": "ripe_init(ctx): as P25-EVP-LEGACY-MD-001 with Ripemd160Ctx; returns 0 for a context the guard cannot establish (D-LEGACY-MD-INIT-MD-DATA-1).", "defects": [], "residuals": ["the divergence is recorded, not independently reviewed", "no Miri/sanitizer run for this file in this batch"]},
+  {"id": "P25-EVP-LEGACY-MD-005", "file": "src/evp/legacy_ripemd.rs", "mechanism": "EVP_PKEY_PROVIDER", "disposition": "BLOCKED", "line": 192, "kind": "UNSAFE_FN_DEF", "operation": "ripe_update", "contract": "ripe_update(ctx, data, count): requires a successful ripe_init; forwards to RIPEMD160_Update (legacy_meth.h:15-18). Not guarded.", "defects": [], "residuals": ["caller contract requires a successful init and is not enforced by the callback", "no Miri/sanitizer run for this file in this batch"]},
+  {"id": "P25-EVP-LEGACY-MD-006", "file": "src/evp/legacy_ripemd.rs", "mechanism": "EVP_PKEY_PROVIDER", "disposition": "BLOCKED", "line": 199, "kind": "UNSAFE_FN_DEF", "operation": "ripe_final", "contract": "ripe_final(ctx, md): requires a successful init and a digest-length writable md; forwards to RIPEMD160_Final (legacy_meth.h:19-22). Not guarded.", "defects": [], "residuals": ["caller contract requires a successful init and is not enforced by the callback", "no Miri/sanitizer run for this file in this batch"]},
+  {"id": "P25-EVP-LEGACY-MD-007", "file": "src/evp/legacy_wp.rs", "mechanism": "EVP_PKEY_PROVIDER", "disposition": "BLOCKED", "line": 177, "kind": "UNSAFE_FN_DEF", "operation": "wp_init", "contract": "wp_init(ctx): as P25-EVP-LEGACY-MD-001 with WhirlpoolCtx; returns 0 for a context the guard cannot establish (D-LEGACY-MD-INIT-MD-DATA-1).", "defects": [], "residuals": ["the divergence is recorded, not independently reviewed", "no Miri/sanitizer run for this file in this batch"]},
+  {"id": "P25-EVP-LEGACY-MD-008", "file": "src/evp/legacy_wp.rs", "mechanism": "EVP_PKEY_PROVIDER", "disposition": "BLOCKED", "line": 194, "kind": "UNSAFE_FN_DEF", "operation": "wp_update", "contract": "wp_update(ctx, data, count): requires a successful wp_init; forwards to WHIRLPOOL_Update (legacy_meth.h:15-18). Not guarded.", "defects": [], "residuals": ["caller contract requires a successful init and is not enforced by the callback", "no Miri/sanitizer run for this file in this batch"]},
+  {"id": "P25-EVP-LEGACY-MD-009", "file": "src/evp/legacy_wp.rs", "mechanism": "EVP_PKEY_PROVIDER", "disposition": "BLOCKED", "line": 201, "kind": "UNSAFE_FN_DEF", "operation": "wp_final", "contract": "wp_final(ctx, md): requires a successful init and a digest-length writable md; forwards to WHIRLPOOL_Final (legacy_meth.h:19-22). Not guarded.", "defects": [], "residuals": ["caller contract requires a successful init and is not enforced by the callback", "no Miri/sanitizer run for this file in this batch"]}
+ ],
+ "non_claims": [
+  "no site is SAFETY_DISCHARGED; every entry is BLOCKED",
+  "the init repair is measured (candidate exits 0, authority SIGSEGV) but is not an independent BOUNDARY review",
+  "update/final remain unguarded and their caller contract is retained",
+  "no family graduation is claimed"
+ ]
+}

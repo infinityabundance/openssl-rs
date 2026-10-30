@@ -124,12 +124,19 @@
       },
       {
         "closure": "the `RT-DOWNSTREAM-MULTITRACK` court passes",
-        "findings": [],
-        "findings_present": false,
-        "measurement_state": "complete",
-        "observation": "RT-DOWNSTREAM-MULTITRACK is pass",
+        "findings": [
+          "the Phase-17 candidate corpus records curl against candidate 0.0.27, not the current 0.0.43",
+          "the Phase-17 candidate corpus records git against candidate 0.0.27, not the current 0.0.43",
+          "the Phase-17 candidate corpus records haproxy against candidate 0.0.27, not the current 0.0.43",
+          "the Phase-17 candidate corpus records nginx against candidate 0.0.27, not the current 0.0.43",
+          "the Phase-17 candidate corpus records openssh against candidate 0.0.27, not the current 0.0.43",
+          "the Phase-17 candidate corpus records python against candidate 0.0.27, not the current 0.0.43"
+        ],
+        "findings_present": true,
+        "measurement_state": "not_measured",
+        "observation": "RT-DOWNSTREAM-MULTITRACK is fail",
         "property_status": "not_claimed",
-        "state": "implemented",
+        "state": "open",
         "surface": "artifacts/phase23/COURTS.json",
         "unit": "downstream-multitrack",
         "what": "at least one meaningful unmodified real downstream consumer per major compatibility epoch, exercised as this stratum's own multitrack court"
@@ -501,8 +508,8 @@
       "contract_units": 17,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 17,
-      "open_in_this_stratum": 0,
+      "implemented": 16,
+      "open_in_this_stratum": 1,
       "owned": 17,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -543,7 +550,7 @@
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "0989d43c8cd3e6eebfae77d097f194b649eaddb039f731244d07cd3850a017b1"
+      "sha256": "94d9a578a66c9190b1868fb32dd2ff69761e49bc8d186357548933ab4f41f439"
     }
   ],
   "kind": "phase23-obligations",

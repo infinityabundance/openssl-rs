@@ -123,7 +123,7 @@ pub type X509V3ExtV2i = Option<
 ///
 /// Authority: `X509V3_EXT_print` assigns `method->i2s(method, ext_str)` to
 /// `char *value` and its `err:` label runs `OPENSSL_free(value)`
-/// (`crypto/x509/v3_prn.c:106,130`); the public `i2s_ASN1_*` family documents
+/// (`crypto/x509/v3_prn.c:96,130`); the public `i2s_ASN1_*` family documents
 /// "It is the caller's responsibility to free the returned string"
 /// (`doc/man3/s2i_ASN1_IA5STRING.pod`). Registration through
 /// [`X509V3_EXT_add`] accepts rows whose `i2s` slot carries this contract.
@@ -143,6 +143,82 @@ pub type X509V3ExtR2i = X509V3ExtS2i;
 ///
 /// The ABI order is the header's: the two `int`s, the item expression, the four old-style codec
 /// hooks, the string pair, the multi-value pair, the raw pair and the caller's `usr_data`.
+///
+/// # Slot contracts
+///
+/// A row is dispatched by `X509V3_EXT_print` (`crypto/x509/v3_prn.c:69-136`) and by
+/// `do_ext_nconf` (`crypto/x509/v3_conf.c:79-134`). Both first obtain `ext_struc`, the value of
+/// the ASN.1 type the row names: `it` when set (`ASN1_item_d2i`/`ASN1_item_i2d`), otherwise the
+/// old-style `d2i`/`i2d`/`ext_new`/`ext_free` quartet (`v3_prn.c:86-89,131-135`;
+/// `v3_conf.c:127-134`). `usr_data` is **not** the decoded extension: it is the row's own
+/// immutable auxiliary table, read only by the bit-string and enumerated printers
+/// (`crypto/x509/v3_bitst.c:52,81`; `crypto/x509/v3_enum.c:48`).
+///
+/// Every slot is optional; the dispatcher tests each slot before calling it and reports
+/// "unsupported" when the applicable print or set path has no arm (`v3_prn.c:95-127`;
+/// `v3_conf.c:96-126`). Precedence is fixed: printing uses `i2s`, else `i2v`, else `i2r`
+/// (`v3_prn.c:95-127`); configuration uses `v2i`, else `s2i`, else `r2i`
+/// (`v3_conf.c:96-126`).
+///
+/// The `i2s` contract is on [`X509V3ExtI2s`]. The remaining four are:
+///
+/// ## `i2r`
+///
+/// `int (*)(const X509V3_EXT_METHOD *method, void *ext, BIO *out, int indent)`
+/// (`include/openssl/x509v3.h.in:58-59`). `ext` is the dispatcher's freshly decoded,
+/// exclusively owned `ext_struc`; it is non-NULL at the call (`v3_prn.c:90-92`) and the
+/// dispatcher frees it afterwards (`v3_prn.c:131-135`), so the callback must not free,
+/// retain or replace it. `out` is a live caller BIO the callback may write to but must not
+/// free. `method` is the row itself, so `usr_data` is its table. Return nonzero on success
+/// and zero on failure; the dispatcher maps zero to a print failure but still reaches its
+/// cleanup (`v3_prn.c:122-127`). A callback that writes conditionally must therefore return
+/// zero from every arm that did not complete.
+///
+/// ## `i2v`
+///
+/// `STACK_OF(CONF_VALUE) *(*)(const X509V3_EXT_METHOD *method, void *ext,
+/// STACK_OF(CONF_VALUE) *extlist)` (`include/openssl/x509v3.h.in:49-50`). `ext` carries the
+/// same dispatcher-owned, non-NULL, must-not-free contract as `i2r`. `extlist` is an
+/// optional sink: `X509V3_EXT_print` passes NULL (`v3_prn.c:116`), while other callbacks
+/// pass an existing stack they are extending (`crypto/x509/v3_info.c:65-70`, forwarding
+/// `tret`). The callback appends `CONF_VALUE`s and returns the possibly newly allocated
+/// stack. On success ownership of the returned stack and its members transfers to the
+/// caller, which releases the members with `X509V3_conf_free` and the stack with
+/// `sk_CONF_VALUE_pop_free` (`v3_prn.c:129`); the callback must not free the returned stack
+/// or its members, and must not retain `ext`. Returning NULL reports failure; when the
+/// caller supplied a non-NULL `extlist`, the callback must not free that caller-owned stack.
+///
+/// ## `v2i`
+///
+/// `void *(*)(const X509V3_EXT_METHOD *method, X509V3_CTX *ctx,
+/// STACK_OF(CONF_VALUE) *values)` (`include/openssl/x509v3.h.in:51-53`). `values` is
+/// **borrowed**: the dispatcher builds it from `X509V3_parse_list(value)` (an owning list it
+/// frees after the call) or from `NCONF_get_section(conf, ...)` (a section owned by the
+/// config database), distinguishing the two by `*value == '@'` (`v3_conf.c:96-112`). The
+/// callback must consume it read-only and must neither free it or its members nor retain
+/// them. `ctx` is the caller's `X509V3_CTX`, borrowed for the call; the `v2i` arm does not
+/// check it (`v3_conf.c:96-112`), so an implementation that reads it relies on the
+/// authority's `X509V3_EXT_nconf*` callers to supply one. On success the callback returns a
+/// new `ext_struc` of the row's ASN.1 item type; ownership transfers to the dispatcher,
+/// which encodes it and then frees it with `ASN1_item_free`/`ext_free`
+/// (`v3_conf.c:127-134`). On failure it returns NULL and releases any partial value it
+/// built. Input it cannot fully consume must be rejected, not partially encoded.
+///
+/// ## `r2i`
+///
+/// `void *(*)(const X509V3_EXT_METHOD *method, X509V3_CTX *ctx, const char *str)`
+/// (`include/openssl/x509v3.h.in:60-61`). Before the call the dispatcher requires `ctx`,
+/// `ctx->db` and `ctx->db_meth` to be non-NULL (`v3_conf.c:117-121`). `str` is the config
+/// value, borrowed for the call: the callback may parse it (the policy arm builds and frees
+/// its own `X509V3_parse_list`, `crypto/x509/v3_cpols.c:96-101`) but must not free or retain
+/// it. Return and ownership are `v2i`'s: a fresh `ext_struc` owned by the dispatcher on
+/// success, NULL on failure, partial values released by the callback.
+///
+/// # Registration
+///
+/// [`X509V3_EXT_add`] stores the row without inspecting its codec slots
+/// (`crypto/x509/v3_lib.c:25-37`), so a registered row may populate any of the five slots;
+/// each callback is responsible for the contract of the slot it fills.
 #[repr(C)]
 pub struct X509V3ExtMethod {
     /// `int ext_nid`.

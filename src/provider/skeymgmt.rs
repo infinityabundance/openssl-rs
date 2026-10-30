@@ -138,12 +138,24 @@ unsafe fn generic_skey_import_decode(params: *const OsslParam) -> Result<*const 
 
 /// `void generic_free(void *keydata)` — `generic.c:25-34`.
 ///
+/// The authority's body opens with `if (skey == NULL) return;`, and the slot is the provider's
+/// **mandatory** `free`: `EVP_SKEY_free` reaches it on the failure arms of `EVP_SKEY_import` and
+/// `EVP_SKEY_generate` with `keydata == NULL` (`s_lib.c:207-226`, `skeymgmt_meth.c:42-46`). The
+/// guard is therefore a provider-facing ABI contract, not a convenience.
+///
 /// # Safety
 /// `keydata` is NULL or a `PROV_SKEY` this module allocated.
 pub(crate) unsafe extern "C" fn generic_free(keydata: *mut c_void) {
-    // SAFETY: `keydata` is NULL or a live key this module allocated and no other owner has released;
-    // `from_raw` maps NULL to `None`, and its `Drop` runs the authority's own `generic_free` body
-    // (the `CRYPTO_clear_free` of the secret bytes) and block release.
+    // The explicit guard is the authority's own first line. `OwnedCtx::from_raw` already maps NULL
+    // to `None` (and `drop(None)` is a no-op), so this is not fixing a latent dereference -- it is
+    // making the NULL tolerance visible at the dispatch boundary, where a C caller and a future
+    // reader can both check it.
+    if keydata.is_null() {
+        return;
+    }
+    // SAFETY: `keydata` is a live key this module allocated and no other owner has released;
+    // `from_raw` runs its `Drop`, which executes the authority's own `generic_free` body (the
+    // `CRYPTO_clear_free` of the secret bytes) and the block release.
     drop(unsafe { OwnedCtx::<ProvSkey>::from_raw(keydata.cast::<ProvSkey>()) });
 }
 
@@ -397,3 +409,22 @@ pub(crate) static DEFLT_SKEYMGMT: [OsslAlgorithm; 3] = [
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(ProvSkey => zero_state_sweep_prov_skey);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The provider's mandatory `free` must tolerate NULL: `EVP_SKEY_free` calls it on the
+    /// `EVP_SKEY_import`/`EVP_SKEY_generate` failure arms before any key data exists
+    /// (`s_lib.c:207-226`, `skeymgmt_meth.c:42-46`). The builtin provider's `generic_free` is the
+    /// authority's `generic_free` (`generic.c:25-34`), whose first line is the NULL return.
+    ///
+    /// This suite does not run under Miri; the negative-control evidence that the call performs no
+    /// dereference is that the body returns before `OwnedCtx::from_raw` is reached.
+    #[test]
+    fn the_builtin_provider_free_tolerates_null() {
+        // SAFETY: NULL is admitted by `generic_free`'s contract; the body returns without a
+        // dereference and owns/releases nothing.
+        unsafe { generic_free(ptr::null_mut()) };
+    }
+}

@@ -1270,7 +1270,7 @@
   },
   {
    "file": "src/engine/tb_asnmth.rs",
-   "line": 74,
+   "line": 72,
    "kind": "UNSAFE_FN_DEF",
    "mechanism": "C_ABI_CONTRACT",
    "operation": "engine_unregister_all_pkey_asn1_meths",
@@ -1279,7 +1279,7 @@
   },
   {
    "file": "src/engine/tb_cipher.rs",
-   "line": 56,
+   "line": 55,
    "kind": "UNSAFE_FN_DEF",
    "mechanism": "C_ABI_CONTRACT",
    "operation": "engine_unregister_all_ciphers",
@@ -1288,7 +1288,7 @@
   },
   {
    "file": "src/engine/tb_dh.rs",
-   "line": 54,
+   "line": 51,
    "kind": "UNSAFE_FN_DEF",
    "mechanism": "C_ABI_CONTRACT",
    "operation": "engine_unregister_all_dh",
@@ -1297,7 +1297,7 @@
   },
   {
    "file": "src/engine/tb_digest.rs",
-   "line": 68,
+   "line": 66,
    "kind": "UNSAFE_FN_DEF",
    "mechanism": "C_ABI_CONTRACT",
    "operation": "engine_unregister_all_digests",
@@ -1306,7 +1306,7 @@
   },
   {
    "file": "src/engine/tb_dsa.rs",
-   "line": 54,
+   "line": 51,
    "kind": "UNSAFE_FN_DEF",
    "mechanism": "C_ABI_CONTRACT",
    "operation": "engine_unregister_all_dsa",
@@ -1315,7 +1315,7 @@
   },
   {
    "file": "src/engine/tb_eckey.rs",
-   "line": 54,
+   "line": 51,
    "kind": "UNSAFE_FN_DEF",
    "mechanism": "C_ABI_CONTRACT",
    "operation": "engine_unregister_all_ec",
@@ -1324,7 +1324,7 @@
   },
   {
    "file": "src/engine/tb_pkmeth.rs",
-   "line": 55,
+   "line": 53,
    "kind": "UNSAFE_FN_DEF",
    "mechanism": "C_ABI_CONTRACT",
    "operation": "engine_unregister_all_pkey_meths",
@@ -1333,7 +1333,7 @@
   },
   {
    "file": "src/engine/tb_rand.rs",
-   "line": 54,
+   "line": 51,
    "kind": "UNSAFE_FN_DEF",
    "mechanism": "C_ABI_CONTRACT",
    "operation": "engine_unregister_all_rand",
@@ -1342,7 +1342,7 @@
   },
   {
    "file": "src/engine/tb_rsa.rs",
-   "line": 55,
+   "line": 52,
    "kind": "UNSAFE_FN_DEF",
    "mechanism": "C_ABI_CONTRACT",
    "operation": "engine_unregister_all_rsa",

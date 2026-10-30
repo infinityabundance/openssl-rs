@@ -1,12 +1,21 @@
 # Phase 24 — the downstream-1000 stratum: seal
 
-> **Superseded for current corpus counts (2026-10-22).** The ladder below is the
+> **Gate status (2026-10-28).** The phrase "`complete`" below is a **phase-state predicate**
+> derived from artefact existence (`forensics/tools/phase_state.py`), **not** independent
+> verification. The repository's **required CI check is red** for phase 24 and for `main`, and it
+> is red for phases 17, 18, 20, 23 and 25 (stale `0.0.27` identities, FRF claims, ratchet records,
+> P1000 counts and custodian/multitrack re-derivation). Phases 7 and 8 are green. No sentence in
+> this seal is a green CI result.
+
+> **Superseded for current corpus counts (2026-10-28).** The ladder below is the
 > frozen Phase-24 measurement (33 measurable, 967 `NOT_APPLICABLE`). The current
-> `forensics/downstream/runtime-functional-atlas.json` records 101 candidate and
-> 101 authority `L7-functional` rows (102 loaded, 898 not attempted, 0 failed)
-> and 33/33 cohort families at `L7-functional`; see
-> `forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md`. The seal's
-> bounded claim remains true of the frozen inputs it cites.
+> `forensics/downstream/runtime-functional-atlas.json` records **207 candidate /
+> 209 authority `L7-functional`** rows (**223 loaded**, **755 not attempted**,
+> **7 failed**) out of 307 recipe-backed families of 1000, and 33/33 cohort
+> families at `L7-functional`; see
+> `forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md` and the
+> generated table in `README.md`. The seal's bounded claim remains true of the
+> frozen inputs it cites.
 
 **STATUS: derived.** This status is not typed; it is the state `forensics/tools/phase_state.py`
 derives from artefact existence. The stratum's obligation ledger is empty of open rows —

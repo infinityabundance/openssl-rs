@@ -108,9 +108,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "apache2-ssl",
         "failure_class": "recipe-build-dependency-missing",
         "family": "apache2-ssl",
@@ -148,9 +148,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "coturn",
         "failure_class": "recipe-build-dependency-missing",
         "family": "coturn",
@@ -188,9 +188,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L1-admitted-source",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L1-admitted-source",
         "canonical_name": "dnsdist",
         "failure_class": "configure-failure",
         "family": "dnsdist",
@@ -208,9 +208,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L1-admitted-source",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L1-admitted-source",
         "canonical_name": "dsniff",
         "failure_class": "recipe-build-system-unsupported",
         "family": "dsniff",
@@ -248,9 +248,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "fdm",
         "failure_class": "recipe-build-dependency-missing",
         "family": "fdm",
@@ -308,9 +308,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "make",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "git-crypt",
         "failure_class": "build-failure",
         "family": "git-crypt",
@@ -368,9 +368,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "hydra",
         "failure_class": "build-failure",
         "family": "hydra",
@@ -408,9 +408,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "ima-evm-utils",
         "failure_class": "acquire-failure",
         "family": "ima-evm-utils",
@@ -428,9 +428,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L1-admitted-source",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L1-admitted-source",
         "canonical_name": "ipmitool",
         "failure_class": "recipe-build-system-unsupported",
         "family": "ipmitool",
@@ -528,9 +528,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "librelp",
         "failure_class": "recipe-build-system-unsupported",
         "family": "librelp",
@@ -568,9 +568,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "libshout",
         "failure_class": "recipe-build-dependency-missing",
         "family": "libshout",
@@ -648,9 +648,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "medusa",
         "failure_class": "build-failure",
         "family": "medusa",
@@ -708,9 +708,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "ncrack",
         "failure_class": "configure-failure",
         "family": "ncrack",
@@ -728,9 +728,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "nghttp2",
         "failure_class": null,
         "family": "nghttp2",
@@ -768,9 +768,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "nmh",
         "failure_class": "configure-failure",
         "family": "nmh",
@@ -828,9 +828,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L2-configured",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L2-configured",
         "canonical_name": "openiked",
         "failure_class": "recipe-build-system-unsupported",
         "family": "openiked",
@@ -868,9 +868,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L1-admitted-source",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L1-admitted-source",
         "canonical_name": "pdns",
         "failure_class": "configure-failure",
         "family": "pdns",
@@ -908,9 +908,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "make",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "postfix",
         "failure_class": "recipe-build-system-unsupported",
         "family": "postfix",
@@ -948,9 +948,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "rhash",
         "failure_class": "configure-failure",
         "family": "rhash",
@@ -1048,9 +1048,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L2-configured",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L2-configured",
         "canonical_name": "sqlcipher",
         "failure_class": "recipe-build-dependency-missing",
         "family": "sqlcipher",
@@ -1188,9 +1188,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "unbound",
         "failure_class": "configure-failure",
         "family": "unbound",
@@ -1248,9 +1248,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "make",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "vsftpd",
         "failure_class": null,
         "family": "vsftpd",
@@ -1288,9 +1288,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L1-admitted-source",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L1-admitted-source",
         "canonical_name": "xrdp",
         "failure_class": "configure-failure",
         "family": "xrdp",
@@ -1308,9 +1308,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "yadifa",
         "failure_class": "acquire-failure",
         "family": "yadifa",
@@ -1509,7 +1509,7 @@
       "priority_rule": "the 24.18 linkage misses, the 24.18 fetch-failures, and the next recipe-less counted families in the frozen 24.16 recipe-queue order -- source breadth descending, then distro breadth descending, then popularity descending, then canonical name ascending, then family_id ascending -- that ship a stable upstream C release tarball. It is a **heuristic** ranking over frozen breadth signals, never a measurement of buildability"
     }
   },
-  "body_hash": "06b341d588f3bc24e42c35b6247bd21e8b6cd09c6114ef54ef0ae1cbb1f2552f",
+  "body_hash": "4408d638b87888bab9ebd97a5f75a8321fb6c6dc64af5520441b3dec515b1a90",
   "generator": "forensics/tools/downstream_close_batch.py",
   "inputs": [
     {
@@ -1525,12 +1525,12 @@
     {
       "name": "shared-blockers",
       "path": "forensics/downstream/shared-blockers.json",
-      "sha256": "1d7c40ab0e4e13f804a0811ea0c3bba96761479adf9ce3354caf397577f8ac7d"
+      "sha256": "284df5f57ad1433dd8f0ae33c7c5dae66692ba02bfda98faf5d3cb719fcfc556"
     },
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "69cc1ce96e0e644d22ae09b387fcf3c08aee811623f0efc73f024d46af566587"
+      "sha256": "d2f93a4244ac02712cceac8c65efe67af7e28924e01d18fb2d26ce4b14cdb81c"
     },
     {
       "name": "p1000-run",
@@ -1560,7 +1560,7 @@
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "51ffb4146753e6c0b3b216ace9844471e687b52d7f0017b92a0bad693365b753"
+      "sha256": "0165c40201d9721d909140ec0d1c01231fccd41ecf8602bb85f9ec018f8e0776"
     },
     {
       "name": "downstream-schemas",
