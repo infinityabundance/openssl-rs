@@ -1,0 +1,27 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/independent-review/v1",
+  "subject": "evidence/mechanism-discharge-ENGINE-CLEANUP.json",
+  "subject_sha256": "17619eddb79eedca86528e82fab9c0fbc51664691a9803bf7aab77d4a99cac1b",
+  "reviewed_at_head": "cc7762e5d",
+  "reviewer": "independent session; the reviewer did not author the package",
+  "verdict": "APPROVE_WITH_CONDITIONS",
+  "summary": "The caller set, slot identity, lock precondition, reentrancy, idempotence and scope discipline hold. The evidence artifact is not admissible as-is: it mixes two source identities and carries pre-repair line numbers, so the nine obligation IDs and boundary dispositions no longer match the frozen tree.",
+  "independently_observed": {
+    "caller_set": "engine_cleanup_add_first has exactly one production caller (engine_table_register at eng_table.rs:298); CLEANUP_STACK is written only by int_cleanup_check and manipulated only by add_first/add_last; each of the nine names occurs in exactly one file at two Some(cb) sites; engine_cleanup_cb_free is the only invoker and is reachable only from the withheld engine_cleanup_int; the nine are not exported",
+    "slot_identity": "9/9: each callback body calls engine_table_cleanup on the same module static used at both registration sites; no alternative slot writer",
+    "lock_precondition": "a non-NULL lock is required before add_first; GLOBAL_ENGINE_LOCK is stored only by the run-once and never freed; ENGINE_new, ENGINE_by_id and ENGINE_get_first/get_last run the init; RawEngine::new is private; no safe-Rust path reaches engine_table_cleanup",
+    "reentrancy": "the cleanup holds the write lock across the pile destructor and engine_unlocked_finish, authority parity; recursive acquisition returns 0 rather than deadlocking; engine_cleanup_cb_free runs unlocked; no second invocation path",
+    "idempotence": "swap-before-release makes a second call a no-op; a failed write_lock after the non-NULL check returns without swapping and leaks the lhash, as documented",
+    "controls": "C3 and C8 re-run by the reviewer: both pass in isolation; C1/C2 independently confirmed; C4 and the UB aspect of C8 are observational, not sanitizer evidence; C7 NOT_RUN"
+  },
+  "conditions": [
+    "Freeze S' (the committed source) and commit the evidence as a separate E naming head and a clean tracked tree, with repairs.state=COMMITTED.",
+    "Regenerate the nine obligation IDs and all file:line/registered_at fields at S'; the pre-repair lines point at doc comments.",
+    "Re-run the closure at S' and confirm exactly 9 BLOCKED -> 9 DISCHARGED with no other obligation changing state; commit the compact receipt.",
+    "Keep state.json C_ABI_CONTRACT=UNSAFE_OPEN and retain eng_list.rs:90 and eng_dyn.rs:401 as BLOCKED.",
+    "Record, not suppress, the residuals: B20-TBL-3 CONTRACTED with B20-R2/R3 open, R4 unreachable callbacks, R5 NOT_RUN for Miri/TSan/ASan.",
+    "Minor: the nine callbacks' docs name ENGINE_new/by_id/get_first but omit ENGINE_get_last; add it."
+  ],
+  "not_run": ["full closure", "full library suite", "clippy", "Miri", "TSan", "ASan"],
+  "note": "A rejection or a conditional approval is a valid outcome. Nothing is discharged by this review; the conditions must be met and the closure re-run before a scoped SAFETY_DISCHARGED entry is recorded."
+}

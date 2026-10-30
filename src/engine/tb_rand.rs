@@ -48,6 +48,13 @@ pub unsafe extern "C" fn ENGINE_unregister_RAND(e: *mut Engine) {
 }
 
 /// `static void engine_unregister_all_RAND(void)` — `:23-26`.
+///
+/// # Safety
+/// Invoked as a cleanup-stack callback after an engine was registered through the public
+/// engine API. That path (`ENGINE_new` / `ENGINE_by_id` / `ENGINE_get_first` / `ENGINE_get_last`) has already
+/// initialised the engine lock, and the lock is not held when the callback runs;
+/// [`engine_table_cleanup`] takes it. If the lock were uninitialised, the cleanup would
+/// return before releasing the table (a documented no-op/leak, not UB).
 unsafe extern "C" fn engine_unregister_all_rand() {
     // SAFETY: the table slot is this module's static.
     unsafe { engine_table_cleanup(rand_table_slot()) };

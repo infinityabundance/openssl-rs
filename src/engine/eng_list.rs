@@ -87,6 +87,13 @@ fn unlock() {
 ///
 /// Registered on the cleanup stack the first time the list becomes non-empty. It is
 /// unreachable until `engine_cleanup_int` is named by `OPENSSL_cleanup` (see `eng_lib.rs`).
+///
+/// # Safety
+/// The engine lock must be initialised (non-NULL) and must not already be held by this
+/// thread: [`ENGINE_remove`] takes it. The list can only become non-empty through
+/// [`ENGINE_add`], whose engine came from `ENGINE_new`/`ENGINE_by_id`, both of which run the
+/// lock init. With a NULL lock, `ENGINE_remove` answers 0 and this cleanup stops with the
+/// list intact — a no-op/leak, not UB.
 unsafe extern "C" fn engine_list_cleanup() {
     loop {
         let head = ENGINE_LIST_HEAD.load(Ordering::Acquire);
