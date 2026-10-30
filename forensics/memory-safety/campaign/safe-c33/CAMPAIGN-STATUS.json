@@ -865,6 +865,29 @@
    "hidden_obligations": 0,
    "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1l-sites.json",
    "note": "Site-scoped only; no mechanism state is changed. The 9 ENGINE cleanup callbacks, the 2 CMS free thunks and ml_kem raise_fixed stay UNKNOWN at v1l; eng_dyn and tb_asnmth stay BLOCKED under B20/B16."
+  },
+  {
+   "receipt": "boundary-sweep-B45",
+   "scope": "nine zero-argument engine-table cleanup thunks in src/engine/tb_*.rs (B45-ENG-CB-001..009)",
+   "base_head": "afcfdc47e",
+   "source_state": "committed",
+   "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+   "discharged_boundaries": [
+    "B45-ENG-CB-001",
+    "B45-ENG-CB-002",
+    "B45-ENG-CB-003",
+    "B45-ENG-CB-004",
+    "B45-ENG-CB-005",
+    "B45-ENG-CB-006",
+    "B45-ENG-CB-007",
+    "B45-ENG-CB-008",
+    "B45-ENG-CB-009"
+   ],
+   "retained_boundaries": [],
+   "retained_state": "BLOCKED",
+   "hidden_obligations": 0,
+   "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B45.json",
+   "note": "Site-scoped only. mechanisms.C_ABI_CONTRACT remains UNSAFE_OPEN. Engine table cleanup (B20-TBL-3) stays CONTRACTED with B20-R2/R3 open; eng_list.rs engine_list_cleanup and eng_dyn.rs:401 remain BLOCKED. Applied at v1u; the control for this boundary is the mutation-sensitive test in src/engine/eng_table.rs."
   }
  ],
  "defects_closed": [
@@ -2342,8 +2365,8 @@
   },
   {
    "id": "CONTRACTED-OBLIGATIONS-BLOCKED",
-   "status": "222 BLOCKED",
-   "detail": "The accepted v1r closure carries 312 reachable production obligations: 90 DISCHARGED, 222 contracted but BLOCKED, 0 UNKNOWN. Every reachable file carries a receipt (92 files, 0 unreceipted), so the 222 are not missing-boundary refusals; they are mechanisms whose safety contracts are recorded but not discharged. The S-prime engine-cleanup package is APPROVED_WITH_CONDITIONS but remains blocked: it documents and enforces a previously hidden lock precondition, yet discharges no obligation, and the closure was not re-run at S-prime. The split therefore remains 90/222/0 and SAFE_COMPATIBLE remains 0/33 until the obligations are discharged within each family's dependency closure.",
+   "status": "215 BLOCKED at the applied v1u closure (222 at the historical v1r closure)",
+   "detail": "The accepted v1r closure carries 312 reachable production obligations: 90 DISCHARGED, 222 contracted but BLOCKED, 0 UNKNOWN. Every reachable file carries a receipt (92 files, 0 unreceipted), so the 222 are not missing-boundary refusals; they are mechanisms whose safety contracts are recorded but not discharged. The S-prime engine-cleanup package is APPROVED_WITH_CONDITIONS but remains blocked: it documents and enforces a previously hidden lock precondition, yet discharges no obligation, and the closure was not re-run at S-prime. The split therefore remains 90/222/0 and SAFE_COMPATIBLE remains 0/33 until the obligations are discharged within each family's dependency closure. At the applied candidate v1u the closure is 314 reachable production obligations: 99 DISCHARGED, 215 BLOCKED, 0 UNKNOWN, ACCEPTED with zero refusals. Nine zero-argument engine-table cleanup callbacks were discharged as the scoped boundary B45; two SSL_SESSION operations in src/ssl/t1_trce.rs became reachable because the relinked binary's graph differs, which is why the total is 314 rather than 312. C_ABI_CONTRACT remains UNSAFE_OPEN and eng_list.rs / eng_dyn.rs:401 remain BLOCKED.",
    "evidence": "evidence/closure-ssh-v1r.json (counts); evidence/inventory-sshd-v1r.json (boundary_coverage); evidence/mechanism-discharge-ENGINE-CLEANUP.json; evidence/mechanism-discharge-ENGINE-CLEANUP-review.json"
   },
   {
