@@ -2,18 +2,18 @@
  "receipt": "boundary-sweep-B46",
  "date": "2026-10-30",
  "campaign": "safe-c33 scoped mechanism discharge (SSL_SESSION S1: the ConfCmdFn command-handler cluster)",
- "subphase": "B46: the seven blocked UNSAFE_FN_DEF sites in src/ssl/ssl_conf.rs that share the ConfCmdFn callback type and the single SslConfCmdTbl.cmd dispatch slot. This subphase establishes the contracts and the receipt; it does not apply the discharge and does not edit CAMPAIGN-STATUS.json.",
+ "subphase": "B46: the seven blocked UNSAFE_FN_DEF sites in src/ssl/ssl_conf.rs that share the ConfCmdFn callback type and the single SslConfCmdTbl.cmd dispatch slot. This refresh adds the same-context in-use guard (B46-D2) and three guard tests, and corrects the stale coordinates and the falsified min_max_proto write-order clause. It still does not apply the discharge and does not edit CAMPAIGN-STATUS.json.",
  "candidate": {
-  "base_commit": "57d6cb53e",
-  "base_commit_subject": "docs(miri): cfg(miri) shims, the clean run, and a correction to the UB claim",
+  "base_commit": "a62adfb2a239aa336be81eb8974044d32a6edccb",
+  "base_commit_subject": "evidence(ssl): B46 and B47 rejected; a self-authored contract is not a witness",
   "branch": "stage/p25/ssl-session-s1",
-  "working_tree": "dirty: the B46 refresh, the Part A SSL_CONF_cmd/argv contracts and the Part D C3 canary in src/ssl/ssl_conf.rs, plus the B47 contracts in src/ssl/{ssl_ciph,ssl_rsa,t1_trce,ssl_lib}.rs; nothing committed, nothing rebuilt",
-  "src_sha256_final": "a48223fa828e35e8a8976b9e708779edc29a274b622430a843006ee280568290",
+  "working_tree": "dirty: the B46/B47 refresh plus the same-context in-use guard (B46-D2) and three guard tests in src/ssl/ssl_conf.rs; nothing committed, nothing rebuilt into the install",
+  "src_sha256_final": "880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
   "src_sha256_final_scope": "sha256 of src/ssl/ssl_conf.rs at this working tree; the other B47 files are listed in boundary-sweep-B47.json",
   "files": [
    "src/ssl/ssl_conf.rs"
   ],
-  "note": "No freeze tag was created and nothing was committed (per the subphase instruction). The obligation coordinates (line fields 438/455/511/537/552/567/573) are the V1 census coordinates; line_current is the current source line. This receipt is a B46 refresh only: the review verdict history is preserved verbatim."
+  "note": "No freeze tag was created and nothing was committed (per the subphase instruction). The obligation coordinates (line fields 438/455/511/537/552/567/573) are the V1 census coordinates and are retained as provenance; line_current, every embedded candidate line reference and the candidate hashes have been refreshed to the current working tree (src_sha256_final). The review verdict history is preserved verbatim."
  },
  "authority": {
   "id": "openssl-3.5.9",
@@ -25,9 +25,16 @@
   "divergence": {
    "id": "B46-D1",
    "section": "AGENTS.md section 17",
-   "divergence": "The pinned authority's SSL_CONF_cmd(3) documentation requires neither exclusive access to SSL_CONF_CTX/SSL/SSL_CTX nor the absence of concurrent mutation, and ssl/ssl_conf.c performs no check. The candidate's public # Safety (src/ssl/ssl_conf.rs:1362) now requires both.",
+   "divergence": "The pinned authority's SSL_CONF_cmd(3) documentation requires neither exclusive access to SSL_CONF_CTX/SSL/SSL_CTX nor the absence of concurrent mutation, and ssl/ssl_conf.c performs no check. The candidate's public # Safety (src/ssl/ssl_conf.rs:1489) now requires both.",
    "effect": "Narrows what the crate accepts; changes no behaviour and no return value. A caller following the authority's documented single-context usage already satisfies it.",
    "disposition": "RECORDED AS A DOCUMENTED DIVERGENCE, not reproduced as an unchecked assumption"
+  },
+  "divergence_overlap": {
+   "id": "B46-D2",
+   "section": "AGENTS.md section 17",
+   "divergence": "The pinned authority performs no check for an overlapping invocation on the same SSL_CONF_CTX; a re-entrant or aliased SSL_CONF_cmd proceeds into the aliasing it would perform. The candidate now refuses a same-thread overlapping invocation of SSL_CONF_cmd/SSL_CONF_cmd_argv on the same context with the API's ordinary failure value 0, via an in-use flag set on entry and cleared by an RAII guard on every exit path (src/ssl/ssl_conf.rs:152-190, 1528, 1572).",
+   "effect": "Changes behaviour only for an overlapping invocation: the authority would proceed (into aliasing/UB), the candidate refuses deterministically. Non-overlapping conforming callers observe no change. Cross-thread mutation of the wrapped SSL/SSL_CTX remains outside the contract and is not made thread-safe by this guard.",
+   "disposition": "RECORDED AS A DOCUMENTED DIVERGENCE: refuse where the authority would proceed into UB (AGENTS.md sections 17 and 5)"
   }
  },
  "scope": {
@@ -59,45 +66,45 @@
    "id": "B46-SSL-CONF-001",
    "file": "src/ssl/ssl_conf.rs",
    "line": 438,
-   "line_current": 532,
-   "line_provenance": "V1 census coordinate at the inventory source head; current line at the B47-batched working tree (after the S1/B46 docs and commit 4903a9c65)",
+   "line_current": 600,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree at src_sha256_final 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
    "kind": "UNSAFE_FN_DEF",
    "operation": "cmd_Protocol",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*mut SslConfCtx, *const c_char) -> c_int",
    "disposition": "SAFETY_DISCHARGED (scope: cmd_Protocol and its dispatch path; src/ssl/ssl_conf.rs:438)",
-   "contract": "`cmd_Protocol` is a `ConfCmdFn` stored as `SslConfCmdTbl.cmd` by the private `commands()` table (`src/ssl/ssl_conf.rs:922`, row `:998`). The only indirect invocation is `f(cctx, value)` in `SSL_CONF_cmd` (`:1426`), reached from `SSL_CONF_cmd_argv` (`:1459` -> `:1505`). `SSL_CONF_cmd_value_type` (`:1532`) reads only `value_type`, never `.cmd`. Preconditions: (1) `cctx` is non-NULL, aligned, live, initialised, and exclusively accessible: `SSL_CONF_cmd` rejects a NULL `cctx`/`cmd` at `:1398`; provenance is one zeroed `size_of::<SslConfCtx>()` block from `SSL_CONF_CTX_new` (`:1561`); `SSL_CONF_CTX_set_ssl`/`_set_ssl_ctx` (`:1684`/`:1728`) set `ctx`/`ssl` to NULL or live in-crate objects; the shared `&*cctx` at `:1410` is used only for lookup and ends (NLL) before `:1426`, so the handler's writes do not alias a live shared borrow. (2) `value` is non-NULL and NUL-terminated: `SSL_CONF_cmd` rejects NULL for a typed row at `:1419`; NUL-termination is the public caller contract at `:1368`. (3) No retention of `value`: the handler passes it to `parse_option_list`, which stores only the frame-local flag table in `cctx.tbl` and clears `tbl`/`ntbl` before returning (`:498-499`). (4) Return: `CONF_parse_list` gives 1 when an element matched and 0 otherwise; `SSL_CONF_cmd` maps >0 to 2 and every other value to 0. (5) NULL `cctx` is never delivered (dispatch guard); if it were, the handler would dereference it. A NULL `value` is not delivered either; the handler would answer 0 (CONF_parse_list's NULL arm). (6) Error path: `cctx.tbl`/`ntbl` are cleared on every path; `CONF_parse_list` has its own `guard_ffi`. The slot is private; exclusivity is now a stated precondition of the public SSL_CONF_cmd (# Safety :1368, B46-D1), whose authority documentation states neither (see preconditions).",
+   "contract": "`cmd_Protocol` is a `ConfCmdFn` stored as `SslConfCmdTbl.cmd` by the private `commands()` table (`src/ssl/ssl_conf.rs:990`, row `:1066`). The only indirect invocation is `f(cctx, value)` in `SSL_CONF_cmd` (`:1473`), reached from `SSL_CONF_cmd_argv` (`:1560` -> `:1616`). `SSL_CONF_cmd_value_type` (`:1643`) reads only `value_type`, never `.cmd`. Preconditions: (1) `cctx` is non-NULL, aligned, live, initialised, and exclusively accessible: `SSL_CONF_cmd` rejects a NULL `cctx`/`cmd` at `:1522`; provenance is one zeroed `size_of::<SslConfCtx>()` block from `SSL_CONF_CTX_new` (`:1672`); `SSL_CONF_CTX_set_ssl`/`_set_ssl_ctx` (`:1795`/`:1839`) set `ctx`/`ssl` to NULL or live in-crate objects; the shared `&*cctx` at `:1457` is used only for lookup and ends (NLL) before `:1473`, so the handler's writes do not alias a live shared borrow. (2) `value` is non-NULL and NUL-terminated: `SSL_CONF_cmd` rejects NULL for a typed row at `:1490`; NUL-termination is the public caller contract at `:1489`. (3) No retention of `value`: the handler passes it to `parse_option_list`, which stores only the frame-local flag table in `cctx.tbl` and clears `tbl`/`ntbl` before returning (`:566-567`). (4) Return: `CONF_parse_list` gives 1 when an element matched and 0 otherwise; `SSL_CONF_cmd` maps >0 to 2 and every other value to 0. (5) NULL `cctx` is never delivered (dispatch guard); if it were, the handler would dereference it. A NULL `value` is not delivered either; the handler would answer 0 (CONF_parse_list's NULL arm). (6) Error path: `cctx.tbl`/`ntbl` are cleared on every path; `CONF_parse_list` has its own `guard_ffi`. The slot is private; exclusivity is now a stated precondition of the public SSL_CONF_cmd (# Safety :1489, B46-D1), whose authority documentation states neither (see preconditions).",
    "callers": [
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1426,
+     "line": 1473,
      "role": "sole indirect invocation f(cctx, value) in SSL_CONF_cmd"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1459,
-     "role": "SSL_CONF_cmd_argv, which calls SSL_CONF_cmd at :1505"
+     "line": 1560,
+     "role": "SSL_CONF_cmd_argv, which calls SSL_CONF_cmd at :1616"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 922,
-     "role": "private commands() table; writes the .cmd slot at :992"
+     "line": 990,
+     "role": "private commands() table; writes the .cmd slot at :1066"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1532,
+     "line": 1643,
      "role": "SSL_CONF_cmd_value_type; reads value_type only, no dispatch"
     }
    ],
    "canary": "C2: ssl::ssl_conf::tests::conf_cmd_dispatch_feeds_a_live_ctx_and_does_not_retain_the_value",
    "established": [
-    "cctx non-NULL and live on the only dispatch path (guard :1398; provenance :1561)",
-    "value non-NULL on the only dispatch path (guard :1419); NUL-termination from the caller contract :1368 (value non-NULL for typed rows) and exercised by the canary's literals",
+    "cctx non-NULL and live on the only dispatch path (guard :1522; provenance :1672)",
+    "value non-NULL on the only dispatch path (guard :1490); NUL-termination from the caller contract :1489 (value non-NULL for typed rows) and exercised by the canary's literals",
     "value not retained: only cctx.tbl is written and it is cleared",
-    "no live shared borrow of cctx across the callback (:1410 ends before :1426)"
+    "no live shared borrow of cctx across the callback (:1457 ends before :1473)"
    ],
    "authority_derived": [
-    "the authority's SSL_CONF_cmd(3) documentation states only that the context is valid; the candidate's public contract (:1368) now requires exclusive access to cctx and the wrapped SSL/SSL_CTX (B46-D1), so the no-concurrent-mutation obligation is a stated external ABI precondition, not a hidden assumption"
+    "the authority's SSL_CONF_cmd(3) documentation states only that the context is valid; the candidate's public contract (:1489) now requires exclusive access to cctx and the wrapped SSL/SSL_CTX (B46-D1), so the no-concurrent-mutation obligation is a stated external ABI precondition, not a hidden assumption"
    ],
    "asserted_not_established": [
     "that no other crate-external code can install a ConfCmdFn: argued from the private SslConfCmdTbl.cmd field and the private commands() table, plus grep for every .cmd read; not mechanically enforced at the ABI"
@@ -107,45 +114,45 @@
    "id": "B46-SSL-CONF-002",
    "file": "src/ssl/ssl_conf.rs",
    "line": 455,
-   "line_current": 574,
-   "line_provenance": "V1 census coordinate at the inventory source head; current line at the B47-batched working tree (after the S1/B46 docs and commit 4903a9c65)",
+   "line_current": 642,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree at src_sha256_final 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
    "kind": "UNSAFE_FN_DEF",
    "operation": "cmd_Options",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*mut SslConfCtx, *const c_char) -> c_int",
    "disposition": "SAFETY_DISCHARGED (scope: cmd_Options and its dispatch path; src/ssl/ssl_conf.rs:455)",
-   "contract": "`cmd_Options` is a `ConfCmdFn` stored by the private `commands()` table `:1001`. The only indirect invocation is `SSL_CONF_cmd` -> `f(cctx, value)` (`:1426`), reached from `SSL_CONF_cmd_argv` (`:1459` -> `:1505`). Preconditions: (1) `cctx` non-NULL/aligned/live/initialised and exclusive: guard `:1398`, provenance `SSL_CONF_CTX_new` `:1561`, members from `:1684`/`:1728`; no shared borrow survives `:1410` into `:1426`. (2) `value` non-NULL and NUL-terminated: guard `:1419`, caller contract `:1368`; the handler itself returns -3 for NULL (authority ssl_conf.c:411-412) but the dispatch refuses NULL before the call. (3) No retention: `parse_option_list` writes only the frame-local table into `cctx.tbl` and clears it. (4) Return: 1 on match / 0 otherwise; a handler-originated -3 is unmapped by dispatch rules and would become 0, but the dispatch-level NULL path returns -3 before the handler. (5) NULL `cctx` never delivered. (6) The -3 arm takes no state; the parse path clears `tbl`/`ntbl` on every path (`CONF_parse_list` is `guard_ffi`-wrapped).",
+   "contract": "`cmd_Options` is a `ConfCmdFn` stored by the private `commands()` table `:1069`. The only indirect invocation is `SSL_CONF_cmd` -> `f(cctx, value)` (`:1473`), reached from `SSL_CONF_cmd_argv` (`:1560` -> `:1616`). Preconditions: (1) `cctx` non-NULL/aligned/live/initialised and exclusive: guard `:1522`, provenance `SSL_CONF_CTX_new` `:1672`, members from `:1795`/`:1839`; no shared borrow survives `:1457` into `:1473`. (2) `value` non-NULL and NUL-terminated: guard `:1490`, caller contract `:1489`; the handler itself returns -3 for NULL (authority ssl_conf.c:411-412) but the dispatch refuses NULL before the call. (3) No retention: `parse_option_list` writes only the frame-local table into `cctx.tbl` and clears it. (4) Return: 1 on match / 0 otherwise; a handler-originated -3 is unmapped by dispatch rules and would become 0, but the dispatch-level NULL path returns -3 before the handler. (5) NULL `cctx` never delivered. (6) The -3 arm takes no state; the parse path clears `tbl`/`ntbl` on every path (`CONF_parse_list` is `guard_ffi`-wrapped).",
    "callers": [
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1426,
+     "line": 1473,
      "role": "sole indirect invocation in SSL_CONF_cmd"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1459,
-     "role": "SSL_CONF_cmd_argv -> SSL_CONF_cmd :1505"
+     "line": 1560,
+     "role": "SSL_CONF_cmd_argv -> ssl_conf_cmd_inner :1616"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 922,
-     "role": "private commands() table; writes .cmd at :995"
+     "line": 990,
+     "role": "private commands() table; writes .cmd at :1069"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1532,
+     "line": 1643,
      "role": "SSL_CONF_cmd_value_type; no dispatch"
     }
    ],
    "canary": "C2: ssl::ssl_conf::tests::conf_cmd_dispatch_feeds_a_live_ctx_and_does_not_retain_the_value (directly pins the handler's NULL arm)",
    "established": [
-    "cctx and value non-NULL on the dispatch path (:1398, :1419)",
+    "cctx and value non-NULL on the dispatch path (:1522, :1490)",
     "the handler's NULL value arm returns -3 and mutates no state (canary direct call)",
     "value not retained; cctx.tbl cleared after the parse",
     "two dispatches with different values have independent effects (canary)"
    ],
    "authority_derived": [
-    "the authority's SSL_CONF_cmd(3) documentation omits exclusivity; the candidate's public contract (:1368) now requires it (B46-D1)",
+    "the authority's SSL_CONF_cmd(3) documentation omits exclusivity; the candidate's public contract (:1489) now requires it (B46-D1)",
     "the -3/bad_value mapping is the authority's (ssl_conf.c:999-1008), exercised at the dispatch-level NULL guard rather than by the handler"
    ],
    "asserted_not_established": [
@@ -156,44 +163,44 @@
    "id": "B46-SSL-CONF-003",
    "file": "src/ssl/ssl_conf.rs",
    "line": 511,
-   "line_current": 654,
-   "line_provenance": "V1 census coordinate at the inventory source head; current line at the B47-batched working tree (after the S1/B46 docs and commit 4903a9c65)",
+   "line_current": 722,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree at src_sha256_final 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
    "kind": "UNSAFE_FN_DEF",
    "operation": "cmd_VerifyMode",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*mut SslConfCtx, *const c_char) -> c_int",
    "disposition": "SAFETY_DISCHARGED (scope: cmd_VerifyMode and its dispatch path; src/ssl/ssl_conf.rs:511)",
-   "contract": "`cmd_VerifyMode` is a `ConfCmdFn` stored by the private `commands()` table `:1002`. The only indirect invocation is `SSL_CONF_cmd` -> `f(cctx, value)` (`:1426`), reached from `SSL_CONF_cmd_argv` (`:1459` -> `:1505`). Preconditions: (1) `cctx` non-NULL/aligned/live/initialised and exclusive: guard `:1398`, provenance `:1561`, members `:1684`/`:1728`, no shared borrow across `:1426` from `:1410`. (2) `value` non-NULL and NUL-terminated: guard `:1419`, caller contract `:1368`; the handler's own -3 arm (authority ssl_conf.c:432-433) is unreachable through the dispatch. (3) No retention: `parse_option_list` clears `cctx.tbl`/`ntbl`. (4) Return: 1/0; a handler -3 would map to 0 under dispatch rules, but the dispatch returns -3 itself for a NULL value. (5) NULL `cctx` never delivered. (6) The verify word is written only through `c.pvfy_flags` by `ssl_set_option`, one `c_int` wide; on the NULL or rejected path no verify word is touched.",
+   "contract": "`cmd_VerifyMode` is a `ConfCmdFn` stored by the private `commands()` table `:1070`. The only indirect invocation is `SSL_CONF_cmd` -> `f(cctx, value)` (`:1473`), reached from `SSL_CONF_cmd_argv` (`:1560` -> `:1616`). Preconditions: (1) `cctx` non-NULL/aligned/live/initialised and exclusive: guard `:1522`, provenance `:1672`, members `:1795`/`:1839`, no shared borrow across `:1473` from `:1457`. (2) `value` non-NULL and NUL-terminated: guard `:1490`, caller contract `:1489`; the handler's own -3 arm (authority ssl_conf.c:432-433) is unreachable through the dispatch. (3) No retention: `parse_option_list` clears `cctx.tbl`/`ntbl`. (4) Return: 1/0; a handler -3 would map to 0 under dispatch rules, but the dispatch returns -3 itself for a NULL value. (5) NULL `cctx` never delivered. (6) The verify word is written only through `c.pvfy_flags` by `ssl_set_option`, one `c_int` wide; on the NULL or rejected path no verify word is touched.",
    "callers": [
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1426,
+     "line": 1473,
      "role": "sole indirect invocation in SSL_CONF_cmd"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1459,
-     "role": "SSL_CONF_cmd_argv -> SSL_CONF_cmd :1505"
+     "line": 1560,
+     "role": "SSL_CONF_cmd_argv -> ssl_conf_cmd_inner :1616"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 922,
-     "role": "private commands() table; writes .cmd at :996"
+     "line": 990,
+     "role": "private commands() table; writes .cmd at :1070"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1532,
+     "line": 1643,
      "role": "SSL_CONF_cmd_value_type; no dispatch"
     }
    ],
    "canary": "C2 exercises the same dispatch slot and table-clearing path; the verify word width is covered by the existing a_verify_option_writes_only_its_own_word",
    "established": [
-    "cctx and value non-NULL on the dispatch path (:1398, :1419)",
+    "cctx and value non-NULL on the dispatch path (:1522, :1490)",
     "value not retained; cctx.tbl cleared",
     "verify-word writes are one c_int wide (existing test)"
    ],
    "authority_derived": [
-    "the authority's SSL_CONF_cmd(3) documentation omits exclusivity; the candidate's public contract (:1368) now requires it (B46-D1)"
+    "the authority's SSL_CONF_cmd(3) documentation omits exclusivity; the candidate's public contract (:1489) now requires it (B46-D1)"
    ],
    "asserted_not_established": [
     "slot writability limited to the private table (argued, not mechanically enforced)"
@@ -203,45 +210,45 @@
    "id": "B46-SSL-CONF-004",
    "file": "src/ssl/ssl_conf.rs",
    "line": 537,
-   "line_current": 705,
-   "line_provenance": "V1 census coordinate at the inventory source head; current line at the B47-batched working tree (after the S1/B46 docs and commit 4903a9c65)",
+   "line_current": 773,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree at src_sha256_final 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
    "kind": "UNSAFE_FN_DEF",
    "operation": "cmd_CipherString",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*mut SslConfCtx, *const c_char) -> c_int",
    "disposition": "SAFETY_DISCHARGED (scope: cmd_CipherString and its dispatch path; src/ssl/ssl_conf.rs:537)",
-   "contract": "`cmd_CipherString` is a `ConfCmdFn` stored by the private `commands()` table `:996`. The only indirect invocation is `SSL_CONF_cmd` -> `f(cctx, value)` (`:1426`), reached from `SSL_CONF_cmd_argv` (`:1459` -> `:1505`). Preconditions: (1) `cctx` non-NULL/aligned/live/initialised and exclusive; `ctx`/`ssl` each NULL or live in-crate objects: guard `:1398`, provenance `:1561`, members `:1684`/`:1728`. (2) `value` non-NULL and NUL-terminated: guard `:1419`, caller contract `:1368`; the setters tolerate NULL as a failure but the dispatch refuses it first. (3) No retention: `SSL_CTX_set_cipher_list`/`SSL_set_cipher_list` parse into fresh stacks and store no pointer to `value`. (4) Return: 1 when the last applied setter returned >0, else 0. (5) NULL `cctx` never delivered. (6) Error path: `sk == NULL` leaves the previous lists untouched, but the authority's zero-TLS1.2-cipher arm (ssl_lib.c:3376-3379) returns 0 after `ssl_create_cipher_list` has published new `cipher_list`/`cipher_list_by_id`; the published stacks are fully initialised and object-owned, so no partial/dangling state is retained. This is authority-parity, not a safety defect.",
+   "contract": "`cmd_CipherString` is a `ConfCmdFn` stored by the private `commands()` table `:1064`. The only indirect invocation is `SSL_CONF_cmd` -> `f(cctx, value)` (`:1473`), reached from `SSL_CONF_cmd_argv` (`:1560` -> `:1616`). Preconditions: (1) `cctx` non-NULL/aligned/live/initialised and exclusive; `ctx`/`ssl` each NULL or live in-crate objects: guard `:1522`, provenance `:1672`, members `:1795`/`:1839`. (2) `value` non-NULL and NUL-terminated: guard `:1490`, caller contract `:1489`; the setters tolerate NULL as a failure but the dispatch refuses it first. (3) No retention: `SSL_CTX_set_cipher_list`/`SSL_set_cipher_list` parse into fresh stacks and store no pointer to `value`. (4) Return: 1 when the last applied setter returned >0, else 0. (5) NULL `cctx` never delivered. (6) Error path: `sk == NULL` leaves the previous lists untouched, but the authority's zero-TLS1.2-cipher arm (ssl_lib.c:3376-3379) returns 0 after `ssl_create_cipher_list` has published new `cipher_list`/`cipher_list_by_id`; the published stacks are fully initialised and object-owned, so no partial/dangling state is retained. This is authority-parity, not a safety defect.",
    "callers": [
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1426,
+     "line": 1473,
      "role": "sole indirect invocation in SSL_CONF_cmd"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1459,
-     "role": "SSL_CONF_cmd_argv -> SSL_CONF_cmd :1505"
+     "line": 1560,
+     "role": "SSL_CONF_cmd_argv -> ssl_conf_cmd_inner :1616"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 922,
-     "role": "private commands() table; writes .cmd at :990"
+     "line": 990,
+     "role": "private commands() table; writes .cmd at :1064"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1532,
+     "line": 1643,
      "role": "SSL_CONF_cmd_value_type; no dispatch"
     }
    ],
    "canary": "C2 exercises the same dispatch slot and table-clearing path",
    "established": [
-    "cctx and value non-NULL on the dispatch path (:1398, :1419)",
+    "cctx and value non-NULL on the dispatch path (:1522, :1490)",
     "ctx/ssl NULL-or-live from the set_ssl/set_ssl_ctx contracts",
     "value not retained by the setters",
     "the published stacks are object-owned and fully initialised on the 0-return arm"
    ],
    "authority_derived": [
-    "the authority's SSL_CONF_cmd(3) documentation omits exclusivity; the candidate's public contract (:1368) now requires it (B46-D1)",
+    "the authority's SSL_CONF_cmd(3) documentation omits exclusivity; the candidate's public contract (:1489) now requires it (B46-D1)",
     "the exact state after the zero-match 0 return is authority-parity (ssl_lib.c:3367-3379), reproduced rather than observed at this identity"
    ],
    "asserted_not_established": [
@@ -252,44 +259,44 @@
    "id": "B46-SSL-CONF-005",
    "file": "src/ssl/ssl_conf.rs",
    "line": 552,
-   "line_current": 744,
-   "line_provenance": "V1 census coordinate at the inventory source head; current line at the B47-batched working tree (after the S1/B46 docs and commit 4903a9c65)",
+   "line_current": 812,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree at src_sha256_final 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
    "kind": "UNSAFE_FN_DEF",
    "operation": "cmd_Ciphersuites",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*mut SslConfCtx, *const c_char) -> c_int",
    "disposition": "SAFETY_DISCHARGED (scope: cmd_Ciphersuites and its dispatch path; src/ssl/ssl_conf.rs:552)",
-   "contract": "`cmd_Ciphersuites` is a `ConfCmdFn` stored by the private `commands()` table `:997`. The only indirect invocation is `SSL_CONF_cmd` -> `f(cctx, value)` (`:1426`), reached from `SSL_CONF_cmd_argv` (`:1459` -> `:1505`). Preconditions: (1) `cctx` non-NULL/aligned/live/initialised and exclusive; `ctx`/`ssl` each NULL or live: guard `:1398`, provenance `:1561`, members `:1684`/`:1728`. (2) `value` non-NULL and NUL-terminated: guard `:1419`, caller contract `:1368`; NULL is tolerated as setter failure but refused by the dispatch. (3) No retention: the ciphersuite setters parse `value` and retain no reference. (4) Return: 1 when the last applied setter returned >0, else 0. (5) NULL `cctx` never delivered. (6) Error path: a parse failure leaves the TLS 1.3 list unchanged; the authority's `update_cipher_list` arm (ssl_ciph.c:1381-1385) can return 0 after publishing fully initialised, object-owned lists, so no partial/dangling state is retained (authority parity).",
+   "contract": "`cmd_Ciphersuites` is a `ConfCmdFn` stored by the private `commands()` table `:1065`. The only indirect invocation is `SSL_CONF_cmd` -> `f(cctx, value)` (`:1473`), reached from `SSL_CONF_cmd_argv` (`:1560` -> `:1616`). Preconditions: (1) `cctx` non-NULL/aligned/live/initialised and exclusive; `ctx`/`ssl` each NULL or live: guard `:1522`, provenance `:1672`, members `:1795`/`:1839`. (2) `value` non-NULL and NUL-terminated: guard `:1490`, caller contract `:1489`; NULL is tolerated as setter failure but refused by the dispatch. (3) No retention: the ciphersuite setters parse `value` and retain no reference. (4) Return: 1 when the last applied setter returned >0, else 0. (5) NULL `cctx` never delivered. (6) Error path: a parse failure leaves the TLS 1.3 list unchanged; the authority's `update_cipher_list` arm (ssl_ciph.c:1381-1385) can return 0 after publishing fully initialised, object-owned lists, so no partial/dangling state is retained (authority parity).",
    "callers": [
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1426,
+     "line": 1473,
      "role": "sole indirect invocation in SSL_CONF_cmd"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1459,
-     "role": "SSL_CONF_cmd_argv -> SSL_CONF_cmd :1505"
+     "line": 1560,
+     "role": "SSL_CONF_cmd_argv -> ssl_conf_cmd_inner :1616"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 922,
-     "role": "private commands() table; writes .cmd at :991"
+     "line": 990,
+     "role": "private commands() table; writes .cmd at :1065"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1532,
+     "line": 1643,
      "role": "SSL_CONF_cmd_value_type; no dispatch"
     }
    ],
    "canary": "C2 exercises the same dispatch slot and table-clearing path",
    "established": [
-    "cctx and value non-NULL on the dispatch path (:1398, :1419)",
+    "cctx and value non-NULL on the dispatch path (:1522, :1490)",
     "ctx/ssl NULL-or-live from the set_ssl/set_ssl_ctx contracts",
     "value not retained by the setters"
    ],
    "authority_derived": [
-    "the authority's SSL_CONF_cmd(3) documentation omits exclusivity; the candidate's public contract (:1368) now requires it (B46-D1)",
+    "the authority's SSL_CONF_cmd(3) documentation omits exclusivity; the candidate's public contract (:1489) now requires it (B46-D1)",
     "the exact state after the update_cipher_list 0 return is authority-parity (ssl_ciph.c:1381-1385)"
    ],
    "asserted_not_established": [
@@ -300,45 +307,45 @@
    "id": "B46-SSL-CONF-006",
    "file": "src/ssl/ssl_conf.rs",
    "line": 567,
-   "line_current": 785,
-   "line_provenance": "V1 census coordinate at the inventory source head; current line at the B47-batched working tree (after the S1/B46 docs and commit 4903a9c65)",
+   "line_current": 853,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree at src_sha256_final 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
    "kind": "UNSAFE_FN_DEF",
    "operation": "cmd_MinProtocol",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*mut SslConfCtx, *const c_char) -> c_int",
    "disposition": "SAFETY_DISCHARGED (scope: cmd_MinProtocol and its dispatch path; src/ssl/ssl_conf.rs:567)",
-   "contract": "`cmd_MinProtocol` is a `ConfCmdFn` stored by the private `commands()` table `:999`. The only indirect invocation is `SSL_CONF_cmd` -> `f(cctx, value)` (`:1426`), reached from `SSL_CONF_cmd_argv` (`:1459` -> `:1505`). Preconditions: (1) `cctx` non-NULL/aligned/live/initialised and exclusive; `ctx`/`ssl` each NULL or live: guard `:1398`, provenance `:1561`, members `:1684`/`:1728`. (2) `value` non-NULL and NUL-terminated: this is a hard precondition because `min_max_proto` reads it with `CStr::from_ptr`; `SSL_CONF_cmd` enforces non-NULL at `:1419` and the caller contract at `:1368` supplies NUL-termination. (3) No retention: the value is converted to a slice and discarded. (4) `(*cctx).min_version` is live whenever `ctx` or `ssl` is non-NULL; when both are NULL, `min_max_proto` returns 0 before reading `value` or the bound. (5) Return: 1 when `ssl_set_version_bound` accepts the name, else 0; the bound is written only on acceptance, so a rejected name leaves it untouched. (6) NULL `cctx` is never delivered; a NULL `value` with a live `ctx`/`ssl` would be UB, which is why non-NULL is a stated precondition.",
+   "contract": "`cmd_MinProtocol` is a `ConfCmdFn` stored by the private `commands()` table `:1067`. The only indirect invocation is `SSL_CONF_cmd` -> `f(cctx, value)` (`:1473`), reached from `SSL_CONF_cmd_argv` (`:1560` -> `:1616`). Preconditions: (1) `cctx` non-NULL/aligned/live/initialised and exclusive; `ctx`/`ssl` each NULL or live: guard `:1522`, provenance `:1672`, members `:1795`/`:1839`. (2) `value` non-NULL and NUL-terminated: this is a hard precondition because `min_max_proto` reads it with `CStr::from_ptr`; `SSL_CONF_cmd` enforces non-NULL at `:1490` and the caller contract at `:1489` supplies NUL-termination. (3) No retention: the value is converted to a slice and discarded. (4) `(*cctx).min_version` is live whenever `ctx` or `ssl` is non-NULL; when both are NULL, `min_max_proto` returns 0 before reading `value` or the bound, so `bound` is never NULL at a dereference. (5) Return: 1 when `ssl_set_version_bound` accepts the name, else 0. The bound is not written only on acceptance: the accepted `None` name parses to version 0, which `ssl_set_version_bound` writes at `:470-473` before any range test; a nonzero accepted version is range-checked before its write; a rejected name, and an accepted name whose method version does not match the protocol family, leave the bound untouched. (6) NULL `cctx` is never delivered; a NULL `value` with a live `ctx`/`ssl` would be UB, which is why non-NULL is a stated precondition.",
    "callers": [
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1426,
+     "line": 1473,
      "role": "sole indirect invocation in SSL_CONF_cmd"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1459,
-     "role": "SSL_CONF_cmd_argv -> SSL_CONF_cmd :1505"
+     "line": 1560,
+     "role": "SSL_CONF_cmd_argv -> ssl_conf_cmd_inner :1616"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 922,
-     "role": "private commands() table; writes .cmd at :993"
+     "line": 990,
+     "role": "private commands() table; writes .cmd at :1067"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1532,
+     "line": 1643,
      "role": "SSL_CONF_cmd_value_type; no dispatch"
     }
    ],
-   "canary": "C2 exercises the same dispatch slot; the min/max NULL-value precondition is established statically by the :1419 guard, not by a runtime canary",
+   "canary": "C2 exercises the same dispatch slot; the min/max NULL-value precondition is established statically by the :1490 guard, not by a runtime canary",
    "established": [
-    "cctx and value non-NULL on the dispatch path (:1398, :1419)",
+    "cctx and value non-NULL on the dispatch path (:1522, :1490)",
     "min_version is live when ctx/ssl is non-NULL (set_ssl/set_ssl_ctx contracts)",
-    "bound written only on acceptance by ssl_set_version_bound",
+    "a nonzero accepted version is range-checked before the write; version 0 (`None`) is written before any range test at `:470-473`; a rejected name leaves the bound untouched",
     "value not retained"
    ],
    "authority_derived": [
-    "the authority's SSL_CONF_cmd(3) documentation omits exclusivity; the candidate's public contract (:1368) now requires it (B46-D1)",
+    "the authority's SSL_CONF_cmd(3) documentation omits exclusivity; the candidate's public contract (:1489) now requires it (B46-D1)",
     "the protocol-name to version mapping is authority semantics, not a safety precondition"
    ],
    "asserted_not_established": [
@@ -349,45 +356,45 @@
    "id": "B46-SSL-CONF-007",
    "file": "src/ssl/ssl_conf.rs",
    "line": 573,
-   "line_current": 817,
-   "line_provenance": "V1 census coordinate at the inventory source head; current line at the B47-batched working tree (after the S1/B46 docs and commit 4903a9c65)",
+   "line_current": 885,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree at src_sha256_final 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
    "kind": "UNSAFE_FN_DEF",
    "operation": "cmd_MaxProtocol",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*mut SslConfCtx, *const c_char) -> c_int",
    "disposition": "SAFETY_DISCHARGED (scope: cmd_MaxProtocol and its dispatch path; src/ssl/ssl_conf.rs:573)",
-   "contract": "`cmd_MaxProtocol` is a `ConfCmdFn` stored by the private `commands()` table `:1000`. The only indirect invocation is `SSL_CONF_cmd` -> `f(cctx, value)` (`:1426`), reached from `SSL_CONF_cmd_argv` (`:1459` -> `:1505`). Preconditions mirror cmd_MinProtocol with `max_version`: (1) `cctx` non-NULL/aligned/live/initialised and exclusive; guard `:1398`, provenance `:1561`, members `:1684`/`:1728`. (2) `value` non-NULL and NUL-terminated: hard precondition because `min_max_proto` uses `CStr::from_ptr`; enforced by `:1419` and the caller contract `:1368`. (3) No retention. (4) `(*cctx).max_version` is live whenever `ctx` or `ssl` is non-NULL; both NULL returns 0 before reading value or bound. (5) Return: 1 on acceptance, else 0; the bound is written only on acceptance. (6) NULL `cctx` never delivered; NULL `value` with a live `ctx`/`ssl` would be UB and is excluded by the stated precondition.",
+   "contract": "`cmd_MaxProtocol` is a `ConfCmdFn` stored by the private `commands()` table `:1068`. The only indirect invocation is `SSL_CONF_cmd` -> `f(cctx, value)` (`:1473`), reached from `SSL_CONF_cmd_argv` (`:1560` -> `:1616`). Preconditions mirror cmd_MinProtocol with `max_version`: (1) `cctx` non-NULL/aligned/live/initialised and exclusive; guard `:1522`, provenance `:1672`, members `:1795`/`:1839`. (2) `value` non-NULL and NUL-terminated: hard precondition because `min_max_proto` uses `CStr::from_ptr`; enforced by `:1490` and the caller contract `:1489`. (3) No retention. (4) `(*cctx).max_version` is live whenever `ctx` or `ssl` is non-NULL; both NULL returns 0 before reading value or bound, so `bound` is never NULL at a dereference. (5) Return: 1 on acceptance, else 0. The bound is not written only on acceptance: `None` (version 0) is written at `:470-473` before any range test; a nonzero accepted version is range-checked before its write; a rejected or method-mismatched name leaves it untouched. (6) NULL `cctx` never delivered; NULL `value` with a live `ctx`/`ssl` would be UB and is excluded by the stated precondition.",
    "callers": [
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1426,
+     "line": 1473,
      "role": "sole indirect invocation in SSL_CONF_cmd"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1459,
-     "role": "SSL_CONF_cmd_argv -> SSL_CONF_cmd :1505"
+     "line": 1560,
+     "role": "SSL_CONF_cmd_argv -> ssl_conf_cmd_inner :1616"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 922,
-     "role": "private commands() table; writes .cmd at :994"
+     "line": 990,
+     "role": "private commands() table; writes .cmd at :1068"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1532,
+     "line": 1643,
      "role": "SSL_CONF_cmd_value_type; no dispatch"
     }
    ],
-   "canary": "C2 exercises the same dispatch slot; the max NULL-value precondition is established statically by the :1419 guard, not by a runtime canary",
+   "canary": "C2 exercises the same dispatch slot; the max NULL-value precondition is established statically by the :1490 guard, not by a runtime canary",
    "established": [
-    "cctx and value non-NULL on the dispatch path (:1398, :1419)",
+    "cctx and value non-NULL on the dispatch path (:1522, :1490)",
     "max_version is live when ctx/ssl is non-NULL",
-    "bound written only on acceptance",
+    "a nonzero accepted version is range-checked before the write; version 0 (`None`) is written before any range test at `:470-473`",
     "value not retained"
    ],
    "authority_derived": [
-    "the authority's SSL_CONF_cmd(3) documentation omits exclusivity; the candidate's public contract (:1368) now requires it (B46-D1)",
+    "the authority's SSL_CONF_cmd(3) documentation omits exclusivity; the candidate's public contract (:1489) now requires it (B46-D1)",
     "the protocol-name to version mapping is authority semantics, not a safety precondition"
    ],
    "asserted_not_established": [
@@ -398,44 +405,53 @@
  "caller_closure": [
   {
    "file": "src/ssl/ssl_conf.rs",
-   "caller": "SSL_CONF_cmd (:1392, guard :1398, value guard :1419, dispatch :1426)",
+   "caller": "SSL_CONF_cmd (:1516, guard :1522, value guard :1490, dispatch :1473)",
    "disposition": "provides cctx/value non-NULL and the only indirect invocation; unchanged by B46",
    "evidence": "the seven names occur only as `cmdstr(cmd_*, ...)` rows in commands() and as `Some(f)` in the SslConfCmdTbl constructor"
   },
   {
    "file": "src/ssl/ssl_conf.rs",
-   "caller": "SSL_CONF_cmd_argv (:1459 -> :1505)",
+   "caller": "SSL_CONF_cmd_argv (:1560 -> :1616)",
    "disposition": "delegates to SSL_CONF_cmd after setting CMDLINE flags; unchanged by B46",
    "evidence": "single call site; arg/argn are the caller's C strings"
   },
   {
    "file": "src/ssl/ssl_conf.rs",
-   "caller": "SSL_CONF_cmd_value_type (:1532)",
+   "caller": "SSL_CONF_cmd_value_type (:1643)",
    "disposition": "does not read or invoke .cmd; no obligation on the ConfCmdFn sites",
    "evidence": "reads only table[idx].value_type"
   },
   {
    "file": "src/ssl/ssl_conf.rs",
-   "caller": "commands() (:922)",
+   "caller": "commands() (:990)",
    "disposition": "the sole writer of SslConfCmdTbl.cmd; private fn",
    "evidence": "the only `.cmd` assignment sites are Some(f) in cmdstr/cmdtype and None in switch"
   }
  ],
  "evidence": {
   "fast": {
-   "fmt": "cargo fmt --all -- --check: PASS (exit 0, no output) in the court container at ssl_conf.rs sha256 a48223fa828e35e8a8976b9e708779edc29a274b622430a843006ee280568290",
-   "clippy": "cargo clippy --all-targets -- -D warnings: PASS (Finished dev profile in 17.21s) at the same source",
-   "focused_tests": "cargo test --lib -- ssl:: -- --test-threads=4: PASS, 345 passed / 0 failed / 16 ignored (1926 filtered out) at the same source, including C2 and C3"
+   "fmt": "cargo fmt --all -- --check: PASS (exit 0, no output) in the court container at ssl_conf.rs sha256 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
+   "clippy": "cargo clippy --all-targets -- -D warnings: PASS (Finished dev profile in 15.50s) at the same source",
+   "focused_tests": "cargo test --lib -- ssl:: -- --test-threads=4: PASS, 348 passed / 0 failed / 16 ignored (1926 filtered out) at the same source, including C2, C3 and the three new guard tests C4-C6"
   },
   "mutation": {
-   "canary": "C2(ssl::ssl_conf::tests::conf_cmd_dispatch_feeds_a_live_ctx_and_does_not_retain_the_value)",
-   "guarded_check": "cmd_Options's `if value.is_null() { return -3; }` arm (src/ssl/ssl_conf.rs:622-624)",
-   "pre_mutation_sha256": "a48223fa828e35e8a8976b9e708779edc29a274b622430a843006ee280568290",
-   "mutation": "removed the three-line NULL guard from cmd_Options (src/ssl/ssl_conf.rs:622-624)",
-   "command": "cargo test --lib -- ssl::ssl_conf::tests::conf_cmd_dispatch_feeds_a_live_ctx_and_does_not_retain_the_value -- --exact --test-threads=1",
-   "observed": "FAILED: panicked at src/ssl/ssl_conf.rs:1889:9: assertion `left == right` failed: the handler's own NULL arm returns -3; left: 0, right: -3; test result 0 passed / 1 failed",
-   "restore": "restored from the snapshot with `cp`; `sha256sum -c` reported OK for the pre-mutation hash",
-   "later_comment_only_edits": "none after the mutation run; the restored file is byte-identical to the measured identity a48223fa828e35e8a8976b9e708779edc29a274b622430a843006ee280568290"
+   "canary": "C4(ssl::ssl_conf::tests::a_reentrant_dispatch_is_refused_and_leaves_the_context_usable)",
+   "guarded_check": "the `let Some(_in_use) = (unsafe { enter_use(cctx) })` acquisition in SSL_CONF_cmd (src/ssl/ssl_conf.rs:1528)",
+   "pre_mutation_sha256": "880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
+   "mutation": "replaced the acquisition with `let _in_use = ();` in SSL_CONF_cmd only (SSL_CONF_cmd_argv kept its guard)",
+   "command": "cargo test --lib -- ssl::ssl_conf::tests::a_reentrant_dispatch_is_refused_and_leaves_the_context_usable -- --exact --test-threads=1",
+   "observed": "FAILED: the re-entrant call was not refused; panicked at src/ssl/ssl_conf.rs:2181:9: assertion `left == right` failed: an overlapping invocation is refused; left: 2, right: 0; test result 0 passed / 1 failed",
+   "restore": "restored from the snapshot with `cp`; `sha256sum -c` reported OK for 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
+   "later_comment_only_edits": "none after the mutation run; the restored file is byte-identical to the measured identity 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
+   "prior_mutation": {
+    "canary": "C2(ssl::ssl_conf::tests::conf_cmd_dispatch_feeds_a_live_ctx_and_does_not_retain_the_value)",
+    "guarded_check": "cmd_Options's `if value.is_null() { return -3; }` arm (src/ssl/ssl_conf.rs:690-692)",
+    "pre_mutation_sha256": "a48223fa828e35e8a8976b9e708779edc29a274b622430a843006ee280568290",
+    "mutation": "removed the three-line NULL guard from cmd_Options (src/ssl/ssl_conf.rs:690-692)",
+    "command": "cargo test --lib -- ssl::ssl_conf::tests::conf_cmd_dispatch_feeds_a_live_ctx_and_does_not_retain_the_value -- --exact --test-threads=1",
+    "observed": "FAILED: panicked at src/ssl/ssl_conf.rs:2003:9: assertion `left == right` failed: the handler's own NULL arm returns -3; left: 0, right: -3; test result 0 passed / 1 failed",
+    "restore": "restored from the snapshot with `cp`; `sha256sum -c` reported OK for the pre-mutation hash"
+   }
   },
   "bounded_reuse": "The contracts are newly written for these seven sites; no prior SAFETY_DISCHARGED receipt names their census lines (the existing OSSH-DIS-097..101 cover lines 178, 605, 1023, 1111 and 1498 only). B46 establishes the per-site receipt; no evidence is reused from another boundary."
  },
@@ -446,19 +462,33 @@
   "result": "PASS",
   "observation": "SSL_CONF_cmd('Options','Bugs') returns 2, sets SSL_OP_ALL in the live option word, and clears cctx.tbl; a second call with '-Bugs' independently clears the bit; a NULL value is refused with -3 and changes no state; a direct cmd_Options(NULL) returns -3. Together these show the callback receives a live SslConfCtx and a NUL-terminated value through the .cmd slot, retains neither, and that a NULL value is handled.",
   "mutation_sensitive": true,
-  "fails_if": "the cmd_Options NULL guard is removed: observed left 0 / right -3 at src/ssl/ssl_conf.rs:1889 (see evidence.mutation)",
+  "fails_if": "the cmd_Options NULL guard is removed: observed left 0 / right -3 at src/ssl/ssl_conf.rs:2003 (see evidence.mutation.prior_mutation)",
   "limits": "The test does not exercise a real SSL/SSL_CTX for every handler; the cipher/protocol handlers are covered only through the shared dispatch/table-clearing path and their static contracts. It does not prove NUL-termination of an arbitrary caller buffer (that is the caller's contract), only that the handler consumes the literal up to its terminator."
  },
+ "negative_control_guard": {
+  "id": "C4-C6",
+  "names": [
+   "ssl::ssl_conf::tests::a_reentrant_dispatch_is_refused_and_leaves_the_context_usable (C4)",
+   "ssl::ssl_conf::tests::the_in_use_guard_is_cleared_on_every_error_exit (C5)",
+   "ssl::ssl_conf::tests::sequential_dispatches_are_not_refused_by_the_in_use_guard (C6)"
+  ],
+  "kind": "court functional tests, lib unittests",
+  "result": "PASS",
+  "observation": "C4 marks the context in use through the same `enter_use` acquisition the public dispatch performs, shows the re-entrant SSL_CONF_cmd returns 0 with no state change, then shows the context usable again after the guard drops. C5 shows the guard is cleared after the -2 (unrecognised command), -3 (NULL value) and handler-error exits and that the context still works. C6 shows two ordinary sequential calls both succeed and the flag is clear between them.",
+  "mutation_sensitive": true,
+  "fails_if": "SSL_CONF_cmd's `enter_use` acquisition is removed: observed left 2 / right 0 at src/ssl/ssl_conf.rs:2181 (see evidence.mutation).",
+  "limits": "A handler in this slice does not itself call back into SSL_CONF_cmd, so C4 presents the in-flight state through the same guard rather than executing a production handler callback. The guard covers same-thread overlap of SSL_CONF_cmd/SSL_CONF_cmd_argv only; it does not make the wrapped SSL/SSL_CTX safe for cross-thread mutation, and it is not a thread-safety claim."
+ },
  "hidden_obligations": 0,
- "hidden_obligations_note": "The rejected candidate had 2 (B46-H1, B46-R1). At this working tree both are closed: B46-H1 (the shared borrow live across the &mut) was fixed by 4903a9c65 and is absent from the current bodies; B46-R1 is now an explicit, stated precondition of the exported SSL_CONF_cmd/SSL_CONF_cmd_argv (external ABI contract, AGENTS.md section 7 criterion 2). Neither is hidden. The review verdict is NOT re-adjudicated and stays REJECT.",
- "new_unsafe_assumptions": 0,
- "new_unsafe_assumptions_note": "Only fn-level # Safety documentation and one test were added; no production unsafe operation, signature, layout or exported symbol changed.",
+ "hidden_obligations_note": "The rejected candidate had 2 (B46-H1, B46-R1). B46-H1 (the shared borrow live across the &mut) remains fixed (4903a9c65) and is absent from the current bodies. B46-R1 is no longer a single closed item; it is split by half and reported in full in residuals[B46-R1]. No obligation is unreported, but the full exclusivity obligation is NOT discharged: the cross-thread half is an advisory authority rule for SSL/SSL_CTX, and the same-thread half is enforced by the in-use guard (B46-D2). SSL_CONF_CTX itself has no authority rule. hidden_obligations=0 means no unreported obligation, not that the gap is closed. The review verdict is NOT re-adjudicated and stays REJECT.",
+ "new_unsafe_assumptions": 1,
+ "new_unsafe_assumptions_note": "One new production unsafe boundary: `enter_use` takes a raw context address with `addr_of!`, and `InUseGuard::drop` dereferences the stored `*const AtomicBool` to clear the flag. Its contract is that the context is live, aligned and outlives the guard, and that the guard is confined to one public dispatch that holds exclusive access. No signature, exported symbol or `#[repr(C)]` layout changed; the type is opaque and not `repr(C)`.",
  "unsafe_operations_removed": 0,
- "unsafe_operations_introduced": 0,
- "test_only_unsafe_added": 1,
- "boundary_size": "Seven `unsafe extern \"C\"` handler bodies in one file, all reached through one private Option<ConfCmdFn> slot. The runtime boundary is the single dispatch edge SSL_CONF_cmd -> f(cctx, value) plus the five callees (parse_option_list, the four cipher setters, min_max_proto). Production source is unchanged apart from fn-level # Safety docs; the canary adds test-only unsafe blocks.",
+ "unsafe_operations_introduced": 3,
+ "test_only_unsafe_added": 3,
+ "boundary_size": "Seven `unsafe extern \"C\"` handler bodies in one file, all reached through one private Option<ConfCmdFn> slot. The runtime boundary is the single dispatch edge (ssl_conf_cmd_inner -> f(cctx, value)) plus the five callees (parse_option_list, the four cipher setters, min_max_proto). The B46-D2 guard adds a two-operation internal unsafe abstraction (`addr_of!` + atomic swap/deref in `enter_use`/`InUseGuard::drop`), not a new C-visible symbol. The three new tests add test-only unsafe blocks.",
  "safe_callers_can_cause_ub": false,
- "safe_callers_can_cause_ub_note": "The slots and table are private and the handlers are not exported, so no safe-Rust caller can install a ConfCmdFn. The exported SSL_CONF_cmd is `unsafe extern \"C\"`; a C caller must satisfy its ':1281' contract (live cctx, NUL-terminated strings). Within the crate all callers are unsafe contexts that satisfy the dispatch guard.",
+ "safe_callers_can_cause_ub_note": "The slots and table are private and the handlers are not exported, so no safe-Rust caller can install a ConfCmdFn. The exported SSL_CONF_cmd is `unsafe extern \"C\"`; a C caller must satisfy its ':1489' contract (live cctx, NUL-terminated strings). Within the crate all callers are unsafe contexts that satisfy the dispatch guard. The in-use guard is internal and cannot be used by a safe caller to construct a reference.",
  "retained_blocked": [
   {
    "obligation": "src/ssl/ssl_conf.rs:240",
@@ -483,9 +513,12 @@
   {
    "id": "B46-R1",
    "severity": "medium",
-   "disposition": "CLOSED BY CONTRACT (external ABI precondition); review verdict not re-adjudicated",
-   "description": "SSL_CONF_cmd's public # Safety (:1281) requires only that cctx be 'live' and the strings NUL-terminated; it does not require exclusive access. The handlers write fields of the referenced SSL/SSL_CTX and cctx.tbl. Exclusivity is established by construction inside the dispatch (no shared borrow crosses the callback) but is an obligation on the foreign C caller that no executing candidate path checks. The precedence of the public contract should be strengthened so this is not merely asserted.",
-   "closed_by": "Part A contract change (see blocking_residual_closed_by)"
+   "disposition": "PARTIALLY ESTABLISHED, SPLIT BY HALF; not discharged; review verdict not re-adjudicated",
+   "description": "The precondition has two halves. (a) Cross-thread mutation of the wrapped SSL/SSL_CTX: the pinned authority documents an application obligation not to change an SSL_CTX/SSL from multiple threads concurrently (doc/man3/SSL_CTX_new.pod:97-99, 'should not be changed ... from multiple threads concurrently, since the implementation does not provide serialization of access'; doc/man7/ossl-guide-quic-multi-stream.pod:51-53, 'you cannot use the same SSL object on two different threads at the same time (without additional application level locking)'). This is advisory ('should not', 'generally') and is not checked by ssl/ssl_conf.c. (b) Same-thread overlap of the SSL_CONF_CTX: the candidate now refuses an overlapping SSL_CONF_cmd/SSL_CONF_cmd_argv deterministically with 0 via the in-use guard (B46-D2). That is a documented divergence: the authority would proceed into the aliasing/UB this crate refuses.",
+   "established_cross_thread": "The authority states the SSL/SSL_CTX exclusivity obligation; the candidate's public # Safety (:1489, argv :1542) restates it. Advisory authority text, not a mechanically enforced condition.",
+   "established_same_thread": "The in-use guard refuses an overlapping dispatch on the same SSL_CONF_CTX (C4; mutation-sensitive), and clears on every exit path (C5); sequential calls are unaffected (C6).",
+   "not_established": "SSL_CONF_CTX has no authority rule of its own. The authority statements are advisory and do not cover SSL_CONF_CTX. The guard covers only SSL_CONF_cmd/SSL_CONF_cmd_argv, not SSL_CONF_CTX_set_ssl/_set_ssl_ctx/_finish/_set1_prefix/_cmd_value_type. Cross-thread mutation of the wrapped SSL/SSL_CTX remains a caller obligation that no executing candidate path enforces. No independent adjudication has been performed.",
+   "closed_by": "Split closure only: authority doc citation for the cross-thread half, B46-D2 guard for the same-thread half (see blocking_residual_closed_by)"
   },
   {
    "id": "B46-R2",
@@ -527,8 +560,9 @@
   "The B46-SSL-CONF-* dispositions are receipts, not applied adjudications: consumer_closure was not run and CAMPAIGN-STATUS.json was not edited.",
   "The three excluded helpers (ssl_match_option, ssl_set_option_list, min_max_proto) remain BLOCKED and are not covered by these dispositions.",
   "No sanitizer, Miri, dudect or authority differential was run; no cryptographic or constant-time claim is made.",
-  "Foreign-caller exclusivity and NUL-termination are obligations on the exported SSL_CONF_cmd's C caller; they are not mechanically enforced by the candidate."
+  "Cross-thread mutation of the wrapped SSL/SSL_CTX and NUL-termination remain obligations on the exported SSL_CONF_cmd's C caller; they are not mechanically enforced. Same-thread overlap of SSL_CONF_cmd/SSL_CONF_cmd_argv on the same SSL_CONF_CTX IS refused mechanically (B46-D2), and that is a behavior change only for an overlapping call."
  ],
+ "refresh_note": "This refresh corrects the two facts the REJECT named without altering the verdict: (1) the min_max_proto write order - `None` (version 0) is written at :470-473 before any range test, a nonzero accepted version is range-checked before its write, and `bound` is never NULL where the body dereferences it; (2) the 'R1 closed' language is replaced by the split statement in residuals[B46-R1] and blocking_residual_closed_by (closed=false). Coordinates are refreshed to src_sha256_final, including the seven row references, the dispatch now at :1473, argv at :1560, value_type at :1643 and the callers. The review block, including its original 399-401 coordinate, is preserved verbatim as history; it is not re-adjudicated.",
  "review": {
   "reviewer": "independent adversarial reviewer (not the author)",
   "verdict": "REJECT",
@@ -552,20 +586,22 @@
  "hidden_obligation_detail": [
   {
    "id": "B46-H1",
-   "description": "shared borrow of SslConfCtx live across a call that takes &mut to the same object (ssl_conf.rs:301 -> :306 -> :185)",
+   "description": "shared borrow of SslConfCtx live across a call that takes &mut to the same object (ssl_conf.rs:369 -> :374 -> :253)",
    "closed_by": "4903a9c65 (shared borrow removed; ssl_set_option_list now copies tbl/ntbl before the loop)"
   },
   {
    "id": "B46-R1",
-   "description": "SSL_CONF_cmd documents only that the context is live; exclusive access is neither required nor enforced for a foreign caller",
-   "closed_by": "Part A contract change: B46-R1 is now a stated external ABI precondition (SSL_CONF_cmd/SSL_CONF_cmd_argv # Safety)"
+   "description": "exclusivity split by half: (a) cross-thread mutation of SSL/SSL_CTX is an advisory authority obligation; (b) same-thread SSL_CONF_CTX overlap is refused by the in-use guard",
+   "closed_by": "NOT fully closed. (a) cited to doc/man3/SSL_CTX_new.pod:97-99 and doc/man7/ossl-guide-quic-multi-stream.pod:51-53; (b) B46-D2 guard + tests C4-C6. SSL_CONF_CTX itself has no authority rule; cross-thread remains a caller obligation."
   }
  ],
  "blocking_residual_closed_by": {
   "residual": "B46-R1",
-  "closed": true,
-  "change": "Part A: src/ssl/ssl_conf.rs SSL_CONF_cmd # Safety (doc at :1368, fn at :1392) and SSL_CONF_cmd_argv # Safety (doc at :1441, fn at :1459) now require exclusive access to the SslConfCtx and to the SSL/SSL_CTX it wraps, forbid concurrent mutation, and require value to be NUL-terminated (non-NULL for every typed row).",
-  "basis": "AGENTS.md section 7 criterion 2 (an external ABI contract may establish a precondition) and section 21 (state the exact external contract). The authority docs do not state exclusivity, so it is recorded as B46-D1, a section 17 divergence that narrows the accepted contract.",
-  "limit": "Contract-level closure only. No behaviour changed, no safe-Rust interface was added, and the REJECT verdict stands until an independent re-review."
+  "closed": false,
+  "cross_thread_half": "Established as an authority-stated application obligation: doc/man3/SSL_CTX_new.pod:97-99 and doc/man7/ossl-guide-quic-multi-stream.pod:51-53. Advisory wordings ('should not', 'generally'); the authority does not check it and it is not a rule about SSL_CONF_CTX. The candidate restates it in the public # Safety (SSL_CONF_cmd :1489, SSL_CONF_cmd_argv :1542).",
+  "same_thread_half": "Established by construction and enforced at run time: SslConfCtx carries an `in_use` AtomicBool set by `enter_use` on entry to SSL_CONF_cmd/SSL_CONF_cmd_argv and cleared by InUseGuard on every exit path, including unwind (src/ssl/ssl_conf.rs:152-190). An overlapping call returns 0 (B46-D2). Tests C4-C6; the guard mutation fails C4.",
+  "change": "Part A contract narrowing (B46-D1) plus the same-context in-use guard (B46-D2).",
+  "basis": "AGENTS.md section 7 criterion 2 (precondition established by callers or an external contract), section 17 (documented divergence), and section 5 (refuse rather than reproduce an unsafe operation).",
+  "limit": "Not a full closure. SSL_CONF_CTX has no authority rule of its own; the guard covers only the two dispatch entry points; cross-thread mutation of the wrapped SSL/SSL_CTX stays a caller obligation; no independent re-review has happened. The REJECT verdict and the prohibition stand."
  }
 }
