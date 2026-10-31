@@ -2822,6 +2822,7 @@ def _nested_fixture(*, extra_instance=False, rogue_value=False,
     g._s1_docs_cache = {"src/nested.rs": (
         "#[repr(C)]\n"
         "pub struct Ctx {\n"
+        "    pub pad: [u8; 0xb8],\n"
         "    pub hw: *const Hw,\n"
         "    pub other: usize,\n"
         "}\n"
@@ -2925,6 +2926,179 @@ def case_nested_static_instance_writer_completeness():
              "unproven": unproven, "cast": cast})
 
 
+def _nested_chain_fixture(*, second_writer=False, other_type=False,
+                          vector_same=False, vector_other=False):
+    """A one-level chain ``ctx->key->hw`` with a controlled writer set.
+
+    The call reads ``hw->cipher`` (member offset 8).  Writers store the table
+    pointer into ``Key.hw`` at offset 0; a store at the *same displacement*
+    through an ``Other`` base is present only when requested, and a vector
+    copy either shares the ``Key`` owner type (a real overlap) or an ``Other``
+    one (provably disjoint).
+    """
+
+    class _P:
+        pass
+
+    class G:
+        name = "nested-chain-fixture.so"
+        source_root = None
+        start_set = {0x3000, 0x3100, 0x3200, 0x3300, 0x3400}
+        funcs = {0x1000: "consumer", 0x2000: "init_a", 0x2100: "init_b",
+                 0x2200: "other_init", 0x2300: "vector_same",
+                 0x2400: "vector_other",
+                 0x3000: "f0", 0x3100: "f1", 0x3200: "f2",
+                 0x3300: "f3", 0x3400: "f4"}
+        all_syms = dict(funcs)
+        names_at = {0x9000: {"HW_A"}, 0x9100: {"HW_B"},
+                    0x3000: {"f0"}, 0x3100: {"f1"}, 0x3200: {"f2"},
+                    0x3300: {"f3"}, 0x3400: {"f4"}}
+        sym_sizes = {"HW_A": 16, "HW_B": 16}
+        dynamic_defs = {}
+        taken_code = set()
+        slot_funcs = {}
+
+        def section_of(self, a):
+            return ".data.rel.ro" if a in (0x9000, 0x9100) else ".text"
+
+        def static_slot(self, a):
+            return {0x9000: {0x3000}, 0x9008: {0x3100},
+                    0x9100: {0x3000}, 0x9108: {0x3200}}.get(a)
+
+    g = G()
+    p = _P()
+    consumer = [(0x1000, "mov    (%rdi),%rax"),
+                (0x1004, "mov    (%rax),%rax"),
+                (0x1008, "call   *0x8(%rax)")]
+    init_a = [(0x2000, "mov    $0x9000,%rax"),
+              (0x2004, "mov    %rax,(%rdi)")]
+    init_b = [(0x2100, "mov    $0x9100,%rax"),
+              (0x2104, "mov    %rax,(%rdi)")]
+    other = [(0x2200, "mov    $0xc000,%rax"),
+             (0x2204, "mov    %rax,(%rdi)")]
+    vec_same = [(0x2300, "movups %xmm0,(%rdi)")]
+    vec_other = [(0x2400, "movups %xmm0,(%rdi)")]
+    p.insns_by_func = {0x1000: consumer, 0x2000: init_a}
+    if second_writer:
+        p.insns_by_func[0x2100] = init_b
+    if other_type:
+        p.insns_by_func[0x2200] = other
+    if vector_same:
+        p.insns_by_func[0x2300] = vec_same
+    if vector_other:
+        p.insns_by_func[0x2400] = vec_other
+    g.precision = p
+    g._s1_ctx_cache = {0x1000: {"file": "src/chain.rs",
+                                "function": "consumer", "line": 1,
+                                "var": "ctx", "type": "Ctx",
+                                "param": "ctx", "param_index": 0,
+                                "declared": "ctx: *mut Ctx"}}
+    g._s1_docs_cache = {"src/chain.rs": (
+        "#[repr(C)]\n"
+        "pub struct Ctx {\n"
+        "    pub key: *const Key,\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Key {\n"
+        "    pub hw: *const Hw,\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Hw {\n"
+        "    pub init: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+        "    pub cipher: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Other {\n"
+        "    pub hw: *const u8,\n"
+        "}\n"
+        "static HW_A: Hw = Hw { init: f0, cipher: f1 };\n"
+        "static HW_B: Hw = Hw { init: f0, cipher: f2 };\n")}
+
+    def span(header, body):
+        return {"file": "src/chain.rs", "line": 10, "header": header,
+                "body": body}
+
+    g._s1_writer_src_cache = {
+        0x2000: {"file": "src/chain.rs", "name": "init_a", "via": "module",
+                 "span": span("unsafe extern \"C\" fn init_a(key: *mut Key)",
+                               "(*key).hw = &HW_A;")},
+        0x2100: {"file": "src/chain.rs", "name": "init_b", "via": "module",
+                 "span": span("unsafe extern \"C\" fn init_b(key: *mut Key)",
+                               "(*key).hw = &HW_B;")},
+        0x2200: {"file": "src/chain.rs", "name": "other_init",
+                 "via": "module",
+                 "span": span("unsafe extern \"C\" fn other_init("
+                               "o: *mut Other)", "(*o).hw = 0xc000;")},
+        0x2300: {"file": "src/chain.rs", "name": "vector_same",
+                 "via": "module",
+                 "span": span("unsafe extern \"C\" fn vector_same("
+                               "key: *mut Key)",
+                               "core::ptr::write_bytes(key, 0, 1);")},
+        0x2400: {"file": "src/chain.rs", "name": "vector_other",
+                 "via": "module",
+                 "span": span("unsafe extern \"C\" fn vector_other("
+                               "o: *mut Other)",
+                               "core::ptr::write_bytes(o, 0, 1);")},
+    }
+    site = {"kind": "call", "func": 0x1000, "addr": 0x1008,
+            "text": "call   *0x8(%rax)", "targets": set(),
+            "unresolved": True, "reason": "base-slot-partial",
+            "class": "field", "field_offsets": {0}, "seam": None}
+    return g, site
+
+
+def case_nested_chain_field_writer_index():
+    """The writer index is keyed by (owning type, field), not displacement."""
+    g, site = _nested_chain_fixture()
+    chain = cc.nested_static_instance_witness(g, site, "consumer")
+    chain_ok = (isinstance(chain, dict) and chain.get("resolved")
+                and chain.get("targets") == ["0x3100"]
+                and chain["completeness"]["stores_at_slot"] == 1
+                and chain["pointer_slot"]["object"] == "Key"
+                and chain["pointer_slot"]["field"] == "hw"
+                and len(chain["pointer_slot"].get("chain") or []) == 2)
+
+    g, site = _nested_chain_fixture(second_writer=True)
+    widened = cc.nested_static_instance_witness(g, site, "consumer")
+    widened_ok = (isinstance(widened, dict) and widened.get("resolved")
+                  and widened.get("targets") == ["0x3100", "0x3200"]
+                  and widened["completeness"]["stores_at_slot"] == 2)
+
+    g, site = _nested_chain_fixture(other_type=True)
+    other = cc.nested_static_instance_witness(g, site, "consumer")
+    other_ok = (isinstance(other, dict) and other.get("resolved")
+                and other.get("targets") == ["0x3100"]
+                and other["completeness"]["excluded_different_object_stores"] >= 1)
+
+    g, site = _nested_chain_fixture(vector_same=True)
+    overlap = cc.nested_static_instance_witness(g, site, "consumer")
+    overlap_ok = bool(isinstance(overlap, dict) and not overlap.get("resolved")
+                      and overlap.get("refusal") == "writer-set-incomplete"
+                      and overlap.get("overlapping_non_scalar_stores"))
+
+    g, site = _nested_chain_fixture(vector_other=True)
+    disjoint = cc.nested_static_instance_witness(g, site, "consumer")
+    disjoint_ok = (isinstance(disjoint, dict) and disjoint.get("resolved")
+                   and disjoint.get("targets") == ["0x3100"])
+
+    ok = (chain_ok and widened_ok and other_ok and overlap_ok and disjoint_ok)
+    return _case(
+        "s2b-nested-chain-field-writer-index",
+        "a one-level object chain ctx->key->hw whose table pointer field is "
+        "written at one displacement by several possible owning types",
+        "resolve only the writers keyed by (Key, hw@0); add a second Key "
+        "writer, a same-displacement Other writer, a same-type vector copy, "
+        "and a different-type vector copy",
+        "the chain proves {0x3100}; a second Key writer widens it to "
+        "{0x3100,0x3200}; the Other store is not counted and does not break "
+        "the proof; the same-type vector copy refuses as "
+        "writer-set-incomplete; the different-type vector copy is disjoint",
+        (f"chain={chain_ok}, widened={widened_ok}, other={other_ok}, "
+         f"overlap={overlap_ok}, disjoint={disjoint_ok}"),
+        ok, {"chain": chain, "widened": widened, "other": other,
+             "overlap": overlap, "disjoint": disjoint})
+
+
 CASES = (
     case_identical_rebuild,
     case_layout_perturbation,
@@ -3014,6 +3188,8 @@ CASES = (
     case_stale_range_does_not_discharge,
     # S2b: nested static-instance dispatch and image-wide writer completeness
     case_nested_static_instance_writer_completeness,
+    # S2b: (owning type, field) writer index across a one-level object chain
+    case_nested_chain_field_writer_index,
 )
 
 NOT_COVERED = [
