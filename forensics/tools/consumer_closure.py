@@ -2953,16 +2953,17 @@ def _semantic_writer_sources(g: "DsoGraph", writer: int, offset: int) -> list:
 
 
 def _drop_s1_caches(g: "DsoGraph", *, all_caches: bool = True) -> None:
-    attrs = ["_s1_docs_cache", "_s1_module_index"]
+    attrs = ["_s1_docs_cache", "_s1_module_index", "_s1_dispatch_cache"]
     if all_caches:
         attrs += ["_s1_struct_cache", "_s1_layout_cache", "_s1_alias_cache",
                   "_s1_fn_cache", "_s1_ctx_cache", "_s1_demangle_cache",
-                  "_s1_instance_cache", "_s1_dispatch_cache", "_s1_sym_index",
+                  "_s1_instance_cache", "_s1_sym_index",
                   "_s1_macro_static_cache"]
     for attr in attrs:
         if hasattr(g, attr):
-            setattr(g, attr, {} if attr not in
-                    ("_s1_docs_cache", "_s1_module_index") else None)
+            setattr(g, attr,
+                    None if attr in ("_s1_docs_cache", "_s1_module_index",
+                                     "_s1_dispatch_cache") else {})
 
 
 def _semantic_provenance_resolver(g: "DsoGraph") -> "PrecisionResolver":
@@ -4297,6 +4298,14 @@ def _reg_origin(g: "DsoGraph", fstart: int, idx: int, reg: str,
     mn, _rest, ops = _insn_parts(_insn(g, fstart, k))
     addr = g.precision.insns_by_func[fstart][k][0]
     if mn.startswith("call"):
+        symbol = _nested_alloc_symbol(g, fstart, k)
+        if symbol is not None:
+            alloc = _nested_alloc_size(g, fstart, k, depth + 1)
+            if alloc is None:
+                return {"kind": "alloc-unknown", "symbol": symbol,
+                        "call_site": k, "addr": addr}
+            return {"kind": "alloc", "symbol": alloc["symbol"],
+                    "size": alloc["size"], "call_site": k, "addr": addr}
         direct = _direct_call_target(g, fstart, k)
         if direct is None:
             return {"kind": "unknown", "why": "indirect call result"}
@@ -6877,12 +6886,16 @@ def _s1_store_base_witness_raw(g: "DsoGraph", wf: int, store: dict,
         rec.update(qualified=False, unknown=True,
                    reason="load origin with no decidable owning type")
         return rec
-    if kind in ("call", "unknown"):
+    if kind in ("call", "alloc", "alloc-unknown", "unknown"):
         if kind == "call":
             call_idx = origin.get("call_site")
             sym = ((g.funcs.get(origin.get("callee")) or "").split("@")[0]
                    or _s1_call_symbol(g, wf, call_idx))
             target = origin.get("callee")
+        elif kind in ("alloc", "alloc-unknown"):
+            call_idx = origin.get("call_site")
+            sym = origin.get("symbol")
+            target = None
         elif "call" in str(origin.get("why") or ""):
             call_idx = _s1_call_def(g, wf, store["index"],
                                     _canon(store["base"]))
@@ -8392,6 +8405,298 @@ def _nested_source_could_write(g: "DsoGraph", wf: int, field: str,
 _NESTED_MAX_CHAIN = 4
 
 
+# Allocation-size attribution (S2b).  A store whose base register is the
+# result of an in-function allocation is qualified by the requested block
+# size, never by proximity: the base must be the allocation result itself and
+# exactly one declared layout of that size may cover the store displacement.
+_NESTED_ALLOCATORS = {
+    "CRYPTO_zalloc": (0,),
+    "CRYPTO_malloc": (0,),
+    "malloc": (0,),
+    "__libc_malloc": (0,),
+    "__rust_alloc": (0,),
+    "__rust_alloc_zeroed": (0,),
+    "alloc": (0,),
+    "calloc": (0, 1),
+    "__libc_calloc": (0, 1),
+}
+
+_S1_DECL_PRIM = {
+    "usize": (8, 8), "isize": (8, 8), "size_t": (8, 8),
+    "ssize_t": (8, 8), "u64": (8, 8), "i64": (8, 8),
+    "uint64_t": (8, 8), "int64_t": (8, 8), "c_ulong": (8, 8),
+    "c_long": (8, 8), "c_uint": (4, 4), "c_int": (4, 4),
+    "u32": (4, 4), "i32": (4, 4), "uint32_t": (4, 4),
+    "int32_t": (4, 4), "c_ushort": (2, 2), "u16": (2, 2),
+    "c_short": (2, 2), "c_uchar": (1, 1), "u8": (1, 1),
+    "i8": (1, 1), "c_char": (1, 1),
+}
+
+
+def _s1_decl_defs(g: "DsoGraph"):
+    """Every declared struct/union definition, in one source pass.
+
+    ``_s1_struct_defs`` re-scans the whole source tree per type name.  The
+    allocation-size rule needs the complete declared-type population, so the
+    scan is done once and cached; the records carry the explicit
+    ``#[repr(align(N))]`` that changes a type's size.
+    """
+    cache = getattr(g, "_s1_decl_defs_cache", None)
+    if cache is not None:
+        return cache
+    out = collections.defaultdict(list)
+    pat = re.compile(r"(?m)^[ \t]*(?:pub(?:\s*\([^)]*\))?\s+)?"
+                     r"(struct|union)\s+([A-Za-z_]\w*)\b")
+    for path, text in _s1_docs(g).items():
+        for m in pat.finditer(text):
+            brace = text.find("{", m.end())
+            if brace < 0:
+                continue
+            semi = text.find(";", m.end(), brace)
+            if semi >= 0:
+                continue
+            end = _s1_brace_span(text, brace)
+            if end is None:
+                continue
+            prefix = text[max(0, m.start() - 600):m.start()]
+            align = 0
+            am = re.search(r"#\[repr\s*\(((?:[^()]|\([^()]*\))*)\)\s*\]"
+                           r"(?:\s*#\[[^\]]*\])*\s*$", prefix)
+            if am is not None:
+                am2 = re.search(r"align\s*\(\s*(\d+)\s*\)", am.group(1))
+                if am2:
+                    align = int(am2.group(1))
+            out[m.group(2)].append({
+                "kind": m.group(1), "file": path,
+                "line": text.count("\n", 0, m.start()) + 1,
+                "body": text[brace + 1:end - 1],
+                "repr_c": bool(re.search(r"#\[repr\s*\(\s*C\b", prefix)),
+                "explicit_align": align,
+            })
+    g._s1_decl_defs_cache = dict(out)
+    return g._s1_decl_defs_cache
+
+
+def _s1_decl_type_size(g: "DsoGraph", type_text: str, seen=()):
+    """(size, alignment) of a declared type, union/align aware.
+
+    The existing ``_s1_type_size`` deliberately refuses an embedded union and
+    does not read ``#[repr(align(N))]``.  Allocation attribution needs the
+    actual ``size_of::<T>()`` for the whole declared population, so this
+    variant resolves a union as its widest member and honours an explicit
+    alignment; it is otherwise the same declared-type arithmetic.
+    """
+    t = " ".join((type_text or "").split())
+    if not t:
+        return None
+    if t.startswith("Option<") and t.endswith(">"):
+        inner = t[len("Option<"):-1].strip()
+        if "fn" in inner:
+            return (8, 8)
+        alias = _s1_type_alias(g, inner) or _s1_type_alias(
+            g, inner.split("::")[-1])
+        if alias is not None and _s1_decl_type_size(g, alias, seen) == (8, 8):
+            return (8, 8)
+        return None
+    if "fn" in t:
+        return (8, 8)
+    if t.startswith("*const") or t.startswith("*mut") or t.startswith("&"):
+        return (8, 8)
+    if t in _S1_DECL_PRIM:
+        return _S1_DECL_PRIM[t]
+    m = re.fullmatch(r"\[(.+);\s*([^\]]+)\]", t)
+    if m:
+        inner = _s1_decl_type_size(g, m.group(1), seen)
+        if inner is None:
+            return None
+        count_text = m.group(2).strip()
+        try:
+            count = int(count_text, 0)
+        except ValueError:
+            count = _s1_eval_int(g, count_text)
+        if count is None:
+            return None
+        return (inner[0] * count, inner[1])
+    alias = _s1_type_alias(g, t) or _s1_type_alias(g, t.split("::")[-1])
+    if alias is not None and alias != t:
+        return _s1_decl_type_size(g, alias, seen + (t,))
+    if t in seen or len(seen) > 8:
+        return None
+    layout = _s1_decl_layout(g, t, seen)
+    if layout is None:
+        return None
+    return (layout["size"], layout["align"])
+
+
+def _s1_decl_layout(g: "DsoGraph", type_name: str, seen=()):
+    """Declared layout of one struct/union, or None.
+
+    Returns ``{"size", "align", "fields": [{"name", "offset", "size",
+    "type"}]}``.  A struct keeps the existing decidable rule (unique
+    definition, ``repr(C)`` or homogeneous fields); a union is admitted only
+    with ``repr(C)`` and is sized as its widest member.
+    """
+    if not type_name or type_name in seen or len(seen) > 8:
+        return None
+    cache = getattr(g, "_s1_decl_layout_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_decl_layout_cache = cache
+    if type_name in cache:
+        return cache[type_name]
+    defs = _s1_decl_defs(g).get(type_name) or []
+    if len(defs) != 1:
+        cache[type_name] = None
+        return None
+    d = defs[0]
+    fields = _s1_split_fields(d["body"])
+    if not fields:
+        cache[type_name] = None
+        return None
+    infos = []
+    for name, ftype in fields:
+        info = _s1_decl_type_size(g, ftype, seen + (type_name,))
+        if info is None:
+            cache[type_name] = None
+            return None
+        infos.append((name, ftype, info[0], info[1]))
+    if d["kind"] == "union":
+        if not d["repr_c"]:
+            cache[type_name] = None
+            return None
+        align = max([a for _n, _t, _s, a in infos] + [d["explicit_align"]])
+        size = max(s for _n, _t, s, _a in infos)
+        size = (size + align - 1) // align * align
+        rows = [{"name": n, "offset": 0, "size": s, "type": t}
+                for n, t, s, _a in infos]
+        out = {"name": type_name, "size": size, "align": align,
+               "fields": rows, "kind": "union"}
+        cache[type_name] = out
+        return out
+    homogeneous = (len({(s, a) for _n, _t, s, a in infos}) == 1
+                   and infos[0][2] == infos[0][3])
+    if not d["repr_c"] and not homogeneous:
+        cache[type_name] = None
+        return None
+    off, align = 0, 1
+    rows = []
+    for name, ftype, size, falign in infos:
+        align = max(align, falign)
+        off = (off + falign - 1) // falign * falign
+        rows.append({"name": name, "offset": off, "size": size,
+                     "type": ftype})
+        off += size
+    align = max(align, d["explicit_align"])
+    size = (off + align - 1) // align * align
+    out = {"name": type_name, "size": size, "align": align,
+           "fields": rows, "kind": "struct"}
+    cache[type_name] = out
+    return out
+
+
+def _s1_decl_layout_index(g: "DsoGraph"):
+    """Declared layout population, grouped by ``size_of::<T>()``."""
+    cache = getattr(g, "_s1_decl_layout_index_cache", None)
+    if cache is not None:
+        return cache
+    index = collections.defaultdict(list)
+    for name in sorted(_s1_decl_defs(g)):
+        layout = _s1_decl_layout(g, name)
+        if layout is not None:
+            index[layout["size"]].append((name, layout))
+    g._s1_decl_layout_index_cache = dict(index)
+    return g._s1_decl_layout_index_cache
+
+
+def _s1_decl_candidates(g: "DsoGraph", size: int, offset: int, width: int):
+    """Declared layouts of exactly ``size`` with a field covering the store."""
+    out = []
+    for name, layout in _s1_decl_layout_index(g).get(size, ()):
+        row = next((f for f in layout["fields"]
+                    if f["offset"] <= offset
+                    and offset + width <= f["offset"] + f["size"]), None)
+        if row is not None:
+            out.append((name, row))
+    return out
+
+
+def _nested_alloc_symbol(g: "DsoGraph", fstart: int, idx: int):
+    """Allocator symbol a call instruction invokes, or None.
+
+    A direct call is named by its annotation.  A call through a relocation
+    slot is named by the slot's relocation symbol, never by objdump's nearest
+    symbol-plus-offset comment.
+    """
+    text = _insn(g, fstart, idx)
+    mn, rest, _ops = _insn_parts(text)
+    if not mn.startswith("call"):
+        return None
+    names = set()
+    if rest.startswith("*"):
+        slot = _insn_comment_addr(text)
+        if slot is not None:
+            info = _semantic_slot(g, slot)
+            if info.get("kind") == "relocation":
+                names |= {row["symbol"].split("@")[0]
+                          for row in info.get("symbols") or ()}
+    else:
+        m = re.search(r"<([^>]+)>", text)
+        if m:
+            names.add(m.group(1).split("@")[0])
+    for name in sorted(names):
+        if name in _NESTED_ALLOCATORS:
+            return name
+    return None
+
+
+def _nested_alloc_size(g: "DsoGraph", fstart: int, idx: int, depth: int = 0):
+    """Requested block size of an allocation call, or None.
+
+    The size is the call's first argument (``calloc``'s first two, multiplied)
+    and must be a single-provenance integer.  A dynamic or open size is not
+    decidable and keeps the refusal; it is never guessed.
+    """
+    if depth > 8:
+        return None
+    symbol = _nested_alloc_symbol(g, fstart, idx)
+    if symbol is None:
+        return None
+    args = _NESTED_ALLOCATORS[symbol]
+    values = []
+    for k in args:
+        origin = _reg_origin(g, fstart, idx, _ARGREGS[k], depth + 1)
+        if origin.get("kind") != "int" or origin.get("value", 0) <= 0:
+            return None
+        values.append(origin["value"])
+    size = values[0]
+    for value in values[1:]:
+        if size > (1 << 63) // value:
+            return None
+        size *= value
+    return {"symbol": symbol, "size": size, "call_site": idx}
+
+
+def _nested_alloc_owner(g: "DsoGraph", size: int, offset: int, width: int):
+    """Unique declared type for an allocation-backed store, or a refusal."""
+    cands = _s1_decl_candidates(g, size, offset, width)
+    names = sorted({name for name, _row in cands})
+    if len(names) == 1:
+        name = names[0]
+        row = next(row for cand, row in cands if cand == name)
+        return {"kind": "type", "type": name,
+                "origin": "allocation-size", "allocation_size": size,
+                "allocation_field": row["name"],
+                "allocation_field_offset": row["offset"]}
+    if not names:
+        return {"kind": "unknown",
+                "why": (f"allocation-size {size:#x} has no declared layout "
+                        f"covering {offset:#x}")}
+    return {"kind": "unknown",
+            "why": (f"allocation-size {size:#x} is ambiguous at {offset:#x}: "
+                    + ", ".join(names)),
+            "candidates": names}
+
+
 def _nested_struct_type(g: "DsoGraph", type_text: str):
     """Named repr(C) struct a declared pointer type denotes, or None.
 
@@ -8753,19 +9058,28 @@ def _nested_owner_from_param(g: "DsoGraph", fstart: int, index, via: str):
 
 
 def _nested_owner_type(g: "DsoGraph", fstart: int, idx: int, reg: str,
-                       depth: int = 0):
+                       depth: int = 0, member_off: int | None = None):
     """The (owning type, field) a store base register denotes, or a refusal.
 
     This is the type side of the field-sensitive index.  It follows declared
     layouts: an entry parameter (with a unique source cast when the parameter
     is opaque), a field load from a proven owner, a constructor return type,
-    or a unique allocation cast.  A chain is followed to its declared end; no
-    stored value of an intermediate pointer is inferred.
+    or a unique allocation of known size.  A chain is followed to its declared
+    end; no stored value of an intermediate pointer is inferred.
     """
     if depth > _NESTED_MAX_CHAIN:
         return {"kind": "unknown", "why": "owner-chain depth"}
     origin = _reg_origin(g, fstart, idx, _canon(reg))
     kind = origin.get("kind")
+    if kind == "alloc":
+        if member_off is None:
+            return {"kind": "unknown",
+                    "why": "allocation is not the store base"}
+        return _nested_alloc_owner(g, origin["size"], member_off, 8)
+    if kind == "alloc-unknown":
+        return {"kind": "unknown",
+                "why": ("allocation-size-unresolved: "
+                        + str(origin.get("symbol")))}
     if kind == "param":
         return _nested_owner_from_param(g, fstart, origin.get("index"),
                                         "entry-parameter")
@@ -8926,7 +9240,7 @@ def _nested_index_one(g: "DsoGraph", out: dict, store: dict,
         out["disjoint"].append(dict(rec, disposition="disjoint"))
         return
     owner = _nested_owner_type(g, wf, store["index"],
-                               _canon(store["base"]))
+                               _canon(store["base"]), member_off=member_off)
     if owner.get("kind") == "type":
         # A symbol-derived receiver type is a base-type witness, not a
         # value witness.  Keep it in the record so a later reader can see
@@ -8940,7 +9254,9 @@ def _nested_index_one(g: "DsoGraph", out: dict, store: dict,
         # A prefix-compatible owner (in either direction) shares the field
         # offset, so the store is a writer of this field.  Only two decidable
         # layouts with no prefix relation prove disjointness; an undecidable
-        # layout is never a disjointness proof.
+        # layout is never a disjointness proof.  An allocation-size owner is
+        # itself a declared layout, so the same rule applies through the
+        # allocation-aware layout population.
         forward = _s1_type_compatible(g, owner["type"], owner_type)
         backward = _s1_type_compatible(g, owner_type, owner["type"])
         if forward.get("admitted") or backward.get("admitted"):
@@ -8948,8 +9264,13 @@ def _nested_index_one(g: "DsoGraph", out: dict, store: dict,
                 dict(rec, disposition="writer", owner=owner["type"],
                      prefix=forward.get("prefix") or backward.get("prefix")))
             return
-        if (_s1_struct_layout(g, owner["type"]) is not None
-                and _s1_struct_layout(g, owner_type) is not None):
+        if owner.get("origin") == "allocation-size":
+            decidable = (_s1_decl_layout(g, owner["type"]) is not None
+                         and _s1_decl_layout(g, owner_type) is not None)
+        else:
+            decidable = (_s1_struct_layout(g, owner["type"]) is not None
+                         and _s1_struct_layout(g, owner_type) is not None)
+        if decidable:
             out["disjoint"].append(dict(
                 rec, disposition="disjoint", owner=owner["type"],
                 reason="field-sensitive owner type"))

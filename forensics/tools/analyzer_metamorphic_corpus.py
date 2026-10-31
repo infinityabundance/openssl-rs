@@ -2873,6 +2873,161 @@ def _nested_fixture(*, extra_instance=False, rogue_value=False,
     return g, site
 
 
+def _alloc_fixture(mode):
+    """A store through an in-function allocation of a known block size.
+
+    ``mode`` selects the control: a unique declared layout of the allocation
+    size proves; two layouts of that size refuse and name both; a dynamic
+    size refuses; and a store whose base is a load from the allocation (not
+    the allocation result itself) refuses.
+    """
+    class _P:
+        def switch_targets(self, base, site_addr=None):
+            return set()
+
+    class G:
+        name = "nested-alloc-fixture.so"
+        source_root = None
+        start_set = {0x3000, 0x3100, 0x3200}
+        funcs = {0x1000: "consumer", 0x2000: "alloc_writer",
+                 0x3000: "f0", 0x3100: "f1", 0x3200: "f2"}
+        all_syms = dict(funcs)
+        names_at = {0x9000: {"HW_A"}, 0x9100: {"HW_B"},
+                    0x3000: {"f0"}, 0x3100: {"f1"}, 0x3200: {"f2"}}
+        sym_sizes = {"HW_A": 16, "HW_B": 16}
+        dynamic_defs = {}
+        taken_code = set()
+        slot_funcs = {}
+        slot_syms = {0x8000: {"CRYPTO_zalloc"}}
+
+        def section_of(self, a):
+            return ".data.rel.ro" if a in (0x9000, 0x9100) else ".text"
+
+        def static_slot(self, a):
+            return {0x9000: {0x3000}, 0x9008: {0x3100},
+                    0x9100: {0x3000}, 0x9108: {0x3200}}.get(a)
+
+    g = G()
+    p = _P()
+    consumer = [(0x1000, "mov    0xb8(%rdi),%rax"),
+                (0x1004, "call   *0x8(%rax)")]
+    writer = [(0x2000, "mov    $0xd0,%edi"),
+              (0x2005, "call   *0x8000(%rip)        # 8000 "
+                       "<CRYPTO_zalloc@@OPENSSL_3.0.0>"),
+              (0x200b, "mov    (%rax),%rdx"),
+              (0x200e, "mov    $0x9000,%rcx"),
+              (0x2014, "mov    %rcx,0xb8(%rdx)"),
+              (0x2018, "ret")]
+    if mode == "size-unresolved":
+        writer = [(0x2000, "mov    %esi,%edi"),
+                  (0x2002, "call   *0x8000(%rip)        # 8000 "
+                           "<CRYPTO_zalloc@@OPENSSL_3.0.0>"),
+                  (0x2008, "mov    $0x9000,%rcx"),
+                  (0x200e, "mov    %rcx,0xb8(%rax)"),
+                  (0x2012, "ret")]
+    elif mode != "base-not-alloc":
+        writer = [(0x2000, "mov    $0xd0,%edi"),
+                  (0x2005, "call   *0x8000(%rip)        # 8000 "
+                           "<CRYPTO_zalloc@@OPENSSL_3.0.0>"),
+                  (0x200b, "mov    $0x9000,%rcx"),
+                  (0x2011, "mov    %rcx,0xb8(%rax)"),
+                  (0x2015, "ret")]
+    p.insns_by_func = {0x1000: consumer, 0x2000: writer}
+    g.precision = p
+    g._s1_ctx_cache = {0x1000: {"file": "src/alloc_size.rs",
+                                "function": "consumer", "line": 1,
+                                "var": "ctx", "type": "Ctx",
+                                "param": "vctx", "param_index": 0,
+                                "declared": "vctx: *mut Ctx"}}
+    docs = ("#[repr(C)]\n"
+            "pub struct Ctx {\n"
+            "    pub pad: [u8; 0xb8],\n"
+            "    pub hw: *const Hw,\n"
+            "    pub other: usize,\n"
+            "}\n"
+            "#[repr(C)]\n"
+            "pub struct Hw {\n"
+            "    pub init: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+            "    pub cipher: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+            "}\n"
+            "#[repr(C)]\n"
+            "pub struct Wide {\n"
+            "    pub base: Ctx,\n"
+            "    pub extra: u64,\n"
+            "}\n")
+    if mode == "ambiguous":
+        docs += ("#[repr(C)]\n"
+                 "pub struct WideB {\n"
+                 "    pub base: Ctx,\n"
+                 "    pub extra2: u64,\n"
+                 "}\n")
+    docs += ("static HW_A: Hw = Hw { init: f0, cipher: f1 };\n"
+             "static HW_B: Hw = Hw { init: f0, cipher: f2 };\n")
+    g._s1_docs_cache = {"src/alloc_size.rs": docs}
+    site = {"kind": "call", "func": 0x1000, "addr": 0x1004,
+            "text": "call   *0x8(%rax)", "targets": set(),
+            "unresolved": True, "reason": "base-slot-partial",
+            "class": "field", "field_offsets": {0xb8}, "seam": None}
+    return g, site
+
+
+def case_nested_allocation_size_attribution():
+    """An allocation-backed base is typed only by a unique block size."""
+    g, site = _alloc_fixture("unique")
+    unique = cc.nested_static_instance_witness(g, site, "consumer")
+    unique_ok = (isinstance(unique, dict) and unique.get("resolved")
+                 and unique.get("targets") == ["0x3100"]
+                 and unique["completeness"]["unproven_base_stores"] == 0
+                 and unique["completeness"]["stores_at_slot"] == 1)
+
+    g, site = _alloc_fixture("ambiguous")
+    ambiguous = cc.nested_static_instance_witness(g, site, "consumer")
+    amb_rows = ambiguous.get("unproven_base_stores") or []
+    ambiguous_ok = (isinstance(ambiguous, dict)
+                    and not ambiguous.get("resolved")
+                    and ambiguous.get("refusal") == "writer-set-incomplete"
+                    and any((row.get("field_sensitive_owner") or {})
+                            .get("candidates") == ["Wide", "WideB"]
+                            for row in amb_rows))
+
+    g, site = _alloc_fixture("size-unresolved")
+    dynamic = cc.nested_static_instance_witness(g, site, "consumer")
+    dyn_rows = dynamic.get("unproven_base_stores") or []
+    dynamic_ok = (isinstance(dynamic, dict)
+                  and not dynamic.get("resolved")
+                  and dynamic.get("refusal") == "writer-set-incomplete"
+                  and any("allocation-size-unresolved"
+                          in str((row.get("field_sensitive_owner") or {})
+                                 .get("why"))
+                          for row in dyn_rows))
+
+    g, site = _alloc_fixture("base-not-alloc")
+    wrong_base = cc.nested_static_instance_witness(g, site, "consumer")
+    base_rows = wrong_base.get("unproven_base_stores") or []
+    base_ok = (isinstance(wrong_base, dict)
+               and not wrong_base.get("resolved")
+               and wrong_base.get("refusal") == "writer-set-incomplete"
+               and any("allocation is not the store base"
+                       in str((row.get("field_sensitive_owner") or {})
+                              .get("why"))
+                       for row in base_rows))
+
+    ok = unique_ok and ambiguous_ok and dynamic_ok and base_ok
+    return _case(
+        "s2b-nested-allocation-size-attribution",
+        "a context field written through an in-function CRYPTO_zalloc of a "
+        "known block size",
+        "attribute the writer only when exactly one declared layout of that "
+        "size has a field covering the store displacement",
+        "a unique-size layout proves and is counted; two same-size layouts "
+        "refuse with both named; a dynamic size refuses; a load from the "
+        "allocation is not the store base and refuses",
+        (f"unique={unique_ok}, ambiguous={ambiguous_ok}, "
+         f"dynamic={dynamic_ok}, wrong_base={base_ok}"),
+        ok, {"unique": unique, "ambiguous": ambiguous,
+             "dynamic": dynamic, "wrong_base": wrong_base})
+
+
 def case_nested_static_instance_writer_completeness():
     """The S2b rule is complete only when the writer population is complete."""
     g, site = _nested_fixture()
@@ -3584,6 +3739,8 @@ CASES = (
     case_nested_symbol_writer_typing,
     # S2b: a base typed by a whole-object primitive's generic argument
     case_nested_symbol_generic_writer_typing,
+    # S2b: allocation-size attribution of a writer's base object
+    case_nested_allocation_size_attribution,
 )
 
 NOT_COVERED = [
