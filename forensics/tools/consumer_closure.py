@@ -4329,6 +4329,25 @@ def _reg_origin(g: "DsoGraph", fstart: int, idx: int, reg: str,
     m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", src)
     if m:
         off = int(m.group(1), 16) if m.group(1) else 0
+        if mn == "lea":
+            # ``lea`` computes an address; it does not load the memory operand.
+            # A RIP-relative lea materialises a link-time static address and
+            # keeps the existing ``load`` shape (the consumer reads the objdump
+            # comment, not memory).  A zero-displacement lea of a register is a
+            # reborrow of the same object, so it keeps the base's provenance.  A
+            # non-zero displacement is an interior pointer and is refused (the
+            # field index is keyed by the literal store displacement).
+            if m.group(2) in ("%rip", "%rsp", "%rbp"):
+                # A RIP-relative lea materialises a link-time static address;
+                # a frame-relative lea materialises the address of a stack
+                # slot.  Both keep the existing ``load`` shape, which its
+                # consumers read as an address materialisation.
+                return {"kind": "load", "offset": off,
+                        "base_reg": m.group(2), "at": k, "addr": addr}
+            if off == 0:
+                return _reg_origin(g, fstart, k, _canon(m.group(2)),
+                                   depth + 1)
+            return {"kind": "unknown", "why": "interior lea address"}
         return {"kind": "load", "offset": off, "base_reg": m.group(2),
                 "at": k, "addr": addr}
     return {"kind": "unknown", "why": "unsupported source " + src}
@@ -5938,22 +5957,19 @@ def _s1_struct_layout(g: "DsoGraph", type_name: str, seen=()):
     return out
 
 
-def _s1_src_fn(g: "DsoGraph", relpath: str, fn_name: str):
-    """Header/body span of one source function, or None."""
-    cache = getattr(g, "_s1_fn_cache", None)
-    if cache is None:
-        cache = {}
-        g._s1_fn_cache = cache
-    key = (relpath, fn_name)
-    if key in cache:
-        return cache[key]
-    text = _s1_docs(g).get(relpath)
-    if text is None:
-        cache[key] = None
-        return None
+def _s1_fn_spans(text: str, relpath: str, fn_name: str,
+                 lo: int = 0, hi: int | None = None):
+    """Every definition span of ``fn name`` in ``text[lo:hi]``.
+
+    The region bound is what makes a ``fn`` inside one inline module
+    distinguishable from an identically named ``fn`` in a sibling module of
+    the same file.  A declaration (``;`` before the body brace) is never a
+    definition.
+    """
+    end_text = len(text) if hi is None else hi
     pat = re.compile(r"\bfn\s+" + re.escape(fn_name) + r"\s*\(")
     hits = []
-    for m in pat.finditer(text):
+    for m in pat.finditer(text, lo, end_text):
         line_start = text.rfind("\n", 0, m.start()) + 1
         line = text[line_start:m.start()].strip()
         if line.startswith("///") or line.startswith("//"):
@@ -5987,6 +6003,71 @@ def _s1_src_fn(g: "DsoGraph", relpath: str, fn_name: str):
             "header": text[m.start():brace + 1],
             "body": text[brace + 1:end - 1],
         })
+    return hits
+
+
+def _s1_module_region(text: str, relpath: str, module_segs):
+    """Character range of the inline module named by ``module_segs``.
+
+    A module path from a demangled symbol names directories as well as inline
+    ``mod`` items.  Only the segments after the file's own module name can be
+    entered in the file text; an absent segment leaves the region unchanged, so
+    an unscopable function keeps the previous (ambiguous or absent) result.
+    """
+    p = Path(relpath)
+    stem = p.parent.name if p.name == "mod.rs" else p.stem
+    segs = list(module_segs or ())
+    if stem in segs:
+        segs = segs[segs.index(stem) + 1:]
+    lo, hi = 0, len(text)
+    for seg in segs:
+        m = re.search(r"\bmod\s+" + re.escape(seg) + r"\s*\{",
+                      text[lo:hi])
+        if m is None:
+            continue
+        brace = lo + m.end() - 1
+        end = _s1_brace_span(text, brace)
+        if end is None:
+            continue
+        lo, hi = brace + 1, end - 1
+    return lo, hi
+
+
+def _s1_src_fn_scoped(g: "DsoGraph", relpath: str, fn_name: str,
+                      module_segs):
+    """Unique definition span within one inline module of ``relpath``."""
+    key = (relpath, fn_name, tuple(module_segs or ()))
+    cache = getattr(g, "_s1_scoped_fn_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_scoped_fn_cache = cache
+    if key in cache:
+        return cache[key]
+    text = _s1_docs(g).get(relpath)
+    if text is None:
+        cache[key] = None
+        return None
+    lo, hi = _s1_module_region(text, relpath, module_segs)
+    hits = _s1_fn_spans(text, relpath, fn_name, lo, hi)
+    out = hits[0] if len(hits) == 1 else None
+    cache[key] = out
+    return out
+
+
+def _s1_src_fn(g: "DsoGraph", relpath: str, fn_name: str):
+    """Header/body span of one source function, or None."""
+    cache = getattr(g, "_s1_fn_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_fn_cache = cache
+    key = (relpath, fn_name)
+    if key in cache:
+        return cache[key]
+    text = _s1_docs(g).get(relpath)
+    if text is None:
+        cache[key] = None
+        return None
+    hits = _s1_fn_spans(text, relpath, fn_name)
     out = hits[0] if len(hits) == 1 else None
     cache[key] = out
     return out
@@ -6576,6 +6657,14 @@ def _s1_writer_source(g: "DsoGraph", wf: int):
                                              root / "src", fallback)
                     if relpath:
                         span = _s1_src_fn(g, relpath, name)
+                        if span is None:
+                            # ``module_to_file`` stops at the first existing
+                            # path prefix, so an inline module (``blake2b`` in
+                            # ``blake2.rs``) resolves to the shared file.  The
+                            # module path then disambiguates the same leaf name
+                            # in sibling modules.
+                            span = _s1_src_fn_scoped(g, relpath, name,
+                                                     segs[:-1])
                         if span is not None:
                             out = {"file": relpath, "span": span,
                                    "name": name, "via": "module"}
@@ -8318,24 +8407,32 @@ def _nested_store_value(g: "DsoGraph", wf: int, store: dict, slot_off: int,
 
 
 def _nested_whole_struct_copy(g: "DsoGraph", wf: int, store: dict,
-                              owner_type: str, ulayout: dict):
-    """Witness for a same-owner whole-object copy that adds no target value.
+                              owner_type: str, ulayout: dict,
+                              field_off: int | None = None):
+    """Witness for a same-owner copy that adds no target value.
 
     A non-scalar store is such a copy only when (a) the destination base is an
-    object of exactly ``owner_type``, (b) the store starts at offset 0 and its
-    width covers the whole layout, and (c) the copied register is loaded from
-    the same offset of another object proven to be ``owner_type``.  Such a copy
-    propagates the field bytes of a same-typed source; the field's own writers
+    object of exactly ``owner_type``, (b) the store covers the queried field
+    (the whole layout for the original whole-object rule, or ``field_off`` for
+    an overlapping copy), and (c) the copied register is loaded from the same
+    offset of another object proven to be ``owner_type``.  Such a copy
+    propagates field bytes of a same-typed source; the field's own writers
     already produce every value it can carry, so it cannot synthesise a new
     target and does not widen the proven set.  A copy without the source
     witness is not given this argument and still refuses.
     """
-    if store.get("offset") != 0:
-        return None
-    if (store.get("width") or 0) < (ulayout.get("size") or 0):
-        return None
-    dest = _nested_owner_type(g, wf, store["index"],
-                              _canon(store["base"]))
+    width = store.get("width") or 0
+    if field_off is None:
+        if store.get("offset") != 0:
+            return None
+        if width < (ulayout.get("size") or 0):
+            return None
+    else:
+        off = store.get("offset") or 0
+        if not (off <= field_off < off + width):
+            return None
+    dest = _nested_owner_with_points_to(g, wf, store["index"],
+                                        _canon(store["base"]))
     if dest.get("kind") != "type" or dest.get("type") != owner_type:
         return None
     src = (store.get("src") or "").strip()
@@ -8356,13 +8453,18 @@ def _nested_whole_struct_copy(g: "DsoGraph", wf: int, store: dict,
         off = int(mo.group(1), 16) if mo.group(1) else 0
         if off != store["offset"]:
             continue
-        source = _nested_owner_type(g, wf, k, _canon(mo.group(2)))
+        source = _nested_owner_with_points_to(g, wf, k,
+                                              _canon(mo.group(2)))
         if source.get("kind") == "type" and source.get("type") == owner_type:
-            return {"origin": "same-owner-whole-object-copy",
+            return {"origin": ("same-owner-overlapping-copy"
+                               if field_off is not None else
+                               "same-owner-whole-object-copy"),
                     "source_load": hex(insns[k][0]),
                     "source_owner": owner_type,
                     "width": store["width"],
                     "layout_size": ulayout["size"],
+                    "store_offset": store.get("offset"),
+                    "field_offset": field_off,
                     "dest_origin": dest.get("origin"),
                     "source_origin": source.get("origin"),
                     "source_symbol_owner":
@@ -9607,6 +9709,225 @@ def _nested_owner_from_param(g: "DsoGraph", fstart: int, index, via: str):
             "why": "entry parameter has no unique owner type"}
 
 
+# Points-to type propagation (S2b-3).
+#
+# The one-edge rules above read a single provenance step and refuse a merge.
+# A store base is often a reborrow, a merge of two reborrows of the same entry
+# parameter, or a pointer reached through two declared field loads.  This pass
+# carries a declared pointee binding forward through the local dataflow:
+#
+#   * an entry parameter is seeded from its Rust signature (an opaque
+#     ``*mut c_void`` parameter uses the writer body's unique source cast, as
+#     the one-edge rule already did);
+#   * ``mov``/``movq`` copies and zero-offset ``lea`` reborrows preserve the
+#     binding;
+#   * a load at a declared field of a typed base yields the field's declared
+#     pointee type; and
+#   * a merge qualifies only when every reaching definition agrees.  A
+#     disagreement is refused and names every disagreeing type.
+#
+# The binding carries a byte offset so an interior ``lea`` is still refused at
+# the store base (the writer index is keyed by the literal store displacement).
+# Every failure returns the existing refusal rather than a guess: the caller
+# only uses a qualified result, so an analysis failure cannot shrink the bound.
+
+_NESTED_POINTS_MAX = 16
+
+
+def _nested_points_unknown(why, **extra):
+    out = {"kind": "unknown", "why": why, "origin": "points-to"}
+    out.update(extra)
+    return out
+
+
+def _nested_points_binding(type_name: str, offset: int = 0, **extra):
+    out = {"kind": "type", "type": type_name, "offset": offset,
+           "origin": "points-to"}
+    out.update(extra)
+    return out
+
+
+def _nested_points_param(g: "DsoGraph", fstart: int, index):
+    """Seed one entry parameter's binding from its Rust signature."""
+    if index is None:
+        return _nested_points_unknown("entry parameter index unknown")
+    owner = _nested_owner_from_param(g, fstart, index, "entry-parameter")
+    if owner.get("kind") != "type":
+        return _nested_points_unknown(
+            owner.get("why") or "entry parameter has no owner type")
+    if _s1_struct_layout(g, owner["type"]) is None:
+        return _nested_points_unknown(
+            "entry parameter type " + str(owner["type"])
+            + " has no decidable layout")
+    return _nested_points_binding(
+        owner["type"], 0, via="entry-parameter", param=index,
+        owner_origin=owner.get("origin"),
+        symbol_basis=owner.get("symbol_basis"))
+
+
+def _nested_points_entry(g: "DsoGraph", fstart: int, reg: str):
+    index = _ENTRY_ARG_REGS.get(reg)
+    if index is None:
+        return _nested_points_unknown("entry value in " + reg)
+    return _nested_points_param(g, fstart, index)
+
+
+def _nested_points_merge(results):
+    """Agreeing arms qualify; a disagreement names every distinct type."""
+    if not results:
+        return _nested_points_unknown("points-to merge has no arms")
+    typed = [r for r in results if r.get("kind") == "type"]
+    if len(typed) != len(results):
+        reasons = sorted({str(r.get("why") or "unresolved")
+                          for r in results if r.get("kind") != "type"})
+        return _nested_points_unknown(
+            "points-to merge has an unresolved arm: " + "; ".join(reasons),
+            arms=[{"kind": r.get("kind"), "type": r.get("type"),
+                   "why": r.get("why")} for r in results])
+    keys = {(r["type"], r.get("offset", 0)) for r in typed}
+    if len(keys) == 1:
+        type_name, offset = next(iter(keys))
+        return _nested_points_binding(
+            type_name, offset, via="merge",
+            arms=[{"type": r["type"], "via": r.get("via")} for r in typed])
+    names = sorted({r["type"] for r in typed})
+    return _nested_points_unknown(
+        "points-to merge disagrees: " + ", ".join(names),
+        candidates=names,
+        arms=[{"type": r["type"], "offset": r.get("offset", 0)}
+              for r in typed])
+
+
+def _nested_points_at_def(g: "DsoGraph", fstart: int, k: int, reg: str,
+                          depth: int, seen: frozenset):
+    """Binding produced by one reaching definition ``k`` of ``reg``."""
+    if k == _ENTRY_DEF:
+        return _nested_points_entry(g, fstart, reg)
+    text = _insn(g, fstart, k)
+    mn, _rest, ops = _insn_parts(text)
+    if mn.startswith("cmov") and len(ops) >= 2:
+        # A conditional move is a two-armed select: the prior destination
+        # value and the source value both reach the result.
+        return _nested_points_merge([
+            _nested_points_type(g, fstart, k, _canon(ops[1]), depth + 1, seen),
+            _nested_points_type(g, fstart, k, _canon(ops[0]), depth + 1, seen)])
+    if mn in ("mov", "movq", "movl", "movzbl", "movzwl", "movslq"):
+        src = ops[0].strip() if ops else ""
+        if src in _REGS or src in _SUBREG:
+            return _nested_points_type(g, fstart, k, _canon(src),
+                                       depth + 1, seen)
+        mo = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", src)
+        if mo is None:
+            if src.startswith("$"):
+                return _nested_points_unknown("integer base")
+            return _nested_points_unknown("unsupported source " + src)
+        base_reg = mo.group(2)
+        off = int(mo.group(1), 16) if mo.group(1) else 0
+        if base_reg in ("%rsp", "%rbp"):
+            spill = _stack_param(g, fstart, k, src, None)
+            if spill is None:
+                return _nested_points_unknown(
+                    "frame load is not a parameter spill")
+            return _nested_points_param(g, fstart, spill.get("index"))
+        outer = _nested_points_type(g, fstart, k, _canon(base_reg),
+                                    depth + 1, seen)
+        if outer.get("kind") != "type":
+            return outer
+        layout = _s1_struct_layout(g, outer["type"])
+        if layout is None:
+            return _nested_points_unknown(
+                "points-to base layout undecidable for " + outer["type"])
+        at = outer.get("offset", 0) + off
+        row = next((r for r in layout["fields"] if r["offset"] == at), None)
+        if row is None:
+            return _nested_points_unknown(
+                "no declared field at load offset %#x" % at)
+        pointee = _nested_pointee_type(g, row["type"])
+        if pointee is None or _s1_struct_layout(g, pointee) is None:
+            return _nested_points_unknown(
+                "field is not a pointer to a decidable struct")
+        return _nested_points_binding(
+            pointee, 0, via="field-load", owner=outer["type"],
+            field=row["name"], field_offset=off)
+    if mn == "lea":
+        mo = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                          ops[0].strip() if ops else "")
+        if mo is None:
+            return _nested_points_unknown("unsupported lea")
+        base_reg = mo.group(2)
+        disp = int(mo.group(1), 16) if mo.group(1) else 0
+        outer = _nested_points_type(g, fstart, k, _canon(base_reg),
+                                    depth + 1, seen)
+        if outer.get("kind") != "type":
+            return outer
+        return _nested_points_binding(
+            outer["type"], outer.get("offset", 0) + disp,
+            via="reborrow" if disp == 0 else "interior-lea",
+            base_via=outer.get("via"))
+    if mn in ("xor", "sub") and len(ops) == 2 and ops[0] == ops[1]:
+        return _nested_points_unknown("integer base")
+    return _nested_points_unknown("unexpected writer " + mn)
+
+
+def _nested_points_type(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                        depth: int = 0, seen: frozenset = frozenset()):
+    """Forward points-to binding for ``reg`` at ``idx``, or a named refusal."""
+    reg = _canon(reg)
+    if depth > _NESTED_POINTS_MAX:
+        return _nested_points_unknown("points-to depth bound")
+    key = (fstart, idx, reg)
+    if key in seen:
+        return _nested_points_unknown("points-to cycle")
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None:
+        return _nested_points_unknown("open or non-convergent CFG")
+    if len(defs) == 1:
+        return _nested_points_at_def(g, fstart, next(iter(defs)), reg,
+                                     depth, seen | {key})
+    arms = [_nested_points_at_def(g, fstart, k, reg, depth + 1, seen | {key})
+            for k in sorted(defs)]
+    return _nested_points_merge(arms)
+
+
+def _nested_points_owner(g: "DsoGraph", fstart: int, idx: int, reg: str):
+    """Whole-object binding of a store base, or the refusal that keeps it.
+
+    An interior pointer (``lea disp(%base)`` with ``disp != 0``) is not a
+    whole-object base: the store index is keyed by the literal displacement,
+    so admitting it would compare the wrong offsets.  It stays refused.
+    """
+    cache = getattr(g, "_nested_points_cache", None)
+    if cache is None:
+        cache = {}
+        g._nested_points_cache = cache
+    key = (fstart, idx, _canon(reg))
+    res = cache.get(key)
+    if res is None:
+        res = _nested_points_type(g, fstart, idx, _canon(reg))
+        cache[key] = res
+    if res.get("kind") != "type":
+        return res
+    if res.get("offset", 0) != 0:
+        return _nested_points_unknown(
+            "points-to base is an interior pointer at %#x"
+            % res["offset"], candidates=res.get("candidates"))
+    return res
+
+
+def _nested_owner_with_points_to(g: "DsoGraph", fstart: int, idx: int,
+                                 reg: str, member_off: int | None = None):
+    """The one-edge owner rule, then the points-to pass as a fallback."""
+    owner = _nested_owner_type(g, fstart, idx, reg, member_off=member_off)
+    if owner.get("kind") == "type":
+        return owner
+    points = _nested_points_owner(g, fstart, idx, reg)
+    if points.get("kind") == "type":
+        return points
+    if points.get("candidates"):
+        return dict(owner, points_to_refusal=points)
+    return owner
+
+
 def _nested_owner_type(g: "DsoGraph", fstart: int, idx: int, reg: str,
                        depth: int = 0, member_off: int | None = None):
     """The (owning type, field) a store base register denotes, or a refusal.
@@ -9803,8 +10124,9 @@ def _nested_index_one(g: "DsoGraph", out: dict, store: dict,
     if bq.get("excluded"):
         out["disjoint"].append(dict(rec, disposition="disjoint"))
         return
-    owner = _nested_owner_type(g, wf, store["index"],
-                               _canon(store["base"]), member_off=member_off)
+    owner = _nested_owner_with_points_to(
+        g, wf, store["index"], _canon(store["base"]),
+        member_off=member_off)
     if owner.get("kind") == "type":
         # A symbol-derived receiver type is a base-type witness, not a
         # value witness.  Keep it in the record so a later reader can see
@@ -9814,6 +10136,16 @@ def _nested_index_one(g: "DsoGraph", out: dict, store: dict,
                       symbol_basis=owner.get("symbol_basis"),
                       symbol=owner.get("symbol"),
                       symbol_origin=owner.get("origin"))
+            rec = {"store": store, "base": bq, "nonscalar": nonscalar}
+        if owner.get("origin") == "points-to":
+            # Record the propagated binding so the receipt names the evidence
+            # that qualified or excluded this store, not just the result.
+            bq = dict(bq, points_to_owner=owner["type"],
+                      points_to_via=owner.get("via"),
+                      points_to_arms=owner.get("arms"),
+                      points_to_param=owner.get("param"),
+                      points_to_field=owner.get("field"),
+                      points_to_owner_origin=owner.get("owner_origin"))
             rec = {"store": store, "base": bq, "nonscalar": nonscalar}
         # A prefix-compatible owner (in either direction) shares the field
         # offset, so the store is a writer of this field.  Only two decidable
@@ -10051,7 +10383,7 @@ def nested_static_instance_witness(g: "DsoGraph", site: dict, name: str,
         # it is accounted, not refused, and adds no target.  Anything without
         # that source witness is still an unexplained overlap.
         copy = _nested_whole_struct_copy(g, store["function"], store,
-                                         final_owner, ulayout)
+                                         final_owner, ulayout, slot_off)
         if copy is not None:
             same_owner_copies.append(dict(
                 copy,
@@ -10267,9 +10599,14 @@ def nested_static_instance_witness(g: "DsoGraph", site: dict, name: str,
              "store_site": hex(r["store"]["addr"]),
              "values": [hex(v) for v in sorted(r["values"])],
              "base_origin": (r["base"].get("origin")
-                             or r["base"].get("symbol_origin")),
+                             or r["base"].get("symbol_origin")
+                             or ("points-to" if r["base"].get(
+                                 "points_to_owner") else None)),
              "base_witness": (r["base"].get("witness")
-                              or r["base"].get("symbol_witness")),
+                              or r["base"].get("symbol_witness")
+                              or r["base"].get("points_to_via")),
+             "base_points_to_owner": r["base"].get("points_to_owner"),
+             "base_points_to_via": r["base"].get("points_to_via"),
              "base_symbol_owner": r["base"].get("symbol_owner"),
              "base_symbol_basis": r["base"].get("symbol_basis")}
             for r in writer_rows],
