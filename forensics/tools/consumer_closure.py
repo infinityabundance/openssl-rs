@@ -8523,6 +8523,10 @@ def _s1_decl_type_size(g: "DsoGraph", type_text: str, seen=()):
     if t in seen or len(seen) > 8:
         return None
     layout = _s1_decl_layout(g, t, seen)
+    if layout is None and t.split("::")[-1] != t:
+        # A module-qualified field type names its declaration by leaf; the
+        # declared population is keyed by leaf name throughout.
+        layout = _s1_decl_layout(g, t.split("::")[-1], seen)
     if layout is None:
         return None
     return (layout["size"], layout["align"])
@@ -8674,6 +8678,552 @@ def _nested_alloc_size(g: "DsoGraph", fstart: int, idx: int, depth: int = 0):
             return None
         size *= value
     return {"symbol": symbol, "size": size, "call_site": idx}
+
+
+# Declared-type attribution at the allocation site (S2b-2).
+#
+# An allocation size does not identify its owner when several layouts share
+# it; the allocation *expression* normally does.  The precedence is fixed:
+#   1. the type written at the allocation site (Box::<T>::new, Box::new(T{..}),
+#      OwnedCtx::<T>::new, alloc::<T>(), or CRYPTO_zalloc(size_of::<T>())),
+#      including a macro-generated body with the invocation's type argument;
+#   2. the declared return type of the constructor called at the site, when it
+#      is mapped to source and returns a concrete *mut T or Box<T>;
+#   3. the allocation size, only when 1 and 2 are absent.
+# Two usable candidates in 1 (or a contradiction with the observed size) is a
+# refusal that names them; frequency, field presence and source order are never
+# tie-breakers.
+
+_NESTED_STORAGE_ALLOCATORS = {
+    "CRYPTO_zalloc", "CRYPTO_malloc", "malloc", "__libc_malloc",
+    "calloc", "__libc_calloc", "__rust_alloc", "__rust_alloc_zeroed",
+}
+
+_S1_SIZE_OF_RX = re.compile(
+    r"\bsize_of\s*::\s*<\s*([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*>")
+_S1_SIZE_OF_LOCAL_RX = re.compile(
+    r"\blet\s+(?:mut\s+)?([A-Za-z_]\w*)\s*(?::[^=;]+)?=\s*"
+    r"(?:(?:core|std)\s*::\s*mem\s*::\s*)?size_of\s*::\s*<\s*"
+    r"([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*>\s*\(\s*\)")
+_S1_ALLOC_FORM_RX = (
+    ("box-turbofish", re.compile(
+        r"\bBox\s*::\s*<\s*([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*>"
+        r"\s*::\s*new\b")),
+    ("box-literal", re.compile(
+        r"\bBox\s*::\s*new\s*\(\s*([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*\{")),
+    ("owned-ctx", re.compile(
+        r"\bOwnedCtx\s*::\s*<\s*([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*>"
+        r"\s*::\s*(?:new|zalloc|zalloc_at)\b")),
+    ("alloc-turbofish", re.compile(
+        r"\balloc\s*::\s*<\s*([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*>")),
+)
+# Which source forms can produce the observed allocator symbol.  A family
+# mismatch is not a candidate at all: a `Box::new(A)` in a function whose
+# observed allocation is `CRYPTO_malloc` is a different allocation.
+_S1_ALLOC_FORM_FAMILY = {
+    "CRYPTO_zalloc": {"size-of", "owned-ctx"},
+    "CRYPTO_malloc": {"size-of", "owned-ctx"},
+    "malloc": {"size-of", "owned-ctx"},
+    "__libc_malloc": {"size-of", "owned-ctx"},
+    "calloc": {"size-of"},
+    "__libc_calloc": {"size-of"},
+    "__rust_alloc": {"box-turbofish", "box-literal", "owned-ctx",
+                      "alloc-turbofish"},
+    "__rust_alloc_zeroed": {"box-turbofish", "box-literal", "owned-ctx",
+                            "alloc-turbofish"},
+    "alloc": {"alloc-turbofish", "box-turbofish", "box-literal",
+              "owned-ctx"},
+}
+_S1_ALLOC_SOURCE_CALL = {
+    "CRYPTO_zalloc": "CRYPTO_zalloc",
+    "CRYPTO_malloc": "CRYPTO_malloc",
+    "malloc": "malloc",
+    "__libc_malloc": "malloc",
+    "calloc": "calloc",
+    "__libc_calloc": "calloc",
+}
+
+
+def _s1_split_top_commas(text: str):
+    """Split macro/invocation arguments on top-level commas only."""
+    out, cur, depth = [], [], 0
+    for ch in text:
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth = max(0, depth - 1)
+        if ch == "," and depth == 0:
+            out.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+    tail = "".join(cur).strip()
+    if tail:
+        out.append(tail)
+    return out
+
+
+def _s1_match_delim(text: str, open_at: int, open_ch: str, close_ch: str):
+    """Index of the delimiter closing ``text[open_at]``, or None."""
+    if open_at < 0 or open_at >= len(text) or text[open_at] != open_ch:
+        return None
+    depth, i, n = 0, open_at, len(text)
+    while i < n:
+        ch = text[i]
+        if ch == '"':
+            i += 1
+            while i < n:
+                if text[i] == "\\":
+                    i += 2
+                    continue
+                if text[i] == '"':
+                    i += 1
+                    break
+                i += 1
+            continue
+        if ch == open_ch:
+            depth += 1
+        elif ch == close_ch:
+            depth -= 1
+            if depth == 0:
+                return i
+        i += 1
+    return None
+
+
+def _s1_stripped_docs(g: "DsoGraph"):
+    cache = getattr(g, "_s1_stripped_docs_cache", None)
+    if cache is None:
+        cache = {p: _s1_strip_comments(t) for p, t in _s1_docs(g).items()}
+        g._s1_stripped_docs_cache = cache
+    return cache
+
+
+def _s1_macro_rule_bodies(text: str, start: int, end: int):
+    """``(matcher, transcriber)`` pairs of a ``macro_rules!`` region."""
+    rules, i = [], start
+    while i < end:
+        m = re.compile(r"\(").search(text, i, end)
+        if m is None:
+            break
+        close = _s1_match_delim(text, m.start(), "(", ")")
+        if close is None or close >= end:
+            break
+        tail = text[close + 1:end]
+        arrow = re.match(r"\s*=>\s*\{", tail)
+        if arrow is None:
+            i = close + 1
+            continue
+        brace = close + arrow.end()
+        bend = _s1_brace_span(text, brace)
+        if bend is None or bend > end:
+            break
+        rules.append((text[m.start() + 1:close], text[brace + 1:bend - 1]))
+        i = bend
+    return rules
+
+
+def _s1_macro_definitions(g: "DsoGraph"):
+    """Every ``macro_rules!`` definition body, by macro name."""
+    cache = getattr(g, "_s1_macro_defs_cache", None)
+    if cache is not None:
+        return cache
+    out = collections.defaultdict(list)
+    for path, text in _s1_stripped_docs(g).items():
+        for m in re.finditer(r"\bmacro_rules!\s*([A-Za-z_]\w*)\s*\{", text):
+            brace = text.find("{", m.start())
+            end = _s1_brace_span(text, brace)
+            if end is None:
+                continue
+            for matcher, body in _s1_macro_rule_bodies(text, brace + 1,
+                                                       end - 1):
+                out[m.group(1)].append({"params": matcher, "body": body,
+                                        "file": path})
+    g._s1_macro_defs_cache = dict(out)
+    return g._s1_macro_defs_cache
+
+
+def _s1_macro_bindings(g: "DsoGraph", fn_name: str):
+    """Invocations whose expansion defines ``fn_name``, with parameter bindings.
+
+    A ``macro_rules!`` row that builds a context through ``OwnedCtx::<$ctx>``
+    has no literal ``fn $newctx`` in the source, so its allocation site names
+    its type only as the invocation's ``$ctx`` argument.  The binding is
+    positional against the rule's matcher and only admitted when the matcher's
+    parameter is the one the transcriber declares as the function name.
+    """
+    cache = getattr(g, "_s1_macro_bind_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_macro_bind_cache = cache
+    if fn_name in cache:
+        return cache[fn_name]
+    defs = _s1_macro_definitions(g)
+    out = []
+    for path, text in _s1_stripped_docs(g).items():
+        for m in re.finditer(r"\b([A-Za-z_]\w*)!\s*\(", text):
+            macro = m.group(1)
+            if macro not in defs:
+                continue
+            op = text.find("(", m.end() - 1)
+            close = _s1_match_delim(text, op, "(", ")")
+            if close is None:
+                continue
+            args = _s1_split_top_commas(text[op + 1:close])
+            if not any(a.split("::")[-1].strip() == fn_name for a in args):
+                continue
+            for rule in defs[macro]:
+                params = _s1_macro_params(rule["params"])
+                if len(params) != len(args):
+                    continue
+                bind = dict(zip(params, args))
+                defines_fn = any(
+                    arg.split("::")[-1].strip() == fn_name
+                    and re.search(r"\bfn\s+\$" + re.escape(param) + r"\b",
+                                  rule["body"])
+                    for param, arg in bind.items())
+                if not defines_fn:
+                    continue
+                out.append({"macro": macro, "file": rule["file"],
+                            "body": rule["body"], "bind": bind})
+    cache[fn_name] = out
+    return out
+
+
+def _s1_macro_params(text: str):
+    """Parameter names of a ``macro_rules!`` matcher, in order."""
+    out = []
+    for part in _s1_split_top_commas(text):
+        m = re.match(r"\s*\$([A-Za-z_]\w*)", part)
+        if m is not None:
+            out.append(m.group(1))
+    return out
+
+
+def _s1_source_alloc_types(g: "DsoGraph", text: str, symbol: str):
+    """Concrete types an allocation expression names, by form.
+
+    Only the forms the task admits are read, and only the forms whose
+    allocator family can produce ``symbol``.  A type argument is a name, never
+    a frequency: the caller refuses when the result is not a singleton.
+    """
+    text = _s1_strip_comments(text or "")
+    family = _S1_ALLOC_FORM_FAMILY.get(symbol, set())
+    out = {}
+    if "size-of" in family:
+        local = {}
+        for m in _S1_SIZE_OF_LOCAL_RX.finditer(text):
+            local.setdefault(m.group(1), set()).add(m.group(2))
+        call_name = _S1_ALLOC_SOURCE_CALL.get(symbol)
+        if call_name:
+            for m in re.finditer(r"\b" + re.escape(call_name) + r"\s*\(",
+                                 text):
+                op = text.find("(", m.start())
+                close = _s1_match_delim(text, op, "(", ")")
+                if close is None:
+                    continue
+                inner = text[op + 1:close]
+                direct = _S1_SIZE_OF_RX.search(inner)
+                if direct is not None:
+                    out.setdefault(direct.group(1), "size-of")
+                    continue
+                first = _s1_split_top_commas(inner)
+                first = first[0] if first else ""
+                if first in local and len(local[first]) == 1:
+                    out.setdefault(next(iter(local[first])), "size-of")
+    for form, rx in _S1_ALLOC_FORM_RX:
+        if form not in family:
+            continue
+        for m in rx.finditer(text):
+            out.setdefault(m.group(1), form)
+    return out
+
+
+def _s1_decl_resolve(g: "DsoGraph", type_name: str):
+    """Resolve a source type name through its unique aliases."""
+    t = " ".join((type_name or "").split())
+    seen = set()
+    while t and t not in seen and len(seen) < 8:
+        seen.add(t)
+        alias = (_s1_type_alias(g, t)
+                 or _s1_type_alias(g, t.split("::")[-1]))
+        if alias is None or alias == t:
+            return t
+        t = " ".join(alias.split())
+    return t or None
+
+
+def _s1_fn_span_in_text(text: str, fn_name: str):
+    """Header/body span of ``fn fn_name`` in an already-expanded text."""
+    pat = re.compile(r"\bfn\s+" + re.escape(fn_name) + r"\s*\(")
+    hits = []
+    for m in pat.finditer(text):
+        line_start = text.rfind("\n", 0, m.start()) + 1
+        if text[line_start:m.start()].strip().startswith("//"):
+            continue
+        open_paren = text.find("(", m.end() - 1)
+        depth, i, close_paren = 0, open_paren, None
+        while i < len(text):
+            if text[i] == "(":
+                depth += 1
+            elif text[i] == ")":
+                depth -= 1
+                if depth == 0:
+                    close_paren = i
+                    break
+            i += 1
+        if close_paren is None:
+            continue
+        brace = text.find("{", close_paren)
+        if brace < 0 or text.find(";", close_paren, brace) >= 0:
+            continue
+        end = _s1_brace_span(text, brace)
+        if end is None:
+            continue
+        hits.append({"header": text[m.start():brace + 1],
+                     "body": text[brace + 1:end - 1]})
+    return hits[0] if len(hits) == 1 else None
+
+
+def _s1_source_fn_index(g: "DsoGraph"):
+    """File paths that define each ``fn name``, in one source pass."""
+    cache = getattr(g, "_s1_source_fn_index_cache", None)
+    if cache is not None:
+        return cache
+    index = collections.defaultdict(list)
+    pat = re.compile(r"\bfn\s+([A-Za-z_]\w*)\s*\(")
+    for path, text in _s1_docs(g).items():
+        for m in pat.finditer(text):
+            index[m.group(1)].append(path)
+    g._s1_source_fn_index_cache = dict(index)
+    return g._s1_source_fn_index_cache
+
+
+def _s1_source_fn_by_leaf(g: "DsoGraph", name: str):
+    """The one source span defining ``fn name``, or None."""
+    cache = getattr(g, "_s1_source_leaf_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_source_leaf_cache = cache
+    if name in cache:
+        return cache[name]
+    hits = []
+    for path in _s1_source_fn_index(g).get(name, ()):
+        span = _s1_src_fn(g, path, name)
+        if span is not None:
+            hits.append(span)
+    cache[name] = hits[0] if len(hits) == 1 else None
+    return cache[name]
+
+
+def _nested_fn_leaf(g: "DsoGraph", fstart: int):
+    """Source leaf name of a machine function, or None."""
+    dm = _s1_demangled(g, fstart)
+    if not dm:
+        return None
+    leaf = dm.split("::")[-1].strip()
+    leaf = re.split(r"\.llvm\.", leaf)[0].strip()
+    return leaf or None
+
+
+def _nested_alloc_type_texts(g: "DsoGraph", fstart: int):
+    """Source texts whose allocation expression may be this call site."""
+    out = []
+    src = _s1_writer_source(g, fstart)
+    if src is not None:
+        out.append((src["span"].get("body") or "", "source"))
+    leaf = _nested_fn_leaf(g, fstart)
+    if leaf:
+        for inv in _s1_macro_bindings(g, leaf):
+            body = inv["body"]
+            for param, arg in inv["bind"].items():
+                body = re.sub(r"\$" + re.escape(param) + r"\b",
+                              lambda _m, a=arg: a, body)
+            span = _s1_fn_span_in_text(body, leaf)
+            if span is not None:
+                body = span["body"]
+            out.append((body, "macro:" + inv["macro"]))
+    return out
+
+
+def _nested_single_source_call(g: "DsoGraph", body: str):
+    """The sole source-mapped call in ``body``, or None.
+
+    Used only when the writer's own body names no allocation: a generated
+    wrapper whose entire body is one call to a constructor delegates the
+    allocation site to that function, and its body -- not the callee's return
+    type -- is where the declared type is written.  Two call names, or a
+    callee with no unique source, is not a single delegation and refuses.
+    """
+    names = []
+    for m in re.finditer(r"\b([A-Za-z_]\w*)\s*\(", body or ""):
+        name = m.group(1)
+        if name in _S1_RUST_KEYWORDS:
+            continue
+        if re.search(r"!\s*$", body[:m.start()]):
+            continue
+        if name not in names:
+            names.append(name)
+    mapped = []
+    for name in names:
+        span = _s1_source_fn_by_leaf(g, name)
+        if span is not None:
+            mapped.append((name, span))
+    return mapped[0] if len(mapped) == 1 else None
+
+
+def _nested_alloc_ctor_type(g: "DsoGraph", fstart: int, origin: dict):
+    """Declared return type of a constructor called at the allocation site.
+
+    A storage allocator (malloc and the crate's allocator seam) is not a
+    constructor: its return is raw storage, so rule 2 is *absent* for it and
+    the size fallback remains available.  For any other allocation symbol, a
+    mapped callee whose return type is not a concrete ``*mut T``/``Box<T>`` is
+    a refusal, not an invitation to guess from size.
+    """
+    symbol = origin.get("symbol")
+    if symbol in _NESTED_STORAGE_ALLOCATORS:
+        return {"kind": "absent"}
+    idx = origin.get("call_site")
+    if idx is None:
+        return {"kind": "absent"}
+    addr = None
+    direct = _direct_call_target(g, fstart, idx)
+    if direct is not None:
+        addr = direct[1] if direct[1] is not None else direct[0]
+    if addr is None and symbol:
+        hit = _s1_symbol_address(g, symbol)
+        if hit is not None:
+            addr = hit[0]
+    if addr is None:
+        return {"kind": "absent"}
+    src = _s1_writer_source(g, addr)
+    if src is None:
+        return {"kind": "absent"}
+    sig = _s1_signature(src["span"])
+    if sig is None:
+        return {"kind": "absent"}
+    ret = " ".join((sig.get("ret") or "").split())
+    m = re.match(r"^(?:\*mut|\*const)\s+([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)$",
+                 ret)
+    if m is None:
+        m = re.match(r"^Box\s*<\s*([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*>$",
+                     ret)
+    if m is None:
+        return {"kind": "refused",
+                "why": (f"allocation constructor {src['name']} returns "
+                        f"{ret!r}, which is not a concrete *mut T or Box<T>")}
+    owner = _s1_decl_resolve(g, m.group(1))
+    if owner is None or _s1_decl_layout(g, owner) is None:
+        return {"kind": "refused",
+                "why": (f"allocation constructor {src['name']} returns "
+                        f"{ret!r}, whose pointee is not a concrete declared "
+                        "type")}
+    return {"kind": "type", "type": owner}
+
+
+def _nested_alloc_declared_type(g: "DsoGraph", fstart: int, origin: dict):
+    """Rules 1 and 2 for an allocation-backed store: type, or a named refusal."""
+    cache = getattr(g, "_nested_alloc_type_cache", None)
+    if cache is None:
+        cache = {}
+        g._nested_alloc_type_cache = cache
+    key = (fstart, origin.get("call_site"), origin.get("symbol"))
+    if key in cache:
+        return cache[key]
+    symbol = origin.get("symbol")
+    size = origin.get("size")
+    cands, how = {}, {}
+    for text, source in _nested_alloc_type_texts(g, fstart):
+        for name, form in _s1_source_alloc_types(g, text, symbol).items():
+            if name in cands:
+                continue
+            owner = _s1_decl_resolve(g, name)
+            if owner is None or _s1_decl_layout(g, owner) is None:
+                # A type parameter or an opaque name is not a usable owner;
+                # it is not a candidate either, but it must never become
+                # proof through the size rule.
+                continue
+            cands[owner] = form
+            how[owner] = source
+    if not cands:
+        # A generated wrapper can delegate its whole body to one constructor.
+        # The allocation site is then in that callee's source, and rule 1 is
+        # read there -- only for a single mapped call and only with the same
+        # block size.  Anything else is not a single delegation.
+        for text, source in _nested_alloc_type_texts(g, fstart):
+            hit = _nested_single_source_call(g, text)
+            if hit is None:
+                continue
+            callee, span = hit
+            for name, form in _s1_source_alloc_types(
+                    g, span.get("body") or "", symbol).items():
+                if name in cands:
+                    continue
+                owner = _s1_decl_resolve(g, name)
+                if owner is None or _s1_decl_layout(g, owner) is None:
+                    continue
+                cands[owner] = form + "@" + callee
+                how[owner] = source + ":" + callee
+    res = None
+    if cands:
+        sized, dropped = {}, {}
+        for name, form in cands.items():
+            info = _s1_decl_type_size(g, name)
+            if info is None or size is None or info[0] == size:
+                sized[name] = form
+            else:
+                dropped[name] = info[0]
+        if len(sized) == 1:
+            name = next(iter(sized))
+            res = {"kind": "type", "type": name,
+                   "form": sized[name], "source": how[name]}
+        elif len(sized) > 1:
+            res = {"kind": "ambiguous", "candidates": sorted(sized),
+                   "why": ("allocation site declares more than one concrete "
+                           "type: " + ", ".join(sorted(sized)))}
+        elif dropped:
+            res = {"kind": "contradiction",
+                   "why": ("declared allocation type "
+                           + ", ".join(f"{n} (size {s:#x})"
+                                       for n, s in sorted(dropped.items()))
+                           + f" does not match allocation size {size:#x}")}
+    if res is None:
+        ctor = _nested_alloc_ctor_type(g, fstart, origin)
+        if ctor.get("kind") == "type":
+            res = {"kind": "type", "type": ctor["type"],
+                   "form": "constructor-return", "source": "source"}
+        elif ctor.get("kind") == "refused":
+            res = ctor
+        else:
+            res = {"kind": "none"}
+    cache[key] = res
+    return res
+
+
+def _nested_decl_owner(g: "DsoGraph", type_name: str, offset: int,
+                       width: int, size=None):
+    """Owner record for a store into a declared allocation type."""
+    owner = _s1_decl_resolve(g, type_name) or type_name
+    layout = _s1_decl_layout(g, owner)
+    if layout is None:
+        return {"kind": "unknown",
+                "why": (f"declared allocation type {type_name} has no "
+                        "decidable layout")}
+    row = next((f for f in layout["fields"]
+                if f["offset"] <= offset
+                and offset + width <= f["offset"] + f["size"]), None)
+    if row is None:
+        return {"kind": "unknown",
+                "why": (f"declared allocation type {type_name} has no "
+                        f"field covering {offset:#x}")}
+    out = {"kind": "type", "type": owner,
+           "origin": "allocation-declared-type",
+           "allocation_field": row["name"],
+           "allocation_field_offset": row["offset"]}
+    if size is not None:
+        out["allocation_size"] = size
+    return out
 
 
 def _nested_alloc_owner(g: "DsoGraph", size: int, offset: int, width: int):
@@ -9071,12 +9621,26 @@ def _nested_owner_type(g: "DsoGraph", fstart: int, idx: int, reg: str,
         return {"kind": "unknown", "why": "owner-chain depth"}
     origin = _reg_origin(g, fstart, idx, _canon(reg))
     kind = origin.get("kind")
-    if kind == "alloc":
+    if kind in ("alloc", "alloc-unknown"):
         if member_off is None:
             return {"kind": "unknown",
                     "why": "allocation is not the store base"}
-        return _nested_alloc_owner(g, origin["size"], member_off, 8)
-    if kind == "alloc-unknown":
+        # The declared allocation expression (rule 1) and, when that is
+        # absent, the constructor's return type (rule 2) outrank the block
+        # size.  The size decides only when neither is present.
+        decl = _nested_alloc_declared_type(g, fstart, origin)
+        dkind = decl.get("kind")
+        if dkind == "type":
+            return _nested_decl_owner(g, decl["type"], member_off, 8,
+                                      size=origin.get("size")) | {
+                "allocation_type_form": decl.get("form"),
+                "allocation_type_source": decl.get("source")}
+        if dkind in ("ambiguous", "contradiction", "refused"):
+            return {"kind": "unknown", "why": decl.get("why"),
+                    "candidates": decl.get("candidates"),
+                    "allocation_type_rule": dkind}
+        if kind == "alloc":
+            return _nested_alloc_owner(g, origin["size"], member_off, 8)
         return {"kind": "unknown",
                 "why": ("allocation-size-unresolved: "
                         + str(origin.get("symbol")))}
@@ -9264,7 +9828,7 @@ def _nested_index_one(g: "DsoGraph", out: dict, store: dict,
                 dict(rec, disposition="writer", owner=owner["type"],
                      prefix=forward.get("prefix") or backward.get("prefix")))
             return
-        if owner.get("origin") == "allocation-size":
+        if str(owner.get("origin") or "").startswith("allocation-"):
             decidable = (_s1_decl_layout(g, owner["type"]) is not None
                          and _s1_decl_layout(g, owner_type) is not None)
         else:
