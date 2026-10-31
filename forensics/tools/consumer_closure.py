@@ -27,7 +27,13 @@ For a named downstream family it:
    unobserved paths unreachable.
 3. joins every reachable source file to the safety obligations recorded in the
    V1 candidate freeze (production uncontracted unsafe operations) and to the
-   boundary receipts that own them;
+   boundary receipts that own them.  The queue is a union: uncontracted
+   operations at this identity, documented operations a site receipt and the
+   persistent ledger both name, and every obligation enumerated by the previous
+   *ACCEPTED* closure whose operation still exists at the same stable identity
+   (file + kind + enclosing item), regardless of its documentation state.  A
+   contract is not a discharge, so adding one cannot remove an enumerated
+   obligation from the queue;
 4. adjudicates each obligation ``DISCHARGED`` / ``BLOCKED`` / ``UNKNOWN`` with
    explicit evidence and refuses the whole closure on a stale hash, a dangling
    edge, a missing boundary receipt or an UNKNOWN applicable dependency;
@@ -12274,21 +12280,258 @@ def operation_stable_identity(file: str, kind: str | None, item: str | None,
     return f"{file}::{kind}::<line:{line}>"
 
 
+def operation_key(record: dict) -> tuple:
+    """Hashable stable identity for an inventory or closure operation record."""
+    item = record.get("item")
+    if item:
+        return (record.get("file"), record.get("kind"), item)
+    return (record.get("file"), record.get("kind"), None, record.get("line"))
+
+
+def carry_forward_candidates(previous: dict, contracts: dict,
+                             queued: collections.Counter,
+                             reachable_files: set[str] | None = None,
+                             reachability_evidence: dict | None = None
+                             ) -> tuple[list[dict], dict]:
+    """Obligations the previous applied closure enumerated, carried forward.
+
+    The queue is a union: an obligation enumerated by the previous *ACCEPTED*
+    closure stays queued while its operation still exists at the same stable
+    identity (file + kind + enclosing item) **and** its file is in the current
+    closure's reachable-file set, whatever its documentation state or ledger
+    membership.  Only a discharge receipt, the operation's disappearance from
+    the current census, or the loss of its file's reachability may remove it.
+
+    Reachability is evidence, not documentation: an unreachable file cannot
+    own a reachable obligation at this artifact, so carrying its operations
+    forward would inflate the queue with sites the closure never reached.  The
+    removal is recorded with the reason ``no-longer-reachable-at-this-artifact``
+    and cites the reachable-file evidence; it is never silent.
+
+    ``queued`` is the multiplicity of each stable identity already enrolled at
+    this identity from the live census and site receipts.  Membership is merged
+    as a multiset maximum, so an operation that is already queued is not added
+    twice and two same-named operations in one file are not collapsed into one.
+
+    The returned record keeps the previous enumeration coordinate as ``line``
+    (provenance; the coordinate at which the discharge receipts were
+    adjudicated) and records the current census coordinate separately, because
+    the carry-forward is about obligation identity, not line stability.
+    Operations enumerated by the previous closure that the current per-site
+    census no longer contains, or whose file is not reachable, are returned in
+    ``removed`` with a reason.
+    """
+    contracted = contracts.get("contracted_operations")
+    production_census = []
+    for rec in contracted or []:
+        if rec.get("partition") == V1_PARTITION_PRODUCTION:
+            production_census.append(("contracted", rec))
+    for rec in contracts.get("blockers") or []:
+        if rec.get("partition") == V1_PARTITION_PRODUCTION:
+            production_census.append(("uncontracted", rec))
+
+    by_stable = collections.defaultdict(list)
+    by_exact = collections.defaultdict(list)
+    for state, rec in production_census:
+        by_stable[operation_key(rec)].append((state, rec))
+        by_exact[(rec.get("file"), rec.get("line"), rec.get("kind"))].append(
+            (state, rec))
+
+    groups = collections.OrderedDict()
+    for rec in previous.get("obligations") or []:
+        sid = rec.get("stable_id") or operation_stable_identity(
+            rec.get("file"), rec.get("kind"), rec.get("item"), rec.get("line"))
+        groups.setdefault(sid, []).append(rec)
+
+    out: list[dict] = []
+    already = 0
+    removed: list[dict] = []
+    ambiguous: list[dict] = []
+    for sid in sorted(groups):
+        group = sorted(groups[sid],
+                       key=lambda r: (r.get("line") or 0, r.get("id") or ""))
+        available = queued.get(sid, 0)
+        for prev in group:
+            if available > 0:
+                available -= 1
+                already += 1
+                continue
+            f, kind = prev.get("file"), prev.get("kind")
+            line = prev.get("line")
+            item = prev.get("item")
+            matched = by_stable.get(operation_key(prev), [])
+            if not matched:
+                matched = by_exact.get((f, line, kind), [])
+            if reachable_files is not None and f not in reachable_files:
+                census_lines = sorted({r.get("line") for _s, r in matched
+                                       if r.get("line") is not None})
+                evidence = dict(reachability_evidence or {})
+                evidence.update({
+                    "file": f,
+                    "file_in_reachable_set": False,
+                    "basis": (
+                        "the file is absent from this closure's reachable-file "
+                        "set (the same final linked-code upper bound used to "
+                        "enroll every other obligation); reachability is "
+                        "evidence, so an operation in an unreachable file "
+                        "cannot be carried forward at this artifact"),
+                })
+                removed.append({
+                    "file": f, "line": line, "kind": kind,
+                    "item": item, "stable_id": sid,
+                    "previous_id": prev.get("id"),
+                    "previous_status": prev.get("status"),
+                    "previous_discharge_receipt": prev.get("discharge_receipt"),
+                    "reason": "no-longer-reachable-at-this-artifact",
+                    "reason_detail": (
+                        "enumerated by the previous applied closure, but this "
+                        "closure's reachable-file set does not contain the "
+                        "file; an unreachable operation is not an obligation "
+                        "at this artifact"),
+                    "operation_still_in_census": bool(matched),
+                    "current_census_lines": census_lines,
+                    "reachable_file_evidence": evidence,
+                })
+                continue
+            if not matched:
+                if contracted is not None:
+                    removed.append({
+                        "file": f, "line": line, "kind": kind,
+                        "item": item, "stable_id": sid,
+                        "previous_id": prev.get("id"),
+                        "previous_status": prev.get("status"),
+                        "reason": (
+                            "enumerated by the previous applied closure, but the "
+                            "current inventory's per-site enumeration contains no "
+                            "production operation at this stable identity (file, "
+                            "kind, enclosing item); the operation no longer "
+                            "exists as a source unsafe operation"),
+                    })
+                    continue
+                # Legacy inventory (no per-site contracted records): the
+                # previous enumeration is the only existence evidence.  Never
+                # drop what cannot be shown removed.
+                state = prev.get("contract") or "uncontracted"
+                basis = ("carry-forward: the current inventory predates per-site "
+                         "contracted-operation records, so existence rests on the "
+                         "previous applied closure's enumeration")
+                current_line = None
+            else:
+                states = {s for s, _r in matched}
+                state = "contracted" if "contracted" in states else "uncontracted"
+                lines = sorted({r.get("line") for _s, r in matched
+                                if r.get("line") is not None})
+                exact_line = next((r.get("line") for _s, r in matched
+                                   if r.get("line") == line), None)
+                if exact_line is not None:
+                    current_line = exact_line
+                elif len(lines) == 1:
+                    current_line = lines[0]
+                else:
+                    current_line = None
+                    ambiguous.append({
+                        "file": f, "line": line, "kind": kind, "item": item,
+                        "stable_id": sid,
+                        "reason": ("several current production operations share "
+                                   "this stable identity and none is at the "
+                                   "previous coordinate; the previous coordinate "
+                                   "is retained and the ambiguity is recorded"),
+                        "current_lines": lines,
+                    })
+                if state == "contracted":
+                    basis = ("attached # Safety / SAFETY contract in the current "
+                             "inventory; a contract is not a discharge")
+                else:
+                    basis = ("no attached # Safety / SAFETY contract in the "
+                             "current inventory")
+            out.append({
+                "id": f"V1:{f}:{line}:{kind}",
+                "stable_id": sid,
+                "file": f,
+                "line": line,
+                "line_provenance": (
+                    "previous applied closure's enumeration coordinate; stable "
+                    "identity is file+kind+enclosing item, the line is provenance"),
+                "current_census_line": current_line,
+                "line_drift": (current_line - line
+                               if isinstance(current_line, int)
+                               and isinstance(line, int) else None),
+                "site_receipt_line": None,
+                "site_receipt_ledger_line": None,
+                "kind": kind,
+                "item": item,
+                "partition": V1_PARTITION_PRODUCTION,
+                "v1_reason": prev.get("v1_reason"),
+                "contract": state,
+                "contract_basis": basis,
+                "site_receipt": None,
+                "site_boundary": None,
+                "ledger_basis": None,
+                "carried_forward_from": {
+                    "receipt": previous.get("receipt"),
+                    "receipt_sha256": previous.get("receipt_sha256"),
+                    "previous_id": prev.get("id"),
+                    "previous_line": prev.get("line"),
+                    "previous_status": prev.get("status"),
+                    "previous_discharge_receipt": prev.get("discharge_receipt"),
+                },
+            })
+
+    removed_by_reason = collections.Counter(r.get("reason") for r in removed)
+    summary = {
+        "previous_obligation_count": sum(len(g) for g in groups.values()),
+        "already_present_count": already,
+        "carried_forward_count": len(out),
+        "removed_count": len(removed),
+        "removed_by_reason": dict(sorted(removed_by_reason.items())),
+        "removed": removed,
+        "ambiguous_identity_count": len(ambiguous),
+        "ambiguous_identity": ambiguous,
+        "reachability_filter_applied": reachable_files is not None,
+        "reachability_evidence": reachability_evidence,
+        "suppressed": [],
+    }
+    return out, summary
+
+
 def obligation_candidates(contracts: dict, files_upper: set[str],
                           boundaries_by_file: dict,
-                          obligation_mechanisms: dict) -> tuple[list[dict], dict]:
-    """Build the obligation set: uncontracted operations plus documented ones.
+                          obligation_mechanisms: dict,
+                          carry_forward: dict | None = None,
+                          reachability_evidence: dict | None = None
+                          ) -> tuple[list[dict], dict]:
+    """Build the obligation set: a union that cannot shrink on documentation.
 
     Enrollment rule
     ---------------
-    The queue is the reachable production operations that are still unsafe and
-    either (a) have no attached contract, or (b) are documented but are named
-    by a mechanism's site-enumerating boundary receipt *and* by the persistent
-    ledger ``state.json#/obligation_mechanisms``.  Documentation state can move
+    The queue is the union of three bounded sources:
+
+    (a) the reachable production operations that are still unsafe and have no
+        attached contract;
+    (b) documented operations named by a mechanism's site-enumerating
+        boundary receipt *and* by the persistent ledger
+        ``state.json#/obligation_mechanisms``;
+    (c) every obligation enumerated by the previous *ACCEPTED* closure whose
+        operation still exists at the same stable identity (file + kind +
+        enclosing item) and whose file is still reachable, regardless of its
+        contract state and regardless of the ledger -- passed in as
+        ``carry_forward`` (see :func:`carry_forward_candidates`).
+
+    (c) is the monotonicity guard.  Source (b) is bounded by a receipt and the
+    ledger, so attaching a ``# Safety`` prelude to an operation that no receipt
+    names used to remove it from the queue without a discharge.  Carry-forward
+    re-enrolls exactly the operations a previous closure already enumerated; it
+    does not enroll the inventory's other contracted operations (the tens of
+    thousands that no closure ever enumerated).  Documentation state can move
     an operation between ``uncontracted`` and ``contracted``; it can never remove
+        documentation state; it can never remove
     it.  An operation leaves only when a discharge receipt names it (decided
-    later by :func:`adjudicate`) or when the inventory no longer contains it,
-    which is recorded in ``enrollment.excluded`` with a reason.
+    later by :func:`adjudicate`), when the inventory no longer contains it, or
+    when its file is no longer reachable at this artifact.  The first two are
+    recorded in ``enrollment.excluded`` (site path) or
+    ``enrollment.carry_forward.removed``; the third is
+    ``enrollment.carry_forward.removed`` with the reason
+    ``no-longer-reachable-at-this-artifact``.
 
     A plan site with no ledger record was never an obligation; enrolling it
     would grow the target set rather than preserve it, so it is skipped.  For
@@ -12445,6 +12688,88 @@ def obligation_candidates(contracts: dict, files_upper: set[str],
                     "contract_basis": basis,
                 })
 
+    cf_records: list[dict] = []
+    cf_summary: dict = {"applied": False,
+                        "reason": "no previous applied closure supplied"}
+    if carry_forward and carry_forward.get("applied"):
+        queued = collections.Counter(o["stable_id"] for o in obligations)
+        cf_records, cf_summary = carry_forward_candidates(
+            carry_forward, contracts, queued,
+            reachable_files=files_upper,
+            reachability_evidence=reachability_evidence)
+        cf_summary.update({
+            "applied": True,
+            "receipt": carry_forward.get("receipt"),
+            "receipt_sha256": carry_forward.get("receipt_sha256"),
+            "receipt_generated_utc": carry_forward.get("receipt_generated_utc"),
+            "receipt_verdict": carry_forward.get("receipt_verdict"),
+            "receipt_source_head": carry_forward.get("receipt_source_head"),
+            "receipt_inventory_path": carry_forward.get("receipt_inventory_path"),
+            "receipt_artifact_path": carry_forward.get("receipt_artifact_path"),
+            "receipt_artifact_sha256": carry_forward.get("receipt_artifact_sha256"),
+            "selection": carry_forward.get("selection"),
+            "discovered_candidate_count": carry_forward.get(
+                "discovered_candidate_count"),
+            "contracted_operations_never_enumerated": len(
+                contracts.get("contracted_operations") or []),
+            "boundedness_note": (
+                "only operations the previous applied closure enumerated are "
+                "carried forward; the inventory's contracted operations that no "
+                "closure enumerated are never enrolled by this path"),
+        })
+        for rec in cf_records:
+            if add(rec):
+                cf_summary.setdefault("carried_forward", []).append({
+                    "id": rec["id"],
+                    "stable_id": rec["stable_id"],
+                    "file": rec["file"], "line": rec["line"],
+                    "current_census_line": rec.get("current_census_line"),
+                    "kind": rec["kind"], "item": rec["item"],
+                    "contract": rec["contract"],
+                    "previous_status": (rec.get("carried_forward_from") or {}).get(
+                        "previous_status"),
+                })
+            else:
+                # The previous coordinate is now occupied by a different
+                # operation.  Retry at the current census coordinate so the
+                # obligation is never silently lost; if that also collides, it
+                # is recorded and the caller refuses instead of dropping it.
+                current = rec.get("current_census_line")
+                alt = dict(rec)
+                if isinstance(current, int) and current != rec.get("line"):
+                    alt.update({
+                        "id": f"V1:{rec['file']}:{current}:{rec['kind']}",
+                        "line": current,
+                        "line_provenance": (
+                            "current census coordinate; the previous applied "
+                            "closure's coordinate is occupied by a different "
+                            "operation"),
+                    })
+                if alt is not rec and add(alt):
+                    cf_summary.setdefault("carried_forward", []).append({
+                        "id": alt["id"],
+                        "stable_id": alt["stable_id"],
+                        "file": alt["file"], "line": alt["line"],
+                        "current_census_line": alt.get("current_census_line"),
+                        "kind": alt["kind"], "item": alt["item"],
+                        "contract": alt["contract"],
+                        "previous_status": (
+                            alt.get("carried_forward_from") or {}).get(
+                                "previous_status"),
+                        "previous_coordinate_occupied": True,
+                    })
+                else:
+                    cf_summary["suppressed"].append({
+                        "file": rec["file"], "line": rec["line"],
+                        "kind": rec["kind"], "item": rec["item"],
+                        "stable_id": rec["stable_id"],
+                        "reason": ("the previous coordinate and the current "
+                                   "census coordinate are both already occupied "
+                                   "in the obligation queue"),
+                    })
+        cf_summary["carried_forward_count"] = len(cf_records) - len(
+            cf_summary["suppressed"])
+
     gaps = []
     for key, rec in sorted(obligation_mechanisms.items()):
         if key in planned or key in seen:
@@ -12467,11 +12792,14 @@ def obligation_candidates(contracts: dict, files_upper: set[str],
         "excluded": excluded,
         "excluded_count": len(excluded),
         "ledger_entries_without_site_plan": gaps,
+        "carry_forward": cf_summary,
         "rule": (
-            "uncontracted production blockers + contracted production operations "
-            "named by an in-scope site-enumerating boundary receipt and by "
-            "state.json#/obligation_mechanisms; documentation state only changes "
-            "the contract field, never membership"),
+            "union of uncontracted production blockers + contracted production "
+            "operations named by an in-scope site-enumerating boundary receipt "
+            "and by state.json#/obligation_mechanisms + every obligation the "
+            "previous ACCEPTED closure enumerated whose operation still exists "
+            "at the same stable identity; documentation state only changes the "
+            "contract field, never membership"),
     }
     return obligations, enrollment
 
@@ -12592,6 +12920,21 @@ def scoped_ranges(disposition: str) -> dict:
     return out
 
 
+def scope_item(name) -> str | None:
+    """The enclosing item a boundary operation names, without a module prefix.
+
+    Site receipts qualify an operation with its module (``sha1::dupctx``),
+    while the census records the enclosing item alone (``dupctx``).  The final
+    path component is the item both sides share; the qualifier is extra
+    resolution, not a different operation.  A boundary that names no operation
+    establishes no identity and therefore cannot establish a discharge.
+    """
+    if not name:
+        return None
+    item = str(name).split("::")[-1].strip()
+    return item or None
+
+
 def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                plane: dict) -> dict:
     mechanism = obligation["mechanism"]
@@ -12632,28 +12975,89 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
             "not enumerate this exact site; consumer-scope re-adjudication required")
         return obligation
 
-    # 2. a scoped discharge, only for the exact ranges its disposition names
+    # 2. a scoped discharge, only for the *stable identity* its disposition
+    #    names.  A line range may narrow that match; it may never establish it.
+    #    The range is checked against the operation's current census coordinate,
+    #    not the coordinate the previous closure enumerated, so a discharge
+    #    cannot be inherited by a drifted (or different) operation.
     scoped_attempt = []
+    stale_rejections = []
+    current_line = (obligation.get("current_census_line")
+                    if isinstance(obligation.get("current_census_line"), int)
+                    else obligation["line"])
     for b in boundaries:
         rec = plane["scoped_boundary_discharges"].get(b["id"])
         if not rec:
             continue
         ranges = scoped_ranges(b.get("disposition") or "")
-        hit = any(lo <= obligation["line"] <= hi
-                  for lo, hi in ranges.get(obligation["file"], []))
-        scoped_attempt.append({"boundary": b["id"], "receipt": rec.get("receipt"),
-                               "declared_ranges": {k: v for k, v in ranges.items()},
-                               "covers_site": hit})
-        if hit:
+        file_ranges = ranges.get(obligation["file"], [])
+        covers_current = any(lo <= current_line <= hi for lo, hi in file_ranges)
+        covers_previous = any(lo <= obligation["line"] <= hi
+                              for lo, hi in file_ranges)
+        boundary_item = scope_item(b.get("operation"))
+        identity_match = (
+            b.get("file") == obligation["file"]
+            and b.get("kind") == obligation.get("kind")
+            and boundary_item is not None
+            and obligation.get("item") is not None
+            and boundary_item == obligation["item"])
+        scoped_attempt.append({
+            "boundary": b["id"], "receipt": rec.get("receipt"),
+            "declared_ranges": {k: v for k, v in ranges.items()},
+            "boundary_operation": b.get("operation"),
+            "identity_match": identity_match,
+            "covers_current_coordinate": covers_current,
+            "covers_previous_coordinate": covers_previous,
+            "previous_coordinate": obligation["line"],
+            "current_coordinate": current_line,
+            "covers_site": identity_match and covers_current,
+        })
+        if identity_match and covers_current:
             obligation["status"] = "DISCHARGED"
             obligation["discharge_receipt"] = rec.get("receipt") or rec.get("artifact")
             obligation["status_reason"] = (
-                f"boundary {b['id']} is scoped-SAFETY_DISCHARGED and its disposition "
-                f"explicitly names line {obligation['line']}")
+                f"boundary {b['id']} is scoped-SAFETY_DISCHARGED and names the "
+                f"operation by stable identity ({obligation['file']}, "
+                f"{obligation.get('kind')}, {obligation.get('item')}) at its "
+                f"current census coordinate {current_line}")
             obligation["scoped_discharge_attempts"] = scoped_attempt
             return obligation
+        if (not covers_current and covers_previous
+                and (identity_match or obligation.get("carried_forward_from"))):
+            stale_rejections.append({
+                "boundary": b["id"],
+                "receipt": rec.get("receipt") or rec.get("artifact"),
+                "declared_ranges": {k: [list(x) for x in v]
+                                    for k, v in ranges.items()},
+                "declared_range_for_file": [list(x) for x in file_ranges],
+                "boundary_operation": b.get("operation"),
+                "operation": obligation.get("item"),
+                "identity_match": identity_match,
+                "previous_coordinate": obligation["line"],
+                "current_coordinate": current_line,
+                "reason": (
+                    "the receipt's declared range covers the previous "
+                    "enumerated coordinate but not the operation's current "
+                    "census coordinate; a line range may only narrow a "
+                    "stable-identity match, never establish it"),
+            })
     if scoped_attempt:
         obligation["scoped_discharge_attempts"] = scoped_attempt
+    if stale_rejections:
+        obligation["stale_discharge_rejections"] = stale_rejections
+        first = stale_rejections[0]
+        obligation["status"] = "BLOCKED"
+        obligation["discharge_receipt"] = None
+        obligation["status_reason"] = (
+            "stale scoped discharge refused: boundary "
+            f"{first['boundary']} declares {first['declared_range_for_file']} "
+            f"for {first['boundary_operation']!r}, but this operation "
+            f"({obligation.get('item')!r}) is at current census coordinate "
+            f"{first['current_coordinate']} (previously enumerated at "
+            f"{first['previous_coordinate']}); the declared range does not "
+            "cover the current coordinate, and a line range may only narrow a "
+            "stable-identity match, never establish it")
+        return obligation
 
     # 3. no boundary receipt at all
     if not boundaries:
@@ -12826,6 +13230,104 @@ def source_root_hash_checks(record: dict, ledger: dict | None) -> tuple[dict, li
                           "not match the atlas row for the same recipe",
             })
     return checks, refusals
+
+
+def resolve_carry_forward(repo: Path, args, family: str, artifact: Path,
+                          artifact_sha: str) -> tuple[dict, list[dict]]:
+    """Load the previous applied closure whose obligations are carried forward.
+
+    The source must be an **ACCEPTED** closure for the same family and the same
+    artifact name.  A rejected or refused receipt is not a queue authority, and
+    a receipt for a different executable is not this consumer.  When no explicit
+    path is supplied the most recent such receipt in the carry-forward directory
+    is used, so a run cannot silently regress to the pre-carry-forward queue.
+    """
+    refusals: list[dict] = []
+    if getattr(args, "no_carry_forward", False):
+        return {"applied": False,
+                "reason": "carry-forward disabled by --no-carry-forward "
+                          "(control run; the queue is not monotone)"}, refusals
+
+    explicit = getattr(args, "carry_forward_closure", None)
+    discovered = None
+    if explicit:
+        path = Path(explicit)
+        if not path.is_absolute():
+            path = (repo / path).resolve()
+        if not path.is_file():
+            refusals.append({
+                "code": "CARRY_FORWARD_SOURCE_INVALID",
+                "detail": f"carry-forward closure {explicit} does not exist"})
+            return {"applied": False, "reason": "source not found"}, refusals
+        selection = "explicit --carry-forward-closure"
+    else:
+        search = Path(getattr(args, "carry_forward_dir", "court/inventory"))
+        if not search.is_absolute():
+            search = (repo / search).resolve()
+        candidates = []
+        for p in (sorted(search.glob("closure-*.json")) if search.is_dir() else []):
+            try:
+                doc = json.loads(p.read_text())
+            except Exception:
+                continue
+            if doc.get("family") != family:
+                continue
+            if (doc.get("verdict") or {}).get("state") != "ACCEPTED":
+                continue
+            other = doc.get("artifact_identity") or {}
+            if Path(str(other.get("path") or "")).name != artifact.name:
+                continue
+            if other.get("sha256") == artifact_sha:
+                continue
+            candidates.append((doc.get("generated_utc") or "", str(p), p))
+        discovered = len(candidates)
+        if not candidates:
+            return {"applied": False,
+                    "reason": ("no ACCEPTED closure for this family and artifact "
+                               "name was found in the carry-forward directory")}, refusals
+        candidates.sort()
+        path = Path(candidates[-1][2])
+        selection = ("most recent ACCEPTED closure for this family and artifact "
+                     "name in the carry-forward directory")
+
+    doc = json.loads(path.read_text())
+    problems = []
+    if doc.get("schema") != SCHEMA:
+        problems.append(f"schema {doc.get('schema')!r} is not {SCHEMA!r}")
+    if doc.get("family") != family:
+        problems.append(f"family {doc.get('family')!r} is not {family!r}")
+    state = (doc.get("verdict") or {}).get("state")
+    if state != "ACCEPTED":
+        problems.append(f"verdict is {state!r}, not 'ACCEPTED'")
+    other = doc.get("artifact_identity") or {}
+    if Path(str(other.get("path") or "")).name != artifact.name:
+        problems.append(
+            f"artifact {other.get('path')!r} is not the analysed artefact "
+            f"{artifact.name!r}")
+    if not isinstance(doc.get("obligations"), list):
+        problems.append("no obligations array")
+    if problems:
+        refusals.append({
+            "code": "CARRY_FORWARD_SOURCE_INVALID",
+            "detail": (f"{rel(path, repo)} cannot be the carry-forward source: "
+                       + "; ".join(problems))})
+        return {"applied": False, "reason": "invalid source"}, refusals
+
+    source_ident = doc.get("source_identity") or {}
+    return {
+        "applied": True,
+        "receipt": rel(path, repo),
+        "receipt_sha256": sha256_file(path),
+        "receipt_generated_utc": doc.get("generated_utc"),
+        "receipt_verdict": state,
+        "receipt_source_head": source_ident.get("repository_head"),
+        "receipt_inventory_path": source_ident.get("inventory_path"),
+        "receipt_artifact_path": other.get("path"),
+        "receipt_artifact_sha256": other.get("sha256"),
+        "obligations": doc.get("obligations") or [],
+        "selection": selection,
+        "discovered_candidate_count": discovered,
+    }, refusals
 
 
 def build_receipt(args) -> dict:
@@ -13212,8 +13714,22 @@ def build_receipt(args) -> dict:
     contracts = inventory.get("contracts") or {}
     blockers = contracts.get("blockers") or []
     production = [b for b in blockers if b.get("partition") == V1_PARTITION_PRODUCTION]
+    carry_forward, carry_refusals = resolve_carry_forward(
+        repo, args, args.family, artifact, artifact_sha)
+    refusals.extend(carry_refusals)
+    reachability_evidence = {
+        "source": "graph.reachable_files (the final linked-code upper bound)",
+        "artifact_path": rel(artifact, repo),
+        "artifact_sha256": artifact_sha,
+        "reachable_file_count": len(files_upper),
+        "rule": ("carry-forward requires the file to be reachable at this "
+                 "artifact; an unreachable file is recorded as removed with "
+                 "reason no-longer-reachable-at-this-artifact"),
+    }
     obligations, enrollment = obligation_candidates(
-        contracts, files_upper, boundaries_by_file, obligation_mechanisms)
+        contracts, files_upper, boundaries_by_file, obligation_mechanisms,
+        carry_forward=carry_forward,
+        reachability_evidence=reachability_evidence)
     for o in obligations:
         mech, basis = mechanism_for(o["file"], mechanisms, o, obligation_mechanisms)
         o["mechanism"] = mech
@@ -13224,6 +13740,22 @@ def build_receipt(args) -> dict:
     for o in obligations:
         adjudicate(o, mechanisms, boundaries_by_file.get(o["file"], []), plane)
         if o.get("contract") == "contracted":
+            if o.get("carried_forward_from"):
+                o["documentation_note"] = (
+                    "documented (attached contract) but retained in the obligation "
+                    "queue by carry-forward from the previous applied closure "
+                    f"{o['carried_forward_from'].get('receipt')}; a contract is "
+                    "not a discharge")
+                previous = o.get("status_reason") or ""
+                separator = (". " if previous and not previous.rstrip().endswith(".")
+                             else " ")
+                o["status_reason"] = (previous + separator if previous else "") + (
+                    "The operation is documented (an attached # Safety/SAFETY "
+                    "contract) but remains enrolled by carry-forward from "
+                    f"{o['carried_forward_from'].get('receipt')}; a contract "
+                    "transfers the obligation to the caller, it does not "
+                    "discharge it.")
+                continue
             o["documentation_note"] = (
                 "documented (attached contract) but retained in the obligation "
                 "queue because it is named by site receipt "
@@ -13235,6 +13767,16 @@ def build_receipt(args) -> dict:
                 "The operation is documented (an attached # Safety/SAFETY contract) "
                 "but remains enrolled; a contract transfers the obligation to the "
                 "caller, it does not discharge it.")
+
+    suppressed = (enrollment.get("carry_forward") or {}).get("suppressed") or []
+    if suppressed:
+        refusals.append({
+            "code": "CARRY_FORWARD_SUPPRESSED",
+            "detail": (
+                f"{len(suppressed)} obligation(s) enumerated by the previous "
+                "applied closure could not be enrolled at either the previous "
+                "or the current census coordinate; they must not be silently "
+                "dropped")})
 
     # per-symbol join over the narrow direct-call view.  Every symbol is a root of
     # the same global upper bound; the direct view is reported as a narrow,
@@ -13256,6 +13798,9 @@ def build_receipt(args) -> dict:
 
     counts = collections.Counter(o["status"] for o in obligations)
     by_mechanism = collections.Counter(o["mechanism"] or "<unmapped>" for o in obligations)
+    stale_discharges = [o for o in obligations
+                        if o.get("stale_discharge_rejections")]
+    cf_enrollment = enrollment.get("carry_forward") or {}
 
     # ---- 5. freshness of the inventory at its own source head ------------- #
     reachable_inventory_files = sorted(files_upper & set(inventory_files))
@@ -14055,6 +14600,9 @@ def build_receipt(args) -> dict:
             "v1_production_operations": len(production),
             "included_in_upper_bound": len(obligations),
             "documented_operations_enrolled": enrollment["enrolled_count"],
+            "carried_forward_obligations": (
+                enrollment.get("carry_forward") or {}).get(
+                    "carried_forward_count", 0),
             "excluded_from_upper_bound": excluded_production,
             "exclusion_basis": (
                 "a production operation is excluded only when its file has no function "
@@ -14071,6 +14619,16 @@ def build_receipt(args) -> dict:
             "by_mechanism": dict(sorted(by_mechanism.items())),
             "v1_production_operations_total": len(production),
             "v1_uncontracted_operations_total": len(blockers),
+            "carried_forward": (enrollment.get("carry_forward") or {}).get(
+                "carried_forward_count", 0),
+            "carried_forward_removed": cf_enrollment.get("removed_count", 0),
+            "carried_forward_removed_by_reason": cf_enrollment.get(
+                "removed_by_reason", {}),
+            "stale_discharge_rejections": len(stale_discharges),
+            "stale_discharge_sites": [
+                {"id": o["id"], "item": o.get("item"),
+                 "rejections": o["stale_discharge_rejections"]}
+                for o in stale_discharges],
         },
         "boundary_coverage": {
             "reachable_files_with_receipt": sorted(
@@ -14150,9 +14708,16 @@ def self_test() -> int:
         "err_scope": {"receipt": "mechanism-discharge-ERR.json", "mechanism": "ERR",
                       "sites": {"src/runtime/err.rs": [(10, 20, "ERR-01")]}},
     }
-    def ob(file, line, mech):
-        return {"file": file, "line": line, "mechanism": mech, "status": None,
-                "discharge_receipt": None, "status_reason": None}
+    def ob(file, line, mech, kind="UNSAFE_FN_DEF", item="f", current=None):
+        rec = {"file": file, "line": line, "mechanism": mech, "status": None,
+               "discharge_receipt": None, "status_reason": None,
+               "kind": kind, "item": item}
+        if current is not None:
+            rec["current_census_line"] = current
+        return rec
+    def bound(file, kind, operation, disposition):
+        return {"id": "B23-WPKT-1", "file": file, "kind": kind,
+                "operation": operation, "disposition": disposition}
     check("discharged exact", adjudicate(ob("src/runtime/err.rs", 15, "ERR"), mechs, [],
                                          plane)["status"], "DISCHARGED")
     check("unknown err outside surface",
@@ -14173,21 +14738,38 @@ def self_test() -> int:
     # names only the loader_set_params path; it must not cover the whole file).
     check("scoped boundary without range does not discharge",
           adjudicate(ob("src/ssl/x.rs", 1, "SSL_SESSION"), mechs,
-                     [{"id": "B23-WPKT-1", "disposition": "SAFETY_DISCHARGED"}],
+                     [bound("src/ssl/x.rs", "UNSAFE_FN_DEF", "f",
+                            "SAFETY_DISCHARGED")],
                      plane)["status"],
           "BLOCKED")
     check("scoped range covers site",
           adjudicate(ob("src/ssl/x.rs", 40, "SSL_SESSION"), mechs,
-                     [{"id": "B23-WPKT-1",
-                       "disposition": "SAFETY_DISCHARGED (scope: src/ssl/x.rs:30-50)"}],
+                     [bound("src/ssl/x.rs", "UNSAFE_FN_DEF", "f",
+                            "SAFETY_DISCHARGED (scope: src/ssl/x.rs:30-50)")],
                      plane)["status"],
           "DISCHARGED")
-    check("scoped range does not blanket-discharge",
-          adjudicate(ob("src/ssl/x.rs", 999, "SSL_SESSION"), mechs,
-                     [{"id": "B23-WPKT-1",
-                       "disposition": "SAFETY_DISCHARGED (scope: src/ssl/x.rs:30-50)"}],
+    # a line range may only narrow a stable-identity match, never establish it
+    check("scoped range alone does not establish identity",
+          adjudicate(ob("src/ssl/x.rs", 40, "SSL_SESSION"), mechs,
+                     [bound("src/ssl/x.rs", "UNSAFE_FN_DEF", "other",
+                            "SAFETY_DISCHARGED (scope: src/ssl/x.rs:30-50)")],
                      plane)["status"],
           "BLOCKED")
+    check("scoped range does not blanket-discharge",
+          adjudicate(ob("src/ssl/x.rs", 999, "SSL_SESSION"), mechs,
+                     [bound("src/ssl/x.rs", "UNSAFE_FN_DEF", "f",
+                            "SAFETY_DISCHARGED (scope: src/ssl/x.rs:30-50)")],
+                     plane)["status"],
+          "BLOCKED")
+    # the range is checked against the current census coordinate, not a stale one
+    stale_ob = adjudicate(ob("src/ssl/x.rs", 40, "SSL_SESSION", current=60),
+                          mechs,
+                          [bound("src/ssl/x.rs", "UNSAFE_FN_DEF", "f",
+                                 "SAFETY_DISCHARGED (scope: src/ssl/x.rs:30-50)")],
+                          plane)
+    check("stale range does not discharge a drifted coordinate",
+          (stale_ob["status"], bool(stale_ob.get("stale_discharge_rejections"))),
+          ("BLOCKED", True))
     check("scoped range parser", scoped_ranges(
         "SAFETY_DISCHARGED (scope: src/ui/ui_openssl.rs:111-124, 269-290)"),
         {"src/ui/ui_openssl.rs": [(111, 124), (269, 290)]})
@@ -17094,6 +17676,19 @@ def main(argv=None) -> int:
                          "full population is always written to the JSONL "
                          "sidecar")
     ap.add_argument("--summary", action="store_true")
+    ap.add_argument(
+        "--carry-forward-closure",
+        help="previously ACCEPTED closure receipt whose enumerated obligations are "
+             "carried forward into this queue; must be the same family and "
+             "artifact name")
+    ap.add_argument(
+        "--carry-forward-dir", default="court/inventory",
+        help="directory scanned for the most recent ACCEPTED closure when "
+             "--carry-forward-closure is omitted")
+    ap.add_argument(
+        "--no-carry-forward", action="store_true",
+        help="control only: do not carry forward a previous closure (the queue is "
+             "then not monotone under documentation edits)")
     args = ap.parse_args(argv)
 
     if args.self_test:
@@ -17117,6 +17712,23 @@ def main(argv=None) -> int:
               f"obligations={c['reachable_production_obligations']} "
               f"DISCHARGED={c['DISCHARGED']} BLOCKED={c['BLOCKED']} "
               f"UNKNOWN={c['UNKNOWN']}")
+        print(f"  carried_forward={c['carried_forward']} "
+              f"removed={c['carried_forward_removed']} "
+              f"removed_by_reason={c['carried_forward_removed_by_reason']} "
+              f"stale_discharge_rejections={c['stale_discharge_rejections']}")
+        cf = receipt["documented_enrollment"].get("carry_forward") or {}
+        for r in cf.get("removed") or []:
+            ev = r.get("reachable_file_evidence") or {}
+            print(f"  CARRIED-REMOVED {r.get('file')}:{r.get('line')} "
+                  f"{r.get('kind')} {r.get('item')} reason={r.get('reason')} "
+                  f"(reachable_files={ev.get('reachable_file_count')} "
+                  f"artifact_sha256={str(ev.get('artifact_sha256'))[:12]})")
+        for o in receipt["obligations"]:
+            for sj in o.get("stale_discharge_rejections") or []:
+                print(f"  STALE-DISCHARGE-REFUSED {o['id']} boundary={sj['boundary']} "
+                      f"range={sj['declared_range_for_file']} "
+                      f"previous={sj['previous_coordinate']} "
+                      f"current={sj['current_coordinate']}")
         p = receipt["precision"]["totals"]
         print(f"  precision: indirect={p['indirect_sites']} "
               f"resolved={p['resolved_sites']} unresolved={p['unresolved_sites']} "
