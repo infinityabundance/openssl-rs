@@ -2461,6 +2461,287 @@ def case_plan_without_ledger_does_not_enroll():
         ok)
 
 
+def case_carried_forward_contract_not_in_ledger():
+    """A previously enumerated obligation with a contract, no receipt, no ledger."""
+    prev_line = ENGINE_LINE
+    moved = ENGINE_LINE + 9
+    stable = f"{ENGINE_FILE}::{ENGINE_KIND}::{ENGINE_ITEM}"
+    previous = {
+        "applied": True,
+        "receipt": "closure-x-previous.json",
+        "receipt_sha256": "0" * 64,
+        "receipt_generated_utc": "2026-10-30T00:00:00Z",
+        "receipt_verdict": "ACCEPTED",
+        "obligations": [{
+            "id": f"V1:{ENGINE_FILE}:{prev_line}:{ENGINE_KIND}",
+            "stable_id": stable, "file": ENGINE_FILE, "line": prev_line,
+            "kind": ENGINE_KIND, "item": ENGINE_ITEM,
+            "partition": "production", "contract": "uncontracted",
+            "status": "BLOCKED", "site_receipt": None,
+            "discharge_receipt": None}],
+    }
+    contracts = {
+        "blockers": [],
+        "contracted_operations": [{
+            "file": ENGINE_FILE, "line": moved, "kind": ENGINE_KIND,
+            "item": ENGINE_ITEM, "partition": "production",
+            "contract_basis": "attached # Safety / SAFETY: contract"}],
+        "per_file": {ENGINE_FILE: {}},
+    }
+    obs, enr = cc.obligation_candidates(
+        contracts, {ENGINE_FILE}, {}, {}, carry_forward=previous)
+    cf = enr["carry_forward"]
+    ok = (len(obs) == 1
+          and obs[0]["contract"] == "contracted"
+          and obs[0]["stable_id"] == stable
+          and obs[0]["line"] == prev_line
+          and obs[0]["current_census_line"] == moved
+          and cf["carried_forward_count"] == 1
+          and cf["already_present_count"] == 0)
+    return _case(
+        "bn-carried-forward-contract-not-in-ledger",
+        "an obligation the previous ACCEPTED closure enumerated that now has an "
+        "attached # Safety prelude, is named by no site receipt, and is absent "
+        "from state.json#/obligation_mechanisms",
+        "build the queue with carry-forward by stable identity",
+        "the obligation PERSISTS, is marked contracted, and keeps its previous "
+        "enumeration coordinate while recording the current census coordinate; "
+        "a contract is not a discharge",
+        (f"obligations={len(obs)}, contract={obs[0]['contract'] if obs else None}, "
+         f"line={obs[0]['line'] if obs else None}, "
+         f"current={obs[0].get('current_census_line') if obs else None}, "
+         f"carried={cf['carried_forward_count']}"),
+        ok, {"enrollment": cf})
+
+
+def case_carried_forward_bounded_to_enumerated():
+    """Contracted operations no closure enumerated are never enrolled."""
+    stable = f"{ENGINE_FILE}::{ENGINE_KIND}::{ENGINE_ITEM}"
+    previous = {
+        "applied": True,
+        "receipt": "closure-x-previous.json", "receipt_sha256": "0" * 64,
+        "obligations": [{
+            "id": f"V1:{ENGINE_FILE}:{ENGINE_LINE}:{ENGINE_KIND}",
+            "stable_id": stable, "file": ENGINE_FILE, "line": ENGINE_LINE,
+            "kind": ENGINE_KIND, "item": ENGINE_ITEM,
+            "partition": "production", "contract": "uncontracted",
+            "status": "BLOCKED", "site_receipt": None,
+            "discharge_receipt": None}],
+    }
+    contracted = [{
+        "file": ENGINE_FILE, "line": ENGINE_LINE, "kind": ENGINE_KIND,
+        "item": ENGINE_ITEM, "partition": "production",
+        "contract_basis": "attached # Safety / SAFETY: contract"}]
+    for n in range(40):
+        contracted.append({
+            "file": ENGINE_FILE, "line": 100 + n, "kind": ENGINE_KIND,
+            "item": f"documented_only_{n}", "partition": "production",
+            "contract_basis": "attached # Safety / SAFETY: contract"})
+    contracts = {"blockers": [], "contracted_operations": contracted,
+                 "per_file": {ENGINE_FILE: {}}}
+    obs, enr = cc.obligation_candidates(
+        contracts, {ENGINE_FILE}, {}, {}, carry_forward=previous)
+    cf = enr["carry_forward"]
+    ok = (len(obs) == 1
+          and cf["carried_forward_count"] == 1
+          and cf["contracted_operations_never_enumerated"] == 41
+          and all(o["item"] == ENGINE_ITEM for o in obs))
+    return _case(
+        "bo-carried-forward-bounded-to-enumerated",
+        "41 contracted operations in the inventory of which the previous closure "
+        "enumerated exactly one",
+        "build the queue with carry-forward",
+        "only the previously enumerated operation is enrolled; the 40 contracted "
+        "operations no closure enumerated stay out of the queue",
+        (f"obligations={len(obs)}, carried={cf['carried_forward_count']}, "
+         f"contracted_never_enumerated="
+         f"{cf['contracted_operations_never_enumerated']}"),
+        ok, {"enrollment": cf})
+
+
+def case_carried_forward_removed_operation_recorded():
+    """A carried-forward operation absent from the current census is removed."""
+    stable = f"{ENGINE_FILE}::{ENGINE_KIND}::{ENGINE_ITEM}"
+    previous = {
+        "applied": True,
+        "receipt": "closure-x-previous.json", "receipt_sha256": "0" * 64,
+        "obligations": [{
+            "id": f"V1:{ENGINE_FILE}:{ENGINE_LINE}:{ENGINE_KIND}",
+            "stable_id": stable, "file": ENGINE_FILE, "line": ENGINE_LINE,
+            "kind": ENGINE_KIND, "item": ENGINE_ITEM,
+            "partition": "production", "contract": "contracted",
+            "status": "BLOCKED", "site_receipt": None,
+            "discharge_receipt": None}],
+    }
+    contracts = {"blockers": [], "contracted_operations": [],
+                 "per_file": {ENGINE_FILE: {}}}
+    obs, enr = cc.obligation_candidates(
+        contracts, {ENGINE_FILE}, {}, {}, carry_forward=previous)
+    cf = enr["carry_forward"]
+    ok = (not obs and cf["removed_count"] == 1
+          and "no longer exists" in cf["removed"][0]["reason"]
+          and cf["removed"][0]["previous_status"] == "BLOCKED")
+    return _case(
+        "bp-carried-forward-removed-operation-recorded",
+        "an operation the previous closure enumerated that the current per-site "
+        "census no longer contains",
+        "build the queue with carry-forward",
+        "the obligation leaves the queue and the removal is recorded with a "
+        "reason and its previous status",
+        (f"obligations={len(obs)}, removed={cf['removed_count']}, "
+         f"reason={cf['removed'][0]['reason'][:44] if cf['removed'] else None}"),
+        ok, {"enrollment": cf})
+
+
+def case_carried_forward_unreachable_file_removed():
+    """A carried obligation whose file is unreachable at this artifact leaves."""
+    stable = f"{ENGINE_FILE}::{ENGINE_KIND}::{ENGINE_ITEM}"
+    moved = ENGINE_LINE + 9
+    previous = {
+        "applied": True,
+        "receipt": "closure-x-previous.json", "receipt_sha256": "0" * 64,
+        "obligations": [{
+            "id": f"V1:{ENGINE_FILE}:{ENGINE_LINE}:{ENGINE_KIND}",
+            "stable_id": stable, "file": ENGINE_FILE, "line": ENGINE_LINE,
+            "kind": ENGINE_KIND, "item": ENGINE_ITEM,
+            "partition": "production", "contract": "uncontracted",
+            "status": "BLOCKED", "site_receipt": None,
+            "discharge_receipt": None}],
+    }
+    contracts = {
+        "blockers": [],
+        "contracted_operations": [{
+            "file": ENGINE_FILE, "line": moved, "kind": ENGINE_KIND,
+            "item": ENGINE_ITEM, "partition": "production",
+            "contract_basis": "attached # Safety / SAFETY: contract"}],
+        "per_file": {ENGINE_FILE: {}},
+    }
+    evidence = {"source": "graph.reachable_files",
+                "artifact_sha256": "1" * 64, "reachable_file_count": 0}
+    gone, gone_enr = cc.obligation_candidates(
+        contracts, set(), {}, {}, carry_forward=previous,
+        reachability_evidence=evidence)
+    cf = gone_enr["carry_forward"]
+    removed = cf["removed"][0] if cf["removed"] else {}
+    ev = removed.get("reachable_file_evidence") or {}
+    # control: the operation still exists at the current census coordinate, so
+    # only reachability can justify the removal
+    kept, kept_enr = cc.obligation_candidates(
+        contracts, {ENGINE_FILE}, {}, {}, carry_forward=previous,
+        reachability_evidence=dict(evidence, reachable_file_count=1))
+    ok = (not gone
+          and cf["removed_count"] == 1
+          and removed.get("reason") == "no-longer-reachable-at-this-artifact"
+          and removed.get("operation_still_in_census") is True
+          and removed.get("current_census_lines") == [moved]
+          and ev.get("file_in_reachable_set") is False
+          and ev.get("reachable_file_count") == 0
+          and len(kept) == 1
+          and kept_enr["carry_forward"]["carried_forward_count"] == 1
+          and kept_enr["carry_forward"]["removed_count"] == 0)
+    return _case(
+        "bq-carried-forward-unreachable-file-removed",
+        "a previously enumerated operation that still exists in the current "
+        "census, in a file the current closure's reachable-file set does not "
+        "contain",
+        "build the queue with carry-forward and the reachable-file set",
+        "the obligation leaves the queue with reason "
+        "no-longer-reachable-at-this-artifact, citing the unreachable-file "
+        "evidence; the same fixture with the file reachable still carries it",
+        (f"unreachable: obligations={len(gone)}, "
+         f"removed={cf['removed_count']}, "
+         f"reason={removed.get('reason')}, "
+         f"still_in_census={removed.get('operation_still_in_census')}; "
+         f"reachable control: obligations={len(kept)}, "
+         f"carried={kept_enr['carry_forward']['carried_forward_count']}"),
+        ok, {"enrollment": cf,
+             "reachable_control": kept_enr["carry_forward"]})
+
+
+def case_stale_range_does_not_discharge():
+    """A scoped discharge needs stable identity and the current coordinate."""
+    previous_line = ENGINE_LINE
+    current_line = ENGINE_LINE + 9
+    other_item = ENGINE_ITEM + "_other"
+    mechanisms = {"MECH": {"state": "OWNERSHIP_RECONSTRUCTED"}}
+
+    def obligation(current):
+        return {
+            "id": f"V1:{ENGINE_FILE}:{previous_line}:{ENGINE_KIND}",
+            "stable_id": f"{ENGINE_FILE}::{ENGINE_KIND}::{ENGINE_ITEM}",
+            "file": ENGINE_FILE, "line": previous_line,
+            "current_census_line": current,
+            "kind": ENGINE_KIND, "item": ENGINE_ITEM,
+            "partition": "production", "contract": "contracted",
+            "mechanism": "MECH",
+            "carried_forward_from": {
+                "receipt": "closure-x-previous.json",
+                "previous_line": previous_line},
+        }
+
+    def boundary(operation, lo, hi):
+        return {"receipt": "p25-x-sites.json", "id": "X-STALE",
+                "file": ENGINE_FILE, "line": lo, "kind": ENGINE_KIND,
+                "operation": operation,
+                "disposition":
+                    f"SAFETY_DISCHARGED: {ENGINE_FILE}:{lo}-{hi}"}
+
+    def run(oblig, bound):
+        plane = {"mechanism_discharges": {},
+                 "scoped_boundary_discharges":
+                     {bound["id"]: {"receipt": bound["receipt"]}},
+                 "err_scope": {}}
+        cc.adjudicate(oblig, mechanisms, [bound], plane)
+        return oblig
+
+    # the stale drift: the receipt names another operation and its range covers
+    # only the previous enumeration coordinate
+    stale = run(obligation(current_line),
+                boundary("module::" + other_item, previous_line,
+                         previous_line + 5))
+    # range alone never establishes a match, even when it covers current
+    wrong_op = run(obligation(current_line),
+                   boundary("module::" + other_item, previous_line,
+                            current_line))
+    # control: right operation, range covers the current coordinate
+    control = run(obligation(current_line),
+                  boundary("module::" + ENGINE_ITEM, previous_line,
+                           current_line))
+    rej = stale.get("stale_discharge_rejections") or []
+    ok = (stale["status"] == "BLOCKED"
+          and len(rej) == 1
+          and rej[0]["previous_coordinate"] == previous_line
+          and rej[0]["current_coordinate"] == current_line
+          and rej[0]["declared_range_for_file"] == [
+              [previous_line, previous_line + 5]]
+          and str(current_line) in stale["status_reason"]
+          and str(previous_line) in stale["status_reason"]
+          and wrong_op["status"] == "BLOCKED"
+          and wrong_op.get("discharge_receipt") is None
+          and control["status"] == "DISCHARGED")
+    return _case(
+        "br-stale-range-does-not-discharge-under-drift",
+        "a carried operation at current census coordinate 109 whose previous "
+        "coordinate 100 is covered by a neighbouring receipt's declared range "
+        "[100,105]",
+        "adjudicate the scoped discharge at the current coordinate",
+        "the discharge does not apply: the site is BLOCKED and the stale range "
+        "and both coordinates are named; a widened range with the wrong "
+        "operation still does not discharge, while the right operation inside "
+        "the range does",
+        (f"stale={stale['status']}, rejected={len(rej)}, "
+         f"wrong_operation={wrong_op['status']}, "
+         f"control={control['status']}"),
+        ok, {"stale": {"status": stale["status"],
+                       "status_reason": stale["status_reason"],
+                       "rejections": rej},
+             "wrong_operation": {"status": wrong_op["status"],
+                                 "discharge_receipt":
+                                     wrong_op.get("discharge_receipt")},
+             "control": {"status": control["status"],
+                         "discharge_receipt": control.get("discharge_receipt")}})
+
+
 CASES = (
     case_identical_rebuild,
     case_layout_perturbation,
@@ -2540,6 +2821,14 @@ CASES = (
     case_legacy_inventory_documented_site_persists,
     case_contracted_record_line_drift_stable_identity,
     case_plan_without_ledger_does_not_enroll,
+    # v1.8: the queue carries forward previously enumerated obligations
+    case_carried_forward_contract_not_in_ledger,
+    case_carried_forward_bounded_to_enumerated,
+    case_carried_forward_removed_operation_recorded,
+    # v1.9: carried entries require reachability, and a discharge requires
+    # stable identity plus the operation's current coordinate
+    case_carried_forward_unreachable_file_removed,
+    case_stale_range_does_not_discharge,
 )
 
 NOT_COVERED = [
