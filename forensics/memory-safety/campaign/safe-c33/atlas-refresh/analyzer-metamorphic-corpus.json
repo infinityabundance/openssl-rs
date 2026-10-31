@@ -716,7 +716,7 @@
         "tool": {
           "path": "forensics/tools/consumer_closure.py",
           "schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
-          "sha256": "3eee76571d4df387a1225a63951e2c944e7f1066cd909517113a36973e9bd8d0",
+          "sha256": "1fd09b6f1d854a47396d7844b79b3bb654388cd6e66413c008e75dea33c37175",
           "version": 5
         }
       },
@@ -1173,6 +1173,10 @@
     {
       "evidence": {
         "enrollment": {
+          "carry_forward": {
+            "applied": false,
+            "reason": "no previous applied closure supplied"
+          },
           "contract_scope": null,
           "contracted_record_count": 1,
           "contracted_records_present": true,
@@ -1194,7 +1198,7 @@
           "excluded": [],
           "excluded_count": 0,
           "ledger_entries_without_site_plan": [],
-          "rule": "uncontracted production blockers + contracted production operations named by an in-scope site-enumerating boundary receipt and by state.json#/obligation_mechanisms; documentation state only changes the contract field, never membership"
+          "rule": "union of uncontracted production blockers + contracted production operations named by an in-scope site-enumerating boundary receipt and by state.json#/obligation_mechanisms + every obligation the previous ACCEPTED closure enumerated whose operation still exists at the same stable identity; documentation state only changes the contract field, never membership"
         }
       },
       "expected_property": "the operation is enrolled and marked contracted; a contract is not a discharge",
@@ -1207,6 +1211,10 @@
     {
       "evidence": {
         "enrollment": {
+          "carry_forward": {
+            "applied": false,
+            "reason": "no previous applied closure supplied"
+          },
           "contract_scope": null,
           "contracted_record_count": 0,
           "contracted_records_present": true,
@@ -1215,7 +1223,7 @@
           "excluded": [],
           "excluded_count": 0,
           "ledger_entries_without_site_plan": [],
-          "rule": "uncontracted production blockers + contracted production operations named by an in-scope site-enumerating boundary receipt and by state.json#/obligation_mechanisms; documentation state only changes the contract field, never membership"
+          "rule": "union of uncontracted production blockers + contracted production operations named by an in-scope site-enumerating boundary receipt and by state.json#/obligation_mechanisms + every obligation the previous ACCEPTED closure enumerated whose operation still exists at the same stable identity; documentation state only changes the contract field, never membership"
         }
       },
       "expected_property": "the obligation PERSISTS and flips to uncontracted; the stable identity does not move with the documentation state",
@@ -1269,6 +1277,311 @@
       "observed_result": "obligations=0, gaps=1",
       "transformation": "build the obligation queue",
       "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "enrollment": {
+          "already_present_count": 0,
+          "ambiguous_identity": [],
+          "ambiguous_identity_count": 0,
+          "applied": true,
+          "boundedness_note": "only operations the previous applied closure enumerated are carried forward; the inventory's contracted operations that no closure enumerated are never enrolled by this path",
+          "carried_forward": [
+            {
+              "contract": "contracted",
+              "current_census_line": 28,
+              "file": "src/engine/tb_x.rs",
+              "id": "V1:src/engine/tb_x.rs:19:UNSAFE_FN_DEF",
+              "item": "engine_unregister_all_x",
+              "kind": "UNSAFE_FN_DEF",
+              "line": 19,
+              "previous_status": "BLOCKED",
+              "stable_id": "src/engine/tb_x.rs::UNSAFE_FN_DEF::engine_unregister_all_x"
+            }
+          ],
+          "carried_forward_count": 1,
+          "contracted_operations_never_enumerated": 1,
+          "discovered_candidate_count": null,
+          "previous_obligation_count": 1,
+          "reachability_evidence": null,
+          "reachability_filter_applied": true,
+          "receipt": "closure-x-previous.json",
+          "receipt_artifact_path": null,
+          "receipt_artifact_sha256": null,
+          "receipt_generated_utc": "2026-10-30T00:00:00Z",
+          "receipt_inventory_path": null,
+          "receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "receipt_source_head": null,
+          "receipt_verdict": "ACCEPTED",
+          "removed": [],
+          "removed_by_reason": {},
+          "removed_count": 0,
+          "selection": null,
+          "suppressed": []
+        }
+      },
+      "expected_property": "the obligation PERSISTS, is marked contracted, and keeps its previous enumeration coordinate while recording the current census coordinate; a contract is not a discharge",
+      "id": "bn-carried-forward-contract-not-in-ledger",
+      "input": "an obligation the previous ACCEPTED closure enumerated that now has an attached # Safety prelude, is named by no site receipt, and is absent from state.json#/obligation_mechanisms",
+      "observed_result": "obligations=1, contract=contracted, line=19, current=28, carried=1",
+      "transformation": "build the queue with carry-forward by stable identity",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "enrollment": {
+          "already_present_count": 0,
+          "ambiguous_identity": [],
+          "ambiguous_identity_count": 0,
+          "applied": true,
+          "boundedness_note": "only operations the previous applied closure enumerated are carried forward; the inventory's contracted operations that no closure enumerated are never enrolled by this path",
+          "carried_forward": [
+            {
+              "contract": "contracted",
+              "current_census_line": 19,
+              "file": "src/engine/tb_x.rs",
+              "id": "V1:src/engine/tb_x.rs:19:UNSAFE_FN_DEF",
+              "item": "engine_unregister_all_x",
+              "kind": "UNSAFE_FN_DEF",
+              "line": 19,
+              "previous_status": "BLOCKED",
+              "stable_id": "src/engine/tb_x.rs::UNSAFE_FN_DEF::engine_unregister_all_x"
+            }
+          ],
+          "carried_forward_count": 1,
+          "contracted_operations_never_enumerated": 41,
+          "discovered_candidate_count": null,
+          "previous_obligation_count": 1,
+          "reachability_evidence": null,
+          "reachability_filter_applied": true,
+          "receipt": "closure-x-previous.json",
+          "receipt_artifact_path": null,
+          "receipt_artifact_sha256": null,
+          "receipt_generated_utc": null,
+          "receipt_inventory_path": null,
+          "receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "receipt_source_head": null,
+          "receipt_verdict": null,
+          "removed": [],
+          "removed_by_reason": {},
+          "removed_count": 0,
+          "selection": null,
+          "suppressed": []
+        }
+      },
+      "expected_property": "only the previously enumerated operation is enrolled; the 40 contracted operations no closure enumerated stay out of the queue",
+      "id": "bo-carried-forward-bounded-to-enumerated",
+      "input": "41 contracted operations in the inventory of which the previous closure enumerated exactly one",
+      "observed_result": "obligations=1, carried=1, contracted_never_enumerated=41",
+      "transformation": "build the queue with carry-forward",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "enrollment": {
+          "already_present_count": 0,
+          "ambiguous_identity": [],
+          "ambiguous_identity_count": 0,
+          "applied": true,
+          "boundedness_note": "only operations the previous applied closure enumerated are carried forward; the inventory's contracted operations that no closure enumerated are never enrolled by this path",
+          "carried_forward_count": 0,
+          "contracted_operations_never_enumerated": 0,
+          "discovered_candidate_count": null,
+          "previous_obligation_count": 1,
+          "reachability_evidence": null,
+          "reachability_filter_applied": true,
+          "receipt": "closure-x-previous.json",
+          "receipt_artifact_path": null,
+          "receipt_artifact_sha256": null,
+          "receipt_generated_utc": null,
+          "receipt_inventory_path": null,
+          "receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "receipt_source_head": null,
+          "receipt_verdict": null,
+          "removed": [
+            {
+              "file": "src/engine/tb_x.rs",
+              "item": "engine_unregister_all_x",
+              "kind": "UNSAFE_FN_DEF",
+              "line": 19,
+              "previous_id": "V1:src/engine/tb_x.rs:19:UNSAFE_FN_DEF",
+              "previous_status": "BLOCKED",
+              "reason": "enumerated by the previous applied closure, but the current inventory's per-site enumeration contains no production operation at this stable identity (file, kind, enclosing item); the operation no longer exists as a source unsafe operation",
+              "stable_id": "src/engine/tb_x.rs::UNSAFE_FN_DEF::engine_unregister_all_x"
+            }
+          ],
+          "removed_by_reason": {
+            "enumerated by the previous applied closure, but the current inventory's per-site enumeration contains no production operation at this stable identity (file, kind, enclosing item); the operation no longer exists as a source unsafe operation": 1
+          },
+          "removed_count": 1,
+          "selection": null,
+          "suppressed": []
+        }
+      },
+      "expected_property": "the obligation leaves the queue and the removal is recorded with a reason and its previous status",
+      "id": "bp-carried-forward-removed-operation-recorded",
+      "input": "an operation the previous closure enumerated that the current per-site census no longer contains",
+      "observed_result": "obligations=0, removed=1, reason=enumerated by the previous applied closure, ",
+      "transformation": "build the queue with carry-forward",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "enrollment": {
+          "already_present_count": 0,
+          "ambiguous_identity": [],
+          "ambiguous_identity_count": 0,
+          "applied": true,
+          "boundedness_note": "only operations the previous applied closure enumerated are carried forward; the inventory's contracted operations that no closure enumerated are never enrolled by this path",
+          "carried_forward_count": 0,
+          "contracted_operations_never_enumerated": 1,
+          "discovered_candidate_count": null,
+          "previous_obligation_count": 1,
+          "reachability_evidence": {
+            "artifact_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "reachable_file_count": 0,
+            "source": "graph.reachable_files"
+          },
+          "reachability_filter_applied": true,
+          "receipt": "closure-x-previous.json",
+          "receipt_artifact_path": null,
+          "receipt_artifact_sha256": null,
+          "receipt_generated_utc": null,
+          "receipt_inventory_path": null,
+          "receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "receipt_source_head": null,
+          "receipt_verdict": null,
+          "removed": [
+            {
+              "current_census_lines": [
+                28
+              ],
+              "file": "src/engine/tb_x.rs",
+              "item": "engine_unregister_all_x",
+              "kind": "UNSAFE_FN_DEF",
+              "line": 19,
+              "operation_still_in_census": true,
+              "previous_discharge_receipt": null,
+              "previous_id": "V1:src/engine/tb_x.rs:19:UNSAFE_FN_DEF",
+              "previous_status": "BLOCKED",
+              "reachable_file_evidence": {
+                "artifact_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+                "basis": "the file is absent from this closure's reachable-file set (the same final linked-code upper bound used to enroll every other obligation); reachability is evidence, so an operation in an unreachable file cannot be carried forward at this artifact",
+                "file": "src/engine/tb_x.rs",
+                "file_in_reachable_set": false,
+                "reachable_file_count": 0,
+                "source": "graph.reachable_files"
+              },
+              "reason": "no-longer-reachable-at-this-artifact",
+              "reason_detail": "enumerated by the previous applied closure, but this closure's reachable-file set does not contain the file; an unreachable operation is not an obligation at this artifact",
+              "stable_id": "src/engine/tb_x.rs::UNSAFE_FN_DEF::engine_unregister_all_x"
+            }
+          ],
+          "removed_by_reason": {
+            "no-longer-reachable-at-this-artifact": 1
+          },
+          "removed_count": 1,
+          "selection": null,
+          "suppressed": []
+        },
+        "reachable_control": {
+          "already_present_count": 0,
+          "ambiguous_identity": [],
+          "ambiguous_identity_count": 0,
+          "applied": true,
+          "boundedness_note": "only operations the previous applied closure enumerated are carried forward; the inventory's contracted operations that no closure enumerated are never enrolled by this path",
+          "carried_forward": [
+            {
+              "contract": "contracted",
+              "current_census_line": 28,
+              "file": "src/engine/tb_x.rs",
+              "id": "V1:src/engine/tb_x.rs:19:UNSAFE_FN_DEF",
+              "item": "engine_unregister_all_x",
+              "kind": "UNSAFE_FN_DEF",
+              "line": 19,
+              "previous_status": "BLOCKED",
+              "stable_id": "src/engine/tb_x.rs::UNSAFE_FN_DEF::engine_unregister_all_x"
+            }
+          ],
+          "carried_forward_count": 1,
+          "contracted_operations_never_enumerated": 1,
+          "discovered_candidate_count": null,
+          "previous_obligation_count": 1,
+          "reachability_evidence": {
+            "artifact_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "reachable_file_count": 1,
+            "source": "graph.reachable_files"
+          },
+          "reachability_filter_applied": true,
+          "receipt": "closure-x-previous.json",
+          "receipt_artifact_path": null,
+          "receipt_artifact_sha256": null,
+          "receipt_generated_utc": null,
+          "receipt_inventory_path": null,
+          "receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "receipt_source_head": null,
+          "receipt_verdict": null,
+          "removed": [],
+          "removed_by_reason": {},
+          "removed_count": 0,
+          "selection": null,
+          "suppressed": []
+        }
+      },
+      "expected_property": "the obligation leaves the queue with reason no-longer-reachable-at-this-artifact, citing the unreachable-file evidence; the same fixture with the file reachable still carries it",
+      "id": "bq-carried-forward-unreachable-file-removed",
+      "input": "a previously enumerated operation that still exists in the current census, in a file the current closure's reachable-file set does not contain",
+      "observed_result": "unreachable: obligations=0, removed=1, reason=no-longer-reachable-at-this-artifact, still_in_census=True; reachable control: obligations=1, carried=1",
+      "transformation": "build the queue with carry-forward and the reachable-file set",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "control": {
+          "discharge_receipt": "p25-x-sites.json",
+          "status": "DISCHARGED"
+        },
+        "stale": {
+          "rejections": [
+            {
+              "boundary": "X-STALE",
+              "boundary_operation": "module::engine_unregister_all_x_other",
+              "current_coordinate": 28,
+              "declared_range_for_file": [
+                [
+                  19,
+                  24
+                ]
+              ],
+              "declared_ranges": {
+                "src/engine/tb_x.rs": [
+                  [
+                    19,
+                    24
+                  ]
+                ]
+              },
+              "identity_match": false,
+              "operation": "engine_unregister_all_x",
+              "previous_coordinate": 19,
+              "reason": "the receipt's declared range covers the previous enumerated coordinate but not the operation's current census coordinate; a line range may only narrow a stable-identity match, never establish it",
+              "receipt": "p25-x-sites.json"
+            }
+          ],
+          "status": "BLOCKED",
+          "status_reason": "stale scoped discharge refused: boundary X-STALE declares [[19, 24]] for 'module::engine_unregister_all_x_other', but this operation ('engine_unregister_all_x') is at current census coordinate 28 (previously enumerated at 19); the declared range does not cover the current coordinate, and a line range may only narrow a stable-identity match, never establish it"
+        },
+        "wrong_operation": {
+          "discharge_receipt": null,
+          "status": "BLOCKED"
+        }
+      },
+      "expected_property": "the discharge does not apply: the site is BLOCKED and the stale range and both coordinates are named; a widened range with the wrong operation still does not discharge, while the right operation inside the range does",
+      "id": "br-stale-range-does-not-discharge-under-drift",
+      "input": "a carried operation at current census coordinate 109 whose previous coordinate 100 is covered by a neighbouring receipt's declared range [100,105]",
+      "observed_result": "stale=BLOCKED, rejected=1, wrong_operation=BLOCKED, control=DISCHARGED",
+      "transformation": "adjudicate the scoped discharge at the current coordinate",
+      "verdict": "PASS"
     }
   ],
   "claim": "stability and sensitivity evidence for the edge resolver: not a proof of soundness",
@@ -1294,12 +1607,12 @@
   "schema": "openssl-rs/campaign/safe-c33/analyzer-metamorphic-corpus/v1",
   "summary": {
     "failed": [],
-    "passed": 74,
-    "total": 74
+    "passed": 79,
+    "total": 79
   },
   "tool": {
     "covered_tool": "forensics/tools/consumer_closure.py",
-    "covered_tool_sha256": "3eee76571d4df387a1225a63951e2c944e7f1066cd909517113a36973e9bd8d0",
+    "covered_tool_sha256": "1fd09b6f1d854a47396d7844b79b3bb654388cd6e66413c008e75dea33c37175",
     "edge_record_schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
     "path": "forensics/tools/analyzer_metamorphic_corpus.py"
   }
