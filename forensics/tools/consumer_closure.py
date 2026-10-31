@@ -7747,6 +7747,584 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
     }
 
 
+# ---- S2b: nested static-instance dispatch (2026-10-31) ----------------- #
+#
+# A second-level dispatch that S1 cannot see: the context object holds a
+# pointer to a static instance of a repr(C) struct of function pointers, and
+# the call reads a member of that instance.  The class this removes is
+# ``base-slot-partial``: the pointer field is offset-keyed ``open`` because at
+# least one store to the same displacement has an unresolved value, even when
+# every store whose base object is the declared context type writes a declared
+# static instance.
+#
+# Completeness is established by an image-wide instruction fact, not by an
+# absence of evidence: every instruction of every function in the image is
+# scanned, and every store that can write the pointer field is either excluded
+# as a different object, accounted as a declared instance (or NULL), or refuses
+# the site.  A non-scalar store that overlaps the pointer slot also refuses.
+# The rule never shrinks the conservative bound on a failure.
+
+NESTED_WITNESS_SCHEMA = "openssl-rs/consumer-closure/nested-static-instance/v1"
+
+_NESTED_SCALAR_STORE = re.compile(
+    r"(mov|movq|movabs)\s+(.+),\s*(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)\s*")
+_NESTED_NONSCALAR_STORE = re.compile(
+    r"(movl|movw|movb|movsd|movss|movups|movupd|movdqu|movdqa|movaps|movapd|"
+    r"vmovdqu|vmovdqa|vmovups|vmovupd|vmovaps|movlps|movhps|vmovdqu64|"
+    r"vmovdqa64)\s+(.+),\s*(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)\s*")
+_NESTED_NONSCALAR_WIDTH = {
+    "movl": 4, "movw": 2, "movb": 1, "movsd": 8, "movss": 4,
+    "movups": 16, "movupd": 16, "movdqu": 16, "movdqa": 16,
+    "movaps": 16, "movapd": 16, "vmovdqu": 16, "vmovdqa": 16,
+    "vmovups": 16, "vmovupd": 16, "vmovaps": 16, "vmovdqu64": 16,
+    "vmovdqa64": 16, "movlps": 8, "movhps": 8,
+}
+
+
+def _nested_refusal(reason: str, **extra) -> dict:
+    rec = {"schema": NESTED_WITNESS_SCHEMA, "class": "nested-static-instance",
+           "contract_bounded": False, "resolved": False,
+           "refusal": reason}
+    rec.update(extra)
+    return rec
+
+
+def _nested_store_index(g: "DsoGraph"):
+    """Every store in the image, keyed by the 8-byte slot it can write.
+
+    The fact is the instruction stream itself, so the writer set is complete
+    relative to the analysed image: an unobserved writer cannot be silently
+    absent.  A store through ``%rsp``/``%rbp`` is a frame operation, not an
+    object-field writer, and is not indexed.
+    """
+    cache = getattr(g, "_nested_store_index_cache", None)
+    if cache is not None:
+        return cache
+    scalar = collections.defaultdict(list)
+    nonscalar = collections.defaultdict(list)
+    if _has_insns(g):
+        for wf, insns in g.precision.insns_by_func.items():
+            for i, (addr, text) in enumerate(insns):
+                body = text.split("#", 1)[0].strip()
+                m = _NESTED_SCALAR_STORE.fullmatch(body)
+                if m:
+                    base = m.group(4)
+                    if base in ("%rsp", "%rbp"):
+                        continue
+                    try:
+                        off = int(m.group(3) or "0", 16)
+                    except ValueError:
+                        continue
+                    scalar[off].append({
+                        "function": wf, "index": i, "addr": addr,
+                        "src": m.group(2).strip(), "base": base})
+                    continue
+                m = _NESTED_NONSCALAR_STORE.fullmatch(body)
+                if not m:
+                    continue
+                base = m.group(4)
+                if base in ("%rsp", "%rbp"):
+                    continue
+                try:
+                    off = int(m.group(3) or "0", 16)
+                except ValueError:
+                    continue
+                width = _NESTED_NONSCALAR_WIDTH.get(m.group(1), 0)
+                if width <= 0:
+                    continue
+                # A non-scalar store can touch a slot that is not its start.
+                first = off & ~7
+                for q in range(first, off + width, 8):
+                    nonscalar[q].append({
+                        "function": wf, "index": i, "addr": addr,
+                        "src": m.group(2).strip(), "base": base,
+                        "mnemonic": m.group(1), "width": width,
+                        "offset": off})
+    cache = (dict(scalar), dict(nonscalar))
+    g._nested_store_index_cache = cache
+    return cache
+
+
+def _nested_body_cast(g: "DsoGraph", wf: int, decl_type: str):
+    """A unique source cast of the writer's entry object to ``decl_type``."""
+    src = _s1_writer_source(g, wf)
+    if src is None:
+        return None
+    w = _s1_construct_witness(g, src["span"], decl_type, "body")
+    if isinstance(w, dict) and w.get("type"):
+        return w
+    return w if isinstance(w, dict) and w.get("ambiguous") else None
+
+
+def _nested_store_base_witness(g: "DsoGraph", wf: int, store: dict,
+                               decl_type: str, slot_off: int):
+    """Qualify a store's base object, including a c_void body cast.
+
+    ``_s1_store_base_witness_raw`` treats a declared ``*mut c_void`` entry
+    parameter as a different object.  That is right for a store on an unrelated
+    object and wrong for the recurring provider shape
+    ``let ctx = vctx.cast::<ProvCipherCtx>(); (*ctx).hw = ...``.  The cast is a
+    source fact about the same register, so it qualifies the base only when the
+    declared type is c_void and the writer's body names exactly one compatible
+    target.  An ambiguous cast refuses.
+    """
+    origin = _reg_origin(g, wf, store["index"], _canon(store["base"]))
+    if origin.get("kind") == "param":
+        src = _s1_writer_source(g, wf)
+        sig = _s1_signature(src["span"]) if src else None
+        cands = _s1_abi_types(sig, origin.get("index")) if sig else []
+        if cands and all("c_void" in str(c.get("type") or "") for c in cands):
+            cast = _nested_body_cast(g, wf, decl_type)
+            if isinstance(cast, dict) and cast.get("type"):
+                return {"qualified": True, "origin": "entry-parameter-cast",
+                        "declared_type": cands[0].get("type"),
+                        "cast_type": cast.get("type"),
+                        "witness": cast.get("witness")}
+            if isinstance(cast, dict) and cast.get("ambiguous"):
+                return {"qualified": False, "unknown": True,
+                        "reason": ("ambiguous body cast to " + decl_type
+                                   + ": " + ", ".join(cast["ambiguous"]))}
+    return _s1_store_base_witness_raw(g, wf, store, decl_type, slot_off)
+
+
+def _nested_param_values(g: "DsoGraph", fstart: int, k: int,
+                         seen: frozenset = frozenset(), depth: int = 0):
+    """Every value an entry parameter can carry, or a named refusal.
+
+    The caller set is the complete set of direct call sites in the image.  A
+    function whose address is taken, exported, or named by a relocated slot can
+    be entered without a direct call, so its argument domain is not finite and
+    the rule refuses.  Every argument value is read from the semantic call
+    index; a forwarded parameter is followed to its own callers.  No value is
+    guessed from a declared symbol name.
+    """
+    key = (fstart, k)
+    if depth > 6 or key in seen:
+        return None, "parameter-recursion"
+    if getattr(g, "taken_code", None) and fstart in g.taken_code:
+        return None, "parameter-address-taken"
+    exported = {a for a in (getattr(g, "dynamic_defs", {}) or {}).values()}
+    if fstart in exported:
+        return None, "parameter-exported"
+    for vals in (getattr(g, "slot_funcs", {}) or {}).values():
+        if fstart in vals:
+            return None, "parameter-in-relocated-slot"
+    idx = _semantic_call_index(g)
+    rows = idx.get(fstart) or {}
+    callers = {(c, a) for c, _i, a in _callers_of(g, fstart)}
+    if not rows or set(rows) != callers:
+        return None, "parameter-caller-set-incomplete"
+    out = set()
+    for (caller, _call_site), row in rows.items():
+        if k < len(_ARGREGS):
+            v = row["args"][k] if k < len(row["args"]) else None
+        else:
+            j = k - len(_ARGREGS)
+            stack = row.get("stack") or ()
+            v = stack[j] if j < len(stack) else None
+        if v is None or v.is_top():
+            return None, "parameter-open-argument"
+        for comp in v.s:
+            if isinstance(comp, int):
+                out.add(comp)
+            elif isinstance(comp, tuple) and comp[0] == "arg":
+                sub, why = _nested_param_values(
+                    g, caller, comp[1], seen | {key}, depth + 1)
+                if sub is None:
+                    return None, why
+                out |= sub
+            else:
+                return None, "parameter-non-image-value"
+    return out, None
+
+
+def _nested_store_value(g: "DsoGraph", wf: int, store: dict, slot_off: int):
+    """Values a store can write, or a named refusal.
+
+    ``identity`` is a reload of the same slot and adds no new target.  A value
+    that is not an immediate, a static address, or a finite parameter domain is
+    a refusal; it is never dropped from the writer set.
+    """
+    src = store["src"]
+    if src in _REGS or src in _SUBREG:
+        origin = _reg_origin(g, wf, store["index"], _canon(src))
+        if origin.get("kind") == "param":
+            return _nested_param_values(g, wf, origin["index"])
+        if origin.get("kind") == "load":
+            spill = _stack_param(g, wf, origin["at"], origin["offset"],
+                                 origin["base_reg"])
+            if spill is not None:
+                return _nested_param_values(g, wf, spill["index"])
+    value, kind = _s1_store_value(g, wf, store["index"], src, slot_off)
+    if kind == "identity":
+        return set(), None
+    if kind in ("immediate", "static"):
+        return {value}, None
+    return None, kind
+
+
+_NESTED_RAW_STORE = (
+    "ptr::write", "write_volatile", "copy_nonoverlapping", "memcpy",
+    "memmove", "transmute", "ptr::copy",
+)
+
+
+def _nested_source_could_write(g: "DsoGraph", wf: int, field: str,
+                               ctx_type: str, pointee: str, slot_off: int):
+    """A source-level negative witness for an unproven-base store.
+
+    Returns ``(True, why)`` when the writer's source could name this field
+    (in which case the store is a real writer and the site must refuse), and
+    ``(False, why)`` only when the function never names the field, the context
+    type, the pointee type or the byte offset and contains no raw-store
+    primitive.  A missing source is never a negative witness.
+    """
+    src = _s1_writer_source(g, wf)
+    if src is None:
+        return True, "no-source"
+    body = ((src.get("span") or {}).get("body") or "") \
+        + "\n" + ((src.get("span") or {}).get("header") or "")
+    off = hex(slot_off)
+    needles = {field, ctx_type, pointee, off, off.upper().replace("0X", "0x")}
+    if any(n and n in body for n in needles):
+        return True, "source-names-field-or-type"
+    if any(r in body for r in _NESTED_RAW_STORE):
+        return True, "source-has-raw-store-primitive"
+    return False, "source-omits-field-type-and-offset"
+
+
+def nested_static_instance_witness(g: "DsoGraph", site: dict, name: str,
+                                   reachable: set | None = None):
+    """Prove a second-level static-instance dispatch, or refuse it by name.
+
+    Returns None when the site is not the shape this rule owns; a dict with
+    ``resolved`` otherwise.  A refusal leaves the site's existing class,
+    targets and conservative bound untouched.
+    """
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    if site.get("reason") != "base-slot-partial":
+        return None
+    fstart = site.get("func")
+    insns = g.precision.insns_by_func.get(fstart, ())
+    idx = next((i for i, (a, _t) in enumerate(insns)
+                if a == site.get("addr")), None)
+    if idx is None:
+        return None
+    text = site.get("text") or ""
+    m = re.search(r"call\w*\s+\*(.+)$", text.split("#", 1)[0].strip())
+    if not m:
+        return None
+    operand = m.group(1).strip()
+    mo = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", operand)
+    if not mo:
+        return None
+    member_off = int(mo.group(1), 16) if mo.group(1) else 0
+    base_reg = mo.group(2)
+    origin = _reg_origin(g, fstart, idx, _canon(base_reg))
+    if origin.get("kind") != "load":
+        return None
+    slot_off = origin.get("offset")
+    table_reg = origin.get("base_reg")
+    ctx_info = _s1_site_context(g, fstart)
+    if ctx_info is None:
+        outer = _reg_origin(g, fstart, origin.get("at"), _canon(table_reg))
+        if outer.get("kind") == "param":
+            return _nested_refusal(
+                "no-context-type", function=name,
+                call_site=hex(site["addr"]),
+                operand={"base_reg": base_reg, "member_offset": hex(member_off)},
+                pointer_slot=hex(slot_off))
+        return None
+    want = ctx_info.get("param_index")
+    ctx_origin = _s1_ctx_param(g, fstart, origin.get("at"),
+                               _canon(table_reg), want)
+    if ctx_origin is None:
+        return _nested_refusal(
+            "ctx-not-proven-parameter", function=name,
+            call_site=hex(site["addr"]),
+            operand={"base_reg": base_reg, "member_offset": hex(member_off)},
+            pointer_slot=hex(slot_off),
+            context={"type": ctx_info["type"], "param": ctx_info.get("param")})
+    tfields = _s1_struct_fields(g, ctx_info["type"])
+    if tfields is None:
+        return _nested_refusal("context-fields-undecidable", function=name,
+                               call_site=hex(site["addr"]))
+    candidates = []
+    for fname, ftype in tfields[0]:
+        mm = re.match(r"\*\s*(?:const|mut)\s+([A-Za-z_]\w*)", ftype)
+        if not mm:
+            continue
+        ulayout = _s1_struct_layout(g, mm.group(1))
+        if ulayout is None:
+            continue
+        row = next((r for r in ulayout["fields"]
+                    if r["offset"] == member_off), None)
+        if row is None:
+            continue
+        candidates.append({"field": fname, "table_type": mm.group(1),
+                           "layout": ulayout, "member": row,
+                           "declaration": (f"{tfields[1]['file']}:"
+                                           f"{tfields[1]['line']}")})
+    distinct = {c["table_type"] for c in candidates}
+    if not candidates:
+        return _nested_refusal("no-pointee-layout", function=name,
+                               call_site=hex(site["addr"]),
+                               operand={"member_offset": hex(member_off)})
+    if len(distinct) != 1:
+        return _nested_refusal("ambiguous-pointee-type", function=name,
+                               call_site=hex(site["addr"]),
+                               pointee_types=sorted(distinct))
+    cand = candidates[0]
+    ulayout = cand["layout"]
+    scalar, nonscalar = _nested_store_index(g)
+    rows = scalar.get(slot_off, [])
+    if not rows:
+        return _nested_refusal("no-writer", function=name,
+                               call_site=hex(site["addr"]),
+                               pointer_slot={"object": ctx_info["type"],
+                                             "field": cand["field"],
+                                             "offset": hex(slot_off)})
+    admitted_offsets = [r["offset"] for r in ulayout["fields"]]
+    writer_rows, excluded, unproven, unaccounted = [], [], [], []
+    source_excluded = []
+    for store in rows:
+        bq = _nested_store_base_witness(g, store["function"], store,
+                                        ctx_info["type"], slot_off)
+        if bq.get("excluded"):
+            excluded.append(bq)
+            continue
+        if not bq.get("qualified"):
+            # An unproven base is excluded only with a source-level negative
+            # witness: the function that contains the store never names the
+            # field, the context type, the pointee type or the byte offset,
+            # and contains no raw-store primitive.  Otherwise the store could
+            # write this field and the site refuses.
+            could, why = _nested_source_could_write(
+                g, store["function"], cand["field"], ctx_info["type"],
+                cand["table_type"], slot_off)
+            if could:
+                unproven.append(dict(bq, source_witness=why))
+            else:
+                source_excluded.append(
+                    {"function": g.funcs.get(store["function"],
+                                              hex(store["function"])),
+                     "store_site": hex(store["addr"]),
+                     "reason": why})
+            continue
+        values, why = _nested_store_value(g, store["function"], store,
+                                          slot_off)
+        if why is not None or values is None:
+            unaccounted.append({"function": g.funcs.get(store["function"],
+                                                         hex(store["function"])),
+                                "store_site": hex(store["addr"]),
+                                "reason": why or "unresolved-value"})
+            continue
+        if not values:
+            continue
+        writer_rows.append({"store": store, "base": bq, "values": values})
+    overlapping = []
+    for store in nonscalar.get(slot_off, []):
+        bq = _nested_store_base_witness(g, store["function"], store,
+                                        ctx_info["type"], slot_off)
+        if bq.get("excluded"):
+            continue
+        if not bq.get("qualified"):
+            could, why = _nested_source_could_write(
+                g, store["function"], cand["field"], ctx_info["type"],
+                cand["table_type"], slot_off)
+            if not could:
+                source_excluded.append(
+                    {"function": g.funcs.get(store["function"],
+                                              hex(store["function"])),
+                     "store_site": hex(store["addr"]),
+                     "reason": why, "non_scalar": True})
+                continue
+        overlapping.append({"function": g.funcs.get(store["function"],
+                                                      hex(store["function"])),
+                            "store_site": hex(store["addr"]),
+                            "mnemonic": store["mnemonic"],
+                            "width": store["width"],
+                            "base": bq})
+    pointer_slot = {"object": ctx_info["type"], "field": cand["field"],
+                    "offset": hex(slot_off),
+                    "declaration": cand["declaration"]}
+    if unproven or unaccounted or overlapping or not writer_rows:
+        return _nested_refusal(
+            "writer-set-incomplete", function=name,
+            call_site=hex(site["addr"]),
+            operand={"base_reg": base_reg, "member_offset": hex(member_off)},
+            pointer_slot=pointer_slot,
+            unproven_base_stores=unproven,
+            unaccounted_values=unaccounted,
+            overlapping_non_scalar_stores=overlapping,
+            source_excluded_stores=source_excluded,
+            stores_at_slot=len(rows))
+    declared = _s1_declared_instances(g, cand["table_type"])["instances"]
+    values = sorted({v for row in writer_rows for v in row["values"]})
+    stored = {v for v in values if isinstance(v, int) and v != 0}
+    prefix_types = {}
+    admitted = dict(declared)
+    unknown_values = []
+    for value in sorted(stored):
+        st = _s1_static_type(g, value)
+        if st is None:
+            unknown_values.append(hex(value))
+            continue
+        if st != cand["table_type"]:
+            w = _s1_prefix_witness(g, st, cand["table_type"],
+                                   admitted_offsets)
+            if w is None:
+                unknown_values.append(hex(value))
+                continue
+            prefix_types[st] = w
+            more = _s1_declared_instances(g, st).get("instances") or {}
+            for a, rec in more.items():
+                admitted.setdefault(a, rec)
+    if unknown_values:
+        return _nested_refusal("unaccounted-writer-value", function=name,
+                               call_site=hex(site["addr"]),
+                               pointer_slot=pointer_slot,
+                               undeclared_values=unknown_values)
+    undeclared = sorted(hex(v) for v in stored if v not in admitted)
+    if undeclared:
+        return _nested_refusal("undeclared-instance", function=name,
+                               call_site=hex(site["addr"]),
+                               pointer_slot=pointer_slot,
+                               undeclared_values=undeclared)
+    instance_rows, targets, shape_failures = [], set(), []
+    for addr in sorted(stored):
+        inst = admitted[addr]
+        inst_type = _s1_static_type(g, addr) or cand["table_type"]
+        is_prefix = inst_type != cand["table_type"]
+        prefix_w = prefix_types.get(inst_type) if is_prefix else None
+        obj_type = ((prefix_w or {}).get("prefix_object_type")
+                    or cand["table_type"])
+        olayout = _s1_struct_layout(g, obj_type) or ulayout
+        sec = g.section_of(addr)
+        if sec not in S1_IMMUTABLE_SECTIONS:
+            shape_failures.append({"instance": inst["name"],
+                                   "addr": hex(addr), "reason": "mutable-section",
+                                   "section": sec})
+            continue
+        size = None
+        for raw in (getattr(g, "names_at", {}) or {}).get(addr, ()):
+            raw_sym = (raw or "").split("@")[0]
+            if raw_sym in (getattr(g, "sym_sizes", {}) or {}):
+                size = g.sym_sizes[raw_sym]
+                break
+        if size is None or size < olayout["size"]:
+            shape_failures.append({"instance": inst["name"],
+                                   "addr": hex(addr),
+                                   "reason": "symbol-smaller-than-layout",
+                                   "symbol_size": size,
+                                   "layout_size": olayout["size"]})
+            continue
+        members = {}
+        ok = True
+        for row in olayout["fields"]:
+            vals = g.static_slot(addr + row["offset"])
+            ints = {x for x in (vals or ()) if isinstance(x, int)}
+            if len(ints) != 1:
+                ok = False
+                members[hex(row["offset"])] = None
+                continue
+            v = next(iter(ints))
+            if v == 0:
+                guard = None
+                if not row["option"]:
+                    ok = False
+                else:
+                    guard = _s1_null_guard(g, fstart, idx, row["offset"],
+                                           base_reg)
+                    if guard is None:
+                        ok = False
+                members[hex(row["offset"])] = {
+                    "value": None,
+                    "guard": hex(guard) if guard is not None else None}
+                continue
+            if v not in g.start_set:
+                ok = False
+                members[hex(row["offset"])] = {"value": hex(v),
+                                                "not_function": True}
+                continue
+            members[hex(row["offset"])] = {"value": hex(v),
+                                            "symbol": g.funcs.get(v)}
+            if row["offset"] == member_off:
+                targets.add(v)
+        if not ok:
+            shape_failures.append({"instance": inst["name"],
+                                   "addr": hex(addr),
+                                   "reason": "member-not-function-start"})
+            continue
+        instance_rows.append({"addr": hex(addr), "symbol": inst["name"],
+                              "section": sec, "declared_type": inst_type,
+                              "prefix_compatible": is_prefix,
+                              "members": members})
+    if shape_failures or not instance_rows or not targets:
+        return _nested_refusal("instance-shape-or-target", function=name,
+                               call_site=hex(site["addr"]),
+                               pointer_slot=pointer_slot,
+                               shape_failures=shape_failures,
+                               instances=[r["addr"] for r in instance_rows])
+    scanned = sum(len(v) for v in g.precision.insns_by_func.values()) \
+        if _has_insns(g) else 0
+    return {
+        "schema": NESTED_WITNESS_SCHEMA,
+        "class": "nested-static-instance",
+        "contract_bounded": False,
+        "resolved": True,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "operand": {"base_reg": base_reg, "member_offset": hex(member_off)},
+        "pointer_slot": pointer_slot,
+        "member": {"offset": hex(member_off), "name": cand["member"]["name"],
+                    "type": cand["member"]["type"]},
+        "instances": instance_rows,
+        "stored_by": [
+            {"function": g.funcs.get(r["store"]["function"],
+                                      hex(r["store"]["function"])),
+             "store_site": hex(r["store"]["addr"]),
+             "values": [hex(v) for v in sorted(r["values"])],
+             "base_origin": r["base"].get("origin"),
+             "base_witness": r["base"].get("witness")}
+            for r in writer_rows],
+        "prefix_compatible_types": sorted(prefix_types),
+        "conditions": [
+            "second-level-static-instance-shape",
+            "base-object-qualified",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "every-member-in-image-function-start",
+            "no-overlapping-non-scalar-store",
+        ],
+        "completeness": {
+            "rule": ("every instruction of every function in the analysed "
+                     "image was scanned; every store that can write the "
+                     "pointer slot is excluded as a different object, "
+                     "accounted as a declared static instance or NULL, or "
+                     "refuses the site; an overlapping non-scalar store also "
+                     "refuses; no value is inferred from a declared name"),
+            "functions_scanned": len(g.precision.insns_by_func),
+            "instructions_scanned": scanned,
+            "stores_at_slot": len(rows),
+            "qualified_writers": len(writer_rows),
+            "excluded_different_object_stores": len(excluded),
+            "source_excluded_stores": len(source_excluded),
+            "unproven_base_stores": 0,
+            "unaccounted_values": 0,
+            "overlapping_non_scalar_stores": 0,
+        },
+        "targets": [hex(t) for t in sorted(targets)],
+        "basis": ("a second-level static-instance dispatch: the context "
+                  "parameter loads a pointer field whose declared pointee is a "
+                  "repr(C) struct; every store to that pointer field in the "
+                  "image writes a declared static instance of that type (or "
+                  "NULL), and the selected member of every stored instance is "
+                  "an in-image function start"),
+    }
+
+
 # ---- S6: triage records (not a class) ---------------------------------- #
 
 S6_FUNCTIONS = {
@@ -8149,6 +8727,31 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                                   + str(s1.get("refusal")))
                 stats["S1_static_instance_refused"] += 1
             continue
+        # S2b: a second-level static-instance dispatch that S1 declines because
+        # the consumer is not in a decoded dispatch table.  Completeness is an
+        # image-wide instruction fact; a refusal keeps the site's existing
+        # class, targets and conservative bound unchanged.
+        nested = nested_static_instance_witness(g, site, name, reachable)
+        if nested is not None:
+            if nested.get("resolved"):
+                targets = {int(t, 16) for t in nested["targets"]}
+                _resolve(g, site, targets | residual, "nested-static-instance",
+                         ("second-level static-instance dispatch: "
+                          + nested["pointer_slot"]["object"] + "."
+                          + nested["pointer_slot"]["field"] + " at "
+                          + nested["pointer_slot"]["offset"] + " -> "
+                          + str(len(nested["instances"]))
+                          + " stored declared static instance(s)"))
+                site["nested_instance_witness"] = nested
+                stats["S2b_nested_instance_resolved"] += 1
+            else:
+                # The refusal is recorded, but the site still falls through to
+                # the weaker evidence classes: those have their own soundness
+                # arguments, and blocking them would lose a previously
+                # established resolution.  The conservative bound is never
+                # shrunk here.
+                site["nested_instance_refusal"] = nested
+                stats["S2b_nested_instance_refused"] += 1
         # A local function pointer built from a finite, fully enumerated set of
         # in-image addresses.  This is a target claim (every stored value is a
         # function start and every writer is accounted for), never a contract.
@@ -8298,7 +8901,7 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
     # close to the court's per-process data limit.
     for attr in ("_fn_cfg_cache", "_reaching_cache", "_reaching_store_cache",
                  "_callers_cache", "_source_cache", "_prologue_delta_cache",
-                 "_direct_call_index_cache"):
+                 "_direct_call_index_cache", "_nested_store_index_cache"):
         if hasattr(g, attr):
             setattr(g, attr, {})
     # The source corpus and every S1 index are the largest allocations here;
@@ -14281,6 +14884,60 @@ def build_receipt(args) -> dict:
                      "chain": w.get("chain")}
                     for name, g in graphs.items() for s in g.sites.values()
                     for w in [s.get("static_instance_refusal") or {}]
+                    if w],
+            },
+            "nested_static_instance": {
+                "schema": NESTED_WITNESS_SCHEMA,
+                "rule": (
+                    "a second-level static-instance dispatch: the context "
+                    "parameter loads a pointer field whose declared pointee is "
+                    "a repr(C) struct; every store to that pointer field in "
+                    "the image is enumerated by scanning every instruction of "
+                    "every function, and each is either excluded as a "
+                    "different object, accounted as a declared static "
+                    "instance (or NULL), or refuses the site; an overlapping "
+                    "non-scalar store refuses as well.  Every stored "
+                    "instance's selected member must be an in-image function "
+                    "start"),
+                "summary": {
+                    "resolved": sum(
+                        1 for g in graphs.values() for s in g.sites.values()
+                        if s.get("nested_instance_witness")),
+                    "refused": sum(
+                        1 for g in graphs.values() for s in g.sites.values()
+                        if s.get("nested_instance_refusal")),
+                    "by_refusal": dict(sorted(collections.Counter(
+                        str((s.get("nested_instance_refusal") or {}).get(
+                            "refusal"))
+                        for g in graphs.values() for s in g.sites.values()
+                        if s.get("nested_instance_refusal")).items())),
+                },
+                "resolved_sites": [
+                    {"dso": name,
+                     "function": w.get("function"),
+                     "call_site": w.get("call_site"),
+                     "pointer_slot": w.get("pointer_slot"),
+                     "member": w.get("member"),
+                     "instances": [r.get("symbol") for r in
+                                   w.get("instances", [])],
+                     "stored_by": w.get("stored_by"),
+                     "conditions": w.get("conditions"),
+                     "targets": w.get("targets")}
+                    for name, g in graphs.items() for s in g.sites.values()
+                    for w in [s.get("nested_instance_witness") or {}]
+                    if w],
+                "refused_sites": [
+                    {"dso": name,
+                     "function": w.get("function"),
+                     "call_site": w.get("call_site"),
+                     "refusal": w.get("refusal"),
+                     "pointer_slot": w.get("pointer_slot"),
+                     "unproven_base_stores": w.get("unproven_base_stores"),
+                     "unaccounted_values": w.get("unaccounted_values"),
+                     "overlapping_non_scalar_stores":
+                         w.get("overlapping_non_scalar_stores")}
+                    for name, g in graphs.items() for s in g.sites.values()
+                    for w in [s.get("nested_instance_refusal") or {}]
                     if w],
             },
             "unclassified_reachable_sites": closure["unclassified_sites"],
