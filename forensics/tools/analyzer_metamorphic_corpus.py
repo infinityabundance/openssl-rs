@@ -2888,8 +2888,9 @@ def _alloc_fixture(mode):
     class G:
         name = "nested-alloc-fixture.so"
         source_root = None
-        start_set = {0x3000, 0x3100, 0x3200}
+        start_set = {0x2500, 0x3000, 0x3100, 0x3200}
         funcs = {0x1000: "consumer", 0x2000: "alloc_writer",
+                 0x2500: "alloc",
                  0x3000: "f0", 0x3100: "f1", 0x3200: "f2"}
         all_syms = dict(funcs)
         names_at = {0x9000: {"HW_A"}, 0x9100: {"HW_B"},
@@ -2925,6 +2926,36 @@ def _alloc_fixture(mode):
                   (0x2008, "mov    $0x9000,%rcx"),
                   (0x200e, "mov    %rcx,0xb8(%rax)"),
                   (0x2012, "ret")]
+    elif mode in ("ambiguous", "ambiguous-no-source-form"):
+        writer = [(0x2000, "mov    $0xd0,%edi"),
+                  (0x2005, "call   *0x8000(%rip)        # 8000 "
+                           "<CRYPTO_zalloc@@OPENSSL_3.0.0>"),
+                  (0x200b, "mov    $0x9000,%rcx"),
+                  (0x2011, "mov    %rcx,0xb8(%rax)"),
+                  (0x2015, "ret")]
+    elif mode == "box-shared":
+        # The size is shared with `Other`; only the Box turbofish names B.
+        writer = [(0x2000, "mov    $0xd0,%edi"),
+                  (0x2005, "call   *0x8000(%rip)        # 8000 "
+                           "<__rust_alloc@@GLIBC_2.34>"),
+                  (0x200b, "mov    $0x9000,%rcx"),
+                  (0x2011, "mov    %rcx,0xb8(%rax)"),
+                  (0x2015, "ret")]
+    elif mode in ("ctor-return", "ctor-generic"):
+        writer = [(0x2000, "mov    $0xd0,%edi"),
+                  (0x2005, "call   2500 <alloc>"),
+                  (0x200b, "mov    $0x9000,%rcx"),
+                  (0x2011, "mov    %rcx,0xb8(%rax)"),
+                  (0x2015, "ret")]
+    elif mode == "ctor-body":
+        # The writer is a generated wrapper: its whole body is one call, and
+        # the allocation site (and its declared type) is in that callee.
+        writer = [(0x2000, "mov    $0xd0,%edi"),
+                  (0x2005, "call   *0x8000(%rip)        # 8000 "
+                           "<CRYPTO_zalloc@@OPENSSL_3.0.0>"),
+                  (0x200b, "mov    $0x9000,%rcx"),
+                  (0x2011, "mov    %rcx,0xb8(%rax)"),
+                  (0x2015, "ret")]
     elif mode != "base-not-alloc":
         writer = [(0x2000, "mov    $0xd0,%edi"),
                   (0x2005, "call   *0x8000(%rip)        # 8000 "
@@ -2955,12 +2986,45 @@ def _alloc_fixture(mode):
             "    pub base: Ctx,\n"
             "    pub extra: u64,\n"
             "}\n")
-    if mode == "ambiguous":
+    if mode in ("ambiguous", "ambiguous-no-source-form"):
         docs += ("#[repr(C)]\n"
                  "pub struct WideB {\n"
                  "    pub base: Ctx,\n"
                  "    pub extra2: u64,\n"
                  "}\n")
+    if mode in ("ambiguous-no-source-form", "ctor-return", "ctor-generic"):
+        # Rule 1 must be absent: the store function has no allocation form.
+        docs += ("fn alloc_writer() {\n"
+                 "    unsafe { core::ptr::write(0 as *mut u64, 0); }\n"
+                 "}\n")
+    if mode in ("box-shared", "ctor-return", "ctor-generic", "ctor-body"):
+        # A same-size peer: the size rule cannot decide; only rules 1/2 can.
+        docs += ("#[repr(C)]\n"
+                 "pub struct Other {\n"
+                 "    pub pad: [u8; 0xb8],\n"
+                 "    pub hw: *const Hw,\n"
+                 "    pub other: usize,\n"
+                 "    pub extra: u64,\n"
+                 "}\n")
+    if mode in ("box-shared",):
+        g.slot_syms = {0x8000: {"__rust_alloc"}}
+        docs += ("fn alloc_writer() {\n"
+                 "    let _b = Box::<Wide>::new(Wide { extra: 0 });\n"
+                 "}\n")
+    if mode == "ctor-body":
+        docs += ("fn alloc_writer() {\n"
+                 "    unsafe { make() }\n"
+                 "}\n"
+                 "fn make() -> *mut c_void {\n"
+                 "    let Some(p) = OwnedCtx::<Wide>::new() else {\n"
+                 "        return core::ptr::null_mut();\n"
+                 "    };\n"
+                 "    p.into_raw().cast()\n"
+                 "}\n")
+    if mode == "ctor-return":
+        docs += "fn alloc() -> *mut Wide {\n    core::ptr::null_mut()\n}\n"
+    if mode == "ctor-generic":
+        docs += "fn alloc() -> *mut T {\n    core::ptr::null_mut()\n}\n"
     docs += ("static HW_A: Hw = Hw { init: f0, cipher: f1 };\n"
              "static HW_B: Hw = Hw { init: f0, cipher: f2 };\n")
     g._s1_docs_cache = {"src/alloc_size.rs": docs}
@@ -3026,6 +3090,65 @@ def case_nested_allocation_size_attribution():
          f"dynamic={dynamic_ok}, wrong_base={base_ok}"),
         ok, {"unique": unique, "ambiguous": ambiguous,
              "dynamic": dynamic, "wrong_base": wrong_base})
+
+
+def case_nested_allocation_declared_type():
+    """The allocation expression outranks the allocation size."""
+    g, site = _alloc_fixture("box-shared")
+    box = cc.nested_static_instance_witness(g, site, "consumer")
+    box_sizes = {n for n, _row in cc._s1_decl_candidates(g, 0xd0, 0xb8, 8)}
+    box_ok = (isinstance(box, dict) and box.get("resolved")
+              and box.get("targets") == ["0x3100"]
+              and {"Wide", "Other"} <= box_sizes)
+
+    g, site = _alloc_fixture("ctor-return")
+    ctor = cc.nested_static_instance_witness(g, site, "consumer")
+    ctor_sizes = {n for n, _row in cc._s1_decl_candidates(g, 0xd0, 0xb8, 8)}
+    ctor_ok = (isinstance(ctor, dict) and ctor.get("resolved")
+               and ctor.get("targets") == ["0x3100"]
+               and {"Wide", "Other"} <= ctor_sizes)
+
+    g, site = _alloc_fixture("ambiguous-no-source-form")
+    fallback = cc.nested_static_instance_witness(g, site, "consumer")
+    fb_rows = fallback.get("unproven_base_stores") or []
+    fallback_ok = (isinstance(fallback, dict) and not fallback.get("resolved")
+                   and fallback.get("refusal") == "writer-set-incomplete"
+                   and any((row.get("field_sensitive_owner") or {})
+                           .get("candidates") == ["Wide", "WideB"]
+                           for row in fb_rows))
+
+    g, site = _alloc_fixture("ctor-generic")
+    generic = cc.nested_static_instance_witness(g, site, "consumer")
+    gen_rows = generic.get("unproven_base_stores") or []
+    generic_ok = (isinstance(generic, dict) and not generic.get("resolved")
+                  and generic.get("refusal") == "writer-set-incomplete"
+                  and any("not a concrete declared type"
+                          in str((row.get("field_sensitive_owner") or {})
+                                 .get("why"))
+                          for row in gen_rows))
+
+    g, site = _alloc_fixture("ctor-body")
+    body = cc.nested_static_instance_witness(g, site, "consumer")
+    body_ok = (isinstance(body, dict) and body.get("resolved")
+               and body.get("targets") == ["0x3100"])
+
+    ok = box_ok and ctor_ok and fallback_ok and generic_ok and body_ok
+    return _case(
+        "s2b-nested-allocation-declared-type",
+        "an allocation whose block size is shared by another declared layout",
+        "prefer the type written at the allocation site, then the "
+        "constructor's concrete return type, and use the size only when both "
+        "are absent",
+        "Box::<Wide>::new proves Wide despite a same-size peer; a constructor "
+        "returning *mut Wide proves Wide despite a same-size peer; with no "
+        "form the size fallback still refuses and names both; a constructor "
+        "whose return type is not concrete refuses instead of falling back; "
+        "a wrapper whose whole body is one mapped call reads rule 1 in that "
+        "callee",
+        (f"box={box_ok}, ctor={ctor_ok}, fallback={fallback_ok}, "
+         f"generic={generic_ok}, body={body_ok}"),
+        ok, {"box": box, "ctor": ctor, "fallback": fallback,
+             "generic": generic, "body": body})
 
 
 def case_nested_static_instance_writer_completeness():
@@ -3741,6 +3864,7 @@ CASES = (
     case_nested_symbol_generic_writer_typing,
     # S2b: allocation-size attribution of a writer's base object
     case_nested_allocation_size_attribution,
+    case_nested_allocation_declared_type,
 )
 
 NOT_COVERED = [
