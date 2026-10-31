@@ -2742,6 +2742,189 @@ def case_stale_range_does_not_discharge():
                          "discharge_receipt": control.get("discharge_receipt")}})
 
 
+# --------------------------------------------------------------------------- #
+# S2b: nested static-instance dispatch (image-wide writer completeness)
+# --------------------------------------------------------------------------- #
+
+
+def _nested_fixture(*, extra_instance=False, rogue_value=False,
+                    unproven_writer=False, c_void_writer=False):
+    """A second-level dispatch plus a controlled set of pointer-field writers.
+
+    The consumer loads ``ctx.hw`` (offset 0xb8) and calls ``hw.cipher``
+    (offset 0x8).  ``HW_A`` and ``HW_B`` are declared ``static Hw`` instances;
+    every mutation below changes only the writer population.
+    """
+    class _P:
+        pass
+
+    class G:
+        name = "nested-fixture.so"
+        source_root = None
+        start_set = {0x3000, 0x3100, 0x3200, 0x3300, 0x3400}
+        funcs = {0x1000: "consumer", 0x2000: "init_a",
+                 0x2100: "init_b", 0x2200: "rogue_writer",
+                 0x2300: "unproven_writer", 0x2400: "typed_writer",
+                 0x2500: "get_ptr",
+                 0x3000: "f0", 0x3100: "f1", 0x3200: "f2",
+                 0x3300: "f3", 0x3400: "f4"}
+        all_syms = dict(funcs)
+        names_at = {0x9000: {"HW_A"}, 0x9100: {"HW_B"},
+                    0x3000: {"f0"}, 0x3100: {"f1"}, 0x3200: {"f2"},
+                    0x3300: {"f3"}, 0x3400: {"f4"}}
+        sym_sizes = {"HW_A": 16, "HW_B": 16}
+        dynamic_defs = {}
+        taken_code = set()
+        slot_funcs = {}
+
+        def section_of(self, a):
+            return ".data.rel.ro" if a in (0x9000, 0x9100) else ".text"
+
+        def static_slot(self, a):
+            return {0x9000: {0x3000}, 0x9008: {0x3100},
+                    0x9100: {0x3000}, 0x9108: {0x3200}}.get(a)
+
+    g = G()
+    p = _P()
+    consumer = [(0x1000, "mov    0xb8(%rdi),%rax"),
+                (0x1004, "call   *0x8(%rax)")]
+    writer_a = [(0x2000, "mov    $0x9000,%rax"),
+                (0x2004, "mov    %rax,0xb8(%rdi)")]
+    writer_b = [(0x2100, "mov    $0x9100,%rax"),
+                (0x2104, "mov    %rax,0xb8(%rdi)")]
+    rogue = [(0x2200, "mov    $0xc000,%rax"),
+             (0x2204, "mov    %rax,0xb8(%rdi)")]
+    unproven = [(0x2300, "call   0x2500"),
+                (0x2304, "mov    $0x9000,%rdx"),
+                (0x2308, "mov    %rdx,0xb8(%rax)")]
+    typed = [(0x2400, "mov    $0x9000,%rax"),
+             (0x2404, "mov    %rax,0xb8(%rdi)")]
+    p.insns_by_func = {0x1000: consumer, 0x2000: writer_a,
+                       0x2100: writer_b, 0x2200: rogue,
+                       0x2300: unproven, 0x2400: typed,
+                       0x2500: [(0x2500, "ret")]}
+    if extra_instance:
+        p.insns_by_func[0x2100] = writer_b
+    else:
+        del p.insns_by_func[0x2100]
+    if not rogue_value:
+        del p.insns_by_func[0x2200]
+    if not unproven_writer:
+        del p.insns_by_func[0x2300]
+    if not c_void_writer:
+        del p.insns_by_func[0x2400]
+    g.precision = p
+    g._s1_ctx_cache = {0x1000: {"file": "src/nested.rs",
+                                "function": "consumer", "line": 1,
+                                "var": "ctx", "type": "Ctx",
+                                "param": "vctx", "param_index": 0,
+                                "declared": "vctx: *mut Ctx"}}
+    g._s1_docs_cache = {"src/nested.rs": (
+        "#[repr(C)]\n"
+        "pub struct Ctx {\n"
+        "    pub hw: *const Hw,\n"
+        "    pub other: usize,\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Hw {\n"
+        "    pub init: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+        "    pub cipher: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+        "}\n"
+        "static HW_A: Hw = Hw { init: f0, cipher: f1 };\n"
+        "static HW_B: Hw = Hw { init: f0, cipher: f2 };\n")}
+
+    def span(header, body):
+        return {"file": "src/nested.rs", "line": 10, "header": header,
+                "body": body}
+
+    g._s1_writer_src_cache = {
+        0x2000: {"file": "src/nested.rs", "name": "init_a", "via": "module",
+                 "span": span("unsafe extern \"C\" fn init_a(vctx: *mut Ctx, "
+                               "hw: *const Hw)",
+                               "(*vctx).hw = hw;")},
+        0x2100: {"file": "src/nested.rs", "name": "init_b", "via": "module",
+                 "span": span("unsafe extern \"C\" fn init_b(vctx: *mut Ctx, "
+                               "hw: *const Hw)",
+                               "(*vctx).hw = hw;")},
+        0x2200: {"file": "src/nested.rs", "name": "rogue_writer",
+                 "via": "module",
+                 "span": span("unsafe extern \"C\" fn rogue_writer("
+                               "vctx: *mut Ctx)", "(*vctx).hw = 0xc000;")},
+        0x2300: {"file": "src/nested.rs", "name": "unproven_writer",
+                 "via": "module",
+                 "span": span("unsafe extern \"C\" fn unproven_writer("
+                               "vctx: *mut Ctx)", "(*vctx).hw = get();")},
+        0x2400: {"file": "src/nested.rs", "name": "typed_writer",
+                 "via": "module",
+                 "span": span("unsafe extern \"C\" fn typed_writer("
+                               "vctx: *mut c_void, hw: *const Hw)",
+                               "let ctx = vctx.cast::<Ctx>(); "
+                               "(*ctx).hw = hw;")},
+        0x2500: {"file": "src/nested.rs", "name": "get_ptr",
+                 "via": "module",
+                 "span": span("unsafe extern \"C\" fn get_ptr("
+                               ") -> *mut c_void", "core::ptr::null_mut()")},
+    }
+    site = {"kind": "call", "func": 0x1000, "addr": 0x1004,
+            "text": "call   *0x8(%rax)", "targets": set(),
+            "unresolved": True, "reason": "base-slot-partial",
+            "class": "field", "field_offsets": {0xb8}, "seam": None}
+    return g, site
+
+
+def case_nested_static_instance_writer_completeness():
+    """The S2b rule is complete only when the writer population is complete."""
+    g, site = _nested_fixture()
+    complete = cc.nested_static_instance_witness(g, site, "consumer")
+    complete_ok = (isinstance(complete, dict) and complete.get("resolved")
+                   and complete.get("targets") == ["0x3100"]
+                   and complete["completeness"]["stores_at_slot"] == 1
+                   and complete["completeness"]["unproven_base_stores"] == 0)
+
+    g, site = _nested_fixture(extra_instance=True)
+    widened = cc.nested_static_instance_witness(g, site, "consumer")
+    widened_ok = (isinstance(widened, dict) and widened.get("resolved")
+                  and widened.get("targets") == ["0x3100", "0x3200"]
+                  and widened["completeness"]["stores_at_slot"] == 2)
+
+    g, site = _nested_fixture(rogue_value=True)
+    rogue = cc.nested_static_instance_witness(g, site, "consumer")
+    rogue_ok = (isinstance(rogue, dict) and not rogue.get("resolved")
+                and rogue.get("refusal") == "unaccounted-writer-value")
+
+    g, site = _nested_fixture(unproven_writer=True)
+    unproven = cc.nested_static_instance_witness(g, site, "consumer")
+    unproven_ok = (isinstance(unproven, dict) and not unproven.get("resolved")
+                   and unproven.get("refusal") == "writer-set-incomplete"
+                   and unproven.get("unproven_base_stores"))
+
+    g, site = _nested_fixture(c_void_writer=True)
+    cast = cc.nested_static_instance_witness(g, site, "consumer")
+    cast_ok = (isinstance(cast, dict) and cast.get("resolved")
+               and cast.get("targets") == ["0x3100"]
+               and any(r.get("base_origin") == "entry-parameter-cast"
+                       for r in cast.get("stored_by", [])))
+
+    ok = complete_ok and widened_ok and rogue_ok and unproven_ok and cast_ok
+    return _case(
+        "s2b-nested-static-instance-writer-completeness",
+        "a context pointer field whose pointee is a repr(C) table of function "
+        "pointers, with a controlled writer population",
+        "prove the member target set from the declared static instances; then "
+        "add a second valid instance, a writer storing an undeclared value, a "
+        "writer whose base is not the context type, and a c_void entry "
+        "parameter whose body cast names the context type",
+        "the complete writer set proves {0x3100}; a new valid instance widens "
+        "it to {0x3100,0x3200}; an undeclared value refuses as "
+        "unaccounted-writer-value; an unproven base refuses as "
+        "writer-set-incomplete; a unique body cast qualifies the base and "
+        "still proves {0x3100}",
+        (f"complete={complete_ok}, widened={widened_ok}, "
+         f"rogue={rogue_ok}, unproven={unproven_ok}, cast={cast_ok}"),
+        ok, {"complete": complete, "widened": widened, "rogue": rogue,
+             "unproven": unproven, "cast": cast})
+
+
 CASES = (
     case_identical_rebuild,
     case_layout_perturbation,
@@ -2829,6 +3012,8 @@ CASES = (
     # stable identity plus the operation's current coordinate
     case_carried_forward_unreachable_file_removed,
     case_stale_range_does_not_discharge,
+    # S2b: nested static-instance dispatch and image-wide writer completeness
+    case_nested_static_instance_writer_completeness,
 )
 
 NOT_COVERED = [
