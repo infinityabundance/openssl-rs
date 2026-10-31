@@ -3257,6 +3257,234 @@ def case_nested_same_owner_whole_struct_copy():
         ok, {"copied": copied, "unsourced": unsourced})
 
 
+def _nested_symbol_fixture(*, other=False, undemanglable=False,
+                           whole_copy=False, generic=None):
+    """A Key.hw writer typed only by its function symbol.
+
+    ``Key`` and ``Other`` are distinct repr(C) structs.  The store functions
+    have no source span on purpose, so their base type can come only from the
+    demangled symbol: a method receiver (``<Key as Store>::store``) or the
+    generic argument of a whole-object primitive (``drop_in_place<Key>``).
+    A symbol that names no type, or two types, must keep the refusal.
+    """
+
+    class _P:
+        pass
+
+    class G:
+        name = "nested-symbol-fixture.so"
+        source_root = None
+        start_set = {0x3000, 0x3100, 0x3200, 0x3300, 0x3400}
+        funcs = {0x1000: "consumer",
+                 0x2300: "_RNvMs_Key_store",
+                 0x2400: "_RNvMs_Other_store",
+                 0x2500: "_Rundemanglable_zzz",
+                 0x2600: "_RNvMs_Key_copy",
+                 0x2700: "_Rdrop_in_place_generic",
+                 0x3000: "f0", 0x3100: "f1", 0x3200: "f2",
+                 0x3300: "f3", 0x3400: "f4"}
+        all_syms = dict(funcs)
+        names_at = {0x9000: {"HW_A"}, 0x9100: {"HW_B"},
+                    0x3000: {"f0"}, 0x3100: {"f1"}, 0x3200: {"f2"},
+                    0x3300: {"f3"}, 0x3400: {"f4"}}
+        sym_sizes = {"HW_A": 16, "HW_B": 16}
+        dynamic_defs = {}
+        taken_code = set()
+        slot_funcs = {}
+
+        def section_of(self, a):
+            return ".data.rel.ro" if a in (0x9000, 0x9100) else ".text"
+
+        def static_slot(self, a):
+            return {0x9000: {0x3000}, 0x9008: {0x3100},
+                    0x9100: {0x3000}, 0x9108: {0x3200}}.get(a)
+
+    g = G()
+    p = _P()
+    consumer = [(0x1000, "mov    (%rdi),%rax"),
+                (0x1004, "mov    (%rax),%rax"),
+                (0x1008, "call   *0x8(%rax)")]
+    key_store = [(0x2300, "mov    $0x9000,%rax"),
+                 (0x2304, "mov    %rax,(%rdi)")]
+    other_store = [(0x2400, "mov    $0x9100,%rax"),
+                   (0x2404, "mov    %rax,(%rdi)")]
+    undem = [(0x2500, "mov    $0x9000,%rax"),
+             (0x2504, "mov    %rax,(%rdi)")]
+    copy_key = [(0x2600, "movups (%rdi),%xmm0"),
+                (0x2604, "movups %xmm0,(%rdi)")]
+    generic_store = [(0x2700, "mov    $0x9000,%rax"),
+                     (0x2704, "mov    %rax,(%rdi)")]
+    if generic == "other":
+        generic_store = [(0x2700, "mov    $0x9100,%rax"),
+                         (0x2704, "mov    %rax,(%rdi)")]
+    p.insns_by_func = {0x1000: consumer}
+    if generic in (None, "other"):
+        p.insns_by_func[0x2300] = key_store
+    if other:
+        p.insns_by_func[0x2400] = other_store
+    if undemanglable:
+        p.insns_by_func[0x2500] = undem
+    if whole_copy:
+        p.insns_by_func[0x2600] = copy_key
+    if generic is not None:
+        p.insns_by_func[0x2700] = generic_store
+    g.precision = p
+    g._s1_ctx_cache = {0x1000: {"file": "src/sym.rs",
+                                "function": "consumer", "line": 1,
+                                "var": "ctx", "type": "Ctx",
+                                "param": "ctx", "param_index": 0,
+                                "declared": "ctx: *mut Ctx"}}
+    g._s1_docs_cache = {"src/sym.rs": (
+        "#[repr(C)]\n"
+        "pub struct Ctx {\n"
+        "    pub key: *const Key,\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Key {\n"
+        "    pub hw: *const Hw,\n"
+        "    pub pad: [u8; 8],\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Other {\n"
+        "    pub hw: *const u8,\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Hw {\n"
+        "    pub init: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+        "    pub cipher: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+        "}\n"
+        "static HW_A: Hw = Hw { init: f0, cipher: f1 };\n"
+        "static HW_B: Hw = Hw { init: f0, cipher: f2 };\n"
+        "pub trait Store {\n"
+        "    unsafe fn store(ptr: *mut Self);\n"
+        "    unsafe fn copy(ptr: *mut Self);\n"
+        "}\n")}
+    g._s1_demangle_cache = {
+        0x2300: ("<openssl_rs[abc]::sym::Key as "
+                 "openssl_rs[abc]::sym::Store>::store"),
+        0x2400: ("<openssl_rs[abc]::sym::Other as "
+                 "openssl_rs[abc]::sym::Store>::store"),
+        0x2500: "_Rundemanglable_zzz",
+        0x2600: ("<openssl_rs[abc]::sym::Key as "
+                 "openssl_rs[abc]::sym::Store>::copy"),
+        0x2700: "_Rdrop_in_place_generic",
+    }
+    if generic == "key":
+        g._s1_demangle_cache[0x2700] = (
+            "core::ptr::drop_in_place<openssl_rs[abc]::sym::Key>")
+    elif generic == "other":
+        g._s1_demangle_cache[0x2700] = (
+            "core::ptr::drop_in_place<openssl_rs[abc]::sym::Other>")
+    elif generic == "two":
+        g._s1_demangle_cache[0x2700] = (
+            "core::ptr::drop_in_place<openssl_rs[abc]::sym::Key, "
+            "openssl_rs[abc]::sym::Other>")
+    elif generic == "none":
+        g._s1_demangle_cache[0x2700] = "_Rundemanglable_zzz"
+    site = {"kind": "call", "func": 0x1000, "addr": 0x1008,
+            "text": "call   *0x8(%rax)", "targets": set(),
+            "unresolved": True, "reason": "base-slot-partial",
+            "class": "field", "field_offsets": {0}, "seam": None}
+    return g, site
+
+
+def case_nested_symbol_writer_typing():
+    """A method symbol's receiver type qualifies or excludes a store base."""
+    g, site = _nested_symbol_fixture()
+    typed = cc.nested_static_instance_witness(g, site, "consumer")
+    typed_ok = (isinstance(typed, dict) and typed.get("resolved")
+                and typed.get("targets") == ["0x3100"]
+                and any(r.get("base_symbol_owner") == "Key"
+                        for r in typed.get("stored_by", [])))
+
+    g, site = _nested_symbol_fixture(other=True)
+    other = cc.nested_static_instance_witness(g, site, "consumer")
+    other_ok = (isinstance(other, dict) and other.get("resolved")
+                and other.get("targets") == ["0x3100"]
+                and other["completeness"]["excluded_different_object_stores"] >= 1
+                and any(r.get("symbol_owner") == "Other"
+                        for r in other.get("excluded_different_object_stores", [])))
+
+    g, site = _nested_symbol_fixture(undemanglable=True)
+    undem = cc.nested_static_instance_witness(g, site, "consumer")
+    undem_ok = (isinstance(undem, dict) and not undem.get("resolved")
+                and undem.get("refusal") == "writer-set-incomplete"
+                and undem.get("unproven_base_stores"))
+
+    g, site = _nested_symbol_fixture(whole_copy=True)
+    copied = cc.nested_static_instance_witness(g, site, "consumer")
+    copied_ok = (isinstance(copied, dict) and copied.get("resolved")
+                 and copied.get("targets") == ["0x3100"]
+                 and copied.get("same_owner_whole_struct_copies")
+                 and not copied.get("overlapping_non_scalar_stores"))
+
+    ok = typed_ok and other_ok and undem_ok and copied_ok
+    return _case(
+        "s2b-nested-symbol-writer-typing",
+        "a Key.hw writer whose source is absent but whose mangled method "
+        "symbol names the receiver type",
+        "add a symbol-typed Key writer, a symbol-typed Other writer, an "
+        "undemanglable writer symbol, and a same-owner whole-Key copy",
+        "the Key symbol writer is counted; the Other symbol writer is "
+        "excluded with Other as the witness; the undemanglable symbol keeps "
+        "the writer-set-incomplete refusal; the same-owner copy adds no "
+        "target and leaves the set at {0x3100}",
+        (f"typed={typed_ok}, other={other_ok}, undem={undem_ok}, "
+         f"copied={copied_ok}"),
+        ok, {"typed": typed, "other": other, "undem": undem,
+             "copied": copied})
+
+
+def case_nested_symbol_generic_writer_typing():
+    """A whole-object primitive's generic argument types the store base."""
+    g, site = _nested_symbol_fixture(generic="key")
+    key = cc.nested_static_instance_witness(g, site, "consumer")
+    key_ok = (isinstance(key, dict) and key.get("resolved")
+              and key.get("targets") == ["0x3100"]
+              and any(r.get("base_symbol_owner") == "Key"
+                      and r.get("base_symbol_basis") == "generic-argument"
+                      for r in key.get("stored_by", [])))
+
+    g, site = _nested_symbol_fixture(generic="other")
+    other = cc.nested_static_instance_witness(g, site, "consumer")
+    other_ok = (isinstance(other, dict) and other.get("resolved")
+                and other.get("targets") == ["0x3100"]
+                and any(r.get("symbol_owner") == "Other"
+                        for r in other.get(
+                            "excluded_different_object_stores", [])))
+
+    g, site = _nested_symbol_fixture(generic="none")
+    none = cc.nested_static_instance_witness(g, site, "consumer")
+    none_stores = (none.get("unproven_base_stores") or []) if isinstance(
+        none, dict) else []
+    none_ok = (isinstance(none, dict) and not none.get("resolved")
+               and none.get("refusal") == "writer-set-incomplete"
+               and bool(none_stores)
+               and all(not r.get("symbol_owner") for r in none_stores))
+
+    g, site = _nested_symbol_fixture(generic="two")
+    two = cc.nested_static_instance_witness(g, site, "consumer")
+    two_stores = (two.get("unproven_base_stores") or []) if isinstance(
+        two, dict) else []
+    two_ok = (isinstance(two, dict) and not two.get("resolved")
+              and two.get("refusal") == "writer-set-incomplete"
+              and bool(two_stores)
+              and all(not r.get("symbol_owner") for r in two_stores))
+
+    ok = key_ok and other_ok and none_ok and two_ok
+    return _case(
+        "s2b-nested-symbol-generic-writer-typing",
+        "a sourceless Key.hw writer whose only type evidence is the generic "
+        "argument of the enclosing whole-object primitive symbol",
+        "use drop_in_place<Key>, drop_in_place<Other>, a symbol with no type "
+        "argument, and a symbol naming two candidate types",
+        "the Key instantiation is counted for Key.hw; the Other instantiation "
+        "is excluded as a different owner; the untyped and two-type symbols "
+        "stay unqualified and keep the writer-set-incomplete refusal",
+        (f"key={key_ok}, other={other_ok}, none={none_ok}, two={two_ok}"),
+        ok, {"key": key, "other": other, "none": none, "two": two})
+
+
 CASES = (
     case_identical_rebuild,
     case_layout_perturbation,
@@ -3352,6 +3580,10 @@ CASES = (
     case_nested_local_const_table_phi,
     # S2b: a same-owner whole-object copy propagates only existing values
     case_nested_same_owner_whole_struct_copy,
+    # S2b: a base typed by the enclosing method symbol's receiver
+    case_nested_symbol_writer_typing,
+    # S2b: a base typed by a whole-object primitive's generic argument
+    case_nested_symbol_generic_writer_typing,
 )
 
 NOT_COVERED = [

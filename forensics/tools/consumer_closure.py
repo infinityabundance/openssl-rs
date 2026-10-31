@@ -8349,7 +8349,12 @@ def _nested_whole_struct_copy(g: "DsoGraph", wf: int, store: dict,
                     "source_load": hex(insns[k][0]),
                     "source_owner": owner_type,
                     "width": store["width"],
-                    "layout_size": ulayout["size"]}
+                    "layout_size": ulayout["size"],
+                    "dest_origin": dest.get("origin"),
+                    "source_origin": source.get("origin"),
+                    "source_symbol_owner":
+                        source.get("type") if source.get("symbol") else None,
+                    "source_symbol_basis": source.get("symbol_basis")}
         return None
     return None
 
@@ -8441,6 +8446,285 @@ def _nested_body_type(g: "DsoGraph", wf: int):
     return next(iter(types)) if len(types) == 1 else None
 
 
+_NESTED_RECEIVER_PARAMS = ("self", "&self", "&mut self", "mut self")
+
+
+def _nested_symbol_path_name(text: str):
+    """Last path segment of a demangled type/path, without generics."""
+    t = " ".join((text or "").split())
+    t = re.sub(r"^(?:&|\*)\s*(?:mut|const)?\s*", "", t)
+    t = t.split("<", 1)[0]
+    segs = [s for s in t.split("::") if s]
+    return segs[-1] if segs else None
+
+
+def _nested_symbol_split_as(inner: str):
+    """Split ``T as Trait`` at a top-level `` as ``."""
+    depth = 0
+    for i in range(len(inner)):
+        ch = inner[i]
+        if ch in "<([":
+            depth += 1
+        elif ch in ">)]":
+            depth = max(0, depth - 1)
+        elif depth == 0 and inner.startswith(" as ", i):
+            return inner[:i].strip(), inner[i + 4:].strip()
+    return inner.strip(), None
+
+
+def _nested_symbol_method(demangled: str):
+    """``(receiver, trait, method)`` named by a Rust method symbol, or None.
+
+    The receiver type is the only parameter type Rust mangling carries: a
+    method ``<T as Trait>::f`` or ``<T>::f`` names ``T``.  A free function's
+    parameter list is not encoded.  This parser therefore returns None for
+    every non-method symbol rather than guessing one.
+    """
+    s = re.sub(r"\[[0-9a-f]+\]", "", demangled or "").strip()
+    if not s.startswith("<"):
+        return None
+    depth, end = 0, None
+    for i, ch in enumerate(s):
+        if ch == "<":
+            depth += 1
+        elif ch == ">":
+            depth -= 1
+            if depth == 0:
+                end = i
+                break
+    if end is None:
+        return None
+    inner = s[1:end]
+    tail = s[end + 1:].lstrip(":")
+    m = re.match(r"([A-Za-z_]\w*)", tail)
+    if m is None:
+        return None
+    receiver, trait = _nested_symbol_split_as(inner)
+    return receiver, trait, m.group(1)
+
+
+def _nested_symbol_trait_method(g: "DsoGraph", trait_text: str, method: str):
+    """(file, declaration signature) of a trait method, or None.
+
+    The symbol supplies the concrete receiver type; the trait declaration
+    supplies the *shape* of the method.  Both are needed: the symbol does not
+    say which parameter a register carries, and a receiver is only the first
+    argument when the return value does not use the hidden sret slot.  A
+    missing or ambiguous declaration is not evidence and yields None.
+    """
+    trait_name = _nested_symbol_path_name(trait_text)
+    if not trait_name:
+        return None
+    path = None
+    root = _repo_root(g)
+    if root is not None:
+        t = re.sub(r"\[[0-9a-f]+\]", "", trait_text)
+        segs = [s for s in t.split("::") if s]
+        if segs and segs[0] == "openssl_rs":
+            segs = segs[1:]
+        mod = "::".join(segs[:-1])
+        if mod:
+            fallback = getattr(g, "_s1_module_index", None)
+            if fallback is None:
+                fallback = build_module_index(root / "src")
+                g._s1_module_index = fallback
+            path = module_to_file(mod, root / "src", fallback)
+    docs = _s1_docs(g)
+    paths = [path] if path in docs else list(docs)
+    for rel in paths:
+        text = docs.get(rel)
+        if text is None:
+            continue
+        tm = re.search(r"\btrait\s+" + re.escape(trait_name) + r"\b", text)
+        if tm is None:
+            continue
+        brace = text.find("{", tm.end())
+        if brace < 0:
+            continue
+        end = _s1_brace_span(text, brace)
+        if end is None:
+            continue
+        body = text[brace + 1:end - 1]
+        fm = re.search(r"\bfn\s+" + re.escape(method) + r"\s*\(", body)
+        if fm is None:
+            continue
+        op = body.find("(", fm.end() - 1)
+        depth, cp = 0, None
+        for i in range(op, len(body)):
+            if body[i] == "(":
+                depth += 1
+            elif body[i] == ")":
+                depth -= 1
+                if depth == 0:
+                    cp = i
+                    break
+        if cp is None:
+            continue
+        sig = _s1_signature({"header": body[fm.start():cp + 1]})
+        if sig is None:
+            continue
+        line = text.count("\n", 0, fm.start()) + 1
+        return {"file": rel, "line": line, "sig": sig}
+    return None
+
+
+def _nested_symbol_receiver_owner(g: "DsoGraph", fstart: int, index):
+    """Owner type carried by a method symbol's receiver, or None.
+
+    A store base is typed from the symbol only when (a) it is the first entry
+    parameter, (b) the enclosing symbol names a trait method receiver, and
+    (c) the trait declaration shows that the first parameter is the receiver
+    and that the return does not use the hidden sret slot.  Any failure is
+    undetermined: no-symbol-found is never treated as a different owner.
+    """
+    if index != 0:
+        return None
+    cache = getattr(g, "_nested_symbol_owner_cache", None)
+    if cache is None:
+        cache = {}
+        g._nested_symbol_owner_cache = cache
+    key = (fstart, index)
+    if key in cache:
+        return cache[key]
+    out = None
+    dm = _s1_demangled(g, fstart)
+    method = _nested_symbol_method(dm) if dm else None
+    if method is not None:
+        receiver, trait, name = method
+        rtype = _nested_symbol_path_name(receiver)
+        if (rtype and trait
+                and _s1_struct_fields(g, rtype) is not None):
+            shape = _nested_symbol_trait_method(g, trait, name)
+            if shape is not None:
+                sig = shape["sig"]
+                params = sig.get("params") or []
+                first = params[0] if params else ""
+                is_receiver = (first in _NESTED_RECEIVER_PARAMS
+                               or bool(re.search(r"\bSelf\b", first)))
+                if (is_receiver
+                        and not _s1_return_uses_sret(sig.get("ret"))):
+                    out = {
+                        "kind": "type", "type": rtype,
+                        "origin": "entry-parameter+symbol-receiver",
+                        "symbol_basis": "method-receiver",
+                        "symbol": dm,
+                        "symbol_trait": _nested_symbol_path_name(trait),
+                        "symbol_method": name,
+                        "symbol_witness": f"{shape['file']}:{shape['line']}",
+                    }
+    cache[key] = out
+    return out
+
+
+# Whole-object primitives whose parameter ABI names the pointee type.  A
+# monomorphised instantiation carries the element type T as a generic
+# argument, and every listed parameter is ``*T``/``*mut T``, so a store
+# through that parameter writes a T.  A function outside this table is not
+# guessed: a free function's generic arguments do not say which register
+# carries which parameter.
+_NESTED_SYMBOL_POINTER_PARAMS = {
+    "drop_in_place": {0},
+    "write": {0},
+    "write_volatile": {0},
+    "replace": {0},
+    "copy_nonoverlapping": {0, 1},
+    "copy": {0, 1},
+    "memcpy": {0, 1},
+    "memmove": {0, 1},
+}
+
+
+def _nested_symbol_no_hash(text: str) -> str:
+    return re.sub(r"\[[0-9a-f]+\]", "", text or "")
+
+
+def _nested_symbol_call_tail(demangled: str):
+    """``(name, generic-arguments-or-None)`` of the final call segment.
+
+    Only the *function* segment is parsed.  Generic arguments elsewhere in
+    the path belong to a containing impl or type and do not type this
+    function's parameters.
+    """
+    s = _nested_symbol_no_hash(demangled).strip()
+    depth, cut = 0, -1
+    for i, ch in enumerate(s):
+        if ch in "<([":
+            depth += 1
+        elif ch in ">)]":
+            depth = max(0, depth - 1)
+        elif depth == 0 and s.startswith("::", i):
+            cut = i
+    tail = s[cut + 2:] if cut >= 0 else s
+    m = re.fullmatch(r"([A-Za-z_]\w*)\s*(?:::\s*)?(?:<(.*)>)?", tail)
+    if m is None:
+        return None, None
+    return m.group(1), m.group(2)
+
+
+def _nested_symbol_split_args(text: str):
+    """Split a generic-argument list at top-level commas."""
+    out, depth, start = [], 0, 0
+    for i, ch in enumerate(text):
+        if ch in "<([":
+            depth += 1
+        elif ch in ">)]":
+            depth = max(0, depth - 1)
+        elif ch == "," and depth == 0:
+            out.append(text[start:i].strip())
+            start = i + 1
+    out.append(text[start:].strip())
+    return [a for a in out if a]
+
+
+def _nested_symbol_exact_crate_struct(g: "DsoGraph", text: str):
+    """The crate struct named exactly by one generic argument, or None.
+
+    A wrapper (``Option<..>``, a reference, an array, a tuple, another
+    generic) is not the pointee itself, so it is not accepted: naming a
+    struct *inside* a wrapper does not make the base that struct.
+    """
+    t = " ".join((text or "").split())
+    t = _nested_symbol_no_hash(t)
+    if not re.fullmatch(r"openssl_rs(?:::[A-Za-z_]\w*)+", t):
+        return None
+    name = t.split("::")[-1]
+    return name if _s1_struct_layout(g, name) is not None else None
+
+
+def _nested_symbol_generic_owner(g: "DsoGraph", fstart: int, index):
+    """Owner type named by a whole-object primitive's generic argument.
+
+    Applies only when the writer has no Rust source mapping (the symbol is
+    then the only attribution available), the symbol is one of the listed
+    primitives, and the base is a parameter that primitive declares as
+    ``*T``/``*mut T``.  The generic argument must name exactly one declared
+    crate struct with a decidable layout.  No type, several types, a wrapper
+    or an unmapped type is undetermined and keeps the refusal.
+    """
+    if index is None or _s1_writer_source(g, fstart) is not None:
+        return None
+    dm = _s1_demangled(g, fstart)
+    if not dm:
+        return None
+    name, arg_text = _nested_symbol_call_tail(dm)
+    params = _NESTED_SYMBOL_POINTER_PARAMS.get(name or "")
+    if params is None or index not in params or not arg_text:
+        return None
+    candidates = set()
+    for arg in _nested_symbol_split_args(arg_text):
+        owner = _nested_symbol_exact_crate_struct(g, arg)
+        if owner is not None:
+            candidates.add(owner)
+    if len(candidates) != 1:
+        return None
+    owner = next(iter(candidates))
+    return {"kind": "type", "type": owner,
+            "origin": "entry-parameter+symbol-generic",
+            "symbol_basis": "generic-argument",
+            "symbol": dm, "symbol_method": name,
+            "symbol_argument": owner}
+
+
 def _nested_owner_from_param(g: "DsoGraph", fstart: int, index, via: str):
     """Owner type of an entry parameter, or a named unknown."""
     src = _s1_writer_source(g, fstart)
@@ -8458,6 +8742,12 @@ def _nested_owner_from_param(g: "DsoGraph", fstart: int, index, via: str):
                 types.add(cast)
     if len(types) == 1:
         return {"kind": "type", "type": next(iter(types)), "origin": via}
+    if not types:
+        symbol = _nested_symbol_receiver_owner(g, fstart, index)
+        if symbol is None:
+            symbol = _nested_symbol_generic_owner(g, fstart, index)
+        if symbol is not None:
+            return symbol
     return {"kind": "unknown",
             "why": "entry parameter has no unique owner type"}
 
@@ -8638,6 +8928,15 @@ def _nested_index_one(g: "DsoGraph", out: dict, store: dict,
     owner = _nested_owner_type(g, wf, store["index"],
                                _canon(store["base"]))
     if owner.get("kind") == "type":
+        # A symbol-derived receiver type is a base-type witness, not a
+        # value witness.  Keep it in the record so a later reader can see
+        # which evidence qualified or excluded the store.
+        if owner.get("symbol"):
+            bq = dict(bq, symbol_owner=owner["type"],
+                      symbol_basis=owner.get("symbol_basis"),
+                      symbol=owner.get("symbol"),
+                      symbol_origin=owner.get("origin"))
+            rec = {"store": store, "base": bq, "nonscalar": nonscalar}
         # A prefix-compatible owner (in either direction) shares the field
         # offset, so the store is a writer of this field.  Only two decidable
         # layouts with no prefix relation prove disjointness; an undecidable
@@ -9082,11 +9381,16 @@ def nested_static_instance_witness(g: "DsoGraph", site: dict, name: str,
                                       hex(r["store"]["function"])),
              "store_site": hex(r["store"]["addr"]),
              "values": [hex(v) for v in sorted(r["values"])],
-             "base_origin": r["base"].get("origin"),
-             "base_witness": r["base"].get("witness")}
+             "base_origin": (r["base"].get("origin")
+                             or r["base"].get("symbol_origin")),
+             "base_witness": (r["base"].get("witness")
+                              or r["base"].get("symbol_witness")),
+             "base_symbol_owner": r["base"].get("symbol_owner"),
+             "base_symbol_basis": r["base"].get("symbol_basis")}
             for r in writer_rows],
         "prefix_compatible_types": sorted(prefix_types),
         "local_const_tables": [const_tables[v] for v in sorted(const_tables)],
+        "excluded_different_object_stores": excluded,
         "same_owner_whole_struct_copies": same_owner_copies,
         "conditions": [
             "second-level-static-instance-shape",
