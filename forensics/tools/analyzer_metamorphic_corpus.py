@@ -2926,8 +2926,129 @@ def case_nested_static_instance_writer_completeness():
              "unproven": unproven, "cast": cast})
 
 
+def _nested_const_table_fixture(*, elements=2, bad_element=False):
+    """A context pointer field written by a phi of leas into one const table.
+
+    ``const METHODS: [FnSlot; N]`` lives at ``0x9000`` under one immutable
+    data symbol of size ``8 * N``.  The writer selects elements with a branch
+    (a CFG phi of two ``lea`` instructions); the consumer calls ``slot.f``
+    (member offset 0).  Only ``elements`` and ``bad_element`` change.
+    """
+
+    class _P:
+        pass
+
+    class G:
+        name = "nested-const-table-fixture.so"
+        source_root = None
+        start_set = {0x3000, 0x3100, 0x3200, 0x3300, 0x3400, 0x3500}
+        funcs = {0x1000: "consumer", 0x2000: "set_hw",
+                 0x3000: "f0", 0x3100: "f1", 0x3200: "f2",
+                 0x3300: "f3", 0x3400: "f4", 0x3500: "f5"}
+        all_syms = dict(funcs)
+        all_syms[0x9000] = "anon.const.methods"
+        names_at = {0x9000: {"anon.const.methods"},
+                    0x3000: {"f0"}, 0x3100: {"f1"}, 0x3200: {"f2"},
+                    0x3300: {"f3"}, 0x3400: {"f4"}, 0x3500: {"f5"}}
+        sym_sizes = {"anon.const.methods": 8 * elements}
+        dynamic_defs = {}
+        taken_code = set()
+        slot_funcs = {}
+
+        def section_of(self, a):
+            return ".data.rel.ro" if 0x9000 <= a < 0x9100 else ".text"
+
+        def static_slot(self, a):
+            vals = {0x9000: {0x3100}, 0x9008: {0x3200}, 0x9010: {0x3300}}
+            if bad_element:
+                vals[0x9008] = {0xC000}
+            return vals.get(a)
+
+    g = G()
+    p = _P()
+    # A CFG phi: each branch materialises one element of the same table.
+    writer = [(0x2000, "test   %esi,%esi"),
+              (0x2001, "je     2008"),
+              (0x2002, "lea    0x9000(%rip),%rcx        # 9000"),
+              (0x2007, "jmp    200a"),
+              (0x2008, "lea    0x9008(%rip),%rcx        # 9008"),
+              (0x200a, "mov    %rcx,0xb0(%rdi)")]
+    p.insns_by_func = {0x1000: [(0x1000, "mov    0xb0(%rdi),%rax"),
+                                (0x1004, "call   *(%rax)")],
+                       0x2000: writer}
+    g.precision = p
+    g._s1_ctx_cache = {0x1000: {"file": "src/const_table.rs",
+                                "function": "consumer", "line": 1,
+                                "var": "ctx", "type": "Ctx",
+                                "param": "vctx", "param_index": 0,
+                                "declared": "vctx: *mut Ctx"}}
+    g._s1_docs_cache = {"src/const_table.rs": (
+        "#[repr(C)]\n"
+        "pub struct Ctx {\n"
+        "    pub pad: [u8; 0xb0],\n"
+        "    pub hw: *const FnSlot,\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct FnSlot {\n"
+        "    pub f: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+        "}\n")}
+    g._s1_writer_src_cache = {
+        0x2000: {"file": "src/const_table.rs", "name": "set_hw",
+                 "via": "module",
+                 "span": {"file": "src/const_table.rs", "line": 10,
+                          "header": ("unsafe extern \"C\" fn set_hw("
+                                     "vctx: *mut Ctx, hw: *const FnSlot)"),
+                          "body": ("(*vctx).hw = if compressed { &METHODS[1] } "
+                                   "else { &METHODS[0] };")}},
+    }
+    site = {"kind": "call", "func": 0x1000, "addr": 0x1004,
+            "text": "call   *(%rax)", "targets": set(),
+            "unresolved": True, "reason": "base-slot-partial",
+            "class": "field", "field_offsets": {0xB0}, "seam": None}
+    return g, site
+
+
+def case_nested_local_const_table_phi():
+    """A phi of leas into one const table resolves to the complete table."""
+    g, site = _nested_const_table_fixture(elements=2)
+    two = cc.nested_static_instance_witness(g, site, "consumer")
+    two_ok = (isinstance(two, dict) and two.get("resolved")
+              and two.get("targets") == ["0x3100", "0x3200"]
+              and two.get("local_const_tables")
+              and two["local_const_tables"][0]["count"] == 2)
+
+    g, site = _nested_const_table_fixture(elements=3)
+    three = cc.nested_static_instance_witness(g, site, "consumer")
+    three_ok = (isinstance(three, dict) and three.get("resolved")
+                and three.get("targets") == ["0x3100", "0x3200", "0x3300"]
+                and three["local_const_tables"][0]["count"] == 3)
+
+    g, site = _nested_const_table_fixture(elements=3, bad_element=True)
+    bad = cc.nested_static_instance_witness(g, site, "consumer")
+    bad_ok = (isinstance(bad, dict) and not bad.get("resolved")
+              and bad.get("refusal") == "writer-set-incomplete"
+              and any(row.get("reason") ==
+                      "local-const-table-element-not-function"
+                      for row in bad.get("unaccounted_values") or ()))
+
+    ok = two_ok and three_ok and bad_ok
+    return _case(
+        "s2b-nested-local-const-table-phi",
+        "a context pointer field whose value is a CFG phi of two leas into "
+        "one in-image const table, with the consumer calling slot.f",
+        "prove the two selected elements; then declare a third element no lea "
+        "selects; then make one element's selected member a non-function",
+        "the phi proves exactly {0x3100,0x3200}; the length comes from the "
+        "containing symbol and stride, so the 3-element table proves the "
+        "complete {0x3100,0x3200,0x3300} even though only two leas name it; "
+        "a non-function member refuses with the specific element reason",
+        (f"two={two_ok}, three={three_ok}, bad={bad_ok}"),
+        ok, {"two": two, "three": three, "bad": bad})
+
+
 def _nested_chain_fixture(*, second_writer=False, other_type=False,
-                          vector_same=False, vector_other=False):
+                          vector_same=False, vector_other=False,
+                          whole_copy=False):
     """A one-level chain ``ctx->key->hw`` with a controlled writer set.
 
     The call reads ``hw->cipher`` (member offset 8).  Writers store the table
@@ -2946,7 +3067,7 @@ def _nested_chain_fixture(*, second_writer=False, other_type=False,
         start_set = {0x3000, 0x3100, 0x3200, 0x3300, 0x3400}
         funcs = {0x1000: "consumer", 0x2000: "init_a", 0x2100: "init_b",
                  0x2200: "other_init", 0x2300: "vector_same",
-                 0x2400: "vector_other",
+                 0x2400: "vector_other", 0x2500: "copy_key",
                  0x3000: "f0", 0x3100: "f1", 0x3200: "f2",
                  0x3300: "f3", 0x3400: "f4"}
         all_syms = dict(funcs)
@@ -2978,6 +3099,8 @@ def _nested_chain_fixture(*, second_writer=False, other_type=False,
              (0x2204, "mov    %rax,(%rdi)")]
     vec_same = [(0x2300, "movups %xmm0,(%rdi)")]
     vec_other = [(0x2400, "movups %xmm0,(%rdi)")]
+    copy_key = [(0x2500, "movups (%rsi),%xmm0"),
+                (0x2502, "movups %xmm0,(%rdi)")]
     p.insns_by_func = {0x1000: consumer, 0x2000: init_a}
     if second_writer:
         p.insns_by_func[0x2100] = init_b
@@ -2987,6 +3110,8 @@ def _nested_chain_fixture(*, second_writer=False, other_type=False,
         p.insns_by_func[0x2300] = vec_same
     if vector_other:
         p.insns_by_func[0x2400] = vec_other
+    if whole_copy:
+        p.insns_by_func[0x2500] = copy_key
     g.precision = p
     g._s1_ctx_cache = {0x1000: {"file": "src/chain.rs",
                                 "function": "consumer", "line": 1,
@@ -3001,6 +3126,7 @@ def _nested_chain_fixture(*, second_writer=False, other_type=False,
         "#[repr(C)]\n"
         "pub struct Key {\n"
         "    pub hw: *const Hw,\n"
+        "    pub pad: [u8; 8],\n"
         "}\n"
         "#[repr(C)]\n"
         "pub struct Hw {\n"
@@ -3039,6 +3165,11 @@ def _nested_chain_fixture(*, second_writer=False, other_type=False,
                  "span": span("unsafe extern \"C\" fn vector_other("
                                "o: *mut Other)",
                                "core::ptr::write_bytes(o, 0, 1);")},
+        0x2500: {"file": "src/chain.rs", "name": "copy_key",
+                 "via": "module",
+                 "span": span("unsafe extern \"C\" fn copy_key("
+                               "dst: *mut Key, src: *const Key)",
+                               "*dst = *src;")},
     }
     site = {"kind": "call", "func": 0x1000, "addr": 0x1008,
             "text": "call   *0x8(%rax)", "targets": set(),
@@ -3097,6 +3228,33 @@ def case_nested_chain_field_writer_index():
          f"overlap={overlap_ok}, disjoint={disjoint_ok}"),
         ok, {"chain": chain, "widened": widened, "other": other,
              "overlap": overlap, "disjoint": disjoint})
+
+
+def case_nested_same_owner_whole_struct_copy():
+    """A same-owner whole-object copy cannot add a target."""
+    g, site = _nested_chain_fixture(whole_copy=True)
+    copied = cc.nested_static_instance_witness(g, site, "consumer")
+    copied_ok = (isinstance(copied, dict) and copied.get("resolved")
+                 and copied.get("targets") == ["0x3100"]
+                 and copied.get("same_owner_whole_struct_copies")
+                 and not copied.get("overlapping_non_scalar_stores"))
+
+    g, site = _nested_chain_fixture(vector_same=True)
+    unsourced = cc.nested_static_instance_witness(g, site, "consumer")
+    unsourced_ok = (isinstance(unsourced, dict)
+                    and not unsourced.get("resolved")
+                    and unsourced.get("refusal") == "writer-set-incomplete")
+
+    ok = copied_ok and unsourced_ok
+    return _case(
+        "s2b-nested-same-owner-whole-struct-copy",
+        "a Key.hw pointer field plus a whole-Key copy from another Key object",
+        "add a copy that loads offset 0 of a same-owner source and stores it "
+        "at offset 0 of the destination; keep a copy with no source witness",
+        "the same-owner whole-object copy is accounted and the proven set is "
+        "unchanged ({0x3100}); a copy without a source witness still refuses",
+        (f"copied={copied_ok}, unsourced={unsourced_ok}"),
+        ok, {"copied": copied, "unsourced": unsourced})
 
 
 CASES = (
@@ -3190,6 +3348,10 @@ CASES = (
     case_nested_static_instance_writer_completeness,
     # S2b: (owning type, field) writer index across a one-level object chain
     case_nested_chain_field_writer_index,
+    # S2b: a phi/select of leas into one local const table, complete length
+    case_nested_local_const_table_phi,
+    # S2b: a same-owner whole-object copy propagates only existing values
+    case_nested_same_owner_whole_struct_copy,
 )
 
 NOT_COVERED = [

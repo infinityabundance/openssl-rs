@@ -8115,14 +8115,178 @@ def _nested_param_values(g: "DsoGraph", fstart: int, k: int,
     return out, None
 
 
-def _nested_store_value(g: "DsoGraph", wf: int, store: dict, slot_off: int):
+_NESTED_CONST_TABLE_MAX = 4096
+
+
+def _nested_data_symbol(g: "DsoGraph", addr: int):
+    """The immutable data symbol containing ``addr``, or None.
+
+    A local Rust ``const`` table is materialised in ``.data.rel.ro``/``.rodata``
+    under a linker-generated whole-object symbol (``anon.``... or the item's own
+    name).  Its size is the length times the element stride, so the containing
+    symbol is what makes the table's length known.
+    """
+    cache = getattr(g, "_nested_data_symbol_cache", None)
+    if cache is None:
+        rows = []
+        sym_sizes = getattr(g, "sym_sizes", {}) or {}
+        for start, name in (getattr(g, "all_syms", {}) or {}).items():
+            if start in (getattr(g, "start_set", set()) or set()):
+                continue
+            size = sym_sizes.get((name or "").split("@")[0])
+            if not size or size <= 0:
+                continue
+            sec = g.section_of(start)
+            if sec not in S1_IMMUTABLE_SECTIONS:
+                continue
+            rows.append((start, size, name, sec))
+        rows.sort()
+        cache = rows
+        g._nested_data_symbol_cache = cache
+    best = None
+    for start, size, name, sec in cache:
+        if start <= addr < start + size:
+            best = (start, size, name, sec)
+        elif start > addr:
+            break
+    return best
+
+
+def _nested_const_table_at(g: "DsoGraph", addr: int, stride: int,
+                           member_off: int):
+    """The constant table containing ``addr``, with every element checked.
+
+    The rule is not specific to one Rust type: a value is a finite set of
+    addresses into a constant table when (a) the containing immutable data
+    symbol's size is a whole multiple of the element stride, (b) the observed
+    address is an element start, and (c) the member the call reads is an
+    in-image function start in *every* element.  The length is derived from the
+    symbol size, not from the observed ``lea``s, so the complete element set is
+    returned even when only some elements are selected by the writer's phi.
+    """
+    if stride is None or stride <= 0:
+        return {"ok": False, "reason": "local-const-table-stride-unknown"}
+    row = _nested_data_symbol(g, addr)
+    if row is None:
+        return {"ok": False, "reason": "local-const-table-not-in-image"}
+    base, size, name, sec = row
+    rel = addr - base
+    if rel % stride or size % stride:
+        return {"ok": False, "reason": "local-const-table-shape-unknown",
+                "base": base, "table": name, "size": size, "stride": stride}
+    count = size // stride
+    if count < 1 or count > _NESTED_CONST_TABLE_MAX:
+        return {"ok": False,
+                "reason": "local-const-table-length-out-of-range",
+                "base": base, "table": name, "count": count}
+    elements = [base + k * stride for k in range(count)]
+    for elem in elements:
+        vals = g.static_slot(elem + member_off)
+        ints = {x for x in (vals or ()) if isinstance(x, int)}
+        if len(ints) != 1:
+            return {"ok": False,
+                    "reason": "local-const-table-element-unresolved",
+                    "base": base, "table": name, "element": hex(elem),
+                    "member_offset": hex(member_off)}
+        value = next(iter(ints))
+        if value == 0 or value not in g.start_set:
+            return {"ok": False,
+                    "reason": "local-const-table-element-not-function",
+                    "base": base, "table": name, "element": hex(elem),
+                    "member_offset": hex(member_off),
+                    "value": hex(value)}
+    return {"ok": True, "base": base, "size": size, "stride": stride,
+            "count": count, "elements": elements, "symbol": name,
+            "section": sec}
+
+
+def _nested_lea_addrs(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                      depth: int = 0, seen: frozenset = frozenset()):
+    """Addresses a register can hold when every definition is a ``lea``.
+
+    A CFG merge (a phi) has several reaching definitions and a ``cmov`` select
+    has two possible sources.  Both are finite only when every alternative is a
+    ``lea``; any other definition returns None so the caller keeps its previous
+    refusal rather than guessing.  A merge is never partially enumerated.
+    """
+    key = (fstart, idx, reg)
+    if depth > 6 or key in seen:
+        return None
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None or not defs:
+        return None
+    out = set()
+    for k in sorted(defs):
+        if k is None or k < 0:
+            return None
+        text = _insn(g, fstart, k)
+        mn, _rest, ops = _insn_parts(text)
+        if mn == "lea":
+            addr = _insn_comment_addr(text)
+            if addr is None:
+                return None
+            out.add(addr)
+            continue
+        if mn.startswith("cmov") and len(ops) >= 2:
+            a = _nested_lea_addrs(g, fstart, k, _canon(ops[0]), depth + 1,
+                                  seen | {key})
+            b = _nested_lea_addrs(g, fstart, k, _canon(ops[1]), depth + 1,
+                                  seen | {key})
+            if a is None or b is None:
+                return None
+            out |= a | b
+            continue
+        if mn in ("mov", "movq") and len(ops) >= 2 \
+                and (ops[0] in _REGS or ops[0] in _SUBREG):
+            sub = _nested_lea_addrs(g, fstart, k, _canon(ops[0]), depth + 1,
+                                    seen | {key})
+            if sub is None:
+                return None
+            out |= sub
+            continue
+        return None
+    return out or None
+
+
+def _nested_store_value(g: "DsoGraph", wf: int, store: dict, slot_off: int,
+                        *, table_stride: int | None = None,
+                        table_member_off: int | None = None):
     """Values a store can write, or a named refusal.
 
-    ``identity`` is a reload of the same slot and adds no new target.  A value
-    that is not an immediate, a static address, or a finite parameter domain is
-    a refusal; it is never dropped from the writer set.
+    ``identity`` is a reload of the same slot and adds no new target.  A phi of
+    ``lea``s into one local constant table resolves to every element of that
+    table (the length comes from the containing symbol, so the set is complete,
+    not just the observed branches).  Any other value that is not an immediate,
+    a static address, or a finite parameter domain is a refusal; it is never
+    dropped from the writer set.
     """
     src = store["src"]
+    if (src in _REGS or src in _SUBREG) and table_stride:
+        addrs = _nested_lea_addrs(g, wf, store["index"], _canon(src))
+        # A declared static instance keeps its existing (source-typed) path.  The
+        # local-table rule owns only addresses with no declared static type;
+        # this is what keeps it from re-interpreting an ordinary static table.
+        if addrs and all(_s1_static_type(g, a) is None for a in addrs):
+            tables = [_nested_const_table_at(
+                g, a, table_stride,
+                table_member_off if table_member_off is not None else 0)
+                for a in sorted(addrs)]
+            base = tables[0].get("base")
+            if base is not None and all(t.get("base") == base
+                                        for t in tables):
+                first = tables[0]
+                if not first.get("ok"):
+                    # Only an established table whose length is known can
+                    # refuse on an element.  A shape we could not establish is
+                    # not evidence of a table, so the previous refusal stands.
+                    if first.get("reason") in (
+                            "local-const-table-element-unresolved",
+                            "local-const-table-element-not-function"):
+                        return None, first.get("reason")
+                elif set(addrs) <= set(first["elements"]):
+                    return set(first["elements"]), None
+                else:
+                    return None, "phi-lea-not-a-table-element"
     if src in _REGS or src in _SUBREG:
         origin = _reg_origin(g, wf, store["index"], _canon(src))
         if origin.get("kind") == "param":
@@ -8138,6 +8302,56 @@ def _nested_store_value(g: "DsoGraph", wf: int, store: dict, slot_off: int):
     if kind in ("immediate", "static"):
         return {value}, None
     return None, kind
+
+
+def _nested_whole_struct_copy(g: "DsoGraph", wf: int, store: dict,
+                              owner_type: str, ulayout: dict):
+    """Witness for a same-owner whole-object copy that adds no target value.
+
+    A non-scalar store is such a copy only when (a) the destination base is an
+    object of exactly ``owner_type``, (b) the store starts at offset 0 and its
+    width covers the whole layout, and (c) the copied register is loaded from
+    the same offset of another object proven to be ``owner_type``.  Such a copy
+    propagates the field bytes of a same-typed source; the field's own writers
+    already produce every value it can carry, so it cannot synthesise a new
+    target and does not widen the proven set.  A copy without the source
+    witness is not given this argument and still refuses.
+    """
+    if store.get("offset") != 0:
+        return None
+    if (store.get("width") or 0) < (ulayout.get("size") or 0):
+        return None
+    dest = _nested_owner_type(g, wf, store["index"],
+                              _canon(store["base"]))
+    if dest.get("kind") != "type" or dest.get("type") != owner_type:
+        return None
+    src = (store.get("src") or "").strip()
+    if not src.startswith("%xmm"):
+        return None
+    insns = g.precision.insns_by_func.get(wf, ())
+    for k in range(store["index"] - 1, max(-1, store["index"] - 12), -1):
+        mn, _rest, ops = _insn_parts(insns[k][1])
+        if len(ops) != 2 or not mn.startswith(
+                ("movups", "movaps", "movdqu", "movdqa")):
+            continue
+        if ops[1].strip() != src:
+            continue
+        mo = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                          ops[0].strip())
+        if not mo:
+            continue
+        off = int(mo.group(1), 16) if mo.group(1) else 0
+        if off != store["offset"]:
+            continue
+        source = _nested_owner_type(g, wf, k, _canon(mo.group(2)))
+        if source.get("kind") == "type" and source.get("type") == owner_type:
+            return {"origin": "same-owner-whole-object-copy",
+                    "source_load": hex(insns[k][0]),
+                    "source_owner": owner_type,
+                    "width": store["width"],
+                    "layout_size": ulayout["size"]}
+        return None
+    return None
 
 
 _NESTED_RAW_STORE = (
@@ -8630,8 +8844,9 @@ def nested_static_instance_witness(g: "DsoGraph", site: dict, name: str,
                              exclusion="different-owner-type"))
     for rec in indexed["scalar"]:
         store, bq = rec["store"], rec["base"]
-        values, why = _nested_store_value(g, store["function"], store,
-                                          slot_off)
+        values, why = _nested_store_value(
+            g, store["function"], store, slot_off,
+            table_stride=ulayout["size"], table_member_off=member_off)
         if why is not None or values is None:
             unaccounted.append({"function": g.funcs.get(store["function"],
                                                          hex(store["function"])),
@@ -8642,8 +8857,24 @@ def nested_static_instance_witness(g: "DsoGraph", site: dict, name: str,
             continue
         writer_rows.append({"store": store, "base": bq, "values": values})
     overlapping = []
+    same_owner_copies = []
     for rec in indexed["nonscalar"]:
         store, bq = rec["store"], rec["base"]
+        # A qualified non-scalar store whose base and source are both this
+        # owner type and whose range covers the whole object is a struct
+        # assignment.  It copies the field bytes of a same-typed object, so it
+        # can only propagate a value the field's own writers already produce;
+        # it is accounted, not refused, and adds no target.  Anything without
+        # that source witness is still an unexplained overlap.
+        copy = _nested_whole_struct_copy(g, store["function"], store,
+                                         final_owner, ulayout)
+        if copy is not None:
+            same_owner_copies.append(dict(
+                copy,
+                function=g.funcs.get(store["function"],
+                                     hex(store["function"])),
+                store_site=hex(store["addr"])))
+            continue
         # The store's range covers the field and its owner type is this field's
         # owner type, so the overlap is real and its value cannot be accounted
         # from the scalar store value model: refuse.  A non-scalar store under
@@ -8698,16 +8929,37 @@ def nested_static_instance_witness(g: "DsoGraph", site: dict, name: str,
             unaccounted_values=unaccounted,
             overlapping_non_scalar_stores=overlapping,
             source_excluded_stores=source_excluded,
+            same_owner_whole_struct_copies=same_owner_copies,
             stores_at_slot=len(rows))
     declared = _s1_declared_instances(g, cand["table_type"])["instances"]
     values = sorted({v for row in writer_rows for v in row["values"]})
     stored = {v for v in values if isinstance(v, int) and v != 0}
     prefix_types = {}
     admitted = dict(declared)
+    const_tables = {}
     unknown_values = []
     for value in sorted(stored):
         st = _s1_static_type(g, value)
         if st is None:
+            # A local ``const`` table has no declared-static name, so the
+            # source-type lookup is empty.  The containing immutable data
+            # symbol supplies the length; every element's selected member must
+            # be an in-image function start, and the complete element set is
+            # admitted rather than only the elements a branch selected.
+            table = _nested_const_table_at(g, value, ulayout["size"],
+                                           member_off)
+            if table.get("ok") and value in table["elements"]:
+                admitted.setdefault(value, {
+                    "name": f"{table['symbol']}+{value - table['base']:#x}",
+                    "symbol": table["symbol"], "addr": value,
+                    "local_const_table": True,
+                    "element_size": table["stride"]})
+                const_tables[value] = {
+                    "symbol": table["symbol"], "base": hex(table["base"]),
+                    "size": hex(table["size"]), "stride": hex(table["stride"]),
+                    "count": table["count"],
+                    "elements": [hex(e) for e in table["elements"]]}
+                continue
             unknown_values.append(hex(value))
             continue
         if st != cand["table_type"]:
@@ -8747,11 +8999,16 @@ def nested_static_instance_witness(g: "DsoGraph", site: dict, name: str,
                                    "section": sec})
             continue
         size = None
-        for raw in (getattr(g, "names_at", {}) or {}).get(addr, ()):
-            raw_sym = (raw or "").split("@")[0]
-            if raw_sym in (getattr(g, "sym_sizes", {}) or {}):
-                size = g.sym_sizes[raw_sym]
-                break
+        if inst.get("local_const_table"):
+            # The containing symbol is the whole array; the instance extent is
+            # one element, whose stride is the declared element type's size.
+            size = inst.get("element_size")
+        else:
+            for raw in (getattr(g, "names_at", {}) or {}).get(addr, ()):
+                raw_sym = (raw or "").split("@")[0]
+                if raw_sym in (getattr(g, "sym_sizes", {}) or {}):
+                    size = g.sym_sizes[raw_sym]
+                    break
         if size is None or size < olayout["size"]:
             shape_failures.append({"instance": inst["name"],
                                    "addr": hex(addr),
@@ -8829,6 +9086,8 @@ def nested_static_instance_witness(g: "DsoGraph", site: dict, name: str,
              "base_witness": r["base"].get("witness")}
             for r in writer_rows],
         "prefix_compatible_types": sorted(prefix_types),
+        "local_const_tables": [const_tables[v] for v in sorted(const_tables)],
+        "same_owner_whole_struct_copies": same_owner_copies,
         "conditions": [
             "second-level-static-instance-shape",
             "declared-chain-types",
@@ -8836,8 +9095,10 @@ def nested_static_instance_witness(g: "DsoGraph", site: dict, name: str,
             "field-sensitive-writer-index",
             "image-wide-writer-scan-complete",
             "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
             "every-member-in-image-function-start",
             "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values",
         ],
         "completeness": {
             "rule": ("every instruction of every function in the analysed "
@@ -8850,9 +9111,21 @@ def nested_static_instance_witness(g: "DsoGraph", site: dict, name: str,
                      "a source-level negative witness or refuses the site.  A "
                      "store at a different displacement cannot write the "
                      "field.  Each hop of a chain contributes only its declared "
-                     "type, never a stored value.  A non-scalar store that "
-                     "genuinely overlaps the field refuses.  No value is "
-                     "inferred from a declared name."),
+                     "type, never a stored value.  A writer value that is a phi "
+                     "or select of lea instructions into one in-image constant "
+                     "table resolves to every element of that table: the "
+                     "length is the containing immutable symbol's size divided "
+                     "by the declared element stride, so the set is complete "
+                     "even when a branch selects only some elements, and every "
+                     "element's selected member must be an in-image function "
+                     "start.  A non-scalar store that genuinely overlaps the "
+                     "field refuses unless it is a same-owner whole-object "
+                     "copy: such a copy starts at byte 0, covers the whole "
+                     "declared layout, and loads its bytes from the same offset "
+                     "of an object proven to be the same owner type, so it can "
+                     "only propagate a value the field's own writers already "
+                     "produce and adds no target.  No value is inferred from a "
+                     "declared name."),
             "functions_scanned": len(g.precision.insns_by_func),
             "instructions_scanned": scanned,
             "writer_index_key": {"owner_type": final_owner,
@@ -8865,6 +9138,8 @@ def nested_static_instance_witness(g: "DsoGraph", site: dict, name: str,
             "unproven_base_stores": 0,
             "unaccounted_values": 0,
             "overlapping_non_scalar_stores": 0,
+            "same_owner_whole_struct_copies": len(same_owner_copies),
+            "local_const_tables": len(const_tables),
         },
         "targets": [hex(t) for t in sorted(targets)],
         "basis": ("a second-level static-instance dispatch resolved through "
