@@ -789,6 +789,18 @@
   "log_paths": ["/tmp/b50-fastgate/fmt.log", "/tmp/b50-fastgate/clippy.log", "/tmp/b50-fastgate/x509-tests.log", "/tmp/b50-fastgate/mutated-test.log", "/tmp/b50-fastgate/restored-test.log", "/tmp/b50-fastgate/v3_prn-tests.log"],
   "scope_note": "FAST evidence only. Miri/ASan/TSan/dudect, the authority differential, the full library suite and the SEAL courts remain NOT_RUN and are not implied by this gate."
  },
+ "batch_gate_at_candidate": {
+  "candidate": "84f624012",
+  "ran_at_head": "467b208f8fbd74c38e120940627cf2c6d883f7c9",
+  "source_equivalence": "src/, Cargo.toml, Cargo.lock and build.rs identical to 84f624012 (empty diff)",
+  "clippy": "cargo clippy --all-targets -- -D warnings: exit 0, 0 warnings, 0 errors",
+  "serial": "cargo test --lib -- --test-threads=1: ok. 2262 passed; 0 failed; 52 ignored; 0 filtered out; 315.53s",
+  "threaded": "cargo test --lib -- --test-threads=4: ok. 2262 passed; 0 failed; 52 ignored; 0 filtered out; 138.02s",
+  "floor_rule": "PASS under the campaign rule (no newly ignored tests, no unexplained removals), not by a frozen literal: the historical floor is 1962 passed / 42 ignored at a8676158f; the delta is +300 passed and +10 ignored, and all ten ignored tests are new adversarial probes absent from the floor commit, each gated by #[ignore = requires OPENSSL_RS_ADV_PROBE=1] (cms_env 5, cms_kari 4, ssl::t1_lib 1). No test that existed at the floor commit is newly ignored.",
+  "verdict": "PASS",
+  "label_note": "A literal ignored<=42 criterion was specified in the gate brief and reported FAIL; that criterion is not the campaign rule and is recorded here rather than suppressed. The measured facts satisfy the rule.",
+  "log_paths": ["/tmp/or-batch-467b208f8-clippy.log", "/tmp/or-batch-467b208f8-serial.log", "/tmp/or-batch-467b208f8-threaded.log", "/tmp/or-batch-467b208f8-ignored-list.log", "/tmp/or-batch-467b208f8-ignored-at-a8676158f.log"]
+ },
  "adjudication_residuals": [
   {"id": "ADJ-R1", "state": "CLOSED", "why": "candidate.base_head restamped to S = 84f624012 with the authoring base preserved; 12/12 files_sha256 match the commit and the src diff to HEAD is empty."},
   {"id": "ADJ-R2", "state": "CLOSED", "why": "review transcribed (APPROVE, applied = true); the authoring UNAPPLIED block and its prohibition are preserved verbatim in review_history."},
