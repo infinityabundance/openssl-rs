@@ -7,9 +7,9 @@
   "base_commit": "3061a264b669897fc00d94f4e0d90103842a95f4",
   "base_commit_subject": "evidence(evp): apply B48 -- 36 obligations discharged, nothing else moved",
   "branch": "stage/p25/element7-s2b",
-  "working_tree": "dirty: src/ssl/ssl_conf.rs only -- B46/B47 repair is committed at branch head 19a3094798a3a7bfdc608412739d5180d75b6d1e; this refresh (corrected SSL_CONF_CTX_free contract + C8 mutation witness) is uncommitted; nothing pushed, no install rebuild",
+  "working_tree": "clean at 31cea14c577e4017baaadd64c5b06de8ea91eef7 (candidate source tree; nothing pushed, no install rebuild)",
   "src_sha256_final": "e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
-  "src_sha256_final_scope": "sha256 of src/ssl/ssl_conf.rs in this working tree (branch head 19a3094798a3a7bfdc608412739d5180d75b6d1e plus the uncommitted contract/witness refresh); the other four B47 boundary files are unchanged and still match files_sha256",
+  "src_sha256_final_scope": "sha256 of src/ssl/ssl_conf.rs at 31cea14c577e4017baaadd64c5b06de8ea91eef7 (clean working tree); the other four B47 boundary files are unchanged and still match files_sha256",
   "files": [
    "src/ssl/ssl_conf.rs",
    "src/ssl/ssl_ciph.rs",
@@ -24,9 +24,9 @@
    "src/ssl/t1_trce.rs": "7a28ef67208e42c8870cab94414367711f7c5491fe99ddfdafa795077f5a51b1",
    "src/ssl/ssl_lib.rs": "b221695b5657e04ebf1f259da7ca3fe100c528efc129b86c88f6e566bb0cf9c2"
   },
-  "note": "No freeze tag was created. The B46/B47 repair is committed at branch head 19a3094798a3a7bfdc608412739d5180d75b6d1e; the contract correction and C8 mutation witness are an uncommitted working-tree refresh of src/ssl/ssl_conf.rs (sha256 e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8). V1 census coordinates in boundaries[].line remain provenance. boundaries[].line_current and every anchor in entry_point_inventory/exclusivity_model/free_policy are refreshed to e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8. Prose line references embedded in the older boundary contracts were written against the prior snapshots 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656/39b89b9695f5071699c51eb45293734acd5b2f24803e9784b23efc5e05b989e6 and are not claimed to match this refresh; the structured anchors are authoritative.",
-  "head_commit": "19a3094798a3a7bfdc608412739d5180d75b6d1e",
-  "head_commit_subject": "fix(ssl): complete the SSL_CONF_CTX exclusivity model (B46/B47 repair)"
+  "note": "No freeze tag was created. The source candidate is 31cea14c577e4017baaadd64c5b06de8ea91eef7 (clean working tree; src/ssl/ssl_conf.rs sha256 e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8). This receipt is evidence about that frozen candidate, not a source edit. V1 census coordinates in boundaries[].line remain provenance. boundaries[].line_current, every structured callers[].line, and every anchor in entry_point_inventory/exclusivity_model/free_policy are refreshed to the 31cea14c5 coordinates (symbol anchors: ssl_conf_cmd_inner :1542, dispatch :1575, SSL_CONF_cmd :1621, argv :1666, value_type :1758, commands() :1092). Prose line references embedded in the older boundary contracts, including caller_closure entries, are symbol-anchored witnesses written against the prior snapshots 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656/39b89b9695f5071699c51eb45293734acd5b2f24803e9784b23efc5e05b989e6 and are not presented as current line numbers; the structured anchors are authoritative.",
+  "head_commit": "31cea14c577e4017baaadd64c5b06de8ea91eef7",
+  "head_commit_subject": "fix(ssl): make SSL_CONF_CTX_free an explicit serialisation point"
  },
  "authority": {
   "id": "openssl-3.5.9",
@@ -63,7 +63,7 @@
    "file": "src/ssl/ssl_conf.rs",
    "line": 240,
    "line_current": 434,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree at src_sha256_final e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to 31cea14c5 at src_sha256_final e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
    "kind": "UNSAFE_FN_DEF",
    "operation": "ssl_match_option",
    "mechanism": "SSL_SESSION",
@@ -107,7 +107,7 @@
    "file": "src/ssl/ssl_conf.rs",
    "line": 274,
    "line_current": 486,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree at src_sha256_final e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to 31cea14c5 at src_sha256_final e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
    "kind": "UNSAFE_FN_DEF",
    "operation": "ssl_set_option_list",
    "mechanism": "SSL_SESSION",
@@ -151,7 +151,7 @@
    "file": "src/ssl/ssl_conf.rs",
    "line": 379,
    "line_current": 616,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree at src_sha256_final e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to 31cea14c5 at src_sha256_final e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
    "kind": "UNSAFE_FN_DEF",
    "operation": "min_max_proto",
    "mechanism": "SSL_SESSION",
@@ -171,8 +171,8 @@
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1473,
-     "role": "sole dispatch f(cctx, value) in SSL_CONF_cmd"
+     "line": 1575,
+     "role": "sole dispatch f(cctx, value) at :1575 inside ssl_conf_cmd_inner (:1542)"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
@@ -200,7 +200,7 @@
    "file": "src/ssl/ssl_ciph.rs",
    "line": 741,
    "line_current": 756,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "update_cipher_list_by_id",
    "mechanism": "SSL_SESSION",
@@ -238,7 +238,7 @@
    "file": "src/ssl/ssl_ciph.rs",
    "line": 851,
    "line_current": 880,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "set_ciphersuites",
    "mechanism": "SSL_SESSION",
@@ -276,7 +276,7 @@
    "file": "src/ssl/ssl_rsa.rs",
    "line": 1007,
    "line_current": 1021,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "serverinfoex_srv_parse_cb",
    "mechanism": "SSL_SESSION",
@@ -319,7 +319,7 @@
    "file": "src/ssl/ssl_rsa.rs",
    "line": 1033,
    "line_current": 1057,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "serverinfo_srv_parse_cb",
    "mechanism": "SSL_SESSION",
@@ -362,7 +362,7 @@
    "file": "src/ssl/ssl_rsa.rs",
    "line": 1046,
    "line_current": 1082,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "serverinfoex_srv_add_cb",
    "mechanism": "SSL_SESSION",
@@ -404,7 +404,7 @@
    "file": "src/ssl/t1_trce.rs",
    "line": 1064,
    "line_current": 1075,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "is_tls13",
    "mechanism": "SSL_SESSION",
@@ -466,7 +466,7 @@
    "file": "src/ssl/t1_trce.rs",
    "line": 1077,
    "line_current": 1098,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "use_sigalgs",
    "mechanism": "SSL_SESSION",
@@ -503,7 +503,7 @@
    "file": "src/ssl/ssl_lib.rs",
    "line": 8845,
    "line_current": 8857,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "ct_permissive",
    "mechanism": "SSL_SESSION",
@@ -677,7 +677,7 @@
    "description": "The min/max bound is written only for version 0 and the matching TLS_ANY/DTLS_ANY arm; the method-mismatch arm returns true without writing. C3 pins the refusal/acceptance path, not every method-version combination."
   },
   {
-   "id": "B46-R2",
+   "id": "B47-R7",
    "severity": "low",
    "disposition": "REPORTED, accepted consequence of B46-D3",
    "description": "If the entry point that holds the context never returns (a non-terminating callback or a deadlocked call), SSL_CONF_CTX_free leaves the block poisoned and unreleased. This is a liveness premise, not an ownership defect: the release is exactly once on every terminating path, and the alternative (immediate free) is the use-after-free/guard-dangling defect this repair removes.",
@@ -742,11 +742,22 @@
   "prohibition": [
    "Do not apply B46 or B47. All 18 sites stay BLOCKED and SSL_SESSION stays OWNERSHIP_RECONSTRUCTED.",
    "Do not substitute our own documentation for an external witness, and do not widen a disposition range to move a count."
+  ],
+  "review_history": [
+   {
+    "round": "fourth review",
+    "date": "2026-11-01",
+    "scope": "receipt-only identity, residual-identity and stale-coordinate repair; no source change and no re-adjudication",
+    "candidate_head_commit": "31cea14c577e4017baaadd64c5b06de8ea91eef7",
+    "verdict": "REJECT",
+    "applied": false,
+    "outcome": "The fourth rejection stands. This entry records the receipt repair only; the decisive_reason above remains the operative rejection and nothing was applied."
+   }
   ]
  },
  "refresh_date": "2026-11-01",
  "applied": false,
- "refresh_note": "Repair refresh after the second rejection: the in-use guard now covers every exported entry point that takes a *mut SslConfCtx, and free-while-in-use is a deferred release. The free contract now states that free is an external serialisation point and that the deferred arm is outside the contract. The REJECT verdict and its history are preserved verbatim and are not re-adjudicated; this receipt remains UNAPPLIED. New sections: entry_point_inventory, exclusivity_model, free_policy, divergences. Candidate identity is refreshed to source sha256 e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8 at branch head 19a3094798a3a7bfdc608412739d5180d75b6d1e (the repair commit) plus this uncommitted working-tree refresh.",
+ "refresh_note": "Repair refresh after the second rejection: the in-use guard now covers every exported entry point that takes a *mut SslConfCtx, and free-while-in-use is a deferred release. The free contract now states that free is an external serialisation point and that the deferred arm is outside the contract. The REJECT verdict and its history are preserved verbatim and are not re-adjudicated; this receipt remains UNAPPLIED. New sections: entry_point_inventory, exclusivity_model, free_policy, divergences. Candidate identity is src/ssl/ssl_conf.rs sha256 e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8 at 31cea14c577e4017baaadd64c5b06de8ea91eef7 (clean working tree).",
  "divergences": [
   {
    "id": "B46-D1",
