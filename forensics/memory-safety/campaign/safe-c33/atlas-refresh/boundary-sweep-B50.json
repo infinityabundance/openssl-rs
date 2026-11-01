@@ -4,8 +4,11 @@
  "campaign": "safe-c33 shared-contract establishment (E2 follow-on: the X509_VERIFY_POLICY extension-method i2s printers)",
  "subphase": "B50 takes the 11 i2s sites left BLOCKED by B49. All 11 are slot callbacks reached only through X509V3_EXT_print, whose B49 registry read hold already spans the i2s arm; i2s therefore needs no second hold, but it does need the row live through the callback because enum_i2s reads method->usr_data. The subphase adds fn-level # Safety contracts, two functional tests and one mutation-proven dispatcher-guard canary. The discharge is NOT applied: CAMPAIGN-STATUS.json is untouched and the closure was not run.",
  "candidate": {
-  "base_head": "db85674a0",
+  "base_head": "84f624012",
+  "authored_base_head": "db85674a0",
+  "identity_restamp": "Restamped at application (2026-11-01) from the authoring base db85674a0 to the committed candidate S = 84f624012 (84f6240121351a061bee2dfeac3b11db263d08eb). This is content identity, not assertion: the independent adjudicator re-checked all 12 files_sha256 below against `git show 84f624012:<path>` and they match, and `git diff 84f624012..a80792455 -- src/ Cargo.toml Cargo.lock build.rs` is empty. The authoring-time claims are preserved verbatim in this block and in candidate.base_commit.",
   "source_state": "uncommitted delta on db85674a0 (no commit was made)",
+  "source_state_at_adjudication": "committed as S = 84f624012; HEAD a80792455 is src-identical to S",
   "base_commit": "db85674a049533619a20fb55a8fa2e75f0c0a75c",
   "base_commit_subject": "evidence(x509): transcribe the B49 approval and land it",
   "branch": "stage/p25/element7-s2b",
@@ -746,12 +749,55 @@
   "source_changed": true,
   "note": "C2 does not change src/x509/v3_lib.rs; the source delta is the eleven # Safety contracts, one v3_prn.rs comment and two tests. The candidate still must be committed, rebuilt and re-frozen (S') and FAST re-run before application."
  },
- "applied": false,
+ "applied": true,
  "review": {
-  "reviewer": "pending independent adjudication",
-  "verdict": "UNAPPLIED",
-  "applied": false,
+  "reviewer": "independent adversarial adjudicator (session f0cc8617-9d59-4694-9164-2413bfefd8ee); transcribed verbatim by the orchestrator",
+  "verdict": "APPROVE",
+  "applied": true,
   "date": "2026-11-01",
-  "prohibition": "Do not apply these dispositions to CAMPAIGN-STATUS.json or run the closure against them in this subphase."
- }
+  "verdict_text": "No claim in the receipt or ledger row is contradicted by the evidence I read. Verdict is conditional only on the residuals below being recorded, not on any repair.",
+  "cond3_ruling": "COND3-SATISFIED. safe_callers_can_cause_ub is a retained-unsafe-entry-point marker, not a safe-caller UB assertion; no safe Rust item takes or returns X509V3ExtMethod and every relevant entry point is unsafe extern C.",
+  "condition_of_authorisation": "The applied row must name S = 84f624012 and the ledger closure/source_head blocks must be refreshed or explicitly marked stale. Both are documentation acts, not re-measurement."
+ },
+ "review_history": [
+  {
+   "reviewer": "pending independent adjudication",
+   "verdict": "UNAPPLIED",
+   "applied": false,
+   "date": "2026-11-01",
+   "prohibition": "Do not apply these dispositions to CAMPAIGN-STATUS.json or run the closure against them in this subphase.",
+   "superseded_by": "independent adjudication, APPROVE, 2026-11-01; superseded only after the observed FAST gate and reproduced mutation control below"
+  }
+ ],
+ "fast_gate_at_candidate": {
+  "candidate": "84f624012",
+  "ran_at_head": "a80792455a4ca1bebb0c0dedaa64b09209c9f6d0",
+  "source_equivalence": "git diff 84f624012..a80792455 -- src/ Cargo.toml Cargo.lock build.rs is empty, so HEAD's source is the measured candidate",
+  "container": "docker/openssl-rs-court.sh (never the host)",
+  "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01), cargo 1.98.1 (797e8a9bc 2026-08-05), nproc 16, CARGO_BUILD_JOBS=4",
+  "fmt": "exit 0, no output",
+  "clippy": "cargo clippy --all-targets -- -D warnings: exit 0, 0 warnings, 0 errors, Finished dev profile in 16.45s",
+  "focused_tests": "cargo test --lib -- x509:: -- --test-threads=4: ok. 145 passed; 0 failed; 0 ignored; 2169 filtered out",
+  "v3_prn_sweep": "cargo test --lib -- x509::v3_prn::tests:: -- --test-threads=4: ok. 10 passed; 0 failed",
+  "mutation_reproduced_independently": {
+   "guard": "src/x509/v3_prn.rs:317-320 (NULL-decode refusal before the i2s slot)",
+   "sha256_before": "7794c3ac10b31e9ecb96090e7aa4e8099df46b6aaa95343b89ac4881b8fada59",
+   "diff": "the four guard lines removed, no other hunk",
+   "mutated": "i2s_is_not_called_when_the_value_does_not_decode FAILED, exit 101 (0 passed; 1 failed)",
+   "restored": "PASSED, exit 0; sha256 restored to the before value; tracked tree clean"
+  },
+  "log_paths": ["/tmp/b50-fastgate/fmt.log", "/tmp/b50-fastgate/clippy.log", "/tmp/b50-fastgate/x509-tests.log", "/tmp/b50-fastgate/mutated-test.log", "/tmp/b50-fastgate/restored-test.log", "/tmp/b50-fastgate/v3_prn-tests.log"],
+  "scope_note": "FAST evidence only. Miri/ASan/TSan/dudect, the authority differential, the full library suite and the SEAL courts remain NOT_RUN and are not implied by this gate."
+ },
+ "adjudication_residuals": [
+  {"id": "ADJ-R1", "state": "CLOSED", "why": "candidate.base_head restamped to S = 84f624012 with the authoring base preserved; 12/12 files_sha256 match the commit and the src diff to HEAD is empty."},
+  {"id": "ADJ-R2", "state": "CLOSED", "why": "review transcribed (APPROVE, applied = true); the authoring UNAPPLIED block and its prohibition are preserved verbatim in review_history."},
+  {"id": "ADJ-R3", "state": "CLOSED-WITH-SCHEMA-RESIDUAL", "why": "Sourced, not inferred: at S the ledger had 21 scoped rows and no B50 row, and CAMPAIGN-STATUS.json (+25 lines) is the only tracked file modified between S and HEAD, so the applied closure necessarily ran with the ledger row under adjudication as its sole dirty tracked file.", "schema_residual": "consumer_closure.py records tracked_tree_dirty without a path list; it must emit tracked_tree_dirty_paths so this can never again be inferred."},
+  {"id": "ADJ-R4", "state": "CLOSED", "why": "fast_gate_at_candidate above is observed output at a source-identical tree, and the mutation control was reproduced independently (FAILED under mutation, PASSED after byte-identical restore)."},
+  {"id": "ADJ-R5", "state": "CLOSED-IN-LEDGER", "why": "CAMPAIGN-STATUS.json top level is the 0.0.44 release snapshot; a current_applied_state block now marks it stale for current reading and names the B50 closures as the current applied state."},
+  {"id": "ADJ-R6", "state": "OPEN", "required_gate": "BOUNDARY", "why": "The canary covers the shared pre-slot NULL-decode refusal only. It does not exercise the registry-liveness hold (a DYNAMIC row printed concurrently with X509V3_EXT_cleanup) or a non-NUL-terminated callback result. Liveness is enforced structurally by the B49 RAII read guard, but no test or sanitizer demonstrates it."},
+  {"id": "ADJ-R7", "state": "RETAINED", "why": "Stated caller obligations B50-R1..R5 (caller-owned row lifetime; declared item versus expected type; result must be one whole NUL-terminated seam block; usr_data pairing; direct method->i2s calls outside the dispatcher get no hold) plus authority divergences B50-R6/R7. All stated; none hidden."},
+  {"id": "ADJ-R8", "state": "OPEN", "required_gate": "next regeneration", "why": "Baseline status_reason prose on these sites says the V1 operation is uncontracted while the same rows record contract = contracted. The generated closures are not hand-edited; the text is corrected by the closure tool's next run."}
+ ],
+ "schema_note": "safe_callers_can_cause_ub is a retained-unsafe-entry-point marker, not a safe-caller-UB assertion: B45 (callbacks private/unreachable) is false; B48, B49 and B50 (unsafe ABI edge) are true. The name is misleading and should be renamed in a future schema revision. Adjudicated COND3-SATISFIED."
 }
