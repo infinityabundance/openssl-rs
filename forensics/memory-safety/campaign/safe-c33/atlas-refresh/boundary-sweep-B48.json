@@ -7,7 +7,7 @@
   "base_commit": "fcd22e3987a4e4d49d2c896b46103cfa26942f85",
   "base_commit_subject": "feat(analyzer): intraprocedural type propagation for store bases",
   "branch": "stage/p25/element7-s2b",
-  "working_tree": "dirty: full-surface fn-level contracts, the 15 NULL-data guards, the `shake_ctrl` negative-length guard, the shared adversarial test module, and refreshed getter/app-datasize docs; nothing committed, nothing rebuilt into an install, CAMPAIGN-STATUS.json untouched. The three previously vacuous surface tests now install each table's own callbacks and invoke them. The REJECT verdict is retained: this is the repair of the rejected batch, not an application.",
+  "working_tree": "clean at d7a1c485079ea5d1639ade2621d0cd110183d32f (branch `stage/p25/element7-s2b`): the full-surface fn-level contracts, the 15 NULL-data guards, the `shake_ctrl` negative-length guard, the shared adversarial test module, and the refreshed getter/app-datasize docs are all committed there, CAMPAIGN-STATUS.json is untouched, and nothing was rebuilt into an install. The three previously vacuous surface tests install each table's own callbacks and invoke them. This receipt's five evidence-only corrections are uncommitted and change no Rust source, so the candidate S is the clean committed tree at d7a1c4850. The REJECT verdict is retained: this is the repair of the rejected batch, not an application.",
   "files": [
    "src/evp/legacy_sha.rs",
    "src/evp/legacy_md5.rs",
@@ -1480,11 +1480,10 @@
     "The authority's `rc2_magic_to_meth` is the same three-arm switch with `EVP_R_UNKNOWN`/0 on the default (crypto/evp/e_rc2.c:116-128)."
    ],
    "residuals": [
-    "B48-R1"
+    "B48-R1",
+    "B48-R8"
    ],
-   "tests": [
-    "e_rc2 integer-only mapping tests (existing)"
-   ]
+   "tests": []
   },
   {
    "id": "B48-SHA-100",
@@ -2602,7 +2601,7 @@
     "result": "PASS",
     "observation": "A NULL block, and a fresh `EVP_MD_CTX_new()`, are refused for every callback.",
     "mutation_sensitive": true,
-    "fails_if": "the `md_data`/`digest` NULL test is removed.",
+    "fails_if": "removing the `md_data`/`digest` NULL refusal breaks `null_md_data_is_refused_for_every_callback` at `assert_eq!(init(ctx_ptr), 0, \"{label}: init accepted the block\")` (fresh-context arm: `assert_eq!(init(fresh), 0, \"{name}: init accepted a fresh context\")`); the callback dereferences the NULL block and the run aborts (SIGSEGV) before that assertion can be satisfied.",
     "limits": "Does not exercise a bound provider context."
    },
    {
@@ -2622,8 +2621,8 @@
     "result": "PASS",
     "observation": "All 15 update callbacks refuse NULL `data` with count 1 after the block guard has passed.",
     "mutation_sensitive": true,
-    "fails_if": "the `data.is_null() && count != 0` guard is removed (SIGABRT for 14 callbacks, timeout/hang for SHA-3).",
-    "limits": "Calls the exported pointers directly; `EVP_DigestUpdate` itself never passes NULL with count != 0."
+    "fails_if": "the `data.is_null() && count != 0` guard is removed: SIGABRT (signal 6) for 14 callbacks; for SHA-3 the run does not complete (exit 124 at 150 s) — the zeroed `KeccakCtx` has `block_size == 0`, so `ossl_sha3_update`/`sha3_absorb` make no progress (the `while len >= r` loop with `r == 0` never advances) and the NULL `data` is never dereferenced.",
+    "limits": "Calls the exported pointers directly; `EVP_DigestUpdate` itself never passes NULL with count != 0. For SHA-3 the bound block is zeroed, so `KeccakCtx::block_size == 0`: the data guard is not the only thing that can stop the primitive, and removing it produces a no-progress hang rather than a NULL read."
    },
    {
     "id": "B48-C7",
@@ -2760,7 +2759,7 @@
      "file": "src/evp/legacy_sha3.rs",
      "operation": "sha3_int_update",
      "mutation": "guard condition forced false",
-     "observed": "test did not complete within 150 s (exit 124); the mutated primitive hung on the NULL input",
+     "observed": "test did not complete within 150 s (exit 124); the mutated callback hung because the zeroed `KeccakCtx` has `block_size == 0`, so `ossl_sha3_update`/`sha3_absorb` make no progress and never read the NULL `data` (the `while len >= r` loop with `r == 0` does not advance)",
      "restore": "byte-for-byte sha256 match"
     },
     {
@@ -2838,13 +2837,19 @@
    "id": "B48-R6",
    "severity": "low",
    "disposition": "AUTHORITY-DIVERGENCE",
-   "description": "All 15 update callbacks refuse a NULL `data` with `count != 0`, answering 0 before the primitive. The authority would dereference it. The refusal is recorded as D-LEGACY-MD-CALLBACK-MD-DATA-1 and mutation-proven per callback."
+   "description": "All 15 update callbacks refuse a NULL `data` with `count != 0`, answering 0 before the primitive. The authority would dereference it. The refusal is recorded as D-LEGACY-MD-CALLBACK-MD-DATA-1. Independent mutation evidence covers the update callbacks (15, the `new_guards` table) and the control callback (`shake_ctrl`); the final callbacks are proven invoked by `installed_callbacks` equality but were not independently mutation-observed, because the extent mutation is refused first at init, so the run stops at the init assertion before a final-specific failure can be isolated."
   },
   {
    "id": "B48-R7",
    "severity": "low",
    "disposition": "AUTHORITY-DIVERGENCE",
    "description": "`shake_ctrl` refuses a negative `EVP_MD_CTRL_XOF_LEN` with 0 instead of storing the authority's `int`-to-`size_t` conversion (a huge length that a later final/squeeze would write past the caller's buffer). Mutation-proven."
+  },
+  {
+   "id": "B48-R8",
+   "severity": "low",
+   "disposition": "NOT_RUN",
+   "description": "No library test covers `rc2_magic_to_meth`. The only test in src/evp/e_rc2.rs is `the_accessors_are_stable_globals_with_the_authority_sizes`, which checks the cipher globals, not the magic-to-key-length mapping. The previously listed `e_rc2 integer-only mapping tests (existing)` was prose, not a test reference, and is removed from B48-RC2-001's `tests`. The disposition rests on the integer-only contract and the authority's three-arm switch; no test exercises the mapping."
   }
  ],
  "not_run": [
@@ -2913,7 +2918,7 @@
    "state": "CLOSED - NULL data with count != 0 is refused",
    "description": "The update callbacks passed a NULL data pointer to the primitive whenever count was non-zero; the authority would dereference it.",
    "correction": "the review demanded adversarial NULL-data coverage across the surface, not only block sizing.",
-   "resolution": "All 15 update callbacks now refuse with 0 before the primitive. Mutation-proven per callback: 14 SIGABRT and one SHA-3 hang when the guard is removed; each file restored byte-for-byte."
+   "resolution": "All 15 update callbacks now refuse with 0 before the primitive. Mutation-proven for the update callbacks: removing the guard gives 14 SIGABRT and one SHA-3 non-completion (exit 124), the latter because the zeroed `KeccakCtx` has `block_size == 0` so `ossl_sha3_update`/`sha3_absorb` make no progress rather than dereferencing the NULL `data`; each file restored byte-for-byte."
   },
   {
    "id": "B48-H5",
