@@ -3,13 +3,13 @@
   "tool": {
     "path": "forensics/tools/consumer_closure.py",
     "version": 5,
-    "sha256": "fc704796c3c839a6fb53296bde49f241650b4d9ed5394f04e0fb701ee769d178",
+    "sha256": "22364c5b62ce35ab791c3a708b7479a1477272ea3fa3ffcadc5208c8b8321145",
     "schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4"
   },
-  "generated_utc": "2026-11-01T11:30:33Z",
+  "generated_utc": "2026-11-01T12:45:56Z",
   "family": "openssh",
   "source_identity": {
-    "repository_head": "4bedf992c8dec561fa1e86d536e1288887884c3d",
+    "repository_head": "91fd5d3369cd5b1654c9a73a60f41d0f44ff226c",
     "branch": "stage/p25/element7-s2b",
     "tracked_tree_dirty": false,
     "inventory_path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/c5-candidate-freeze.json",
@@ -80,7 +80,7 @@
         "matches_inventory": true
       }
     },
-    "raw_ldd": "\tlinux-vdso.so.1 (0x00007fa62d7c7000)\n\tlibcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 (0x00007fa62ce00000)\n\tlibz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007fa62d6ab000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fa62cc1e000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007fa62cbfe000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007fa62d7c9000)\n"
+    "raw_ldd": "\tlinux-vdso.so.1 (0x00007f383770f000)\n\tlibcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 (0x00007f3836c00000)\n\tlibz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007f38375f3000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f3836a1e000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f38375d3000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007f3837711000)\n"
   },
   "ledger_record": {
     "run_id": "run:build-link:candidate:openssh",
@@ -85985,9 +85985,9 @@
     "records_sha256": "b34098a57ebaa4220c756945f542edf3767bc84afe3cd96db1ff8968b8a98ba0",
     "records_bytes": 1393005231,
     "sidecar_lines": 51793,
-    "validator_sha256": "fc704796c3c839a6fb53296bde49f241650b4d9ed5394f04e0fb701ee769d178",
+    "validator_sha256": "22364c5b62ce35ab791c3a708b7479a1477272ea3fa3ffcadc5208c8b8321145",
     "admissibility": {
-      "validator_sha256": "fc704796c3c839a6fb53296bde49f241650b4d9ed5394f04e0fb701ee769d178",
+      "validator_sha256": "22364c5b62ce35ab791c3a708b7479a1477272ea3fa3ffcadc5208c8b8321145",
       "record_schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
       "artifact_sha256": "538294db081308363759e1765893f781cf59e690f429f682bc413a07c80bd59e",
       "records_sha256": "b34098a57ebaa4220c756945f542edf3767bc84afe3cd96db1ff8968b8a98ba0",
@@ -168577,7 +168577,7 @@
       "mechanism_basis": "obligation-override:state.json#/obligation_mechanisms (stable identity file/kind/operation; +N-line drift)",
       "status": "BLOCKED",
       "discharge_receipt": null,
-      "status_reason": "mechanism state is UNSAFE_OPEN: no ownership reconstruction and no SAFETY_DISCHARGED receipt. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "mechanism state is UNSAFE_OPEN: no ownership reconstruction and no SAFETY_DISCHARGED receipt. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled; the attached contract alone does not discharge it.",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "P25-ENGINE-CB-000"
@@ -168610,7 +168610,7 @@
       "mechanism_basis": "obligation-override:state.json#/obligation_mechanisms (stable identity file/kind/operation; +N-line drift)",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B45",
-      "status_reason": "boundary B45-ENG-CB-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_asnmth.rs, UNSAFE_FN_DEF, engine_unregister_all_pkey_asn1_meths) at its current census coordinate 79. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B45-ENG-CB-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_asnmth.rs, UNSAFE_FN_DEF, engine_unregister_all_pkey_asn1_meths) at its current census coordinate 79",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B16-ASN1-1",
@@ -168648,8 +168648,7 @@
           "current_coordinate": 79,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue because it is named by site receipt boundary-sweep-B45 and by state.json#/obligation_mechanisms; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/engine/tb_cipher.rs:62:UNSAFE_FN_DEF",
@@ -168672,7 +168671,7 @@
       "mechanism_basis": "obligation-override:state.json#/obligation_mechanisms (stable identity file/kind/operation; +N-line drift)",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B45",
-      "status_reason": "boundary B45-ENG-CB-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_cipher.rs, UNSAFE_FN_DEF, engine_unregister_all_ciphers) at its current census coordinate 62. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B45-ENG-CB-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_cipher.rs, UNSAFE_FN_DEF, engine_unregister_all_ciphers) at its current census coordinate 62",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B45-ENG-CB-002",
@@ -168704,8 +168703,7 @@
           "current_coordinate": 62,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue because it is named by site receipt boundary-sweep-B45 and by state.json#/obligation_mechanisms; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/engine/tb_dh.rs:58:UNSAFE_FN_DEF",
@@ -168728,7 +168726,7 @@
       "mechanism_basis": "obligation-override:state.json#/obligation_mechanisms (stable identity file/kind/operation; +N-line drift)",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B45",
-      "status_reason": "boundary B45-ENG-CB-003 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_dh.rs, UNSAFE_FN_DEF, engine_unregister_all_dh) at its current census coordinate 58. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B45-ENG-CB-003 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_dh.rs, UNSAFE_FN_DEF, engine_unregister_all_dh) at its current census coordinate 58",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B45-ENG-CB-003",
@@ -168760,8 +168758,7 @@
           "current_coordinate": 58,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue because it is named by site receipt boundary-sweep-B45 and by state.json#/obligation_mechanisms; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/engine/tb_digest.rs:73:UNSAFE_FN_DEF",
@@ -168784,7 +168781,7 @@
       "mechanism_basis": "obligation-override:state.json#/obligation_mechanisms (stable identity file/kind/operation; +N-line drift)",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B45",
-      "status_reason": "boundary B45-ENG-CB-004 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_digest.rs, UNSAFE_FN_DEF, engine_unregister_all_digests) at its current census coordinate 73. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B45-ENG-CB-004 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_digest.rs, UNSAFE_FN_DEF, engine_unregister_all_digests) at its current census coordinate 73",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B45-ENG-CB-004",
@@ -168816,8 +168813,7 @@
           "current_coordinate": 73,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue because it is named by site receipt boundary-sweep-B45 and by state.json#/obligation_mechanisms; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/engine/tb_dsa.rs:58:UNSAFE_FN_DEF",
@@ -168840,7 +168836,7 @@
       "mechanism_basis": "obligation-override:state.json#/obligation_mechanisms (stable identity file/kind/operation; +N-line drift)",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B45",
-      "status_reason": "boundary B45-ENG-CB-005 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_dsa.rs, UNSAFE_FN_DEF, engine_unregister_all_dsa) at its current census coordinate 58. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B45-ENG-CB-005 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_dsa.rs, UNSAFE_FN_DEF, engine_unregister_all_dsa) at its current census coordinate 58",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B45-ENG-CB-005",
@@ -168872,8 +168868,7 @@
           "current_coordinate": 58,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue because it is named by site receipt boundary-sweep-B45 and by state.json#/obligation_mechanisms; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/engine/tb_eckey.rs:58:UNSAFE_FN_DEF",
@@ -168896,7 +168891,7 @@
       "mechanism_basis": "obligation-override:state.json#/obligation_mechanisms (stable identity file/kind/operation; +N-line drift)",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B45",
-      "status_reason": "boundary B45-ENG-CB-006 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_eckey.rs, UNSAFE_FN_DEF, engine_unregister_all_ec) at its current census coordinate 58. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B45-ENG-CB-006 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_eckey.rs, UNSAFE_FN_DEF, engine_unregister_all_ec) at its current census coordinate 58",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B45-ENG-CB-006",
@@ -168928,8 +168923,7 @@
           "current_coordinate": 58,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue because it is named by site receipt boundary-sweep-B45 and by state.json#/obligation_mechanisms; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/engine/tb_pkmeth.rs:60:UNSAFE_FN_DEF",
@@ -168952,7 +168946,7 @@
       "mechanism_basis": "obligation-override:state.json#/obligation_mechanisms (stable identity file/kind/operation; +N-line drift)",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B45",
-      "status_reason": "boundary B45-ENG-CB-007 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_pkmeth.rs, UNSAFE_FN_DEF, engine_unregister_all_pkey_meths) at its current census coordinate 60. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B45-ENG-CB-007 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_pkmeth.rs, UNSAFE_FN_DEF, engine_unregister_all_pkey_meths) at its current census coordinate 60",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B45-ENG-CB-007",
@@ -168984,8 +168978,7 @@
           "current_coordinate": 60,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue because it is named by site receipt boundary-sweep-B45 and by state.json#/obligation_mechanisms; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/engine/tb_rand.rs:58:UNSAFE_FN_DEF",
@@ -169008,7 +169001,7 @@
       "mechanism_basis": "obligation-override:state.json#/obligation_mechanisms (stable identity file/kind/operation; +N-line drift)",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B45",
-      "status_reason": "boundary B45-ENG-CB-008 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_rand.rs, UNSAFE_FN_DEF, engine_unregister_all_rand) at its current census coordinate 58. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B45-ENG-CB-008 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_rand.rs, UNSAFE_FN_DEF, engine_unregister_all_rand) at its current census coordinate 58",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B45-ENG-CB-008",
@@ -169040,8 +169033,7 @@
           "current_coordinate": 58,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue because it is named by site receipt boundary-sweep-B45 and by state.json#/obligation_mechanisms; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/engine/tb_rsa.rs:59:UNSAFE_FN_DEF",
@@ -169064,7 +169056,7 @@
       "mechanism_basis": "obligation-override:state.json#/obligation_mechanisms (stable identity file/kind/operation; +N-line drift)",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B45",
-      "status_reason": "boundary B45-ENG-CB-009 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_rsa.rs, UNSAFE_FN_DEF, engine_unregister_all_rsa) at its current census coordinate 59. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B45-ENG-CB-009 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/engine/tb_rsa.rs, UNSAFE_FN_DEF, engine_unregister_all_rsa) at its current census coordinate 59",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B45-ENG-CB-009",
@@ -169096,8 +169088,7 @@
           "current_coordinate": 59,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue because it is named by site receipt boundary-sweep-B45 and by state.json#/obligation_mechanisms; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/e_rc2.rs:348:UNSAFE_FN_DEF",
@@ -169175,7 +169166,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-BLAKE2-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_blake2.rs, UNSAFE_FN_DEF, blake2b_int_update) at its current census coordinate 264. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-BLAKE2-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_blake2.rs, UNSAFE_FN_DEF, blake2b_int_update) at its current census coordinate 264",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-BLAKE2-001",
@@ -169217,8 +169208,7 @@
           "current_coordinate": 264,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_blake2.rs:260:UNSAFE_FN_DEF",
@@ -169251,7 +169241,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-BLAKE2-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_blake2.rs, UNSAFE_FN_DEF, blake2b_int_final) at its current census coordinate 309. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-BLAKE2-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_blake2.rs, UNSAFE_FN_DEF, blake2b_int_final) at its current census coordinate 309",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-BLAKE2-001",
@@ -169312,8 +169302,7 @@
           "current_coordinate": 309,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_blake2.rs:299:UNSAFE_FN_DEF",
@@ -169346,7 +169335,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-BLAKE2-003 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_blake2.rs, UNSAFE_FN_DEF, blake2s_int_update) at its current census coordinate 378. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-BLAKE2-003 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_blake2.rs, UNSAFE_FN_DEF, blake2s_int_update) at its current census coordinate 378",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-BLAKE2-001",
@@ -169426,8 +169415,7 @@
           "current_coordinate": 378,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_blake2.rs:315:UNSAFE_FN_DEF",
@@ -169460,7 +169448,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-BLAKE2-004 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_blake2.rs, UNSAFE_FN_DEF, blake2s_int_final) at its current census coordinate 419. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-BLAKE2-004 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_blake2.rs, UNSAFE_FN_DEF, blake2s_int_final) at its current census coordinate 419",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-BLAKE2-001",
@@ -169559,8 +169547,7 @@
           "current_coordinate": 419,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_md4.rs:191:UNSAFE_FN_DEF",
@@ -169593,7 +169580,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-MD4-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_md4.rs, UNSAFE_FN_DEF, md4_update) at its current census coordinate 212. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-MD4-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_md4.rs, UNSAFE_FN_DEF, md4_update) at its current census coordinate 212",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-MD4-001",
@@ -169631,8 +169618,7 @@
           "current_coordinate": 212,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_md4.rs:198:UNSAFE_FN_DEF",
@@ -169665,7 +169651,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-MD4-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_md4.rs, UNSAFE_FN_DEF, md4_final) at its current census coordinate 248. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-MD4-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_md4.rs, UNSAFE_FN_DEF, md4_final) at its current census coordinate 248",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-MD4-001",
@@ -169722,8 +169708,7 @@
           "current_coordinate": 248,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_md5.rs:216:UNSAFE_FN_DEF",
@@ -169756,7 +169741,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-MD5-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_md5.rs, UNSAFE_FN_DEF, md5_update) at its current census coordinate 237. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-MD5-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_md5.rs, UNSAFE_FN_DEF, md5_update) at its current census coordinate 237",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-MD5-001",
@@ -169802,8 +169787,7 @@
           "current_coordinate": 237,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_md5.rs:223:UNSAFE_FN_DEF",
@@ -169836,7 +169820,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-MD5-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_md5.rs, UNSAFE_FN_DEF, md5_final) at its current census coordinate 273. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-MD5-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_md5.rs, UNSAFE_FN_DEF, md5_final) at its current census coordinate 273",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-MD5-001",
@@ -169901,8 +169885,7 @@
           "current_coordinate": 273,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_md5.rs:234:UNSAFE_FN_DEF",
@@ -169935,7 +169918,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-MD5-003 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_md5.rs, UNSAFE_FN_DEF, md5_sha1_int_init) at its current census coordinate 310. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-MD5-003 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_md5.rs, UNSAFE_FN_DEF, md5_sha1_int_init) at its current census coordinate 310",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-MD5-001",
@@ -170019,8 +170002,7 @@
           "current_coordinate": 310,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_md5.rs:240:UNSAFE_FN_DEF",
@@ -170053,7 +170035,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-MD5-004 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_md5.rs, UNSAFE_FN_DEF, md5_sha1_int_update) at its current census coordinate 339. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-MD5-004 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_md5.rs, UNSAFE_FN_DEF, md5_sha1_int_update) at its current census coordinate 339",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-MD5-001",
@@ -170156,8 +170138,7 @@
           "current_coordinate": 339,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_md5.rs:250:UNSAFE_FN_DEF",
@@ -170190,7 +170171,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-MD5-005 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_md5.rs, UNSAFE_FN_DEF, md5_sha1_int_final) at its current census coordinate 376. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-MD5-005 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_md5.rs, UNSAFE_FN_DEF, md5_sha1_int_final) at its current census coordinate 376",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-MD5-001",
@@ -170312,8 +170293,7 @@
           "current_coordinate": 376,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_md5.rs:258:UNSAFE_FN_DEF",
@@ -170346,7 +170326,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-MD5-006 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_md5.rs, UNSAFE_FN_DEF, md5_sha1_int_ctrl) at its current census coordinate 409. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-MD5-006 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_md5.rs, UNSAFE_FN_DEF, md5_sha1_int_ctrl) at its current census coordinate 409",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-MD5-001",
@@ -170487,8 +170467,7 @@
           "current_coordinate": 409,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_mdc2.rs:197:UNSAFE_FN_DEF",
@@ -170521,7 +170500,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-MDC2-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_mdc2.rs, UNSAFE_FN_DEF, mdc2_update) at its current census coordinate 218. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-MDC2-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_mdc2.rs, UNSAFE_FN_DEF, mdc2_update) at its current census coordinate 218",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-MDC2-001",
@@ -170557,8 +170536,7 @@
           "current_coordinate": 218,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_mdc2.rs:204:UNSAFE_FN_DEF",
@@ -170591,7 +170569,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-MDC2-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_mdc2.rs, UNSAFE_FN_DEF, mdc2_final) at its current census coordinate 258. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-MDC2-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_mdc2.rs, UNSAFE_FN_DEF, mdc2_final) at its current census coordinate 258",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-MDC2-001",
@@ -170646,8 +170624,7 @@
           "current_coordinate": 258,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_ripemd.rs:192:UNSAFE_FN_DEF",
@@ -170680,7 +170657,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-RIPE-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_ripemd.rs, UNSAFE_FN_DEF, ripe_update) at its current census coordinate 213. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-RIPE-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_ripemd.rs, UNSAFE_FN_DEF, ripe_update) at its current census coordinate 213",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-RIPE-001",
@@ -170718,8 +170695,7 @@
           "current_coordinate": 213,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_ripemd.rs:199:UNSAFE_FN_DEF",
@@ -170752,7 +170728,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-RIPE-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_ripemd.rs, UNSAFE_FN_DEF, ripe_final) at its current census coordinate 250. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-RIPE-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_ripemd.rs, UNSAFE_FN_DEF, ripe_final) at its current census coordinate 250",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-RIPE-001",
@@ -170809,8 +170785,7 @@
           "current_coordinate": 250,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_sha.rs:262:UNSAFE_FN_DEF",
@@ -170843,7 +170818,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SHA-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha1_update) at its current census coordinate 298. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SHA-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha1_update) at its current census coordinate 298",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SHA-001",
@@ -170986,8 +170961,7 @@
           "current_coordinate": 298,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_sha.rs:269:UNSAFE_FN_DEF",
@@ -171020,7 +170994,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SHA-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha1_final) at its current census coordinate 334. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SHA-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha1_final) at its current census coordinate 334",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SHA-001",
@@ -171182,8 +171156,7 @@
           "current_coordinate": 334,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_sha.rs:277:UNSAFE_FN_DEF",
@@ -171216,7 +171189,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SHA-003 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha1_int_ctrl) at its current census coordinate 372. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SHA-003 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha1_int_ctrl) at its current census coordinate 372",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SHA-001",
@@ -171397,8 +171370,7 @@
           "current_coordinate": 372,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_sha.rs:324:UNSAFE_FN_DEF",
@@ -171431,7 +171403,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SHA-004 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha224_update) at its current census coordinate 448. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SHA-004 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha224_update) at its current census coordinate 448",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SHA-001",
@@ -171631,8 +171603,7 @@
           "current_coordinate": 448,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_sha.rs:330:UNSAFE_FN_DEF",
@@ -171665,7 +171636,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SHA-005 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha224_final) at its current census coordinate 481. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SHA-005 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha224_final) at its current census coordinate 481",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SHA-001",
@@ -171884,8 +171855,7 @@
           "current_coordinate": 481,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_sha.rs:360:UNSAFE_FN_DEF",
@@ -171918,7 +171888,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SHA-006 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha256_update) at its current census coordinate 540. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SHA-006 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha256_update) at its current census coordinate 540",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SHA-001",
@@ -172156,8 +172126,7 @@
           "current_coordinate": 540,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_sha.rs:366:UNSAFE_FN_DEF",
@@ -172190,7 +172159,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SHA-007 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha256_final) at its current census coordinate 573. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SHA-007 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha256_final) at its current census coordinate 573",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SHA-001",
@@ -172447,8 +172416,7 @@
           "current_coordinate": 573,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_sha.rs:396:UNSAFE_FN_DEF",
@@ -172481,7 +172449,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SHA-008 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha384_update) at its current census coordinate 634. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SHA-008 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha384_update) at its current census coordinate 634",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SHA-001",
@@ -172757,8 +172725,7 @@
           "current_coordinate": 634,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_sha.rs:402:UNSAFE_FN_DEF",
@@ -172791,7 +172758,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SHA-009 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha384_final) at its current census coordinate 672. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SHA-009 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha384_final) at its current census coordinate 672",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SHA-001",
@@ -173086,8 +173053,7 @@
           "current_coordinate": 672,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_sha.rs:432:UNSAFE_FN_DEF",
@@ -173120,7 +173086,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SHA-010 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha512_update) at its current census coordinate 731. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SHA-010 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha512_update) at its current census coordinate 731",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SHA-001",
@@ -173434,8 +173400,7 @@
           "current_coordinate": 731,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_sha.rs:438:UNSAFE_FN_DEF",
@@ -173468,7 +173433,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SHA-011 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha512_final) at its current census coordinate 764. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SHA-011 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha512_final) at its current census coordinate 764",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SHA-001",
@@ -173801,8 +173766,7 @@
           "current_coordinate": 764,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_sha.rs:471:UNSAFE_FN_DEF",
@@ -173835,7 +173799,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SHA-012 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha512_224_int_final) at its current census coordinate 825. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SHA-012 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha512_224_int_final) at its current census coordinate 825",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SHA-001",
@@ -174187,8 +174151,7 @@
           "current_coordinate": 825,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_sha.rs:501:UNSAFE_FN_DEF",
@@ -174221,7 +174184,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SHA-013 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha512_256_int_final) at its current census coordinate 883. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SHA-013 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha512_256_int_final) at its current census coordinate 883",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SHA-001",
@@ -174592,8 +174555,7 @@
           "current_coordinate": 883,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_sha3.rs:277:UNSAFE_FN_DEF",
@@ -174626,7 +174588,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SHA3-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha3.rs, UNSAFE_FN_DEF, sha3_int_update) at its current census coordinate 299. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SHA3-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha3.rs, UNSAFE_FN_DEF, sha3_int_update) at its current census coordinate 299",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SHA3-001",
@@ -174668,8 +174630,7 @@
           "current_coordinate": 299,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_sha3.rs:289:UNSAFE_FN_DEF",
@@ -174702,7 +174663,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SHA3-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha3.rs, UNSAFE_FN_DEF, sha3_int_final) at its current census coordinate 346. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SHA3-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha3.rs, UNSAFE_FN_DEF, sha3_int_final) at its current census coordinate 346",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SHA3-001",
@@ -174763,8 +174724,7 @@
           "current_coordinate": 346,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_sha3.rs:332:UNSAFE_FN_DEF",
@@ -174797,7 +174757,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SHA3-003 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha3.rs, UNSAFE_FN_DEF, shake_ctrl) at its current census coordinate 425. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SHA3-003 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_sha3.rs, UNSAFE_FN_DEF, shake_ctrl) at its current census coordinate 425",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SHA3-001",
@@ -174877,8 +174837,7 @@
           "current_coordinate": 425,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_wp.rs:194:UNSAFE_FN_DEF",
@@ -174911,7 +174870,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-WP-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_wp.rs, UNSAFE_FN_DEF, wp_update) at its current census coordinate 216. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-WP-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_wp.rs, UNSAFE_FN_DEF, wp_update) at its current census coordinate 216",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-WP-001",
@@ -174949,8 +174908,7 @@
           "current_coordinate": 216,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/evp/legacy_wp.rs:201:UNSAFE_FN_DEF",
@@ -174983,7 +174941,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-WP-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_wp.rs, UNSAFE_FN_DEF, wp_final) at its current census coordinate 253. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-WP-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/evp/legacy_wp.rs, UNSAFE_FN_DEF, wp_final) at its current census coordinate 253",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-WP-001",
@@ -175040,8 +174998,7 @@
           "current_coordinate": 253,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ml_kem/key.rs:272:UNSAFE_FN_DEF",
@@ -211268,7 +211225,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SM3-101 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/sm3/legacy_sm3.rs, UNSAFE_FN_DEF, sm3_int_update) at its current census coordinate 219. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SM3-101 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/sm3/legacy_sm3.rs, UNSAFE_FN_DEF, sm3_int_update) at its current census coordinate 219",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SM3-001",
@@ -211342,8 +211299,7 @@
           "current_coordinate": 219,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/sm3/legacy_sm3.rs:209:UNSAFE_FN_DEF",
@@ -211376,7 +211332,7 @@
       "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B48",
-      "status_reason": "boundary B48-SM3-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/sm3/legacy_sm3.rs, UNSAFE_FN_DEF, sm3_int_final) at its current census coordinate 262. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B48-SM3-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/sm3/legacy_sm3.rs, UNSAFE_FN_DEF, sm3_int_final) at its current census coordinate 262",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B48-SM3-001",
@@ -211412,8 +211368,7 @@
           "current_coordinate": 262,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ssl/ssl_ciph.rs:741:UNSAFE_FN_DEF",
@@ -211446,7 +211401,7 @@
       "mechanism_basis": "directory-rule:^src/ssl/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B47",
-      "status_reason": "boundary B47-CIPH-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_ciph.rs, UNSAFE_FN_DEF, update_cipher_list_by_id) at its current census coordinate 756. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B47-CIPH-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_ciph.rs, UNSAFE_FN_DEF, update_cipher_list_by_id) at its current census coordinate 756",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B47-CIPH-001",
@@ -211488,8 +211443,7 @@
           "current_coordinate": 756,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ssl/ssl_ciph.rs:851:UNSAFE_FN_DEF",
@@ -211522,7 +211476,7 @@
       "mechanism_basis": "directory-rule:^src/ssl/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B47",
-      "status_reason": "boundary B47-CIPH-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_ciph.rs, UNSAFE_FN_DEF, set_ciphersuites) at its current census coordinate 880. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B47-CIPH-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_ciph.rs, UNSAFE_FN_DEF, set_ciphersuites) at its current census coordinate 880",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B47-CIPH-001",
@@ -211583,8 +211537,7 @@
           "current_coordinate": 880,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ssl/ssl_conf.rs:240:UNSAFE_FN_DEF",
@@ -211617,7 +211570,7 @@
       "mechanism_basis": "directory-rule:^src/ssl/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B47",
-      "status_reason": "boundary B47-SSL-CONF-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, ssl_match_option) at its current census coordinate 434. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B47-SSL-CONF-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, ssl_match_option) at its current census coordinate 434",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B11-SSL-1",
@@ -211812,8 +211765,7 @@
           "current_coordinate": 434,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ssl/ssl_conf.rs:274:UNSAFE_FN_DEF",
@@ -211846,7 +211798,7 @@
       "mechanism_basis": "directory-rule:^src/ssl/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B47",
-      "status_reason": "boundary B47-SSL-CONF-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, ssl_set_option_list) at its current census coordinate 486. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B47-SSL-CONF-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, ssl_set_option_list) at its current census coordinate 486",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B11-SSL-1",
@@ -212060,8 +212012,7 @@
           "current_coordinate": 486,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ssl/ssl_conf.rs:379:UNSAFE_FN_DEF",
@@ -212094,7 +212045,7 @@
       "mechanism_basis": "directory-rule:^src/ssl/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B47",
-      "status_reason": "boundary B47-SSL-CONF-003 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, min_max_proto) at its current census coordinate 616. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B47-SSL-CONF-003 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, min_max_proto) at its current census coordinate 616",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B11-SSL-1",
@@ -212327,8 +212278,7 @@
           "current_coordinate": 616,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ssl/ssl_conf.rs:438:UNSAFE_FN_DEF",
@@ -212361,7 +212311,7 @@
       "mechanism_basis": "directory-rule:^src/ssl/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B46",
-      "status_reason": "boundary B46-SSL-CONF-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, cmd_Protocol) at its current census coordinate 702. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B46-SSL-CONF-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, cmd_Protocol) at its current census coordinate 702",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B11-SSL-1",
@@ -212423,8 +212373,7 @@
           "current_coordinate": 702,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ssl/ssl_conf.rs:455:UNSAFE_FN_DEF",
@@ -212457,7 +212406,7 @@
       "mechanism_basis": "directory-rule:^src/ssl/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B46",
-      "status_reason": "boundary B46-SSL-CONF-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, cmd_Options) at its current census coordinate 744. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B46-SSL-CONF-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, cmd_Options) at its current census coordinate 744",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B11-SSL-1",
@@ -212538,8 +212487,7 @@
           "current_coordinate": 744,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ssl/ssl_conf.rs:511:UNSAFE_FN_DEF",
@@ -212572,7 +212520,7 @@
       "mechanism_basis": "directory-rule:^src/ssl/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B46",
-      "status_reason": "boundary B46-SSL-CONF-003 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, cmd_VerifyMode) at its current census coordinate 824. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B46-SSL-CONF-003 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, cmd_VerifyMode) at its current census coordinate 824",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B11-SSL-1",
@@ -212672,8 +212620,7 @@
           "current_coordinate": 824,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ssl/ssl_conf.rs:537:UNSAFE_FN_DEF",
@@ -212706,7 +212653,7 @@
       "mechanism_basis": "directory-rule:^src/ssl/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B46",
-      "status_reason": "boundary B46-SSL-CONF-004 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, cmd_CipherString) at its current census coordinate 875. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B46-SSL-CONF-004 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, cmd_CipherString) at its current census coordinate 875",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B11-SSL-1",
@@ -212825,8 +212772,7 @@
           "current_coordinate": 875,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ssl/ssl_conf.rs:552:UNSAFE_FN_DEF",
@@ -212859,7 +212805,7 @@
       "mechanism_basis": "directory-rule:^src/ssl/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B46",
-      "status_reason": "boundary B46-SSL-CONF-005 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, cmd_Ciphersuites) at its current census coordinate 914. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B46-SSL-CONF-005 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, cmd_Ciphersuites) at its current census coordinate 914",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B11-SSL-1",
@@ -212997,8 +212943,7 @@
           "current_coordinate": 914,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ssl/ssl_conf.rs:567:UNSAFE_FN_DEF",
@@ -213031,7 +212976,7 @@
       "mechanism_basis": "directory-rule:^src/ssl/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B46",
-      "status_reason": "boundary B46-SSL-CONF-006 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, cmd_MinProtocol) at its current census coordinate 955. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B46-SSL-CONF-006 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, cmd_MinProtocol) at its current census coordinate 955",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B11-SSL-1",
@@ -213188,8 +213133,7 @@
           "current_coordinate": 955,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ssl/ssl_conf.rs:573:UNSAFE_FN_DEF",
@@ -213222,7 +213166,7 @@
       "mechanism_basis": "directory-rule:^src/ssl/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B46",
-      "status_reason": "boundary B46-SSL-CONF-007 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, cmd_MaxProtocol) at its current census coordinate 987. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B46-SSL-CONF-007 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_conf.rs, UNSAFE_FN_DEF, cmd_MaxProtocol) at its current census coordinate 987",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B11-SSL-1",
@@ -213398,8 +213342,7 @@
           "current_coordinate": 987,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ssl/ssl_lib.rs:8845:UNSAFE_FN_DEF",
@@ -213432,7 +213375,7 @@
       "mechanism_basis": "converted_files_on_branch",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B47",
-      "status_reason": "boundary B47-CT-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_lib.rs, UNSAFE_FN_DEF, ct_permissive) at its current census coordinate 8857. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B47-CT-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_lib.rs, UNSAFE_FN_DEF, ct_permissive) at its current census coordinate 8857",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B17-SSL-1",
@@ -213481,8 +213424,7 @@
           "current_coordinate": 8857,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ssl/ssl_rsa.rs:1007:UNSAFE_FN_DEF",
@@ -213515,7 +213457,7 @@
       "mechanism_basis": "directory-rule:^src/ssl/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B47",
-      "status_reason": "boundary B47-RSA-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_rsa.rs, UNSAFE_FN_DEF, serverinfoex_srv_parse_cb) at its current census coordinate 1021. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B47-RSA-001 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_rsa.rs, UNSAFE_FN_DEF, serverinfoex_srv_parse_cb) at its current census coordinate 1021",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B47-RSA-001",
@@ -213555,8 +213497,7 @@
           "current_coordinate": 1021,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ssl/ssl_rsa.rs:1033:UNSAFE_FN_DEF",
@@ -213589,7 +213530,7 @@
       "mechanism_basis": "directory-rule:^src/ssl/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B47",
-      "status_reason": "boundary B47-RSA-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_rsa.rs, UNSAFE_FN_DEF, serverinfo_srv_parse_cb) at its current census coordinate 1057. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B47-RSA-002 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_rsa.rs, UNSAFE_FN_DEF, serverinfo_srv_parse_cb) at its current census coordinate 1057",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B47-RSA-001",
@@ -213648,8 +213589,7 @@
           "current_coordinate": 1057,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ssl/ssl_rsa.rs:1046:UNSAFE_FN_DEF",
@@ -213682,7 +213622,7 @@
       "mechanism_basis": "directory-rule:^src/ssl/",
       "status": "DISCHARGED",
       "discharge_receipt": "boundary-sweep-B47",
-      "status_reason": "boundary B47-RSA-003 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_rsa.rs, UNSAFE_FN_DEF, serverinfoex_srv_add_cb) at its current census coordinate 1082. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b48.json; a contract transfers the obligation to the caller, it does not discharge it.",
+      "status_reason": "boundary B47-RSA-003 is scoped-SAFETY_DISCHARGED and names the operation by stable identity (src/ssl/ssl_rsa.rs, UNSAFE_FN_DEF, serverinfoex_srv_add_cb) at its current census coordinate 1082",
       "boundary_receipt_present": true,
       "boundary_ids": [
         "B47-RSA-001",
@@ -213760,8 +213700,7 @@
           "current_coordinate": 1082,
           "covers_site": true
         }
-      ],
-      "documentation_note": "documented (attached contract) but retained in the obligation queue by carry-forward from the previous applied closure court/inventory/closure-ssh-b48.json; a contract is not a discharge"
+      ]
     },
     {
       "id": "V1:src/ui/ui_util.rs:197:UNSAFE_FN_DEF",
