@@ -1292,9 +1292,67 @@
  },
  "review": {
   "reviewer": "pending independent adjudication",
-  "verdict": "UNAPPLIED",
-  "applied": false,
+  "verdict": "APPLIED (superseded by the review_history entry of 2026-11-01)",
+  "applied": true,
   "date": "2026-11-01",
-  "prohibition": "Do not apply these dispositions to CAMPAIGN-STATUS.json or run the closure against them in this subphase."
- }
+  "prohibition": "Do not apply these dispositions to CAMPAIGN-STATUS.json or run the closure against them in this subphase.",
+  "superseded_by": "review_history[-1] (APPROVE, APPLIED)"
+ },
+ "review_history": [
+  {
+   "verdict": "APPROVE",
+   "disposition": "APPLIED \u2014 22 i2r boundaries discharged; supersedes the receipt's stale review.verdict=UNAPPLIED",
+   "conditions_closed": [
+    "C1_identity: frozen S=4612d6cf8, install rebuilt a736c4ccf, E=6aa58e3d8, src_content_sha256 5617fc5d",
+    "C2_receipt_accuracy: boundary_size 15 slot callbacks + 7 i2r-only helpers; slot read v3_prn.rs:322-331, called :358",
+    "C3_row_liveness: read/write registry hold; printer set never mutates the registry",
+    "C4_NULL out/ext prologue plus mutation-observed row-liveness canary"
+   ],
+   "what_may_be_applied": [
+    "B49-I2R-001",
+    "B49-I2R-002",
+    "B49-I2R-003",
+    "B49-I2R-004",
+    "B49-I2R-005",
+    "B49-I2R-006",
+    "B49-I2R-007",
+    "B49-I2R-008",
+    "B49-I2R-009",
+    "B49-I2R-010",
+    "B49-I2R-011",
+    "B49-I2R-012",
+    "B49-I2R-013",
+    "B49-I2R-014",
+    "B49-I2R-015",
+    "B49-I2R-016",
+    "B49-I2R-017",
+    "B49-I2R-018",
+    "B49-I2R-019",
+    "B49-I2R-020",
+    "B49-I2R-021",
+    "B49-I2R-022"
+   ],
+   "what_remains_blocked": {
+    "x509_verify_policy_sites": 53,
+    "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+    "raw_borrowed_row_obligation": "X509V3_EXT_get/_nid returns a borrowed row; an external caller keeping it across its own X509V3_EXT_cleanup remains responsible for excluding that call",
+    "stated_caller_obligations": [
+     "B49-R2",
+     "B49-R3",
+     "B49-R4"
+    ],
+    "ssl_conf_sites": 16
+   },
+   "identity_basis": {
+    "S": "4612d6cf8 (source); install rebuilt at a736c4ccf",
+    "E": "6aa58e3d8",
+    "closure": "evidence/closure-ssh-b49.json @ a736c4ccf",
+    "inventory": "evidence/inventory-sshd-b49.json @ a736c4ccf",
+    "freeze": "atlas-refresh/b49-candidate-freeze.json",
+    "receipt": "atlas-refresh/boundary-sweep-B49.json"
+   },
+   "date": "2026-11-01",
+   "reviewer": "independent reviewer; verdict transcribed verbatim by the orchestrator"
+  }
+ ]
 }
