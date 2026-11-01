@@ -137,6 +137,20 @@ pub unsafe extern "C" fn i2d_OSSL_ATTRIBUTES_SYNTAX(
 /// A NULL list prints `<No Attributes>`, an empty one `<Empty Attributes>`; otherwise one block per
 /// attribute, its name from `OBJ_nid2ln` when the object resolves and from `i2a_ASN1_OBJECT` when it
 /// does not, then one `ossl_print_attribute_value` line per value (or `<No Values>`).
+///
+/// # Safety
+///
+/// The `i2r` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `X509V3_EXT_print`'s `i2r` arm (`src/x509/v3_prn.rs:341`), which decoded the extension
+/// through the row's `OSSL_ATTRIBUTES_SYNTAX` item and refused a NULL result (`:300-303`), and
+/// refused a NULL `out`/`ext` prologue (`:254-256`). `attrlst` is therefore non-NULL and a
+/// decoded stack of `X509_ATTRIBUTE`; its elements and their values are the decoder's own and
+/// stay live for the call. This body also tolerates a NULL list (the authority does), but the
+/// dispatcher never supplies one. `out` is a non-NULL BIO and `method` the live row, neither
+/// retained. Non-NULLness is the dispatcher's; liveness and the row's `it`↔`i2r` pairing are
+/// the caller's/registrar's obligations.
+///
+/// Authority-derived: `crypto/x509/v3_sda.c:20-68`.
 unsafe extern "C" fn i2r_ATTRIBUTES_SYNTAX(
     _method: *const X509V3ExtMethod,
     attrlst: *mut c_void,

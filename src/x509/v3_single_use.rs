@@ -31,6 +31,17 @@ const FILE: &core::ffi::CStr = c"crypto/x509/v3_single_use.c";
 const LINE_STRDUP: c_int = 32;
 
 /// `static int i2r_SINGLE_USE(...)` — `crypto/x509/v3_single_use.c:17-22`. A bare `1`.
+///
+/// # Safety
+///
+/// The `i2r` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `X509V3_EXT_print`'s `i2r` arm (`src/x509/v3_prn.rs:341`), which decoded the extension
+/// through the row's `ASN1_NULL` item and refused a NULL result (`:300-303`), and refused a
+/// NULL `out`/`ext` prologue (`:254-256`). The body reads none of `method`, `su`, `out` or
+/// `indent`; those are non-NULL per the dispatcher where the parameter is a pointer, and stay
+/// live for the call. No further property is required.
+///
+/// Authority-derived: `crypto/x509/v3_single_use.c:17-22` reads nothing and answers 1.
 unsafe extern "C" fn i2r_SINGLE_USE(
     _method: *const X509V3ExtMethod,
     _su: *mut c_void,

@@ -161,6 +161,20 @@ pub unsafe extern "C" fn i2d_PKEY_USAGE_PERIOD(
 ///
 /// Brackets the two `ASN1_GENERALIZEDTIME` fields with the authority's labels; the indent is the
 /// caller's, and the separating `", "` appears only when a `notAfter` follows a `notBefore`.
+///
+/// # Safety
+///
+/// The `i2r` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `X509V3_EXT_print`'s `i2r` arm (`src/x509/v3_prn.rs:341`), which decoded the extension
+/// through the row's `PKEY_USAGE_PERIOD` item and refused a NULL result (`:300-303`), and
+/// refused a NULL `out`/`ext` prologue (`:254-256`). Hence `usage` is a non-NULL, decoded
+/// `PKEY_USAGE_PERIOD` whose `notBefore`/`notAfter` are NULL or the decoder's own live
+/// `ASN1_GENERALIZEDTIME` values; this body does not accept a NULL `usage`. `out` is a
+/// non-NULL BIO and `method` the live row, neither retained. Non-NULLness is the
+/// dispatcher's; liveness and the row's `it`↔`i2r` pairing are the caller's/registrar's
+/// obligations.
+///
+/// Authority-derived: `crypto/x509/v3_pku.c:36-52`.
 unsafe extern "C" fn i2r_PKEY_USAGE_PERIOD(
     _method: *const X509V3ExtMethod,
     usage: *mut c_void,

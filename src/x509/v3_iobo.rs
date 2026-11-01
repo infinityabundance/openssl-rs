@@ -39,6 +39,19 @@ use crate::x509::v3_san::GENERAL_NAME_print;
 ///
 /// Indents, prints the `GENERAL_NAME` through the shared printer, then a newline. Each of the three
 /// writes is a refusal arm: a non-positive answer aborts with 0.
+///
+/// # Safety
+///
+/// The `i2r` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `X509V3_EXT_print`'s `i2r` arm (`src/x509/v3_prn.rs:341`), which decoded the extension
+/// through the row's `GENERAL_NAME` item and refused a NULL result (`:300-303`), and refused a
+/// NULL `out`/`ext` prologue (`:254-256`). Hence `gn` is a non-NULL, decoded `GENERAL_NAME`
+/// whose selected arm and the objects it points at are the decoder's own and stay live for
+/// the call; `GENERAL_NAME_print` reads only that value. `out` is a non-NULL BIO and `method`
+/// the live row, neither retained. Non-NULLness is the dispatcher's; liveness and the row's
+/// `it`↔`i2r` pairing are the caller's/registrar's obligations.
+///
+/// Authority-derived: `crypto/x509/v3_iobo.c:13-22`.
 unsafe extern "C" fn i2r_ISSUED_ON_BEHALF_OF(
     _method: *const X509V3ExtMethod,
     gn: *mut c_void,

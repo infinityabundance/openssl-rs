@@ -329,6 +329,20 @@ pub unsafe extern "C" fn i2d_SXNET(a: *const Sxnet, out: *mut *mut c_uchar) -> c
 ///
 /// Prints the version (as `v + 1` and as `v`, or `<unsupported>` outside `long`), then one
 /// `Zone: ..., User: ...` line per identifier. Each `i2s_ASN1_INTEGER` that answers NULL aborts.
+///
+/// # Safety
+///
+/// The `i2r` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `X509V3_EXT_print`'s `i2r` arm (`src/x509/v3_prn.rs:341`), which decoded the extension
+/// through the row's `SXNET` item and refused a NULL result (`:300-303`), and refused a NULL
+/// `out`/`ext` prologue (`:254-256`). `sx` is therefore non-NULL and a decoded `SXNET`; its
+/// `version` is a live `ASN1_INTEGER` and `ids` is a live stack of `SXNETID` whose elements
+/// and their integers are the decoder's own and stay live for the call. This body dereferences
+/// `sx` unconditionally, so it relies on the dispatcher's non-NULL guarantee. `out` is a
+/// non-NULL BIO and `method` the live row, neither retained. Liveness and the row's
+/// `it`↔`i2r` pairing are the caller's/registrar's obligations.
+///
+/// Authority-derived: `crypto/x509/v3_sxnet.c:57-88`.
 unsafe extern "C" fn sxnet_i2r(
     _method: *const X509V3ExtMethod,
     sx: *mut c_void,

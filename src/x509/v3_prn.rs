@@ -38,6 +38,7 @@ use crate::asn1::a_print::ASN1_STRING_print;
 use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::der::ASN1_parse_dump;
 use crate::asn1::fre::ASN1_item_free;
+use crate::asn1::layout::Asn1Item;
 use crate::asn1::string::{ASN1_STRING_get0_data, ASN1_STRING_length};
 use crate::asn1::text::i2a_ASN1_OBJECT;
 use crate::runtime::bio::dump::BIO_dump_indent;
@@ -50,7 +51,7 @@ use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_authority_key_identifier, NID_subject_key_identifier, OBJ_obj2nid};
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_value, OpenSslStack};
-use crate::x509::v3_lib::{X509V3_EXT_get, X509V3_EXT_MULTILINE};
+use crate::x509::v3_lib::{X509V3ExtMethod, X509V3_EXT_get, X509V3_EXT_MULTILINE};
 use crate::x509::v3_utl::X509V3_conf_free;
 use crate::x509::x509_v3::{
     X509_EXTENSION_get_critical, X509_EXTENSION_get_data, X509_EXTENSION_get_object,
@@ -197,6 +198,36 @@ unsafe fn unknown_ext_print(
     }
 }
 
+/// Resolve a method row's declared `ASN1_ITEM` exactly once.
+///
+/// `X509V3_EXT_METHOD.it` is an `ASN1_ITEM_EXP *`: a function returning the item the row's
+/// value has (`include/openssl/asn1.h.in:378-384`). The authority expands
+/// `ASN1_ITEM_ptr(method->it)` separately at its decode site and at its release site
+/// (`crypto/x509/v3_prn.c:86-89,131-135`). One resolution makes those two halves agree even
+/// for a caller-registered row whose accessor is not stable, and it is the dispatcher's
+/// guard for the `i2r` family: that slot is reached only with a value decoded by the row's
+/// declared item, never with a NULL item.
+///
+/// # Safety
+///
+/// `method` must be a live `X509V3_EXT_METHOD`. `Ok(None)` means the row declares no `it`
+/// (its old-style `d2i`/`ext_free` pair is the codec); `Err(())` means the declared
+/// accessor answered NULL, which the caller must treat as a failed decode rather than pass a
+/// NULL item to `ASN1_item_d2i`/`ASN1_item_free`.
+unsafe fn ext_method_item(method: *const X509V3ExtMethod) -> Result<Option<*const Asn1Item>, ()> {
+    // SAFETY: `method` is live per the contract.
+    let Some(it) = (unsafe { (*method).it }) else {
+        return Ok(None);
+    };
+    // SAFETY: `it` is the row's `ASN1_ITEM_ref` accessor.
+    let item = unsafe { it() };
+    if item.is_null() {
+        Err(())
+    } else {
+        Ok(Some(item))
+    }
+}
+
 /// `int X509V3_EXT_print(BIO *out, X509_EXTENSION *ext, unsigned long flag, int indent)` —
 /// `crypto/x509/v3_prn.c:69-136`.
 ///
@@ -207,7 +238,9 @@ unsafe fn unknown_ext_print(
 ///
 /// # Safety
 ///
-/// `out` must be a live BIO; `ext` must be a live `X509_EXTENSION`.
+/// `out` must be a live BIO; `ext` must be a live `X509_EXTENSION`. The prologue refuses a
+/// NULL `out` or `ext` with 0 before the first dereference. That establishes non-NULLness
+/// only: liveness remains the caller's obligation, and it cannot be established by a check.
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_EXT_print(
     out: *mut Bio,
@@ -215,6 +248,12 @@ pub unsafe extern "C" fn X509V3_EXT_print(
     flag: c_ulong,
     indent: c_int,
 ) -> c_int {
+    // The `i2s`/`i2v`/`i2r` slots all require a live output BIO, and the `i2r` slot is handed
+    // the extension this frame decodes. Both are cheap necessary conditions the dispatcher
+    // can refuse before any callback runs; the authority faults on either.
+    if out.is_null() || ext.is_null() {
+        return 0;
+    }
     // SAFETY: `ext` is live per the contract.
     let extoct = unsafe { X509_EXTENSION_get_data(ext) };
     // SAFETY: `extoct` is the extension's embedded octet string.
@@ -229,13 +268,27 @@ pub unsafe extern "C" fn X509V3_EXT_print(
         // SAFETY: `out` is live; `p`/`extlen` describe the (still raw) value.
         return unsafe { unknown_ext_print(out, p, extlen, flag, indent, 0) };
     }
+    // Resolve the row's declared item once, before the decode, and reuse that same item for
+    // the release below. The authority expands `ASN1_ITEM_ptr(method->it)` at both sites
+    // (`crypto/x509/v3_prn.c:86-89,131-135`); resolving once makes the decode and the free
+    // agree even if a caller-registered row supplies an accessor that does not answer a
+    // stable item, and it refuses a NULL item instead of passing it to `ASN1_item_d2i` /
+    // `ASN1_item_free`, whose contracts require a live item. This is the dispatcher's
+    // `i2r`-family guard: the slot is reached only with a value decoded by the declared item.
     // SAFETY: `method` is live.
-    let it = unsafe { (*method).it };
+    let item = match unsafe { ext_method_item(method) } {
+        Ok(item) => item,
+        // The row's accessor answered NULL: there is no type to decode with, so the printer
+        // is never handed a value. This is the authority's failed-decode path.
+        Err(()) => {
+            // SAFETY: `out` is live; `p`/`extlen` describe the raw value.
+            return unsafe { unknown_ext_print(out, p, extlen, flag, indent, 1) };
+        }
+    };
     let mut ext_str: *mut c_void = ptr::null_mut();
-    if let Some(it) = it {
-        // SAFETY: `p` borrows the value for `extlen` bytes; `it()` answers the item the
-        // `ASN1_ITEM_ref` macro names.
-        ext_str = unsafe { ASN1_item_d2i(ptr::null_mut(), &raw mut p, extlen as c_long, it()) };
+    if let Some(item) = item {
+        // SAFETY: `p` borrows the value for `extlen` bytes; `item` is the row's live item.
+        ext_str = unsafe { ASN1_item_d2i(ptr::null_mut(), &raw mut p, extlen as c_long, item) };
     } else {
         // SAFETY: `method` is live.
         let d2i = unsafe { (*method).d2i };
@@ -296,9 +349,10 @@ pub unsafe extern "C" fn X509V3_EXT_print(
     unsafe { OPENSSL_sk_pop_free(nval, Some(conf_value_free_thunk)) };
     // The authority's `err:` order: release the value at :130, then the decoded structure.
     drop(value);
-    if let Some(it) = it {
-        // SAFETY: `ext_str` is the item value; `it()` answers the item it describes.
-        unsafe { ASN1_item_free(ext_str, it()) };
+    if let Some(item) = item {
+        // SAFETY: `ext_str` is the value the same `item` decoded; the one resolution is used
+        // for both halves, so a value is never released through a different item.
+        unsafe { ASN1_item_free(ext_str, item) };
     } else if let Some(f) = ext_free {
         // SAFETY: `ext_str` is the old-style value `f` releases.
         unsafe { f(ext_str) };
@@ -424,8 +478,118 @@ mod tests {
     use crate::asn1::typ::i2d_ASN1_OCTET_STRING;
     use crate::runtime::bio::bss_mem::BIO_s_mem;
     use crate::runtime::bio::{BIO_free, BIO_new};
+    use crate::runtime::obj::NID_issued_on_behalf_of;
     use crate::x509::x509_v3::X509_EXTENSION_create_by_NID;
     use crate::x509::x_exten::X509_EXTENSION_free;
+
+    /// A minimal live row for the item-resolution guard: only `it` is read.
+    fn probe_row(it: Option<unsafe extern "C" fn() -> *const Asn1Item>) -> X509V3ExtMethod {
+        X509V3ExtMethod {
+            ext_nid: 0,
+            ext_flags: 0,
+            it,
+            ext_new: None,
+            ext_free: None,
+            d2i: None,
+            i2d: None,
+            i2s: None,
+            s2i: None,
+            i2v: None,
+            v2i: None,
+            i2r: None,
+            r2i: None,
+            usr_data: ptr::null_mut(),
+        }
+    }
+
+    /// A row's `it` accessor that answers NULL: there is no item to decode with.
+    unsafe extern "C" fn null_item() -> *const Asn1Item {
+        ptr::null()
+    }
+
+    /// The guard's canary: a row whose `it` accessor answers NULL is reported as a failed
+    /// resolution, so the dispatcher never hands `ASN1_item_d2i`/`ASN1_item_free` a NULL
+    /// item. Removing the `is_null` refusal resolves `Some(null)` and this assertion fails.
+    #[test]
+    fn ext_method_item_refuses_an_accessor_that_answers_null() {
+        let row = probe_row(Some(null_item));
+        // SAFETY: `row` is a live local row.
+        let resolved = unsafe { ext_method_item(&raw const row) };
+        assert_eq!(resolved, Err(()), "a NULL ASN.1 item must not be resolved");
+    }
+
+    /// The same helper still resolves a real accessor, and reports a row that declares none.
+    #[test]
+    fn ext_method_item_resolves_the_declared_item() {
+        let row = probe_row(Some(crate::x509::v3_genn::GENERAL_NAME_it));
+        let expected = crate::x509::v3_genn::GENERAL_NAME_it();
+        // SAFETY: `row` is a live local row and its accessor is the item function itself.
+        let resolved = unsafe { ext_method_item(&raw const row) };
+        assert_eq!(resolved, Ok(Some(expected)));
+        let none = probe_row(None);
+        // SAFETY: `none` is a live local row.
+        let absent = unsafe { ext_method_item(&raw const none) };
+        assert_eq!(absent, Ok(None));
+    }
+
+    /// Build an extension of `nid` whose value is `der`. `issuedOnBehalfOf` carries a bare
+    /// `GENERAL_NAME` and its row installs no `i2s`/`i2v`, so printing it runs the `i2r` arm
+    /// this family is about; a `dNSName` (`[2] IA5String`) is `82 03 66 6f 6f`.
+    fn extension_with_der(nid: c_int, der: &[u8]) -> *mut X509Extension {
+        let value = ASN1_OCTET_STRING_new();
+        assert!(!value.is_null(), "the extension value must be allocatable");
+        // SAFETY: `value` is live and uniquely owned; `der` is `der.len()` readable bytes.
+        let set = unsafe { ASN1_OCTET_STRING_set(value, der.as_ptr(), der.len() as c_int) };
+        assert_eq!(set, 1);
+        // SAFETY: `value` is live; the constructor copies its contents.
+        let ext = unsafe { X509_EXTENSION_create_by_NID(ptr::null_mut(), nid, 0, value) };
+        // SAFETY: the extension copied the octets; release this test's reference.
+        unsafe { ASN1_OCTET_STRING_free(value) };
+        assert!(!ext.is_null(), "the extension must be created");
+        ext
+    }
+
+    fn issued_on_behalf_of_extension() -> *mut X509Extension {
+        extension_with_der(NID_issued_on_behalf_of, &[0x82, 0x03, b'f', b'o', b'o'])
+    }
+
+    /// The `i2r` arm still runs for a well-formed value.
+    #[test]
+    fn i2r_printer_still_prints_through_a_live_bio() {
+        let ext = issued_on_behalf_of_extension();
+        // SAFETY: `BIO_s_mem` is a live method table and `BIO_new` returns a fresh BIO.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null(), "the memory BIO must be created");
+        // A non-zero indent: the authority's body treats a zero-length first write as a
+        // refusal, so indent 0 would make this printer answer 0 by design.
+        // SAFETY: `bio` and `ext` are live; this row's only print slot is `i2r`.
+        let ret = unsafe { X509V3_EXT_print(bio, ext, 0, 4) };
+        assert_eq!(ret, 1, "the i2r path must print successfully");
+        // SAFETY: both objects are this test's own.
+        unsafe {
+            BIO_free(bio);
+            X509_EXTENSION_free(ext);
+        }
+    }
+
+    /// A value that does not decode as the row's item never reaches `i2r`, so the printers
+    /// that dereference the decoded value unconditionally (e.g. `sxnet_i2r`) are never handed
+    /// NULL. This is the decode guard the `i2r` contracts name as their establishing path.
+    #[test]
+    fn i2r_printer_is_refused_when_the_value_does_not_decode() {
+        let ext = extension_with_der(NID_issued_on_behalf_of, &[0xFF, 0xFF]);
+        // SAFETY: `BIO_s_mem` is a live method table and `BIO_new` returns a fresh BIO.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null(), "the memory BIO must be created");
+        // SAFETY: `bio` and `ext` are live; the default unknown-extension policy answers 0.
+        let ret = unsafe { X509V3_EXT_print(bio, ext, 0, 4) };
+        assert_eq!(ret, 0, "a failed decode must not reach the i2r slot");
+        // SAFETY: both objects are this test's own.
+        unsafe {
+            BIO_free(bio);
+            X509_EXTENSION_free(ext);
+        }
+    }
 
     /// Drive the `method->i2s` arm that owns the callback result through
     /// `OwnedStr`: the standard subject-key-identifier method builds its string
