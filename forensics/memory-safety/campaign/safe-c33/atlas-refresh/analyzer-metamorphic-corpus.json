@@ -716,7 +716,7 @@
         "tool": {
           "path": "forensics/tools/consumer_closure.py",
           "schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
-          "sha256": "1fd09b6f1d854a47396d7844b79b3bb654388cd6e66413c008e75dea33c37175",
+          "sha256": "22364c5b62ce35ab791c3a708b7479a1477272ea3fa3ffcadc5208c8b8321145",
           "version": 5
         }
       },
@@ -1582,6 +1582,3775 @@
       "observed_result": "stale=BLOCKED, rejected=1, wrong_operation=BLOCKED, control=DISCHARGED",
       "transformation": "adjudicate the scoped discharge at the current coordinate",
       "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "cast": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 4,
+            "instructions_scanned": 7,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 2,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 2,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0xb8",
+              "owner_type": "Ctx"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/nested.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/nested.rs:10",
+              "function": "init_a",
+              "store_site": "0x2004",
+              "values": [
+                "0x9000"
+              ]
+            },
+            {
+              "base_origin": "entry-parameter-cast",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/nested.rs:10",
+              "function": "typed_writer",
+              "store_site": "0x2404",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        },
+        "complete": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 3,
+            "instructions_scanned": 5,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 1,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0xb8",
+              "owner_type": "Ctx"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/nested.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/nested.rs:10",
+              "function": "init_a",
+              "store_site": "0x2004",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        },
+        "rogue": {
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "contract_bounded": false,
+          "function": "consumer",
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/nested.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "refusal": "unaccounted-writer-value",
+          "resolved": false,
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "undeclared_values": [
+            "0xc000"
+          ]
+        },
+        "unproven": {
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "contract_bounded": false,
+          "function": "consumer",
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "overlapping_non_scalar_stores": [],
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/nested.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "refusal": "writer-set-incomplete",
+          "resolved": false,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "source_excluded_stores": [],
+          "stores_at_slot": 2,
+          "unaccounted_values": [],
+          "unproven_base_stores": [
+            {
+              "field_sensitive_owner": {
+                "kind": "unknown",
+                "why": "indirect call result"
+              },
+              "function": "unproven_writer",
+              "origin_kind": "unknown",
+              "qualified": false,
+              "reason": "call origin with no resolvable symbol without a typed constructor witness",
+              "source_witness": "source-names-field-or-type",
+              "store_site": "0x2308",
+              "unknown": true
+            }
+          ]
+        },
+        "widened": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 4,
+            "instructions_scanned": 7,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 2,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 2,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0xb8",
+              "owner_type": "Ctx"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            },
+            {
+              "addr": "0x9100",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f2",
+                  "value": "0x3200"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_B"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/nested.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/nested.rs:10",
+              "function": "init_a",
+              "store_site": "0x2004",
+              "values": [
+                "0x9000"
+              ]
+            },
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/nested.rs:10",
+              "function": "init_b",
+              "store_site": "0x2104",
+              "values": [
+                "0x9100"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100",
+            "0x3200"
+          ]
+        }
+      },
+      "expected_property": "the complete writer set proves {0x3100}; a new valid instance widens it to {0x3100,0x3200}; an undeclared value refuses as unaccounted-writer-value; an unproven base refuses as writer-set-incomplete; a unique body cast qualifies the base and still proves {0x3100}",
+      "id": "s2b-nested-static-instance-writer-completeness",
+      "input": "a context pointer field whose pointee is a repr(C) table of function pointers, with a controlled writer population",
+      "observed_result": "complete=True, widened=True, rogue=True, unproven=[{'function': 'unproven_writer', 'store_site': '0x2308', 'origin_kind': 'unknown', 'qualified': False, 'unknown': True, 'reason': 'call origin with no resolvable symbol without a typed constructor witness', 'source_witness': 'source-names-field-or-type', 'field_sensitive_owner': {'kind': 'unknown', 'why': 'indirect call result'}}], cast=True",
+      "transformation": "prove the member target set from the declared static instances; then add a second valid instance, a writer storing an undeclared value, a writer whose base is not the context type, and a c_void entry parameter whose body cast names the context type",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "chain": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1008",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 2,
+            "instructions_scanned": 5,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 1,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0x0",
+              "owner_type": "Key"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "key",
+                "field_type": "*const Key",
+                "offset": "0x0",
+                "owner": "Ctx",
+                "pointee": "Key"
+              },
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0x0",
+                "owner": "Key",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/chain.rs:6",
+            "field": "hw",
+            "field_key": "Key.hw@0x0",
+            "object": "Key",
+            "offset": "0x0"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/chain.rs:10",
+              "function": "init_a",
+              "store_site": "0x2004",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        },
+        "disjoint": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1008",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 1,
+            "functions_scanned": 3,
+            "instructions_scanned": 6,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 1,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0x0",
+              "owner_type": "Key"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [
+            {
+              "excluded": true,
+              "exclusion": "different-owner-type",
+              "field_sensitive_owner": null,
+              "function": "vector_other",
+              "origin": "entry-parameter",
+              "origin_kind": "param",
+              "qualified": false,
+              "reason": "base is an entry value of declared type param0:*mut Other, not Key",
+              "store_site": "0x2400"
+            }
+          ],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "key",
+                "field_type": "*const Key",
+                "offset": "0x0",
+                "owner": "Ctx",
+                "pointee": "Key"
+              },
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0x0",
+                "owner": "Key",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/chain.rs:6",
+            "field": "hw",
+            "field_key": "Key.hw@0x0",
+            "object": "Key",
+            "offset": "0x0"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/chain.rs:10",
+              "function": "init_a",
+              "store_site": "0x2004",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        },
+        "other": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1008",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 1,
+            "functions_scanned": 3,
+            "instructions_scanned": 7,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 1,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0x0",
+              "owner_type": "Key"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [
+            {
+              "excluded": true,
+              "exclusion": "different-owner-type",
+              "field_sensitive_owner": null,
+              "function": "other_init",
+              "origin": "entry-parameter",
+              "origin_kind": "param",
+              "qualified": false,
+              "reason": "base is an entry value of declared type param0:*mut Other, not Key",
+              "store_site": "0x2204"
+            }
+          ],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "key",
+                "field_type": "*const Key",
+                "offset": "0x0",
+                "owner": "Ctx",
+                "pointee": "Key"
+              },
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0x0",
+                "owner": "Key",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/chain.rs:6",
+            "field": "hw",
+            "field_key": "Key.hw@0x0",
+            "object": "Key",
+            "offset": "0x0"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/chain.rs:10",
+              "function": "init_a",
+              "store_site": "0x2004",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        },
+        "overlap": {
+          "call_site": "0x1008",
+          "class": "nested-static-instance",
+          "contract_bounded": false,
+          "function": "consumer",
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "overlapping_non_scalar_stores": [
+            {
+              "base": {
+                "declared_role": "param0",
+                "declared_type": "*mut Key",
+                "exact": true,
+                "function": "vector_same",
+                "origin": "entry-parameter",
+                "origin_kind": "param",
+                "prefix": [
+                  "Key"
+                ],
+                "qualified": true,
+                "store_site": "0x2300",
+                "witness": "src/chain.rs:10"
+              },
+              "function": "vector_same",
+              "mnemonic": "movups",
+              "store_site": "0x2300",
+              "width": 16
+            }
+          ],
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "key",
+                "field_type": "*const Key",
+                "offset": "0x0",
+                "owner": "Ctx",
+                "pointee": "Key"
+              },
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0x0",
+                "owner": "Key",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/chain.rs:6",
+            "field": "hw",
+            "field_key": "Key.hw@0x0",
+            "object": "Key",
+            "offset": "0x0"
+          },
+          "refusal": "writer-set-incomplete",
+          "resolved": false,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "source_excluded_stores": [],
+          "stores_at_slot": 2,
+          "unaccounted_values": [],
+          "unproven_base_stores": []
+        },
+        "widened": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1008",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 3,
+            "instructions_scanned": 7,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 2,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 2,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0x0",
+              "owner_type": "Key"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            },
+            {
+              "addr": "0x9100",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f2",
+                  "value": "0x3200"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_B"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "key",
+                "field_type": "*const Key",
+                "offset": "0x0",
+                "owner": "Ctx",
+                "pointee": "Key"
+              },
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0x0",
+                "owner": "Key",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/chain.rs:6",
+            "field": "hw",
+            "field_key": "Key.hw@0x0",
+            "object": "Key",
+            "offset": "0x0"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/chain.rs:10",
+              "function": "init_a",
+              "store_site": "0x2004",
+              "values": [
+                "0x9000"
+              ]
+            },
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/chain.rs:10",
+              "function": "init_b",
+              "store_site": "0x2104",
+              "values": [
+                "0x9100"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100",
+            "0x3200"
+          ]
+        }
+      },
+      "expected_property": "the chain proves {0x3100}; a second Key writer widens it to {0x3100,0x3200}; the Other store is not counted and does not break the proof; the same-type vector copy refuses as writer-set-incomplete; the different-type vector copy is disjoint",
+      "id": "s2b-nested-chain-field-writer-index",
+      "input": "a one-level object chain ctx->key->hw whose table pointer field is written at one displacement by several possible owning types",
+      "observed_result": "chain=True, widened=True, other=True, overlap=True, disjoint=True",
+      "transformation": "resolve only the writers keyed by (Key, hw@0); add a second Key writer, a same-displacement Other writer, a same-type vector copy, and a different-type vector copy",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "bad": {
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "contract_bounded": false,
+          "function": "consumer",
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x0"
+          },
+          "overlapping_non_scalar_stores": [],
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const FnSlot",
+                "offset": "0xb0",
+                "owner": "Ctx",
+                "pointee": "FnSlot"
+              }
+            ],
+            "declaration": "src/const_table.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb0",
+            "object": "Ctx",
+            "offset": "0xb0"
+          },
+          "refusal": "writer-set-incomplete",
+          "resolved": false,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "source_excluded_stores": [],
+          "stores_at_slot": 1,
+          "unaccounted_values": [
+            {
+              "function": "set_hw",
+              "reason": "local-const-table-element-not-function",
+              "store_site": "0x200a"
+            }
+          ],
+          "unproven_base_stores": []
+        },
+        "three": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 2,
+            "instructions_scanned": 8,
+            "local_const_tables": 3,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 1,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0xb0",
+              "owner_type": "Ctx"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "FnSlot",
+              "members": {
+                "0x0": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "anon.const.methods+0x0"
+            },
+            {
+              "addr": "0x9008",
+              "declared_type": "FnSlot",
+              "members": {
+                "0x0": {
+                  "symbol": "f2",
+                  "value": "0x3200"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "anon.const.methods+0x8"
+            },
+            {
+              "addr": "0x9010",
+              "declared_type": "FnSlot",
+              "members": {
+                "0x0": {
+                  "symbol": "f3",
+                  "value": "0x3300"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "anon.const.methods+0x10"
+            }
+          ],
+          "local_const_tables": [
+            {
+              "base": "0x9000",
+              "count": 3,
+              "elements": [
+                "0x9000",
+                "0x9008",
+                "0x9010"
+              ],
+              "size": "0x18",
+              "stride": "0x8",
+              "symbol": "anon.const.methods"
+            },
+            {
+              "base": "0x9000",
+              "count": 3,
+              "elements": [
+                "0x9000",
+                "0x9008",
+                "0x9010"
+              ],
+              "size": "0x18",
+              "stride": "0x8",
+              "symbol": "anon.const.methods"
+            },
+            {
+              "base": "0x9000",
+              "count": 3,
+              "elements": [
+                "0x9000",
+                "0x9008",
+                "0x9010"
+              ],
+              "size": "0x18",
+              "stride": "0x8",
+              "symbol": "anon.const.methods"
+            }
+          ],
+          "member": {
+            "name": "f",
+            "offset": "0x0",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x0"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const FnSlot",
+                "offset": "0xb0",
+                "owner": "Ctx",
+                "pointee": "FnSlot"
+              }
+            ],
+            "declaration": "src/const_table.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb0",
+            "object": "Ctx",
+            "offset": "0xb0"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/const_table.rs:10",
+              "function": "set_hw",
+              "store_site": "0x200a",
+              "values": [
+                "0x9000",
+                "0x9008",
+                "0x9010"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100",
+            "0x3200",
+            "0x3300"
+          ]
+        },
+        "two": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 2,
+            "instructions_scanned": 8,
+            "local_const_tables": 2,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 1,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0xb0",
+              "owner_type": "Ctx"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "FnSlot",
+              "members": {
+                "0x0": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "anon.const.methods+0x0"
+            },
+            {
+              "addr": "0x9008",
+              "declared_type": "FnSlot",
+              "members": {
+                "0x0": {
+                  "symbol": "f2",
+                  "value": "0x3200"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "anon.const.methods+0x8"
+            }
+          ],
+          "local_const_tables": [
+            {
+              "base": "0x9000",
+              "count": 2,
+              "elements": [
+                "0x9000",
+                "0x9008"
+              ],
+              "size": "0x10",
+              "stride": "0x8",
+              "symbol": "anon.const.methods"
+            },
+            {
+              "base": "0x9000",
+              "count": 2,
+              "elements": [
+                "0x9000",
+                "0x9008"
+              ],
+              "size": "0x10",
+              "stride": "0x8",
+              "symbol": "anon.const.methods"
+            }
+          ],
+          "member": {
+            "name": "f",
+            "offset": "0x0",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x0"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const FnSlot",
+                "offset": "0xb0",
+                "owner": "Ctx",
+                "pointee": "FnSlot"
+              }
+            ],
+            "declaration": "src/const_table.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb0",
+            "object": "Ctx",
+            "offset": "0xb0"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/const_table.rs:10",
+              "function": "set_hw",
+              "store_site": "0x200a",
+              "values": [
+                "0x9000",
+                "0x9008"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100",
+            "0x3200"
+          ]
+        }
+      },
+      "expected_property": "the phi proves exactly {0x3100,0x3200}; the length comes from the containing symbol and stride, so the 3-element table proves the complete {0x3100,0x3200,0x3300} even though only two leas name it; a non-function member refuses with the specific element reason",
+      "id": "s2b-nested-local-const-table-phi",
+      "input": "a context pointer field whose value is a CFG phi of two leas into one in-image const table, with the consumer calling slot.f",
+      "observed_result": "two=True, three=True, bad=True",
+      "transformation": "prove the two selected elements; then declare a third element no lea selects; then make one element's selected member a non-function",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "copied": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1008",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 3,
+            "instructions_scanned": 7,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 1,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 2,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0x0",
+              "owner_type": "Key"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "key",
+                "field_type": "*const Key",
+                "offset": "0x0",
+                "owner": "Ctx",
+                "pointee": "Key"
+              },
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0x0",
+                "owner": "Key",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/chain.rs:6",
+            "field": "hw",
+            "field_key": "Key.hw@0x0",
+            "object": "Key",
+            "offset": "0x0"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [
+            {
+              "dest_origin": "entry-parameter",
+              "field_offset": 0,
+              "function": "copy_key",
+              "layout_size": 16,
+              "origin": "same-owner-overlapping-copy",
+              "source_load": "0x2500",
+              "source_origin": "entry-parameter",
+              "source_owner": "Key",
+              "source_symbol_basis": null,
+              "source_symbol_owner": null,
+              "store_offset": 0,
+              "store_site": "0x2502",
+              "width": 16
+            }
+          ],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/chain.rs:10",
+              "function": "init_a",
+              "store_site": "0x2004",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        },
+        "unsourced": {
+          "call_site": "0x1008",
+          "class": "nested-static-instance",
+          "contract_bounded": false,
+          "function": "consumer",
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "overlapping_non_scalar_stores": [
+            {
+              "base": {
+                "declared_role": "param0",
+                "declared_type": "*mut Key",
+                "exact": true,
+                "function": "vector_same",
+                "origin": "entry-parameter",
+                "origin_kind": "param",
+                "prefix": [
+                  "Key"
+                ],
+                "qualified": true,
+                "store_site": "0x2300",
+                "witness": "src/chain.rs:10"
+              },
+              "function": "vector_same",
+              "mnemonic": "movups",
+              "store_site": "0x2300",
+              "width": 16
+            }
+          ],
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "key",
+                "field_type": "*const Key",
+                "offset": "0x0",
+                "owner": "Ctx",
+                "pointee": "Key"
+              },
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0x0",
+                "owner": "Key",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/chain.rs:6",
+            "field": "hw",
+            "field_key": "Key.hw@0x0",
+            "object": "Key",
+            "offset": "0x0"
+          },
+          "refusal": "writer-set-incomplete",
+          "resolved": false,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "source_excluded_stores": [],
+          "stores_at_slot": 2,
+          "unaccounted_values": [],
+          "unproven_base_stores": []
+        }
+      },
+      "expected_property": "the same-owner whole-object copy is accounted and the proven set is unchanged ({0x3100}); a copy without a source witness still refuses",
+      "id": "s2b-nested-same-owner-whole-struct-copy",
+      "input": "a Key.hw pointer field plus a whole-Key copy from another Key object",
+      "observed_result": "copied=True, unsourced=True",
+      "transformation": "add a copy that loads offset 0 of a same-owner source and stores it at offset 0 of the destination; keep a copy with no source witness",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "copied": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1008",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 3,
+            "instructions_scanned": 7,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 1,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 2,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0x0",
+              "owner_type": "Key"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "key",
+                "field_type": "*const Key",
+                "offset": "0x0",
+                "owner": "Ctx",
+                "pointee": "Key"
+              },
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0x0",
+                "owner": "Key",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/sym.rs:6",
+            "field": "hw",
+            "field_key": "Key.hw@0x0",
+            "object": "Key",
+            "offset": "0x0"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [
+            {
+              "dest_origin": "entry-parameter+symbol-receiver",
+              "field_offset": 0,
+              "function": "_RNvMs_Key_copy",
+              "layout_size": 16,
+              "origin": "same-owner-overlapping-copy",
+              "source_load": "0x2600",
+              "source_origin": "entry-parameter+symbol-receiver",
+              "source_owner": "Key",
+              "source_symbol_basis": "method-receiver",
+              "source_symbol_owner": "Key",
+              "store_offset": 0,
+              "store_site": "0x2604",
+              "width": 16
+            }
+          ],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter+symbol-receiver",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": "method-receiver",
+              "base_symbol_owner": "Key",
+              "base_witness": null,
+              "function": "_RNvMs_Key_store",
+              "store_site": "0x2304",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        },
+        "other": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1008",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 1,
+            "functions_scanned": 3,
+            "instructions_scanned": 7,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 1,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0x0",
+              "owner_type": "Key"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [
+            {
+              "exclusion": "different-owner-type",
+              "field_sensitive_owner": "Other",
+              "function": "_RNvMs_Other_store",
+              "origin_kind": "param",
+              "qualified": false,
+              "reason": "entry-parameter origin without a source signature",
+              "store_site": "0x2404",
+              "symbol": "<openssl_rs[abc]::sym::Other as openssl_rs[abc]::sym::Store>::store",
+              "symbol_basis": "method-receiver",
+              "symbol_origin": "entry-parameter+symbol-receiver",
+              "symbol_owner": "Other",
+              "unknown": true
+            }
+          ],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "key",
+                "field_type": "*const Key",
+                "offset": "0x0",
+                "owner": "Ctx",
+                "pointee": "Key"
+              },
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0x0",
+                "owner": "Key",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/sym.rs:6",
+            "field": "hw",
+            "field_key": "Key.hw@0x0",
+            "object": "Key",
+            "offset": "0x0"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter+symbol-receiver",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": "method-receiver",
+              "base_symbol_owner": "Key",
+              "base_witness": null,
+              "function": "_RNvMs_Key_store",
+              "store_site": "0x2304",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        },
+        "typed": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1008",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 2,
+            "instructions_scanned": 5,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 1,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0x0",
+              "owner_type": "Key"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "key",
+                "field_type": "*const Key",
+                "offset": "0x0",
+                "owner": "Ctx",
+                "pointee": "Key"
+              },
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0x0",
+                "owner": "Key",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/sym.rs:6",
+            "field": "hw",
+            "field_key": "Key.hw@0x0",
+            "object": "Key",
+            "offset": "0x0"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter+symbol-receiver",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": "method-receiver",
+              "base_symbol_owner": "Key",
+              "base_witness": null,
+              "function": "_RNvMs_Key_store",
+              "store_site": "0x2304",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        },
+        "undem": {
+          "call_site": "0x1008",
+          "class": "nested-static-instance",
+          "contract_bounded": false,
+          "function": "consumer",
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "overlapping_non_scalar_stores": [],
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "key",
+                "field_type": "*const Key",
+                "offset": "0x0",
+                "owner": "Ctx",
+                "pointee": "Key"
+              },
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0x0",
+                "owner": "Key",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/sym.rs:6",
+            "field": "hw",
+            "field_key": "Key.hw@0x0",
+            "object": "Key",
+            "offset": "0x0"
+          },
+          "refusal": "writer-set-incomplete",
+          "resolved": false,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "source_excluded_stores": [],
+          "stores_at_slot": 2,
+          "unaccounted_values": [],
+          "unproven_base_stores": [
+            {
+              "field_sensitive_owner": {
+                "kind": "unknown",
+                "why": "entry parameter has no unique owner type"
+              },
+              "function": "_Rundemanglable_zzz",
+              "origin_kind": "param",
+              "qualified": false,
+              "reason": "entry-parameter origin without a source signature",
+              "source_witness": "no-source",
+              "store_site": "0x2504",
+              "unknown": true
+            }
+          ]
+        }
+      },
+      "expected_property": "the Key symbol writer is counted; the Other symbol writer is excluded with Other as the witness; the undemanglable symbol keeps the writer-set-incomplete refusal; the same-owner copy adds no target and leaves the set at {0x3100}",
+      "id": "s2b-nested-symbol-writer-typing",
+      "input": "a Key.hw writer whose source is absent but whose mangled method symbol names the receiver type",
+      "observed_result": "typed=True, other=True, undem=[{'function': '_Rundemanglable_zzz', 'store_site': '0x2504', 'origin_kind': 'param', 'qualified': False, 'unknown': True, 'reason': 'entry-parameter origin without a source signature', 'source_witness': 'no-source', 'field_sensitive_owner': {'kind': 'unknown', 'why': 'entry parameter has no unique owner type'}}], copied=True",
+      "transformation": "add a symbol-typed Key writer, a symbol-typed Other writer, an undemanglable writer symbol, and a same-owner whole-Key copy",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "key": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1008",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 2,
+            "instructions_scanned": 5,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 1,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0x0",
+              "owner_type": "Key"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "key",
+                "field_type": "*const Key",
+                "offset": "0x0",
+                "owner": "Ctx",
+                "pointee": "Key"
+              },
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0x0",
+                "owner": "Key",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/sym.rs:6",
+            "field": "hw",
+            "field_key": "Key.hw@0x0",
+            "object": "Key",
+            "offset": "0x0"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter+symbol-generic",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": "generic-argument",
+              "base_symbol_owner": "Key",
+              "base_witness": null,
+              "function": "_Rdrop_in_place_generic",
+              "store_site": "0x2704",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        },
+        "none": {
+          "call_site": "0x1008",
+          "class": "nested-static-instance",
+          "contract_bounded": false,
+          "function": "consumer",
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "overlapping_non_scalar_stores": [],
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "key",
+                "field_type": "*const Key",
+                "offset": "0x0",
+                "owner": "Ctx",
+                "pointee": "Key"
+              },
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0x0",
+                "owner": "Key",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/sym.rs:6",
+            "field": "hw",
+            "field_key": "Key.hw@0x0",
+            "object": "Key",
+            "offset": "0x0"
+          },
+          "refusal": "writer-set-incomplete",
+          "resolved": false,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "source_excluded_stores": [],
+          "stores_at_slot": 1,
+          "unaccounted_values": [],
+          "unproven_base_stores": [
+            {
+              "field_sensitive_owner": {
+                "kind": "unknown",
+                "why": "entry parameter has no unique owner type"
+              },
+              "function": "_Rdrop_in_place_generic",
+              "origin_kind": "param",
+              "qualified": false,
+              "reason": "entry-parameter origin without a source signature",
+              "source_witness": "no-source",
+              "store_site": "0x2704",
+              "unknown": true
+            }
+          ]
+        },
+        "other": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1008",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 1,
+            "functions_scanned": 3,
+            "instructions_scanned": 7,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 1,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0x0",
+              "owner_type": "Key"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [
+            {
+              "exclusion": "different-owner-type",
+              "field_sensitive_owner": "Other",
+              "function": "_Rdrop_in_place_generic",
+              "origin_kind": "param",
+              "qualified": false,
+              "reason": "entry-parameter origin without a source signature",
+              "store_site": "0x2704",
+              "symbol": "core::ptr::drop_in_place<openssl_rs[abc]::sym::Other>",
+              "symbol_basis": "generic-argument",
+              "symbol_origin": "entry-parameter+symbol-generic",
+              "symbol_owner": "Other",
+              "unknown": true
+            }
+          ],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "key",
+                "field_type": "*const Key",
+                "offset": "0x0",
+                "owner": "Ctx",
+                "pointee": "Key"
+              },
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0x0",
+                "owner": "Key",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/sym.rs:6",
+            "field": "hw",
+            "field_key": "Key.hw@0x0",
+            "object": "Key",
+            "offset": "0x0"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter+symbol-receiver",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": "method-receiver",
+              "base_symbol_owner": "Key",
+              "base_witness": null,
+              "function": "_RNvMs_Key_store",
+              "store_site": "0x2304",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        },
+        "two": {
+          "call_site": "0x1008",
+          "class": "nested-static-instance",
+          "contract_bounded": false,
+          "function": "consumer",
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "overlapping_non_scalar_stores": [],
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "key",
+                "field_type": "*const Key",
+                "offset": "0x0",
+                "owner": "Ctx",
+                "pointee": "Key"
+              },
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0x0",
+                "owner": "Key",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/sym.rs:6",
+            "field": "hw",
+            "field_key": "Key.hw@0x0",
+            "object": "Key",
+            "offset": "0x0"
+          },
+          "refusal": "writer-set-incomplete",
+          "resolved": false,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "source_excluded_stores": [],
+          "stores_at_slot": 1,
+          "unaccounted_values": [],
+          "unproven_base_stores": [
+            {
+              "field_sensitive_owner": {
+                "kind": "unknown",
+                "why": "entry parameter has no unique owner type"
+              },
+              "function": "_Rdrop_in_place_generic",
+              "origin_kind": "param",
+              "qualified": false,
+              "reason": "entry-parameter origin without a source signature",
+              "source_witness": "no-source",
+              "store_site": "0x2704",
+              "unknown": true
+            }
+          ]
+        }
+      },
+      "expected_property": "the Key instantiation is counted for Key.hw; the Other instantiation is excluded as a different owner; the untyped and two-type symbols stay unqualified and keep the writer-set-incomplete refusal",
+      "id": "s2b-nested-symbol-generic-writer-typing",
+      "input": "a sourceless Key.hw writer whose only type evidence is the generic argument of the enclosing whole-object primitive symbol",
+      "observed_result": "key=True, other=True, none=True, two=True",
+      "transformation": "use drop_in_place<Key>, drop_in_place<Other>, a symbol with no type argument, and a symbol naming two candidate types",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "ambiguous": {
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "contract_bounded": false,
+          "function": "consumer",
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "overlapping_non_scalar_stores": [],
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/alloc_size.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "refusal": "writer-set-incomplete",
+          "resolved": false,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "source_excluded_stores": [],
+          "stores_at_slot": 1,
+          "unaccounted_values": [],
+          "unproven_base_stores": [
+            {
+              "field_sensitive_owner": {
+                "candidates": [
+                  "Wide",
+                  "WideB"
+                ],
+                "kind": "unknown",
+                "why": "allocation-size 0xd0 is ambiguous at 0xb8: Wide, WideB"
+              },
+              "function": "alloc_writer",
+              "origin_kind": "alloc",
+              "qualified": false,
+              "reason": "call origin to CRYPTO_zalloc without a typed constructor witness",
+              "source_witness": "no-source",
+              "store_site": "0x2011",
+              "unknown": true
+            }
+          ]
+        },
+        "dynamic": {
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "contract_bounded": false,
+          "function": "consumer",
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "overlapping_non_scalar_stores": [],
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/alloc_size.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "refusal": "writer-set-incomplete",
+          "resolved": false,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "source_excluded_stores": [],
+          "stores_at_slot": 1,
+          "unaccounted_values": [],
+          "unproven_base_stores": [
+            {
+              "field_sensitive_owner": {
+                "kind": "unknown",
+                "why": "allocation-size-unresolved: CRYPTO_zalloc"
+              },
+              "function": "alloc_writer",
+              "origin_kind": "alloc-unknown",
+              "qualified": false,
+              "reason": "call origin to CRYPTO_zalloc without a typed constructor witness",
+              "source_witness": "no-source",
+              "store_site": "0x200e",
+              "unknown": true
+            }
+          ]
+        },
+        "unique": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 2,
+            "instructions_scanned": 7,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 1,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0xb8",
+              "owner_type": "Ctx"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/alloc_size.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": null,
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": null,
+              "function": "alloc_writer",
+              "store_site": "0x2011",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        },
+        "wrong_base": {
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "contract_bounded": false,
+          "function": "consumer",
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "overlapping_non_scalar_stores": [],
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/alloc_size.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "refusal": "writer-set-incomplete",
+          "resolved": false,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "source_excluded_stores": [],
+          "stores_at_slot": 1,
+          "unaccounted_values": [],
+          "unproven_base_stores": [
+            {
+              "field_sensitive_owner": {
+                "kind": "unknown",
+                "why": "allocation is not the store base"
+              },
+              "function": "alloc_writer",
+              "origin_kind": "load",
+              "qualified": false,
+              "reason": "load origin with no decidable owning type",
+              "source_witness": "no-source",
+              "store_site": "0x2014",
+              "unknown": true
+            }
+          ]
+        }
+      },
+      "expected_property": "a unique-size layout proves and is counted; two same-size layouts refuse with both named; a dynamic size refuses; a load from the allocation is not the store base and refuses",
+      "id": "s2b-nested-allocation-size-attribution",
+      "input": "a context field written through an in-function CRYPTO_zalloc of a known block size",
+      "observed_result": "unique=True, ambiguous=True, dynamic=True, wrong_base=True",
+      "transformation": "attribute the writer only when exactly one declared layout of that size has a field covering the store displacement",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "body": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 2,
+            "instructions_scanned": 7,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 1,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0xb8",
+              "owner_type": "Ctx"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/alloc_size.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": null,
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": null,
+              "function": "alloc_writer",
+              "store_site": "0x2011",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        },
+        "box": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 2,
+            "instructions_scanned": 7,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 1,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0xb8",
+              "owner_type": "Ctx"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/alloc_size.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": null,
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": null,
+              "function": "alloc_writer",
+              "store_site": "0x2011",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        },
+        "ctor": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 2,
+            "instructions_scanned": 7,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 1,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0xb8",
+              "owner_type": "Ctx"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/alloc_size.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": null,
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": null,
+              "function": "alloc_writer",
+              "store_site": "0x2011",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        },
+        "fallback": {
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "contract_bounded": false,
+          "function": "consumer",
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "overlapping_non_scalar_stores": [],
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/alloc_size.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "refusal": "writer-set-incomplete",
+          "resolved": false,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "source_excluded_stores": [],
+          "stores_at_slot": 1,
+          "unaccounted_values": [],
+          "unproven_base_stores": [
+            {
+              "field_sensitive_owner": {
+                "candidates": [
+                  "Wide",
+                  "WideB"
+                ],
+                "kind": "unknown",
+                "why": "allocation-size 0xd0 is ambiguous at 0xb8: Wide, WideB"
+              },
+              "function": "alloc_writer",
+              "origin_kind": "alloc",
+              "qualified": false,
+              "reason": "call origin to CRYPTO_zalloc without a typed constructor witness",
+              "source_witness": "source-has-raw-store-primitive",
+              "store_site": "0x2011",
+              "unknown": true
+            }
+          ]
+        },
+        "generic": {
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "contract_bounded": false,
+          "function": "consumer",
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "overlapping_non_scalar_stores": [],
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/alloc_size.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "refusal": "writer-set-incomplete",
+          "resolved": false,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "source_excluded_stores": [],
+          "stores_at_slot": 1,
+          "unaccounted_values": [],
+          "unproven_base_stores": [
+            {
+              "field_sensitive_owner": {
+                "allocation_type_rule": "refused",
+                "candidates": null,
+                "kind": "unknown",
+                "why": "allocation constructor alloc returns '*mut T', whose pointee is not a concrete declared type"
+              },
+              "function": "alloc_writer",
+              "origin_kind": "alloc",
+              "qualified": false,
+              "reason": "call origin to alloc without a typed constructor witness",
+              "source_witness": "source-has-raw-store-primitive",
+              "store_site": "0x2011",
+              "unknown": true
+            }
+          ]
+        }
+      },
+      "expected_property": "Box::<Wide>::new proves Wide despite a same-size peer; a constructor returning *mut Wide proves Wide despite a same-size peer; with no form the size fallback still refuses and names both; a constructor whose return type is not concrete refuses instead of falling back; a wrapper whose whole body is one mapped call reads rule 1 in that callee",
+      "id": "s2b-nested-allocation-declared-type",
+      "input": "an allocation whose block size is shared by another declared layout",
+      "observed_result": "box=True, ctor=True, fallback=True, generic=True, body=True",
+      "transformation": "prefer the type written at the allocation site, then the constructor's concrete return type, and use the size only when both are absent",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "result": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 3,
+            "instructions_scanned": 7,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 2,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 2,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0xb8",
+              "owner_type": "Ctx"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/points.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/points.rs:10",
+              "function": "test_writer",
+              "store_site": "0x2008",
+              "values": [
+                "0x9000"
+              ]
+            },
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/points.rs:10",
+              "function": "init_a",
+              "store_site": "0x2104",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        }
+      },
+      "expected_property": "the store is a writer for Ctx.hw and the slot resolves to {0x3100}",
+      "id": "s2b3-points-to-reborrow",
+      "input": "a Ctx.hw writer whose base is a zero-offset reborrow of the entry parameter (``lea 0(%rdi),%rax``)",
+      "observed_result": "['0x3100']",
+      "transformation": "propagate the parameter binding through the reborrow",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "result": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 3,
+            "instructions_scanned": 8,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 2,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 2,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0xb8",
+              "owner_type": "Ctx"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/points.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": null,
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": null,
+              "function": "test_writer",
+              "store_site": "0x200c",
+              "values": [
+                "0x9000"
+              ]
+            },
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/points.rs:10",
+              "function": "init_a",
+              "store_site": "0x2104",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        }
+      },
+      "expected_property": "the second load yields Ctx and the slot resolves to {0x3100}",
+      "id": "s2b3-points-to-field-chain",
+      "input": "a Ctx.hw writer reached through Ctx.mid then Mid.ctx",
+      "observed_result": "['0x3100']",
+      "transformation": "load the declared pointee type at each declared field offset",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "result": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 0,
+            "functions_scanned": 3,
+            "instructions_scanned": 11,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 2,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 0,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 2,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0xb8",
+              "owner_type": "Ctx"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/points.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "points-to",
+              "base_points_to_owner": "Ctx",
+              "base_points_to_via": "merge",
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "merge",
+              "function": "test_writer",
+              "store_site": "0x201c",
+              "values": [
+                "0x9000"
+              ]
+            },
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/points.rs:10",
+              "function": "init_a",
+              "store_site": "0x2104",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        }
+      },
+      "expected_property": "the merge is Ctx and the slot resolves to {0x3100}",
+      "id": "s2b3-points-to-merge-agree",
+      "input": "a store base defined by two branches, both reborrows of the same Ctx parameter",
+      "observed_result": "['0x3100']",
+      "transformation": "evaluate every reaching definition and qualify only on agreement",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "result": {
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "contract_bounded": false,
+          "function": "consumer",
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "overlapping_non_scalar_stores": [],
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/points.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "refusal": "writer-set-incomplete",
+          "resolved": false,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "source_excluded_stores": [],
+          "stores_at_slot": 2,
+          "unaccounted_values": [],
+          "unproven_base_stores": [
+            {
+              "field_sensitive_owner": {
+                "kind": "unknown",
+                "points_to_refusal": {
+                  "arms": [
+                    {
+                      "offset": 0,
+                      "type": "Ctx"
+                    },
+                    {
+                      "offset": 0,
+                      "type": "Other"
+                    }
+                  ],
+                  "candidates": [
+                    "Ctx",
+                    "Other"
+                  ],
+                  "kind": "unknown",
+                  "origin": "points-to",
+                  "why": "points-to merge disagrees: Ctx, Other"
+                },
+                "why": "multiple reaching definitions: 0x2008, 0x2010"
+              },
+              "function": "test_writer",
+              "origin_kind": "unknown",
+              "qualified": false,
+              "reason": "unproven base origin: multiple reaching definitions: 0x2008, 0x2010",
+              "source_witness": "source-names-field-or-type",
+              "store_site": "0x201c",
+              "unknown": true
+            }
+          ]
+        }
+      },
+      "expected_property": "writer-set-incomplete is kept and both disagreeing types are named",
+      "id": "s2b3-points-to-merge-disagree",
+      "input": "a store base defined by one Ctx arm and one Other arm",
+      "observed_result": "resolved=False, named=True",
+      "transformation": "refuse the merge unless every reaching definition agrees",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "result": {
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "contract_bounded": false,
+          "function": "consumer",
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "overlapping_non_scalar_stores": [
+            {
+              "base": {
+                "function": "test_writer",
+                "origin_kind": "param",
+                "qualified": false,
+                "reason": "entry-parameter origin without a source signature",
+                "store_site": "0x2004",
+                "unknown": true
+              },
+              "function": "test_writer",
+              "mnemonic": "movups",
+              "store_site": "0x2004",
+              "width": 16
+            }
+          ],
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/points.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "refusal": "writer-set-incomplete",
+          "resolved": false,
+          "same_owner_whole_struct_copies": [],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "source_excluded_stores": [],
+          "stores_at_slot": 2,
+          "unaccounted_values": [],
+          "unproven_base_stores": []
+        }
+      },
+      "expected_property": "the owner stays unknown and writer-set-incomplete is kept",
+      "id": "s2b3-points-to-copy-unknown",
+      "input": "an overlapping 16-byte copy whose writer has no source and no typed base",
+      "observed_result": "resolved=False",
+      "transformation": "apply the same propagation to the copy's base",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "result": {
+          "basis": "a second-level static-instance dispatch resolved through a field-sensitive (owning type, member offset) writer index: each hop's declared pointee type is taken from the source layout (a one-level object chain is supported), and every store that can write the final pointer field writes a declared static instance of that type (or NULL); the selected member of every stored instance is an in-image function start",
+          "call_site": "0x1004",
+          "class": "nested-static-instance",
+          "completeness": {
+            "excluded_different_object_stores": 2,
+            "functions_scanned": 5,
+            "instructions_scanned": 13,
+            "local_const_tables": 0,
+            "overlapping_non_scalar_stores": 0,
+            "qualified_writers": 1,
+            "rule": "every instruction of every function in the analysed image was scanned into a displacement index; every store at the final field's declared member offset (and every non-scalar store whose byte range covers it) is keyed by its owning type: this field's type is a writer, a provably different non-prefix type is disjoint, and an unestablished type is unqualified and either excluded by a source-level negative witness or refuses the site.  A store at a different displacement cannot write the field.  Each hop of a chain contributes only its declared type, never a stored value.  A writer value that is a phi or select of lea instructions into one in-image constant table resolves to every element of that table: the length is the containing immutable symbol's size divided by the declared element stride, so the set is complete even when a branch selects only some elements, and every element's selected member must be an in-image function start.  A non-scalar store that genuinely overlaps the field refuses unless it is a same-owner whole-object copy: such a copy starts at byte 0, covers the whole declared layout, and loads its bytes from the same offset of an object proven to be the same owner type, so it can only propagate a value the field's own writers already produce and adds no target.  No value is inferred from a declared name.",
+            "same_owner_whole_struct_copies": 1,
+            "source_excluded_stores": 0,
+            "stores_at_slot": 2,
+            "unaccounted_values": 0,
+            "unproven_base_stores": 0,
+            "writer_index_key": {
+              "field": "hw",
+              "offset": "0xb8",
+              "owner_type": "Ctx"
+            }
+          },
+          "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values"
+          ],
+          "contract_bounded": false,
+          "excluded_different_object_stores": [
+            {
+              "excluded": true,
+              "exclusion": "different-owner-type",
+              "field_sensitive_owner": null,
+              "function": "test_writer",
+              "origin": "entry-parameter",
+              "origin_kind": "param",
+              "qualified": false,
+              "reason": "base is an entry value of declared type param0:*mut Other, not Ctx",
+              "store_site": "0x2008"
+            },
+            {
+              "excluded": true,
+              "exclusion": "different-owner-type",
+              "field_sensitive_owner": null,
+              "function": "copy_other",
+              "origin": "entry-parameter",
+              "origin_kind": "param",
+              "qualified": false,
+              "reason": "base is an entry value of declared type param0:*mut Other, not Ctx",
+              "store_site": "0x2208"
+            }
+          ],
+          "function": "consumer",
+          "instances": [
+            {
+              "addr": "0x9000",
+              "declared_type": "Hw",
+              "members": {
+                "0x0": {
+                  "symbol": "f0",
+                  "value": "0x3000"
+                },
+                "0x8": {
+                  "symbol": "f1",
+                  "value": "0x3100"
+                }
+              },
+              "prefix_compatible": false,
+              "section": ".data.rel.ro",
+              "symbol": "HW_A"
+            }
+          ],
+          "local_const_tables": [],
+          "member": {
+            "name": "cipher",
+            "offset": "0x8",
+            "type": "unsafe extern \"C\" fn(*mut Ctx) -> c_int"
+          },
+          "operand": {
+            "base_reg": "%rax",
+            "member_offset": "0x8"
+          },
+          "pointer_slot": {
+            "chain": [
+              {
+                "field": "hw",
+                "field_type": "*const Hw",
+                "offset": "0xb8",
+                "owner": "Ctx",
+                "pointee": "Hw"
+              }
+            ],
+            "declaration": "src/points.rs:2",
+            "field": "hw",
+            "field_key": "Ctx.hw@0xb8",
+            "object": "Ctx",
+            "offset": "0xb8"
+          },
+          "prefix_compatible_types": [],
+          "resolved": true,
+          "same_owner_whole_struct_copies": [
+            {
+              "dest_origin": "entry-parameter",
+              "field_offset": 184,
+              "function": "copy_same",
+              "layout_size": 16,
+              "origin": "same-owner-overlapping-copy",
+              "source_load": "0x2304",
+              "source_origin": "entry-parameter",
+              "source_owner": "Ctx",
+              "source_symbol_basis": null,
+              "source_symbol_owner": null,
+              "store_offset": 176,
+              "store_site": "0x2308",
+              "width": 16
+            }
+          ],
+          "schema": "openssl-rs/consumer-closure/nested-static-instance/v1",
+          "stored_by": [
+            {
+              "base_origin": "entry-parameter",
+              "base_points_to_owner": null,
+              "base_points_to_via": null,
+              "base_symbol_basis": null,
+              "base_symbol_owner": null,
+              "base_witness": "src/points.rs:10",
+              "function": "init_a",
+              "store_site": "0x2104",
+              "values": [
+                "0x9000"
+              ]
+            }
+          ],
+          "targets": [
+            "0x3100"
+          ]
+        }
+      },
+      "expected_property": "the different-owner copy is excluded, the same-owner copy is accounted, and the slot resolves to {0x3100}",
+      "id": "s2b3-points-to-copy-other",
+      "input": "one overlapping copy typed Other and one typed Ctx, both reached through a reborrow",
+      "observed_result": "resolved=True, disjoint=2, copies=1",
+      "transformation": "qualify each copy by propagation: Other is disjoint, Ctx is a same-owner copy",
+      "verdict": "PASS"
     }
   ],
   "claim": "stability and sensitivity evidence for the edge resolver: not a proof of soundness",
@@ -1607,12 +5376,12 @@
   "schema": "openssl-rs/campaign/safe-c33/analyzer-metamorphic-corpus/v1",
   "summary": {
     "failed": [],
-    "passed": 79,
-    "total": 79
+    "passed": 93,
+    "total": 93
   },
   "tool": {
     "covered_tool": "forensics/tools/consumer_closure.py",
-    "covered_tool_sha256": "1fd09b6f1d854a47396d7844b79b3bb654388cd6e66413c008e75dea33c37175",
+    "covered_tool_sha256": "22364c5b62ce35ab791c3a708b7479a1477272ea3fa3ffcadc5208c8b8321145",
     "edge_record_schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
     "path": "forensics/tools/analyzer_metamorphic_corpus.py"
   }

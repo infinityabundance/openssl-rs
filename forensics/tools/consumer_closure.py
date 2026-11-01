@@ -16697,6 +16697,11 @@ def build_receipt(args) -> dict:
     for o in obligations:
         adjudicate(o, mechanisms, boundaries_by_file.get(o["file"], []), plane)
         if o.get("contract") == "contracted":
+            if o.get("status") == "DISCHARGED":
+                # The queue note explains why a documented operation stayed
+                # enrolled; it must never be appended to a discharged obligation,
+                # where it would read as "not discharged" against the receipt.
+                continue
             if o.get("carried_forward_from"):
                 o["documentation_note"] = (
                     "documented (attached contract) but retained in the obligation "
@@ -16722,8 +16727,8 @@ def build_receipt(args) -> dict:
             separator = ". " if previous and not previous.rstrip().endswith(".") else " "
             o["status_reason"] = (previous + separator if previous else "") + (
                 "The operation is documented (an attached # Safety/SAFETY contract) "
-                "but remains enrolled; a contract transfers the obligation to the "
-                "caller, it does not discharge it.")
+                "but remains enrolled; the attached contract alone does not "
+                "discharge it.")
 
     suppressed = (enrollment.get("carry_forward") or {}).get("suppressed") or []
     if suppressed:
