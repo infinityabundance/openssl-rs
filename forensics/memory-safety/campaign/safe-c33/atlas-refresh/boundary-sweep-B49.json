@@ -2,15 +2,15 @@
  "receipt": "boundary-sweep-B49",
  "date": "2026-11-01",
  "campaign": "safe-c33 shared-contract establishment (E2 follow-on: the X509_VERIFY_POLICY extension-method i2r printers)",
- "subphase": "B49 starts the X509_VERIFY_POLICY mechanism (75 BLOCKED sites). The 75 are grouped by X509V3_EXT_METHOD callback family; the largest family whose dispatch is wholly ours, the 22 i2r sites, receives fn-level # Safety contracts and one dispatcher guard. The other 53 sites are enumerated and left BLOCKED. The discharge is NOT applied: CAMPAIGN-STATUS.json is untouched and the closure was not run.",
+ "subphase": "B49 starts the X509_VERIFY_POLICY mechanism (75 BLOCKED sites). The 75 are grouped by X509V3_EXT_METHOD callback family; the largest family whose dispatch is wholly ours, the 22 i2r sites, receives fn-level # Safety contracts, one dispatcher guard and a registry read/write hold that closes row liveness (R10). The other 53 sites are enumerated and left BLOCKED. The discharge is NOT applied: CAMPAIGN-STATUS.json is untouched and the closure was not run.",
  "candidate": {
-  "base_head": "ade24461d",
-  "source_state": "committed",
-  "base_commit": "ade24461d9e54ea7796b0856ee2f98f6c81f97cf",
-  "base_commit_subject": "docs(x509): contracts for the 22 i2r extension printers, and a dispatcher guard",
+  "base_head": "52ba53c11",
+  "source_state": "uncommitted delta on 52ba53c11 (no commit was made)",
+  "base_commit": "52ba53c11ece5426657e58e349c8bbef1d20cad0",
+  "base_commit_subject": "docs(x509): close B49 conditions; row liveness becomes a stated precondition",
   "parent_commit": "53a9507369251c1e3862fb9445ffe7c474c9de84",
   "branch": "stage/p25/element7-s2b",
-  "working_tree": "clean at ade24461d9e54ea7796b0856ee2f98f6c81f97cf: the 16 printer files and v3_prn.rs are committed there, and files_sha256 below is that tree. No build or install was made.",
+  "working_tree": "dirty at 52ba53c11: src/x509/v3_lib.rs and src/x509/v3_prn.rs carry the registry read/write lock, the R10 closure and two new tests (the C4 prologue test from 52ba53c11 also remains). files_sha256 below is that working tree, not a commit; the candidate must be committed and re-frozen (S') before any application. fmt/clippy/x509 tests were run in the court container against this tree.",
   "files": [
    "src/x509/v3_aaa.rs",
    "src/x509/v3_asid.rs",
@@ -19,6 +19,7 @@
    "src/x509/v3_ind_iss.rs",
    "src/x509/v3_iobo.rs",
    "src/x509/v3_ist.rs",
+   "src/x509/v3_lib.rs",
    "src/x509/v3_no_ass.rs",
    "src/x509/v3_no_rev_avail.rs",
    "src/x509/v3_pku.rs",
@@ -31,7 +32,8 @@
    "src/x509/v3_usernotice.rs"
   ],
   "files_sha256": {
-   "src/x509/v3_prn.rs": "4d0a8bf2186e29f6c636ad948e64492b79a4189ebd71c8260cd7a454c435e805",
+   "src/x509/v3_prn.rs": "27b2619bb76be9072afbb765ad0e65a7b55da25cc7f852f9e46d6ef4445949ee",
+   "src/x509/v3_lib.rs": "307261eb4eca70308d76c7910ef6cad3718b0eb9c68fb6772368a2881fe8c4f5",
    "src/x509/v3_aaa.rs": "3af623bdb7a88d59841cbac6b400506170256270f08f96615d2e6f48b8fadd6c",
    "src/x509/v3_asid.rs": "cb33ddbb8da259a547bcb9642cfcc073cfed56a90c1f1582ae0396d22e0630b2",
    "src/x509/v3_cpols.rs": "82a1cea7e92366964710dd2cc3027ab3c5b9de3491e24d455a0d4fe615345120",
@@ -50,7 +52,7 @@
    "src/x509/v3_usernotice.rs": "eb8b6ac2b8b8c53a798116082b52a730c927b00b163b0f8b9154cc32c7285d1d"
   },
   "note": "No freeze tag was created. V1 census coordinates are retained in `line`; `line_current` is bound to files_sha256.",
-  "review_correction_source_state": "uncommitted delta on ade24461d: C3 route (b) adds a row-liveness paragraph to X509V3_EXT_print's # Safety and C4 adds one prologue test, both in src/x509/v3_prn.rs (post-review sha256 e52ca5eb5a5804a15689a43f6f39cd7ee04affe7a905c28fce39529426d877d7). files_sha256 above remains the committed ade24461d tree. This delta makes the candidate S' and requires a rebuild and re-freeze plus a FAST re-run before any application; the closure was not run. The # Safety edit keeps its line count so the candidate's cited coordinates (:254-256, :279, :306-310, :341, :355) still address the same statements; the C4 test is appended after them."
+  "review_correction_source_state": "B49-R10 is now ENFORCED, not stated. src/x509/v3_lib.rs adds a CRYPTO_RWLOCK created by a CRYPTO_THREAD_run_once (REGISTRY_ONCE/REGISTRY_LOCK) over EXT_LIST and splits every entry point into a public function that takes the hold and a private `*_locked` body: X509V3_EXT_add/_add_list/_add_alias/_cleanup take the write hold; X509V3_EXT_get_nid/_get take the read hold. The authority's lazy `OPENSSL_sk_sort` moves from the lookup into ext_add_locked (under the write hold), so lookups are read-only and a read hold can span a lookup plus its use. src/x509/v3_prn.rs takes RegistryReadGuard at :271-273 and holds it across the lookup (:283), the row reads (:322-331), the i2r call (:358) and the release (:372); the 22 printers and helpers do not call any registry entry point. Two tests were added in this delta (x509::v3_prn::tests::a_dynamic_alias_prints_and_cleanup_releases_it and the load-bearing x509::v3_prn::tests::cleanup_cannot_release_a_row_while_a_print_uses_it, whose observed failure under a removed read hold is B49-C3); the C4 prologue test from 52ba53c11 remains. This delta makes the candidate S' and requires a commit, rebuild and re-freeze plus a FAST re-run before any application; the closure was not run."
  },
  "authority": {
   "id": "openssl-3.6.4-production",
@@ -191,7 +193,7 @@
   "chosen_family": {
    "family": "i2r",
    "count": 22,
-   "why": "Largest family. Every i2r site is reached only through X509V3_EXT_print (this crate) at src/x509/v3_prn.rs:341 after the row looked up from the extension NID; no other code path calls an i2r slot (grep of `(*method).i2r` finds only the slot read at src/x509/v3_prn.rs:306-310, whose value is called at :341)."
+   "why": "Largest family. Every i2r site is reached only through X509V3_EXT_print (this crate) at src/x509/v3_prn.rs:358 after the row looked up from the extension NID; no other code path calls an i2r slot (grep of `(*method).i2r` finds only the slot read at src/x509/v3_prn.rs:322-331, whose value is called at :358)."
   },
   "per_file": [
    {
@@ -352,25 +354,25 @@
    }
   ]
  },
- "shared_contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). The resolved `method` row must also stay live and unmodified for the call (B49-R10): the lookup establishes non-NULL only, and the dynamic list is unlocked.",
+ "shared_contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). The resolved `method` row is kept live and unmodified for the whole call (B49-R10 CLOSED): X509V3_EXT_print takes the extension registry's read hold at :271-273 and holds it across the lookup (:283), every row read (:322-331), the i2r call (:358) and the release (:372), while X509V3_EXT_add/_add_list/_add_alias/_cleanup take the write hold. The 22 printers and helpers do not call any registry entry point.",
  "dispatch_paths": {
-  "lookup": "X509V3_EXT_get(ext) at src/x509/v3_prn.rs:266 -> X509V3_EXT_get_nid (standard_exts[] binary search, then the dynamic ext_list)",
-  "decode": "the row item is resolved once (ext_method_item, :279): None means the old-style d2i/ext_free pair; Err means the accessor answered NULL and the call takes the failed-decode path",
-  "decode_call": "ASN1_item_d2i(NULL, &p, extlen, item) at :291-300, or method->d2i; a NULL result is refused at :300-303",
-  "slot": "the first set of i2s/i2v/i2r wins (:274-343); the i2r call is f(method, ext_str, out, indent) at :341",
-  "free": "ASN1_item_free(ext_str, item) at :355 with the same item the decode used, or method->ext_free",
-  "lifetime": "ext_str is exclusively this frame's from decode to :355 and is live across the callback; the callback must not free, retain or replace it",
-  "allocator": "no allocator is involved at the boundary: ext_str comes from the ASN.1 decoder on the CRYPTO_* seam; out is the caller's BIO"
+  "lookup": "X509V3_EXT_get(ext) at src/x509/v3_prn.rs:283 -> X509V3_EXT_get_nid (standard_exts[] binary search, then the dynamic ext_list, both under the registry read hold)",
+  "decode": "the row item is resolved once (ext_method_item, :296): None means the old-style d2i/ext_free pair; Err means the accessor answered NULL and the call takes the failed-decode path",
+  "decode_call": "ASN1_item_d2i(NULL, &p, extlen, item) at :308, or method->d2i; a NULL result is refused at :317-320",
+  "slot": "the first set of i2s/i2v/i2r wins (:334-363); the i2r call is f(method, ext_str, out, indent) at :358",
+  "free": "ASN1_item_free(ext_str, item) at :372 with the same item the decode used, or method->ext_free",
+  "lifetime": "ext_str is exclusively this frame's from decode to :372 and is live across the callback; the callback must not free, retain or replace it",
+  "allocator": "no allocator is involved at the i2r boundary: ext_str comes from the ASN.1 decoder on the CRYPTO_* seam; out is the caller's BIO. The registry lock itself is one CRYPTO_RWLOCK allocated on first use (B49-R11)"
  },
  "row_liveness": {
   "question": "Does the dispatcher establish that the row returned by X509V3_EXT_get is live against a concurrent X509V3_EXT_add/_add_alias/_cleanup, and is the reachable set only static rows?",
-  "lookup_order": "X509V3_EXT_get -> X509V3_EXT_get_nid: the STANDARD_EXTS binary search answers first (src/x509/v3_lib.rs:596-599); the dynamic EXT_LIST is consulted only when that search misses (:600-614).",
-  "callbacks_are_private": "The 22 boundary functions are module-private `unsafe [extern \"C\"] fn`s with no #[no_mangle]; the 15 slot callbacks appear only as function-pointer values in crate-owned rows, and the 7 helpers are called only from those rows.",
+  "lookup_order": "X509V3_EXT_get -> X509V3_EXT_get_nid: the STANDARD_EXTS binary search answers first (src/x509/v3_lib.rs:683-701); the dynamic EXT_LIST is consulted only when that search misses (:719-731), all under the registry read hold.",
+  "callbacks_are_private": "The 22 boundary functions are module-private `unsafe [extern \"C\"] fn`s with no #[no_mangle]; the 15 slot callbacks appear only as function-pointer values in crate-owned rows, and the 7 helpers are called only from those rows. None of the 16 printer files references X509V3_EXT_add/_add_list/_add_alias/_cleanup/_get/_get_nid, so a printer cannot re-enter a registry writer from inside the read hold.",
   "static_rows": "The 15 slot callbacks are installed only in crate-owned `pub static` method rows reached through STANDARD_EXTS; for a standard NID the dynamic list is never consulted, so those rows are process-lifetime statics that X509V3_EXT_cleanup cannot release.",
-  "dynamic_rows": "X509V3_EXT_add (src/x509/v3_lib.rs:490-509) accepts a caller row; X509V3_EXT_add_alias (:644-680) copies a row (including its i2r pointer) into a DYNAMIC allocation and registers it; X509V3_EXT_cleanup (:543-547) swaps EXT_LIST to NULL and pop_free's the list, releasing every DYNAMIC row through ext_list_free (:457-470). A dynamic alias of a standard row therefore carries one of the 22 callbacks and is reachable through the dynamic fallback for its new NID. X509V3_EXT_add_nid does not exist in this crate or in the pinned 3.6.4 authority; the registration entry points are _add, _add_list and _add_alias.",
-  "locking": "EXT_LIST is an AtomicPtr used without a list lock. The authority's ext_list is unlocked too (crypto/x509/v3_lib.c comments 'Ideally, this would be done under a lock'), and the candidate's X509V3_EXT_get_nid/_add/_add_alias/_cleanup # Safety sections state the same single-threaded contract.",
-  "crate_callers": "No non-test code in src/ calls X509V3_EXT_add/_add_list/_add_alias/_cleanup (grep); those entry points are exported ABI, so an external consumer can register a row or run cleanup.",
-  "conclusion": "Only-static-rows is NOT established: the exported registration/cleanup ABI makes a DYNAMIC alias row (carrying a standard row's i2r) reachable, and the unlocked list lets cleanup release it while a print holds the pointer. The lookup establishes non-NULLness only. Recorded as retained obligation B49-R10 and stated in X509V3_EXT_print's # Safety; the dispositions were not applied and the closure was not run."
+  "dynamic_rows": "X509V3_EXT_add (src/x509/v3_lib.rs:613-620) accepts a caller row; X509V3_EXT_add_alias (:788-827) copies a row (including its i2r pointer) into a DYNAMIC allocation and registers it; X509V3_EXT_cleanup (:661-668) swaps EXT_LIST to NULL and pop_free's the list, releasing every DYNAMIC row through ext_list_free (:544-559). A dynamic alias of a standard row therefore carries one of the 22 callbacks and is reachable through the dynamic fallback for its new NID. X509V3_EXT_add_nid does not exist in this crate or in the pinned 3.6.4 authority; the registration entry points are _add, _add_list and _add_alias.",
+  "locking": "EXT_LIST is guarded by REGISTRY_LOCK, a CRYPTO_RWLOCK created by the REGISTRY_ONCE run-once (src/x509/v3_lib.rs:437-508). Every entry point takes the hold before touching the list: X509V3_EXT_add/_add_list/_add_alias/_cleanup take the write hold; X509V3_EXT_get_nid/_get take the read hold. The authority's lazy OPENSSL_sk_sort moved from the lookup into ext_add_locked (:565-596), so the lookup is read-only. X509V3_EXT_print takes the read hold at src/x509/v3_prn.rs:271-273 and holds it across resolution and every use of the row. The 22 printers do not take the lock themselves.",
+  "crate_callers": "No non-test code in src/ calls X509V3_EXT_add/_add_list/_add_alias/_cleanup (grep); those entry points are exported ABI, so an external consumer can register a row or run cleanup. The registry lock makes concurrent registration/cleanup memory-safe.",
+  "conclusion": "Only-static-rows is NOT established: the exported registration/cleanup ABI makes a DYNAMIC alias row (carrying a standard row's i2r) reachable. B49-R10 is CLOSED by the registry read/write hold: a cleanup cannot release a dynamic row while X509V3_EXT_print is resolving or using it. The raw X509V3_EXT_get[_nid] ABI still returns a borrowed row, so an external caller that keeps using that pointer across its own X509V3_EXT_cleanup remains responsible for excluding that call; the crate's dispatcher does not rely on that. The dispositions were not applied and the closure was not run."
  },
  "defect_class": {
   "existing": "uncontracted unsafe fn definitions at 75 X509_VERIFY_POLICY sites; the i2r printer family had per-line SAFETY comments but no fn-level # Safety",
@@ -390,14 +392,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "helper called by i2r_ALLOWED_ATTRIBUTES_ITEM (v3_aaa.rs:480) and i2r_ALLOWED_ATTRIBUTES_SYNTAX (v3_aaa.rs:541); row ossl_v3_allowed_attribute_assignments, i2r slot at v3_aaa.rs:588",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_ALLOWED_ATTRIBUTES_CHOICE and its dispatch path; src/x509/v3_aaa.rs:397)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `a` is a live decoded OSSL_ALLOWED_ATTRIBUTES_CHOICE of the row's OSSL_ALLOWED_ATTRIBUTES_SYNTAX item; its selector names the live union arm (the ASN.1 decoder built the pairing; this body does not re-check it) and it reads only that value.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `a` is a live decoded OSSL_ALLOWED_ATTRIBUTES_CHOICE of the row's OSSL_ALLOWED_ATTRIBUTES_SYNTAX item; its selector names the live union arm (the ASN.1 decoder built the pairing; this body does not re-check it) and it reads only that value.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -423,14 +425,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "helper called by i2r_ALLOWED_ATTRIBUTES_SYNTAX (v3_aaa.rs:541); row ossl_v3_allowed_attribute_assignments, i2r slot at v3_aaa.rs:588",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_ALLOWED_ATTRIBUTES_ITEM and its dispatch path; src/x509/v3_aaa.rs:480)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `aai` is a live decoded OSSL_ALLOWED_ATTRIBUTES_ITEM; its `attributes` stack and every element are the decoder's own and live for the call.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `aai` is a live decoded OSSL_ALLOWED_ATTRIBUTES_ITEM; its `attributes` stack and every element are the decoder's own and live for the call.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -456,14 +458,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "ossl_v3_allowed_attribute_assignments (v3_aaa.rs:576), i2r slot at v3_aaa.rs:588",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_ALLOWED_ATTRIBUTES_SYNTAX and its dispatch path; src/x509/v3_aaa.rs:541)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `aaa` is a live decoded OSSL_ALLOWED_ATTRIBUTES_SYNTAX stack of OSSL_ALLOWED_ATTRIBUTES_ITEM; every element is the decoder's own and live for the call.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `aaa` is a live decoded OSSL_ALLOWED_ATTRIBUTES_SYNTAX stack of OSSL_ALLOWED_ATTRIBUTES_ITEM; every element is the decoder's own and live for the call.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -489,14 +491,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe fn(*mut Bio, *mut AsIdentifierChoice, c_int, *const c_char) -> c_int",
    "registration": "helper called by i2r_ASIdentifiers (v3_asid.rs), the ossl_v3_asid row's i2r slot",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_ASIdentifierChoice and its dispatch path; src/x509/v3_asid.rs:699)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: Not a slot: the only caller is i2r_ASIdentifiers (this file), which passes `(*asid).asnum` or `(*asid).rdi` (each NULL or a decoded ASIdentifierChoice), the dispatcher's non-NULL BIO and a static message literal. `choice` is NULL or a live value whose selector names the live union arm; the stack/elements or bounds it selects are the decoder's own.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: Not a slot: the only caller is i2r_ASIdentifiers (this file), which passes `(*asid).asnum` or `(*asid).rdi` (each NULL or a decoded ASIdentifierChoice), the dispatcher's non-NULL BIO and a static message literal. `choice` is NULL or a live value whose selector names the live union arm; the stack/elements or bounds it selects are the decoder's own.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -522,14 +524,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "ossl_v3_cpols (v3_cpols.rs:1602), i2r slot at v3_cpols.rs:1614",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_certpol and its dispatch path; src/x509/v3_cpols.rs:1380)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `pol` is a live decoded CERTIFICATEPOLICIES stack of POLICYINFO; each element, its `policyid` object and its optional `qualifiers` stack and members are the decoder's own and live for the call.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `pol` is a live decoded CERTIFICATEPOLICIES stack of POLICYINFO; each element, its `policyid` object and its optional `qualifiers` stack and members are the decoder's own and live for the call.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -555,14 +557,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "ossl_v3_group_ac (v3_group_ac.rs:86), i2r slot at v3_group_ac.rs:98",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_GROUP_AC and its dispatch path; src/x509/v3_group_ac.rs:44)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: The row's item is ASN1_NULL; the body reads none of `method`, `su`, `out` or `indent`.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: The row's item is ASN1_NULL; the body reads none of `method`, `su`, `out` or `indent`.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -588,14 +590,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "ossl_v3_indirect_issuer (v3_ind_iss.rs:86), i2r slot at v3_ind_iss.rs:98",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_INDIRECT_ISSUER and its dispatch path; src/x509/v3_ind_iss.rs:44)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: The row's item is ASN1_NULL; the body reads none of `method`, `su`, `out` or `indent`.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: The row's item is ASN1_NULL; the body reads none of `method`, `su`, `out` or `indent`.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -621,14 +623,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "ossl_v3_issued_on_behalf_of (v3_iobo.rs:77), i2r slot at v3_iobo.rs:89",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_ISSUED_ON_BEHALF_OF and its dispatch path; src/x509/v3_iobo.rs:55)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `gn` is a live decoded GENERAL_NAME of the row's GENERAL_NAME item; GENERAL_NAME_print reads only that value (the selected arm and the objects it names are the decoder's own).",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `gn` is a live decoded GENERAL_NAME of the row's GENERAL_NAME item; GENERAL_NAME_print reads only that value (the selected arm and the objects it names are the decoder's own).",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -654,14 +656,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "ossl_v3_issuer_sign_tool (v3_ist.rs:430), i2r slot at v3_ist.rs:442",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_issuer_sign_tool and its dispatch path; src/x509/v3_ist.rs:346)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `ist` is a live decoded ISSUER_SIGN_TOOL; each of its three string members is NULL or a live ASN1_IA5STRING whose `data` is readable for exactly `length` bytes, which is the extent BIO_write reads.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `ist` is a live decoded ISSUER_SIGN_TOOL; each of its three string members is NULL or a live ASN1_IA5STRING whose `data` is readable for exactly `length` bytes, which is the extent BIO_write reads.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -687,14 +689,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "ossl_v3_no_assertion (v3_no_ass.rs:98), i2r slot at v3_no_ass.rs:110",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_NO_ASSERTION and its dispatch path; src/x509/v3_no_ass.rs:47)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: The row's item is ASN1_NULL; the body reads none of `method`, `su`, `out` or `indent`.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: The row's item is ASN1_NULL; the body reads none of `method`, `su`, `out` or `indent`.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -720,14 +722,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "ossl_v3_no_rev_avail (v3_no_rev_avail.rs:86), i2r slot at v3_no_rev_avail.rs:98",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_NO_REV_AVAIL and its dispatch path; src/x509/v3_no_rev_avail.rs:44)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: The row's item is ASN1_NULL; the body reads none of `method`, `su`, `out` or `indent`.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: The row's item is ASN1_NULL; the body reads none of `method`, `su`, `out` or `indent`.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -753,14 +755,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "ossl_v3_pkey_usage_period (v3_pku.rs:209), i2r slot at v3_pku.rs:221",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_PKEY_USAGE_PERIOD and its dispatch path; src/x509/v3_pku.rs:178)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `usage` is a live decoded PKEY_USAGE_PERIOD (dereferenced unconditionally); `notBefore`/`notAfter` are NULL or the decoder's own live ASN1_GENERALIZEDTIME values.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `usage` is a live decoded PKEY_USAGE_PERIOD (dereferenced unconditionally); `notBefore`/`notAfter` are NULL or the decoder's own live ASN1_GENERALIZEDTIME values.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -786,14 +788,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "attributes_syntax_row (v3_sda.rs:239) shared by ossl_v3_subj_dir_attrs (v3_sda.rs:259) and ossl_v3_associated_info (v3_sda.rs:263); i2r slot at v3_sda.rs:252",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_ATTRIBUTES_SYNTAX and its dispatch path; src/x509/v3_sda.rs:154)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `attrlst` is a live decoded OSSL_ATTRIBUTES_SYNTAX stack of X509_ATTRIBUTE; its elements and their values are the decoder's own. The body also tolerates a NULL list (the authority does), though the dispatcher never supplies one.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `attrlst` is a live decoded OSSL_ATTRIBUTES_SYNTAX stack of X509_ATTRIBUTE; its elements and their values are the decoder's own. The body also tolerates a NULL list (the authority does), though the dispatcher never supplies one.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -819,14 +821,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "ossl_v3_single_use (v3_single_use.rs:87), i2r slot at v3_single_use.rs:99",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_SINGLE_USE and its dispatch path; src/x509/v3_single_use.rs:45)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: The row's item is ASN1_NULL; the body reads none of `method`, `su`, `out` or `indent`.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: The row's item is ASN1_NULL; the body reads none of `method`, `su`, `out` or `indent`.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -852,14 +854,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "ossl_v3_soa_identifier (v3_soa_id.rs:86), i2r slot at v3_soa_id.rs:98",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_SOA_IDENTIFIER and its dispatch path; src/x509/v3_soa_id.rs:44)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: The row's item is ASN1_NULL; the body reads none of `method`, `su`, `out` or `indent`.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: The row's item is ASN1_NULL; the body reads none of `method`, `su`, `out` or `indent`.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -885,14 +887,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "ossl_v3_sxnet (v3_sxnet.rs:706), i2r slot at v3_sxnet.rs:718",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: sxnet_i2r and its dispatch path; src/x509/v3_sxnet.rs:346)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `sx` is a live decoded SXNET (dereferenced unconditionally); `version` is a live ASN1_INTEGER and `ids` a live stack of SXNETID whose elements and integers are the decoder's own.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `sx` is a live decoded SXNET (dereferenced unconditionally); `version` is a live ASN1_INTEGER and `ids` a live stack of SXNETID whose elements and integers are the decoder's own.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -918,14 +920,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe fn(*const X509V3ExtMethod, *mut OsslDayTime, *mut Bio, c_int) -> c_int",
    "registration": "helper called by i2r_OSSL_DAY_TIME_BAND (v3_timespec.rs:1440)",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_OSSL_DAY_TIME and its dispatch path; src/x509/v3_timespec.rs:1400)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: Not a slot: the only caller is i2r_OSSL_DAY_TIME_BAND, which passes one of the band's values after its own non-NULL test, so `dt` is a live decoded OSSL_DAY_TIME whose `hour` is live and whose `minute`/`second` are NULL or live.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: Not a slot: the only caller is i2r_OSSL_DAY_TIME_BAND, which passes one of the band's values after its own non-NULL test, so `dt` is a live decoded OSSL_DAY_TIME whose `hour` is live and whose `minute`/`second` are NULL or live.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -951,14 +953,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe fn(*const X509V3ExtMethod, *mut OsslDayTimeBand, *mut Bio, c_int) -> c_int",
    "registration": "helper called by i2r_OSSL_PERIOD (v3_timespec.rs:1636)",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_OSSL_DAY_TIME_BAND and its dispatch path; src/x509/v3_timespec.rs:1440)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: Not a slot: the only caller is i2r_OSSL_PERIOD, which passes an element of the decoded `timesOfDay` stack, so `band` is a live decoded OSSL_DAY_TIME_BAND whose `startDayTime`/`endDayTime` are NULL or live.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: Not a slot: the only caller is i2r_OSSL_PERIOD, which passes an element of the decoded `timesOfDay` stack, so `band` is a live decoded OSSL_DAY_TIME_BAND whose `startDayTime`/`endDayTime` are NULL or live.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -984,14 +986,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe fn(*const X509V3ExtMethod, *mut OsslTimePeriod, *mut Bio, c_int) -> c_int",
    "registration": "helper called by i2r_OSSL_TIME_SPEC_TIME (v3_timespec.rs:2038)",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_OSSL_PERIOD and its dispatch path; src/x509/v3_timespec.rs:1636)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: Not a slot: the only caller is i2r_OSSL_TIME_SPEC_TIME, which passes an element of the decoded periodic stack, so `p` is a live decoded OSSL_TIME_PERIOD; `timesOfDay` is NULL or a live stack of bands and `days`/`weeks`/`months`/`years` are NULL or the decoder's own values.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: Not a slot: the only caller is i2r_OSSL_TIME_SPEC_TIME, which passes an element of the decoded periodic stack, so `p` is a live decoded OSSL_TIME_PERIOD; `timesOfDay` is NULL or a live stack of bands and `days`/`weeks`/`months`/`years` are NULL or the decoder's own values.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -1017,14 +1019,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe fn(*const X509V3ExtMethod, *mut OsslTimeSpecTime, *mut Bio, c_int) -> c_int",
    "registration": "helper called by i2r_OSSL_TIME_SPEC (v3_timespec.rs:2106)",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_OSSL_TIME_SPEC_TIME and its dispatch path; src/x509/v3_timespec.rs:2038)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: Not a slot: the only caller is i2r_OSSL_TIME_SPEC, which passes the decoded `(*ts).time`, so `time` is a live OSSL_TIME_SPEC_TIME whose selector and active choice arm agree (decoder invariant, not re-checked; an unknown selector answers 0).",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: Not a slot: the only caller is i2r_OSSL_TIME_SPEC, which passes the decoded `(*ts).time`, so `time` is a live OSSL_TIME_SPEC_TIME whose selector and active choice arm agree (decoder invariant, not re-checked; an unknown selector answers 0).",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -1050,14 +1052,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "ossl_v3_time_specification (v3_timespec.rs:2153), i2r slot at v3_timespec.rs:2165",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_OSSL_TIME_SPEC and its dispatch path; src/x509/v3_timespec.rs:2106)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `ts` is a live decoded OSSL_TIME_SPEC; `timeZone` is NULL or a live ASN1_INTEGER and `time` a live OSSL_TIME_SPEC_TIME of the decoder's construction.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `ts` is a live decoded OSSL_TIME_SPEC; `timeZone` is NULL or a live ASN1_INTEGER and `time` a live OSSL_TIME_SPEC_TIME of the decoder's construction.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -1083,14 +1085,14 @@
    "mechanism": "X509_VERIFY_POLICY",
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "ossl_v3_user_notice (v3_usernotice.rs:331), i2r slot at v3_usernotice.rs:343",
-   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:254-256); ext_method_item resolves the row item once and refuses a NULL item (:279-289); a NULL decode is refused before the slot (:300-303)",
+   "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
    "disposition": "SAFETY_DISCHARGED (scope: i2r_USER_NOTICE_SYNTAX and its dispatch path; src/x509/v3_usernotice.rs:300)",
-   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `uns` is a live decoded OSSL_USER_NOTICE_SYNTAX stack of USERNOTICE; each notice, its `noticeRef` and `exptext` members and the strings they name are the decoder's own and live for the call.",
+   "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `uns` is a live decoded OSSL_USER_NOTICE_SYNTAX stack of USERNOTICE; each notice, its `noticeRef` and `exptext` members and the strings they name are the decoder's own and live for the call.",
    "established": [
-    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:266) and refuses a NULL row (:267-270).",
-    "The row item is resolved once by ext_method_item (:279) and a NULL item is treated as a failed decode (:279-289).",
-    "The value is decoded through that item (:291-300) and a NULL decode is refused before any printer slot (:300-303).",
-    "The i2r slot is called at :341 and the decoded value is released with the same item at :355."
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any printer slot (:317-320).",
+    "The i2r slot is called at :358 and the decoded value is released with the same item at :372."
    ],
    "authority_derived": [
     "V3_prn.c:90-92 decodes through ASN1_ITEM_ptr(method->it) and calls method->i2r(method, ext_str, out, indent) at :95-127.",
@@ -1107,17 +1109,17 @@
   }
  ],
  "hidden_obligations": 0,
- "hidden_obligations_note": "The retained obligations are stated in the fn-level contracts and in B49-R2/R3/R4/R10: the registrar must keep each row's `it` paired with its `i2r`, `out` liveness is the caller's, exclusive use of the decoded value is the dispatcher's, and the resolved row must stay live across the call (no concurrent _add/_add_alias/_cleanup). None is hidden.",
- "new_unsafe_assumptions": 1,
- "new_unsafe_assumptions_note": "One new private unsafe fn, ext_method_item, with a # Safety contract and a single caller (X509V3_EXT_print). It assumes that `method` is a live row. The dispatcher establishes non-NULLness at :266-270 but NOT liveness: a DYNAMIC row copied by X509V3_EXT_add_alias is released by X509V3_EXT_cleanup, so row liveness across the call is retained as caller obligation B49-R10 and stated in X509V3_EXT_print's # Safety. It adds no new site to the 75.",
+ "hidden_obligations_note": "The retained obligations are stated in the fn-level contracts and in B49-R2/R3/R4: the registrar must keep each row's `it` paired with its `i2r`, `out` liveness is the caller's, and exclusive use of the decoded value is the dispatcher's. B49-R10 (row liveness across the call) is no longer a retained caller obligation: X509V3_EXT_print holds the registry read hold across resolution and use, and every writer takes the write hold. None is hidden.",
+ "new_unsafe_assumptions": 3,
+ "new_unsafe_assumptions_note": "Three private unsafe fns: ext_method_item, ext_add_locked and ext_get_nid_locked. ext_method_item's `method` is live because X509V3_EXT_print holds the registry read hold (:271-273); ext_add_locked requires the caller to hold the write hold (X509V3_EXT_add/_add_list/_add_alias do); ext_get_nid_locked requires the read or write hold (X509V3_EXT_get_nid/_get and the writers do). The guard constructors are safe fns whose bodies wrap CRYPTO_THREAD_read_lock/write_lock and CRYPTO_THREAD_unlock with SAFETY comments; the run-once body calls only CRYPTO_THREAD_lock_new. No new site in the 75, and no caller obligation is hidden: every lock precondition is established by the function that takes the hold.",
  "unsafe_operations_removed": 0,
- "unsafe_operations_introduced": 1,
- "unsafe_operations_introduced_note": "ext_method_item (src/x509/v3_prn.rs:217) is the contract-carrying handler for the item resolution; it is not a new boundary site.",
+ "unsafe_operations_introduced": 3,
+ "unsafe_operations_introduced_note": "ext_method_item (src/x509/v3_prn.rs:217) remains the item-resolution helper; ext_add_locked (src/x509/v3_lib.rs:565) and ext_get_nid_locked (:711) carry the moved list operations with explicit lock-held contracts. The CRYPTO_THREAD_* acquire/release calls live in the guard constructors and Drop. None is a new boundary site.",
  "test_only_unsafe_added": 1,
  "test_only_unsafe_added_note": "The test-only `unsafe extern \"C\" fn null_item()` accessor used by the canary.",
  "boundary_size": "22 boundary operations: 15 i2r slot callbacks (the `i2r` field of a registered row) and 7 i2r-only helpers (i2r_ALLOWED_ATTRIBUTES_CHOICE, i2r_ALLOWED_ATTRIBUTES_ITEM, i2r_ASIdentifierChoice, i2r_OSSL_DAY_TIME, i2r_OSSL_DAY_TIME_BAND, i2r_OSSL_PERIOD, i2r_OSSL_TIME_SPEC_TIME), over 16 files. 22 V1 census sites retained; no new boundary rows for the 53 untouched sites.",
  "safe_callers_can_cause_ub": true,
- "safe_callers_can_cause_ub_note": "Kept true: all 22 sites remain reachable only as unsafe extern \"C\" callbacks through the unsafe X509V3_EXT_print entry point. The dispatcher now refuses a NULL out/ext and a NULL or undecodable item before the slot; the remaining stated obligations are the registrar's row pairing (B49-R2), out liveness (B49-R3), exclusive use of the decoded value (B49-R4) and the resolved row's liveness across the call (B49-R10). No safe Rust path to these callbacks exists.",
+ "safe_callers_can_cause_ub_note": "Kept true: all 22 sites remain reachable only as unsafe extern \"C\" callbacks through the unsafe X509V3_EXT_print entry point. The dispatcher refuses a NULL out/ext and a NULL or undecodable item before the slot; the remaining stated obligations are the registrar's row pairing (B49-R2), out liveness (B49-R3) and exclusive use of the decoded value (B49-R4). Row liveness is enforced by the registry read/write hold (B49-R10 CLOSED). No safe Rust path to these callbacks exists.",
  "negative_control": {
   "id": "B49-C1",
   "name": "x509::v3_prn::tests::ext_method_item_refuses_an_accessor_that_answers_null",
@@ -1125,10 +1127,10 @@
   "result": "PASS (1 passed, 0 failed, 0 ignored at --test-threads=1)",
   "observation": "A probe row whose `it` accessor answers NULL is resolved as Err(()), and the dispatcher therefore takes the failed-decode path instead of passing NULL to ASN1_item_d2i.",
   "mutation_sensitive": true,
-  "mutation": "the guard `if item.is_null() { Err(()) } else { Ok(Some(item)) }` in ext_method_item (src/x509/v3_prn.rs:221-225) replaced by `Ok(Some(item))`",
-  "fails_if": "observed FAILED rc 101 at src/x509/v3_prn.rs:514: assertion `left == right` failed: a NULL ASN.1 item must not be resolved; left: Ok(Some(0x0)), right: Err(())",
-  "restore": "byte-for-byte: sha256 4d0a8bf2186e29f6c636ad948e64492b79a4189ebd71c8260cd7a454c435e805 before and after the mutation",
-  "limits": "The guard is exercised directly on a live stack row. No end-to-end row with a NULL-item accessor can be built without mutating the process-global dynamic extension list, which the crate does not do in tests (B49-R8)."
+  "mutation": "the guard `if item.is_null() { Err(()) } else { Ok(Some(item)) }` in ext_method_item (src/x509/v3_prn.rs:227-231) replaced by `Ok(Some(item))`",
+  "fails_if": "observed FAILED rc 101 at src/x509/v3_prn.rs:514 (prior tree): assertion `left == right` failed: a NULL ASN.1 item must not be resolved; left: Ok(Some(0x0)), right: Err(())",
+  "restore": "byte-for-byte: sha256 4d0a8bf2186e29f6c636ad948e64492b79a4189ebd71c8260cd7a454c435e805 before and after the mutation (prior tree); the guard still passes at the current candidate hashes",
+  "limits": "The guard is exercised directly on a live stack row. A dynamic row can now be registered safely under the registry lock, but no end-to-end row whose item accessor answers NULL is installed (B49-R8)."
  },
  "negative_control_2": {
   "id": "B49-C2",
@@ -1137,16 +1139,28 @@
   "result": "PASS (1 passed, 0 failed, 0 ignored at --test-threads=4)",
   "observation": "A NULL `out`, a NULL `ext`, and the pair each answer 0; the guard returns before X509_EXTENSION_get_data, the item resolution, the decoder or any callback.",
   "mutation_sensitive": true,
-  "mutation": "the prologue `if out.is_null() || ext.is_null() { return 0; }` (src/x509/v3_prn.rs:254-256) removed",
-  "fails_if": "observed FAILED rc 101 at src/x509/v3_prn.rs:588: assertion `left == right` failed: a NULL out must be refused; left: 1, right: 0 (the guardless call reaches the failed-decode path under X509V3_EXT_ERROR_UNKNOWN)",
-  "restore": "byte-for-byte: sha256 e52ca5eb5a5804a15689a43f6f39cd7ee04affe7a905c28fce39529426d877d7 before and after the mutation",
+  "mutation": "the prologue `if out.is_null() || ext.is_null() { return 0; }` (src/x509/v3_prn.rs:263-265) removed",
+  "fails_if": "observed FAILED rc 101 at src/x509/v3_prn.rs:588 (prior tree): assertion `left == right` failed: a NULL out must be refused; left: 1, right: 0 (the guardless call reaches the failed-decode path under X509V3_EXT_ERROR_UNKNOWN)",
+  "restore": "byte-for-byte: sha256 e52ca5eb5a5804a15689a43f6f39cd7ee04affe7a905c28fce39529426d877d7 before and after the mutation (prior tree); the guard still passes at the current candidate hashes",
   "limits": "The positive path is `ret == 0` for each NULL argument; the observable difference under the mutation is the return value (1), not a fault, because the guardless call reaches the unknown/failed-decode arms safely for these inputs."
+ },
+ "negative_control_3": {
+  "id": "B49-C3",
+  "name": "x509::v3_prn::tests::cleanup_cannot_release_a_row_while_a_print_uses_it",
+  "kind": "court concurrency test, lib unittest",
+  "result": "PASS (1 passed, 0 failed at --test-threads=1 and at --test-threads=4; sha256 27b2619bb76be9072afbb765ad0e65a7b55da25cc7f852f9e46d6ef4445949ee restored)",
+  "observation": "A DYNAMIC alias row's i2r blocks inside X509V3_EXT_print while a second thread calls X509V3_EXT_cleanup. The cleanup cannot complete until the print's registry read hold is released, so CLEANUP_RAN_DURING_PRINT stays false.",
+  "mutation_sensitive": true,
+  "mutation": "the read hold `let Some(_registry) = RegistryReadGuard::acquire() else { return 0; };` in X509V3_EXT_print (src/x509/v3_prn.rs:271-273) replaced by `let _registry = None::<RegistryReadGuard>;`",
+  "fails_if": "observed FAILED rc 101 at src/x509/v3_prn.rs:884: assertion failed: X509V3_EXT_cleanup completed while X509V3_EXT_print was still using the row: the registry read hold is not excluding the writer",
+  "restore": "byte-for-byte: sha256 27b2619bb76be9072afbb765ad0e65a7b55da25cc7f852f9e46d6ef4445949ee before and after the mutation; the test then passes again",
+  "limits": "The canary reports that cleanup *completed* during the print. Under the mutation the row is freed while the callback is active, but the callback does not dereference it after the observation, so the test reports the inconsistency rather than relying on a use-after-free fault. It excludes a writer that returns; it does not attempt to exclude a writer that deadlocks (a callback that itself calls a registry writer is B49-R11)."
  },
  "evidence": {
   "fast": {
    "fmt": "cargo fmt --all -- --check: PASS (exit 0, no output) at the candidate hashes above",
    "clippy": "cargo clippy --all-targets -- -D warnings: PASS (Finished dev profile) at the same source",
-   "focused_tests": "cargo test --lib -- x509:: -- --test-threads=4: PASS, 141 passed / 0 failed / 0 ignored (2169 filtered out). cargo test --lib -- x509::v3_prn -- --test-threads=4: PASS, 6 passed / 0 failed / 0 ignored. cargo test --lib -- x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue -- --test-threads=1: PASS, 1 passed / 0 failed."
+   "focused_tests": "cargo test --lib -- x509:: -- --test-threads=4: PASS, 143 passed / 0 failed / 0 ignored (2169 filtered out). cargo test --lib -- x509::v3_prn -- --test-threads=4: PASS, 8 passed / 0 failed / 0 ignored (the six prior tests plus a_dynamic_alias_prints_and_cleanup_releases_it and cleanup_cannot_release_a_row_while_a_print_uses_it). cargo test --lib -- x509::v3_prn::tests::cleanup_cannot_release_a_row_while_a_print_uses_it -- --test-threads=1: PASS, 1 passed / 0 failed."
   },
   "mutation": {
    "canary": "B49-C1 (the NULL-item refusal in ext_method_item)",
@@ -1154,9 +1168,13 @@
    "observed": "removing the refusal makes ext_method_item answer Ok(Some(0x0)); the canary fails with left: Ok(Some(0x0)), right: Err(())",
    "restore": "byte-for-byte sha256 match (4d0a8bf2186e29f6c636ad948e64492b79a4189ebd71c8260cd7a454c435e805)",
    "canary_2": "B49-C2 (the NULL out/ext prologue refusal in X509V3_EXT_print)",
-   "guarded_check_2": "if out.is_null() || ext.is_null() { return 0; } (src/x509/v3_prn.rs:254-256)",
+   "guarded_check_2": "if out.is_null() || ext.is_null() { return 0; } (src/x509/v3_prn.rs:263-265)",
    "observed_2": "removing the guard makes the NULL-out call answer 1 under X509V3_EXT_ERROR_UNKNOWN; the canary fails with left: 1, right: 0 at src/x509/v3_prn.rs:588",
-   "restore_2": "byte-for-byte sha256 match (e52ca5eb5a5804a15689a43f6f39cd7ee04affe7a905c28fce39529426d877d7)"
+   "restore_2": "byte-for-byte sha256 match (e52ca5eb5a5804a15689a43f6f39cd7ee04affe7a905c28fce39529426d877d7) at the prior tree",
+   "canary_3": "B49-C3 (the registry read hold in X509V3_EXT_print)",
+   "guarded_check_3": "let Some(_registry) = RegistryReadGuard::acquire() else { return 0; }; (src/x509/v3_prn.rs:271-273)",
+   "observed_3": "replacing the read hold with `let _registry = None::<RegistryReadGuard>;` lets X509V3_EXT_cleanup complete while the blocked i2r is still inside X509V3_EXT_print; the canary fails with `the registry read hold is not excluding the writer` at src/x509/v3_prn.rs:884",
+   "restore_3": "byte-for-byte sha256 match (27b2619bb76be9072afbb765ad0e65a7b55da25cc7f852f9e46d6ef4445949ee)"
   }
  },
  "residuals": [
@@ -1182,7 +1200,7 @@
    "id": "B49-R4",
    "severity": "low",
    "disposition": "STATED-CALLER-OBLIGATION",
-   "description": "The decoded value is exclusively the dispatcher's and is released once at :355. The contracts forbid the callback from freeing, retaining or replacing it; all 22 bodies retain nothing."
+   "description": "The decoded value is exclusively the dispatcher's and is released once at :372. The contracts forbid the callback from freeing, retaining or replacing it; all 22 bodies retain nothing."
   },
   {
    "id": "B49-R5",
@@ -1206,7 +1224,7 @@
    "id": "B49-R8",
    "severity": "low",
    "disposition": "NOT_RUN",
-   "description": "The NULL-item guard is canaried on a live stack row, not end-to-end: reaching it through X509V3_EXT_print requires registering a dynamic row in the process-global ext_list, which no existing test does and which would race parallel readers under --test-threads=4."
+   "description": "The NULL-item guard is canaried on a live stack row, not end-to-end: a dynamic row can now be registered safely under the registry lock, but no row whose item accessor answers NULL is installed end-to-end."
   },
   {
    "id": "B49-R9",
@@ -1217,8 +1235,14 @@
   {
    "id": "B49-R10",
    "severity": "medium",
-   "disposition": "STATED-CALLER-OBLIGATION",
-   "description": "The row resolved by X509V3_EXT_get must stay live and unmodified for the whole X509V3_EXT_print call. The lookup establishes non-NULLness only. A row registered by X509V3_EXT_add is the caller's, and a X509V3_EXT_add_alias copy is released by X509V3_EXT_cleanup; a dynamic alias of a standard row still carries one of the 22 i2r callbacks. The dynamic EXT_LIST is unlocked in the candidate exactly as in the authority, so no X509V3_EXT_add/_add_alias/_cleanup may run concurrently with a print. Stated in X509V3_EXT_print's # Safety; not mechanically checked."
+   "disposition": "CLOSED",
+   "description": "CLOSED by mechanism. The row resolved by X509V3_EXT_get stays live and unmodified for the whole X509V3_EXT_print call because the print holds the extension registry's read hold (RegistryReadGuard, src/x509/v3_prn.rs:271-273) across the lookup (:283), every row read (:322-331), the i2r call (:358) and the release (:372). Every writer (X509V3_EXT_add/_add_list/_add_alias/_cleanup) takes the write hold (src/x509/v3_lib.rs:613,631,661,788); the list's lazy sort moved into ext_add_locked (:565-596) so lookup is read-only. A DYNAMIC alias row cannot be released while a print is using it, demonstrated by B49-C3. The raw X509V3_EXT_get[_nid] ABI still returns a borrowed row: an external caller that keeps using that pointer across its own X509V3_EXT_cleanup remains responsible for excluding that call, which the C ABI cannot enforce."
+  },
+  {
+   "id": "B49-R11",
+   "severity": "low",
+   "disposition": "AUTHORITY-DIVERGENCE",
+   "description": "The candidate adds synchronisation the authority does not have. EXT_LIST is now guarded by one CRYPTO_RWLOCK created by a CRYPTO_THREAD_run_once on first registry use; the block is process-lifetime (X509V3_EXT_cleanup does not free it, and must not, because the registry is reusable). Consequence for valid calls: return values and printed bytes are unchanged; the read hold is shared by readers and only writers exclude. Consequence for observability and re-entrancy: an allocator hook sees one additional CRYPTO_RWLOCK allocation (the authority makes none here); if that allocation fails, the entry points fail closed (print answers 0, lookup NULL, add 0) where the authority had no such failure; and a caller-registered i2s/i2v/i2r callback that itself calls a registry writer blocks until the print returns, where the authority would instead free the in-use row (B49-C3 cannot observe a callback that deadlocks). Both consequences are documented, not silent."
   }
  ],
  "not_run": [
@@ -1244,7 +1268,7 @@
   },
   {
    "gate": "end-to-end NULL-item row",
-   "blocker": "would require registering a dynamic row in the process-global ext_list (B49-R8)"
+   "blocker": "would require registering a dynamic row whose item accessor answers NULL; registration is now safe under the registry lock, but no such row is installed in the end-to-end tests"
   }
  ],
  "non_claims": [
@@ -1253,16 +1277,18 @@
   "No sanitizer, Miri, dudect or authority differential was run; no cryptographic or constant-time claim is made.",
   "The i2r type pairing is a registrar ABI obligation, not a checked property (B49-R2).",
   "Only i2r_ISSUED_ON_BEHALF_OF is driven end-to-end by a functional test; the other 21 printers are covered by contract review and the dispatcher tests.",
-  "The row resolved by X509V3_EXT_get is established non-NULL only; its liveness across the call is the caller's obligation, and a concurrent X509V3_EXT_add/_add_alias/_cleanup is not excluded by any lock (B49-R10).",
+  "The row resolved by X509V3_EXT_get is kept live across X509V3_EXT_print by the registry read hold, and every registry writer takes the write hold (B49-R10 CLOSED). The raw X509V3_EXT_get[_nid] ABI still returns a borrowed row: an external caller that keeps using that pointer across its own X509V3_EXT_cleanup must exclude that call itself.",
+  "The registry lock is a candidate addition the authority does not have (B49-R11): it adds one process-lifetime CRYPTO_RWLOCK allocation (and fails closed if it cannot be created) and makes a callback that mutates the registry during a print block rather than free the in-use row. Valid-call return values and printed bytes are unchanged.",
   "Every candidate line number is bound to candidate.files_sha256; any source edit invalidates these coordinates and the receipt."
  ],
  "review_conditions": {
-  "C1_identity": "base_head is ade24461d and source_state is committed; the uncommitted/no-commit text is deleted.",
-  "C2_receipt_accuracy": "boundary_size corrected to 15 i2r slot callbacks + 7 i2r-only helpers; chosen_family.why corrected to the slot read at src/x509/v3_prn.rs:306-310, whose value is called at :341.",
-  "C3_row_liveness": "Route (b): only-static-rows is not established, so the dynamic-row case is retained as B49-R10 and stated in X509V3_EXT_print's # Safety.",
-  "C4_prologue_test": "x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue, with the B49-C2 mutation observed and restored.",
+  "C1_identity": "base_head is 52ba53c11 with the B49 lock delta uncommitted (S'); the worktree delta is bound by files_sha256 and must be committed and re-frozen before application.",
+  "C2_receipt_accuracy": "boundary_size corrected to 15 i2r slot callbacks + 7 i2r-only helpers; chosen_family.why corrected to the slot read at src/x509/v3_prn.rs:322-331, whose value is called at :358.",
+  "C3_row_liveness": "Route (c): B49-R10 is CLOSED structurally by the registry read/write hold (src/x509/v3_lib.rs REGISTRY_ONCE/REGISTRY_LOCK; src/x509/v3_prn.rs:271-273), not retained as a stated precondition. The external borrowed-pointer contract of X509V3_EXT_get[_nid] is stated but does not apply to the dispatcher.",
+  "C4_prologue_test": "x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue, with the B49-C2 mutation still observed and the test passing at the candidate hashes.",
+  "C5_registry_lock": "B49-C3 (x509::v3_prn::tests::cleanup_cannot_release_a_row_while_a_print_uses_it) observes cleanup blocked by the read hold; removing the read hold fails it deterministically. a_dynamic_alias_prints_and_cleanup_releases_it drives add_alias -> print -> cleanup end to end.",
   "source_changed": true,
-  "note": "C3/C4 change src/x509/v3_prn.rs, so the candidate must be rebuilt and re-frozen (S') and the FAST gate re-run before any application. No closure was run."
+  "note": "C3/C4/C5 change src/x509/v3_lib.rs and src/x509/v3_prn.rs, so the candidate must be committed, rebuilt and re-frozen (S') and the FAST gate re-run before any application. No closure was run."
  },
  "review": {
   "reviewer": "pending independent adjudication",

@@ -50,7 +50,7 @@
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicPtr, Ordering};
+use core::sync::atomic::{AtomicI32, AtomicPtr, Ordering};
 
 use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::layout::Asn1Item;
@@ -64,6 +64,10 @@ use crate::runtime::stack::{
     OPENSSL_sk_delete, OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_new, OPENSSL_sk_new_null,
     OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_set, OPENSSL_sk_sort,
     OPENSSL_sk_value, OpenSslStack,
+};
+use crate::runtime::thread::{
+    CRYPTO_THREAD_lock_new, CRYPTO_THREAD_read_lock, CRYPTO_THREAD_run_once, CRYPTO_THREAD_unlock,
+    CRYPTO_THREAD_write_lock, CryptoRwlock,
 };
 use crate::x509::v3_conf::X509V3_EXT_i2d;
 use crate::x509::x509_v3::{
@@ -424,9 +428,92 @@ static STANDARD_EXTS: StandardExts = StandardExts([
 /// `static STACK_OF(X509V3_EXT_METHOD) *ext_list = NULL` — `crypto/x509/v3_lib.c:19`.
 ///
 /// The authority's plain static; held as an atomic pointer only so a `static` in Rust is sound.
-/// The list is process-global and unlocked in the authority too (its `X509V3_EXT_get_nid`
-/// comments "Ideally, this would be done under a lock"), so this is the same contract.
+/// The authority leaves the list unlocked (its `X509V3_EXT_get_nid` comments "Ideally, this
+/// would be done under a lock"); this candidate adds [`REGISTRY_LOCK`] so that a row resolved by
+/// the dispatcher cannot be released by a concurrent `X509V3_EXT_cleanup` (B49-R10).
 static EXT_LIST: AtomicPtr<OpenSslStack> = AtomicPtr::new(ptr::null_mut());
+
+/// `static CRYPTO_ONCE registry_init = CRYPTO_ONCE_STATIC_INIT` — this module's run-once.
+static REGISTRY_ONCE: AtomicI32 = AtomicI32::new(0);
+/// `static CRYPTO_RWLOCK *registry_lock` — the reader/writer lock over [`EXT_LIST`].
+static REGISTRY_LOCK: AtomicPtr<CryptoRwlock> = AtomicPtr::new(ptr::null_mut());
+
+/// The run-once body: create the registry lock.
+///
+/// It reaches only `CRYPTO_THREAD_lock_new` (the allocator seam), never a registry entry point,
+/// so a constructor that calls [`ensure_registry`] cannot deadlock against its own run-once.
+extern "C" fn do_registry_init() {
+    // `CRYPTO_THREAD_lock_new` is a safe function; the store is the publication.
+    REGISTRY_LOCK.store(CRYPTO_THREAD_lock_new(), Ordering::Release);
+}
+
+/// `RUN_ONCE` for the registry lock: true when the lock exists.
+fn ensure_registry() -> bool {
+    // SAFETY: `REGISTRY_ONCE` is this module's own `CRYPTO_ONCE` storage, and
+    // `do_registry_init` is a valid `extern "C"` initialiser with no parameters.
+    if unsafe { CRYPTO_THREAD_run_once(REGISTRY_ONCE.as_ptr(), Some(do_registry_init)) } == 0 {
+        return false;
+    }
+    !REGISTRY_LOCK.load(Ordering::Acquire).is_null()
+}
+
+/// A held registry **read** hold; dropping it unlocks.
+///
+/// The guard is `!Send` (it holds a raw pointer), so it cannot be moved to another thread. A
+/// read taken while this thread already holds a read is a reader-count increment in the crate's
+/// `CryptoRwlock`; that is what lets [`crate::x509::v3_prn::X509V3_EXT_print`] hold this guard and
+/// still call the public [`X509V3_EXT_get`], which takes its own short read hold.
+pub(crate) struct RegistryReadGuard {
+    lock: *mut CryptoRwlock,
+}
+
+impl RegistryReadGuard {
+    /// Take the read hold, or `None` when the lock could not be created or acquired.
+    pub(crate) fn acquire() -> Option<Self> {
+        if !ensure_registry() {
+            return None;
+        }
+        let lock = REGISTRY_LOCK.load(Ordering::Acquire);
+        // SAFETY: `lock` is the live registry lock published by `ensure_registry`.
+        if unsafe { CRYPTO_THREAD_read_lock(lock) } == 0 {
+            return None;
+        }
+        Some(Self { lock })
+    }
+}
+
+impl Drop for RegistryReadGuard {
+    fn drop(&mut self) {
+        // SAFETY: this guard acquired the read hold and releases it exactly once.
+        unsafe { CRYPTO_THREAD_unlock(self.lock) };
+    }
+}
+
+/// A held registry **write** hold; dropping it unlocks. Private because every writer is here.
+struct RegistryWriteGuard {
+    lock: *mut CryptoRwlock,
+}
+
+impl RegistryWriteGuard {
+    fn acquire() -> Option<Self> {
+        if !ensure_registry() {
+            return None;
+        }
+        let lock = REGISTRY_LOCK.load(Ordering::Acquire);
+        // SAFETY: `lock` is the live registry lock published by `ensure_registry`.
+        if unsafe { CRYPTO_THREAD_write_lock(lock) } == 0 {
+            return None;
+        }
+        Some(Self { lock })
+    }
+}
+
+impl Drop for RegistryWriteGuard {
+    fn drop(&mut self) {
+        // SAFETY: this guard acquired the write hold and releases it exactly once.
+        unsafe { CRYPTO_THREAD_unlock(self.lock) };
+    }
+}
 
 /// `static int ext_cmp(const X509V3_EXT_METHOD *const *a, const X509V3_EXT_METHOD *const *b)`
 /// — `crypto/x509/v3_lib.c:39-43`.
@@ -469,12 +556,48 @@ unsafe extern "C" fn ext_list_free(ext: *mut c_void) {
     }
 }
 
+/// [`X509V3_EXT_add`]'s body, with the registry write hold already held.
+///
+/// # Safety
+///
+/// `ext` must satisfy [`X509V3_EXT_add`]'s contract, and the caller must hold the registry
+/// **write** hold for the whole call.
+unsafe fn ext_add_locked(ext: *mut X509V3ExtMethod) -> c_int {
+    if EXT_LIST.load(Ordering::Acquire).is_null() {
+        // `OPENSSL_sk_new` is a safe function; `ext_cmp` is the list's comparator.
+        let list = OPENSSL_sk_new(Some(ext_cmp));
+        if list.is_null() {
+            // SAFETY: the site is a compiled-in constant.
+            unsafe { raise_site(&err_sites::V3_LIB_29) };
+            return 0;
+        }
+        EXT_LIST.store(list, Ordering::Release);
+    }
+    let list = EXT_LIST.load(Ordering::Acquire);
+    // SAFETY: `list` is live (write hold) and `ext` is the caller's live row.
+    if unsafe { OPENSSL_sk_push(list, ext.cast::<c_void>()) } == 0 {
+        // SAFETY: the site is a compiled-in constant.
+        unsafe { raise_site(&err_sites::V3_LIB_33) };
+        return 0;
+    }
+    // The authority sorts on the first lookup (`X509V3_EXT_get_nid`). Sorting here, under the
+    // write hold, keeps every read-side lookup free of a mutation, which is what lets a read
+    // hold span the dispatcher's use of the row. A stable sort preserves the order of equal-NID
+    // rows, so the lookup result is unchanged.
+    // SAFETY: `list` is live and `ext_cmp` is its comparator.
+    unsafe { OPENSSL_sk_sort(list) };
+    1
+}
+
 /// `int X509V3_EXT_add(X509V3_EXT_METHOD *ext)` — `crypto/x509/v3_lib.c:25-37`.
 ///
 /// Lazily creates the list with [`ext_cmp`], then pushes the caller's row (the list does not own
 /// it unless it is `X509V3_EXT_DYNAMIC`). The authority's body is only the list creation and
 /// `sk_X509V3_EXT_METHOD_push` (`crypto/x509/v3_lib.c:25-37`); it does not inspect or take over
 /// the row's callbacks.
+///
+/// The whole mutation runs under the registry write hold, so no print can be using a row while
+/// the list changes.
 ///
 /// # Safety
 ///
@@ -488,40 +611,32 @@ unsafe extern "C" fn ext_list_free(ext: *mut c_void) {
 /// cannot verify the callback.
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_EXT_add(ext: *mut X509V3ExtMethod) -> c_int {
-    if EXT_LIST.load(Ordering::Acquire).is_null() {
-        // `OPENSSL_sk_new` is a safe function; `ext_cmp` is the list's comparator.
-        let list = OPENSSL_sk_new(Some(ext_cmp));
-        if list.is_null() {
-            // SAFETY: the site is a compiled-in constant.
-            unsafe { raise_site(&err_sites::V3_LIB_29) };
-            return 0;
-        }
-        EXT_LIST.store(list, Ordering::Release);
-    }
-    let list = EXT_LIST.load(Ordering::Acquire);
-    // SAFETY: `list` is live and `ext` is the caller's live row.
-    if unsafe { OPENSSL_sk_push(list, ext.cast::<c_void>()) } == 0 {
-        // SAFETY: the site is a compiled-in constant.
-        unsafe { raise_site(&err_sites::V3_LIB_33) };
+    let Some(_registry) = RegistryWriteGuard::acquire() else {
         return 0;
-    }
-    1
+    };
+    // SAFETY: `ext` is the caller's row and the write hold is held for the whole call.
+    unsafe { ext_add_locked(ext) }
 }
 
 /// `int X509V3_EXT_add_list(X509V3_EXT_METHOD *extlist)` — `crypto/x509/v3_lib.c:81-87`.
 ///
-/// Walks a caller's table until the `ext_nid == -1` terminator, adding each row.
+/// Walks a caller's table until the `ext_nid == -1` terminator, adding each row. The write hold
+/// is taken once for the whole walk, so the list is never observable half-updated.
 ///
 /// # Safety
 ///
-/// `extlist` points at a `-1`-terminated array of live methods.
+/// `extlist` points at a `-1`-terminated array of live methods that outlive the list (unless a
+/// row is `X509V3_EXT_DYNAMIC`, which the list then owns).
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_EXT_add_list(extlist: *mut X509V3ExtMethod) -> c_int {
+    let Some(_registry) = RegistryWriteGuard::acquire() else {
+        return 0;
+    };
     let mut p = extlist;
     // SAFETY: the caller's contract is a `-1`-terminated array.
     while unsafe { (*p).ext_nid } != -1 {
-        // SAFETY: `p` is a live row of the array.
-        if unsafe { X509V3_EXT_add(p) } == 0 {
+        // SAFETY: `p` is a live row of the array and the write hold is held.
+        if unsafe { ext_add_locked(p) } == 0 {
             return 0;
         }
         // SAFETY: advancing within the caller's array.
@@ -533,14 +648,20 @@ pub unsafe extern "C" fn X509V3_EXT_add_list(extlist: *mut X509V3ExtMethod) -> c
 /// `void X509V3_EXT_cleanup(void)` — `crypto/x509/v3_lib.c:110-114`.
 ///
 /// Pops and frees the list; a NULL list is a no-op, as the typed `sk_*_pop_free` is in the
-/// authority.
+/// authority. The write hold excludes every read, so a print that has resolved a DYNAMIC row is
+/// using it only while this function waits.
 ///
 /// # Safety
 ///
-/// Must not race another `X509V3_EXT_add`/`_cleanup`; the authority's list is unlocked, so this
-/// is the same single-threaded contract the authority documents.
+/// No pointer arguments. A pointer previously returned by [`X509V3_EXT_get_nid`]/[`X509V3_EXT_get`]
+/// is a borrowed view (the C ABI cannot extend its lifetime), so a caller that keeps using such a
+/// pointer across its own `X509V3_EXT_cleanup` is still responsible for excluding that call. The
+/// crate's own dispatchers do not rely on that: `X509V3_EXT_print` holds the read hold.
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_EXT_cleanup() {
+    let Some(_registry) = RegistryWriteGuard::acquire() else {
+        return;
+    };
     let list = EXT_LIST.swap(ptr::null_mut(), Ordering::AcqRel);
     // SAFETY: `list` is NULL or the list this module built; `ext_list_free` is its destructor.
     unsafe { OPENSSL_sk_pop_free(list, Some(ext_list_free)) };
@@ -579,17 +700,15 @@ fn standard_ext_lookup(nid: c_int) -> *const X509V3ExtMethod {
     ptr::null()
 }
 
-/// `const X509V3_EXT_METHOD *X509V3_EXT_get_nid(int nid)` — `crypto/x509/v3_lib.c:52-71`.
+/// [`X509V3_EXT_get_nid`]'s body, with the registry hold already taken.
 ///
-/// A negative `nid` answers NULL; otherwise the ordered `standard_exts[]` search answers first, and
-/// failing that the dynamic `ext_list` is sorted and binary-searched. A miss answers NULL.
+/// The dynamic list is maintained in `ext_nid` order by [`ext_add_locked`], so this lookup does
+/// not mutate it: a read hold is sufficient for the whole search.
 ///
 /// # Safety
 ///
-/// No pointer arguments. As in the authority, the dynamic `ext_list` fallback is not locked, so
-/// concurrent callers must not race a `X509V3_EXT_add`/`X509V3_EXT_cleanup`.
-#[no_mangle]
-pub unsafe extern "C" fn X509V3_EXT_get_nid(nid: c_int) -> *const X509V3ExtMethod {
+/// The caller must hold the registry read or write hold for the whole call.
+unsafe fn ext_get_nid_locked(nid: c_int) -> *const X509V3ExtMethod {
     if nid < 0 {
         return ptr::null();
     }
@@ -601,33 +720,57 @@ pub unsafe extern "C" fn X509V3_EXT_get_nid(nid: c_int) -> *const X509V3ExtMetho
     if list.is_null() {
         return ptr::null();
     }
-    // SAFETY: `list` is the live global this module built.
-    unsafe { OPENSSL_sk_sort(list) };
     // The comparator's key: a method whose only read field is `ext_nid`.
     // SAFETY: an all-zero `X509V3ExtMethod` is a valid starting value (`ext_nid` 0, the rest
     // null/None); `ext_nid` is set below.
     let mut tmp: X509V3ExtMethod = unsafe { core::mem::zeroed() };
     tmp.ext_nid = nid;
-    // SAFETY: `list` is live; `&tmp` is the key `ext_cmp` reads `ext_nid` from.
+    // SAFETY: `list` is live under the hold; `&tmp` is the key `ext_cmp` reads `ext_nid` from.
     let idx = unsafe { OPENSSL_sk_find(list, (&raw const tmp).cast::<c_void>()) };
     // SAFETY: `list` is live; an out-of-range `idx` (the miss) answers NULL.
     unsafe { OPENSSL_sk_value(list, idx) }.cast::<X509V3ExtMethod>() as *const X509V3ExtMethod
+}
+
+/// `const X509V3_EXT_METHOD *X509V3_EXT_get_nid(int nid)` — `crypto/x509/v3_lib.c:52-71`.
+///
+/// A negative `nid` answers NULL; otherwise the ordered `standard_exts[]` search answers first, and
+/// failing that the dynamic `ext_list` is binary-searched. A miss answers NULL. The search runs
+/// under the registry read hold.
+///
+/// # Safety
+///
+/// No pointer arguments. The answer is a **borrowed** row, exactly the authority's C contract: a
+/// DYNAMIC row may be released by a later `X509V3_EXT_cleanup`, and the ABI cannot carry the read
+/// hold past this return. A caller that uses the pointer after this function returns must exclude
+/// a concurrent `_cleanup` itself; `X509V3_EXT_print` does not rely on that contract (it holds the
+/// read hold across resolution and use, B49-R10).
+#[no_mangle]
+pub unsafe extern "C" fn X509V3_EXT_get_nid(nid: c_int) -> *const X509V3ExtMethod {
+    let Some(_registry) = RegistryReadGuard::acquire() else {
+        return ptr::null();
+    };
+    // SAFETY: the read hold is held for the whole lookup.
+    unsafe { ext_get_nid_locked(nid) }
 }
 
 /// `const X509V3_EXT_METHOD *X509V3_EXT_get(X509_EXTENSION *ext)` — `crypto/x509/v3_lib.c:73-79`.
 ///
 /// # Safety
 ///
-/// `ext` must be a live `X509_EXTENSION`.
+/// `ext` must be a live `X509_EXTENSION`. The returned row is borrowed on the same terms as
+/// [`X509V3_EXT_get_nid`].
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_EXT_get(ext: *mut X509Extension) -> *const X509V3ExtMethod {
+    let Some(_registry) = RegistryReadGuard::acquire() else {
+        return ptr::null();
+    };
     // SAFETY: `ext` is live per the contract.
     let nid = unsafe { OBJ_obj2nid(X509_EXTENSION_get_object(ext)) };
     if nid == NID_undef {
         return ptr::null();
     }
-    // SAFETY: no preconditions; `X509V3_EXT_get_nid` takes an integer NID.
-    unsafe { X509V3_EXT_get_nid(nid) }
+    // SAFETY: the read hold is held for the whole lookup.
+    unsafe { ext_get_nid_locked(nid) }
 }
 
 /// `int X509V3_EXT_add_alias(int nid_to, int nid_from)` — `crypto/x509/v3_lib.c:89-108`.
@@ -638,18 +781,22 @@ pub unsafe extern "C" fn X509V3_EXT_get(ext: *mut X509Extension) -> *const X509V
 ///
 /// # Safety
 ///
-/// No pointer arguments. As in the authority the global `ext_list` is not locked, so this must not
-/// race another `X509V3_EXT_add`/`X509V3_EXT_cleanup`.
+/// No pointer arguments. One write hold covers the lookup, the copy and the insert: the source
+/// row may itself be a DYNAMIC row, and `X509V3_EXT_cleanup` must not release it between the
+/// lookup and the `ptr::read` below.
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_EXT_add_alias(nid_to: c_int, nid_from: c_int) -> c_int {
-    // SAFETY: no preconditions; `nid_from` is an integer NID.
-    let ext = unsafe { X509V3_EXT_get_nid(nid_from) };
+    let Some(_registry) = RegistryWriteGuard::acquire() else {
+        return 0;
+    };
+    // SAFETY: the write hold excludes every mutation for the whole call.
+    let ext = unsafe { ext_get_nid_locked(nid_from) };
     if ext.is_null() {
         // SAFETY: the site is a compiled-in constant.
         unsafe { raise_site(&err_sites::V3_LIB_95) };
         return 0;
     }
-    // `tmpext` owns the fresh copy; a failed `X509V3_EXT_add` releases it at the authority's own
+    // `tmpext` owns the fresh copy; a failed `ext_add_locked` releases it at the authority's own
     // `:104` site, and a successful one gives the block up to the `ext_list`.
     // SAFETY: the allocator answers NULL or one `X509V3ExtMethod`-sized block.
     let Some(raw) = RawCtx::<X509V3ExtMethod>::malloc_at(
@@ -661,7 +808,7 @@ pub unsafe extern "C" fn X509V3_EXT_add_alias(nid_to: c_int, nid_from: c_int) ->
         return 0;
     };
     let p = raw.as_ptr();
-    // SAFETY: `p` is a fresh, unaliased allocation of one row; `ext` is a live row.
+    // SAFETY: `p` is a fresh, unaliased allocation of one row; `ext` is a live row under the hold.
     unsafe {
         ptr::write(p, ptr::read(ext));
         (*p).ext_nid = nid_to;
@@ -669,8 +816,8 @@ pub unsafe extern "C" fn X509V3_EXT_add_alias(nid_to: c_int, nid_from: c_int) ->
     }
     // SAFETY: every field of the row has been written above.
     let tmpext = unsafe { raw.assume_init() };
-    // SAFETY: `tmpext.as_ptr()` is this call's own row, so `X509V3_EXT_add`'s contract holds.
-    if unsafe { X509V3_EXT_add(tmpext.as_ptr()) } == 0 {
+    // SAFETY: `tmpext.as_ptr()` is this call's own row and the write hold is held.
+    if unsafe { ext_add_locked(tmpext.as_ptr()) } == 0 {
         // `tmpext` drops here, at the authority's `:104` site.
         return 0;
     }
