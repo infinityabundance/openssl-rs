@@ -196,6 +196,12 @@ const fn legacy_md(
 /// shape — a writable `MD5_CTX` behind a context bound to this method — still initialises and
 /// returns `1`. The refusal is recorded as `docs/SECURITY_DIVERGENCE_POLICY.md`
 /// `D-LEGACY-MD-INIT-MD-DATA-1`; no path the crate's own initialiser takes reaches it.
+///
+/// Callers: `evp_md_init_legacy` (`src/evp/digest.rs:2325`, callback call `:2382`) and the
+/// exported `EVP_MD_meth_get_init` (`src/evp/digest.rs:1577`). The context's method is the
+/// provenance for the block: an owner-table context is trusted by identity, and any other method
+/// is trusted only for the extent its `ctx_size` declares. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn md5_init(ctx: *mut EvpMdCtx) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `MD5_MD` is a live static
     // method.
@@ -222,6 +228,12 @@ unsafe extern "C" fn md5_init(ctx: *mut EvpMdCtx) -> c_int {
 /// `digest` NULL), a NULL method, or a method with a smaller `ctx_size` — with `0` instead of
 /// dereferencing it (`docs/SECURITY_DIVERGENCE_POLICY.md`, `D-LEGACY-MD-CALLBACK-MD-DATA-1`). The
 /// context is borrowed exclusively for the duration of the call and no pointer is retained.
+///
+/// Callers: `EVP_DigestUpdate` (`src/evp/digest.rs:2451`, callback call `:2505`) and the exported
+/// `EVP_MD_meth_get_update` (`src/evp/digest.rs:1592`). `data`'s readable extent is the caller's
+/// obligation; a NULL `data` with `count != 0` is refused with `0` before the primitive is called.
+/// The callback retains no pointer; a refusal leaves the context untouched and retryable, while a
+/// primitive-level failure may leave partial state.
 unsafe extern "C" fn md5_update(ctx: *mut EvpMdCtx, data: *const c_void, count: usize) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `MD5_MD` is a live static
     // method.
@@ -234,6 +246,11 @@ unsafe extern "C" fn md5_update(ctx: *mut EvpMdCtx, data: *const c_void, count: 
     }) else {
         return 0;
     };
+    // A NULL `data` with a non-zero length is not a valid update; `MD5_Update` would dereference
+    // it. Refuse before the primitive is called (D-LEGACY-MD-CALLBACK-MD-DATA-1).
+    if data.is_null() && count != 0 {
+        return 0;
+    }
     // SAFETY: `init_md_data` established a writable `MD5_CTX`; `data`/`count` are the caller's.
     unsafe { MD5_Update(block.cast::<Md5Ctx>(), data, count) }
 }
@@ -247,6 +264,12 @@ unsafe extern "C" fn md5_update(ctx: *mut EvpMdCtx, data: *const c_void, count: 
 /// `MD5_DIGEST_LENGTH` (16) bytes. The context precondition is the one [`md5_update`] states, and
 /// a context that does not establish a writable `MD5_CTX` is refused with `0` before `md` is
 /// touched.
+///
+/// Callers: `evp_md_final_legacy` (`src/evp/digest.rs:2635`, callback call `:2652`),
+/// `evp_digest_final_xof_legacy` (`src/evp/digest.rs:2757`, call `:2783`) and the exported
+/// `EVP_MD_meth_get_final` (`src/evp/digest.rs:1606`). `md`'s writable extent is the caller's
+/// obligation. The callback retains no pointer; a refusal leaves the context untouched and
+/// retryable, while a successful final consumes the block.
 unsafe extern "C" fn md5_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `MD5_MD` is a live static
     // method.
@@ -278,6 +301,12 @@ unsafe extern "C" fn md5_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
 /// the authority's NULL write (`docs/SECURITY_DIVERGENCE_POLICY.md`,
 /// `D-LEGACY-MD-INIT-MD-DATA-1`). The normal table shape — a writable `MD5_SHA1_CTX` behind a
 /// context bound to `md5_sha1_md` — still initialises and returns `1`.
+///
+/// Callers: `evp_md_init_legacy` (`src/evp/digest.rs:2325`, callback call `:2382`) and the
+/// exported `EVP_MD_meth_get_init` (`src/evp/digest.rs:1577`). The context's method is the
+/// provenance for the block: an owner-table context is trusted by identity, and any other method
+/// is trusted only for the extent its `ctx_size` declares. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn md5_sha1_int_init(ctx: *mut EvpMdCtx) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `MD5_SHA1_MD` is a live static
     // method.
@@ -301,6 +330,12 @@ unsafe extern "C" fn md5_sha1_int_init(ctx: *mut EvpMdCtx) -> c_int {
 /// As [`md5_update`], over a writable `MD5_SHA1_CTX` (`MD5_SHA1_MD` is the owner): `ctx` NULL or
 /// live; `data` readable for `count` bytes and NULL only when `count == 0`; a context without a
 /// writable block answers `0` before any dereference.
+///
+/// Callers: `EVP_DigestUpdate` (`src/evp/digest.rs:2451`, callback call `:2505`) and the exported
+/// `EVP_MD_meth_get_update` (`src/evp/digest.rs:1592`). `data`'s readable extent is the caller's
+/// obligation; a NULL `data` with `count != 0` is refused with `0` before the primitive is called.
+/// The callback retains no pointer; a refusal leaves the context untouched and retryable, while a
+/// primitive-level failure may leave partial state.
 unsafe extern "C" fn md5_sha1_int_update(
     ctx: *mut EvpMdCtx,
     data: *const c_void,
@@ -317,6 +352,11 @@ unsafe extern "C" fn md5_sha1_int_update(
     }) else {
         return 0;
     };
+    // A NULL `data` with a non-zero length is not a valid update; the primitive would dereference
+    // it. Refuse before it is called (D-LEGACY-MD-CALLBACK-MD-DATA-1).
+    if data.is_null() && count != 0 {
+        return 0;
+    }
     // SAFETY: `init_md_data` established a writable `MD5_SHA1_CTX`; `data`/`count` are the caller's.
     unsafe { ossl_md5_sha1_update(block.cast::<Md5Sha1Ctx>(), data, count) }
 }
@@ -327,6 +367,12 @@ unsafe extern "C" fn md5_sha1_int_update(
 ///
 /// As [`md5_final`], over a writable `MD5_SHA1_CTX`: `ctx` NULL or live, `md` writable for
 /// `MD5_SHA1_DIGEST_LENGTH` (36) bytes, and a context without a writable block refused with `0`.
+///
+/// Callers: `evp_md_final_legacy` (`src/evp/digest.rs:2635`, callback call `:2652`),
+/// `evp_digest_final_xof_legacy` (`src/evp/digest.rs:2757`, call `:2783`) and the exported
+/// `EVP_MD_meth_get_final` (`src/evp/digest.rs:1606`). `md`'s writable extent is the caller's
+/// obligation. The callback retains no pointer; a refusal leaves the context untouched and
+/// retryable, while a successful final consumes the block.
 unsafe extern "C" fn md5_sha1_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `MD5_SHA1_MD` is a live static
     // method.
@@ -355,6 +401,11 @@ unsafe extern "C" fn md5_sha1_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) ->
 /// before the block is read (`D-LEGACY-MD-CALLBACK-MD-DATA-1`); `ossl_md5_sha1_ctrl` would also
 /// answer `0` for a NULL block, but this callback must not dereference the context to discover
 /// that.
+///
+/// Callers: `evp_md_ctx_ctrl_legacy` (`src/evp/digest.rs:3667`, callback call `:3680`) and the
+/// exported `EVP_MD_meth_get_ctrl` (`src/evp/digest.rs:1651`). The readable extent of `p2` under
+/// the commands that consume it is the caller's obligation. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn md5_sha1_int_ctrl(
     ctx: *mut EvpMdCtx,
     cmd: c_int,

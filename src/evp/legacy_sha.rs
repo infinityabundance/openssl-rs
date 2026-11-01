@@ -257,6 +257,12 @@ const fn legacy_md(
 /// shape — a writable `SHA_CTX` behind a context bound to this method — still initialises and
 /// returns `1`. The refusal is recorded as `docs/SECURITY_DIVERGENCE_POLICY.md`
 /// `D-LEGACY-MD-INIT-MD-DATA-1`; no path the crate's own initialiser takes reaches it.
+///
+/// Callers: `evp_md_init_legacy` (`src/evp/digest.rs:2325`, callback call `:2382`) and the
+/// exported `EVP_MD_meth_get_init` (`src/evp/digest.rs:1577`). The context's method is the
+/// provenance for the block: an owner-table context is trusted by identity, and any other method
+/// is trusted only for the extent its `ctx_size` declares. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn sha1_init(ctx: *mut EvpMdCtx) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA1_MD` is a live static
     // method.
@@ -283,6 +289,12 @@ unsafe extern "C" fn sha1_init(ctx: *mut EvpMdCtx) -> c_int {
 /// `digest` NULL), a NULL method, or a method with a smaller `ctx_size` — with `0` instead of
 /// dereferencing it (`docs/SECURITY_DIVERGENCE_POLICY.md`, `D-LEGACY-MD-CALLBACK-MD-DATA-1`). The
 /// context is borrowed exclusively for the duration of the call and no pointer is retained.
+///
+/// Callers: `EVP_DigestUpdate` (`src/evp/digest.rs:2451`, callback call `:2505`) and the exported
+/// `EVP_MD_meth_get_update` (`src/evp/digest.rs:1592`). `data`'s readable extent is the caller's
+/// obligation; a NULL `data` with `count != 0` is refused with `0` before the primitive is called.
+/// The callback retains no pointer; a refusal leaves the context untouched and retryable, while a
+/// primitive-level failure may leave partial state.
 unsafe extern "C" fn sha1_update(ctx: *mut EvpMdCtx, data: *const c_void, count: usize) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA1_MD` is a live static
     // method.
@@ -295,6 +307,11 @@ unsafe extern "C" fn sha1_update(ctx: *mut EvpMdCtx, data: *const c_void, count:
     }) else {
         return 0;
     };
+    // A NULL `data` with a non-zero length is not a valid update; `SHA1_Update` would dereference
+    // it. Refuse before the primitive is called (D-LEGACY-MD-CALLBACK-MD-DATA-1).
+    if data.is_null() && count != 0 {
+        return 0;
+    }
     // SAFETY: `init_md_data` established a writable `SHA_CTX`; `data`/`count` are the caller's.
     unsafe { SHA1_Update(block.cast::<ShaCtx>(), data, count) }
 }
@@ -308,6 +325,12 @@ unsafe extern "C" fn sha1_update(ctx: *mut EvpMdCtx, data: *const c_void, count:
 /// `SHA_DIGEST_LENGTH` (20) bytes. The context precondition is the one [`sha1_update`] states, and
 /// a context that does not establish a writable `SHA_CTX` is refused with `0` before `md` is
 /// touched.
+///
+/// Callers: `evp_md_final_legacy` (`src/evp/digest.rs:2635`, callback call `:2652`),
+/// `evp_digest_final_xof_legacy` (`src/evp/digest.rs:2757`, call `:2783`) and the exported
+/// `EVP_MD_meth_get_final` (`src/evp/digest.rs:1606`). `md`'s writable extent is the caller's
+/// obligation. The callback retains no pointer; a refusal leaves the context untouched and
+/// retryable, while a successful final consumes the block.
 unsafe extern "C" fn sha1_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA1_MD` is a live static
     // method.
@@ -341,6 +364,11 @@ unsafe extern "C" fn sha1_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
 /// establishes its extent from the caller's declared `app_datasize`, exactly as `init_md_data`
 /// does for the initialiser, so a sufficiently large but wrongly typed block is a caller contract
 /// violation rather than an out-of-bounds write. No state is changed on refusal.
+///
+/// Callers: `evp_md_ctx_ctrl_legacy` (`src/evp/digest.rs:3667`, callback call `:3680`) and the
+/// exported `EVP_MD_meth_get_ctrl` (`src/evp/digest.rs:1651`). The readable extent of `p2` under
+/// the commands that consume it is the caller's obligation. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn sha1_int_ctrl(
     ctx: *mut EvpMdCtx,
     cmd: c_int,
@@ -381,6 +409,12 @@ unsafe extern "C" fn sha1_int_ctrl(
 /// its own writable `SHA256_CTX` from the context's method and block, and answers `0` when the
 /// caller supplied a shape that does not contain one. The table's own path (a context bound to
 /// `sha224_md` with a writable block) is unchanged and returns `1`.
+///
+/// Callers: `evp_md_init_legacy` (`src/evp/digest.rs:2325`, callback call `:2382`) and the
+/// exported `EVP_MD_meth_get_init` (`src/evp/digest.rs:1577`). The context's method is the
+/// provenance for the block: an owner-table context is trusted by identity, and any other method
+/// is trusted only for the extent its `ctx_size` declares. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn sha224_init(ctx: *mut EvpMdCtx) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA224_MD` is a live static
     // method.
@@ -405,6 +439,12 @@ unsafe extern "C" fn sha224_init(ctx: *mut EvpMdCtx) -> c_int {
 /// As [`sha1_update`], over a writable `SHA256_CTX` (`SHA224_MD` is the owner): `ctx` NULL or live;
 /// `data` readable for `count` bytes and NULL only when `count == 0`; a context without a writable
 /// block answers `0` before any dereference.
+///
+/// Callers: `EVP_DigestUpdate` (`src/evp/digest.rs:2451`, callback call `:2505`) and the exported
+/// `EVP_MD_meth_get_update` (`src/evp/digest.rs:1592`). `data`'s readable extent is the caller's
+/// obligation; a NULL `data` with `count != 0` is refused with `0` before the primitive is called.
+/// The callback retains no pointer; a refusal leaves the context untouched and retryable, while a
+/// primitive-level failure may leave partial state.
 unsafe extern "C" fn sha224_update(ctx: *mut EvpMdCtx, data: *const c_void, count: usize) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA224_MD` is a live static
     // method.
@@ -417,6 +457,11 @@ unsafe extern "C" fn sha224_update(ctx: *mut EvpMdCtx, data: *const c_void, coun
     }) else {
         return 0;
     };
+    // A NULL `data` with a non-zero length is not a valid update; `SHA256_Update` would dereference
+    // it. Refuse before the primitive is called (D-LEGACY-MD-CALLBACK-MD-DATA-1).
+    if data.is_null() && count != 0 {
+        return 0;
+    }
     // SAFETY: `init_md_data` established a writable `SHA256_CTX`; `data`/`count` are the caller's.
     unsafe { SHA256_Update(block.cast::<Sha256Ctx>(), data, count) }
 }
@@ -427,6 +472,12 @@ unsafe extern "C" fn sha224_update(ctx: *mut EvpMdCtx, data: *const c_void, coun
 ///
 /// As [`sha1_final`], over a writable `SHA256_CTX`: `ctx` NULL or live, `md` writable for
 /// `SHA224_DIGEST_LENGTH` (28) bytes, and a context without a writable block refused with `0`.
+///
+/// Callers: `evp_md_final_legacy` (`src/evp/digest.rs:2635`, callback call `:2652`),
+/// `evp_digest_final_xof_legacy` (`src/evp/digest.rs:2757`, call `:2783`) and the exported
+/// `EVP_MD_meth_get_final` (`src/evp/digest.rs:1606`). `md`'s writable extent is the caller's
+/// obligation. The callback retains no pointer; a refusal leaves the context untouched and
+/// retryable, while a successful final consumes the block.
 unsafe extern "C" fn sha224_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA224_MD` is a live static
     // method.
@@ -451,6 +502,12 @@ unsafe extern "C" fn sha224_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int
 /// its own writable `SHA256_CTX` from the context's method and block, and answers `0` when the
 /// caller supplied a shape that does not contain one. The table's own path (a context bound to
 /// `sha256_md` with a writable block) is unchanged and returns `1`.
+///
+/// Callers: `evp_md_init_legacy` (`src/evp/digest.rs:2325`, callback call `:2382`) and the
+/// exported `EVP_MD_meth_get_init` (`src/evp/digest.rs:1577`). The context's method is the
+/// provenance for the block: an owner-table context is trusted by identity, and any other method
+/// is trusted only for the extent its `ctx_size` declares. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn sha256_init(ctx: *mut EvpMdCtx) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA256_MD` is a live static
     // method.
@@ -474,6 +531,12 @@ unsafe extern "C" fn sha256_init(ctx: *mut EvpMdCtx) -> c_int {
 /// As [`sha1_update`], over a writable `SHA256_CTX` (`SHA256_MD` is the owner): `ctx` NULL or
 /// live; `data` readable for `count` bytes and NULL only when `count == 0`; a context without a
 /// writable block answers `0` before any dereference.
+///
+/// Callers: `EVP_DigestUpdate` (`src/evp/digest.rs:2451`, callback call `:2505`) and the exported
+/// `EVP_MD_meth_get_update` (`src/evp/digest.rs:1592`). `data`'s readable extent is the caller's
+/// obligation; a NULL `data` with `count != 0` is refused with `0` before the primitive is called.
+/// The callback retains no pointer; a refusal leaves the context untouched and retryable, while a
+/// primitive-level failure may leave partial state.
 unsafe extern "C" fn sha256_update(ctx: *mut EvpMdCtx, data: *const c_void, count: usize) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA256_MD` is a live static
     // method.
@@ -486,6 +549,11 @@ unsafe extern "C" fn sha256_update(ctx: *mut EvpMdCtx, data: *const c_void, coun
     }) else {
         return 0;
     };
+    // A NULL `data` with a non-zero length is not a valid update; `SHA256_Update` would dereference
+    // it. Refuse before the primitive is called (D-LEGACY-MD-CALLBACK-MD-DATA-1).
+    if data.is_null() && count != 0 {
+        return 0;
+    }
     // SAFETY: `init_md_data` established a writable `SHA256_CTX`; `data`/`count` are the caller's.
     unsafe { SHA256_Update(block.cast::<Sha256Ctx>(), data, count) }
 }
@@ -496,6 +564,12 @@ unsafe extern "C" fn sha256_update(ctx: *mut EvpMdCtx, data: *const c_void, coun
 ///
 /// As [`sha1_final`], over a writable `SHA256_CTX`: `ctx` NULL or live, `md` writable for
 /// `SHA256_DIGEST_LENGTH` (32) bytes, and a context without a writable block refused with `0`.
+///
+/// Callers: `evp_md_final_legacy` (`src/evp/digest.rs:2635`, callback call `:2652`),
+/// `evp_digest_final_xof_legacy` (`src/evp/digest.rs:2757`, call `:2783`) and the exported
+/// `EVP_MD_meth_get_final` (`src/evp/digest.rs:1606`). `md`'s writable extent is the caller's
+/// obligation. The callback retains no pointer; a refusal leaves the context untouched and
+/// retryable, while a successful final consumes the block.
 unsafe extern "C" fn sha256_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA256_MD` is a live static
     // method.
@@ -520,6 +594,12 @@ unsafe extern "C" fn sha256_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int
 /// its own writable `SHA512_CTX` from the context's method and block, and answers `0` when the
 /// caller supplied a shape that does not contain one. The table's own path (a context bound to
 /// `sha384_md` with a writable block) is unchanged and returns `1`.
+///
+/// Callers: `evp_md_init_legacy` (`src/evp/digest.rs:2325`, callback call `:2382`) and the
+/// exported `EVP_MD_meth_get_init` (`src/evp/digest.rs:1577`). The context's method is the
+/// provenance for the block: an owner-table context is trusted by identity, and any other method
+/// is trusted only for the extent its `ctx_size` declares. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn sha384_init(ctx: *mut EvpMdCtx) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA384_MD` is a live static
     // method.
@@ -545,6 +625,12 @@ unsafe extern "C" fn sha384_init(ctx: *mut EvpMdCtx) -> c_int {
 /// As [`sha1_update`], over a writable `SHA512_CTX` (`SHA384_MD`, `SHA512_224_MD` and
 /// `SHA512_256_MD` are the owners): `ctx` NULL or live; `data` readable for `count` bytes and NULL
 /// only when `count == 0`; a context without a writable block answers `0` before any dereference.
+///
+/// Callers: `EVP_DigestUpdate` (`src/evp/digest.rs:2451`, callback call `:2505`) and the exported
+/// `EVP_MD_meth_get_update` (`src/evp/digest.rs:1592`). `data`'s readable extent is the caller's
+/// obligation; a NULL `data` with `count != 0` is refused with `0` before the primitive is called.
+/// The callback retains no pointer; a refusal leaves the context untouched and retryable, while a
+/// primitive-level failure may leave partial state.
 unsafe extern "C" fn sha384_update(ctx: *mut EvpMdCtx, data: *const c_void, count: usize) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and the three owners are live
     // static methods.
@@ -561,6 +647,11 @@ unsafe extern "C" fn sha384_update(ctx: *mut EvpMdCtx, data: *const c_void, coun
     }) else {
         return 0;
     };
+    // A NULL `data` with a non-zero length is not a valid update; `SHA512_Update` would dereference
+    // it. Refuse before the primitive is called (D-LEGACY-MD-CALLBACK-MD-DATA-1).
+    if data.is_null() && count != 0 {
+        return 0;
+    }
     // SAFETY: `init_md_data_any` established a writable `SHA512_CTX`; `data`/`count` are the
     // caller's.
     unsafe { SHA512_Update(block.cast::<Sha512Ctx>(), data, count) }
@@ -572,6 +663,12 @@ unsafe extern "C" fn sha384_update(ctx: *mut EvpMdCtx, data: *const c_void, coun
 ///
 /// As [`sha1_final`], over a writable `SHA512_CTX`: `ctx` NULL or live, `md` writable for
 /// `SHA384_DIGEST_LENGTH` (48) bytes, and a context without a writable block refused with `0`.
+///
+/// Callers: `evp_md_final_legacy` (`src/evp/digest.rs:2635`, callback call `:2652`),
+/// `evp_digest_final_xof_legacy` (`src/evp/digest.rs:2757`, call `:2783`) and the exported
+/// `EVP_MD_meth_get_final` (`src/evp/digest.rs:1606`). `md`'s writable extent is the caller's
+/// obligation. The callback retains no pointer; a refusal leaves the context untouched and
+/// retryable, while a successful final consumes the block.
 unsafe extern "C" fn sha384_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA384_MD` is a live static
     // method.
@@ -596,6 +693,12 @@ unsafe extern "C" fn sha384_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int
 /// its own writable `SHA512_CTX` from the context's method and block, and answers `0` when the
 /// caller supplied a shape that does not contain one. The table's own path (a context bound to
 /// `sha512_md` with a writable block) is unchanged and returns `1`.
+///
+/// Callers: `evp_md_init_legacy` (`src/evp/digest.rs:2325`, callback call `:2382`) and the
+/// exported `EVP_MD_meth_get_init` (`src/evp/digest.rs:1577`). The context's method is the
+/// provenance for the block: an owner-table context is trusted by identity, and any other method
+/// is trusted only for the extent its `ctx_size` declares. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn sha512_init(ctx: *mut EvpMdCtx) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA512_MD` is a live static
     // method.
@@ -619,6 +722,12 @@ unsafe extern "C" fn sha512_init(ctx: *mut EvpMdCtx) -> c_int {
 /// As [`sha1_update`], over a writable `SHA512_CTX` (`SHA512_MD` is the owner): `ctx` NULL or
 /// live; `data` readable for `count` bytes and NULL only when `count == 0`; a context without a
 /// writable block answers `0` before any dereference.
+///
+/// Callers: `EVP_DigestUpdate` (`src/evp/digest.rs:2451`, callback call `:2505`) and the exported
+/// `EVP_MD_meth_get_update` (`src/evp/digest.rs:1592`). `data`'s readable extent is the caller's
+/// obligation; a NULL `data` with `count != 0` is refused with `0` before the primitive is called.
+/// The callback retains no pointer; a refusal leaves the context untouched and retryable, while a
+/// primitive-level failure may leave partial state.
 unsafe extern "C" fn sha512_update(ctx: *mut EvpMdCtx, data: *const c_void, count: usize) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA512_MD` is a live static
     // method.
@@ -631,6 +740,11 @@ unsafe extern "C" fn sha512_update(ctx: *mut EvpMdCtx, data: *const c_void, coun
     }) else {
         return 0;
     };
+    // A NULL `data` with a non-zero length is not a valid update; `SHA512_Update` would dereference
+    // it. Refuse before the primitive is called (D-LEGACY-MD-CALLBACK-MD-DATA-1).
+    if data.is_null() && count != 0 {
+        return 0;
+    }
     // SAFETY: `init_md_data` established a writable `SHA512_CTX`; `data`/`count` are the caller's.
     unsafe { SHA512_Update(block.cast::<Sha512Ctx>(), data, count) }
 }
@@ -641,6 +755,12 @@ unsafe extern "C" fn sha512_update(ctx: *mut EvpMdCtx, data: *const c_void, coun
 ///
 /// As [`sha1_final`], over a writable `SHA512_CTX`: `ctx` NULL or live, `md` writable for
 /// `SHA512_DIGEST_LENGTH` (64) bytes, and a context without a writable block refused with `0`.
+///
+/// Callers: `evp_md_final_legacy` (`src/evp/digest.rs:2635`, callback call `:2652`),
+/// `evp_digest_final_xof_legacy` (`src/evp/digest.rs:2757`, call `:2783`) and the exported
+/// `EVP_MD_meth_get_final` (`src/evp/digest.rs:1606`). `md`'s writable extent is the caller's
+/// obligation. The callback retains no pointer; a refusal leaves the context untouched and
+/// retryable, while a successful final consumes the block.
 unsafe extern "C" fn sha512_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA512_MD` is a live static
     // method.
@@ -668,6 +788,12 @@ unsafe extern "C" fn sha512_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int
 /// its own writable `SHA512_CTX` from the context's method and block, and answers `0` when the
 /// caller supplied a shape that does not contain one. The table's own path (a context bound to
 /// `sha512_224_md` with a writable block) is unchanged and returns `1`.
+///
+/// Callers: `evp_md_init_legacy` (`src/evp/digest.rs:2325`, callback call `:2382`) and the
+/// exported `EVP_MD_meth_get_init` (`src/evp/digest.rs:1577`). The context's method is the
+/// provenance for the block: an owner-table context is trusted by identity, and any other method
+/// is trusted only for the extent its `ctx_size` declares. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn sha512_224_int_init(ctx: *mut EvpMdCtx) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA512_224_MD` is a live
     // static method.
@@ -690,6 +816,12 @@ unsafe extern "C" fn sha512_224_int_init(ctx: *mut EvpMdCtx) -> c_int {
 ///
 /// As [`sha1_final`], over a writable `SHA512_CTX` (`SHA512_224_MD` is the owner): `ctx` NULL or
 /// live, `md` writable for 28 bytes, and a context without a writable block refused with `0`.
+///
+/// Callers: `evp_md_final_legacy` (`src/evp/digest.rs:2635`, callback call `:2652`),
+/// `evp_digest_final_xof_legacy` (`src/evp/digest.rs:2757`, call `:2783`) and the exported
+/// `EVP_MD_meth_get_final` (`src/evp/digest.rs:1606`). `md`'s writable extent is the caller's
+/// obligation. The callback retains no pointer; a refusal leaves the context untouched and
+/// retryable, while a successful final consumes the block.
 unsafe extern "C" fn sha512_224_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA512_224_MD` is a live
     // static method.
@@ -714,6 +846,12 @@ unsafe extern "C" fn sha512_224_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) 
 /// its own writable `SHA512_CTX` from the context's method and block, and answers `0` when the
 /// caller supplied a shape that does not contain one. The table's own path (a context bound to
 /// `sha512_256_md` with a writable block) is unchanged and returns `1`.
+///
+/// Callers: `evp_md_init_legacy` (`src/evp/digest.rs:2325`, callback call `:2382`) and the
+/// exported `EVP_MD_meth_get_init` (`src/evp/digest.rs:1577`). The context's method is the
+/// provenance for the block: an owner-table context is trusted by identity, and any other method
+/// is trusted only for the extent its `ctx_size` declares. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn sha512_256_int_init(ctx: *mut EvpMdCtx) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA512_256_MD` is a live
     // static method.
@@ -736,6 +874,12 @@ unsafe extern "C" fn sha512_256_int_init(ctx: *mut EvpMdCtx) -> c_int {
 ///
 /// As [`sha1_final`], over a writable `SHA512_CTX` (`SHA512_256_MD` is the owner): `ctx` NULL or
 /// live, `md` writable for 32 bytes, and a context without a writable block refused with `0`.
+///
+/// Callers: `evp_md_final_legacy` (`src/evp/digest.rs:2635`, callback call `:2652`),
+/// `evp_digest_final_xof_legacy` (`src/evp/digest.rs:2757`, call `:2783`) and the exported
+/// `EVP_MD_meth_get_final` (`src/evp/digest.rs:1606`). `md`'s writable extent is the caller's
+/// obligation. The callback retains no pointer; a refusal leaves the context untouched and
+/// retryable, while a successful final consumes the block.
 unsafe extern "C" fn sha512_256_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA512_256_MD` is a live
     // static method.

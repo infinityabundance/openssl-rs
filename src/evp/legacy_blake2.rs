@@ -219,6 +219,12 @@ const fn legacy_md(
 /// shape — a writable `BLAKE2B_CTX` behind a context bound to this method — still initialises and
 /// returns `1`. The refusal is recorded as `docs/SECURITY_DIVERGENCE_POLICY.md`
 /// `D-LEGACY-BLAKE2-INIT-MD-DATA-1`.
+///
+/// Callers: `evp_md_init_legacy` (`src/evp/digest.rs:2325`, callback call `:2382`) and the
+/// exported `EVP_MD_meth_get_init` (`src/evp/digest.rs:1577`). The context's method is the
+/// provenance for the block: an owner-table context is trusted by identity, and any other method
+/// is trusted only for the extent its `ctx_size` declares. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn blake2b_int_init(ctx: *mut EvpMdCtx) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `BLAKE2B_MD` is a live
     // static method.
@@ -249,6 +255,12 @@ unsafe extern "C" fn blake2b_int_init(ctx: *mut EvpMdCtx) -> c_int {
 /// a NULL method, or a method with a smaller `ctx_size` — with `0` before any dereference
 /// (`docs/SECURITY_DIVERGENCE_POLICY.md`, `D-LEGACY-MD-CALLBACK-MD-DATA-1`). The context is
 /// borrowed exclusively for the duration of the call and no pointer is retained.
+///
+/// Callers: `EVP_DigestUpdate` (`src/evp/digest.rs:2451`, callback call `:2505`) and the exported
+/// `EVP_MD_meth_get_update` (`src/evp/digest.rs:1592`). `data`'s readable extent is the caller's
+/// obligation; a NULL `data` with `count != 0` is refused with `0` before the primitive is called.
+/// The callback retains no pointer; a refusal leaves the context untouched and retryable, while a
+/// primitive-level failure may leave partial state.
 unsafe extern "C" fn blake2b_int_update(
     ctx: *mut EvpMdCtx,
     data: *const c_void,
@@ -265,6 +277,11 @@ unsafe extern "C" fn blake2b_int_update(
     }) else {
         return 0;
     };
+    // A NULL `data` with a non-zero length is not a valid update; the primitive would dereference
+    // it. Refuse before it is called (D-LEGACY-MD-CALLBACK-MD-DATA-1).
+    if data.is_null() && count != 0 {
+        return 0;
+    }
     // The authority's `ossl_blake2b_update` reaches `copy_nonoverlapping` even for a zero length;
     // answer the zero-length update before the pointer is used so a NULL `data` is accepted here.
     if count == 0 {
@@ -283,6 +300,12 @@ unsafe extern "C" fn blake2b_int_update(
 /// `BLAKE2B_DIGEST_LENGTH` (64) bytes. The context precondition is the one
 /// [`blake2b_int_update`] states, and a context without a writable block is refused with `0`
 /// before `md` is touched.
+///
+/// Callers: `evp_md_final_legacy` (`src/evp/digest.rs:2635`, callback call `:2652`),
+/// `evp_digest_final_xof_legacy` (`src/evp/digest.rs:2757`, call `:2783`) and the exported
+/// `EVP_MD_meth_get_final` (`src/evp/digest.rs:1606`). `md`'s writable extent is the caller's
+/// obligation. The callback retains no pointer; a refusal leaves the context untouched and
+/// retryable, while a successful final consumes the block.
 unsafe extern "C" fn blake2b_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `BLAKE2B_MD` is a live static
     // method.
@@ -313,6 +336,12 @@ unsafe extern "C" fn blake2b_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> 
 /// [`blake2b_int_init`] applies over a `BLAKE2S_CTX`: a context without a writable block answers
 /// `0` instead of performing the authority's NULL write, and the bound table path still
 /// initialises and returns `1`. Recorded as `D-LEGACY-BLAKE2-INIT-MD-DATA-1`.
+///
+/// Callers: `evp_md_init_legacy` (`src/evp/digest.rs:2325`, callback call `:2382`) and the
+/// exported `EVP_MD_meth_get_init` (`src/evp/digest.rs:1577`). The context's method is the
+/// provenance for the block: an owner-table context is trusted by identity, and any other method
+/// is trusted only for the extent its `ctx_size` declares. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn blake2s_int_init(ctx: *mut EvpMdCtx) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `BLAKE2S_MD` is a live
     // static method.
@@ -340,6 +369,12 @@ unsafe extern "C" fn blake2s_int_init(ctx: *mut EvpMdCtx) -> c_int {
 /// As [`blake2b_int_update`], over a writable `BLAKE2S_CTX` (`BLAKE2S_MD` is the owner): `ctx`
 /// NULL or live, `count` zero allowed with `data` NULL, and a context without a writable block
 /// refused with `0` before any dereference.
+///
+/// Callers: `EVP_DigestUpdate` (`src/evp/digest.rs:2451`, callback call `:2505`) and the exported
+/// `EVP_MD_meth_get_update` (`src/evp/digest.rs:1592`). `data`'s readable extent is the caller's
+/// obligation; a NULL `data` with `count != 0` is refused with `0` before the primitive is called.
+/// The callback retains no pointer; a refusal leaves the context untouched and retryable, while a
+/// primitive-level failure may leave partial state.
 unsafe extern "C" fn blake2s_int_update(
     ctx: *mut EvpMdCtx,
     data: *const c_void,
@@ -356,6 +391,11 @@ unsafe extern "C" fn blake2s_int_update(
     }) else {
         return 0;
     };
+    // A NULL `data` with a non-zero length is not a valid update; the primitive would dereference
+    // it. Refuse before it is called (D-LEGACY-MD-CALLBACK-MD-DATA-1).
+    if data.is_null() && count != 0 {
+        return 0;
+    }
     // As in the BLAKE2b arm: a zero-length update is answered before the pointer is used.
     if count == 0 {
         return 1;
@@ -370,6 +410,12 @@ unsafe extern "C" fn blake2s_int_update(
 ///
 /// As [`blake2b_int_final`], over a writable `BLAKE2S_CTX`: `ctx` NULL or live, `md` writable for
 /// `BLAKE2S_DIGEST_LENGTH` (32) bytes, and a context without a writable block refused with `0`.
+///
+/// Callers: `evp_md_final_legacy` (`src/evp/digest.rs:2635`, callback call `:2652`),
+/// `evp_digest_final_xof_legacy` (`src/evp/digest.rs:2757`, call `:2783`) and the exported
+/// `EVP_MD_meth_get_final` (`src/evp/digest.rs:1606`). `md`'s writable extent is the caller's
+/// obligation. The callback retains no pointer; a refusal leaves the context untouched and
+/// retryable, while a successful final consumes the block.
 unsafe extern "C" fn blake2s_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `BLAKE2S_MD` is a live static
     // method.

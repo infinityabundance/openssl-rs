@@ -102,6 +102,10 @@ pub mod legacy_ripemd;
 pub mod legacy_sha;
 pub mod legacy_sha3;
 pub mod legacy_wp;
+
+// Adversarial coverage for the entire exported legacy digest callback surface.
+#[cfg(test)]
+mod legacy_digest_callback_surface;
 pub mod mac;
 pub mod method_store;
 pub mod p5_crpt;
