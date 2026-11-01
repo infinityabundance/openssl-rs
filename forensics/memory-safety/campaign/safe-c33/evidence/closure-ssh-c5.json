@@ -6,12 +6,12 @@
     "sha256": "fc704796c3c839a6fb53296bde49f241650b4d9ed5394f04e0fb701ee769d178",
     "schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4"
   },
-  "generated_utc": "2026-11-01T10:02:50Z",
+  "generated_utc": "2026-11-01T11:30:33Z",
   "family": "openssh",
   "source_identity": {
-    "repository_head": "de1c09815e3067fb8e3c8ebea996e30fb965b075",
+    "repository_head": "4bedf992c8dec561fa1e86d536e1288887884c3d",
     "branch": "stage/p25/element7-s2b",
-    "tracked_tree_dirty": true,
+    "tracked_tree_dirty": false,
     "inventory_path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/c5-candidate-freeze.json",
     "inventory_source_head": "ca9ca31440aa926363b1579e651c31953fc3ee11",
     "inventory_is_ancestor_or_equal": true,
@@ -80,7 +80,7 @@
         "matches_inventory": true
       }
     },
-    "raw_ldd": "\tlinux-vdso.so.1 (0x00007fd4a5485000)\n\tlibcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 (0x00007fd4a4a00000)\n\tlibz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007fd4a5369000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fd4a481e000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007fd4a5349000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007fd4a5487000)\n"
+    "raw_ldd": "\tlinux-vdso.so.1 (0x00007fa62d7c7000)\n\tlibcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 (0x00007fa62ce00000)\n\tlibz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007fa62d6ab000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fa62cc1e000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007fa62cbfe000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007fa62d7c9000)\n"
   },
   "ledger_record": {
     "run_id": "run:build-link:candidate:openssh",
@@ -217956,8 +217956,8 @@
       "receipt_inventory_path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b48-candidate-freeze.json",
       "receipt_artifact_path": "court/tmp/openssh-closure/client-b48/openssh-9.9p1/ssh",
       "receipt_artifact_sha256": "4a2a8e85eb3ddbf8b4e6197e3af48d150387d92c95fa0daf7e31a360e5edc9ed",
-      "selection": "explicit --carry-forward-closure",
-      "discovered_candidate_count": null,
+      "selection": "most recent ACCEPTED closure for this family and artifact name in the carry-forward directory",
+      "discovered_candidate_count": 14,
       "contracted_operations_never_enumerated": 56637,
       "boundedness_note": "only operations the previous applied closure enumerated are carried forward; the inventory's contracted operations that no closure enumerated are never enrolled by this path",
       "carried_forward": [
