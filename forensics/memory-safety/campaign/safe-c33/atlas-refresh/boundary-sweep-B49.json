@@ -4,10 +4,13 @@
  "campaign": "safe-c33 shared-contract establishment (E2 follow-on: the X509_VERIFY_POLICY extension-method i2r printers)",
  "subphase": "B49 starts the X509_VERIFY_POLICY mechanism (75 BLOCKED sites). The 75 are grouped by X509V3_EXT_METHOD callback family; the largest family whose dispatch is wholly ours, the 22 i2r sites, receives fn-level # Safety contracts and one dispatcher guard. The other 53 sites are enumerated and left BLOCKED. The discharge is NOT applied: CAMPAIGN-STATUS.json is untouched and the closure was not run.",
  "candidate": {
-  "base_commit": "53a9507369251c1e3862fb9445ffe7c474c9de84",
-  "base_commit_subject": "evidence(ssl): withdraw the B46/B47 rows; the witness question is undecided",
+  "base_head": "ade24461d",
+  "source_state": "committed",
+  "base_commit": "ade24461d9e54ea7796b0856ee2f98f6c81f97cf",
+  "base_commit_subject": "docs(x509): contracts for the 22 i2r extension printers, and a dispatcher guard",
+  "parent_commit": "53a9507369251c1e3862fb9445ffe7c474c9de84",
   "branch": "stage/p25/element7-s2b",
-  "working_tree": "uncommitted working tree on the base commit: 16 src/x509/v3_*.rs printer files plus src/x509/v3_prn.rs. No commit, tag, build or install was made; the source identity is the base commit plus the files_sha256 below.",
+  "working_tree": "clean at ade24461d9e54ea7796b0856ee2f98f6c81f97cf: the 16 printer files and v3_prn.rs are committed there, and files_sha256 below is that tree. No build or install was made.",
   "files": [
    "src/x509/v3_aaa.rs",
    "src/x509/v3_asid.rs",
@@ -46,7 +49,8 @@
    "src/x509/v3_timespec.rs": "daee2f48e66d7105f446bd25aa81a5bc6341f9071d3b6c2e5168c442772c2b18",
    "src/x509/v3_usernotice.rs": "eb8b6ac2b8b8c53a798116082b52a730c927b00b163b0f8b9154cc32c7285d1d"
   },
-  "note": "No freeze tag was created. V1 census coordinates are retained in `line`; `line_current` is bound to files_sha256."
+  "note": "No freeze tag was created. V1 census coordinates are retained in `line`; `line_current` is bound to files_sha256.",
+  "review_correction_source_state": "uncommitted delta on ade24461d: C3 route (b) adds a row-liveness paragraph to X509V3_EXT_print's # Safety and C4 adds one prologue test, both in src/x509/v3_prn.rs (post-review sha256 e52ca5eb5a5804a15689a43f6f39cd7ee04affe7a905c28fce39529426d877d7). files_sha256 above remains the committed ade24461d tree. This delta makes the candidate S' and requires a rebuild and re-freeze plus a FAST re-run before any application; the closure was not run. The # Safety edit keeps its line count so the candidate's cited coordinates (:254-256, :279, :306-310, :341, :355) still address the same statements; the C4 test is appended after them."
  },
  "authority": {
   "id": "openssl-3.6.4-production",
@@ -187,7 +191,7 @@
   "chosen_family": {
    "family": "i2r",
    "count": 22,
-   "why": "Largest family. Every i2r site is reached only through X509V3_EXT_print (this crate) at src/x509/v3_prn.rs:341 after the row looked up from the extension NID; no other code path calls an i2r slot (grep of `(*method).i2r` finds only v3_prn.rs:267)."
+   "why": "Largest family. Every i2r site is reached only through X509V3_EXT_print (this crate) at src/x509/v3_prn.rs:341 after the row looked up from the extension NID; no other code path calls an i2r slot (grep of `(*method).i2r` finds only the slot read at src/x509/v3_prn.rs:306-310, whose value is called at :341)."
   },
   "per_file": [
    {
@@ -348,7 +352,7 @@
    }
   ]
  },
- "shared_contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only).",
+ "shared_contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:279) and treats a NULL item as a failed decode (:279-289); it refuses a NULL out or ext in its prologue (:254-256) and a NULL decode before the slot (:300-303); it calls i2r at :341 and releases the decoded value with the same item at :355. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). The resolved `method` row must also stay live and unmodified for the call (B49-R10): the lookup establishes non-NULL only, and the dynamic list is unlocked.",
  "dispatch_paths": {
   "lookup": "X509V3_EXT_get(ext) at src/x509/v3_prn.rs:266 -> X509V3_EXT_get_nid (standard_exts[] binary search, then the dynamic ext_list)",
   "decode": "the row item is resolved once (ext_method_item, :279): None means the old-style d2i/ext_free pair; Err means the accessor answered NULL and the call takes the failed-decode path",
@@ -357,6 +361,16 @@
   "free": "ASN1_item_free(ext_str, item) at :355 with the same item the decode used, or method->ext_free",
   "lifetime": "ext_str is exclusively this frame's from decode to :355 and is live across the callback; the callback must not free, retain or replace it",
   "allocator": "no allocator is involved at the boundary: ext_str comes from the ASN.1 decoder on the CRYPTO_* seam; out is the caller's BIO"
+ },
+ "row_liveness": {
+  "question": "Does the dispatcher establish that the row returned by X509V3_EXT_get is live against a concurrent X509V3_EXT_add/_add_alias/_cleanup, and is the reachable set only static rows?",
+  "lookup_order": "X509V3_EXT_get -> X509V3_EXT_get_nid: the STANDARD_EXTS binary search answers first (src/x509/v3_lib.rs:596-599); the dynamic EXT_LIST is consulted only when that search misses (:600-614).",
+  "callbacks_are_private": "The 22 boundary functions are module-private `unsafe [extern \"C\"] fn`s with no #[no_mangle]; the 15 slot callbacks appear only as function-pointer values in crate-owned rows, and the 7 helpers are called only from those rows.",
+  "static_rows": "The 15 slot callbacks are installed only in crate-owned `pub static` method rows reached through STANDARD_EXTS; for a standard NID the dynamic list is never consulted, so those rows are process-lifetime statics that X509V3_EXT_cleanup cannot release.",
+  "dynamic_rows": "X509V3_EXT_add (src/x509/v3_lib.rs:490-509) accepts a caller row; X509V3_EXT_add_alias (:644-680) copies a row (including its i2r pointer) into a DYNAMIC allocation and registers it; X509V3_EXT_cleanup (:543-547) swaps EXT_LIST to NULL and pop_free's the list, releasing every DYNAMIC row through ext_list_free (:457-470). A dynamic alias of a standard row therefore carries one of the 22 callbacks and is reachable through the dynamic fallback for its new NID. X509V3_EXT_add_nid does not exist in this crate or in the pinned 3.6.4 authority; the registration entry points are _add, _add_list and _add_alias.",
+  "locking": "EXT_LIST is an AtomicPtr used without a list lock. The authority's ext_list is unlocked too (crypto/x509/v3_lib.c comments 'Ideally, this would be done under a lock'), and the candidate's X509V3_EXT_get_nid/_add/_add_alias/_cleanup # Safety sections state the same single-threaded contract.",
+  "crate_callers": "No non-test code in src/ calls X509V3_EXT_add/_add_list/_add_alias/_cleanup (grep); those entry points are exported ABI, so an external consumer can register a row or run cleanup.",
+  "conclusion": "Only-static-rows is NOT established: the exported registration/cleanup ABI makes a DYNAMIC alias row (carrying a standard row's i2r) reachable, and the unlocked list lets cleanup release it while a print holds the pointer. The lookup establishes non-NULLness only. Recorded as retained obligation B49-R10 and stated in X509V3_EXT_print's # Safety; the dispositions were not applied and the closure was not run."
  },
  "defect_class": {
   "existing": "uncontracted unsafe fn definitions at 75 X509_VERIFY_POLICY sites; the i2r printer family had per-line SAFETY comments but no fn-level # Safety",
@@ -1093,17 +1107,17 @@
   }
  ],
  "hidden_obligations": 0,
- "hidden_obligations_note": "The retained obligations are stated in the fn-level contracts and in B49-R2/R3/R4: the registrar must keep each row's `it` paired with its `i2r`, `out` liveness is the caller's, and exclusive use of the decoded value is the dispatcher's. None is hidden.",
+ "hidden_obligations_note": "The retained obligations are stated in the fn-level contracts and in B49-R2/R3/R4/R10: the registrar must keep each row's `it` paired with its `i2r`, `out` liveness is the caller's, exclusive use of the decoded value is the dispatcher's, and the resolved row must stay live across the call (no concurrent _add/_add_alias/_cleanup). None is hidden.",
  "new_unsafe_assumptions": 1,
- "new_unsafe_assumptions_note": "One new private unsafe fn, ext_method_item, with a # Safety contract and a single caller (X509V3_EXT_print). It assumes only that `method` is a live row, which the dispatcher establishes at :266-270. It adds no new site to the 75.",
+ "new_unsafe_assumptions_note": "One new private unsafe fn, ext_method_item, with a # Safety contract and a single caller (X509V3_EXT_print). It assumes that `method` is a live row. The dispatcher establishes non-NULLness at :266-270 but NOT liveness: a DYNAMIC row copied by X509V3_EXT_add_alias is released by X509V3_EXT_cleanup, so row liveness across the call is retained as caller obligation B49-R10 and stated in X509V3_EXT_print's # Safety. It adds no new site to the 75.",
  "unsafe_operations_removed": 0,
  "unsafe_operations_introduced": 1,
  "unsafe_operations_introduced_note": "ext_method_item (src/x509/v3_prn.rs:217) is the contract-carrying handler for the item resolution; it is not a new boundary site.",
  "test_only_unsafe_added": 1,
  "test_only_unsafe_added_note": "The test-only `unsafe extern \"C\" fn null_item()` accessor used by the canary.",
- "boundary_size": "22 boundary operations: 16 i2r slot callbacks and 6 i2r-only helpers (i2r_ASIdentifierChoice, i2r_OSSL_DAY_TIME, i2r_OSSL_DAY_TIME_BAND, i2r_OSSL_PERIOD, i2r_OSSL_TIME_SPEC_TIME, plus the i2r_OSSL_TIME_SPEC slot), over 16 files. 22 V1 census sites retained; no new boundary rows for the 53 untouched sites.",
+ "boundary_size": "22 boundary operations: 15 i2r slot callbacks (the `i2r` field of a registered row) and 7 i2r-only helpers (i2r_ALLOWED_ATTRIBUTES_CHOICE, i2r_ALLOWED_ATTRIBUTES_ITEM, i2r_ASIdentifierChoice, i2r_OSSL_DAY_TIME, i2r_OSSL_DAY_TIME_BAND, i2r_OSSL_PERIOD, i2r_OSSL_TIME_SPEC_TIME), over 16 files. 22 V1 census sites retained; no new boundary rows for the 53 untouched sites.",
  "safe_callers_can_cause_ub": true,
- "safe_callers_can_cause_ub_note": "Kept true: all 22 sites remain reachable only as unsafe extern \"C\" callbacks through the unsafe X509V3_EXT_print entry point. The dispatcher now refuses a NULL out/ext and a NULL or undecodable item before the slot; the remaining stated obligations are the registrar's row pairing (B49-R2), out liveness (B49-R3) and exclusive use of the decoded value (B49-R4). No safe Rust path to these callbacks exists.",
+ "safe_callers_can_cause_ub_note": "Kept true: all 22 sites remain reachable only as unsafe extern \"C\" callbacks through the unsafe X509V3_EXT_print entry point. The dispatcher now refuses a NULL out/ext and a NULL or undecodable item before the slot; the remaining stated obligations are the registrar's row pairing (B49-R2), out liveness (B49-R3), exclusive use of the decoded value (B49-R4) and the resolved row's liveness across the call (B49-R10). No safe Rust path to these callbacks exists.",
  "negative_control": {
   "id": "B49-C1",
   "name": "x509::v3_prn::tests::ext_method_item_refuses_an_accessor_that_answers_null",
@@ -1116,17 +1130,33 @@
   "restore": "byte-for-byte: sha256 4d0a8bf2186e29f6c636ad948e64492b79a4189ebd71c8260cd7a454c435e805 before and after the mutation",
   "limits": "The guard is exercised directly on a live stack row. No end-to-end row with a NULL-item accessor can be built without mutating the process-global dynamic extension list, which the crate does not do in tests (B49-R8)."
  },
+ "negative_control_2": {
+  "id": "B49-C2",
+  "name": "x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue",
+  "kind": "court functional test, lib unittest",
+  "result": "PASS (1 passed, 0 failed, 0 ignored at --test-threads=4)",
+  "observation": "A NULL `out`, a NULL `ext`, and the pair each answer 0; the guard returns before X509_EXTENSION_get_data, the item resolution, the decoder or any callback.",
+  "mutation_sensitive": true,
+  "mutation": "the prologue `if out.is_null() || ext.is_null() { return 0; }` (src/x509/v3_prn.rs:254-256) removed",
+  "fails_if": "observed FAILED rc 101 at src/x509/v3_prn.rs:588: assertion `left == right` failed: a NULL out must be refused; left: 1, right: 0 (the guardless call reaches the failed-decode path under X509V3_EXT_ERROR_UNKNOWN)",
+  "restore": "byte-for-byte: sha256 e52ca5eb5a5804a15689a43f6f39cd7ee04affe7a905c28fce39529426d877d7 before and after the mutation",
+  "limits": "The positive path is `ret == 0` for each NULL argument; the observable difference under the mutation is the return value (1), not a fault, because the guardless call reaches the unknown/failed-decode arms safely for these inputs."
+ },
  "evidence": {
   "fast": {
    "fmt": "cargo fmt --all -- --check: PASS (exit 0, no output) at the candidate hashes above",
    "clippy": "cargo clippy --all-targets -- -D warnings: PASS (Finished dev profile) at the same source",
-   "focused_tests": "cargo test --lib -- x509:: -- --test-threads=4: PASS, 140 passed / 0 failed / 0 ignored (2169 filtered out). cargo test --lib -- x509::v3_prn -- --test-threads=4: PASS, 5 passed / 0 failed / 0 ignored."
+   "focused_tests": "cargo test --lib -- x509:: -- --test-threads=4: PASS, 141 passed / 0 failed / 0 ignored (2169 filtered out). cargo test --lib -- x509::v3_prn -- --test-threads=4: PASS, 6 passed / 0 failed / 0 ignored. cargo test --lib -- x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue -- --test-threads=1: PASS, 1 passed / 0 failed."
   },
   "mutation": {
    "canary": "B49-C1 (the NULL-item refusal in ext_method_item)",
    "guarded_check": "if item.is_null() { Err(()) } else { Ok(Some(item)) } in ext_method_item",
    "observed": "removing the refusal makes ext_method_item answer Ok(Some(0x0)); the canary fails with left: Ok(Some(0x0)), right: Err(())",
-   "restore": "byte-for-byte sha256 match (4d0a8bf2186e29f6c636ad948e64492b79a4189ebd71c8260cd7a454c435e805)"
+   "restore": "byte-for-byte sha256 match (4d0a8bf2186e29f6c636ad948e64492b79a4189ebd71c8260cd7a454c435e805)",
+   "canary_2": "B49-C2 (the NULL out/ext prologue refusal in X509V3_EXT_print)",
+   "guarded_check_2": "if out.is_null() || ext.is_null() { return 0; } (src/x509/v3_prn.rs:254-256)",
+   "observed_2": "removing the guard makes the NULL-out call answer 1 under X509V3_EXT_ERROR_UNKNOWN; the canary fails with left: 1, right: 0 at src/x509/v3_prn.rs:588",
+   "restore_2": "byte-for-byte sha256 match (e52ca5eb5a5804a15689a43f6f39cd7ee04affe7a905c28fce39529426d877d7)"
   }
  },
  "residuals": [
@@ -1183,6 +1213,12 @@
    "severity": "high",
    "disposition": "BLOCKED",
    "description": "The other 53 X509_VERIFY_POLICY sites are untouched and remain BLOCKED: i2s 11, v2i 10, s2i 9, i2v 7, r2i 6, print 4, audit 2, bitst 2, non-method 2. No contract or guard is claimed for them."
+  },
+  {
+   "id": "B49-R10",
+   "severity": "medium",
+   "disposition": "STATED-CALLER-OBLIGATION",
+   "description": "The row resolved by X509V3_EXT_get must stay live and unmodified for the whole X509V3_EXT_print call. The lookup establishes non-NULLness only. A row registered by X509V3_EXT_add is the caller's, and a X509V3_EXT_add_alias copy is released by X509V3_EXT_cleanup; a dynamic alias of a standard row still carries one of the 22 i2r callbacks. The dynamic EXT_LIST is unlocked in the candidate exactly as in the authority, so no X509V3_EXT_add/_add_alias/_cleanup may run concurrently with a print. Stated in X509V3_EXT_print's # Safety; not mechanically checked."
   }
  ],
  "not_run": [
@@ -1217,8 +1253,17 @@
   "No sanitizer, Miri, dudect or authority differential was run; no cryptographic or constant-time claim is made.",
   "The i2r type pairing is a registrar ABI obligation, not a checked property (B49-R2).",
   "Only i2r_ISSUED_ON_BEHALF_OF is driven end-to-end by a functional test; the other 21 printers are covered by contract review and the dispatcher tests.",
+  "The row resolved by X509V3_EXT_get is established non-NULL only; its liveness across the call is the caller's obligation, and a concurrent X509V3_EXT_add/_add_alias/_cleanup is not excluded by any lock (B49-R10).",
   "Every candidate line number is bound to candidate.files_sha256; any source edit invalidates these coordinates and the receipt."
  ],
+ "review_conditions": {
+  "C1_identity": "base_head is ade24461d and source_state is committed; the uncommitted/no-commit text is deleted.",
+  "C2_receipt_accuracy": "boundary_size corrected to 15 i2r slot callbacks + 7 i2r-only helpers; chosen_family.why corrected to the slot read at src/x509/v3_prn.rs:306-310, whose value is called at :341.",
+  "C3_row_liveness": "Route (b): only-static-rows is not established, so the dynamic-row case is retained as B49-R10 and stated in X509V3_EXT_print's # Safety.",
+  "C4_prologue_test": "x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue, with the B49-C2 mutation observed and restored.",
+  "source_changed": true,
+  "note": "C3/C4 change src/x509/v3_prn.rs, so the candidate must be rebuilt and re-frozen (S') and the FAST gate re-run before any application. No closure was run."
+ },
  "review": {
   "reviewer": "pending independent adjudication",
   "verdict": "UNAPPLIED",

@@ -238,9 +238,9 @@ unsafe fn ext_method_item(method: *const X509V3ExtMethod) -> Result<Option<*cons
 ///
 /// # Safety
 ///
-/// `out` must be a live BIO; `ext` must be a live `X509_EXTENSION`. The prologue refuses a
-/// NULL `out` or `ext` with 0 before the first dereference. That establishes non-NULLness
-/// only: liveness remains the caller's obligation, and it cannot be established by a check.
+/// `out` must be a live BIO and `ext` a live `X509_EXTENSION`; the prologue refuses NULL for either with 0 before the first dereference, establishing non-NULLness only.
+/// The method row `X509V3_EXT_get` resolves must stay live and unmodified for the whole call: no `X509V3_EXT_add`/`_add_alias`/`_cleanup` may run concurrently with it (B49-R10).
+/// An `_add_alias` copy is DYNAMIC and released by `_cleanup` while the dynamic list is unlocked, as in the authority; liveness remains the caller's obligation.
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_EXT_print(
     out: *mut Bio,
@@ -569,6 +569,46 @@ mod tests {
         unsafe {
             BIO_free(bio);
             X509_EXTENSION_free(ext);
+        }
+    }
+
+    /// The prologue refuses a NULL `out` or `ext` with 0 before the method lookup, the decode
+    /// or any callback. `X509V3_EXT_ERROR_UNKNOWN` makes the refusal observable: without the
+    /// guard the NULL-`ext` call takes the unknown path and answers 1, and the NULL-`out` call
+    /// reaches the failed-decode path and answers 1 as well.
+    #[test]
+    fn null_out_or_ext_is_refused_by_the_prologue() {
+        let malformed = extension_with_der(NID_issued_on_behalf_of, &[0xFF, 0xFF]);
+        // SAFETY: `BIO_s_mem` is a live method table and `BIO_new` returns a fresh BIO.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null(), "the memory BIO must be created");
+        // SAFETY: each call passes one NULL argument to the prologue's refusal path. The
+        // implementation returns before dereferencing it and before the lookup, so no invalid
+        // access occurs; the other argument is live. Without the guard the first calls would
+        // reach the decode/unknown paths and answer 1 under `X509V3_EXT_ERROR_UNKNOWN`.
+        unsafe {
+            assert_eq!(
+                X509V3_EXT_print(ptr::null_mut(), malformed, X509V3_EXT_ERROR_UNKNOWN, 4),
+                0,
+                "a NULL out must be refused"
+            );
+            assert_eq!(
+                X509V3_EXT_print(bio, ptr::null_mut(), X509V3_EXT_ERROR_UNKNOWN, 4),
+                0,
+                "a NULL ext must be refused"
+            );
+            assert_eq!(
+                X509V3_EXT_print(
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    X509V3_EXT_ERROR_UNKNOWN,
+                    4
+                ),
+                0,
+                "two NULL arguments must be refused"
+            );
+            BIO_free(bio);
+            X509_EXTENSION_free(malformed);
         }
     }
 
