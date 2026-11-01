@@ -969,6 +969,42 @@
    "hidden_obligations": 0,
    "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B48.json",
    "note": "Site-scoped only. EVP_PKEY_PROVIDER remains OWNERSHIP_RECONSTRUCTED mechanism-wide; the shared B20-TBL-3 and the provider-context writer-set sites stay BLOCKED. Applied at this candidate. B48-RC2-001 is deliberately excluded from this row and stays BLOCKED: its co-boundary P25-VESTIGIAL-MARKER-002 is BLOCKED and its own residual B48-R8 (no test covers the magic-to-key-length mapping) is NOT_RUN, so it cannot be discharged while a co-owning boundary is blocked and its residual test is not run; 67 of the receipt's 68 boundaries are claimed here."
+  },
+  {
+   "receipt": "boundary-sweep-B49",
+   "scope": "the 22 X509_VERIFY_POLICY i2r printer boundaries enumerated in boundary-sweep-B49.json (B49-I2R-001..B49-I2R-022) across src/x509/v3_aaa.rs, v3_asid.rs, v3_cpols.rs, v3_group_ac.rs, v3_ind_iss.rs, v3_iobo.rs, v3_ist.rs, v3_no_ass.rs, v3_no_rev_avail.rs, v3_pku.rs, v3_sda.rs, v3_single_use.rs, v3_soa_id.rs, v3_sxnet.rs, v3_timespec.rs and v3_usernotice.rs, dispatched through X509V3_EXT_print in src/x509/v3_prn.rs",
+   "base_head": "a736c4ccf",
+   "source_state": "committed",
+   "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+   "discharged_boundaries": [
+    "B49-I2R-001",
+    "B49-I2R-002",
+    "B49-I2R-003",
+    "B49-I2R-004",
+    "B49-I2R-005",
+    "B49-I2R-006",
+    "B49-I2R-007",
+    "B49-I2R-008",
+    "B49-I2R-009",
+    "B49-I2R-010",
+    "B49-I2R-011",
+    "B49-I2R-012",
+    "B49-I2R-013",
+    "B49-I2R-014",
+    "B49-I2R-015",
+    "B49-I2R-016",
+    "B49-I2R-017",
+    "B49-I2R-018",
+    "B49-I2R-019",
+    "B49-I2R-020",
+    "B49-I2R-021",
+    "B49-I2R-022"
+   ],
+   "retained_boundaries": [],
+   "retained_state": "BLOCKED",
+   "hidden_obligations": 0,
+   "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B49.json",
+   "note": "Site-scoped only. X509_VERIFY_POLICY remains OWNERSHIP_RECONSTRUCTED mechanism-wide; the other 53 X509_VERIFY_POLICY sites (i2s 11, v2i 10, s2i 9, i2v 7, r2i 6, print 4, audit 2, bitst 2, non-method 2) stay BLOCKED and no contract or guard is claimed for them (B49-R9). Applied at this candidate."
   }
  ],
  "defects_closed": [
