@@ -969,52 +969,6 @@
    "hidden_obligations": 0,
    "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B48.json",
    "note": "Site-scoped only. EVP_PKEY_PROVIDER remains OWNERSHIP_RECONSTRUCTED mechanism-wide; the shared B20-TBL-3 and the provider-context writer-set sites stay BLOCKED. Applied at this candidate. B48-RC2-001 is deliberately excluded from this row and stays BLOCKED: its co-boundary P25-VESTIGIAL-MARKER-002 is BLOCKED and its own residual B48-R8 (no test covers the magic-to-key-length mapping) is NOT_RUN, so it cannot be discharged while a co-owning boundary is blocked and its residual test is not run; 67 of the receipt's 68 boundaries are claimed here."
-  },
-  {
-   "receipt": "boundary-sweep-B46",
-   "scope": "seven ConfCmdFn dispatcher sites in src/ssl/ssl_conf.rs (B46-SSL-CONF-001..007); dispositions re-derived to the current census coordinates at candidate c5",
-   "base_head": "31cea14c5",
-   "source_state": "committed",
-   "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
-   "discharged_boundaries": [
-    "B46-SSL-CONF-001",
-    "B46-SSL-CONF-002",
-    "B46-SSL-CONF-003",
-    "B46-SSL-CONF-004",
-    "B46-SSL-CONF-005",
-    "B46-SSL-CONF-006",
-    "B46-SSL-CONF-007"
-   ],
-   "retained_boundaries": [],
-   "retained_state": "BLOCKED",
-   "hidden_obligations": 0,
-   "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B46.json",
-   "note": "Site-scoped only. mechanisms.SSL_SESSION remains OWNERSHIP_RECONSTRUCTED and B46-R1 stays closed:false (cross-thread mutation of the wrapped SSL/SSL_CTX and use of the cctx pointer after SSL_CONF_CTX_free remain caller obligations). The three helpers in the receipt's retained_blocked (ssl_match_option, ssl_set_option_list, min_max_proto) are B47's boundaries and are not discharged by this row."
-  },
-  {
-   "receipt": "boundary-sweep-B47",
-   "scope": "eleven sites: three ssl_conf.rs helpers, two ssl_ciph.rs setters, three ssl_rsa.rs serverinfo callbacks, two t1_trce.rs predicates and one ssl_lib.rs CT callback (B47-SSL-CONF-001..003, B47-CIPH-001..002, B47-RSA-001..003, B47-TRACE-001..002, B47-CT-001); dispositions re-derived to the current census coordinates at candidate c5",
-   "base_head": "31cea14c5",
-   "source_state": "committed",
-   "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
-   "discharged_boundaries": [
-    "B47-SSL-CONF-001",
-    "B47-SSL-CONF-002",
-    "B47-SSL-CONF-003",
-    "B47-CIPH-001",
-    "B47-CIPH-002",
-    "B47-RSA-001",
-    "B47-RSA-002",
-    "B47-RSA-003",
-    "B47-TRACE-001",
-    "B47-TRACE-002",
-    "B47-CT-001"
-   ],
-   "retained_boundaries": [],
-   "retained_state": "BLOCKED",
-   "hidden_obligations": 0,
-   "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B47.json",
-   "note": "Site-scoped only. mechanisms.SSL_SESSION remains OWNERSHIP_RECONSTRUCTED and B46-R1 stays closed:false. B47-TRACE-001/002 (is_tls13, use_sigalgs) name no obligation in the c5 closure queue; they are discharged as ABI-scope boundaries without moving a count."
   }
  ],
  "defects_closed": [
