@@ -56,10 +56,20 @@
 //!   guard, which performs the member teardown and the block release exactly once when it
 //!   drops. Later entry points are refused while the context is poisoned. The consequence is a
 //!   bounded lifetime extension (the block outlives the free call by at most the remaining
-//!   in-flight call), not a leak: the release is still exactly once. A guard can therefore
-//!   never write into freed memory. If the in-flight call never returns, the block is not
-//!   released, the same liveness premise every scope-bound resource has. The authority frees
-//!   immediately and has no such state; this is recorded as a documented divergence.
+//!   in-flight call), not a leak: the release is still exactly once. On that single-overlap
+//!   interleaving no guard writes into freed memory. If the in-flight call never returns, the
+//!   block is not released, the same liveness premise every scope-bound resource has. The
+//!   authority frees immediately and has no such state; this is recorded as a documented
+//!   divergence.
+//!
+//!   The deferral is a defensive arm, **not** a licence for concurrent use. `SSL_CONF_CTX_free`
+//!   is an external serialisation point: its `# Safety` contract requires that no other thread
+//!   is inside any `SSL_CONF_CTX` entry point and that free is not entered concurrently. Under
+//!   that contract the context is `CTX_IDLE` and the immediate path is taken; the deferred arm
+//!   is reachable only by a caller that has already violated the contract. It cannot make a
+//!   second concurrent free, or an entry point racing the release, safe: each can perform an
+//!   atomic access on `state` inside the released block, and the `void` ABI carries no refusal
+//!   that an address-keyed check could distinguish from a fresh allocation at the same address.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -233,8 +243,12 @@ impl Drop for InUseGuard {
 ///
 /// # Safety
 /// `cctx` must be non-NULL, aligned and point to a live, initialised `SslConfCtx` that
-/// outlives the returned guard. The caller must hold the exclusive-access precondition of
-/// the public entry point for the whole guard lifetime.
+/// outlives the returned guard, and no other call may release that block during the guard's
+/// lifetime. The caller must hold the exclusive-access precondition of the public entry point
+/// for the whole guard lifetime: a non-free entry point requires that no `SSL_CONF_CTX_free`
+/// can complete a release while it runs, and `SSL_CONF_CTX_free` itself requires, per its own
+/// contract, that no other entry point is in flight and that no second free is concurrent.
+/// Those are external caller obligations; the atomic transition below cannot establish them.
 unsafe fn enter_use(cctx: *mut SslConfCtx) -> Option<InUseGuard> {
     // SAFETY: `cctx` is live and aligned per the caller's contract; `addr_of!` creates no
     // reference, so it does not conflict with the `&mut *cctx` the handlers later take.
@@ -1818,22 +1832,38 @@ pub unsafe extern "C" fn SSL_CONF_CTX_finish(cctx: *mut SslConfCtx) -> c_int {
 /// `void SSL_CONF_CTX_free(SSL_CONF_CTX *cctx)` — `ssl/ssl_conf.c:1114-1122`.
 ///
 /// # Safety
-/// `cctx` must be NULL or a live context that the caller does not use through any pointer
-/// after this call returns. Exclusive access is **not** required: this function is defined for
-/// the free-while-in-use interleaving.
+/// `cctx` must be NULL or a live, initialised context, and the caller must not use it through
+/// any pointer after this call returns. **The caller must externally serialise this call:**
+/// while it runs, no other thread may be inside any `SSL_CONF_CTX` entry point (including a
+/// second `SSL_CONF_CTX_free` of the same context), and no thread may enter one afterwards.
+/// Equivalently, this call is the sole user of the context and is not entered concurrently.
+///
+/// That exclusivity is a stated external caller obligation, not something this function can
+/// enforce. It is required because the single release here returns the block to the
+/// allocator: a second concurrent free, or an entry point that races this call's `enter_use`,
+/// would perform an atomic access to `state` inside the released block. The `void` ABI carries
+/// no refusal signal, and an address-keyed out-of-band check cannot distinguish a freed context
+/// from a new allocation at the same address, so the callee cannot discharge it. A conforming
+/// caller therefore enters this function with the context in `CTX_IDLE`, which is exactly the
+/// `enter_use` precondition above.
 ///
 /// Free policy (B46-D3, documented divergence). The authority frees immediately. Here:
 ///
-/// * no entry point holds the context: this call acquires the exclusion state, tears the
-///   members down and releases the block once;
-/// * another entry point holds it: this call poisons the context (`CTX_FREE_PENDING`) and
-///   returns without releasing anything. The holder's RAII guard performs the same teardown and
-///   release exactly once when it drops. Every later entry point is refused while poisoned.
+/// * the contract path: the context is idle and exclusive to this call, so this call acquires
+///   the exclusion state, tears the members down and releases the block once;
+/// * a defensive arm outside the contract: if the caller violates the obligation above by
+///   leaving exactly one entry point in flight, this call poisons the context
+///   (`CTX_FREE_PENDING`) and returns without releasing anything. That holder's RAII guard
+///   performs the same teardown and release exactly once when it drops, and every later entry
+///   point is refused while poisoned. This arm is a hardening retained from the B46/B47
+///   repair; it does not extend the contract, is unreachable from a conforming caller, and
+///   does not make concurrent use safe.
 ///
 /// A refusal was rejected as the policy because the authority's signature is `void`: a caller
 /// could not observe the refusal, would drop its pointer and leak, or would keep it and race.
-/// Deferral keeps the authority's "one call, exactly one release" postcondition and, crucially,
-/// never leaves a guard whose `Drop` would write into freed memory.
+/// Deferral keeps the authority's "one call, exactly one release" postcondition and, on the
+/// single-overlap interleaving it covers, never leaves a guard whose `Drop` would write into
+/// freed memory.
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CONF_CTX_free(cctx: *mut SslConfCtx) {
     guard_ffi((), || {
