@@ -6,14 +6,21 @@
 //! behind it. This module drives every callback installed by the 22 legacy `EVP_MD` tables
 //! through the exported getters and the context shapes a caller can construct:
 //!
-//! * an undersized `md_data` (8 bytes) and a wrong-typed block (a `u64`);
+//! * an undersized `md_data` (8 bytes) and a wrong-typed block whose extent passes;
 //! * a NULL context block (`EVP_MD_CTX_new`-shaped) and a NULL `data` with `count != 0`;
 //! * a `METH`-origin method whose `ctx_size` is 0, which allocates no block;
 //! * a positive control proving the table's own bound context still digests.
 //!
+//! Each caller-created method installs the table's own exported callbacks with
+//! `EVP_MD_meth_set_init/update/final/ctrl`, so `EVP_MD_meth_get_*` answers them and the test
+//! observes a real invocation rather than an absent callback. `EVP_DigestInit_ex` is also driven
+//! once per table: it allocates exactly `app_datasize` bytes, the extent the callback's guard
+//! then compares against `size_of`.
+//!
 //! The extent of a caller-created block is mechanically checked by `init_md_data`/`init_keccak`.
 //! The concrete **type** is not: `app_datasize` declares a size, not a type, so a correctly-sized
-//! block of the wrong type is a caller contract violation. `extent_is_not_type` records that
+//! block of the wrong type is a caller contract violation.
+//! `wrong_typed_block_is_admitted_when_extent_passes` and `extent_is_not_type` record that
 //! boundary explicitly rather than claiming more than the guard establishes.
 //!
 //! SPDX-License-Identifier: Apache-2.0
@@ -21,9 +28,11 @@
 use core::ffi::{c_int, c_void};
 
 use crate::evp::digest::{
-    EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_meth_free, EVP_MD_meth_get_ctrl, EVP_MD_meth_get_final,
-    EVP_MD_meth_get_init, EVP_MD_meth_get_update, EVP_MD_meth_new, EVP_MD_meth_set_app_datasize,
-    EVP_MD_meth_set_result_size, EVP_md_null, EvpMd, EvpMdCtx,
+    EVP_DigestInit_ex, EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_meth_free, EVP_MD_meth_get_ctrl,
+    EVP_MD_meth_get_final, EVP_MD_meth_get_init, EVP_MD_meth_get_update, EVP_MD_meth_new,
+    EVP_MD_meth_set_app_datasize, EVP_MD_meth_set_ctrl, EVP_MD_meth_set_final,
+    EVP_MD_meth_set_init, EVP_MD_meth_set_result_size, EVP_MD_meth_set_update, EVP_md_null, EvpMd,
+    EvpMdCtx,
 };
 use crate::evp::legacy_blake2::{EVP_blake2b512, EVP_blake2s256};
 use crate::evp::legacy_md4::EVP_md4;
@@ -90,6 +99,38 @@ fn custom_method(ctx_size: c_int, md_size: c_int) -> *mut EvpMd {
     md
 }
 
+/// A fresh `METH`-origin method that installs `table`'s callbacks, so the method answers the same
+/// exported pointers a legacy table does while the test declares the caller-sized block.
+fn method_with_table_callbacks(ctx_size: c_int, table: *const EvpMd) -> *mut EvpMd {
+    let md = custom_method(ctx_size, 32);
+    // SAFETY: `md` is the fresh method this test owns and `table` is a live static method; each
+    // setter fills one still-NULL slot and answers 1.
+    unsafe {
+        assert_eq!(EVP_MD_meth_set_init(md, EVP_MD_meth_get_init(table)), 1);
+        assert_eq!(EVP_MD_meth_set_update(md, EVP_MD_meth_get_update(table)), 1);
+        assert_eq!(EVP_MD_meth_set_final(md, EVP_MD_meth_get_final(table)), 1);
+        assert_eq!(EVP_MD_meth_set_ctrl(md, EVP_MD_meth_get_ctrl(table)), 1);
+    }
+    md
+}
+
+/// How many of the four callbacks `md` answers. Comparing this against the table is what proves
+/// the install above happened and that the test is not driving an all-`None` method.
+fn installed_callbacks(md: *const EvpMd) -> usize {
+    // SAFETY: `md` is a live method this test owns or a live static method.
+    unsafe {
+        [
+            EVP_MD_meth_get_init(md).is_some(),
+            EVP_MD_meth_get_update(md).is_some(),
+            EVP_MD_meth_get_final(md).is_some(),
+            EVP_MD_meth_get_ctrl(md).is_some(),
+        ]
+        .into_iter()
+        .filter(|present| *present)
+        .count()
+    }
+}
+
 /// A context with no provider state, as `EVP_MD_CTX_new` leaves it, but bound to `digest` and a
 /// caller-supplied block.
 fn ctx(digest: *const EvpMd, md_data: *mut c_void) -> EvpMdCtx {
@@ -108,7 +149,8 @@ fn ctx(digest: *const EvpMd, md_data: *mut c_void) -> EvpMdCtx {
 
 /// Ask every callback installed on `md` to operate on `ctx`, which must not establish the
 /// callback's concrete block. Each must answer the failure value without touching `md_data`.
-fn assert_callbacks_refuse(md: *const EvpMd, ctx_ptr: &mut EvpMdCtx, label: &str) {
+/// Answers how many callbacks were invoked, so a caller can prove the method was not empty.
+fn assert_callbacks_refuse(md: *const EvpMd, ctx_ptr: &mut EvpMdCtx, label: &str) -> usize {
     // SAFETY: `md` is a live static method or a live `METH` method this test owns.
     let (init, update, final_, ctrl) = unsafe {
         (
@@ -119,8 +161,10 @@ fn assert_callbacks_refuse(md: *const EvpMd, ctx_ptr: &mut EvpMdCtx, label: &str
         )
     };
     let message = b"abc";
+    let mut invoked = 0;
 
     if let Some(init) = init {
+        invoked += 1;
         // SAFETY: `ctx_ptr` is live and the callback accepts any live context.
         assert_eq!(
             // SAFETY: `ctx_ptr` is live and the callback accepts any live context.
@@ -130,6 +174,7 @@ fn assert_callbacks_refuse(md: *const EvpMd, ctx_ptr: &mut EvpMdCtx, label: &str
         );
     }
     if let Some(update) = update {
+        invoked += 1;
         // SAFETY: `ctx_ptr` is live and `message` is readable for its length.
         assert_eq!(
             // SAFETY: `ctx_ptr` is live and `message` is readable for its length.
@@ -148,6 +193,7 @@ fn assert_callbacks_refuse(md: *const EvpMd, ctx_ptr: &mut EvpMdCtx, label: &str
         );
     }
     if let Some(final_) = final_ {
+        invoked += 1;
         let mut output = [0u8; 64];
         // SAFETY: `ctx_ptr` is live and `output` is writable for the longest legacy digest.
         assert_eq!(
@@ -158,6 +204,7 @@ fn assert_callbacks_refuse(md: *const EvpMd, ctx_ptr: &mut EvpMdCtx, label: &str
         );
     }
     if let Some(ctrl) = ctrl {
+        invoked += 1;
         // SAFETY: `ctx_ptr` is live; neither command reads a `p2` on the refusals under test.
         let master = unsafe {
             ctrl(
@@ -174,40 +221,147 @@ fn assert_callbacks_refuse(md: *const EvpMd, ctx_ptr: &mut EvpMdCtx, label: &str
             "{label}: ctrl wrote through the block (master {master}, xof {xof})"
         );
     }
+
+    invoked
 }
 
 /// An undersized block (eight bytes) is refused by every callback, before any write.
+///
+/// The methods below carry the tables' **real** callbacks (the getter comparison proves the
+/// install), and `EVP_DigestInit_ex` allocates exactly the declared eight bytes and reaches the
+/// installed initialiser, which refuses that block.
 #[test]
 fn undersized_block_is_refused_for_every_callback() {
     let mut block = [0xa5u8; 8];
-    for (name, _table) in tables() {
-        let md = custom_method(8, 32);
+    for (name, table) in tables() {
+        let md = method_with_table_callbacks(8, table);
+        let expected = installed_callbacks(table);
+        assert_eq!(
+            installed_callbacks(md),
+            expected,
+            "{name}: the table's callbacks were not installed"
+        );
         let mut c = ctx(md, block.as_mut_ptr().cast());
-        assert_callbacks_refuse(md, &mut c, name);
+        assert_eq!(
+            assert_callbacks_refuse(md, &mut c, name),
+            expected,
+            "{name}: a callback was not invoked"
+        );
         assert_eq!(
             block, [0xa5u8; 8],
             "{name}: a refused callback modified md_data"
         );
+
+        let fresh = EVP_MD_CTX_new();
+        assert!(!fresh.is_null(), "EVP_MD_CTX_new answered NULL");
+        // SAFETY: `fresh` is live and `md` is this test's live method; the initialiser installed
+        // above is reached with the eight-byte block `ctx_size` produces.
+        assert_eq!(
+            // SAFETY: `fresh` is live and `md` is this test's live method; the initialiser
+            // installed above is reached with the eight-byte block `ctx_size` produces.
+            unsafe { EVP_DigestInit_ex(fresh, md, core::ptr::null_mut()) },
+            0,
+            "{name}: EVP_DigestInit_ex accepted an eight-byte context"
+        );
+        // SAFETY: `fresh` came from `EVP_MD_CTX_new` and is released exactly once here.
+        unsafe { EVP_MD_CTX_free(fresh) };
         // SAFETY: `md` is this test's own method, released exactly once here.
         unsafe { EVP_MD_meth_free(md) };
     }
 }
 
-/// A wrong-typed block is refused for every callback that casts: an eight-byte `u64` is neither
-/// the concrete context of any callback nor large enough for one.
+/// A block whose **extent passes** but whose concrete type is wrong is admitted, not refused.
+///
+/// `app_datasize` is 1024 and the block is a `[u64; 128]`, a valid object of a different type
+/// than any digest context and at least `size_of::<T>()` for every `T` the tables cast to. The
+/// guard therefore compares extent only: each initialiser writes its own `size_of::<T>()` inside
+/// the admitted block and answers 1. Refusal here would mean the guard checked a type it does
+/// not have; admission is the measured residual (`extent_is_not_type`, B48-R5).
 #[test]
-fn wrong_typed_block_is_refused_for_every_callback() {
-    let mut block = [0x5au64; 1];
-    for (name, _table) in tables() {
-        let md = custom_method(8, 32);
-        let mut c = ctx(md, block.as_mut_ptr().cast());
-        assert_callbacks_refuse(md, &mut c, name);
+fn wrong_typed_block_is_admitted_when_extent_passes() {
+    // Every concrete context `T` the 22 tables cast to is smaller than this block, so writing a
+    // `T` into its prefix below is in bounds.
+    const _: () = {
+        use crate::digest::blake2::{blake2b, blake2s};
+        use crate::digest::md4::Md4Ctx;
+        use crate::digest::md5::Md5Ctx;
+        use crate::digest::md5_sha1::Md5Sha1Ctx;
+        use crate::digest::mdc2::Mdc2Ctx;
+        use crate::digest::ripemd::Ripemd160Ctx;
+        use crate::digest::sha1::ShaCtx;
+        use crate::digest::sha2::{Sha256Ctx, Sha512Ctx};
+        use crate::digest::sha3::KeccakCtx;
+        use crate::digest::sm3::Sm3Ctx;
+        use crate::digest::wp::WhirlpoolCtx;
+        assert!(core::mem::size_of::<[u64; 128]>() >= core::mem::size_of::<ShaCtx>());
+        assert!(core::mem::size_of::<[u64; 128]>() >= core::mem::size_of::<Sha256Ctx>());
+        assert!(core::mem::size_of::<[u64; 128]>() >= core::mem::size_of::<Sha512Ctx>());
+        assert!(core::mem::size_of::<[u64; 128]>() >= core::mem::size_of::<Md4Ctx>());
+        assert!(core::mem::size_of::<[u64; 128]>() >= core::mem::size_of::<Md5Ctx>());
+        assert!(core::mem::size_of::<[u64; 128]>() >= core::mem::size_of::<Md5Sha1Ctx>());
+        assert!(core::mem::size_of::<[u64; 128]>() >= core::mem::size_of::<Mdc2Ctx>());
+        assert!(core::mem::size_of::<[u64; 128]>() >= core::mem::size_of::<Ripemd160Ctx>());
+        assert!(core::mem::size_of::<[u64; 128]>() >= core::mem::size_of::<WhirlpoolCtx>());
+        assert!(core::mem::size_of::<[u64; 128]>() >= core::mem::size_of::<Sm3Ctx>());
+        assert!(core::mem::size_of::<[u64; 128]>() >= core::mem::size_of::<KeccakCtx>());
+        assert!(core::mem::size_of::<[u64; 128]>() >= core::mem::size_of::<blake2b::Ctx>());
+        assert!(core::mem::size_of::<[u64; 128]>() >= core::mem::size_of::<blake2s::Ctx>());
+    };
+
+    let mut block = [0x5au64; 128];
+    for (name, table) in tables() {
+        let md = method_with_table_callbacks(1024, table);
+        let expected = installed_callbacks(table);
         assert_eq!(
-            block, [0x5au64; 1],
-            "{name}: a refused callback modified the u64"
+            installed_callbacks(md),
+            expected,
+            "{name}: the table's callbacks were not installed"
         );
+        let mut c = ctx(md, block.as_mut_ptr().cast());
+        // SAFETY: `md` is this test's live method.
+        let (init, update, final_) = unsafe {
+            (
+                EVP_MD_meth_get_init(md),
+                EVP_MD_meth_get_update(md),
+                EVP_MD_meth_get_final(md),
+            )
+        };
+        assert!(
+            init.is_some() && update.is_some() && final_.is_some(),
+            "{name}: the table is missing one of its callbacks"
+        );
+        if let (Some(init), Some(update), Some(final_)) = (init, update, final_) {
+            // SAFETY: `c` is live, the block is 1024 bytes, and the method declares that extent.
+            assert_eq!(
+                // SAFETY: `c` is live, the block is 1024 bytes, and the method declares that
+                // extent.
+                unsafe { init(&mut c) },
+                1,
+                "{name}: init refused a block whose extent passed"
+            );
+            let message = b"abc";
+            // SAFETY: `init` above wrote the concrete context into the block's prefix and
+            // `message` is readable for its length.
+            assert_eq!(
+                // SAFETY: `init` above wrote the concrete context into the block's prefix and
+                // `message` is readable for its length.
+                unsafe { update(&mut c, message.as_ptr().cast(), message.len()) },
+                1,
+                "{name}: update failed on the admitted block"
+            );
+            let mut output = [0u8; 64];
+            // SAFETY: the block holds the concrete context and `output` is writable for 64 bytes.
+            assert_eq!(
+                // SAFETY: the block holds the concrete context and `output` is writable for 64
+                // bytes.
+                unsafe { final_(&mut c, output.as_mut_ptr()) },
+                1,
+                "{name}: final failed on the admitted block"
+            );
+        }
         // SAFETY: `md` is this test's own method, released exactly once here.
         unsafe { EVP_MD_meth_free(md) };
+        block = [0x5au64; 128];
     }
 }
 
@@ -298,10 +452,38 @@ fn null_data_with_nonzero_count_is_refused_for_every_update_callback() {
 #[test]
 fn zero_ctx_size_legacy_method_is_refused_for_every_callback() {
     let mut block = [0u64; 128];
-    for (name, _table) in tables() {
-        let md = custom_method(0, 32);
+    for (name, table) in tables() {
+        let md = method_with_table_callbacks(0, table);
+        let expected = installed_callbacks(table);
+        assert_eq!(
+            installed_callbacks(md),
+            expected,
+            "{name}: the table's callbacks were not installed"
+        );
         let mut c = ctx(md, block.as_mut_ptr().cast());
-        assert_callbacks_refuse(md, &mut c, name);
+        assert_eq!(
+            assert_callbacks_refuse(md, &mut c, name),
+            expected,
+            "{name}: a callback was not invoked"
+        );
+        assert_eq!(
+            block, [0u64; 128],
+            "{name}: a refused callback modified md_data"
+        );
+
+        let fresh = EVP_MD_CTX_new();
+        assert!(!fresh.is_null(), "EVP_MD_CTX_new answered NULL");
+        // SAFETY: `fresh` is live and `md` is this test's live method; `ctx_size == 0` allocates
+        // no block, so the installed initialiser is reached with a NULL `md_data` and refuses.
+        assert_eq!(
+            // SAFETY: `fresh` is live and `md` is this test's live method; `ctx_size == 0`
+            // allocates no block, so the installed initialiser sees a NULL `md_data`.
+            unsafe { EVP_DigestInit_ex(fresh, md, core::ptr::null_mut()) },
+            0,
+            "{name}: EVP_DigestInit_ex accepted a context with no block"
+        );
+        // SAFETY: `fresh` came from `EVP_MD_CTX_new` and is released exactly once here.
+        unsafe { EVP_MD_CTX_free(fresh) };
         // SAFETY: `md` is this test's own method, released exactly once here.
         unsafe { EVP_MD_meth_free(md) };
     }
