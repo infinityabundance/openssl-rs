@@ -174,6 +174,12 @@ const fn legacy_md(
 /// shape — a writable `WhirlpoolCtx` behind a context bound to this method — still initialises and
 /// returns `1`. The refusal is recorded as `docs/SECURITY_DIVERGENCE_POLICY.md`
 /// `D-LEGACY-MD-INIT-MD-DATA-1`; no path the crate's own initialiser takes reaches it.
+///
+/// Callers: `evp_md_init_legacy` (`src/evp/digest.rs:2325`, callback call `:2382`) and the
+/// exported `EVP_MD_meth_get_init` (`src/evp/digest.rs:1577`). The context's method is the
+/// provenance for the block: an owner-table context is trusted by identity, and any other method
+/// is trusted only for the extent its `ctx_size` declares. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn wp_init(ctx: *mut EvpMdCtx) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `WHIRLPOOL_MD` is a live
     // static method.
@@ -201,6 +207,12 @@ unsafe extern "C" fn wp_init(ctx: *mut EvpMdCtx) -> c_int {
 /// `0` before any dereference (`docs/SECURITY_DIVERGENCE_POLICY.md`,
 /// `D-LEGACY-MD-CALLBACK-MD-DATA-1`). The context is borrowed exclusively for the duration of the
 /// call and no pointer is retained.
+///
+/// Callers: `EVP_DigestUpdate` (`src/evp/digest.rs:2451`, callback call `:2505`) and the exported
+/// `EVP_MD_meth_get_update` (`src/evp/digest.rs:1592`). `data`'s readable extent is the caller's
+/// obligation; a NULL `data` with `count != 0` is refused with `0` before the primitive is called.
+/// The callback retains no pointer; a refusal leaves the context untouched and retryable, while a
+/// primitive-level failure may leave partial state.
 unsafe extern "C" fn wp_update(ctx: *mut EvpMdCtx, data: *const c_void, count: usize) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `WHIRLPOOL_MD` is a live
     // static method.
@@ -213,6 +225,12 @@ unsafe extern "C" fn wp_update(ctx: *mut EvpMdCtx, data: *const c_void, count: u
     }) else {
         return 0;
     };
+    // A NULL `data` with a non-zero length is not a valid update; `WHIRLPOOL_Update` would
+    // dereference it. Refuse before the primitive is called
+    // (D-LEGACY-MD-CALLBACK-MD-DATA-1).
+    if data.is_null() && count != 0 {
+        return 0;
+    }
     // SAFETY: `init_md_data` established a writable `WhirlpoolCtx`; `data`/`count` are the
     // caller's.
     unsafe { WHIRLPOOL_Update(block.cast::<WhirlpoolCtx>(), data, count) }
@@ -226,6 +244,12 @@ unsafe extern "C" fn wp_update(ctx: *mut EvpMdCtx, data: *const c_void, count: u
 /// `ctx` must be NULL or point to a live `EVP_MD_CTX`; `md` must be writable for
 /// `WHIRLPOOL_DIGEST_LENGTH` (64) bytes. The context precondition is the one [`wp_update`] states,
 /// and a context without a writable block is refused with `0` before `md` is touched.
+///
+/// Callers: `evp_md_final_legacy` (`src/evp/digest.rs:2635`, callback call `:2652`),
+/// `evp_digest_final_xof_legacy` (`src/evp/digest.rs:2757`, call `:2783`) and the exported
+/// `EVP_MD_meth_get_final` (`src/evp/digest.rs:1606`). `md`'s writable extent is the caller's
+/// obligation. The callback retains no pointer; a refusal leaves the context untouched and
+/// retryable, while a successful final consumes the block.
 unsafe extern "C" fn wp_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and `WHIRLPOOL_MD` is a live
     // static method.

@@ -1371,6 +1371,12 @@ pub unsafe extern "C" fn EVP_MD_meth_set_result_size(md: *mut EvpMd, resultsize:
 
 /// `int EVP_MD_meth_set_app_datasize(EVP_MD *md, int datasize)`.
 ///
+/// The value is the size `evp_md_init_legacy` allocates for this `METH` method, so it is the only
+/// extent a caller-installed legacy callback can rely on. It does **not** establish the block's
+/// concrete type: the installer chooses the callback and must declare an extent that fits the
+/// context that callback casts to, and that the allocation actually has. A negative value is
+/// stored as the authority stores it; every legacy callback refuses a negative `ctx_size`.
+///
 /// # Safety
 /// `md` must be a live `EvpMd`.
 #[no_mangle]
@@ -1559,6 +1565,12 @@ pub unsafe extern "C" fn EVP_MD_meth_get_flags(md: *const EvpMd) -> core::ffi::c
 
 /// `int (*EVP_MD_meth_get_init(const EVP_MD *md))(EVP_MD_CTX *ctx)`.
 ///
+/// The returned pointer is the method's legacy `init` callback. Invoking it carries that
+/// callback's own `# Safety` contract (the concrete block type/size and the context's
+/// `digest`/`md_data` shape), not this getter's. For a method built by `EVP_MD_meth_new`, the
+/// caller-declared `app_datasize` establishes only the block's extent; the concrete type is the
+/// installer's obligation.
+///
 /// # Safety
 /// `md` must be a live `EvpMd`.
 #[no_mangle]
@@ -1570,6 +1582,10 @@ pub unsafe extern "C" fn EVP_MD_meth_get_init(md: *const EvpMd) -> Option<MdLega
 /// `int (*EVP_MD_meth_get_update(const EVP_MD *md))(EVP_MD_CTX *ctx, const void *data,
 /// size_t count)`.
 ///
+/// The returned pointer is the method's legacy `update` callback. Invoking it carries that
+/// callback's own `# Safety` contract, including `data`'s readable extent and the block
+/// precondition; a NULL `data` with `count != 0` is refused by the transcribed callbacks.
+///
 /// # Safety
 /// `md` must be a live `EvpMd`.
 #[no_mangle]
@@ -1579,6 +1595,10 @@ pub unsafe extern "C" fn EVP_MD_meth_get_update(md: *const EvpMd) -> Option<MdLe
 }
 
 /// `int (*EVP_MD_meth_get_final(const EVP_MD *md))(EVP_MD_CTX *ctx, unsigned char *md)`.
+///
+/// The returned pointer is the method's legacy `final` callback. Invoking it carries that
+/// callback's own `# Safety` contract, including the output buffer's writable extent and the
+/// block precondition.
 ///
 /// # Safety
 /// `md` must be a live `EvpMd`.
@@ -1590,6 +1610,11 @@ pub unsafe extern "C" fn EVP_MD_meth_get_final(md: *const EvpMd) -> Option<MdLeg
 
 /// `int (*EVP_MD_meth_get_copy(const EVP_MD *md))(EVP_MD_CTX *to, const EVP_MD_CTX *from)`.
 ///
+/// The returned pointer is the method's legacy `copy` callback; invoking it carries that
+/// callback's own `# Safety` contract. None of the legacy digest tables in this crate installs
+/// one, so the answer is `None` for every `EVP_sha*`, `EVP_md*`, `EVP_blake2*`, `EVP_sha3*`,
+/// `EVP_shake*`, `EVP_whirlpool` and `EVP_sm3` object.
+///
 /// # Safety
 /// `md` must be a live `EvpMd`.
 #[no_mangle]
@@ -1599,6 +1624,10 @@ pub unsafe extern "C" fn EVP_MD_meth_get_copy(md: *const EvpMd) -> Option<MdLega
 }
 
 /// `int (*EVP_MD_meth_get_cleanup(const EVP_MD *md))(EVP_MD_CTX *ctx)`.
+///
+/// The returned pointer is the method's legacy `cleanup` callback; invoking it carries that
+/// callback's own `# Safety` contract. None of the legacy digest tables in this crate installs
+/// one, so the answer is `None` for every object listed at `EVP_MD_meth_get_copy`.
 ///
 /// # Safety
 /// `md` must be a live `EvpMd`.
@@ -1610,6 +1639,11 @@ pub unsafe extern "C" fn EVP_MD_meth_get_cleanup(md: *const EvpMd) -> Option<MdL
 
 /// `int (*EVP_MD_meth_get_ctrl(const EVP_MD *md))(EVP_MD_CTX *ctx, int cmd, int p1,
 /// void *p2)`.
+///
+/// The returned pointer is the method's legacy `md_ctrl` callback. Invoking it carries that
+/// callback's own `# Safety` contract, including the block precondition and the readable extent
+/// of `p2` for the commands that consume it. `sha1_int_ctrl` and `shake_ctrl` establish the
+/// block themselves, so an undersized `app_datasize` is refused with `0` before any write.
 ///
 /// # Safety
 /// `md` must be a live `EvpMd`.
