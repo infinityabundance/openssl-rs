@@ -7,7 +7,7 @@
   "base_commit": "fcd22e3987a4e4d49d2c896b46103cfa26942f85",
   "base_commit_subject": "feat(analyzer): intraprocedural type propagation for store bases",
   "branch": "stage/p25/element7-s2b",
-  "working_tree": "dirty: full-surface fn-level contracts, the 15 NULL-data guards, the `shake_ctrl` negative-length guard, the shared adversarial test module, and refreshed getter/app-datasize docs; nothing committed, nothing rebuilt into an install, CAMPAIGN-STATUS.json untouched. The REJECT verdict is retained: this is the repair of the rejected batch, not an application.",
+  "working_tree": "dirty: full-surface fn-level contracts, the 15 NULL-data guards, the `shake_ctrl` negative-length guard, the shared adversarial test module, and refreshed getter/app-datasize docs; nothing committed, nothing rebuilt into an install, CAMPAIGN-STATUS.json untouched. The three previously vacuous surface tests now install each table's own callbacks and invoke them. The REJECT verdict is retained: this is the repair of the rejected batch, not an application.",
   "files": [
    "src/evp/legacy_sha.rs",
    "src/evp/legacy_md5.rs",
@@ -36,7 +36,7 @@
    "src/evp/e_rc2.rs": "ef0cc7760e22b883ae5f3889941c0b456f97f0422a28f1a7f92f60f11fadb4d3",
    "src/evp/digest.rs": "63a5a4941d2694b492390c3ac21aaeb1cd9a6b596b9cf8b97fe7d2d464ee1f1a",
    "src/evp/mod.rs": "99fbd7f17d4b1d5a066d5223af7eecc31f6c069674ffe0c46db47f737675be94",
-   "src/evp/legacy_digest_callback_surface.rs": "361f1fbcabfcc0e2b84596408ffb2501234fd01bceecbb9782f428069480d927"
+   "src/evp/legacy_digest_callback_surface.rs": "de51eb1bf21923d498f68e08b972d013ad1824036f090f6f48e78e7b356d0043"
   },
   "note": "No freeze tag was created. `line` retains the V1 census coordinate where one exists; `line_current` and every embedded candidate line reference are refreshed to this working tree and bound to files_sha256."
  },
@@ -247,7 +247,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -283,7 +283,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -317,7 +317,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -354,7 +354,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -389,7 +389,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -425,7 +425,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -460,7 +460,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -496,7 +496,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -531,7 +531,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -567,7 +567,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -602,7 +602,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -636,7 +636,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -670,7 +670,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -706,7 +706,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -741,7 +741,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -776,7 +776,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -812,7 +812,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -847,7 +847,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -881,7 +881,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -917,7 +917,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -952,7 +952,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -989,7 +989,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1024,7 +1024,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1061,7 +1061,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1096,7 +1096,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1132,7 +1132,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1167,7 +1167,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1202,7 +1202,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1241,7 +1241,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1276,7 +1276,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1312,7 +1312,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1347,7 +1347,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1383,7 +1383,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1418,7 +1418,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1452,7 +1452,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1515,7 +1515,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1551,7 +1551,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1587,7 +1587,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1623,7 +1623,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1659,7 +1659,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1695,7 +1695,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1731,7 +1731,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1767,7 +1767,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1803,7 +1803,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1839,7 +1839,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1875,7 +1875,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1911,7 +1911,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1947,7 +1947,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -1983,7 +1983,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -2019,7 +2019,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -2055,7 +2055,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -2091,7 +2091,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -2128,7 +2128,7 @@
    ],
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "evp::legacy_digest_callback_surface::null_md_data_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
@@ -2580,20 +2580,20 @@
     "name": "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
     "kind": "lib unittest",
     "result": "PASS",
-    "observation": "Every callback installed by the 22 tables refuses an 8-byte block and leaves it unchanged.",
+    "observation": "The method installs each table's real init/update/final/ctrl getters (`installed_callbacks` equality) and the measured invocation count equals that set, so no branch is skipped; every invoked callback refuses an 8-byte block and leaves it unchanged. `EVP_DigestInit_ex` also allocates exactly the declared eight bytes and the installed initialiser refuses them.",
     "mutation_sensitive": true,
-    "fails_if": "removing any callback's `init_md_data`/`init_keccak` guard lets the primitive write a full context (SIGABRT in the SHA/MD families, hang in SHA-3).",
-    "limits": "Uses a hand-built context bound to a `METH` method; the `EVP_DigestInit_ex` allocation path is covered by the preserved sha1/shake ctrl tests."
+    "fails_if": "forcing the per-file extent branch to accept (`if true`) makes the zero-ctx and undersized runs fail with `{table}: init accepted the block`; observed rc 101 for md4, md5, sha1, mdc2, ripemd160, whirlpool, blake2b512, sm3 and sha3_224.",
+    "limits": "Uses a hand-built context bound to a `METH` method carrying the table's callbacks; the `EVP_DigestInit_ex` allocation path is now driven once per table as well."
    },
    {
     "id": "B48-C3",
-    "name": "evp::legacy_digest_callback_surface::wrong_typed_block_is_refused_for_every_callback",
+    "name": "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes",
     "kind": "lib unittest",
     "result": "PASS",
-    "observation": "An 8-byte `u64` (wrong type and wrong extent) is refused for every callback.",
+    "observation": "`app_datasize` is 1024 and the block is a `[u64; 128]`, a valid object of a different type and at least `size_of::<T>()` for every concrete legacy context (const-checked), so init/update/final are admitted and answer 1: the guard establishes extent, never type.",
     "mutation_sensitive": true,
-    "fails_if": "the extent guard is removed.",
-    "limits": "A correctly-sized wrong-typed block is accepted; that residual is B48-C5 and B48-R5."
+    "fails_if": "forcing the per-file extent branch to refuse (`if false`; `if true` for `init_keccak`) makes it fail with `{table}: init refused a block whose extent passed`; observed rc 101 for md4, md5, sha1, mdc2, ripemd160, whirlpool, blake2b512, sm3 and sha3_224.",
+    "limits": "Records the residual rather than a refusal: a correctly sized wrong-typed block is admitted (B48-C5 and B48-R5)."
    },
    {
     "id": "B48-C4",
@@ -2640,10 +2640,10 @@
     "name": "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "kind": "lib unittest",
     "result": "PASS",
-    "observation": "A `METH`-origin method with `ctx_size == 0` and a non-NULL block is refused by every callback.",
+    "observation": "The method installs the table's real callbacks; a `ctx_size == 0` method with a non-NULL 128-byte block is refused by every invoked callback, and `EVP_DigestInit_ex` allocates no block so the installed initialiser is refused with a NULL `md_data`.",
     "mutation_sensitive": true,
-    "fails_if": "the `ctx_size >= size` test is removed.",
-    "limits": "The library itself allocates no block for `ctx_size == 0`."
+    "fails_if": "forcing the per-file extent branch to accept makes it fail with `{table}: init accepted the block`; observed rc 101 for md4, md5, sha1, mdc2, ripemd160, whirlpool, blake2b512, sm3 and sha3_224.",
+    "limits": "The library itself allocates no block for `ctx_size == 0`; the direct-call arm attaches a block the library would not."
    },
    {
     "id": "B48-C9",
@@ -2661,11 +2661,30 @@
   "fast": {
    "fmt": "cargo fmt --all -- --check: PASS (exit 0, no output) at the candidate hashes above",
    "clippy": "cargo clippy --all-targets -- -D warnings: PASS (Finished dev profile) at the same source",
-   "focused_tests": "cargo test --lib -- evp:: -- --test-threads=4: PASS, 290 passed / 0 failed / 0 ignored (2012 filtered out); cargo test --lib -- sm3:: -- --test-threads=4: PASS, 5 passed / 0 failed; the new module alone: 9 passed / 0 failed."
+   "focused_tests": "cargo test --lib -- evp:: -- --test-threads=4: PASS, 290 passed / 0 failed / 0 ignored (2012 filtered out); cargo test --lib -- evp::legacy_digest_callback_surface -- --test-threads=4: PASS, 9 passed / 0 failed / 0 ignored (2293 filtered out). The earlier sm3:: run (5 passed / 0 failed) is retained from the pre-repair source; it was not rerun for this test-only change."
   },
   "mutation": {
    "canary": "B48-C1 (sha1_update guard) retained; the new control B48-C6 drives the 15 NULL-data guards.",
    "guarded_check": "the 15 `if data.is_null() && count != 0 { return 0; }` guards and the `shake_ctrl` `if p1 < 0 { return 0; }` guard",
+   "surface_tests": [
+    {
+     "tests": [
+      "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
+      "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback"
+     ],
+     "mutation": "the per-file extent guard forced to accept (`if true`; `if false` for `init_keccak`) in each of the nine helper copies, one file at a time",
+     "observed": "every run failed rc 101: zero_ctx_size with `{table}: init accepted the block` for sha1, md4, md5, mdc2, ripemd160, whirlpool, blake2b512, sm3 and sha3_224; the undersized arm failed with `md4: init accepted the block`.",
+     "restore": "byte-for-byte sha256 match for all nine files after each mutation"
+    },
+    {
+     "tests": [
+      "evp::legacy_digest_callback_surface::wrong_typed_block_is_admitted_when_extent_passes"
+     ],
+     "mutation": "the per-file extent guard forced to refuse (`if false`; `if true` for `init_keccak`) in each of the nine helper copies, one file at a time",
+     "observed": "every run failed rc 101 with `{table}: init refused a block whose extent passed` for sha1, md4, md5, mdc2, ripemd160, whirlpool, blake2b512, sm3 and sha3_224.",
+     "restore": "byte-for-byte sha256 match for all nine files after each mutation"
+    }
+   ],
    "new_guards": [
     {
      "file": "src/evp/legacy_sha.rs",
@@ -2930,7 +2949,7 @@
  "repair_for_review": {
   "date": "2026-11-01",
   "state": "REPAIRED, NOT APPLIED",
-  "what_changed": "full-surface enumeration (68 rows), 15 NULL-data guards, shake_ctrl negative-length guard, shared adversarial test module, refreshed getter/app-datasize docs and coordinates",
+  "what_changed": "full-surface enumeration (68 rows), 15 NULL-data guards, shake_ctrl negative-length guard, shared adversarial test module with its three previously vacuous tests now installing and invoking the table callbacks, refreshed getter/app-datasize docs and coordinates",
   "review_verdict_retained": "REJECT",
   "next": "independent re-review against candidate.files_sha256; CAMPAIGN-STATUS.json untouched and closure not run"
  },
