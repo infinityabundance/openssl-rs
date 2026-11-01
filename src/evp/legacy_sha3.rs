@@ -250,6 +250,12 @@ const fn legacy_md(
 /// answer `0`, the C initialise failure value, instead of performing the authority's NULL write.
 /// The normal table shape — a writable `KeccakCtx` behind a context bound to one of the four
 /// SHA-3 objects — still initialises and returns `1`.
+///
+/// Callers: `evp_md_init_legacy` (`src/evp/digest.rs:2325`, callback call `:2382`) and the
+/// exported `EVP_MD_meth_get_init` (`src/evp/digest.rs:1577`). The context's method is the
+/// provenance for the block: an owner-table context is trusted by identity, and any other method
+/// is trusted only for the extent its `ctx_size` declares. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn sha3_int_init(ctx: *mut EvpMdCtx) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and the owner list is composed of
     // live static methods.
@@ -284,6 +290,12 @@ unsafe extern "C" fn sha3_int_init(ctx: *mut EvpMdCtx) -> c_int {
 /// `ctx_size` — with `0` before any dereference (`docs/SECURITY_DIVERGENCE_POLICY.md`,
 /// `D-LEGACY-MD-CALLBACK-MD-DATA-1`). The context is borrowed exclusively for the duration of the
 /// call and no pointer is retained.
+///
+/// Callers: `EVP_DigestUpdate` (`src/evp/digest.rs:2451`, callback call `:2505`) and the exported
+/// `EVP_MD_meth_get_update` (`src/evp/digest.rs:1592`). `data`'s readable extent is the caller's
+/// obligation; a NULL `data` with `count != 0` is refused with `0` before the primitive is called.
+/// The callback retains no pointer; a refusal leaves the context untouched and retryable, while a
+/// primitive-level failure may leave partial state.
 unsafe extern "C" fn sha3_int_update(
     ctx: *mut EvpMdCtx,
     data: *const c_void,
@@ -306,6 +318,11 @@ unsafe extern "C" fn sha3_int_update(
     }) else {
         return 0;
     };
+    // A NULL `data` with a non-zero length is not a valid update; `ossl_sha3_update` would
+    // dereference it. Refuse before the primitive is called (D-LEGACY-MD-CALLBACK-MD-DATA-1).
+    if data.is_null() && count != 0 {
+        return 0;
+    }
     // SAFETY: `init_keccak` established a writable `KeccakCtx`; `data`/`count` are the caller's.
     unsafe { ossl_sha3_update(kctx, data.cast::<u8>(), count) }
 }
@@ -320,6 +337,12 @@ unsafe extern "C" fn sha3_int_update(
 /// current `md_size` bytes. The context precondition is the one [`sha3_int_update`] states, and a
 /// context without a writable block or a positive `md_size` is refused with `0` before `md` is
 /// touched.
+///
+/// Callers: `evp_md_final_legacy` (`src/evp/digest.rs:2635`, callback call `:2652`),
+/// `evp_digest_final_xof_legacy` (`src/evp/digest.rs:2757`, call `:2783`) and the exported
+/// `EVP_MD_meth_get_final` (`src/evp/digest.rs:1606`). `md`'s writable extent is the caller's
+/// obligation. The callback retains no pointer; a refusal leaves the context untouched and
+/// retryable, while a successful final consumes the block.
 unsafe extern "C" fn sha3_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and every owner is a live static
     // method.
@@ -354,6 +377,12 @@ unsafe extern "C" fn sha3_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_i
 /// # Safety
 ///
 /// As [`sha3_int_init`], over the two SHAKE table objects.
+///
+/// Callers: `evp_md_init_legacy` (`src/evp/digest.rs:2325`, callback call `:2382`) and the
+/// exported `EVP_MD_meth_get_init` (`src/evp/digest.rs:1577`). The context's method is the
+/// provenance for the block: an owner-table context is trusted by identity, and any other method
+/// is trusted only for the extent its `ctx_size` declares. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn shake_init(ctx: *mut EvpMdCtx) -> c_int {
     // SAFETY: `ctx` is NULL or live per the callback's contract, and the owner list is composed of
     // live static methods.
@@ -388,6 +417,11 @@ unsafe extern "C" fn shake_init(ctx: *mut EvpMdCtx) -> c_int {
 /// write `md_size` through the undersized block. When the method is not one of the two SHAKE
 /// tables, the block *type* is not established by the context; the guard establishes its extent
 /// from the caller's declared `app_datasize`, exactly as `init_keccak` does for the initialiser.
+///
+/// Callers: `evp_md_ctx_ctrl_legacy` (`src/evp/digest.rs:3667`, callback call `:3680`) and the
+/// exported `EVP_MD_meth_get_ctrl` (`src/evp/digest.rs:1651`). The readable extent of `p2` under
+/// the commands that consume it is the caller's obligation. The callback retains no pointer; a
+/// refusal leaves the context untouched and retryable.
 unsafe extern "C" fn shake_ctrl(
     evp_ctx: *mut EvpMdCtx,
     cmd: c_int,
@@ -410,9 +444,15 @@ unsafe extern "C" fn shake_ctrl(
 
     match cmd {
         EVP_MD_CTRL_XOF_LEN => {
-            // SAFETY: `init_keccak` established a writable `KeccakCtx` and a positive `md_size`.
-            // The `int`-to-`usize` cast is the authority's `int`-to-`size_t` assignment; the
-            // length is non-negative in every call `EVP_DigestSqueeze` makes.
+            // A negative output length has no meaning and the authority's `int`-to-`size_t`
+            // assignment would turn it into a huge length that a later final or squeeze would
+            // write past the caller's buffer. Refuse it before the write
+            // (D-LEGACY-MD-CALLBACK-MD-DATA-1).
+            if p1 < 0 {
+                return 0;
+            }
+            // SAFETY: `init_keccak` established a writable `KeccakCtx` and a positive `md_size`;
+            // `p1` is non-negative per the guard above.
             unsafe { (*kctx).md_size = p1 as usize };
             1
         }

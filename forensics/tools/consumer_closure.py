@@ -64,6 +64,7 @@ Example:    python3 forensics/tools/consumer_closure.py \
 from __future__ import annotations
 
 import argparse
+import ast
 import collections
 import datetime as _dt
 import hashlib
@@ -2952,16 +2953,17 @@ def _semantic_writer_sources(g: "DsoGraph", writer: int, offset: int) -> list:
 
 
 def _drop_s1_caches(g: "DsoGraph", *, all_caches: bool = True) -> None:
-    attrs = ["_s1_docs_cache", "_s1_module_index"]
+    attrs = ["_s1_docs_cache", "_s1_module_index", "_s1_dispatch_cache"]
     if all_caches:
         attrs += ["_s1_struct_cache", "_s1_layout_cache", "_s1_alias_cache",
                   "_s1_fn_cache", "_s1_ctx_cache", "_s1_demangle_cache",
-                  "_s1_instance_cache", "_s1_dispatch_cache", "_s1_sym_index",
+                  "_s1_instance_cache", "_s1_sym_index",
                   "_s1_macro_static_cache"]
     for attr in attrs:
         if hasattr(g, attr):
-            setattr(g, attr, {} if attr not in
-                    ("_s1_docs_cache", "_s1_module_index") else None)
+            setattr(g, attr,
+                    None if attr in ("_s1_docs_cache", "_s1_module_index",
+                                     "_s1_dispatch_cache") else {})
 
 
 def _semantic_provenance_resolver(g: "DsoGraph") -> "PrecisionResolver":
@@ -4296,6 +4298,14 @@ def _reg_origin(g: "DsoGraph", fstart: int, idx: int, reg: str,
     mn, _rest, ops = _insn_parts(_insn(g, fstart, k))
     addr = g.precision.insns_by_func[fstart][k][0]
     if mn.startswith("call"):
+        symbol = _nested_alloc_symbol(g, fstart, k)
+        if symbol is not None:
+            alloc = _nested_alloc_size(g, fstart, k, depth + 1)
+            if alloc is None:
+                return {"kind": "alloc-unknown", "symbol": symbol,
+                        "call_site": k, "addr": addr}
+            return {"kind": "alloc", "symbol": alloc["symbol"],
+                    "size": alloc["size"], "call_site": k, "addr": addr}
         direct = _direct_call_target(g, fstart, k)
         if direct is None:
             return {"kind": "unknown", "why": "indirect call result"}
@@ -4319,6 +4329,25 @@ def _reg_origin(g: "DsoGraph", fstart: int, idx: int, reg: str,
     m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", src)
     if m:
         off = int(m.group(1), 16) if m.group(1) else 0
+        if mn == "lea":
+            # ``lea`` computes an address; it does not load the memory operand.
+            # A RIP-relative lea materialises a link-time static address and
+            # keeps the existing ``load`` shape (the consumer reads the objdump
+            # comment, not memory).  A zero-displacement lea of a register is a
+            # reborrow of the same object, so it keeps the base's provenance.  A
+            # non-zero displacement is an interior pointer and is refused (the
+            # field index is keyed by the literal store displacement).
+            if m.group(2) in ("%rip", "%rsp", "%rbp"):
+                # A RIP-relative lea materialises a link-time static address;
+                # a frame-relative lea materialises the address of a stack
+                # slot.  Both keep the existing ``load`` shape, which its
+                # consumers read as an address materialisation.
+                return {"kind": "load", "offset": off,
+                        "base_reg": m.group(2), "at": k, "addr": addr}
+            if off == 0:
+                return _reg_origin(g, fstart, k, _canon(m.group(2)),
+                                   depth + 1)
+            return {"kind": "unknown", "why": "interior lea address"}
         return {"kind": "load", "offset": off, "base_reg": m.group(2),
                 "at": k, "addr": addr}
     return {"kind": "unknown", "why": "unsupported source " + src}
@@ -5735,6 +5764,92 @@ def _s1_type_alias(g: "DsoGraph", name: str):
     return cache[name]
 
 
+_S1_CONST_SCALAR = r"(?:usize|isize|u8|u16|u32|u64|i8|i16|i32|i64|size_t)"
+
+
+def _s1_const_exprs(g: "DsoGraph"):
+    """Source integer constants, by name, when the definition is unique.
+
+    A struct layout is decidable only when every field size is.  Array
+    lengths are frequently written as a constant expression
+    (``[u8; 4 * SLH_DSA_MAX_N]``), which the literal-only rule could not
+    evaluate; the same source documents that give the field types also give
+    the constants.  A name defined more than once with different text is
+    ambiguous and is not evaluated.
+    """
+    cache = getattr(g, "_s1_const_cache", None)
+    if cache is not None:
+        return cache
+    hits = {}
+    pat = re.compile(
+        r"(?m)^[ \t]*(?:pub(?:\s*\([^)]*\))?\s+)?const\s+"
+        r"([A-Za-z_]\w*)\s*:\s*" + _S1_CONST_SCALAR + r"\s*=\s*([^;]+);")
+    for _path, text in _s1_docs(g).items():
+        for m in pat.finditer(text):
+            hits.setdefault(m.group(1), set()).add(
+                " ".join(m.group(2).split()))
+    out = {name: next(iter(vals)) if len(vals) == 1 else None
+           for name, vals in hits.items()}
+    g._s1_const_cache = out
+    return out
+
+
+def _s1_eval_int(g: "DsoGraph", expr: str, seen=()):
+    """Evaluate a source integer expression, or None.
+
+    Only integer literals, previously resolved constants, parentheses and
+    ``+ - * / %`` are accepted.  Division must be exact, so a platform or
+    compiler difference cannot silently change an array length.
+    """
+    try:
+        tree = ast.parse(expr, mode="eval")
+    except (SyntaxError, ValueError):
+        return None
+
+    def ev(node):
+        if isinstance(node, ast.Expression):
+            return ev(node.body)
+        if isinstance(node, ast.Constant) and isinstance(node.value, int):
+            return node.value
+        if isinstance(node, ast.Name):
+            return _s1_const_value(g, node.id, seen)
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+            val = ev(node.operand)
+            return -val if val is not None else None
+        if isinstance(node, ast.BinOp) and isinstance(
+                node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div,
+                          ast.FloorDiv, ast.Mod)):
+            left, right = ev(node.left), ev(node.right)
+            if left is None or right is None:
+                return None
+            if isinstance(node.op, ast.Add):
+                return left + right
+            if isinstance(node.op, ast.Sub):
+                return left - right
+            if isinstance(node.op, ast.Mult):
+                return left * right
+            if right == 0:
+                return None
+            if isinstance(node.op, ast.Mod):
+                return left % right
+            if left % right != 0:
+                return None
+            return left // right
+        return None
+
+    value = ev(tree)
+    return value if isinstance(value, int) and value >= 0 else None
+
+
+def _s1_const_value(g: "DsoGraph", name: str, seen=frozenset()):
+    if name in seen:
+        return None
+    expr = _s1_const_exprs(g).get(name)
+    if expr is None:
+        return None
+    return _s1_eval_int(g, expr, frozenset(seen) | {name})
+
+
 def _s1_type_size(g: "DsoGraph", type_text: str, seen=()):
     """(size, alignment) of a repr(C) field type, or None if not decidable."""
     t = " ".join((type_text or "").split())
@@ -5764,10 +5879,13 @@ def _s1_type_size(g: "DsoGraph", type_text: str, seen=()):
     m = re.fullmatch(r"\[(.+);\s*([^\]]+)\]", t)
     if m:
         inner = _s1_type_size(g, m.group(1), seen)
+        count_text = m.group(2).strip()
         try:
-            count = int(m.group(2).strip(), 0)
+            count = int(count_text, 0)
         except ValueError:
-            return None
+            count = _s1_eval_int(g, count_text)
+            if count is None:
+                return None
         if inner is None:
             return None
         return (inner[0] * count, inner[1])
@@ -5839,22 +5957,19 @@ def _s1_struct_layout(g: "DsoGraph", type_name: str, seen=()):
     return out
 
 
-def _s1_src_fn(g: "DsoGraph", relpath: str, fn_name: str):
-    """Header/body span of one source function, or None."""
-    cache = getattr(g, "_s1_fn_cache", None)
-    if cache is None:
-        cache = {}
-        g._s1_fn_cache = cache
-    key = (relpath, fn_name)
-    if key in cache:
-        return cache[key]
-    text = _s1_docs(g).get(relpath)
-    if text is None:
-        cache[key] = None
-        return None
+def _s1_fn_spans(text: str, relpath: str, fn_name: str,
+                 lo: int = 0, hi: int | None = None):
+    """Every definition span of ``fn name`` in ``text[lo:hi]``.
+
+    The region bound is what makes a ``fn`` inside one inline module
+    distinguishable from an identically named ``fn`` in a sibling module of
+    the same file.  A declaration (``;`` before the body brace) is never a
+    definition.
+    """
+    end_text = len(text) if hi is None else hi
     pat = re.compile(r"\bfn\s+" + re.escape(fn_name) + r"\s*\(")
     hits = []
-    for m in pat.finditer(text):
+    for m in pat.finditer(text, lo, end_text):
         line_start = text.rfind("\n", 0, m.start()) + 1
         line = text[line_start:m.start()].strip()
         if line.startswith("///") or line.startswith("//"):
@@ -5888,6 +6003,71 @@ def _s1_src_fn(g: "DsoGraph", relpath: str, fn_name: str):
             "header": text[m.start():brace + 1],
             "body": text[brace + 1:end - 1],
         })
+    return hits
+
+
+def _s1_module_region(text: str, relpath: str, module_segs):
+    """Character range of the inline module named by ``module_segs``.
+
+    A module path from a demangled symbol names directories as well as inline
+    ``mod`` items.  Only the segments after the file's own module name can be
+    entered in the file text; an absent segment leaves the region unchanged, so
+    an unscopable function keeps the previous (ambiguous or absent) result.
+    """
+    p = Path(relpath)
+    stem = p.parent.name if p.name == "mod.rs" else p.stem
+    segs = list(module_segs or ())
+    if stem in segs:
+        segs = segs[segs.index(stem) + 1:]
+    lo, hi = 0, len(text)
+    for seg in segs:
+        m = re.search(r"\bmod\s+" + re.escape(seg) + r"\s*\{",
+                      text[lo:hi])
+        if m is None:
+            continue
+        brace = lo + m.end() - 1
+        end = _s1_brace_span(text, brace)
+        if end is None:
+            continue
+        lo, hi = brace + 1, end - 1
+    return lo, hi
+
+
+def _s1_src_fn_scoped(g: "DsoGraph", relpath: str, fn_name: str,
+                      module_segs):
+    """Unique definition span within one inline module of ``relpath``."""
+    key = (relpath, fn_name, tuple(module_segs or ()))
+    cache = getattr(g, "_s1_scoped_fn_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_scoped_fn_cache = cache
+    if key in cache:
+        return cache[key]
+    text = _s1_docs(g).get(relpath)
+    if text is None:
+        cache[key] = None
+        return None
+    lo, hi = _s1_module_region(text, relpath, module_segs)
+    hits = _s1_fn_spans(text, relpath, fn_name, lo, hi)
+    out = hits[0] if len(hits) == 1 else None
+    cache[key] = out
+    return out
+
+
+def _s1_src_fn(g: "DsoGraph", relpath: str, fn_name: str):
+    """Header/body span of one source function, or None."""
+    cache = getattr(g, "_s1_fn_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_fn_cache = cache
+    key = (relpath, fn_name)
+    if key in cache:
+        return cache[key]
+    text = _s1_docs(g).get(relpath)
+    if text is None:
+        cache[key] = None
+        return None
+    hits = _s1_fn_spans(text, relpath, fn_name)
     out = hits[0] if len(hits) == 1 else None
     cache[key] = out
     return out
@@ -5938,7 +6118,10 @@ def _s1_site_context(g: "DsoGraph", fstart: int):
                     span = _s1_src_fn(g, relpath, fn_name)
                     if span is not None:
                         ctx = _s1_fn_context(span, fn_name)
-                        if ctx is not None:
+                        if ctx is not None and ctx.get("type") is None:
+                            ctx = _s1_inlined_fn_context(g, span,
+                                                         ctx.get("param"))
+                        if ctx is not None and ctx.get("type"):
                             out = {"file": relpath, "function": fn_name,
                                    "line": span["line"], **ctx}
     cache[fstart] = out
@@ -5995,12 +6178,96 @@ def _s1_fn_context(span: dict, fn_name: str):
             r"(?:let\s+)?([A-Za-z_]\w*)\s*(?::[^=]*)?=\s*([A-Za-z_]\w*)"
             r"\s*\.\s*cast\s*::\s*<\s*([A-Za-z_]\w*)\s*>", body)
         if cast is None:
-            return None
+            # The type may still be established by an inlined callee; the
+            # caller resolves that from the wrapper's unique call edge.
+            return {"var": var, "type": None, "param": var,
+                    "param_index": 0, "declared": " ".join(first.split()),
+                    "c_void": True}
         return {"var": cast.group(1), "type": cast.group(3),
                 "param": var, "param_index": 0,
                 "declared": " ".join(first.split())}
     return {"var": var, "type": typ, "param": var, "param_index": 0,
             "declared": " ".join(first.split())}
+
+
+_RUST_NON_CALL_WORDS = {
+    "if", "while", "for", "match", "loop", "return", "unsafe", "as",
+    "in", "let", "move", "Some", "Ok", "Err", "size_of", "align_of",
+    "addr_of", "addr_of_mut", "cast", "from", "into",
+}
+
+
+def _s1_strip_comments(text: str) -> str:
+    """Remove Rust line and block comments (the bodies here are declarations,
+    so a string literal containing ``//`` is not expected; if one occurs the
+    unique-call rule simply refuses)."""
+    text = re.sub(r"/\*.*?\*/", " ", text, flags=re.S)
+    return re.sub(r"//[^\n]*", " ", text)
+
+
+def _s1_inlined_fn_context(g: "DsoGraph", span: dict, var: str):
+    """The context type a thin wrapper's inlined callee establishes.
+
+    ``ossl_gcm_dinit(vctx: *mut c_void, ...)`` is exactly
+    ``{ gcm_init(vctx, ...) }``, and ``gcm_init`` is the function that casts
+    ``vctx`` to ``*mut ProvGcmCtx``.  The cast is not a guess about which
+    callee the compiler chose: when the indirect call is observed inside the
+    wrapper's own instruction stream, the wrapper's body was inlined, and the
+    wrapper's only use of its context parameter is the first argument of its
+    only call.  The attribution is refused unless every one of those facts is
+    unique: one call, one use of the parameter, one source definition of the
+    callee, one cast target, and a decidable layout for that target.
+    """
+    if not var:
+        return None
+    body = span.get("body") or ""
+    stripped = _s1_strip_comments(body)
+    if len(re.findall(r"\b" + re.escape(var) + r"\b", stripped)) != 1:
+        return None
+    calls = [c for c in re.findall(r"\b([A-Za-z_]\w*)\s*\(", stripped)
+             if c not in _RUST_NON_CALL_WORDS]
+    if len(calls) != 1:
+        return None
+    callee = calls[0]
+    arg = re.search(r"\b" + re.escape(callee) + r"\s*\(\s*"
+                    + re.escape(var) + r"\s*[,)]", stripped)
+    if arg is None:
+        return None
+    defs = []
+    for path, text in _s1_docs(g).items():
+        for mm in re.finditer(
+                r"(?m)^[ \t]*(?:pub(?:\s*\([^)]*\))?\s+)?(?:unsafe\s+)?"
+                r"(?:extern\s+\"C\"\s+)?fn\s+" + re.escape(callee)
+                + r"\s*\((.*?)\)", text, re.S):
+            defs.append((path, mm))
+    if len(defs) != 1:
+        return None
+    path, mm = defs[0]
+    pm = re.match(r"\s*([A-Za-z_]\w*)\s*:\s*(.+?)(?:,|$)", mm.group(1),
+                  re.S)
+    if pm is None:
+        return None
+    pvar, ptype = pm.group(1), " ".join(pm.group(2).split())
+    if _s1_pointee(ptype) not in ("c_void", "void"):
+        return None
+    cspan = _s1_src_fn(g, path, callee)
+    if cspan is None:
+        return None
+    casts = set(re.findall(
+        r"\b" + re.escape(pvar) + r"\s*\.\s*cast\s*::\s*<\s*"
+        r"([A-Za-z_]\w*)\s*>", cspan.get("body") or ""))
+    if len(casts) != 1:
+        return None
+    target = casts.pop()
+    # The cast proves the type name.  A decidable *byte layout* is a separate
+    # question that the downstream rules answer (and refuse honestly when they
+    # cannot); requiring it here would discard a proven cast fact.
+    if _s1_struct_fields(g, target) is None:
+        return None
+    return {"var": pvar, "type": target, "param": var, "param_index": 0,
+            "declared": " ".join((span.get("header") or "").split()),
+            "via": "inlined-callee", "callee": callee,
+            "witness": f"{path}:{cspan['line']}"}
 
 
 def _s1_cast_types(g: "DsoGraph", ctx_info: dict, field: str):
@@ -6390,6 +6657,14 @@ def _s1_writer_source(g: "DsoGraph", wf: int):
                                              root / "src", fallback)
                     if relpath:
                         span = _s1_src_fn(g, relpath, name)
+                        if span is None:
+                            # ``module_to_file`` stops at the first existing
+                            # path prefix, so an inline module (``blake2b`` in
+                            # ``blake2.rs``) resolves to the shared file.  The
+                            # module path then disambiguates the same leaf name
+                            # in sibling modules.
+                            span = _s1_src_fn_scoped(g, relpath, name,
+                                                     segs[:-1])
                         if span is not None:
                             out = {"file": relpath, "span": span,
                                    "name": name, "via": "module"}
@@ -6700,12 +6975,16 @@ def _s1_store_base_witness_raw(g: "DsoGraph", wf: int, store: dict,
         rec.update(qualified=False, unknown=True,
                    reason="load origin with no decidable owning type")
         return rec
-    if kind in ("call", "unknown"):
+    if kind in ("call", "alloc", "alloc-unknown", "unknown"):
         if kind == "call":
             call_idx = origin.get("call_site")
             sym = ((g.funcs.get(origin.get("callee")) or "").split("@")[0]
                    or _s1_call_symbol(g, wf, call_idx))
             target = origin.get("callee")
+        elif kind in ("alloc", "alloc-unknown"):
+            call_idx = origin.get("call_site")
+            sym = origin.get("symbol")
+            target = None
         elif "call" in str(origin.get("why") or ""):
             call_idx = _s1_call_def(g, wf, store["index"],
                                     _canon(store["base"]))
@@ -7747,6 +8026,2659 @@ def static_table_instance_witness(g: "DsoGraph", site: dict, name: str,
     }
 
 
+# ---- S2b: nested static-instance dispatch (2026-10-31) ----------------- #
+#
+# A second-level dispatch that S1 cannot see: the context object holds a
+# pointer to a static instance of a repr(C) struct of function pointers, and
+# the call reads a member of that instance.  The class this removes is
+# ``base-slot-partial``: the pointer field is offset-keyed ``open`` because at
+# least one store to the same displacement has an unresolved value, even when
+# every store whose base object is the declared context type writes a declared
+# static instance.
+#
+# Completeness is established by an image-wide instruction fact, not by an
+# absence of evidence: every instruction of every function in the image is
+# scanned, and every store that can write the pointer field is either excluded
+# as a different object, accounted as a declared instance (or NULL), or refuses
+# the site.  A non-scalar store that overlaps the pointer slot also refuses.
+# The rule never shrinks the conservative bound on a failure.
+
+NESTED_WITNESS_SCHEMA = "openssl-rs/consumer-closure/nested-static-instance/v1"
+
+_NESTED_SCALAR_STORE = re.compile(
+    r"(mov|movq|movabs)\s+(.+),\s*(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)\s*")
+_NESTED_NONSCALAR_STORE = re.compile(
+    r"(movl|movw|movb|movsd|movss|movups|movupd|movdqu|movdqa|movaps|movapd|"
+    r"vmovdqu|vmovdqa|vmovups|vmovupd|vmovaps|movlps|movhps|vmovdqu64|"
+    r"vmovdqa64)\s+(.+),\s*(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)\s*")
+_NESTED_NONSCALAR_WIDTH = {
+    "movl": 4, "movw": 2, "movb": 1, "movsd": 8, "movss": 4,
+    "movups": 16, "movupd": 16, "movdqu": 16, "movdqa": 16,
+    "movaps": 16, "movapd": 16, "vmovdqu": 16, "vmovdqa": 16,
+    "vmovups": 16, "vmovupd": 16, "vmovaps": 16, "vmovdqu64": 16,
+    "vmovdqa64": 16, "movlps": 8, "movhps": 8,
+}
+
+
+def _nested_refusal(reason: str, **extra) -> dict:
+    rec = {"schema": NESTED_WITNESS_SCHEMA, "class": "nested-static-instance",
+           "contract_bounded": False, "resolved": False,
+           "refusal": reason}
+    rec.update(extra)
+    return rec
+
+
+def _nested_store_index(g: "DsoGraph"):
+    """Every store in the image, keyed by the 8-byte slot it can write.
+
+    The fact is the instruction stream itself, so the writer set is complete
+    relative to the analysed image: an unobserved writer cannot be silently
+    absent.  A store through ``%rsp``/``%rbp`` is a frame operation, not an
+    object-field writer, and is not indexed.
+    """
+    cache = getattr(g, "_nested_store_index_cache", None)
+    if cache is not None:
+        return cache
+    scalar = collections.defaultdict(list)
+    nonscalar = collections.defaultdict(list)
+    if _has_insns(g):
+        for wf, insns in g.precision.insns_by_func.items():
+            for i, (addr, text) in enumerate(insns):
+                body = text.split("#", 1)[0].strip()
+                m = _NESTED_SCALAR_STORE.fullmatch(body)
+                if m:
+                    base = m.group(4)
+                    if base in ("%rsp", "%rbp"):
+                        continue
+                    try:
+                        off = int(m.group(3) or "0", 16)
+                    except ValueError:
+                        continue
+                    scalar[off].append({
+                        "function": wf, "index": i, "addr": addr,
+                        "src": m.group(2).strip(), "base": base})
+                    continue
+                m = _NESTED_NONSCALAR_STORE.fullmatch(body)
+                if not m:
+                    continue
+                base = m.group(4)
+                if base in ("%rsp", "%rbp"):
+                    continue
+                try:
+                    off = int(m.group(3) or "0", 16)
+                except ValueError:
+                    continue
+                width = _NESTED_NONSCALAR_WIDTH.get(m.group(1), 0)
+                if width <= 0:
+                    continue
+                # A non-scalar store can touch a slot that is not its start.
+                first = off & ~7
+                for q in range(first, off + width, 8):
+                    nonscalar[q].append({
+                        "function": wf, "index": i, "addr": addr,
+                        "src": m.group(2).strip(), "base": base,
+                        "mnemonic": m.group(1), "width": width,
+                        "offset": off})
+    cache = (dict(scalar), dict(nonscalar))
+    g._nested_store_index_cache = cache
+    return cache
+
+
+def _nested_body_cast(g: "DsoGraph", wf: int, decl_type: str):
+    """A unique source cast of the writer's entry object to ``decl_type``."""
+    src = _s1_writer_source(g, wf)
+    if src is None:
+        return None
+    w = _s1_construct_witness(g, src["span"], decl_type, "body")
+    if isinstance(w, dict) and w.get("type"):
+        return w
+    return w if isinstance(w, dict) and w.get("ambiguous") else None
+
+
+def _nested_store_base_witness(g: "DsoGraph", wf: int, store: dict,
+                               decl_type: str, slot_off: int):
+    """Qualify a store's base object, including a c_void body cast.
+
+    ``_s1_store_base_witness_raw`` treats a declared ``*mut c_void`` entry
+    parameter as a different object.  That is right for a store on an unrelated
+    object and wrong for the recurring provider shape
+    ``let ctx = vctx.cast::<ProvCipherCtx>(); (*ctx).hw = ...``.  The cast is a
+    source fact about the same register, so it qualifies the base only when the
+    declared type is c_void and the writer's body names exactly one compatible
+    target.  An ambiguous cast refuses.
+    """
+    origin = _reg_origin(g, wf, store["index"], _canon(store["base"]))
+    if origin.get("kind") == "param":
+        src = _s1_writer_source(g, wf)
+        sig = _s1_signature(src["span"]) if src else None
+        cands = _s1_abi_types(sig, origin.get("index")) if sig else []
+        if cands and all("c_void" in str(c.get("type") or "") for c in cands):
+            cast = _nested_body_cast(g, wf, decl_type)
+            if isinstance(cast, dict) and cast.get("type"):
+                return {"qualified": True, "origin": "entry-parameter-cast",
+                        "declared_type": cands[0].get("type"),
+                        "cast_type": cast.get("type"),
+                        "witness": cast.get("witness")}
+            if isinstance(cast, dict) and cast.get("ambiguous"):
+                return {"qualified": False, "unknown": True,
+                        "reason": ("ambiguous body cast to " + decl_type
+                                   + ": " + ", ".join(cast["ambiguous"]))}
+    return _s1_store_base_witness_raw(g, wf, store, decl_type, slot_off)
+
+
+def _nested_param_values(g: "DsoGraph", fstart: int, k: int,
+                         seen: frozenset = frozenset(), depth: int = 0):
+    """Every value an entry parameter can carry, or a named refusal.
+
+    The caller set is the complete set of direct call sites in the image.  A
+    function whose address is taken, exported, or named by a relocated slot can
+    be entered without a direct call, so its argument domain is not finite and
+    the rule refuses.  Every argument value is read from the semantic call
+    index; a forwarded parameter is followed to its own callers.  No value is
+    guessed from a declared symbol name.
+    """
+    key = (fstart, k)
+    if depth > 6 or key in seen:
+        return None, "parameter-recursion"
+    if getattr(g, "taken_code", None) and fstart in g.taken_code:
+        return None, "parameter-address-taken"
+    exported = {a for a in (getattr(g, "dynamic_defs", {}) or {}).values()}
+    if fstart in exported:
+        return None, "parameter-exported"
+    for vals in (getattr(g, "slot_funcs", {}) or {}).values():
+        if fstart in vals:
+            return None, "parameter-in-relocated-slot"
+    idx = _semantic_call_index(g)
+    rows = idx.get(fstart) or {}
+    callers = {(c, a) for c, _i, a in _callers_of(g, fstart)}
+    if not rows or set(rows) != callers:
+        return None, "parameter-caller-set-incomplete"
+    out = set()
+    for (caller, _call_site), row in rows.items():
+        if k < len(_ARGREGS):
+            v = row["args"][k] if k < len(row["args"]) else None
+        else:
+            j = k - len(_ARGREGS)
+            stack = row.get("stack") or ()
+            v = stack[j] if j < len(stack) else None
+        if v is None or v.is_top():
+            return None, "parameter-open-argument"
+        for comp in v.s:
+            if isinstance(comp, int):
+                out.add(comp)
+            elif isinstance(comp, tuple) and comp[0] == "arg":
+                sub, why = _nested_param_values(
+                    g, caller, comp[1], seen | {key}, depth + 1)
+                if sub is None:
+                    return None, why
+                out |= sub
+            else:
+                return None, "parameter-non-image-value"
+    return out, None
+
+
+_NESTED_CONST_TABLE_MAX = 4096
+
+
+def _nested_data_symbol(g: "DsoGraph", addr: int):
+    """The immutable data symbol containing ``addr``, or None.
+
+    A local Rust ``const`` table is materialised in ``.data.rel.ro``/``.rodata``
+    under a linker-generated whole-object symbol (``anon.``... or the item's own
+    name).  Its size is the length times the element stride, so the containing
+    symbol is what makes the table's length known.
+    """
+    cache = getattr(g, "_nested_data_symbol_cache", None)
+    if cache is None:
+        rows = []
+        sym_sizes = getattr(g, "sym_sizes", {}) or {}
+        for start, name in (getattr(g, "all_syms", {}) or {}).items():
+            if start in (getattr(g, "start_set", set()) or set()):
+                continue
+            size = sym_sizes.get((name or "").split("@")[0])
+            if not size or size <= 0:
+                continue
+            sec = g.section_of(start)
+            if sec not in S1_IMMUTABLE_SECTIONS:
+                continue
+            rows.append((start, size, name, sec))
+        rows.sort()
+        cache = rows
+        g._nested_data_symbol_cache = cache
+    best = None
+    for start, size, name, sec in cache:
+        if start <= addr < start + size:
+            best = (start, size, name, sec)
+        elif start > addr:
+            break
+    return best
+
+
+def _nested_const_table_at(g: "DsoGraph", addr: int, stride: int,
+                           member_off: int):
+    """The constant table containing ``addr``, with every element checked.
+
+    The rule is not specific to one Rust type: a value is a finite set of
+    addresses into a constant table when (a) the containing immutable data
+    symbol's size is a whole multiple of the element stride, (b) the observed
+    address is an element start, and (c) the member the call reads is an
+    in-image function start in *every* element.  The length is derived from the
+    symbol size, not from the observed ``lea``s, so the complete element set is
+    returned even when only some elements are selected by the writer's phi.
+    """
+    if stride is None or stride <= 0:
+        return {"ok": False, "reason": "local-const-table-stride-unknown"}
+    row = _nested_data_symbol(g, addr)
+    if row is None:
+        return {"ok": False, "reason": "local-const-table-not-in-image"}
+    base, size, name, sec = row
+    rel = addr - base
+    if rel % stride or size % stride:
+        return {"ok": False, "reason": "local-const-table-shape-unknown",
+                "base": base, "table": name, "size": size, "stride": stride}
+    count = size // stride
+    if count < 1 or count > _NESTED_CONST_TABLE_MAX:
+        return {"ok": False,
+                "reason": "local-const-table-length-out-of-range",
+                "base": base, "table": name, "count": count}
+    elements = [base + k * stride for k in range(count)]
+    for elem in elements:
+        vals = g.static_slot(elem + member_off)
+        ints = {x for x in (vals or ()) if isinstance(x, int)}
+        if len(ints) != 1:
+            return {"ok": False,
+                    "reason": "local-const-table-element-unresolved",
+                    "base": base, "table": name, "element": hex(elem),
+                    "member_offset": hex(member_off)}
+        value = next(iter(ints))
+        if value == 0 or value not in g.start_set:
+            return {"ok": False,
+                    "reason": "local-const-table-element-not-function",
+                    "base": base, "table": name, "element": hex(elem),
+                    "member_offset": hex(member_off),
+                    "value": hex(value)}
+    return {"ok": True, "base": base, "size": size, "stride": stride,
+            "count": count, "elements": elements, "symbol": name,
+            "section": sec}
+
+
+def _nested_lea_addrs(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                      depth: int = 0, seen: frozenset = frozenset()):
+    """Addresses a register can hold when every definition is a ``lea``.
+
+    A CFG merge (a phi) has several reaching definitions and a ``cmov`` select
+    has two possible sources.  Both are finite only when every alternative is a
+    ``lea``; any other definition returns None so the caller keeps its previous
+    refusal rather than guessing.  A merge is never partially enumerated.
+    """
+    key = (fstart, idx, reg)
+    if depth > 6 or key in seen:
+        return None
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None or not defs:
+        return None
+    out = set()
+    for k in sorted(defs):
+        if k is None or k < 0:
+            return None
+        text = _insn(g, fstart, k)
+        mn, _rest, ops = _insn_parts(text)
+        if mn == "lea":
+            addr = _insn_comment_addr(text)
+            if addr is None:
+                return None
+            out.add(addr)
+            continue
+        if mn.startswith("cmov") and len(ops) >= 2:
+            a = _nested_lea_addrs(g, fstart, k, _canon(ops[0]), depth + 1,
+                                  seen | {key})
+            b = _nested_lea_addrs(g, fstart, k, _canon(ops[1]), depth + 1,
+                                  seen | {key})
+            if a is None or b is None:
+                return None
+            out |= a | b
+            continue
+        if mn in ("mov", "movq") and len(ops) >= 2 \
+                and (ops[0] in _REGS or ops[0] in _SUBREG):
+            sub = _nested_lea_addrs(g, fstart, k, _canon(ops[0]), depth + 1,
+                                    seen | {key})
+            if sub is None:
+                return None
+            out |= sub
+            continue
+        return None
+    return out or None
+
+
+def _nested_store_value(g: "DsoGraph", wf: int, store: dict, slot_off: int,
+                        *, table_stride: int | None = None,
+                        table_member_off: int | None = None):
+    """Values a store can write, or a named refusal.
+
+    ``identity`` is a reload of the same slot and adds no new target.  A phi of
+    ``lea``s into one local constant table resolves to every element of that
+    table (the length comes from the containing symbol, so the set is complete,
+    not just the observed branches).  Any other value that is not an immediate,
+    a static address, or a finite parameter domain is a refusal; it is never
+    dropped from the writer set.
+    """
+    src = store["src"]
+    if (src in _REGS or src in _SUBREG) and table_stride:
+        addrs = _nested_lea_addrs(g, wf, store["index"], _canon(src))
+        # A declared static instance keeps its existing (source-typed) path.  The
+        # local-table rule owns only addresses with no declared static type;
+        # this is what keeps it from re-interpreting an ordinary static table.
+        if addrs and all(_s1_static_type(g, a) is None for a in addrs):
+            tables = [_nested_const_table_at(
+                g, a, table_stride,
+                table_member_off if table_member_off is not None else 0)
+                for a in sorted(addrs)]
+            base = tables[0].get("base")
+            if base is not None and all(t.get("base") == base
+                                        for t in tables):
+                first = tables[0]
+                if not first.get("ok"):
+                    # Only an established table whose length is known can
+                    # refuse on an element.  A shape we could not establish is
+                    # not evidence of a table, so the previous refusal stands.
+                    if first.get("reason") in (
+                            "local-const-table-element-unresolved",
+                            "local-const-table-element-not-function"):
+                        return None, first.get("reason")
+                elif set(addrs) <= set(first["elements"]):
+                    return set(first["elements"]), None
+                else:
+                    return None, "phi-lea-not-a-table-element"
+    if src in _REGS or src in _SUBREG:
+        origin = _reg_origin(g, wf, store["index"], _canon(src))
+        if origin.get("kind") == "param":
+            return _nested_param_values(g, wf, origin["index"])
+        if origin.get("kind") == "load":
+            spill = _stack_param(g, wf, origin["at"], origin["offset"],
+                                 origin["base_reg"])
+            if spill is not None:
+                return _nested_param_values(g, wf, spill["index"])
+    value, kind = _s1_store_value(g, wf, store["index"], src, slot_off)
+    if kind == "identity":
+        return set(), None
+    if kind in ("immediate", "static"):
+        return {value}, None
+    return None, kind
+
+
+def _nested_whole_struct_copy(g: "DsoGraph", wf: int, store: dict,
+                              owner_type: str, ulayout: dict,
+                              field_off: int | None = None):
+    """Witness for a same-owner copy that adds no target value.
+
+    A non-scalar store is such a copy only when (a) the destination base is an
+    object of exactly ``owner_type``, (b) the store covers the queried field
+    (the whole layout for the original whole-object rule, or ``field_off`` for
+    an overlapping copy), and (c) the copied register is loaded from the same
+    offset of another object proven to be ``owner_type``.  Such a copy
+    propagates field bytes of a same-typed source; the field's own writers
+    already produce every value it can carry, so it cannot synthesise a new
+    target and does not widen the proven set.  A copy without the source
+    witness is not given this argument and still refuses.
+    """
+    width = store.get("width") or 0
+    if field_off is None:
+        if store.get("offset") != 0:
+            return None
+        if width < (ulayout.get("size") or 0):
+            return None
+    else:
+        off = store.get("offset") or 0
+        if not (off <= field_off < off + width):
+            return None
+    dest = _nested_owner_with_points_to(g, wf, store["index"],
+                                        _canon(store["base"]))
+    if dest.get("kind") != "type" or dest.get("type") != owner_type:
+        return None
+    src = (store.get("src") or "").strip()
+    if not src.startswith("%xmm"):
+        return None
+    insns = g.precision.insns_by_func.get(wf, ())
+    for k in range(store["index"] - 1, max(-1, store["index"] - 12), -1):
+        mn, _rest, ops = _insn_parts(insns[k][1])
+        if len(ops) != 2 or not mn.startswith(
+                ("movups", "movaps", "movdqu", "movdqa")):
+            continue
+        if ops[1].strip() != src:
+            continue
+        mo = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                          ops[0].strip())
+        if not mo:
+            continue
+        off = int(mo.group(1), 16) if mo.group(1) else 0
+        if off != store["offset"]:
+            continue
+        source = _nested_owner_with_points_to(g, wf, k,
+                                              _canon(mo.group(2)))
+        if source.get("kind") == "type" and source.get("type") == owner_type:
+            return {"origin": ("same-owner-overlapping-copy"
+                               if field_off is not None else
+                               "same-owner-whole-object-copy"),
+                    "source_load": hex(insns[k][0]),
+                    "source_owner": owner_type,
+                    "width": store["width"],
+                    "layout_size": ulayout["size"],
+                    "store_offset": store.get("offset"),
+                    "field_offset": field_off,
+                    "dest_origin": dest.get("origin"),
+                    "source_origin": source.get("origin"),
+                    "source_symbol_owner":
+                        source.get("type") if source.get("symbol") else None,
+                    "source_symbol_basis": source.get("symbol_basis")}
+        return None
+    return None
+
+
+_NESTED_RAW_STORE = (
+    "ptr::write", "write_volatile", "copy_nonoverlapping", "memcpy",
+    "memmove", "transmute", "ptr::copy",
+)
+
+
+def _nested_source_could_write(g: "DsoGraph", wf: int, field: str,
+                               ctx_type: str, pointee: str, slot_off: int):
+    """A source-level negative witness for an unproven-base store.
+
+    Returns ``(True, why)`` when the writer's source could name this field
+    (in which case the store is a real writer and the site must refuse), and
+    ``(False, why)`` only when the function never names the field, the context
+    type, the pointee type or the byte offset and contains no raw-store
+    primitive.  A missing source is never a negative witness.
+    """
+    src = _s1_writer_source(g, wf)
+    if src is None:
+        return True, "no-source"
+    body = ((src.get("span") or {}).get("body") or "") \
+        + "\n" + ((src.get("span") or {}).get("header") or "")
+    off = hex(slot_off)
+    needles = {field, ctx_type, pointee, off, off.upper().replace("0X", "0x")}
+    if any(n and n in body for n in needles):
+        return True, "source-names-field-or-type"
+    if any(r in body for r in _NESTED_RAW_STORE):
+        return True, "source-has-raw-store-primitive"
+    return False, "source-omits-field-type-and-offset"
+
+
+_NESTED_MAX_CHAIN = 4
+
+
+# Allocation-size attribution (S2b).  A store whose base register is the
+# result of an in-function allocation is qualified by the requested block
+# size, never by proximity: the base must be the allocation result itself and
+# exactly one declared layout of that size may cover the store displacement.
+_NESTED_ALLOCATORS = {
+    "CRYPTO_zalloc": (0,),
+    "CRYPTO_malloc": (0,),
+    "malloc": (0,),
+    "__libc_malloc": (0,),
+    "__rust_alloc": (0,),
+    "__rust_alloc_zeroed": (0,),
+    "alloc": (0,),
+    "calloc": (0, 1),
+    "__libc_calloc": (0, 1),
+}
+
+_S1_DECL_PRIM = {
+    "usize": (8, 8), "isize": (8, 8), "size_t": (8, 8),
+    "ssize_t": (8, 8), "u64": (8, 8), "i64": (8, 8),
+    "uint64_t": (8, 8), "int64_t": (8, 8), "c_ulong": (8, 8),
+    "c_long": (8, 8), "c_uint": (4, 4), "c_int": (4, 4),
+    "u32": (4, 4), "i32": (4, 4), "uint32_t": (4, 4),
+    "int32_t": (4, 4), "c_ushort": (2, 2), "u16": (2, 2),
+    "c_short": (2, 2), "c_uchar": (1, 1), "u8": (1, 1),
+    "i8": (1, 1), "c_char": (1, 1),
+}
+
+
+def _s1_decl_defs(g: "DsoGraph"):
+    """Every declared struct/union definition, in one source pass.
+
+    ``_s1_struct_defs`` re-scans the whole source tree per type name.  The
+    allocation-size rule needs the complete declared-type population, so the
+    scan is done once and cached; the records carry the explicit
+    ``#[repr(align(N))]`` that changes a type's size.
+    """
+    cache = getattr(g, "_s1_decl_defs_cache", None)
+    if cache is not None:
+        return cache
+    out = collections.defaultdict(list)
+    pat = re.compile(r"(?m)^[ \t]*(?:pub(?:\s*\([^)]*\))?\s+)?"
+                     r"(struct|union)\s+([A-Za-z_]\w*)\b")
+    for path, text in _s1_docs(g).items():
+        for m in pat.finditer(text):
+            brace = text.find("{", m.end())
+            if brace < 0:
+                continue
+            semi = text.find(";", m.end(), brace)
+            if semi >= 0:
+                continue
+            end = _s1_brace_span(text, brace)
+            if end is None:
+                continue
+            prefix = text[max(0, m.start() - 600):m.start()]
+            align = 0
+            am = re.search(r"#\[repr\s*\(((?:[^()]|\([^()]*\))*)\)\s*\]"
+                           r"(?:\s*#\[[^\]]*\])*\s*$", prefix)
+            if am is not None:
+                am2 = re.search(r"align\s*\(\s*(\d+)\s*\)", am.group(1))
+                if am2:
+                    align = int(am2.group(1))
+            out[m.group(2)].append({
+                "kind": m.group(1), "file": path,
+                "line": text.count("\n", 0, m.start()) + 1,
+                "body": text[brace + 1:end - 1],
+                "repr_c": bool(re.search(r"#\[repr\s*\(\s*C\b", prefix)),
+                "explicit_align": align,
+            })
+    g._s1_decl_defs_cache = dict(out)
+    return g._s1_decl_defs_cache
+
+
+def _s1_decl_type_size(g: "DsoGraph", type_text: str, seen=()):
+    """(size, alignment) of a declared type, union/align aware.
+
+    The existing ``_s1_type_size`` deliberately refuses an embedded union and
+    does not read ``#[repr(align(N))]``.  Allocation attribution needs the
+    actual ``size_of::<T>()`` for the whole declared population, so this
+    variant resolves a union as its widest member and honours an explicit
+    alignment; it is otherwise the same declared-type arithmetic.
+    """
+    t = " ".join((type_text or "").split())
+    if not t:
+        return None
+    if t.startswith("Option<") and t.endswith(">"):
+        inner = t[len("Option<"):-1].strip()
+        if "fn" in inner:
+            return (8, 8)
+        alias = _s1_type_alias(g, inner) or _s1_type_alias(
+            g, inner.split("::")[-1])
+        if alias is not None and _s1_decl_type_size(g, alias, seen) == (8, 8):
+            return (8, 8)
+        return None
+    if "fn" in t:
+        return (8, 8)
+    if t.startswith("*const") or t.startswith("*mut") or t.startswith("&"):
+        return (8, 8)
+    if t in _S1_DECL_PRIM:
+        return _S1_DECL_PRIM[t]
+    m = re.fullmatch(r"\[(.+);\s*([^\]]+)\]", t)
+    if m:
+        inner = _s1_decl_type_size(g, m.group(1), seen)
+        if inner is None:
+            return None
+        count_text = m.group(2).strip()
+        try:
+            count = int(count_text, 0)
+        except ValueError:
+            count = _s1_eval_int(g, count_text)
+        if count is None:
+            return None
+        return (inner[0] * count, inner[1])
+    alias = _s1_type_alias(g, t) or _s1_type_alias(g, t.split("::")[-1])
+    if alias is not None and alias != t:
+        return _s1_decl_type_size(g, alias, seen + (t,))
+    if t in seen or len(seen) > 8:
+        return None
+    layout = _s1_decl_layout(g, t, seen)
+    if layout is None and t.split("::")[-1] != t:
+        # A module-qualified field type names its declaration by leaf; the
+        # declared population is keyed by leaf name throughout.
+        layout = _s1_decl_layout(g, t.split("::")[-1], seen)
+    if layout is None:
+        return None
+    return (layout["size"], layout["align"])
+
+
+def _s1_decl_layout(g: "DsoGraph", type_name: str, seen=()):
+    """Declared layout of one struct/union, or None.
+
+    Returns ``{"size", "align", "fields": [{"name", "offset", "size",
+    "type"}]}``.  A struct keeps the existing decidable rule (unique
+    definition, ``repr(C)`` or homogeneous fields); a union is admitted only
+    with ``repr(C)`` and is sized as its widest member.
+    """
+    if not type_name or type_name in seen or len(seen) > 8:
+        return None
+    cache = getattr(g, "_s1_decl_layout_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_decl_layout_cache = cache
+    if type_name in cache:
+        return cache[type_name]
+    defs = _s1_decl_defs(g).get(type_name) or []
+    if len(defs) != 1:
+        cache[type_name] = None
+        return None
+    d = defs[0]
+    fields = _s1_split_fields(d["body"])
+    if not fields:
+        cache[type_name] = None
+        return None
+    infos = []
+    for name, ftype in fields:
+        info = _s1_decl_type_size(g, ftype, seen + (type_name,))
+        if info is None:
+            cache[type_name] = None
+            return None
+        infos.append((name, ftype, info[0], info[1]))
+    if d["kind"] == "union":
+        if not d["repr_c"]:
+            cache[type_name] = None
+            return None
+        align = max([a for _n, _t, _s, a in infos] + [d["explicit_align"]])
+        size = max(s for _n, _t, s, _a in infos)
+        size = (size + align - 1) // align * align
+        rows = [{"name": n, "offset": 0, "size": s, "type": t}
+                for n, t, s, _a in infos]
+        out = {"name": type_name, "size": size, "align": align,
+               "fields": rows, "kind": "union"}
+        cache[type_name] = out
+        return out
+    homogeneous = (len({(s, a) for _n, _t, s, a in infos}) == 1
+                   and infos[0][2] == infos[0][3])
+    if not d["repr_c"] and not homogeneous:
+        cache[type_name] = None
+        return None
+    off, align = 0, 1
+    rows = []
+    for name, ftype, size, falign in infos:
+        align = max(align, falign)
+        off = (off + falign - 1) // falign * falign
+        rows.append({"name": name, "offset": off, "size": size,
+                     "type": ftype})
+        off += size
+    align = max(align, d["explicit_align"])
+    size = (off + align - 1) // align * align
+    out = {"name": type_name, "size": size, "align": align,
+           "fields": rows, "kind": "struct"}
+    cache[type_name] = out
+    return out
+
+
+def _s1_decl_layout_index(g: "DsoGraph"):
+    """Declared layout population, grouped by ``size_of::<T>()``."""
+    cache = getattr(g, "_s1_decl_layout_index_cache", None)
+    if cache is not None:
+        return cache
+    index = collections.defaultdict(list)
+    for name in sorted(_s1_decl_defs(g)):
+        layout = _s1_decl_layout(g, name)
+        if layout is not None:
+            index[layout["size"]].append((name, layout))
+    g._s1_decl_layout_index_cache = dict(index)
+    return g._s1_decl_layout_index_cache
+
+
+def _s1_decl_candidates(g: "DsoGraph", size: int, offset: int, width: int):
+    """Declared layouts of exactly ``size`` with a field covering the store."""
+    out = []
+    for name, layout in _s1_decl_layout_index(g).get(size, ()):
+        row = next((f for f in layout["fields"]
+                    if f["offset"] <= offset
+                    and offset + width <= f["offset"] + f["size"]), None)
+        if row is not None:
+            out.append((name, row))
+    return out
+
+
+def _nested_alloc_symbol(g: "DsoGraph", fstart: int, idx: int):
+    """Allocator symbol a call instruction invokes, or None.
+
+    A direct call is named by its annotation.  A call through a relocation
+    slot is named by the slot's relocation symbol, never by objdump's nearest
+    symbol-plus-offset comment.
+    """
+    text = _insn(g, fstart, idx)
+    mn, rest, _ops = _insn_parts(text)
+    if not mn.startswith("call"):
+        return None
+    names = set()
+    if rest.startswith("*"):
+        slot = _insn_comment_addr(text)
+        if slot is not None:
+            info = _semantic_slot(g, slot)
+            if info.get("kind") == "relocation":
+                names |= {row["symbol"].split("@")[0]
+                          for row in info.get("symbols") or ()}
+    else:
+        m = re.search(r"<([^>]+)>", text)
+        if m:
+            names.add(m.group(1).split("@")[0])
+    for name in sorted(names):
+        if name in _NESTED_ALLOCATORS:
+            return name
+    return None
+
+
+def _nested_alloc_size(g: "DsoGraph", fstart: int, idx: int, depth: int = 0):
+    """Requested block size of an allocation call, or None.
+
+    The size is the call's first argument (``calloc``'s first two, multiplied)
+    and must be a single-provenance integer.  A dynamic or open size is not
+    decidable and keeps the refusal; it is never guessed.
+    """
+    if depth > 8:
+        return None
+    symbol = _nested_alloc_symbol(g, fstart, idx)
+    if symbol is None:
+        return None
+    args = _NESTED_ALLOCATORS[symbol]
+    values = []
+    for k in args:
+        origin = _reg_origin(g, fstart, idx, _ARGREGS[k], depth + 1)
+        if origin.get("kind") != "int" or origin.get("value", 0) <= 0:
+            return None
+        values.append(origin["value"])
+    size = values[0]
+    for value in values[1:]:
+        if size > (1 << 63) // value:
+            return None
+        size *= value
+    return {"symbol": symbol, "size": size, "call_site": idx}
+
+
+# Declared-type attribution at the allocation site (S2b-2).
+#
+# An allocation size does not identify its owner when several layouts share
+# it; the allocation *expression* normally does.  The precedence is fixed:
+#   1. the type written at the allocation site (Box::<T>::new, Box::new(T{..}),
+#      OwnedCtx::<T>::new, alloc::<T>(), or CRYPTO_zalloc(size_of::<T>())),
+#      including a macro-generated body with the invocation's type argument;
+#   2. the declared return type of the constructor called at the site, when it
+#      is mapped to source and returns a concrete *mut T or Box<T>;
+#   3. the allocation size, only when 1 and 2 are absent.
+# Two usable candidates in 1 (or a contradiction with the observed size) is a
+# refusal that names them; frequency, field presence and source order are never
+# tie-breakers.
+
+_NESTED_STORAGE_ALLOCATORS = {
+    "CRYPTO_zalloc", "CRYPTO_malloc", "malloc", "__libc_malloc",
+    "calloc", "__libc_calloc", "__rust_alloc", "__rust_alloc_zeroed",
+}
+
+_S1_SIZE_OF_RX = re.compile(
+    r"\bsize_of\s*::\s*<\s*([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*>")
+_S1_SIZE_OF_LOCAL_RX = re.compile(
+    r"\blet\s+(?:mut\s+)?([A-Za-z_]\w*)\s*(?::[^=;]+)?=\s*"
+    r"(?:(?:core|std)\s*::\s*mem\s*::\s*)?size_of\s*::\s*<\s*"
+    r"([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*>\s*\(\s*\)")
+_S1_ALLOC_FORM_RX = (
+    ("box-turbofish", re.compile(
+        r"\bBox\s*::\s*<\s*([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*>"
+        r"\s*::\s*new\b")),
+    ("box-literal", re.compile(
+        r"\bBox\s*::\s*new\s*\(\s*([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*\{")),
+    ("owned-ctx", re.compile(
+        r"\bOwnedCtx\s*::\s*<\s*([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*>"
+        r"\s*::\s*(?:new|zalloc|zalloc_at)\b")),
+    ("alloc-turbofish", re.compile(
+        r"\balloc\s*::\s*<\s*([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*>")),
+)
+# Which source forms can produce the observed allocator symbol.  A family
+# mismatch is not a candidate at all: a `Box::new(A)` in a function whose
+# observed allocation is `CRYPTO_malloc` is a different allocation.
+_S1_ALLOC_FORM_FAMILY = {
+    "CRYPTO_zalloc": {"size-of", "owned-ctx"},
+    "CRYPTO_malloc": {"size-of", "owned-ctx"},
+    "malloc": {"size-of", "owned-ctx"},
+    "__libc_malloc": {"size-of", "owned-ctx"},
+    "calloc": {"size-of"},
+    "__libc_calloc": {"size-of"},
+    "__rust_alloc": {"box-turbofish", "box-literal", "owned-ctx",
+                      "alloc-turbofish"},
+    "__rust_alloc_zeroed": {"box-turbofish", "box-literal", "owned-ctx",
+                            "alloc-turbofish"},
+    "alloc": {"alloc-turbofish", "box-turbofish", "box-literal",
+              "owned-ctx"},
+}
+_S1_ALLOC_SOURCE_CALL = {
+    "CRYPTO_zalloc": "CRYPTO_zalloc",
+    "CRYPTO_malloc": "CRYPTO_malloc",
+    "malloc": "malloc",
+    "__libc_malloc": "malloc",
+    "calloc": "calloc",
+    "__libc_calloc": "calloc",
+}
+
+
+def _s1_split_top_commas(text: str):
+    """Split macro/invocation arguments on top-level commas only."""
+    out, cur, depth = [], [], 0
+    for ch in text:
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth = max(0, depth - 1)
+        if ch == "," and depth == 0:
+            out.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+    tail = "".join(cur).strip()
+    if tail:
+        out.append(tail)
+    return out
+
+
+def _s1_match_delim(text: str, open_at: int, open_ch: str, close_ch: str):
+    """Index of the delimiter closing ``text[open_at]``, or None."""
+    if open_at < 0 or open_at >= len(text) or text[open_at] != open_ch:
+        return None
+    depth, i, n = 0, open_at, len(text)
+    while i < n:
+        ch = text[i]
+        if ch == '"':
+            i += 1
+            while i < n:
+                if text[i] == "\\":
+                    i += 2
+                    continue
+                if text[i] == '"':
+                    i += 1
+                    break
+                i += 1
+            continue
+        if ch == open_ch:
+            depth += 1
+        elif ch == close_ch:
+            depth -= 1
+            if depth == 0:
+                return i
+        i += 1
+    return None
+
+
+def _s1_stripped_docs(g: "DsoGraph"):
+    cache = getattr(g, "_s1_stripped_docs_cache", None)
+    if cache is None:
+        cache = {p: _s1_strip_comments(t) for p, t in _s1_docs(g).items()}
+        g._s1_stripped_docs_cache = cache
+    return cache
+
+
+def _s1_macro_rule_bodies(text: str, start: int, end: int):
+    """``(matcher, transcriber)`` pairs of a ``macro_rules!`` region."""
+    rules, i = [], start
+    while i < end:
+        m = re.compile(r"\(").search(text, i, end)
+        if m is None:
+            break
+        close = _s1_match_delim(text, m.start(), "(", ")")
+        if close is None or close >= end:
+            break
+        tail = text[close + 1:end]
+        arrow = re.match(r"\s*=>\s*\{", tail)
+        if arrow is None:
+            i = close + 1
+            continue
+        brace = close + arrow.end()
+        bend = _s1_brace_span(text, brace)
+        if bend is None or bend > end:
+            break
+        rules.append((text[m.start() + 1:close], text[brace + 1:bend - 1]))
+        i = bend
+    return rules
+
+
+def _s1_macro_definitions(g: "DsoGraph"):
+    """Every ``macro_rules!`` definition body, by macro name."""
+    cache = getattr(g, "_s1_macro_defs_cache", None)
+    if cache is not None:
+        return cache
+    out = collections.defaultdict(list)
+    for path, text in _s1_stripped_docs(g).items():
+        for m in re.finditer(r"\bmacro_rules!\s*([A-Za-z_]\w*)\s*\{", text):
+            brace = text.find("{", m.start())
+            end = _s1_brace_span(text, brace)
+            if end is None:
+                continue
+            for matcher, body in _s1_macro_rule_bodies(text, brace + 1,
+                                                       end - 1):
+                out[m.group(1)].append({"params": matcher, "body": body,
+                                        "file": path})
+    g._s1_macro_defs_cache = dict(out)
+    return g._s1_macro_defs_cache
+
+
+def _s1_macro_bindings(g: "DsoGraph", fn_name: str):
+    """Invocations whose expansion defines ``fn_name``, with parameter bindings.
+
+    A ``macro_rules!`` row that builds a context through ``OwnedCtx::<$ctx>``
+    has no literal ``fn $newctx`` in the source, so its allocation site names
+    its type only as the invocation's ``$ctx`` argument.  The binding is
+    positional against the rule's matcher and only admitted when the matcher's
+    parameter is the one the transcriber declares as the function name.
+    """
+    cache = getattr(g, "_s1_macro_bind_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_macro_bind_cache = cache
+    if fn_name in cache:
+        return cache[fn_name]
+    defs = _s1_macro_definitions(g)
+    out = []
+    for path, text in _s1_stripped_docs(g).items():
+        for m in re.finditer(r"\b([A-Za-z_]\w*)!\s*\(", text):
+            macro = m.group(1)
+            if macro not in defs:
+                continue
+            op = text.find("(", m.end() - 1)
+            close = _s1_match_delim(text, op, "(", ")")
+            if close is None:
+                continue
+            args = _s1_split_top_commas(text[op + 1:close])
+            if not any(a.split("::")[-1].strip() == fn_name for a in args):
+                continue
+            for rule in defs[macro]:
+                params = _s1_macro_params(rule["params"])
+                if len(params) != len(args):
+                    continue
+                bind = dict(zip(params, args))
+                defines_fn = any(
+                    arg.split("::")[-1].strip() == fn_name
+                    and re.search(r"\bfn\s+\$" + re.escape(param) + r"\b",
+                                  rule["body"])
+                    for param, arg in bind.items())
+                if not defines_fn:
+                    continue
+                out.append({"macro": macro, "file": rule["file"],
+                            "body": rule["body"], "bind": bind})
+    cache[fn_name] = out
+    return out
+
+
+def _s1_macro_params(text: str):
+    """Parameter names of a ``macro_rules!`` matcher, in order."""
+    out = []
+    for part in _s1_split_top_commas(text):
+        m = re.match(r"\s*\$([A-Za-z_]\w*)", part)
+        if m is not None:
+            out.append(m.group(1))
+    return out
+
+
+def _s1_source_alloc_types(g: "DsoGraph", text: str, symbol: str):
+    """Concrete types an allocation expression names, by form.
+
+    Only the forms the task admits are read, and only the forms whose
+    allocator family can produce ``symbol``.  A type argument is a name, never
+    a frequency: the caller refuses when the result is not a singleton.
+    """
+    text = _s1_strip_comments(text or "")
+    family = _S1_ALLOC_FORM_FAMILY.get(symbol, set())
+    out = {}
+    if "size-of" in family:
+        local = {}
+        for m in _S1_SIZE_OF_LOCAL_RX.finditer(text):
+            local.setdefault(m.group(1), set()).add(m.group(2))
+        call_name = _S1_ALLOC_SOURCE_CALL.get(symbol)
+        if call_name:
+            for m in re.finditer(r"\b" + re.escape(call_name) + r"\s*\(",
+                                 text):
+                op = text.find("(", m.start())
+                close = _s1_match_delim(text, op, "(", ")")
+                if close is None:
+                    continue
+                inner = text[op + 1:close]
+                direct = _S1_SIZE_OF_RX.search(inner)
+                if direct is not None:
+                    out.setdefault(direct.group(1), "size-of")
+                    continue
+                first = _s1_split_top_commas(inner)
+                first = first[0] if first else ""
+                if first in local and len(local[first]) == 1:
+                    out.setdefault(next(iter(local[first])), "size-of")
+    for form, rx in _S1_ALLOC_FORM_RX:
+        if form not in family:
+            continue
+        for m in rx.finditer(text):
+            out.setdefault(m.group(1), form)
+    return out
+
+
+def _s1_decl_resolve(g: "DsoGraph", type_name: str):
+    """Resolve a source type name through its unique aliases."""
+    t = " ".join((type_name or "").split())
+    seen = set()
+    while t and t not in seen and len(seen) < 8:
+        seen.add(t)
+        alias = (_s1_type_alias(g, t)
+                 or _s1_type_alias(g, t.split("::")[-1]))
+        if alias is None or alias == t:
+            return t
+        t = " ".join(alias.split())
+    return t or None
+
+
+def _s1_fn_span_in_text(text: str, fn_name: str):
+    """Header/body span of ``fn fn_name`` in an already-expanded text."""
+    pat = re.compile(r"\bfn\s+" + re.escape(fn_name) + r"\s*\(")
+    hits = []
+    for m in pat.finditer(text):
+        line_start = text.rfind("\n", 0, m.start()) + 1
+        if text[line_start:m.start()].strip().startswith("//"):
+            continue
+        open_paren = text.find("(", m.end() - 1)
+        depth, i, close_paren = 0, open_paren, None
+        while i < len(text):
+            if text[i] == "(":
+                depth += 1
+            elif text[i] == ")":
+                depth -= 1
+                if depth == 0:
+                    close_paren = i
+                    break
+            i += 1
+        if close_paren is None:
+            continue
+        brace = text.find("{", close_paren)
+        if brace < 0 or text.find(";", close_paren, brace) >= 0:
+            continue
+        end = _s1_brace_span(text, brace)
+        if end is None:
+            continue
+        hits.append({"header": text[m.start():brace + 1],
+                     "body": text[brace + 1:end - 1]})
+    return hits[0] if len(hits) == 1 else None
+
+
+def _s1_source_fn_index(g: "DsoGraph"):
+    """File paths that define each ``fn name``, in one source pass."""
+    cache = getattr(g, "_s1_source_fn_index_cache", None)
+    if cache is not None:
+        return cache
+    index = collections.defaultdict(list)
+    pat = re.compile(r"\bfn\s+([A-Za-z_]\w*)\s*\(")
+    for path, text in _s1_docs(g).items():
+        for m in pat.finditer(text):
+            index[m.group(1)].append(path)
+    g._s1_source_fn_index_cache = dict(index)
+    return g._s1_source_fn_index_cache
+
+
+def _s1_source_fn_by_leaf(g: "DsoGraph", name: str):
+    """The one source span defining ``fn name``, or None."""
+    cache = getattr(g, "_s1_source_leaf_cache", None)
+    if cache is None:
+        cache = {}
+        g._s1_source_leaf_cache = cache
+    if name in cache:
+        return cache[name]
+    hits = []
+    for path in _s1_source_fn_index(g).get(name, ()):
+        span = _s1_src_fn(g, path, name)
+        if span is not None:
+            hits.append(span)
+    cache[name] = hits[0] if len(hits) == 1 else None
+    return cache[name]
+
+
+def _nested_fn_leaf(g: "DsoGraph", fstart: int):
+    """Source leaf name of a machine function, or None."""
+    dm = _s1_demangled(g, fstart)
+    if not dm:
+        return None
+    leaf = dm.split("::")[-1].strip()
+    leaf = re.split(r"\.llvm\.", leaf)[0].strip()
+    return leaf or None
+
+
+def _nested_alloc_type_texts(g: "DsoGraph", fstart: int):
+    """Source texts whose allocation expression may be this call site."""
+    out = []
+    src = _s1_writer_source(g, fstart)
+    if src is not None:
+        out.append((src["span"].get("body") or "", "source"))
+    leaf = _nested_fn_leaf(g, fstart)
+    if leaf:
+        for inv in _s1_macro_bindings(g, leaf):
+            body = inv["body"]
+            for param, arg in inv["bind"].items():
+                body = re.sub(r"\$" + re.escape(param) + r"\b",
+                              lambda _m, a=arg: a, body)
+            span = _s1_fn_span_in_text(body, leaf)
+            if span is not None:
+                body = span["body"]
+            out.append((body, "macro:" + inv["macro"]))
+    return out
+
+
+def _nested_single_source_call(g: "DsoGraph", body: str):
+    """The sole source-mapped call in ``body``, or None.
+
+    Used only when the writer's own body names no allocation: a generated
+    wrapper whose entire body is one call to a constructor delegates the
+    allocation site to that function, and its body -- not the callee's return
+    type -- is where the declared type is written.  Two call names, or a
+    callee with no unique source, is not a single delegation and refuses.
+    """
+    names = []
+    for m in re.finditer(r"\b([A-Za-z_]\w*)\s*\(", body or ""):
+        name = m.group(1)
+        if name in _S1_RUST_KEYWORDS:
+            continue
+        if re.search(r"!\s*$", body[:m.start()]):
+            continue
+        if name not in names:
+            names.append(name)
+    mapped = []
+    for name in names:
+        span = _s1_source_fn_by_leaf(g, name)
+        if span is not None:
+            mapped.append((name, span))
+    return mapped[0] if len(mapped) == 1 else None
+
+
+def _nested_alloc_ctor_type(g: "DsoGraph", fstart: int, origin: dict):
+    """Declared return type of a constructor called at the allocation site.
+
+    A storage allocator (malloc and the crate's allocator seam) is not a
+    constructor: its return is raw storage, so rule 2 is *absent* for it and
+    the size fallback remains available.  For any other allocation symbol, a
+    mapped callee whose return type is not a concrete ``*mut T``/``Box<T>`` is
+    a refusal, not an invitation to guess from size.
+    """
+    symbol = origin.get("symbol")
+    if symbol in _NESTED_STORAGE_ALLOCATORS:
+        return {"kind": "absent"}
+    idx = origin.get("call_site")
+    if idx is None:
+        return {"kind": "absent"}
+    addr = None
+    direct = _direct_call_target(g, fstart, idx)
+    if direct is not None:
+        addr = direct[1] if direct[1] is not None else direct[0]
+    if addr is None and symbol:
+        hit = _s1_symbol_address(g, symbol)
+        if hit is not None:
+            addr = hit[0]
+    if addr is None:
+        return {"kind": "absent"}
+    src = _s1_writer_source(g, addr)
+    if src is None:
+        return {"kind": "absent"}
+    sig = _s1_signature(src["span"])
+    if sig is None:
+        return {"kind": "absent"}
+    ret = " ".join((sig.get("ret") or "").split())
+    m = re.match(r"^(?:\*mut|\*const)\s+([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)$",
+                 ret)
+    if m is None:
+        m = re.match(r"^Box\s*<\s*([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*>$",
+                     ret)
+    if m is None:
+        return {"kind": "refused",
+                "why": (f"allocation constructor {src['name']} returns "
+                        f"{ret!r}, which is not a concrete *mut T or Box<T>")}
+    owner = _s1_decl_resolve(g, m.group(1))
+    if owner is None or _s1_decl_layout(g, owner) is None:
+        return {"kind": "refused",
+                "why": (f"allocation constructor {src['name']} returns "
+                        f"{ret!r}, whose pointee is not a concrete declared "
+                        "type")}
+    return {"kind": "type", "type": owner}
+
+
+def _nested_alloc_declared_type(g: "DsoGraph", fstart: int, origin: dict):
+    """Rules 1 and 2 for an allocation-backed store: type, or a named refusal."""
+    cache = getattr(g, "_nested_alloc_type_cache", None)
+    if cache is None:
+        cache = {}
+        g._nested_alloc_type_cache = cache
+    key = (fstart, origin.get("call_site"), origin.get("symbol"))
+    if key in cache:
+        return cache[key]
+    symbol = origin.get("symbol")
+    size = origin.get("size")
+    cands, how = {}, {}
+    for text, source in _nested_alloc_type_texts(g, fstart):
+        for name, form in _s1_source_alloc_types(g, text, symbol).items():
+            if name in cands:
+                continue
+            owner = _s1_decl_resolve(g, name)
+            if owner is None or _s1_decl_layout(g, owner) is None:
+                # A type parameter or an opaque name is not a usable owner;
+                # it is not a candidate either, but it must never become
+                # proof through the size rule.
+                continue
+            cands[owner] = form
+            how[owner] = source
+    if not cands:
+        # A generated wrapper can delegate its whole body to one constructor.
+        # The allocation site is then in that callee's source, and rule 1 is
+        # read there -- only for a single mapped call and only with the same
+        # block size.  Anything else is not a single delegation.
+        for text, source in _nested_alloc_type_texts(g, fstart):
+            hit = _nested_single_source_call(g, text)
+            if hit is None:
+                continue
+            callee, span = hit
+            for name, form in _s1_source_alloc_types(
+                    g, span.get("body") or "", symbol).items():
+                if name in cands:
+                    continue
+                owner = _s1_decl_resolve(g, name)
+                if owner is None or _s1_decl_layout(g, owner) is None:
+                    continue
+                cands[owner] = form + "@" + callee
+                how[owner] = source + ":" + callee
+    res = None
+    if cands:
+        sized, dropped = {}, {}
+        for name, form in cands.items():
+            info = _s1_decl_type_size(g, name)
+            if info is None or size is None or info[0] == size:
+                sized[name] = form
+            else:
+                dropped[name] = info[0]
+        if len(sized) == 1:
+            name = next(iter(sized))
+            res = {"kind": "type", "type": name,
+                   "form": sized[name], "source": how[name]}
+        elif len(sized) > 1:
+            res = {"kind": "ambiguous", "candidates": sorted(sized),
+                   "why": ("allocation site declares more than one concrete "
+                           "type: " + ", ".join(sorted(sized)))}
+        elif dropped:
+            res = {"kind": "contradiction",
+                   "why": ("declared allocation type "
+                           + ", ".join(f"{n} (size {s:#x})"
+                                       for n, s in sorted(dropped.items()))
+                           + f" does not match allocation size {size:#x}")}
+    if res is None:
+        ctor = _nested_alloc_ctor_type(g, fstart, origin)
+        if ctor.get("kind") == "type":
+            res = {"kind": "type", "type": ctor["type"],
+                   "form": "constructor-return", "source": "source"}
+        elif ctor.get("kind") == "refused":
+            res = ctor
+        else:
+            res = {"kind": "none"}
+    cache[key] = res
+    return res
+
+
+def _nested_decl_owner(g: "DsoGraph", type_name: str, offset: int,
+                       width: int, size=None):
+    """Owner record for a store into a declared allocation type."""
+    owner = _s1_decl_resolve(g, type_name) or type_name
+    layout = _s1_decl_layout(g, owner)
+    if layout is None:
+        return {"kind": "unknown",
+                "why": (f"declared allocation type {type_name} has no "
+                        "decidable layout")}
+    row = next((f for f in layout["fields"]
+                if f["offset"] <= offset
+                and offset + width <= f["offset"] + f["size"]), None)
+    if row is None:
+        return {"kind": "unknown",
+                "why": (f"declared allocation type {type_name} has no "
+                        f"field covering {offset:#x}")}
+    out = {"kind": "type", "type": owner,
+           "origin": "allocation-declared-type",
+           "allocation_field": row["name"],
+           "allocation_field_offset": row["offset"]}
+    if size is not None:
+        out["allocation_size"] = size
+    return out
+
+
+def _nested_alloc_owner(g: "DsoGraph", size: int, offset: int, width: int):
+    """Unique declared type for an allocation-backed store, or a refusal."""
+    cands = _s1_decl_candidates(g, size, offset, width)
+    names = sorted({name for name, _row in cands})
+    if len(names) == 1:
+        name = names[0]
+        row = next(row for cand, row in cands if cand == name)
+        return {"kind": "type", "type": name,
+                "origin": "allocation-size", "allocation_size": size,
+                "allocation_field": row["name"],
+                "allocation_field_offset": row["offset"]}
+    if not names:
+        return {"kind": "unknown",
+                "why": (f"allocation-size {size:#x} has no declared layout "
+                        f"covering {offset:#x}")}
+    return {"kind": "unknown",
+            "why": (f"allocation-size {size:#x} is ambiguous at {offset:#x}: "
+                    + ", ".join(names)),
+            "candidates": names}
+
+
+def _nested_struct_type(g: "DsoGraph", type_text: str):
+    """Named repr(C) struct a declared pointer type denotes, or None.
+
+    A decidable *byte layout* is not required here: an owner type only has to
+    be a declared struct so the (type, offset) field key is meaningful.  The
+    rules that need offsets (member lookup, prefix compatibility) ask for the
+    layout and refuse when it cannot be decided.
+    """
+    t = " ".join((type_text or "").split())
+    if t.startswith("Option<") and t.endswith(">"):
+        t = t[len("Option<"):-1].strip()
+    if not (t.startswith("*") or t.startswith("&")):
+        return None
+    name = _s1_pointee(t)
+    if not name or name in ("c_void", "void"):
+        return None
+    owner = _s1_resolve_type(g, t) or name
+    return owner if _s1_struct_fields(g, owner) is not None else None
+
+
+def _nested_pointee_type(g: "DsoGraph", field_type: str):
+    """Pointee struct type of a pointer field, or None.
+
+    A field whose declared type is an opaque pointer (``*mut c_void``) is not
+    resolved here: the cast that makes it concrete is a separate source fact,
+    and guessing one through an inlined callee is exactly what this rule does
+    not do.
+    """
+    t = " ".join((field_type or "").split())
+    if t.startswith("Option<") and t.endswith(">"):
+        t = t[len("Option<"):-1].strip()
+    if not (t.startswith("*") or t.startswith("&")):
+        return None
+    name = _s1_pointee(t)
+    if not name or name in ("c_void", "void"):
+        return None
+    owner = _s1_resolve_type(g, t) or name
+    return owner if _s1_struct_layout(g, owner) is not None else None
+
+
+def _nested_body_type(g: "DsoGraph", wf: int):
+    """The one struct type a writer's own body casts the entry object to."""
+    src = _s1_writer_source(g, wf)
+    if src is None:
+        return None
+    body = src["span"].get("body") or ""
+    casts = set(re.findall(r"\.\s*cast\s*::\s*<\s*([A-Za-z_]\w*)\s*>",
+                           body))
+    casts |= set(re.findall(r"Owned[A-Za-z_]*\s*::\s*<\s*([A-Za-z_]\w*)\s*>",
+                            body))
+    types = {t for t in casts if _s1_struct_fields(g, t) is not None}
+    return next(iter(types)) if len(types) == 1 else None
+
+
+_NESTED_RECEIVER_PARAMS = ("self", "&self", "&mut self", "mut self")
+
+
+def _nested_symbol_path_name(text: str):
+    """Last path segment of a demangled type/path, without generics."""
+    t = " ".join((text or "").split())
+    t = re.sub(r"^(?:&|\*)\s*(?:mut|const)?\s*", "", t)
+    t = t.split("<", 1)[0]
+    segs = [s for s in t.split("::") if s]
+    return segs[-1] if segs else None
+
+
+def _nested_symbol_split_as(inner: str):
+    """Split ``T as Trait`` at a top-level `` as ``."""
+    depth = 0
+    for i in range(len(inner)):
+        ch = inner[i]
+        if ch in "<([":
+            depth += 1
+        elif ch in ">)]":
+            depth = max(0, depth - 1)
+        elif depth == 0 and inner.startswith(" as ", i):
+            return inner[:i].strip(), inner[i + 4:].strip()
+    return inner.strip(), None
+
+
+def _nested_symbol_method(demangled: str):
+    """``(receiver, trait, method)`` named by a Rust method symbol, or None.
+
+    The receiver type is the only parameter type Rust mangling carries: a
+    method ``<T as Trait>::f`` or ``<T>::f`` names ``T``.  A free function's
+    parameter list is not encoded.  This parser therefore returns None for
+    every non-method symbol rather than guessing one.
+    """
+    s = re.sub(r"\[[0-9a-f]+\]", "", demangled or "").strip()
+    if not s.startswith("<"):
+        return None
+    depth, end = 0, None
+    for i, ch in enumerate(s):
+        if ch == "<":
+            depth += 1
+        elif ch == ">":
+            depth -= 1
+            if depth == 0:
+                end = i
+                break
+    if end is None:
+        return None
+    inner = s[1:end]
+    tail = s[end + 1:].lstrip(":")
+    m = re.match(r"([A-Za-z_]\w*)", tail)
+    if m is None:
+        return None
+    receiver, trait = _nested_symbol_split_as(inner)
+    return receiver, trait, m.group(1)
+
+
+def _nested_symbol_trait_method(g: "DsoGraph", trait_text: str, method: str):
+    """(file, declaration signature) of a trait method, or None.
+
+    The symbol supplies the concrete receiver type; the trait declaration
+    supplies the *shape* of the method.  Both are needed: the symbol does not
+    say which parameter a register carries, and a receiver is only the first
+    argument when the return value does not use the hidden sret slot.  A
+    missing or ambiguous declaration is not evidence and yields None.
+    """
+    trait_name = _nested_symbol_path_name(trait_text)
+    if not trait_name:
+        return None
+    path = None
+    root = _repo_root(g)
+    if root is not None:
+        t = re.sub(r"\[[0-9a-f]+\]", "", trait_text)
+        segs = [s for s in t.split("::") if s]
+        if segs and segs[0] == "openssl_rs":
+            segs = segs[1:]
+        mod = "::".join(segs[:-1])
+        if mod:
+            fallback = getattr(g, "_s1_module_index", None)
+            if fallback is None:
+                fallback = build_module_index(root / "src")
+                g._s1_module_index = fallback
+            path = module_to_file(mod, root / "src", fallback)
+    docs = _s1_docs(g)
+    paths = [path] if path in docs else list(docs)
+    for rel in paths:
+        text = docs.get(rel)
+        if text is None:
+            continue
+        tm = re.search(r"\btrait\s+" + re.escape(trait_name) + r"\b", text)
+        if tm is None:
+            continue
+        brace = text.find("{", tm.end())
+        if brace < 0:
+            continue
+        end = _s1_brace_span(text, brace)
+        if end is None:
+            continue
+        body = text[brace + 1:end - 1]
+        fm = re.search(r"\bfn\s+" + re.escape(method) + r"\s*\(", body)
+        if fm is None:
+            continue
+        op = body.find("(", fm.end() - 1)
+        depth, cp = 0, None
+        for i in range(op, len(body)):
+            if body[i] == "(":
+                depth += 1
+            elif body[i] == ")":
+                depth -= 1
+                if depth == 0:
+                    cp = i
+                    break
+        if cp is None:
+            continue
+        sig = _s1_signature({"header": body[fm.start():cp + 1]})
+        if sig is None:
+            continue
+        line = text.count("\n", 0, fm.start()) + 1
+        return {"file": rel, "line": line, "sig": sig}
+    return None
+
+
+def _nested_symbol_receiver_owner(g: "DsoGraph", fstart: int, index):
+    """Owner type carried by a method symbol's receiver, or None.
+
+    A store base is typed from the symbol only when (a) it is the first entry
+    parameter, (b) the enclosing symbol names a trait method receiver, and
+    (c) the trait declaration shows that the first parameter is the receiver
+    and that the return does not use the hidden sret slot.  Any failure is
+    undetermined: no-symbol-found is never treated as a different owner.
+    """
+    if index != 0:
+        return None
+    cache = getattr(g, "_nested_symbol_owner_cache", None)
+    if cache is None:
+        cache = {}
+        g._nested_symbol_owner_cache = cache
+    key = (fstart, index)
+    if key in cache:
+        return cache[key]
+    out = None
+    dm = _s1_demangled(g, fstart)
+    method = _nested_symbol_method(dm) if dm else None
+    if method is not None:
+        receiver, trait, name = method
+        rtype = _nested_symbol_path_name(receiver)
+        if (rtype and trait
+                and _s1_struct_fields(g, rtype) is not None):
+            shape = _nested_symbol_trait_method(g, trait, name)
+            if shape is not None:
+                sig = shape["sig"]
+                params = sig.get("params") or []
+                first = params[0] if params else ""
+                is_receiver = (first in _NESTED_RECEIVER_PARAMS
+                               or bool(re.search(r"\bSelf\b", first)))
+                if (is_receiver
+                        and not _s1_return_uses_sret(sig.get("ret"))):
+                    out = {
+                        "kind": "type", "type": rtype,
+                        "origin": "entry-parameter+symbol-receiver",
+                        "symbol_basis": "method-receiver",
+                        "symbol": dm,
+                        "symbol_trait": _nested_symbol_path_name(trait),
+                        "symbol_method": name,
+                        "symbol_witness": f"{shape['file']}:{shape['line']}",
+                    }
+    cache[key] = out
+    return out
+
+
+# Whole-object primitives whose parameter ABI names the pointee type.  A
+# monomorphised instantiation carries the element type T as a generic
+# argument, and every listed parameter is ``*T``/``*mut T``, so a store
+# through that parameter writes a T.  A function outside this table is not
+# guessed: a free function's generic arguments do not say which register
+# carries which parameter.
+_NESTED_SYMBOL_POINTER_PARAMS = {
+    "drop_in_place": {0},
+    "write": {0},
+    "write_volatile": {0},
+    "replace": {0},
+    "copy_nonoverlapping": {0, 1},
+    "copy": {0, 1},
+    "memcpy": {0, 1},
+    "memmove": {0, 1},
+}
+
+
+def _nested_symbol_no_hash(text: str) -> str:
+    return re.sub(r"\[[0-9a-f]+\]", "", text or "")
+
+
+def _nested_symbol_call_tail(demangled: str):
+    """``(name, generic-arguments-or-None)`` of the final call segment.
+
+    Only the *function* segment is parsed.  Generic arguments elsewhere in
+    the path belong to a containing impl or type and do not type this
+    function's parameters.
+    """
+    s = _nested_symbol_no_hash(demangled).strip()
+    depth, cut = 0, -1
+    for i, ch in enumerate(s):
+        if ch in "<([":
+            depth += 1
+        elif ch in ">)]":
+            depth = max(0, depth - 1)
+        elif depth == 0 and s.startswith("::", i):
+            cut = i
+    tail = s[cut + 2:] if cut >= 0 else s
+    m = re.fullmatch(r"([A-Za-z_]\w*)\s*(?:::\s*)?(?:<(.*)>)?", tail)
+    if m is None:
+        return None, None
+    return m.group(1), m.group(2)
+
+
+def _nested_symbol_split_args(text: str):
+    """Split a generic-argument list at top-level commas."""
+    out, depth, start = [], 0, 0
+    for i, ch in enumerate(text):
+        if ch in "<([":
+            depth += 1
+        elif ch in ">)]":
+            depth = max(0, depth - 1)
+        elif ch == "," and depth == 0:
+            out.append(text[start:i].strip())
+            start = i + 1
+    out.append(text[start:].strip())
+    return [a for a in out if a]
+
+
+def _nested_symbol_exact_crate_struct(g: "DsoGraph", text: str):
+    """The crate struct named exactly by one generic argument, or None.
+
+    A wrapper (``Option<..>``, a reference, an array, a tuple, another
+    generic) is not the pointee itself, so it is not accepted: naming a
+    struct *inside* a wrapper does not make the base that struct.
+    """
+    t = " ".join((text or "").split())
+    t = _nested_symbol_no_hash(t)
+    if not re.fullmatch(r"openssl_rs(?:::[A-Za-z_]\w*)+", t):
+        return None
+    name = t.split("::")[-1]
+    return name if _s1_struct_layout(g, name) is not None else None
+
+
+def _nested_symbol_generic_owner(g: "DsoGraph", fstart: int, index):
+    """Owner type named by a whole-object primitive's generic argument.
+
+    Applies only when the writer has no Rust source mapping (the symbol is
+    then the only attribution available), the symbol is one of the listed
+    primitives, and the base is a parameter that primitive declares as
+    ``*T``/``*mut T``.  The generic argument must name exactly one declared
+    crate struct with a decidable layout.  No type, several types, a wrapper
+    or an unmapped type is undetermined and keeps the refusal.
+    """
+    if index is None or _s1_writer_source(g, fstart) is not None:
+        return None
+    dm = _s1_demangled(g, fstart)
+    if not dm:
+        return None
+    name, arg_text = _nested_symbol_call_tail(dm)
+    params = _NESTED_SYMBOL_POINTER_PARAMS.get(name or "")
+    if params is None or index not in params or not arg_text:
+        return None
+    candidates = set()
+    for arg in _nested_symbol_split_args(arg_text):
+        owner = _nested_symbol_exact_crate_struct(g, arg)
+        if owner is not None:
+            candidates.add(owner)
+    if len(candidates) != 1:
+        return None
+    owner = next(iter(candidates))
+    return {"kind": "type", "type": owner,
+            "origin": "entry-parameter+symbol-generic",
+            "symbol_basis": "generic-argument",
+            "symbol": dm, "symbol_method": name,
+            "symbol_argument": owner}
+
+
+def _nested_owner_from_param(g: "DsoGraph", fstart: int, index, via: str):
+    """Owner type of an entry parameter, or a named unknown."""
+    src = _s1_writer_source(g, fstart)
+    sig = _s1_signature(src["span"]) if src else None
+    cands = _s1_abi_types(sig, index) if sig else []
+    types = set()
+    for c in cands:
+        t = c.get("type") or ""
+        owner = _nested_struct_type(g, t)
+        if owner is not None:
+            types.add(owner)
+        elif _s1_pointee(t) in ("c_void", "void"):
+            cast = _nested_body_type(g, fstart)
+            if cast is not None:
+                types.add(cast)
+    if len(types) == 1:
+        return {"kind": "type", "type": next(iter(types)), "origin": via}
+    if not types:
+        symbol = _nested_symbol_receiver_owner(g, fstart, index)
+        if symbol is None:
+            symbol = _nested_symbol_generic_owner(g, fstart, index)
+        if symbol is not None:
+            return symbol
+    return {"kind": "unknown",
+            "why": "entry parameter has no unique owner type"}
+
+
+# Points-to type propagation (S2b-3).
+#
+# The one-edge rules above read a single provenance step and refuse a merge.
+# A store base is often a reborrow, a merge of two reborrows of the same entry
+# parameter, or a pointer reached through two declared field loads.  This pass
+# carries a declared pointee binding forward through the local dataflow:
+#
+#   * an entry parameter is seeded from its Rust signature (an opaque
+#     ``*mut c_void`` parameter uses the writer body's unique source cast, as
+#     the one-edge rule already did);
+#   * ``mov``/``movq`` copies and zero-offset ``lea`` reborrows preserve the
+#     binding;
+#   * a load at a declared field of a typed base yields the field's declared
+#     pointee type; and
+#   * a merge qualifies only when every reaching definition agrees.  A
+#     disagreement is refused and names every disagreeing type.
+#
+# The binding carries a byte offset so an interior ``lea`` is still refused at
+# the store base (the writer index is keyed by the literal store displacement).
+# Every failure returns the existing refusal rather than a guess: the caller
+# only uses a qualified result, so an analysis failure cannot shrink the bound.
+
+_NESTED_POINTS_MAX = 16
+
+
+def _nested_points_unknown(why, **extra):
+    out = {"kind": "unknown", "why": why, "origin": "points-to"}
+    out.update(extra)
+    return out
+
+
+def _nested_points_binding(type_name: str, offset: int = 0, **extra):
+    out = {"kind": "type", "type": type_name, "offset": offset,
+           "origin": "points-to"}
+    out.update(extra)
+    return out
+
+
+def _nested_points_param(g: "DsoGraph", fstart: int, index):
+    """Seed one entry parameter's binding from its Rust signature."""
+    if index is None:
+        return _nested_points_unknown("entry parameter index unknown")
+    owner = _nested_owner_from_param(g, fstart, index, "entry-parameter")
+    if owner.get("kind") != "type":
+        return _nested_points_unknown(
+            owner.get("why") or "entry parameter has no owner type")
+    if _s1_struct_layout(g, owner["type"]) is None:
+        return _nested_points_unknown(
+            "entry parameter type " + str(owner["type"])
+            + " has no decidable layout")
+    return _nested_points_binding(
+        owner["type"], 0, via="entry-parameter", param=index,
+        owner_origin=owner.get("origin"),
+        symbol_basis=owner.get("symbol_basis"))
+
+
+def _nested_points_entry(g: "DsoGraph", fstart: int, reg: str):
+    index = _ENTRY_ARG_REGS.get(reg)
+    if index is None:
+        return _nested_points_unknown("entry value in " + reg)
+    return _nested_points_param(g, fstart, index)
+
+
+def _nested_points_merge(results):
+    """Agreeing arms qualify; a disagreement names every distinct type."""
+    if not results:
+        return _nested_points_unknown("points-to merge has no arms")
+    typed = [r for r in results if r.get("kind") == "type"]
+    if len(typed) != len(results):
+        reasons = sorted({str(r.get("why") or "unresolved")
+                          for r in results if r.get("kind") != "type"})
+        return _nested_points_unknown(
+            "points-to merge has an unresolved arm: " + "; ".join(reasons),
+            arms=[{"kind": r.get("kind"), "type": r.get("type"),
+                   "why": r.get("why")} for r in results])
+    keys = {(r["type"], r.get("offset", 0)) for r in typed}
+    if len(keys) == 1:
+        type_name, offset = next(iter(keys))
+        return _nested_points_binding(
+            type_name, offset, via="merge",
+            arms=[{"type": r["type"], "via": r.get("via")} for r in typed])
+    names = sorted({r["type"] for r in typed})
+    return _nested_points_unknown(
+        "points-to merge disagrees: " + ", ".join(names),
+        candidates=names,
+        arms=[{"type": r["type"], "offset": r.get("offset", 0)}
+              for r in typed])
+
+
+def _nested_points_at_def(g: "DsoGraph", fstart: int, k: int, reg: str,
+                          depth: int, seen: frozenset):
+    """Binding produced by one reaching definition ``k`` of ``reg``."""
+    if k == _ENTRY_DEF:
+        return _nested_points_entry(g, fstart, reg)
+    text = _insn(g, fstart, k)
+    mn, _rest, ops = _insn_parts(text)
+    if mn.startswith("cmov") and len(ops) >= 2:
+        # A conditional move is a two-armed select: the prior destination
+        # value and the source value both reach the result.
+        return _nested_points_merge([
+            _nested_points_type(g, fstart, k, _canon(ops[1]), depth + 1, seen),
+            _nested_points_type(g, fstart, k, _canon(ops[0]), depth + 1, seen)])
+    if mn in ("mov", "movq", "movl", "movzbl", "movzwl", "movslq"):
+        src = ops[0].strip() if ops else ""
+        if src in _REGS or src in _SUBREG:
+            return _nested_points_type(g, fstart, k, _canon(src),
+                                       depth + 1, seen)
+        mo = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", src)
+        if mo is None:
+            if src.startswith("$"):
+                return _nested_points_unknown("integer base")
+            return _nested_points_unknown("unsupported source " + src)
+        base_reg = mo.group(2)
+        off = int(mo.group(1), 16) if mo.group(1) else 0
+        if base_reg in ("%rsp", "%rbp"):
+            spill = _stack_param(g, fstart, k, src, None)
+            if spill is None:
+                return _nested_points_unknown(
+                    "frame load is not a parameter spill")
+            return _nested_points_param(g, fstart, spill.get("index"))
+        outer = _nested_points_type(g, fstart, k, _canon(base_reg),
+                                    depth + 1, seen)
+        if outer.get("kind") != "type":
+            return outer
+        layout = _s1_struct_layout(g, outer["type"])
+        if layout is None:
+            return _nested_points_unknown(
+                "points-to base layout undecidable for " + outer["type"])
+        at = outer.get("offset", 0) + off
+        row = next((r for r in layout["fields"] if r["offset"] == at), None)
+        if row is None:
+            return _nested_points_unknown(
+                "no declared field at load offset %#x" % at)
+        pointee = _nested_pointee_type(g, row["type"])
+        if pointee is None or _s1_struct_layout(g, pointee) is None:
+            return _nested_points_unknown(
+                "field is not a pointer to a decidable struct")
+        return _nested_points_binding(
+            pointee, 0, via="field-load", owner=outer["type"],
+            field=row["name"], field_offset=off)
+    if mn == "lea":
+        mo = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                          ops[0].strip() if ops else "")
+        if mo is None:
+            return _nested_points_unknown("unsupported lea")
+        base_reg = mo.group(2)
+        disp = int(mo.group(1), 16) if mo.group(1) else 0
+        outer = _nested_points_type(g, fstart, k, _canon(base_reg),
+                                    depth + 1, seen)
+        if outer.get("kind") != "type":
+            return outer
+        return _nested_points_binding(
+            outer["type"], outer.get("offset", 0) + disp,
+            via="reborrow" if disp == 0 else "interior-lea",
+            base_via=outer.get("via"))
+    if mn in ("xor", "sub") and len(ops) == 2 and ops[0] == ops[1]:
+        return _nested_points_unknown("integer base")
+    return _nested_points_unknown("unexpected writer " + mn)
+
+
+def _nested_points_type(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                        depth: int = 0, seen: frozenset = frozenset()):
+    """Forward points-to binding for ``reg`` at ``idx``, or a named refusal."""
+    reg = _canon(reg)
+    if depth > _NESTED_POINTS_MAX:
+        return _nested_points_unknown("points-to depth bound")
+    key = (fstart, idx, reg)
+    if key in seen:
+        return _nested_points_unknown("points-to cycle")
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None:
+        return _nested_points_unknown("open or non-convergent CFG")
+    if len(defs) == 1:
+        return _nested_points_at_def(g, fstart, next(iter(defs)), reg,
+                                     depth, seen | {key})
+    arms = [_nested_points_at_def(g, fstart, k, reg, depth + 1, seen | {key})
+            for k in sorted(defs)]
+    return _nested_points_merge(arms)
+
+
+def _nested_points_owner(g: "DsoGraph", fstart: int, idx: int, reg: str):
+    """Whole-object binding of a store base, or the refusal that keeps it.
+
+    An interior pointer (``lea disp(%base)`` with ``disp != 0``) is not a
+    whole-object base: the store index is keyed by the literal displacement,
+    so admitting it would compare the wrong offsets.  It stays refused.
+    """
+    cache = getattr(g, "_nested_points_cache", None)
+    if cache is None:
+        cache = {}
+        g._nested_points_cache = cache
+    key = (fstart, idx, _canon(reg))
+    res = cache.get(key)
+    if res is None:
+        res = _nested_points_type(g, fstart, idx, _canon(reg))
+        cache[key] = res
+    if res.get("kind") != "type":
+        return res
+    if res.get("offset", 0) != 0:
+        return _nested_points_unknown(
+            "points-to base is an interior pointer at %#x"
+            % res["offset"], candidates=res.get("candidates"))
+    return res
+
+
+def _nested_owner_with_points_to(g: "DsoGraph", fstart: int, idx: int,
+                                 reg: str, member_off: int | None = None):
+    """The one-edge owner rule, then the points-to pass as a fallback."""
+    owner = _nested_owner_type(g, fstart, idx, reg, member_off=member_off)
+    if owner.get("kind") == "type":
+        return owner
+    points = _nested_points_owner(g, fstart, idx, reg)
+    if points.get("kind") == "type":
+        return points
+    if points.get("candidates"):
+        return dict(owner, points_to_refusal=points)
+    return owner
+
+
+def _nested_owner_type(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                       depth: int = 0, member_off: int | None = None):
+    """The (owning type, field) a store base register denotes, or a refusal.
+
+    This is the type side of the field-sensitive index.  It follows declared
+    layouts: an entry parameter (with a unique source cast when the parameter
+    is opaque), a field load from a proven owner, a constructor return type,
+    or a unique allocation of known size.  A chain is followed to its declared
+    end; no stored value of an intermediate pointer is inferred.
+    """
+    if depth > _NESTED_MAX_CHAIN:
+        return {"kind": "unknown", "why": "owner-chain depth"}
+    origin = _reg_origin(g, fstart, idx, _canon(reg))
+    kind = origin.get("kind")
+    if kind in ("alloc", "alloc-unknown"):
+        if member_off is None:
+            return {"kind": "unknown",
+                    "why": "allocation is not the store base"}
+        # The declared allocation expression (rule 1) and, when that is
+        # absent, the constructor's return type (rule 2) outrank the block
+        # size.  The size decides only when neither is present.
+        decl = _nested_alloc_declared_type(g, fstart, origin)
+        dkind = decl.get("kind")
+        if dkind == "type":
+            return _nested_decl_owner(g, decl["type"], member_off, 8,
+                                      size=origin.get("size")) | {
+                "allocation_type_form": decl.get("form"),
+                "allocation_type_source": decl.get("source")}
+        if dkind in ("ambiguous", "contradiction", "refused"):
+            return {"kind": "unknown", "why": decl.get("why"),
+                    "candidates": decl.get("candidates"),
+                    "allocation_type_rule": dkind}
+        if kind == "alloc":
+            return _nested_alloc_owner(g, origin["size"], member_off, 8)
+        return {"kind": "unknown",
+                "why": ("allocation-size-unresolved: "
+                        + str(origin.get("symbol")))}
+    if kind == "param":
+        return _nested_owner_from_param(g, fstart, origin.get("index"),
+                                        "entry-parameter")
+    if kind == "load":
+        if origin.get("base_reg") in ("%rsp", "%rbp"):
+            spill = _stack_param(g, fstart, origin.get("at"),
+                                 origin.get("offset"), origin.get("base_reg"))
+            if spill is None:
+                return {"kind": "unknown",
+                        "why": "frame load is not a parameter spill"}
+            return _nested_owner_from_param(g, fstart, spill.get("index"),
+                                            "frame-slot")
+        outer = _nested_owner_type(g, fstart, origin.get("at"),
+                                   origin.get("base_reg"), depth + 1)
+        if outer.get("kind") != "type":
+            return outer
+        layout = _s1_struct_layout(g, outer["type"])
+        if layout is None:
+            return {"kind": "unknown",
+                    "why": "owner layout undecidable"}
+        row = next((r for r in layout["fields"]
+                    if r["offset"] == origin.get("offset")), None)
+        if row is None:
+            return {"kind": "unknown",
+                    "why": "no declared field at load offset"}
+        pointee = _nested_pointee_type(g, row["type"])
+        if pointee is None:
+            return {"kind": "unknown",
+                    "why": "field is not a pointer to a decidable struct"}
+        return {"kind": "type", "type": pointee, "origin": "field-load",
+                "owner": outer["type"], "field": row["name"]}
+    if kind == "call":
+        target = origin.get("callee")
+        csrc = _s1_writer_source(g, target) if target else None
+        sig = _s1_signature(csrc["span"]) if csrc else None
+        if sig is not None:
+            owner = _nested_pointee_type(g, sig.get("ret"))
+            if owner is not None:
+                return {"kind": "type", "type": owner,
+                        "origin": "constructor-result"}
+        cast = _nested_body_type(g, fstart)
+        if cast is not None:
+            return {"kind": "type", "type": cast,
+                    "origin": "allocation-cast"}
+        return {"kind": "unknown",
+                "why": "call result has no decidable owner type"}
+    if kind == "int":
+        return {"kind": "unknown", "why": "integer base"}
+    return {"kind": "unknown",
+            "why": origin.get("why") or "unproven base origin"}
+
+
+def _nested_chain_desc(hops, ctx_type):
+    return {"context_type": ctx_type,
+            "hops": [{"offset": hex(h.get("offset")),
+                      "base_reg": h.get("base_reg")}
+                     for h in reversed(hops)]}
+
+
+def _nested_resolve_chain(g: "DsoGraph", hops, ctx_type: str, ctx_info: dict):
+    """Resolve the declared types along a chain, from the context outward.
+
+    ``hops`` is ordered from the call's slot load back towards the context.
+    Each hop must name a field at its exact displacement in the previous
+    hop's pointee layout.  The final (outermost) field is the pointer slot the
+    call dereferences; its owner type is what the writer index is keyed on.
+    """
+    owner = ctx_type
+    field = None
+    offset = None
+    declaration = None
+    rows = []
+    for hop in reversed(hops):
+        layout = _s1_struct_layout(g, owner)
+        if layout is None:
+            return {"refusal": "no-pointee-layout",
+                    "chain": _nested_chain_desc(hops, ctx_type)}
+        row = next((r for r in layout["fields"]
+                    if r["offset"] == hop.get("offset")), None)
+        if row is None:
+            return {"refusal": "no-pointee-layout",
+                    "chain": _nested_chain_desc(hops, ctx_type)}
+        nxt = _nested_pointee_type(g, row["type"])
+        if nxt is None and _s1_pointee(row["type"]) in ("c_void", "void"):
+            casts = [t for t in _s1_cast_types(g, ctx_info, row["name"])
+                     if _s1_struct_layout(g, t) is not None]
+            if len(casts) == 1:
+                nxt = casts[0]
+        if nxt is None:
+            return {"refusal": "no-pointee-layout",
+                    "chain": _nested_chain_desc(hops, ctx_type)}
+        rows.append({"owner": owner, "offset": hex(hop.get("offset")),
+                     "field": row["name"], "field_type": row["type"],
+                     "pointee": nxt})
+        field, offset = row, hop.get("offset")
+        declaration = f"{layout['file']}:{layout['line']}"
+        owner = nxt
+    table_layout = _s1_struct_layout(g, owner)
+    if table_layout is None:
+        return {"refusal": "no-pointee-layout",
+                "chain": rows}
+    return {"owner": rows[-1]["owner"], "field": field, "offset": offset,
+            "table_type": owner, "layout": table_layout,
+            "declaration": declaration, "chain": rows}
+
+
+def _nested_direct_candidate(g: "DsoGraph", ctx_info: dict,
+                             member_off: int):
+    """Legacy direct-context candidate when the owner layout is undecidable.
+
+    A context type with an embedded union (for example ``ProvCipherCtx``'
+    ``stream`` or ``ProvGcmCtx``'s ``GcmCtx``) has no decidable byte layout,
+    yet its *declared field list* still names the pointer field whose pointee
+    declares the member the call reads.  Exactly as the pre-index rule did, a
+    unique pointee type is admitted; the writer index remains keyed by the
+    proven owner type and the actual load displacement, so the store set is
+    still field-sensitive even though the field's name cannot be resolved.
+    An absent or ambiguous candidate refuses.
+    """
+    fields = _s1_struct_fields(g, ctx_info.get("type") or "")
+    if fields is None:
+        return {"status": "none"}
+    cands = []
+    for fname, ftype in fields[0]:
+        mm = re.match(r"\*\s*(?:const|mut)\s+([A-Za-z_]\w*)", ftype)
+        if not mm:
+            continue
+        ulayout = _s1_struct_layout(g, mm.group(1))
+        if ulayout is None:
+            continue
+        row = next((r for r in ulayout["fields"]
+                    if r["offset"] == member_off), None)
+        if row is None:
+            continue
+        cands.append({"field": fname, "table_type": mm.group(1),
+                      "layout": ulayout, "member": row,
+                      "declaration": (f"{fields[1]['file']}:"
+                                      f"{fields[1]['line']}")})
+    distinct = {c["table_type"] for c in cands}
+    if not cands:
+        return {"status": "none"}
+    if len(distinct) != 1:
+        return {"status": "ambiguous", "types": sorted(distinct)}
+    return {"status": "ok", "candidate": cands[0]}
+
+
+def _nested_index_one(g: "DsoGraph", out: dict, store: dict,
+                      owner_type: str, member_off: int, nonscalar: bool):
+    """Place one store in exactly one field-index bucket."""
+    wf = store["function"]
+    bq = _nested_store_base_witness(g, wf, store, owner_type, member_off)
+    rec = {"store": store, "base": bq, "nonscalar": nonscalar}
+    if bq.get("qualified"):
+        out["nonscalar" if nonscalar else "scalar"].append(
+            dict(rec, disposition="writer"))
+        return
+    if bq.get("excluded"):
+        out["disjoint"].append(dict(rec, disposition="disjoint"))
+        return
+    owner = _nested_owner_with_points_to(
+        g, wf, store["index"], _canon(store["base"]),
+        member_off=member_off)
+    if owner.get("kind") == "type":
+        # A symbol-derived receiver type is a base-type witness, not a
+        # value witness.  Keep it in the record so a later reader can see
+        # which evidence qualified or excluded the store.
+        if owner.get("symbol"):
+            bq = dict(bq, symbol_owner=owner["type"],
+                      symbol_basis=owner.get("symbol_basis"),
+                      symbol=owner.get("symbol"),
+                      symbol_origin=owner.get("origin"))
+            rec = {"store": store, "base": bq, "nonscalar": nonscalar}
+        if owner.get("origin") == "points-to":
+            # Record the propagated binding so the receipt names the evidence
+            # that qualified or excluded this store, not just the result.
+            bq = dict(bq, points_to_owner=owner["type"],
+                      points_to_via=owner.get("via"),
+                      points_to_arms=owner.get("arms"),
+                      points_to_param=owner.get("param"),
+                      points_to_field=owner.get("field"),
+                      points_to_owner_origin=owner.get("owner_origin"))
+            rec = {"store": store, "base": bq, "nonscalar": nonscalar}
+        # A prefix-compatible owner (in either direction) shares the field
+        # offset, so the store is a writer of this field.  Only two decidable
+        # layouts with no prefix relation prove disjointness; an undecidable
+        # layout is never a disjointness proof.  An allocation-size owner is
+        # itself a declared layout, so the same rule applies through the
+        # allocation-aware layout population.
+        forward = _s1_type_compatible(g, owner["type"], owner_type)
+        backward = _s1_type_compatible(g, owner_type, owner["type"])
+        if forward.get("admitted") or backward.get("admitted"):
+            out["nonscalar" if nonscalar else "scalar"].append(
+                dict(rec, disposition="writer", owner=owner["type"],
+                     prefix=forward.get("prefix") or backward.get("prefix")))
+            return
+        if str(owner.get("origin") or "").startswith("allocation-"):
+            decidable = (_s1_decl_layout(g, owner["type"]) is not None
+                         and _s1_decl_layout(g, owner_type) is not None)
+        else:
+            decidable = (_s1_struct_layout(g, owner["type"]) is not None
+                         and _s1_struct_layout(g, owner_type) is not None)
+        if decidable:
+            out["disjoint"].append(dict(
+                rec, disposition="disjoint", owner=owner["type"],
+                reason="field-sensitive owner type"))
+            return
+    out["unqualified"].append(dict(rec, owner=owner))
+
+
+def _nested_field_writer_set(g: "DsoGraph", owner_type: str, member_off: int):
+    """Every store that can write ``owner_type``'s field at ``member_off``.
+
+    Completeness: the candidate superset is the image-wide store index at that
+    displacement (and every non-scalar store whose byte range covers it).  A
+    store at a different displacement cannot write the field.  Each candidate
+    is then keyed by its owning type: this field's type (a writer), a provably
+    different non-prefix type (disjoint), or an unestablished type
+    (unqualified, never silently dropped).  The result is cached per
+    ``(owner type, member offset)``, which is the field-sensitive key.
+    """
+    cache = getattr(g, "_nested_field_writer_cache", None)
+    if cache is None:
+        cache = {}
+        g._nested_field_writer_cache = cache
+    key = (owner_type, member_off)
+    if key in cache:
+        return cache[key]
+    scalar, nonscalar = _nested_store_index(g)
+    out = {"owner_type": owner_type, "offset": member_off,
+           "scalar": [], "nonscalar": [], "disjoint": [],
+           "unqualified": []}
+    for store in scalar.get(member_off, []):
+        _nested_index_one(g, out, store, owner_type, member_off, False)
+    for store in nonscalar.get(member_off, []):
+        _nested_index_one(g, out, store, owner_type, member_off, True)
+    cache[key] = out
+    return out
+
+
+def nested_static_instance_witness(g: "DsoGraph", site: dict, name: str,
+                                   reachable: set | None = None):
+    """Prove a second-level static-instance dispatch, or refuse it by name.
+
+    Returns None when the site is not the shape this rule owns; a dict with
+    ``resolved`` otherwise.  A refusal leaves the site's existing class,
+    targets and conservative bound untouched.
+    """
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    if site.get("reason") != "base-slot-partial":
+        return None
+    fstart = site.get("func")
+    insns = g.precision.insns_by_func.get(fstart, ())
+    idx = next((i for i, (a, _t) in enumerate(insns)
+                if a == site.get("addr")), None)
+    if idx is None:
+        return None
+    text = site.get("text") or ""
+    m = re.search(r"call\w*\s+\*(.+)$", text.split("#", 1)[0].strip())
+    if not m:
+        return None
+    operand = m.group(1).strip()
+    mo = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", operand)
+    if not mo:
+        return None
+    member_off = int(mo.group(1), 16) if mo.group(1) else 0
+    base_reg = mo.group(2)
+    origin = _reg_origin(g, fstart, idx, _canon(base_reg))
+    if origin.get("kind") != "load":
+        return None
+    # A one-level object chain (``base = ctx->a->b``) is a sequence of loads.
+    # Walk from the call's table register back towards the context parameter.
+    # Only the final pointer field's writers are enumerated; the earlier hops
+    # establish declared types from their pointee layouts and infer no value.
+    hops = [origin]
+    cur = _reg_origin(g, fstart, origin.get("at"),
+                      _canon(origin.get("base_reg")))
+    while cur.get("kind") == "load":
+        if cur.get("base_reg") in ("%rsp", "%rbp"):
+            spill = _stack_param(g, fstart, cur.get("at"), cur.get("offset"),
+                                 cur.get("base_reg"))
+            cur = ({"kind": "param", "index": spill.get("index"),
+                    "via": "frame-slot", "spill": spill}
+                   if spill is not None else
+                   {"kind": "unknown",
+                    "why": "frame slot is not a parameter"})
+            break
+        if len(hops) > _NESTED_MAX_CHAIN:
+            return _nested_refusal("chain-depth", function=name,
+                                   call_site=hex(site["addr"]))
+        hops.append(cur)
+        cur = _reg_origin(g, fstart, cur.get("at"),
+                          _canon(cur.get("base_reg")))
+    ctx_info = _s1_site_context(g, fstart)
+    if ctx_info is None:
+        outer = hops[1] if len(hops) > 1 else cur
+        if outer.get("kind") == "param":
+            return _nested_refusal(
+                "no-context-type", function=name,
+                call_site=hex(site["addr"]),
+                operand={"base_reg": base_reg, "member_offset": hex(member_off)},
+                pointer_slot=hex(origin.get("offset")))
+        return None
+    want = ctx_info.get("param_index")
+    last = hops[-1]
+    ctx_origin = _s1_ctx_param(g, fstart, last.get("at"),
+                               _canon(last.get("base_reg")), want)
+    if cur.get("kind") != "param" or ctx_origin is None:
+        return _nested_refusal(
+            "ctx-not-proven-parameter", function=name,
+            call_site=hex(site["addr"]),
+            operand={"base_reg": base_reg, "member_offset": hex(member_off)},
+            pointer_slot=hex(origin.get("offset")),
+            context={"type": ctx_info["type"], "param": ctx_info.get("param")},
+            chain=_nested_chain_desc(hops, ctx_info.get("type")))
+    chain = _nested_resolve_chain(g, hops, ctx_info["type"], ctx_info)
+    if chain.get("refusal"):
+        # A direct context field whose owner type has no decidable layout
+        # (an embedded union) still has a declared field list.  Admit the
+        # unique pointee candidate exactly as the pre-index rule did; the
+        # writer index is keyed by the proven owner type and the actual load
+        # displacement.  A chain cannot fall back: its intermediate types
+        # must be resolved from real layouts.
+        if len(hops) == 1 and _s1_struct_layout(g, ctx_info["type"]) is None:
+            direct = _nested_direct_candidate(g, ctx_info, member_off)
+            if direct["status"] == "ambiguous":
+                return _nested_refusal(
+                    "ambiguous-pointee-type", function=name,
+                    call_site=hex(site["addr"]),
+                    pointee_types=direct["types"])
+            if direct["status"] != "ok":
+                return _nested_refusal(
+                    "no-pointee-layout", function=name,
+                    call_site=hex(site["addr"]),
+                    operand={"member_offset": hex(member_off)},
+                    chain=chain.get("chain"),
+                    context={"type": ctx_info["type"],
+                             "param": ctx_info.get("param")})
+            c = direct["candidate"]
+            chain = {"owner": ctx_info["type"],
+                     "field": {"name": c["field"]},
+                     "offset": origin.get("offset"),
+                     "table_type": c["table_type"],
+                     "layout": c["layout"],
+                     "declaration": c["declaration"],
+                     "chain": None}
+        else:
+            return _nested_refusal(
+                chain["refusal"], function=name,
+                call_site=hex(site["addr"]),
+                operand={"base_reg": base_reg,
+                         "member_offset": hex(member_off)},
+                chain=chain.get("chain"),
+                context={"type": ctx_info["type"],
+                         "param": ctx_info.get("param")})
+    final_owner = chain["owner"]
+    final_field = chain["field"]
+    slot_off = chain["offset"]
+    table_type = chain["table_type"]
+    ulayout = chain["layout"]
+    member_row = next((r for r in ulayout["fields"]
+                       if r["offset"] == member_off), None)
+    if member_row is None:
+        return _nested_refusal("no-pointee-layout", function=name,
+                               call_site=hex(site["addr"]),
+                               operand={"member_offset": hex(member_off)},
+                               pointer_slot={"object": final_owner,
+                                             "field": final_field["name"],
+                                             "offset": hex(slot_off)},
+                               chain=chain.get("chain"))
+    cand = {"field": final_field["name"], "table_type": table_type,
+            "layout": ulayout, "member": member_row,
+            "declaration": chain["declaration"]}
+    # The writer index is keyed by (owning type, declared member offset), not
+    # by bare displacement.  A store at the same displacement under a provably
+    # different owner type is disjoint from this field and is excluded; a store
+    # whose owner type cannot be established remains unqualified and is decided
+    # by the source-level negative witness or refuses the site.
+    indexed = _nested_field_writer_set(g, final_owner, slot_off)
+    rows = (indexed["scalar"] + indexed["nonscalar"] + indexed["unqualified"])
+    if not rows:
+        return _nested_refusal("no-writer", function=name,
+                               call_site=hex(site["addr"]),
+                               pointer_slot={"object": final_owner,
+                                             "field": cand["field"],
+                                             "offset": hex(slot_off)})
+    admitted_offsets = [r["offset"] for r in ulayout["fields"]]
+    writer_rows, excluded, unproven, unaccounted = [], [], [], []
+    source_excluded = []
+    for rec in indexed["disjoint"]:
+        excluded.append(dict(rec["base"],
+                             field_sensitive_owner=rec.get("owner"),
+                             exclusion="different-owner-type"))
+    for rec in indexed["scalar"]:
+        store, bq = rec["store"], rec["base"]
+        values, why = _nested_store_value(
+            g, store["function"], store, slot_off,
+            table_stride=ulayout["size"], table_member_off=member_off)
+        if why is not None or values is None:
+            unaccounted.append({"function": g.funcs.get(store["function"],
+                                                         hex(store["function"])),
+                                "store_site": hex(store["addr"]),
+                                "reason": why or "unresolved-value"})
+            continue
+        if not values:
+            continue
+        writer_rows.append({"store": store, "base": bq, "values": values})
+    overlapping = []
+    same_owner_copies = []
+    for rec in indexed["nonscalar"]:
+        store, bq = rec["store"], rec["base"]
+        # A qualified non-scalar store whose base and source are both this
+        # owner type and whose range covers the whole object is a struct
+        # assignment.  It copies the field bytes of a same-typed object, so it
+        # can only propagate a value the field's own writers already produce;
+        # it is accounted, not refused, and adds no target.  Anything without
+        # that source witness is still an unexplained overlap.
+        copy = _nested_whole_struct_copy(g, store["function"], store,
+                                         final_owner, ulayout, slot_off)
+        if copy is not None:
+            same_owner_copies.append(dict(
+                copy,
+                function=g.funcs.get(store["function"],
+                                     hex(store["function"])),
+                store_site=hex(store["addr"])))
+            continue
+        # The store's range covers the field and its owner type is this field's
+        # owner type, so the overlap is real and its value cannot be accounted
+        # from the scalar store value model: refuse.  A non-scalar store under
+        # a provably different owner type is in ``disjoint`` instead.
+        overlapping.append({"function": g.funcs.get(store["function"],
+                                                      hex(store["function"])),
+                            "store_site": hex(store["addr"]),
+                            "mnemonic": store["mnemonic"],
+                            "width": store["width"],
+                            "base": bq})
+    for rec in indexed["unqualified"]:
+        store, bq = rec["store"], rec["base"]
+        could, why = _nested_source_could_write(
+            g, store["function"], cand["field"], final_owner,
+            cand["table_type"], slot_off)
+        if rec.get("nonscalar"):
+            if not could:
+                source_excluded.append(
+                    {"function": g.funcs.get(store["function"],
+                                              hex(store["function"])),
+                     "store_site": hex(store["addr"]),
+                     "reason": why, "non_scalar": True})
+                continue
+            overlapping.append({"function": g.funcs.get(store["function"],
+                                                          hex(store["function"])),
+                                "store_site": hex(store["addr"]),
+                                "mnemonic": store["mnemonic"],
+                                "width": store["width"],
+                                "base": bq})
+            continue
+        if could:
+            unproven.append(dict(bq, source_witness=why,
+                                 field_sensitive_owner=rec.get("owner")))
+        else:
+            source_excluded.append(
+                {"function": g.funcs.get(store["function"],
+                                          hex(store["function"])),
+                 "store_site": hex(store["addr"]),
+                 "reason": why})
+    pointer_slot = {"object": final_owner, "field": cand["field"],
+                    "offset": hex(slot_off),
+                    "declaration": cand["declaration"],
+                    "field_key": f"{final_owner}.{cand['field']}@{hex(slot_off)}",
+                    "chain": chain.get("chain")}
+    if unproven or unaccounted or overlapping or not writer_rows:
+        return _nested_refusal(
+            "writer-set-incomplete", function=name,
+            call_site=hex(site["addr"]),
+            operand={"base_reg": base_reg, "member_offset": hex(member_off)},
+            pointer_slot=pointer_slot,
+            unproven_base_stores=unproven,
+            unaccounted_values=unaccounted,
+            overlapping_non_scalar_stores=overlapping,
+            source_excluded_stores=source_excluded,
+            same_owner_whole_struct_copies=same_owner_copies,
+            stores_at_slot=len(rows))
+    declared = _s1_declared_instances(g, cand["table_type"])["instances"]
+    values = sorted({v for row in writer_rows for v in row["values"]})
+    stored = {v for v in values if isinstance(v, int) and v != 0}
+    prefix_types = {}
+    admitted = dict(declared)
+    const_tables = {}
+    unknown_values = []
+    for value in sorted(stored):
+        st = _s1_static_type(g, value)
+        if st is None:
+            # A local ``const`` table has no declared-static name, so the
+            # source-type lookup is empty.  The containing immutable data
+            # symbol supplies the length; every element's selected member must
+            # be an in-image function start, and the complete element set is
+            # admitted rather than only the elements a branch selected.
+            table = _nested_const_table_at(g, value, ulayout["size"],
+                                           member_off)
+            if table.get("ok") and value in table["elements"]:
+                admitted.setdefault(value, {
+                    "name": f"{table['symbol']}+{value - table['base']:#x}",
+                    "symbol": table["symbol"], "addr": value,
+                    "local_const_table": True,
+                    "element_size": table["stride"]})
+                const_tables[value] = {
+                    "symbol": table["symbol"], "base": hex(table["base"]),
+                    "size": hex(table["size"]), "stride": hex(table["stride"]),
+                    "count": table["count"],
+                    "elements": [hex(e) for e in table["elements"]]}
+                continue
+            unknown_values.append(hex(value))
+            continue
+        if st != cand["table_type"]:
+            w = _s1_prefix_witness(g, st, cand["table_type"],
+                                   admitted_offsets)
+            if w is None:
+                unknown_values.append(hex(value))
+                continue
+            prefix_types[st] = w
+            more = _s1_declared_instances(g, st).get("instances") or {}
+            for a, rec in more.items():
+                admitted.setdefault(a, rec)
+    if unknown_values:
+        return _nested_refusal("unaccounted-writer-value", function=name,
+                               call_site=hex(site["addr"]),
+                               pointer_slot=pointer_slot,
+                               undeclared_values=unknown_values)
+    undeclared = sorted(hex(v) for v in stored if v not in admitted)
+    if undeclared:
+        return _nested_refusal("undeclared-instance", function=name,
+                               call_site=hex(site["addr"]),
+                               pointer_slot=pointer_slot,
+                               undeclared_values=undeclared)
+    instance_rows, targets, shape_failures = [], set(), []
+    for addr in sorted(stored):
+        inst = admitted[addr]
+        inst_type = _s1_static_type(g, addr) or cand["table_type"]
+        is_prefix = inst_type != cand["table_type"]
+        prefix_w = prefix_types.get(inst_type) if is_prefix else None
+        obj_type = ((prefix_w or {}).get("prefix_object_type")
+                    or cand["table_type"])
+        olayout = _s1_struct_layout(g, obj_type) or ulayout
+        sec = g.section_of(addr)
+        if sec not in S1_IMMUTABLE_SECTIONS:
+            shape_failures.append({"instance": inst["name"],
+                                   "addr": hex(addr), "reason": "mutable-section",
+                                   "section": sec})
+            continue
+        size = None
+        if inst.get("local_const_table"):
+            # The containing symbol is the whole array; the instance extent is
+            # one element, whose stride is the declared element type's size.
+            size = inst.get("element_size")
+        else:
+            for raw in (getattr(g, "names_at", {}) or {}).get(addr, ()):
+                raw_sym = (raw or "").split("@")[0]
+                if raw_sym in (getattr(g, "sym_sizes", {}) or {}):
+                    size = g.sym_sizes[raw_sym]
+                    break
+        if size is None or size < olayout["size"]:
+            shape_failures.append({"instance": inst["name"],
+                                   "addr": hex(addr),
+                                   "reason": "symbol-smaller-than-layout",
+                                   "symbol_size": size,
+                                   "layout_size": olayout["size"]})
+            continue
+        members = {}
+        ok = True
+        for row in olayout["fields"]:
+            vals = g.static_slot(addr + row["offset"])
+            ints = {x for x in (vals or ()) if isinstance(x, int)}
+            if len(ints) != 1:
+                ok = False
+                members[hex(row["offset"])] = None
+                continue
+            v = next(iter(ints))
+            if v == 0:
+                guard = None
+                if not row["option"]:
+                    ok = False
+                else:
+                    guard = _s1_null_guard(g, fstart, idx, row["offset"],
+                                           base_reg)
+                    if guard is None:
+                        ok = False
+                members[hex(row["offset"])] = {
+                    "value": None,
+                    "guard": hex(guard) if guard is not None else None}
+                continue
+            if v not in g.start_set:
+                ok = False
+                members[hex(row["offset"])] = {"value": hex(v),
+                                                "not_function": True}
+                continue
+            members[hex(row["offset"])] = {"value": hex(v),
+                                            "symbol": g.funcs.get(v)}
+            if row["offset"] == member_off:
+                targets.add(v)
+        if not ok:
+            shape_failures.append({"instance": inst["name"],
+                                   "addr": hex(addr),
+                                   "reason": "member-not-function-start"})
+            continue
+        instance_rows.append({"addr": hex(addr), "symbol": inst["name"],
+                              "section": sec, "declared_type": inst_type,
+                              "prefix_compatible": is_prefix,
+                              "members": members})
+    if shape_failures or not instance_rows or not targets:
+        return _nested_refusal("instance-shape-or-target", function=name,
+                               call_site=hex(site["addr"]),
+                               pointer_slot=pointer_slot,
+                               shape_failures=shape_failures,
+                               instances=[r["addr"] for r in instance_rows])
+    scanned = sum(len(v) for v in g.precision.insns_by_func.values()) \
+        if _has_insns(g) else 0
+    return {
+        "schema": NESTED_WITNESS_SCHEMA,
+        "class": "nested-static-instance",
+        "contract_bounded": False,
+        "resolved": True,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "operand": {"base_reg": base_reg, "member_offset": hex(member_off)},
+        "pointer_slot": pointer_slot,
+        "member": {"offset": hex(member_off), "name": cand["member"]["name"],
+                    "type": cand["member"]["type"]},
+        "instances": instance_rows,
+        "stored_by": [
+            {"function": g.funcs.get(r["store"]["function"],
+                                      hex(r["store"]["function"])),
+             "store_site": hex(r["store"]["addr"]),
+             "values": [hex(v) for v in sorted(r["values"])],
+             "base_origin": (r["base"].get("origin")
+                             or r["base"].get("symbol_origin")
+                             or ("points-to" if r["base"].get(
+                                 "points_to_owner") else None)),
+             "base_witness": (r["base"].get("witness")
+                              or r["base"].get("symbol_witness")
+                              or r["base"].get("points_to_via")),
+             "base_points_to_owner": r["base"].get("points_to_owner"),
+             "base_points_to_via": r["base"].get("points_to_via"),
+             "base_symbol_owner": r["base"].get("symbol_owner"),
+             "base_symbol_basis": r["base"].get("symbol_basis")}
+            for r in writer_rows],
+        "prefix_compatible_types": sorted(prefix_types),
+        "local_const_tables": [const_tables[v] for v in sorted(const_tables)],
+        "excluded_different_object_stores": excluded,
+        "same_owner_whole_struct_copies": same_owner_copies,
+        "conditions": [
+            "second-level-static-instance-shape",
+            "declared-chain-types",
+            "base-object-qualified",
+            "field-sensitive-writer-index",
+            "image-wide-writer-scan-complete",
+            "declared-instance-writers",
+            "local-const-table-length-from-symbol-and-stride",
+            "every-member-in-image-function-start",
+            "no-unproven-overlapping-non-scalar-store",
+            "same-owner-whole-object-copy-propagates-existing-values",
+        ],
+        "completeness": {
+            "rule": ("every instruction of every function in the analysed "
+                     "image was scanned into a displacement index; every store "
+                     "at the final field's declared member offset (and every "
+                     "non-scalar store whose byte range covers it) is keyed by "
+                     "its owning type: this field's type is a writer, a "
+                     "provably different non-prefix type is disjoint, and an "
+                     "unestablished type is unqualified and either excluded by "
+                     "a source-level negative witness or refuses the site.  A "
+                     "store at a different displacement cannot write the "
+                     "field.  Each hop of a chain contributes only its declared "
+                     "type, never a stored value.  A writer value that is a phi "
+                     "or select of lea instructions into one in-image constant "
+                     "table resolves to every element of that table: the "
+                     "length is the containing immutable symbol's size divided "
+                     "by the declared element stride, so the set is complete "
+                     "even when a branch selects only some elements, and every "
+                     "element's selected member must be an in-image function "
+                     "start.  A non-scalar store that genuinely overlaps the "
+                     "field refuses unless it is a same-owner whole-object "
+                     "copy: such a copy starts at byte 0, covers the whole "
+                     "declared layout, and loads its bytes from the same offset "
+                     "of an object proven to be the same owner type, so it can "
+                     "only propagate a value the field's own writers already "
+                     "produce and adds no target.  No value is inferred from a "
+                     "declared name."),
+            "functions_scanned": len(g.precision.insns_by_func),
+            "instructions_scanned": scanned,
+            "writer_index_key": {"owner_type": final_owner,
+                                 "field": cand["field"],
+                                 "offset": hex(slot_off)},
+            "stores_at_slot": len(rows),
+            "qualified_writers": len(writer_rows),
+            "excluded_different_object_stores": len(excluded),
+            "source_excluded_stores": len(source_excluded),
+            "unproven_base_stores": 0,
+            "unaccounted_values": 0,
+            "overlapping_non_scalar_stores": 0,
+            "same_owner_whole_struct_copies": len(same_owner_copies),
+            "local_const_tables": len(const_tables),
+        },
+        "targets": [hex(t) for t in sorted(targets)],
+        "basis": ("a second-level static-instance dispatch resolved through "
+                  "a field-sensitive (owning type, member offset) writer "
+                  "index: each hop's declared pointee type is taken from the "
+                  "source layout (a one-level object chain is supported), "
+                  "and every store that can write the final pointer field "
+                  "writes a declared static instance of that type (or NULL); "
+                  "the selected member of every stored instance is an "
+                  "in-image function start"),
+    }
+
+
 # ---- S6: triage records (not a class) ---------------------------------- #
 
 S6_FUNCTIONS = {
@@ -8149,6 +11081,31 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                                   + str(s1.get("refusal")))
                 stats["S1_static_instance_refused"] += 1
             continue
+        # S2b: a second-level static-instance dispatch that S1 declines because
+        # the consumer is not in a decoded dispatch table.  Completeness is an
+        # image-wide instruction fact; a refusal keeps the site's existing
+        # class, targets and conservative bound unchanged.
+        nested = nested_static_instance_witness(g, site, name, reachable)
+        if nested is not None:
+            if nested.get("resolved"):
+                targets = {int(t, 16) for t in nested["targets"]}
+                _resolve(g, site, targets | residual, "nested-static-instance",
+                         ("second-level static-instance dispatch: "
+                          + nested["pointer_slot"]["object"] + "."
+                          + nested["pointer_slot"]["field"] + " at "
+                          + nested["pointer_slot"]["offset"] + " -> "
+                          + str(len(nested["instances"]))
+                          + " stored declared static instance(s)"))
+                site["nested_instance_witness"] = nested
+                stats["S2b_nested_instance_resolved"] += 1
+            else:
+                # The refusal is recorded, but the site still falls through to
+                # the weaker evidence classes: those have their own soundness
+                # arguments, and blocking them would lose a previously
+                # established resolution.  The conservative bound is never
+                # shrunk here.
+                site["nested_instance_refusal"] = nested
+                stats["S2b_nested_instance_refused"] += 1
         # A local function pointer built from a finite, fully enumerated set of
         # in-image addresses.  This is a target claim (every stored value is a
         # function start and every writer is accounted for), never a contract.
@@ -8298,7 +11255,7 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
     # close to the court's per-process data limit.
     for attr in ("_fn_cfg_cache", "_reaching_cache", "_reaching_store_cache",
                  "_callers_cache", "_source_cache", "_prologue_delta_cache",
-                 "_direct_call_index_cache"):
+                 "_direct_call_index_cache", "_nested_store_index_cache"):
         if hasattr(g, attr):
             setattr(g, attr, {})
     # The source corpus and every S1 index are the largest allocations here;
@@ -14281,6 +17238,60 @@ def build_receipt(args) -> dict:
                      "chain": w.get("chain")}
                     for name, g in graphs.items() for s in g.sites.values()
                     for w in [s.get("static_instance_refusal") or {}]
+                    if w],
+            },
+            "nested_static_instance": {
+                "schema": NESTED_WITNESS_SCHEMA,
+                "rule": (
+                    "a second-level static-instance dispatch: the context "
+                    "parameter loads a pointer field whose declared pointee is "
+                    "a repr(C) struct; every store to that pointer field in "
+                    "the image is enumerated by scanning every instruction of "
+                    "every function, and each is either excluded as a "
+                    "different object, accounted as a declared static "
+                    "instance (or NULL), or refuses the site; an overlapping "
+                    "non-scalar store refuses as well.  Every stored "
+                    "instance's selected member must be an in-image function "
+                    "start"),
+                "summary": {
+                    "resolved": sum(
+                        1 for g in graphs.values() for s in g.sites.values()
+                        if s.get("nested_instance_witness")),
+                    "refused": sum(
+                        1 for g in graphs.values() for s in g.sites.values()
+                        if s.get("nested_instance_refusal")),
+                    "by_refusal": dict(sorted(collections.Counter(
+                        str((s.get("nested_instance_refusal") or {}).get(
+                            "refusal"))
+                        for g in graphs.values() for s in g.sites.values()
+                        if s.get("nested_instance_refusal")).items())),
+                },
+                "resolved_sites": [
+                    {"dso": name,
+                     "function": w.get("function"),
+                     "call_site": w.get("call_site"),
+                     "pointer_slot": w.get("pointer_slot"),
+                     "member": w.get("member"),
+                     "instances": [r.get("symbol") for r in
+                                   w.get("instances", [])],
+                     "stored_by": w.get("stored_by"),
+                     "conditions": w.get("conditions"),
+                     "targets": w.get("targets")}
+                    for name, g in graphs.items() for s in g.sites.values()
+                    for w in [s.get("nested_instance_witness") or {}]
+                    if w],
+                "refused_sites": [
+                    {"dso": name,
+                     "function": w.get("function"),
+                     "call_site": w.get("call_site"),
+                     "refusal": w.get("refusal"),
+                     "pointer_slot": w.get("pointer_slot"),
+                     "unproven_base_stores": w.get("unproven_base_stores"),
+                     "unaccounted_values": w.get("unaccounted_values"),
+                     "overlapping_non_scalar_stores":
+                         w.get("overlapping_non_scalar_stores")}
+                    for name, g in graphs.items() for s in g.sites.values()
+                    for w in [s.get("nested_instance_refusal") or {}]
                     if w],
             },
             "unclassified_reachable_sites": closure["unclassified_sites"],

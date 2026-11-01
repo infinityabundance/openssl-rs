@@ -2742,6 +2742,1310 @@ def case_stale_range_does_not_discharge():
                          "discharge_receipt": control.get("discharge_receipt")}})
 
 
+# --------------------------------------------------------------------------- #
+# S2b: nested static-instance dispatch (image-wide writer completeness)
+# --------------------------------------------------------------------------- #
+
+
+def _nested_fixture(*, extra_instance=False, rogue_value=False,
+                    unproven_writer=False, c_void_writer=False):
+    """A second-level dispatch plus a controlled set of pointer-field writers.
+
+    The consumer loads ``ctx.hw`` (offset 0xb8) and calls ``hw.cipher``
+    (offset 0x8).  ``HW_A`` and ``HW_B`` are declared ``static Hw`` instances;
+    every mutation below changes only the writer population.
+    """
+    class _P:
+        pass
+
+    class G:
+        name = "nested-fixture.so"
+        source_root = None
+        start_set = {0x3000, 0x3100, 0x3200, 0x3300, 0x3400}
+        funcs = {0x1000: "consumer", 0x2000: "init_a",
+                 0x2100: "init_b", 0x2200: "rogue_writer",
+                 0x2300: "unproven_writer", 0x2400: "typed_writer",
+                 0x2500: "get_ptr",
+                 0x3000: "f0", 0x3100: "f1", 0x3200: "f2",
+                 0x3300: "f3", 0x3400: "f4"}
+        all_syms = dict(funcs)
+        names_at = {0x9000: {"HW_A"}, 0x9100: {"HW_B"},
+                    0x3000: {"f0"}, 0x3100: {"f1"}, 0x3200: {"f2"},
+                    0x3300: {"f3"}, 0x3400: {"f4"}}
+        sym_sizes = {"HW_A": 16, "HW_B": 16}
+        dynamic_defs = {}
+        taken_code = set()
+        slot_funcs = {}
+
+        def section_of(self, a):
+            return ".data.rel.ro" if a in (0x9000, 0x9100) else ".text"
+
+        def static_slot(self, a):
+            return {0x9000: {0x3000}, 0x9008: {0x3100},
+                    0x9100: {0x3000}, 0x9108: {0x3200}}.get(a)
+
+    g = G()
+    p = _P()
+    consumer = [(0x1000, "mov    0xb8(%rdi),%rax"),
+                (0x1004, "call   *0x8(%rax)")]
+    writer_a = [(0x2000, "mov    $0x9000,%rax"),
+                (0x2004, "mov    %rax,0xb8(%rdi)")]
+    writer_b = [(0x2100, "mov    $0x9100,%rax"),
+                (0x2104, "mov    %rax,0xb8(%rdi)")]
+    rogue = [(0x2200, "mov    $0xc000,%rax"),
+             (0x2204, "mov    %rax,0xb8(%rdi)")]
+    unproven = [(0x2300, "call   0x2500"),
+                (0x2304, "mov    $0x9000,%rdx"),
+                (0x2308, "mov    %rdx,0xb8(%rax)")]
+    typed = [(0x2400, "mov    $0x9000,%rax"),
+             (0x2404, "mov    %rax,0xb8(%rdi)")]
+    p.insns_by_func = {0x1000: consumer, 0x2000: writer_a,
+                       0x2100: writer_b, 0x2200: rogue,
+                       0x2300: unproven, 0x2400: typed,
+                       0x2500: [(0x2500, "ret")]}
+    if extra_instance:
+        p.insns_by_func[0x2100] = writer_b
+    else:
+        del p.insns_by_func[0x2100]
+    if not rogue_value:
+        del p.insns_by_func[0x2200]
+    if not unproven_writer:
+        del p.insns_by_func[0x2300]
+    if not c_void_writer:
+        del p.insns_by_func[0x2400]
+    g.precision = p
+    g._s1_ctx_cache = {0x1000: {"file": "src/nested.rs",
+                                "function": "consumer", "line": 1,
+                                "var": "ctx", "type": "Ctx",
+                                "param": "vctx", "param_index": 0,
+                                "declared": "vctx: *mut Ctx"}}
+    g._s1_docs_cache = {"src/nested.rs": (
+        "#[repr(C)]\n"
+        "pub struct Ctx {\n"
+        "    pub pad: [u8; 0xb8],\n"
+        "    pub hw: *const Hw,\n"
+        "    pub other: usize,\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Hw {\n"
+        "    pub init: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+        "    pub cipher: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+        "}\n"
+        "static HW_A: Hw = Hw { init: f0, cipher: f1 };\n"
+        "static HW_B: Hw = Hw { init: f0, cipher: f2 };\n")}
+
+    def span(header, body):
+        return {"file": "src/nested.rs", "line": 10, "header": header,
+                "body": body}
+
+    g._s1_writer_src_cache = {
+        0x2000: {"file": "src/nested.rs", "name": "init_a", "via": "module",
+                 "span": span("unsafe extern \"C\" fn init_a(vctx: *mut Ctx, "
+                               "hw: *const Hw)",
+                               "(*vctx).hw = hw;")},
+        0x2100: {"file": "src/nested.rs", "name": "init_b", "via": "module",
+                 "span": span("unsafe extern \"C\" fn init_b(vctx: *mut Ctx, "
+                               "hw: *const Hw)",
+                               "(*vctx).hw = hw;")},
+        0x2200: {"file": "src/nested.rs", "name": "rogue_writer",
+                 "via": "module",
+                 "span": span("unsafe extern \"C\" fn rogue_writer("
+                               "vctx: *mut Ctx)", "(*vctx).hw = 0xc000;")},
+        0x2300: {"file": "src/nested.rs", "name": "unproven_writer",
+                 "via": "module",
+                 "span": span("unsafe extern \"C\" fn unproven_writer("
+                               "vctx: *mut Ctx)", "(*vctx).hw = get();")},
+        0x2400: {"file": "src/nested.rs", "name": "typed_writer",
+                 "via": "module",
+                 "span": span("unsafe extern \"C\" fn typed_writer("
+                               "vctx: *mut c_void, hw: *const Hw)",
+                               "let ctx = vctx.cast::<Ctx>(); "
+                               "(*ctx).hw = hw;")},
+        0x2500: {"file": "src/nested.rs", "name": "get_ptr",
+                 "via": "module",
+                 "span": span("unsafe extern \"C\" fn get_ptr("
+                               ") -> *mut c_void", "core::ptr::null_mut()")},
+    }
+    site = {"kind": "call", "func": 0x1000, "addr": 0x1004,
+            "text": "call   *0x8(%rax)", "targets": set(),
+            "unresolved": True, "reason": "base-slot-partial",
+            "class": "field", "field_offsets": {0xb8}, "seam": None}
+    return g, site
+
+
+def _alloc_fixture(mode):
+    """A store through an in-function allocation of a known block size.
+
+    ``mode`` selects the control: a unique declared layout of the allocation
+    size proves; two layouts of that size refuse and name both; a dynamic
+    size refuses; and a store whose base is a load from the allocation (not
+    the allocation result itself) refuses.
+    """
+    class _P:
+        def switch_targets(self, base, site_addr=None):
+            return set()
+
+    class G:
+        name = "nested-alloc-fixture.so"
+        source_root = None
+        start_set = {0x2500, 0x3000, 0x3100, 0x3200}
+        funcs = {0x1000: "consumer", 0x2000: "alloc_writer",
+                 0x2500: "alloc",
+                 0x3000: "f0", 0x3100: "f1", 0x3200: "f2"}
+        all_syms = dict(funcs)
+        names_at = {0x9000: {"HW_A"}, 0x9100: {"HW_B"},
+                    0x3000: {"f0"}, 0x3100: {"f1"}, 0x3200: {"f2"}}
+        sym_sizes = {"HW_A": 16, "HW_B": 16}
+        dynamic_defs = {}
+        taken_code = set()
+        slot_funcs = {}
+        slot_syms = {0x8000: {"CRYPTO_zalloc"}}
+
+        def section_of(self, a):
+            return ".data.rel.ro" if a in (0x9000, 0x9100) else ".text"
+
+        def static_slot(self, a):
+            return {0x9000: {0x3000}, 0x9008: {0x3100},
+                    0x9100: {0x3000}, 0x9108: {0x3200}}.get(a)
+
+    g = G()
+    p = _P()
+    consumer = [(0x1000, "mov    0xb8(%rdi),%rax"),
+                (0x1004, "call   *0x8(%rax)")]
+    writer = [(0x2000, "mov    $0xd0,%edi"),
+              (0x2005, "call   *0x8000(%rip)        # 8000 "
+                       "<CRYPTO_zalloc@@OPENSSL_3.0.0>"),
+              (0x200b, "mov    (%rax),%rdx"),
+              (0x200e, "mov    $0x9000,%rcx"),
+              (0x2014, "mov    %rcx,0xb8(%rdx)"),
+              (0x2018, "ret")]
+    if mode == "size-unresolved":
+        writer = [(0x2000, "mov    %esi,%edi"),
+                  (0x2002, "call   *0x8000(%rip)        # 8000 "
+                           "<CRYPTO_zalloc@@OPENSSL_3.0.0>"),
+                  (0x2008, "mov    $0x9000,%rcx"),
+                  (0x200e, "mov    %rcx,0xb8(%rax)"),
+                  (0x2012, "ret")]
+    elif mode in ("ambiguous", "ambiguous-no-source-form"):
+        writer = [(0x2000, "mov    $0xd0,%edi"),
+                  (0x2005, "call   *0x8000(%rip)        # 8000 "
+                           "<CRYPTO_zalloc@@OPENSSL_3.0.0>"),
+                  (0x200b, "mov    $0x9000,%rcx"),
+                  (0x2011, "mov    %rcx,0xb8(%rax)"),
+                  (0x2015, "ret")]
+    elif mode == "box-shared":
+        # The size is shared with `Other`; only the Box turbofish names B.
+        writer = [(0x2000, "mov    $0xd0,%edi"),
+                  (0x2005, "call   *0x8000(%rip)        # 8000 "
+                           "<__rust_alloc@@GLIBC_2.34>"),
+                  (0x200b, "mov    $0x9000,%rcx"),
+                  (0x2011, "mov    %rcx,0xb8(%rax)"),
+                  (0x2015, "ret")]
+    elif mode in ("ctor-return", "ctor-generic"):
+        writer = [(0x2000, "mov    $0xd0,%edi"),
+                  (0x2005, "call   2500 <alloc>"),
+                  (0x200b, "mov    $0x9000,%rcx"),
+                  (0x2011, "mov    %rcx,0xb8(%rax)"),
+                  (0x2015, "ret")]
+    elif mode == "ctor-body":
+        # The writer is a generated wrapper: its whole body is one call, and
+        # the allocation site (and its declared type) is in that callee.
+        writer = [(0x2000, "mov    $0xd0,%edi"),
+                  (0x2005, "call   *0x8000(%rip)        # 8000 "
+                           "<CRYPTO_zalloc@@OPENSSL_3.0.0>"),
+                  (0x200b, "mov    $0x9000,%rcx"),
+                  (0x2011, "mov    %rcx,0xb8(%rax)"),
+                  (0x2015, "ret")]
+    elif mode != "base-not-alloc":
+        writer = [(0x2000, "mov    $0xd0,%edi"),
+                  (0x2005, "call   *0x8000(%rip)        # 8000 "
+                           "<CRYPTO_zalloc@@OPENSSL_3.0.0>"),
+                  (0x200b, "mov    $0x9000,%rcx"),
+                  (0x2011, "mov    %rcx,0xb8(%rax)"),
+                  (0x2015, "ret")]
+    p.insns_by_func = {0x1000: consumer, 0x2000: writer}
+    g.precision = p
+    g._s1_ctx_cache = {0x1000: {"file": "src/alloc_size.rs",
+                                "function": "consumer", "line": 1,
+                                "var": "ctx", "type": "Ctx",
+                                "param": "vctx", "param_index": 0,
+                                "declared": "vctx: *mut Ctx"}}
+    docs = ("#[repr(C)]\n"
+            "pub struct Ctx {\n"
+            "    pub pad: [u8; 0xb8],\n"
+            "    pub hw: *const Hw,\n"
+            "    pub other: usize,\n"
+            "}\n"
+            "#[repr(C)]\n"
+            "pub struct Hw {\n"
+            "    pub init: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+            "    pub cipher: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+            "}\n"
+            "#[repr(C)]\n"
+            "pub struct Wide {\n"
+            "    pub base: Ctx,\n"
+            "    pub extra: u64,\n"
+            "}\n")
+    if mode in ("ambiguous", "ambiguous-no-source-form"):
+        docs += ("#[repr(C)]\n"
+                 "pub struct WideB {\n"
+                 "    pub base: Ctx,\n"
+                 "    pub extra2: u64,\n"
+                 "}\n")
+    if mode in ("ambiguous-no-source-form", "ctor-return", "ctor-generic"):
+        # Rule 1 must be absent: the store function has no allocation form.
+        docs += ("fn alloc_writer() {\n"
+                 "    unsafe { core::ptr::write(0 as *mut u64, 0); }\n"
+                 "}\n")
+    if mode in ("box-shared", "ctor-return", "ctor-generic", "ctor-body"):
+        # A same-size peer: the size rule cannot decide; only rules 1/2 can.
+        docs += ("#[repr(C)]\n"
+                 "pub struct Other {\n"
+                 "    pub pad: [u8; 0xb8],\n"
+                 "    pub hw: *const Hw,\n"
+                 "    pub other: usize,\n"
+                 "    pub extra: u64,\n"
+                 "}\n")
+    if mode in ("box-shared",):
+        g.slot_syms = {0x8000: {"__rust_alloc"}}
+        docs += ("fn alloc_writer() {\n"
+                 "    let _b = Box::<Wide>::new(Wide { extra: 0 });\n"
+                 "}\n")
+    if mode == "ctor-body":
+        docs += ("fn alloc_writer() {\n"
+                 "    unsafe { make() }\n"
+                 "}\n"
+                 "fn make() -> *mut c_void {\n"
+                 "    let Some(p) = OwnedCtx::<Wide>::new() else {\n"
+                 "        return core::ptr::null_mut();\n"
+                 "    };\n"
+                 "    p.into_raw().cast()\n"
+                 "}\n")
+    if mode == "ctor-return":
+        docs += "fn alloc() -> *mut Wide {\n    core::ptr::null_mut()\n}\n"
+    if mode == "ctor-generic":
+        docs += "fn alloc() -> *mut T {\n    core::ptr::null_mut()\n}\n"
+    docs += ("static HW_A: Hw = Hw { init: f0, cipher: f1 };\n"
+             "static HW_B: Hw = Hw { init: f0, cipher: f2 };\n")
+    g._s1_docs_cache = {"src/alloc_size.rs": docs}
+    site = {"kind": "call", "func": 0x1000, "addr": 0x1004,
+            "text": "call   *0x8(%rax)", "targets": set(),
+            "unresolved": True, "reason": "base-slot-partial",
+            "class": "field", "field_offsets": {0xb8}, "seam": None}
+    return g, site
+
+
+def case_nested_allocation_size_attribution():
+    """An allocation-backed base is typed only by a unique block size."""
+    g, site = _alloc_fixture("unique")
+    unique = cc.nested_static_instance_witness(g, site, "consumer")
+    unique_ok = (isinstance(unique, dict) and unique.get("resolved")
+                 and unique.get("targets") == ["0x3100"]
+                 and unique["completeness"]["unproven_base_stores"] == 0
+                 and unique["completeness"]["stores_at_slot"] == 1)
+
+    g, site = _alloc_fixture("ambiguous")
+    ambiguous = cc.nested_static_instance_witness(g, site, "consumer")
+    amb_rows = ambiguous.get("unproven_base_stores") or []
+    ambiguous_ok = (isinstance(ambiguous, dict)
+                    and not ambiguous.get("resolved")
+                    and ambiguous.get("refusal") == "writer-set-incomplete"
+                    and any((row.get("field_sensitive_owner") or {})
+                            .get("candidates") == ["Wide", "WideB"]
+                            for row in amb_rows))
+
+    g, site = _alloc_fixture("size-unresolved")
+    dynamic = cc.nested_static_instance_witness(g, site, "consumer")
+    dyn_rows = dynamic.get("unproven_base_stores") or []
+    dynamic_ok = (isinstance(dynamic, dict)
+                  and not dynamic.get("resolved")
+                  and dynamic.get("refusal") == "writer-set-incomplete"
+                  and any("allocation-size-unresolved"
+                          in str((row.get("field_sensitive_owner") or {})
+                                 .get("why"))
+                          for row in dyn_rows))
+
+    g, site = _alloc_fixture("base-not-alloc")
+    wrong_base = cc.nested_static_instance_witness(g, site, "consumer")
+    base_rows = wrong_base.get("unproven_base_stores") or []
+    base_ok = (isinstance(wrong_base, dict)
+               and not wrong_base.get("resolved")
+               and wrong_base.get("refusal") == "writer-set-incomplete"
+               and any("allocation is not the store base"
+                       in str((row.get("field_sensitive_owner") or {})
+                              .get("why"))
+                       for row in base_rows))
+
+    ok = unique_ok and ambiguous_ok and dynamic_ok and base_ok
+    return _case(
+        "s2b-nested-allocation-size-attribution",
+        "a context field written through an in-function CRYPTO_zalloc of a "
+        "known block size",
+        "attribute the writer only when exactly one declared layout of that "
+        "size has a field covering the store displacement",
+        "a unique-size layout proves and is counted; two same-size layouts "
+        "refuse with both named; a dynamic size refuses; a load from the "
+        "allocation is not the store base and refuses",
+        (f"unique={unique_ok}, ambiguous={ambiguous_ok}, "
+         f"dynamic={dynamic_ok}, wrong_base={base_ok}"),
+        ok, {"unique": unique, "ambiguous": ambiguous,
+             "dynamic": dynamic, "wrong_base": wrong_base})
+
+
+def case_nested_allocation_declared_type():
+    """The allocation expression outranks the allocation size."""
+    g, site = _alloc_fixture("box-shared")
+    box = cc.nested_static_instance_witness(g, site, "consumer")
+    box_sizes = {n for n, _row in cc._s1_decl_candidates(g, 0xd0, 0xb8, 8)}
+    box_ok = (isinstance(box, dict) and box.get("resolved")
+              and box.get("targets") == ["0x3100"]
+              and {"Wide", "Other"} <= box_sizes)
+
+    g, site = _alloc_fixture("ctor-return")
+    ctor = cc.nested_static_instance_witness(g, site, "consumer")
+    ctor_sizes = {n for n, _row in cc._s1_decl_candidates(g, 0xd0, 0xb8, 8)}
+    ctor_ok = (isinstance(ctor, dict) and ctor.get("resolved")
+               and ctor.get("targets") == ["0x3100"]
+               and {"Wide", "Other"} <= ctor_sizes)
+
+    g, site = _alloc_fixture("ambiguous-no-source-form")
+    fallback = cc.nested_static_instance_witness(g, site, "consumer")
+    fb_rows = fallback.get("unproven_base_stores") or []
+    fallback_ok = (isinstance(fallback, dict) and not fallback.get("resolved")
+                   and fallback.get("refusal") == "writer-set-incomplete"
+                   and any((row.get("field_sensitive_owner") or {})
+                           .get("candidates") == ["Wide", "WideB"]
+                           for row in fb_rows))
+
+    g, site = _alloc_fixture("ctor-generic")
+    generic = cc.nested_static_instance_witness(g, site, "consumer")
+    gen_rows = generic.get("unproven_base_stores") or []
+    generic_ok = (isinstance(generic, dict) and not generic.get("resolved")
+                  and generic.get("refusal") == "writer-set-incomplete"
+                  and any("not a concrete declared type"
+                          in str((row.get("field_sensitive_owner") or {})
+                                 .get("why"))
+                          for row in gen_rows))
+
+    g, site = _alloc_fixture("ctor-body")
+    body = cc.nested_static_instance_witness(g, site, "consumer")
+    body_ok = (isinstance(body, dict) and body.get("resolved")
+               and body.get("targets") == ["0x3100"])
+
+    ok = box_ok and ctor_ok and fallback_ok and generic_ok and body_ok
+    return _case(
+        "s2b-nested-allocation-declared-type",
+        "an allocation whose block size is shared by another declared layout",
+        "prefer the type written at the allocation site, then the "
+        "constructor's concrete return type, and use the size only when both "
+        "are absent",
+        "Box::<Wide>::new proves Wide despite a same-size peer; a constructor "
+        "returning *mut Wide proves Wide despite a same-size peer; with no "
+        "form the size fallback still refuses and names both; a constructor "
+        "whose return type is not concrete refuses instead of falling back; "
+        "a wrapper whose whole body is one mapped call reads rule 1 in that "
+        "callee",
+        (f"box={box_ok}, ctor={ctor_ok}, fallback={fallback_ok}, "
+         f"generic={generic_ok}, body={body_ok}"),
+        ok, {"box": box, "ctor": ctor, "fallback": fallback,
+             "generic": generic, "body": body})
+
+
+def case_nested_static_instance_writer_completeness():
+    """The S2b rule is complete only when the writer population is complete."""
+    g, site = _nested_fixture()
+    complete = cc.nested_static_instance_witness(g, site, "consumer")
+    complete_ok = (isinstance(complete, dict) and complete.get("resolved")
+                   and complete.get("targets") == ["0x3100"]
+                   and complete["completeness"]["stores_at_slot"] == 1
+                   and complete["completeness"]["unproven_base_stores"] == 0)
+
+    g, site = _nested_fixture(extra_instance=True)
+    widened = cc.nested_static_instance_witness(g, site, "consumer")
+    widened_ok = (isinstance(widened, dict) and widened.get("resolved")
+                  and widened.get("targets") == ["0x3100", "0x3200"]
+                  and widened["completeness"]["stores_at_slot"] == 2)
+
+    g, site = _nested_fixture(rogue_value=True)
+    rogue = cc.nested_static_instance_witness(g, site, "consumer")
+    rogue_ok = (isinstance(rogue, dict) and not rogue.get("resolved")
+                and rogue.get("refusal") == "unaccounted-writer-value")
+
+    g, site = _nested_fixture(unproven_writer=True)
+    unproven = cc.nested_static_instance_witness(g, site, "consumer")
+    unproven_ok = (isinstance(unproven, dict) and not unproven.get("resolved")
+                   and unproven.get("refusal") == "writer-set-incomplete"
+                   and unproven.get("unproven_base_stores"))
+
+    g, site = _nested_fixture(c_void_writer=True)
+    cast = cc.nested_static_instance_witness(g, site, "consumer")
+    cast_ok = (isinstance(cast, dict) and cast.get("resolved")
+               and cast.get("targets") == ["0x3100"]
+               and any(r.get("base_origin") == "entry-parameter-cast"
+                       for r in cast.get("stored_by", [])))
+
+    ok = complete_ok and widened_ok and rogue_ok and unproven_ok and cast_ok
+    return _case(
+        "s2b-nested-static-instance-writer-completeness",
+        "a context pointer field whose pointee is a repr(C) table of function "
+        "pointers, with a controlled writer population",
+        "prove the member target set from the declared static instances; then "
+        "add a second valid instance, a writer storing an undeclared value, a "
+        "writer whose base is not the context type, and a c_void entry "
+        "parameter whose body cast names the context type",
+        "the complete writer set proves {0x3100}; a new valid instance widens "
+        "it to {0x3100,0x3200}; an undeclared value refuses as "
+        "unaccounted-writer-value; an unproven base refuses as "
+        "writer-set-incomplete; a unique body cast qualifies the base and "
+        "still proves {0x3100}",
+        (f"complete={complete_ok}, widened={widened_ok}, "
+         f"rogue={rogue_ok}, unproven={unproven_ok}, cast={cast_ok}"),
+        ok, {"complete": complete, "widened": widened, "rogue": rogue,
+             "unproven": unproven, "cast": cast})
+
+
+def _nested_const_table_fixture(*, elements=2, bad_element=False):
+    """A context pointer field written by a phi of leas into one const table.
+
+    ``const METHODS: [FnSlot; N]`` lives at ``0x9000`` under one immutable
+    data symbol of size ``8 * N``.  The writer selects elements with a branch
+    (a CFG phi of two ``lea`` instructions); the consumer calls ``slot.f``
+    (member offset 0).  Only ``elements`` and ``bad_element`` change.
+    """
+
+    class _P:
+        pass
+
+    class G:
+        name = "nested-const-table-fixture.so"
+        source_root = None
+        start_set = {0x3000, 0x3100, 0x3200, 0x3300, 0x3400, 0x3500}
+        funcs = {0x1000: "consumer", 0x2000: "set_hw",
+                 0x3000: "f0", 0x3100: "f1", 0x3200: "f2",
+                 0x3300: "f3", 0x3400: "f4", 0x3500: "f5"}
+        all_syms = dict(funcs)
+        all_syms[0x9000] = "anon.const.methods"
+        names_at = {0x9000: {"anon.const.methods"},
+                    0x3000: {"f0"}, 0x3100: {"f1"}, 0x3200: {"f2"},
+                    0x3300: {"f3"}, 0x3400: {"f4"}, 0x3500: {"f5"}}
+        sym_sizes = {"anon.const.methods": 8 * elements}
+        dynamic_defs = {}
+        taken_code = set()
+        slot_funcs = {}
+
+        def section_of(self, a):
+            return ".data.rel.ro" if 0x9000 <= a < 0x9100 else ".text"
+
+        def static_slot(self, a):
+            vals = {0x9000: {0x3100}, 0x9008: {0x3200}, 0x9010: {0x3300}}
+            if bad_element:
+                vals[0x9008] = {0xC000}
+            return vals.get(a)
+
+    g = G()
+    p = _P()
+    # A CFG phi: each branch materialises one element of the same table.
+    writer = [(0x2000, "test   %esi,%esi"),
+              (0x2001, "je     2008"),
+              (0x2002, "lea    0x9000(%rip),%rcx        # 9000"),
+              (0x2007, "jmp    200a"),
+              (0x2008, "lea    0x9008(%rip),%rcx        # 9008"),
+              (0x200a, "mov    %rcx,0xb0(%rdi)")]
+    p.insns_by_func = {0x1000: [(0x1000, "mov    0xb0(%rdi),%rax"),
+                                (0x1004, "call   *(%rax)")],
+                       0x2000: writer}
+    g.precision = p
+    g._s1_ctx_cache = {0x1000: {"file": "src/const_table.rs",
+                                "function": "consumer", "line": 1,
+                                "var": "ctx", "type": "Ctx",
+                                "param": "vctx", "param_index": 0,
+                                "declared": "vctx: *mut Ctx"}}
+    g._s1_docs_cache = {"src/const_table.rs": (
+        "#[repr(C)]\n"
+        "pub struct Ctx {\n"
+        "    pub pad: [u8; 0xb0],\n"
+        "    pub hw: *const FnSlot,\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct FnSlot {\n"
+        "    pub f: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+        "}\n")}
+    g._s1_writer_src_cache = {
+        0x2000: {"file": "src/const_table.rs", "name": "set_hw",
+                 "via": "module",
+                 "span": {"file": "src/const_table.rs", "line": 10,
+                          "header": ("unsafe extern \"C\" fn set_hw("
+                                     "vctx: *mut Ctx, hw: *const FnSlot)"),
+                          "body": ("(*vctx).hw = if compressed { &METHODS[1] } "
+                                   "else { &METHODS[0] };")}},
+    }
+    site = {"kind": "call", "func": 0x1000, "addr": 0x1004,
+            "text": "call   *(%rax)", "targets": set(),
+            "unresolved": True, "reason": "base-slot-partial",
+            "class": "field", "field_offsets": {0xB0}, "seam": None}
+    return g, site
+
+
+def case_nested_local_const_table_phi():
+    """A phi of leas into one const table resolves to the complete table."""
+    g, site = _nested_const_table_fixture(elements=2)
+    two = cc.nested_static_instance_witness(g, site, "consumer")
+    two_ok = (isinstance(two, dict) and two.get("resolved")
+              and two.get("targets") == ["0x3100", "0x3200"]
+              and two.get("local_const_tables")
+              and two["local_const_tables"][0]["count"] == 2)
+
+    g, site = _nested_const_table_fixture(elements=3)
+    three = cc.nested_static_instance_witness(g, site, "consumer")
+    three_ok = (isinstance(three, dict) and three.get("resolved")
+                and three.get("targets") == ["0x3100", "0x3200", "0x3300"]
+                and three["local_const_tables"][0]["count"] == 3)
+
+    g, site = _nested_const_table_fixture(elements=3, bad_element=True)
+    bad = cc.nested_static_instance_witness(g, site, "consumer")
+    bad_ok = (isinstance(bad, dict) and not bad.get("resolved")
+              and bad.get("refusal") == "writer-set-incomplete"
+              and any(row.get("reason") ==
+                      "local-const-table-element-not-function"
+                      for row in bad.get("unaccounted_values") or ()))
+
+    ok = two_ok and three_ok and bad_ok
+    return _case(
+        "s2b-nested-local-const-table-phi",
+        "a context pointer field whose value is a CFG phi of two leas into "
+        "one in-image const table, with the consumer calling slot.f",
+        "prove the two selected elements; then declare a third element no lea "
+        "selects; then make one element's selected member a non-function",
+        "the phi proves exactly {0x3100,0x3200}; the length comes from the "
+        "containing symbol and stride, so the 3-element table proves the "
+        "complete {0x3100,0x3200,0x3300} even though only two leas name it; "
+        "a non-function member refuses with the specific element reason",
+        (f"two={two_ok}, three={three_ok}, bad={bad_ok}"),
+        ok, {"two": two, "three": three, "bad": bad})
+
+
+def _nested_chain_fixture(*, second_writer=False, other_type=False,
+                          vector_same=False, vector_other=False,
+                          whole_copy=False):
+    """A one-level chain ``ctx->key->hw`` with a controlled writer set.
+
+    The call reads ``hw->cipher`` (member offset 8).  Writers store the table
+    pointer into ``Key.hw`` at offset 0; a store at the *same displacement*
+    through an ``Other`` base is present only when requested, and a vector
+    copy either shares the ``Key`` owner type (a real overlap) or an ``Other``
+    one (provably disjoint).
+    """
+
+    class _P:
+        pass
+
+    class G:
+        name = "nested-chain-fixture.so"
+        source_root = None
+        start_set = {0x3000, 0x3100, 0x3200, 0x3300, 0x3400}
+        funcs = {0x1000: "consumer", 0x2000: "init_a", 0x2100: "init_b",
+                 0x2200: "other_init", 0x2300: "vector_same",
+                 0x2400: "vector_other", 0x2500: "copy_key",
+                 0x3000: "f0", 0x3100: "f1", 0x3200: "f2",
+                 0x3300: "f3", 0x3400: "f4"}
+        all_syms = dict(funcs)
+        names_at = {0x9000: {"HW_A"}, 0x9100: {"HW_B"},
+                    0x3000: {"f0"}, 0x3100: {"f1"}, 0x3200: {"f2"},
+                    0x3300: {"f3"}, 0x3400: {"f4"}}
+        sym_sizes = {"HW_A": 16, "HW_B": 16}
+        dynamic_defs = {}
+        taken_code = set()
+        slot_funcs = {}
+
+        def section_of(self, a):
+            return ".data.rel.ro" if a in (0x9000, 0x9100) else ".text"
+
+        def static_slot(self, a):
+            return {0x9000: {0x3000}, 0x9008: {0x3100},
+                    0x9100: {0x3000}, 0x9108: {0x3200}}.get(a)
+
+    g = G()
+    p = _P()
+    consumer = [(0x1000, "mov    (%rdi),%rax"),
+                (0x1004, "mov    (%rax),%rax"),
+                (0x1008, "call   *0x8(%rax)")]
+    init_a = [(0x2000, "mov    $0x9000,%rax"),
+              (0x2004, "mov    %rax,(%rdi)")]
+    init_b = [(0x2100, "mov    $0x9100,%rax"),
+              (0x2104, "mov    %rax,(%rdi)")]
+    other = [(0x2200, "mov    $0xc000,%rax"),
+             (0x2204, "mov    %rax,(%rdi)")]
+    vec_same = [(0x2300, "movups %xmm0,(%rdi)")]
+    vec_other = [(0x2400, "movups %xmm0,(%rdi)")]
+    copy_key = [(0x2500, "movups (%rsi),%xmm0"),
+                (0x2502, "movups %xmm0,(%rdi)")]
+    p.insns_by_func = {0x1000: consumer, 0x2000: init_a}
+    if second_writer:
+        p.insns_by_func[0x2100] = init_b
+    if other_type:
+        p.insns_by_func[0x2200] = other
+    if vector_same:
+        p.insns_by_func[0x2300] = vec_same
+    if vector_other:
+        p.insns_by_func[0x2400] = vec_other
+    if whole_copy:
+        p.insns_by_func[0x2500] = copy_key
+    g.precision = p
+    g._s1_ctx_cache = {0x1000: {"file": "src/chain.rs",
+                                "function": "consumer", "line": 1,
+                                "var": "ctx", "type": "Ctx",
+                                "param": "ctx", "param_index": 0,
+                                "declared": "ctx: *mut Ctx"}}
+    g._s1_docs_cache = {"src/chain.rs": (
+        "#[repr(C)]\n"
+        "pub struct Ctx {\n"
+        "    pub key: *const Key,\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Key {\n"
+        "    pub hw: *const Hw,\n"
+        "    pub pad: [u8; 8],\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Hw {\n"
+        "    pub init: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+        "    pub cipher: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Other {\n"
+        "    pub hw: *const u8,\n"
+        "}\n"
+        "static HW_A: Hw = Hw { init: f0, cipher: f1 };\n"
+        "static HW_B: Hw = Hw { init: f0, cipher: f2 };\n")}
+
+    def span(header, body):
+        return {"file": "src/chain.rs", "line": 10, "header": header,
+                "body": body}
+
+    g._s1_writer_src_cache = {
+        0x2000: {"file": "src/chain.rs", "name": "init_a", "via": "module",
+                 "span": span("unsafe extern \"C\" fn init_a(key: *mut Key)",
+                               "(*key).hw = &HW_A;")},
+        0x2100: {"file": "src/chain.rs", "name": "init_b", "via": "module",
+                 "span": span("unsafe extern \"C\" fn init_b(key: *mut Key)",
+                               "(*key).hw = &HW_B;")},
+        0x2200: {"file": "src/chain.rs", "name": "other_init",
+                 "via": "module",
+                 "span": span("unsafe extern \"C\" fn other_init("
+                               "o: *mut Other)", "(*o).hw = 0xc000;")},
+        0x2300: {"file": "src/chain.rs", "name": "vector_same",
+                 "via": "module",
+                 "span": span("unsafe extern \"C\" fn vector_same("
+                               "key: *mut Key)",
+                               "core::ptr::write_bytes(key, 0, 1);")},
+        0x2400: {"file": "src/chain.rs", "name": "vector_other",
+                 "via": "module",
+                 "span": span("unsafe extern \"C\" fn vector_other("
+                               "o: *mut Other)",
+                               "core::ptr::write_bytes(o, 0, 1);")},
+        0x2500: {"file": "src/chain.rs", "name": "copy_key",
+                 "via": "module",
+                 "span": span("unsafe extern \"C\" fn copy_key("
+                               "dst: *mut Key, src: *const Key)",
+                               "*dst = *src;")},
+    }
+    site = {"kind": "call", "func": 0x1000, "addr": 0x1008,
+            "text": "call   *0x8(%rax)", "targets": set(),
+            "unresolved": True, "reason": "base-slot-partial",
+            "class": "field", "field_offsets": {0}, "seam": None}
+    return g, site
+
+
+def case_nested_chain_field_writer_index():
+    """The writer index is keyed by (owning type, field), not displacement."""
+    g, site = _nested_chain_fixture()
+    chain = cc.nested_static_instance_witness(g, site, "consumer")
+    chain_ok = (isinstance(chain, dict) and chain.get("resolved")
+                and chain.get("targets") == ["0x3100"]
+                and chain["completeness"]["stores_at_slot"] == 1
+                and chain["pointer_slot"]["object"] == "Key"
+                and chain["pointer_slot"]["field"] == "hw"
+                and len(chain["pointer_slot"].get("chain") or []) == 2)
+
+    g, site = _nested_chain_fixture(second_writer=True)
+    widened = cc.nested_static_instance_witness(g, site, "consumer")
+    widened_ok = (isinstance(widened, dict) and widened.get("resolved")
+                  and widened.get("targets") == ["0x3100", "0x3200"]
+                  and widened["completeness"]["stores_at_slot"] == 2)
+
+    g, site = _nested_chain_fixture(other_type=True)
+    other = cc.nested_static_instance_witness(g, site, "consumer")
+    other_ok = (isinstance(other, dict) and other.get("resolved")
+                and other.get("targets") == ["0x3100"]
+                and other["completeness"]["excluded_different_object_stores"] >= 1)
+
+    g, site = _nested_chain_fixture(vector_same=True)
+    overlap = cc.nested_static_instance_witness(g, site, "consumer")
+    overlap_ok = bool(isinstance(overlap, dict) and not overlap.get("resolved")
+                      and overlap.get("refusal") == "writer-set-incomplete"
+                      and overlap.get("overlapping_non_scalar_stores"))
+
+    g, site = _nested_chain_fixture(vector_other=True)
+    disjoint = cc.nested_static_instance_witness(g, site, "consumer")
+    disjoint_ok = (isinstance(disjoint, dict) and disjoint.get("resolved")
+                   and disjoint.get("targets") == ["0x3100"])
+
+    ok = (chain_ok and widened_ok and other_ok and overlap_ok and disjoint_ok)
+    return _case(
+        "s2b-nested-chain-field-writer-index",
+        "a one-level object chain ctx->key->hw whose table pointer field is "
+        "written at one displacement by several possible owning types",
+        "resolve only the writers keyed by (Key, hw@0); add a second Key "
+        "writer, a same-displacement Other writer, a same-type vector copy, "
+        "and a different-type vector copy",
+        "the chain proves {0x3100}; a second Key writer widens it to "
+        "{0x3100,0x3200}; the Other store is not counted and does not break "
+        "the proof; the same-type vector copy refuses as "
+        "writer-set-incomplete; the different-type vector copy is disjoint",
+        (f"chain={chain_ok}, widened={widened_ok}, other={other_ok}, "
+         f"overlap={overlap_ok}, disjoint={disjoint_ok}"),
+        ok, {"chain": chain, "widened": widened, "other": other,
+             "overlap": overlap, "disjoint": disjoint})
+
+
+def case_nested_same_owner_whole_struct_copy():
+    """A same-owner whole-object copy cannot add a target."""
+    g, site = _nested_chain_fixture(whole_copy=True)
+    copied = cc.nested_static_instance_witness(g, site, "consumer")
+    copied_ok = (isinstance(copied, dict) and copied.get("resolved")
+                 and copied.get("targets") == ["0x3100"]
+                 and copied.get("same_owner_whole_struct_copies")
+                 and not copied.get("overlapping_non_scalar_stores"))
+
+    g, site = _nested_chain_fixture(vector_same=True)
+    unsourced = cc.nested_static_instance_witness(g, site, "consumer")
+    unsourced_ok = (isinstance(unsourced, dict)
+                    and not unsourced.get("resolved")
+                    and unsourced.get("refusal") == "writer-set-incomplete")
+
+    ok = copied_ok and unsourced_ok
+    return _case(
+        "s2b-nested-same-owner-whole-struct-copy",
+        "a Key.hw pointer field plus a whole-Key copy from another Key object",
+        "add a copy that loads offset 0 of a same-owner source and stores it "
+        "at offset 0 of the destination; keep a copy with no source witness",
+        "the same-owner whole-object copy is accounted and the proven set is "
+        "unchanged ({0x3100}); a copy without a source witness still refuses",
+        (f"copied={copied_ok}, unsourced={unsourced_ok}"),
+        ok, {"copied": copied, "unsourced": unsourced})
+
+
+def _nested_symbol_fixture(*, other=False, undemanglable=False,
+                           whole_copy=False, generic=None):
+    """A Key.hw writer typed only by its function symbol.
+
+    ``Key`` and ``Other`` are distinct repr(C) structs.  The store functions
+    have no source span on purpose, so their base type can come only from the
+    demangled symbol: a method receiver (``<Key as Store>::store``) or the
+    generic argument of a whole-object primitive (``drop_in_place<Key>``).
+    A symbol that names no type, or two types, must keep the refusal.
+    """
+
+    class _P:
+        pass
+
+    class G:
+        name = "nested-symbol-fixture.so"
+        source_root = None
+        start_set = {0x3000, 0x3100, 0x3200, 0x3300, 0x3400}
+        funcs = {0x1000: "consumer",
+                 0x2300: "_RNvMs_Key_store",
+                 0x2400: "_RNvMs_Other_store",
+                 0x2500: "_Rundemanglable_zzz",
+                 0x2600: "_RNvMs_Key_copy",
+                 0x2700: "_Rdrop_in_place_generic",
+                 0x3000: "f0", 0x3100: "f1", 0x3200: "f2",
+                 0x3300: "f3", 0x3400: "f4"}
+        all_syms = dict(funcs)
+        names_at = {0x9000: {"HW_A"}, 0x9100: {"HW_B"},
+                    0x3000: {"f0"}, 0x3100: {"f1"}, 0x3200: {"f2"},
+                    0x3300: {"f3"}, 0x3400: {"f4"}}
+        sym_sizes = {"HW_A": 16, "HW_B": 16}
+        dynamic_defs = {}
+        taken_code = set()
+        slot_funcs = {}
+
+        def section_of(self, a):
+            return ".data.rel.ro" if a in (0x9000, 0x9100) else ".text"
+
+        def static_slot(self, a):
+            return {0x9000: {0x3000}, 0x9008: {0x3100},
+                    0x9100: {0x3000}, 0x9108: {0x3200}}.get(a)
+
+    g = G()
+    p = _P()
+    consumer = [(0x1000, "mov    (%rdi),%rax"),
+                (0x1004, "mov    (%rax),%rax"),
+                (0x1008, "call   *0x8(%rax)")]
+    key_store = [(0x2300, "mov    $0x9000,%rax"),
+                 (0x2304, "mov    %rax,(%rdi)")]
+    other_store = [(0x2400, "mov    $0x9100,%rax"),
+                   (0x2404, "mov    %rax,(%rdi)")]
+    undem = [(0x2500, "mov    $0x9000,%rax"),
+             (0x2504, "mov    %rax,(%rdi)")]
+    copy_key = [(0x2600, "movups (%rdi),%xmm0"),
+                (0x2604, "movups %xmm0,(%rdi)")]
+    generic_store = [(0x2700, "mov    $0x9000,%rax"),
+                     (0x2704, "mov    %rax,(%rdi)")]
+    if generic == "other":
+        generic_store = [(0x2700, "mov    $0x9100,%rax"),
+                         (0x2704, "mov    %rax,(%rdi)")]
+    p.insns_by_func = {0x1000: consumer}
+    if generic in (None, "other"):
+        p.insns_by_func[0x2300] = key_store
+    if other:
+        p.insns_by_func[0x2400] = other_store
+    if undemanglable:
+        p.insns_by_func[0x2500] = undem
+    if whole_copy:
+        p.insns_by_func[0x2600] = copy_key
+    if generic is not None:
+        p.insns_by_func[0x2700] = generic_store
+    g.precision = p
+    g._s1_ctx_cache = {0x1000: {"file": "src/sym.rs",
+                                "function": "consumer", "line": 1,
+                                "var": "ctx", "type": "Ctx",
+                                "param": "ctx", "param_index": 0,
+                                "declared": "ctx: *mut Ctx"}}
+    g._s1_docs_cache = {"src/sym.rs": (
+        "#[repr(C)]\n"
+        "pub struct Ctx {\n"
+        "    pub key: *const Key,\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Key {\n"
+        "    pub hw: *const Hw,\n"
+        "    pub pad: [u8; 8],\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Other {\n"
+        "    pub hw: *const u8,\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Hw {\n"
+        "    pub init: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+        "    pub cipher: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+        "}\n"
+        "static HW_A: Hw = Hw { init: f0, cipher: f1 };\n"
+        "static HW_B: Hw = Hw { init: f0, cipher: f2 };\n"
+        "pub trait Store {\n"
+        "    unsafe fn store(ptr: *mut Self);\n"
+        "    unsafe fn copy(ptr: *mut Self);\n"
+        "}\n")}
+    g._s1_demangle_cache = {
+        0x2300: ("<openssl_rs[abc]::sym::Key as "
+                 "openssl_rs[abc]::sym::Store>::store"),
+        0x2400: ("<openssl_rs[abc]::sym::Other as "
+                 "openssl_rs[abc]::sym::Store>::store"),
+        0x2500: "_Rundemanglable_zzz",
+        0x2600: ("<openssl_rs[abc]::sym::Key as "
+                 "openssl_rs[abc]::sym::Store>::copy"),
+        0x2700: "_Rdrop_in_place_generic",
+    }
+    if generic == "key":
+        g._s1_demangle_cache[0x2700] = (
+            "core::ptr::drop_in_place<openssl_rs[abc]::sym::Key>")
+    elif generic == "other":
+        g._s1_demangle_cache[0x2700] = (
+            "core::ptr::drop_in_place<openssl_rs[abc]::sym::Other>")
+    elif generic == "two":
+        g._s1_demangle_cache[0x2700] = (
+            "core::ptr::drop_in_place<openssl_rs[abc]::sym::Key, "
+            "openssl_rs[abc]::sym::Other>")
+    elif generic == "none":
+        g._s1_demangle_cache[0x2700] = "_Rundemanglable_zzz"
+    site = {"kind": "call", "func": 0x1000, "addr": 0x1008,
+            "text": "call   *0x8(%rax)", "targets": set(),
+            "unresolved": True, "reason": "base-slot-partial",
+            "class": "field", "field_offsets": {0}, "seam": None}
+    return g, site
+
+
+def case_nested_symbol_writer_typing():
+    """A method symbol's receiver type qualifies or excludes a store base."""
+    g, site = _nested_symbol_fixture()
+    typed = cc.nested_static_instance_witness(g, site, "consumer")
+    typed_ok = (isinstance(typed, dict) and typed.get("resolved")
+                and typed.get("targets") == ["0x3100"]
+                and any(r.get("base_symbol_owner") == "Key"
+                        for r in typed.get("stored_by", [])))
+
+    g, site = _nested_symbol_fixture(other=True)
+    other = cc.nested_static_instance_witness(g, site, "consumer")
+    other_ok = (isinstance(other, dict) and other.get("resolved")
+                and other.get("targets") == ["0x3100"]
+                and other["completeness"]["excluded_different_object_stores"] >= 1
+                and any(r.get("symbol_owner") == "Other"
+                        for r in other.get("excluded_different_object_stores", [])))
+
+    g, site = _nested_symbol_fixture(undemanglable=True)
+    undem = cc.nested_static_instance_witness(g, site, "consumer")
+    undem_ok = (isinstance(undem, dict) and not undem.get("resolved")
+                and undem.get("refusal") == "writer-set-incomplete"
+                and undem.get("unproven_base_stores"))
+
+    g, site = _nested_symbol_fixture(whole_copy=True)
+    copied = cc.nested_static_instance_witness(g, site, "consumer")
+    copied_ok = (isinstance(copied, dict) and copied.get("resolved")
+                 and copied.get("targets") == ["0x3100"]
+                 and copied.get("same_owner_whole_struct_copies")
+                 and not copied.get("overlapping_non_scalar_stores"))
+
+    ok = typed_ok and other_ok and undem_ok and copied_ok
+    return _case(
+        "s2b-nested-symbol-writer-typing",
+        "a Key.hw writer whose source is absent but whose mangled method "
+        "symbol names the receiver type",
+        "add a symbol-typed Key writer, a symbol-typed Other writer, an "
+        "undemanglable writer symbol, and a same-owner whole-Key copy",
+        "the Key symbol writer is counted; the Other symbol writer is "
+        "excluded with Other as the witness; the undemanglable symbol keeps "
+        "the writer-set-incomplete refusal; the same-owner copy adds no "
+        "target and leaves the set at {0x3100}",
+        (f"typed={typed_ok}, other={other_ok}, undem={undem_ok}, "
+         f"copied={copied_ok}"),
+        ok, {"typed": typed, "other": other, "undem": undem,
+             "copied": copied})
+
+
+def case_nested_symbol_generic_writer_typing():
+    """A whole-object primitive's generic argument types the store base."""
+    g, site = _nested_symbol_fixture(generic="key")
+    key = cc.nested_static_instance_witness(g, site, "consumer")
+    key_ok = (isinstance(key, dict) and key.get("resolved")
+              and key.get("targets") == ["0x3100"]
+              and any(r.get("base_symbol_owner") == "Key"
+                      and r.get("base_symbol_basis") == "generic-argument"
+                      for r in key.get("stored_by", [])))
+
+    g, site = _nested_symbol_fixture(generic="other")
+    other = cc.nested_static_instance_witness(g, site, "consumer")
+    other_ok = (isinstance(other, dict) and other.get("resolved")
+                and other.get("targets") == ["0x3100"]
+                and any(r.get("symbol_owner") == "Other"
+                        for r in other.get(
+                            "excluded_different_object_stores", [])))
+
+    g, site = _nested_symbol_fixture(generic="none")
+    none = cc.nested_static_instance_witness(g, site, "consumer")
+    none_stores = (none.get("unproven_base_stores") or []) if isinstance(
+        none, dict) else []
+    none_ok = (isinstance(none, dict) and not none.get("resolved")
+               and none.get("refusal") == "writer-set-incomplete"
+               and bool(none_stores)
+               and all(not r.get("symbol_owner") for r in none_stores))
+
+    g, site = _nested_symbol_fixture(generic="two")
+    two = cc.nested_static_instance_witness(g, site, "consumer")
+    two_stores = (two.get("unproven_base_stores") or []) if isinstance(
+        two, dict) else []
+    two_ok = (isinstance(two, dict) and not two.get("resolved")
+              and two.get("refusal") == "writer-set-incomplete"
+              and bool(two_stores)
+              and all(not r.get("symbol_owner") for r in two_stores))
+
+    ok = key_ok and other_ok and none_ok and two_ok
+    return _case(
+        "s2b-nested-symbol-generic-writer-typing",
+        "a sourceless Key.hw writer whose only type evidence is the generic "
+        "argument of the enclosing whole-object primitive symbol",
+        "use drop_in_place<Key>, drop_in_place<Other>, a symbol with no type "
+        "argument, and a symbol naming two candidate types",
+        "the Key instantiation is counted for Key.hw; the Other instantiation "
+        "is excluded as a different owner; the untyped and two-type symbols "
+        "stay unqualified and keep the writer-set-incomplete refusal",
+        (f"key={key_ok}, other={other_ok}, none={none_ok}, two={two_ok}"),
+        ok, {"key": key, "other": other, "none": none, "two": two})
+
+
+def _nested_points_to_fixture(mode):
+    """A Ctx.hw writer whose base type is carried by local dataflow.
+
+    ``Ctx`` and ``Other`` are distinct repr(C) structs; ``Mid`` exists only to
+    make the two-level field-load chain unambiguous.  The consumer reads
+    ``ctx.hw`` at 0xb8 and calls ``hw.cipher`` at 0x8.  The mode selects the
+    one writer under test; a plain ``init_a`` writer keeps the slot populated
+    so a refusal can only come from the mode's store.
+    """
+
+    class _P:
+        pass
+
+    class G:
+        name = "nested-points-fixture.so"
+        source_root = None
+        start_set = {0x3000, 0x3100, 0x3200, 0x3300, 0x3400}
+        funcs = {0x1000: "consumer", 0x2000: "test_writer",
+                 0x2100: "init_a", 0x2200: "copy_other",
+                 0x2300: "copy_same",
+                 0x3000: "f0", 0x3100: "f1", 0x3200: "f2",
+                 0x3300: "f3", 0x3400: "f4"}
+        all_syms = dict(funcs)
+        names_at = {0x9000: {"HW_A"}, 0x9100: {"HW_B"},
+                    0x3000: {"f0"}, 0x3100: {"f1"}, 0x3200: {"f2"},
+                    0x3300: {"f3"}, 0x3400: {"f4"}}
+        sym_sizes = {"HW_A": 16, "HW_B": 16}
+        dynamic_defs = {}
+        taken_code = set()
+        slot_funcs = {}
+
+        def section_of(self, a):
+            return ".data.rel.ro" if a in (0x9000, 0x9100) else ".text"
+
+        def static_slot(self, a):
+            return {0x9000: {0x3000}, 0x9008: {0x3100},
+                    0x9100: {0x3000}, 0x9108: {0x3200}}.get(a)
+
+    g = G()
+    p = _P()
+    consumer = [(0x1000, "mov    0xb8(%rdi),%rax"),
+                (0x1004, "call   *0x8(%rax)")]
+    init_a = [(0x2100, "mov    $0x9000,%rax"),
+              (0x2104, "mov    %rax,0xb8(%rdi)")]
+    if mode == "reborrow":
+        writer = [(0x2000, "lea    0x0(%rdi),%rax"),
+                  (0x2004, "mov    $0x9000,%rcx"),
+                  (0x2008, "mov    %rcx,0xb8(%rax)")]
+        sig = ("unsafe extern \"C\" fn test_writer(vctx: *mut Ctx)",
+               "let p = &mut *vctx; (*p).hw = 0x9000 as *const Hw;")
+    elif mode == "chain":
+        writer = [(0x2000, "mov    0x0(%rdi),%rax"),
+                  (0x2004, "mov    0x0(%rax),%rbx"),
+                  (0x2008, "mov    $0x9000,%rcx"),
+                  (0x200c, "mov    %rcx,0xb8(%rbx)")]
+        sig = ("unsafe extern \"C\" fn test_writer(vctx: *mut Ctx)",
+               "let mid = (*vctx).mid; let p = (*mid).ctx; "
+               "(*p).hw = 0x9000 as *const Hw;")
+    elif mode in ("merge-agree", "merge-disagree"):
+        arm = "%rdi" if mode == "merge-agree" else "%rsi"
+        writer = [(0x2000, "test   %rsi,%rsi"),
+                  (0x2004, "jne    2010"),
+                  (0x2008, "lea    0x0(%rdi),%rax"),
+                  (0x200c, "jmp    2018"),
+                  (0x2010, "lea    0x0(" + arm + "),%rax"),
+                  (0x2018, "mov    $0x9000,%rcx"),
+                  (0x201c, "mov    %rcx,0xb8(%rax)")]
+        if mode == "merge-agree":
+            sig = ("unsafe extern \"C\" fn test_writer(vctx: *mut Ctx, "
+                   "flag: usize)", "let p = &mut *vctx; (*p).hw = 0;")
+        else:
+            sig = ("unsafe extern \"C\" fn test_writer(vctx: *mut Ctx, "
+                   "other: *mut Other)", "let p = &mut *vctx; (*p).hw = 0;")
+    elif mode == "copy-unknown":
+        writer = [(0x2000, "movups 0xb0(%rdi),%xmm0"),
+                  (0x2004, "movups %xmm0,0xb0(%rdi)")]
+        sig = None
+    elif mode in ("copy-other", "copy-same"):
+        writer = [(0x2000, "lea    0x0(%rdi),%rax"),
+                  (0x2004, "movups 0xb0(%rdi),%xmm0"),
+                  (0x2008, "movups %xmm0,0xb0(%rax)")]
+        sig = ("unsafe extern \"C\" fn test_writer(vctx: *mut "
+               + ("Other" if mode == "copy-other" else "Ctx") + ")",
+               "let p = &mut *vctx;")
+    else:
+        raise ValueError(mode)
+    p.insns_by_func = {0x1000: consumer, 0x2000: writer, 0x2100: init_a}
+    if mode == "copy-other":
+        # Both an overlapping copy of a different owner (disjoint) and one of
+        # the same owner (accounted) are present: the proof must resolve and
+        # neither may be mistaken for a value source.
+        p.insns_by_func[0x2200] = [
+            (0x2200, "lea    0x0(%rdi),%rax"),
+            (0x2204, "movups 0xb0(%rdi),%xmm0"),
+            (0x2208, "movups %xmm0,0xb0(%rax)")]
+        p.insns_by_func[0x2300] = [
+            (0x2300, "lea    0x0(%rdi),%rax"),
+            (0x2304, "movups 0xb0(%rdi),%xmm0"),
+            (0x2308, "movups %xmm0,0xb0(%rax)")]
+    g.precision = p
+    g._s1_ctx_cache = {0x1000: {"file": "src/points.rs",
+                                "function": "consumer", "line": 1,
+                                "var": "ctx", "type": "Ctx",
+                                "param": "vctx", "param_index": 0,
+                                "declared": "vctx: *mut Ctx"}}
+    g._s1_docs_cache = {"src/points.rs": (
+        "#[repr(C)]\n"
+        "pub struct Ctx {\n"
+        "    pub mid: *mut Mid,\n"
+        "    pub pad: [u8; 0xb0],\n"
+        "    pub hw: *const Hw,\n"
+        "    pub other: usize,\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Other {\n"
+        "    pub mid: *mut Mid,\n"
+        "    pub pad: [u8; 0xb0],\n"
+        "    pub hw: *const Hw,\n"
+        "    pub other: usize,\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Mid {\n"
+        "    pub ctx: *mut Ctx,\n"
+        "    pub pad: [u8; 8],\n"
+        "}\n"
+        "#[repr(C)]\n"
+        "pub struct Hw {\n"
+        "    pub init: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+        "    pub cipher: unsafe extern \"C\" fn(*mut Ctx) -> c_int,\n"
+        "}\n"
+        "static HW_A: Hw = Hw { init: f0, cipher: f1 };\n"
+        "static HW_B: Hw = Hw { init: f0, cipher: f2 };\n")}
+
+    def span(header, body):
+        return {"file": "src/points.rs", "line": 10, "header": header,
+                "body": body}
+
+    sources = {0x2100: {"file": "src/points.rs", "name": "init_a",
+                       "via": "module",
+                       "span": span("unsafe extern \"C\" fn init_a("
+                                    "vctx: *mut Ctx, hw: *const Hw)",
+                                    "(*vctx).hw = hw;")}}
+    if sig is not None:
+        sources[0x2000] = {"file": "src/points.rs", "name": "test_writer",
+                          "via": "module", "span": span(*sig)}
+    g._s1_writer_src_cache = sources
+    if mode == "copy-other":
+        g._s1_writer_src_cache[0x2200] = {
+            "file": "src/points.rs", "name": "copy_other", "via": "module",
+            "span": span("unsafe extern \"C\" fn copy_other("
+                         "vctx: *mut Other)", "let p = &mut *vctx;")}
+        g._s1_writer_src_cache[0x2300] = {
+            "file": "src/points.rs", "name": "copy_same", "via": "module",
+            "span": span("unsafe extern \"C\" fn copy_same("
+                         "vctx: *mut Ctx)", "let p = &mut *vctx;")}
+    site = {"kind": "call", "func": 0x1000, "addr": 0x1004,
+            "text": "call   *0x8(%rax)", "targets": set(),
+            "unresolved": True, "reason": "base-slot-partial",
+            "class": "field", "field_offsets": {0xb8}, "seam": None}
+    return g, site
+
+
+def case_nested_points_to_reborrow():
+    """A zero-offset reborrow carries the entry parameter's declared type."""
+    g, site = _nested_points_to_fixture("reborrow")
+    res = cc.nested_static_instance_witness(g, site, "consumer")
+    ok = (isinstance(res, dict) and res.get("resolved")
+          and res.get("targets") == ["0x3100"]
+          and any(r.get("function") == "test_writer"
+                  and (r.get("base_points_to_owner") == "Ctx"
+                       or r.get("base_origin") == "entry-parameter")
+                  for r in res.get("stored_by", [])))
+    return _case(
+        "s2b3-points-to-reborrow",
+        "a Ctx.hw writer whose base is a zero-offset reborrow of the entry "
+        "parameter (``lea 0(%rdi),%rax``)",
+        "propagate the parameter binding through the reborrow",
+        "the store is a writer for Ctx.hw and the slot resolves to {0x3100}",
+        str(res.get("targets") if isinstance(res, dict) else res), ok,
+        {"result": res})
+
+
+def case_nested_points_to_field_chain():
+    """Two declared field loads carry the owner type to the store base."""
+    g, site = _nested_points_to_fixture("chain")
+    res = cc.nested_static_instance_witness(g, site, "consumer")
+    ok = (isinstance(res, dict) and res.get("resolved")
+          and res.get("targets") == ["0x3100"]
+          and any(r.get("function") == "test_writer"
+                  for r in res.get("stored_by", [])))
+    return _case(
+        "s2b3-points-to-field-chain",
+        "a Ctx.hw writer reached through Ctx.mid then Mid.ctx",
+        "load the declared pointee type at each declared field offset",
+        "the second load yields Ctx and the slot resolves to {0x3100}",
+        str(res.get("targets") if isinstance(res, dict) else res), ok,
+        {"result": res})
+
+
+def case_nested_points_to_merge_agree():
+    """A CFG merge qualifies when every reaching arm names the same type."""
+    g, site = _nested_points_to_fixture("merge-agree")
+    res = cc.nested_static_instance_witness(g, site, "consumer")
+    ok = (isinstance(res, dict) and res.get("resolved")
+          and res.get("targets") == ["0x3100"]
+          and any(r.get("base_points_to_owner") == "Ctx"
+                  and r.get("base_points_to_via") == "merge"
+                  for r in res.get("stored_by", [])))
+    return _case(
+        "s2b3-points-to-merge-agree",
+        "a store base defined by two branches, both reborrows of the same "
+        "Ctx parameter",
+        "evaluate every reaching definition and qualify only on agreement",
+        "the merge is Ctx and the slot resolves to {0x3100}",
+        str(res.get("targets") if isinstance(res, dict) else res), ok,
+        {"result": res})
+
+
+def case_nested_points_to_merge_disagree():
+    """A merge of two different owners is refused and names both."""
+    g, site = _nested_points_to_fixture("merge-disagree")
+    res = cc.nested_static_instance_witness(g, site, "consumer")
+    stores = (res.get("unproven_base_stores") or []) \
+        if isinstance(res, dict) else []
+    owners = [r.get("field_sensitive_owner") or {} for r in stores]
+    named = any(sorted((o.get("points_to_refusal") or {}).get(
+        "candidates") or []) == ["Ctx", "Other"] for o in owners)
+    ok = (isinstance(res, dict) and not res.get("resolved")
+          and res.get("refusal") == "writer-set-incomplete" and named)
+    return _case(
+        "s2b3-points-to-merge-disagree",
+        "a store base defined by one Ctx arm and one Other arm",
+        "refuse the merge unless every reaching definition agrees",
+        "writer-set-incomplete is kept and both disagreeing types are named",
+        f"resolved={isinstance(res, dict) and res.get('resolved')}, "
+        f"named={named}", ok, {"result": res})
+
+
+def case_nested_points_to_copy_unknown():
+    """An overlapping copy with no established base owner still refuses."""
+    g, site = _nested_points_to_fixture("copy-unknown")
+    res = cc.nested_static_instance_witness(g, site, "consumer")
+    ok = (isinstance(res, dict) and not res.get("resolved")
+          and res.get("refusal") == "writer-set-incomplete"
+          and res.get("overlapping_non_scalar_stores"))
+    return _case(
+        "s2b3-points-to-copy-unknown",
+        "an overlapping 16-byte copy whose writer has no source and no typed "
+        "base",
+        "apply the same propagation to the copy's base",
+        "the owner stays unknown and writer-set-incomplete is kept",
+        f"resolved={isinstance(res, dict) and res.get('resolved')}", ok,
+        {"result": res})
+
+
+def case_nested_points_to_copy_other():
+    """A copy of a different owner is disjoint; a same-owner copy is accounted."""
+    g, site = _nested_points_to_fixture("copy-other")
+    res = cc.nested_static_instance_witness(g, site, "consumer")
+    disjoint = [r for r in res.get("excluded_different_object_stores", [])
+                if (r.get("field_sensitive_owner") == "Other"
+                    or r.get("declared_type") == "Other"
+                    or "Other" in str(r.get("reason") or ""))] \
+        if isinstance(res, dict) else []
+    ok = (isinstance(res, dict) and res.get("resolved")
+          and res.get("targets") == ["0x3100"]
+          and bool(disjoint)
+          and bool(res.get("same_owner_whole_struct_copies"))
+          and not res.get("overlapping_non_scalar_stores"))
+    return _case(
+        "s2b3-points-to-copy-other",
+        "one overlapping copy typed Other and one typed Ctx, both reached "
+        "through a reborrow",
+        "qualify each copy by propagation: Other is disjoint, Ctx is a "
+        "same-owner copy",
+        "the different-owner copy is excluded, the same-owner copy is "
+        "accounted, and the slot resolves to {0x3100}",
+        f"resolved={isinstance(res, dict) and res.get('resolved')}, "
+        f"disjoint={len(disjoint)}, "
+        f"copies={len((res or {}).get('same_owner_whole_struct_copies') or [])}",
+        ok, {"result": res})
+
+
 CASES = (
     case_identical_rebuild,
     case_layout_perturbation,
@@ -2829,6 +4133,28 @@ CASES = (
     # stable identity plus the operation's current coordinate
     case_carried_forward_unreachable_file_removed,
     case_stale_range_does_not_discharge,
+    # S2b: nested static-instance dispatch and image-wide writer completeness
+    case_nested_static_instance_writer_completeness,
+    # S2b: (owning type, field) writer index across a one-level object chain
+    case_nested_chain_field_writer_index,
+    # S2b: a phi/select of leas into one local const table, complete length
+    case_nested_local_const_table_phi,
+    # S2b: a same-owner whole-object copy propagates only existing values
+    case_nested_same_owner_whole_struct_copy,
+    # S2b: a base typed by the enclosing method symbol's receiver
+    case_nested_symbol_writer_typing,
+    # S2b: a base typed by a whole-object primitive's generic argument
+    case_nested_symbol_generic_writer_typing,
+    # S2b: allocation-size attribution of a writer's base object
+    case_nested_allocation_size_attribution,
+    case_nested_allocation_declared_type,
+    # S2b-3: points-to type propagation for a store base and an overlapping copy
+    case_nested_points_to_reborrow,
+    case_nested_points_to_field_chain,
+    case_nested_points_to_merge_agree,
+    case_nested_points_to_merge_disagree,
+    case_nested_points_to_copy_unknown,
+    case_nested_points_to_copy_other,
 )
 
 NOT_COVERED = [
