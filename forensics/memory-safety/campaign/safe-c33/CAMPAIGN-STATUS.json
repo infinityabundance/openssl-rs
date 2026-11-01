@@ -969,6 +969,50 @@
    "hidden_obligations": 0,
    "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B48.json",
    "note": "Site-scoped only. EVP_PKEY_PROVIDER remains OWNERSHIP_RECONSTRUCTED mechanism-wide; the shared B20-TBL-3 and the provider-context writer-set sites stay BLOCKED. Applied at this candidate. B48-RC2-001 is deliberately excluded from this row and stays BLOCKED: its co-boundary P25-VESTIGIAL-MARKER-002 is BLOCKED and its own residual B48-R8 (no test covers the magic-to-key-length mapping) is NOT_RUN, so it cannot be discharged while a co-owning boundary is blocked and its residual test is not run; 67 of the receipt's 68 boundaries are claimed here."
+  },
+  {
+   "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+   "retained_boundaries": [],
+   "retained_state": "BLOCKED",
+   "hidden_obligations": 0,
+   "base_head": "31cea14c5",
+   "source_state": "committed",
+   "receipt": "boundary-sweep-B46",
+   "discharged_boundaries": [
+    "B46-SSL-CONF-001",
+    "B46-SSL-CONF-002",
+    "B46-SSL-CONF-003",
+    "B46-SSL-CONF-004",
+    "B46-SSL-CONF-005",
+    "B46-SSL-CONF-006",
+    "B46-SSL-CONF-007"
+   ],
+   "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B46.json",
+   "note": "Site-scoped only. SSL_SESSION remains OWNERSHIP_RECONSTRUCTED; B46-R1 stays closed:false; the wrapped SSL/SSL_CTX exclusivity and SSL_CONF_CTX_free serialisation remain external caller obligations. Applied at the candidate that contains this row, and measured at that clean candidate."
+  },
+  {
+   "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+   "retained_boundaries": [],
+   "retained_state": "BLOCKED",
+   "hidden_obligations": 0,
+   "base_head": "31cea14c5",
+   "source_state": "committed",
+   "receipt": "boundary-sweep-B47",
+   "discharged_boundaries": [
+    "B47-SSL-CONF-001",
+    "B47-SSL-CONF-002",
+    "B47-SSL-CONF-003",
+    "B47-CIPH-001",
+    "B47-CIPH-002",
+    "B47-RSA-001",
+    "B47-RSA-002",
+    "B47-RSA-003",
+    "B47-TRACE-001",
+    "B47-TRACE-002",
+    "B47-CT-001"
+   ],
+   "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B47.json",
+   "note": "Site-scoped only. SSL_SESSION remains OWNERSHIP_RECONSTRUCTED; B46-R1 stays closed:false; the wrapped SSL/SSL_CTX exclusivity and SSL_CONF_CTX_free serialisation remain external caller obligations. Applied at the candidate that contains this row, and measured at that clean candidate."
   }
  ],
  "defects_closed": [
