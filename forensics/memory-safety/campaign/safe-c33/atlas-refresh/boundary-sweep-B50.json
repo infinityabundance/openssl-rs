@@ -1,0 +1,757 @@
+{
+ "receipt": "boundary-sweep-B50",
+ "date": "2026-11-01",
+ "campaign": "safe-c33 shared-contract establishment (E2 follow-on: the X509_VERIFY_POLICY extension-method i2s printers)",
+ "subphase": "B50 takes the 11 i2s sites left BLOCKED by B49. All 11 are slot callbacks reached only through X509V3_EXT_print, whose B49 registry read hold already spans the i2s arm; i2s therefore needs no second hold, but it does need the row live through the callback because enum_i2s reads method->usr_data. The subphase adds fn-level # Safety contracts, two functional tests and one mutation-proven dispatcher-guard canary. The discharge is NOT applied: CAMPAIGN-STATUS.json is untouched and the closure was not run.",
+ "candidate": {
+  "base_head": "db85674a0",
+  "source_state": "uncommitted delta on db85674a0 (no commit was made)",
+  "base_commit": "db85674a049533619a20fb55a8fa2e75f0c0a75c",
+  "base_commit_subject": "evidence(x509): transcribe the B49 approval and land it",
+  "branch": "stage/p25/element7-s2b",
+  "working_tree": "dirty at db85674a0: eleven i2s files carry fn-level # Safety contracts and src/x509/v3_prn.rs carries one clarifying comment plus two tests. files_sha256 below is that working tree, not a commit; the candidate must be committed and re-frozen (S') before any application. fmt/clippy/x509 tests were run in the court container against this tree.",
+  "files": [
+   "src/x509/v3_enum.rs",
+   "src/x509/v3_group_ac.rs",
+   "src/x509/v3_ia5.rs",
+   "src/x509/v3_ind_iss.rs",
+   "src/x509/v3_int.rs",
+   "src/x509/v3_no_ass.rs",
+   "src/x509/v3_no_rev_avail.rs",
+   "src/x509/v3_single_use.rs",
+   "src/x509/v3_skid.rs",
+   "src/x509/v3_soa_id.rs",
+   "src/x509/v3_utf8.rs",
+   "src/x509/v3_prn.rs"
+  ],
+  "files_sha256": {
+   "src/x509/v3_enum.rs": "e05a92f50e8414206420d406f7b66b256317f1bd322205f1086bcb8bbe76d44d",
+   "src/x509/v3_group_ac.rs": "3f540d0993677f42f5e82543d86c8f5c34fa670376b062126aea5a540ccc0e65",
+   "src/x509/v3_ia5.rs": "6fbbb2a7fb28423bbf7d33376522626e38804b2384b51689fa32b25a109e98d0",
+   "src/x509/v3_ind_iss.rs": "50b01d0e56cb27641cb43fda072effc2340fd9ce2aec41b5436b7be3184126cb",
+   "src/x509/v3_int.rs": "6f0498f22083349590cca54e7870a6f80046b8642db7f6b4526efb19414ed4c3",
+   "src/x509/v3_no_ass.rs": "271e95d195c0eeb0ba3839fd3fe3865630387e113cb6a7de23370cacf83401fe",
+   "src/x509/v3_no_rev_avail.rs": "580f82cc08818a7372423aaefa32f225f3eda772853fadfa0770e714ebfb3cca",
+   "src/x509/v3_single_use.rs": "714a3b615969bde097511d247144e1e97406e39cfc80079566cf168d86c6adab",
+   "src/x509/v3_skid.rs": "7cc2334da09abda69cd30349ab930a626f62bfb0ebb4fad60cd2b1304ecfe8a9",
+   "src/x509/v3_soa_id.rs": "dc02bbdae33553912fd549c7064fe15219694148e2461e793159ec44b2518d6f",
+   "src/x509/v3_utf8.rs": "0dcbeaee50e35ef07e8fd1bcd688ed254a09b681b8837110b50a85de63c24eb1",
+   "src/x509/v3_prn.rs": "7794c3ac10b31e9ecb96090e7aa4e8099df46b6aaa95343b89ac4881b8fada59"
+  },
+  "note": "No freeze tag was created. V1 census coordinates are retained in `line`; `line_current` is bound to files_sha256."
+ },
+ "authority": {
+  "id": "openssl-3.6.4-production",
+  "source": "forensics/authorities/src/openssl-3.6.4",
+  "header": "include/openssl/x509v3.h.in:45-61 (the X509V3_EXT_* callback typedefs and the method struct)",
+  "dispatch": "crypto/x509/v3_prn.c:69-136 (X509V3_EXT_print) and crypto/x509/v3_lib.c:52-79 (lookup)",
+  "note": "The authority decodes the extension octet string through ASN1_ITEM_ptr(method->it) and calls the first of i2s/i2v/i2r that is set. It does not check out, ext, the item or the decoded value. The candidate refuses a NULL out/ext, a NULL item and a NULL decode; those are recorded safety divergences (B49-R5, B49-R6, B49-R7), not authority behaviour."
+ },
+ "scope": {
+  "aggregation": ".obligations[] | select(.mechanism == \"X509_VERIFY_POLICY\" and .status == \"BLOCKED\")",
+  "raw_blocked_count": 75,
+  "chosen_family": {
+   "family": "i2s",
+   "count": 11,
+   "why": "The i2s arm is the first slot X509V3_EXT_print tries, before i2v and i2r, so the 11 i2s definitions share the same dispatcher path as the 22 B49 printers. The only production reader of an i2s slot is src/x509/v3_prn.rs:323-332, whose value is called at :346; a grep of `(*method).i2s` finds no other production read. The only other read is the test at src/x509/v3_ia5.rs:226 against a static row."
+  },
+  "per_file": [
+   {
+    "file": "src/x509/v3_enum.rs",
+    "i2s_count": 1,
+    "operations": [
+     "enum_i2s"
+    ]
+   },
+   {
+    "file": "src/x509/v3_group_ac.rs",
+    "i2s_count": 1,
+    "operations": [
+     "i2s_GROUP_AC"
+    ]
+   },
+   {
+    "file": "src/x509/v3_ia5.rs",
+    "i2s_count": 1,
+    "operations": [
+     "ia5_i2s"
+    ]
+   },
+   {
+    "file": "src/x509/v3_ind_iss.rs",
+    "i2s_count": 1,
+    "operations": [
+     "i2s_INDIRECT_ISSUER"
+    ]
+   },
+   {
+    "file": "src/x509/v3_int.rs",
+    "i2s_count": 1,
+    "operations": [
+     "int_i2s"
+    ]
+   },
+   {
+    "file": "src/x509/v3_no_ass.rs",
+    "i2s_count": 1,
+    "operations": [
+     "i2s_NO_ASSERTION"
+    ]
+   },
+   {
+    "file": "src/x509/v3_no_rev_avail.rs",
+    "i2s_count": 1,
+    "operations": [
+     "i2s_NO_REV_AVAIL"
+    ]
+   },
+   {
+    "file": "src/x509/v3_single_use.rs",
+    "i2s_count": 1,
+    "operations": [
+     "i2s_SINGLE_USE"
+    ]
+   },
+   {
+    "file": "src/x509/v3_skid.rs",
+    "i2s_count": 1,
+    "operations": [
+     "skid_i2s"
+    ]
+   },
+   {
+    "file": "src/x509/v3_soa_id.rs",
+    "i2s_count": 1,
+    "operations": [
+     "i2s_SOA_IDENTIFIER"
+    ]
+   },
+   {
+    "file": "src/x509/v3_utf8.rs",
+    "i2s_count": 1,
+    "operations": [
+     "utf8_i2s"
+    ]
+   }
+  ],
+  "not_touched": [
+   {
+    "family": "v2i",
+    "count": 10
+   },
+   {
+    "family": "s2i",
+    "count": 9
+   },
+   {
+    "family": "i2v",
+    "count": 7
+   },
+   {
+    "family": "r2i",
+    "count": 6
+   },
+   {
+    "family": "print",
+    "count": 4
+   },
+   {
+    "family": "audit",
+    "count": 2
+   },
+   {
+    "family": "bitst",
+    "count": 2
+   },
+   {
+    "family": "non-method",
+    "count": 2
+   }
+  ]
+ },
+ "shared_contract": "i2s slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row (src/x509/v3_prn.rs:283) under the registry read hold (:271-273), decodes through the row's own item (:308) and refuses a NULL decode (:317-320), then reads the i2s slot (:323-332) and calls it at :346. The non-NULL result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item (:374-381). `ext_str` is exclusively the dispatcher's from decode to release: the callback must not free, retain or replace it. `method` is the live row, passed to the callback; the callback must not retain it. The callback may retain nothing and transfers ownership of its result.",
+ "dispatch_paths": {
+  "entry_points": [
+   "X509V3_EXT_print itself (src/x509/v3_prn.rs:254), the exported C ABI entry point, called directly by external consumers and by src/x509/t_acert.rs:429 and src/x509/t_req.rs:389.",
+   "X509V3_extensions_print (src/x509/v3_prn.rs:390) loops over a stack and calls X509V3_EXT_print at :447; reached from src/x509/t_x509.rs, src/x509/t_crl.rs and src/ocsp/ocsp_prn.rs.",
+   "X509V3_EXT_print_fp (src/x509/v3_prn.rs:470) wraps a FILE* in a BIO and calls X509V3_EXT_print at :483."
+  ],
+  "lookup": "X509V3_EXT_get(ext) at src/x509/v3_prn.rs:283 -> X509V3_EXT_get_nid (standard_exts[] binary search, then the dynamic ext_list), all under the registry read hold.",
+  "decode": "the row item is resolved once (ext_method_item, :296); None means the old-style d2i/ext_free pair, Err means a NULL item accessor and the failed-decode path.",
+  "slot": "the first set of i2s/i2v/i2r wins (:323-369); the i2s call is f(method, ext_str) at :346, before i2v (:355) and i2r (:364).",
+  "result": "the i2s result is adopted as Option<OwnedStr> at :346; NULL means the print fails (:350-351), non-NULL is printed at :349 and released by Drop at :374.",
+  "free": "ASN1_item_free(ext_str, item) at :378 with the same item the decode used, or method->ext_free (:379-381).",
+  "lifetime": "`method` must be live from the lookup through the callback; `ext_str` is exclusively this frame's from decode to :374-381 and is live across the callback. Neither is retained by the callback.",
+  "allocator": "no allocator is involved in the dispatch itself: ext_str comes from the ASN.1 decoder on the CRYPTO_* seam; the i2s result is the callback's own seam block and is released with OPENSSL_free at v3_prn.c:130; the registry lock is one CRYPTO_RWLOCK allocated on first use (B49-R11).",
+  "second_reader": "The only other i2s slot read is the unit test at src/x509/v3_ia5.rs:226 on a process-lifetime static row; it neither registers nor releases a dynamic row and does not need the hold.",
+  "arguments": "i2s receives (method, ext_str) only. `ext` (the X509_EXTENSION) is the caller's; X509V3_EXT_print uses it before the slot to read the value (:276-279) and resolve the row (:283), and does not pass it to the callback. `out` (the BIO) is not passed to i2s at all. `method` is the live row and `ext_str` is the dispatcher-owned decoded value.",
+  "ctx": "none: the i2s typedef has no X509V3_CTX parameter; X509V3_CTX is an s2i input, not an i2s input.",
+  "retention": "the callback may retain nothing: not `method`, not `ext_str`, and not the extension or output BIO. Its non-NULL result transfers to the dispatcher, which owns it from :346 to :374."
+ },
+ "row_liveness": {
+  "question": "Does the B49 registry hold also cover the i2s dispatch, and what does i2s need that i2r did not?",
+  "answer": "Yes. The read hold is taken before the lookup (:271-273) and lives to the end of X509V3_EXT_print, so it covers the slot read (:323-332), the callback (:346) and the release (:374-381). No second hold was added. The i2s arm needs the row live through the callback, not merely through the slot read, because it passes `method` to the callback and enum_i2s reads `method->usr_data`; the existing hold supplies exactly that.",
+  "static_rows": "The 11 callbacks are installed only in crate-owned `pub static` rows (or the helper-constructed `ossl_v3_ns_ia5_list`/`ossl_v3_utf8_list`), reached through STANDARD_EXTS; those rows are process-lifetime statics that X509V3_EXT_cleanup cannot release.",
+  "dynamic_rows": "X509V3_EXT_add_alias copies a row (including i2s and usr_data) into a DYNAMIC allocation; X509V3_EXT_cleanup releases it through ext_list_free. The read hold keeps such an alias live for the whole print.",
+  "caller_rows": "X509V3_EXT_add also accepts a caller-owned row and the list borrows it (only DYNAMIC rows are freed on cleanup). The registry lock protects the list, not the caller's storage: a caller that frees a registered row while a print uses it retains that obligation (B50-R1)."
+ },
+ "defect_class": {
+  "existing": "uncontracted unsafe fn definitions at 11 X509_VERIFY_POLICY i2s sites; the blocks had per-line SAFETY comments but no fn-level # Safety",
+  "extension": "none functional: the B49 dispatcher already holds the registry read lock across the i2s arm. The i2s-specific requirement is that the row stay live through the callback (enum_i2s reads method->usr_data), which the same hold provides.",
+  "sites_completed": 11,
+  "sites_remaining_blocked": 42
+ },
+ "boundaries": [
+  {
+   "id": "B50-I2S-001",
+   "file": "src/x509/v3_enum.rs",
+   "line": 120,
+   "line_current": 134,
+   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the candidate working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "enum_i2s",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char",
+   "registration": "row ossl_v3_crl_reason, i2s slot at src/x509/v3_enum.rs:192",
+   "guard": "X509V3_EXT_print refuses NULL out/ext (src/x509/v3_prn.rs:263-265), takes the registry read hold (:271-273), refuses a NULL row (:284-287), resolves the row item once and refuses a NULL item (:296-304), refuses a NULL decode (:317-320), and adopts the callback result as Option<OwnedStr> (:346). No new guard was added: the i2s arm uses exactly these dispatcher checks, and a callback body check would not establish anything the dispatch does not already establish.",
+   "disposition": "SAFETY_DISCHARGED (scope: enum_i2s and its dispatch path; src/x509/v3_enum.rs:134)",
+   "contract": "i2s slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print refuses a NULL out/ext in its prologue (src/x509/v3_prn.rs:263-265), takes the extension registry's read hold for the whole dispatch (:271-273), resolves the row (:283) and refuses a NULL row (:284-287), resolves the row's own ASN.1 item once (ext_method_item, :296) and refuses a NULL item (:296-304), decodes through that item (:308) and refuses a NULL decode before the slot (:317-320), reads the i2s slot (:323-332), and calls it at :346. The non-NULL result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381. `method` is the live row and `ext_str` the dispatcher-owned decoded value for the whole call; the callback must not free, retain or replace either, and must return NULL or one whole CRYPTO_*-allocated NUL-terminated block whose ownership transfers to the dispatcher. This body additionally relies on `meth->usr_data` being the row's registered `BitStringBitname` table terminated by a NULL `lname`; `ossl_v3_crl_reason` pairs it with `CRL_REASONS` (src/x509/v3_enum.rs). That pairing is the registrar's obligation. The callee walks the table and falls back to `i2s_ASN1_ENUMERATED`.",
+   "established": [
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) while holding the registry read hold (:271-273) and refuses a NULL row (:284-287).",
+    "The read hold spans the slot read (:323-332) and the callback (:346), so a DYNAMIC alias row cannot be released while the callback runs; that matters because the callback receives `method` and enum_i2s reads `method->usr_data`.",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any slot (:317-320).",
+    "The result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_prn.c:96 assigns method->i2s(method, ext_str) to `char *value`; crypto/x509/v3_prn.c:130 runs OPENSSL_free(value).",
+    "The authority null-checks none of out/ext, the item or the decoded value; the B49 prologue/item/decode refusals are recorded safety divergences (B49-R5, B49-R6, B49-R7).",
+    "The callback body is transcribed from crypto/x509/v3_enum.c:32-39 (row) and crypto/x509/v3_enum.c:41-53 (i2s_ASN1_ENUMERATED_TABLE).",
+    "The authority has no registry lock; the read/write hold is the candidate's B49-R10 mechanism, and the i2s arm needs it for the same reason the i2r arm does."
+   ],
+   "tests": [
+    "x509::v3_prn::tests::i2s_callbacks_print_end_to_end",
+    "x509::v3_prn::tests::i2s_is_not_called_when_the_value_does_not_decode",
+    "x509::v3_prn::tests::print_an_octet_string_extension_owns_the_i2s_result",
+    "x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue"
+   ],
+   "tests_note": "i2s_callbacks_print_end_to_end drives group_ac, crl_reason and crl_number end to end; print_an_octet_string_extension_owns_the_i2s_result drives subject_key_identifier end to end; i2s_is_not_called_when_the_value_does_not_decode is the dispatcher-guard canary. The other seven callbacks are covered by contract review and the shared dispatcher tests, not by a per-callback end-to-end case."
+  },
+  {
+   "id": "B50-I2S-002",
+   "file": "src/x509/v3_group_ac.rs",
+   "line": 64,
+   "line_current": 74,
+   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the candidate working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_GROUP_AC",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char",
+   "registration": "row ossl_v3_group_ac, i2s slot at src/x509/v3_group_ac.rs:104",
+   "guard": "X509V3_EXT_print refuses NULL out/ext (src/x509/v3_prn.rs:263-265), takes the registry read hold (:271-273), refuses a NULL row (:284-287), resolves the row item once and refuses a NULL item (:296-304), refuses a NULL decode (:317-320), and adopts the callback result as Option<OwnedStr> (:346). No new guard was added: the i2s arm uses exactly these dispatcher checks, and a callback body check would not establish anything the dispatch does not already establish.",
+   "disposition": "SAFETY_DISCHARGED (scope: i2s_GROUP_AC and its dispatch path; src/x509/v3_group_ac.rs:74)",
+   "contract": "i2s slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print refuses a NULL out/ext in its prologue (src/x509/v3_prn.rs:263-265), takes the extension registry's read hold for the whole dispatch (:271-273), resolves the row (:283) and refuses a NULL row (:284-287), resolves the row's own ASN.1 item once (ext_method_item, :296) and refuses a NULL item (:296-304), decodes through that item (:308) and refuses a NULL decode before the slot (:317-320), reads the i2s slot (:323-332), and calls it at :346. The non-NULL result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381. `method` is the live row and `ext_str` the dispatcher-owned decoded value for the whole call; the callback must not free, retain or replace either, and must return NULL or one whole CRYPTO_*-allocated NUL-terminated block whose ownership transfers to the dispatcher. Neither argument is read; the body duplicates the compile-time constant `\"NULL\"` and retains nothing.",
+   "established": [
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) while holding the registry read hold (:271-273) and refuses a NULL row (:284-287).",
+    "The read hold spans the slot read (:323-332) and the callback (:346), so a DYNAMIC alias row cannot be released while the callback runs; that matters because the callback receives `method` and enum_i2s reads `method->usr_data`.",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any slot (:317-320).",
+    "The result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_prn.c:96 assigns method->i2s(method, ext_str) to `char *value`; crypto/x509/v3_prn.c:130 runs OPENSSL_free(value).",
+    "The authority null-checks none of out/ext, the item or the decoded value; the B49 prologue/item/decode refusals are recorded safety divergences (B49-R5, B49-R6, B49-R7).",
+    "The callback body is transcribed from crypto/x509/v3_group_ac.c:30-33.",
+    "The authority has no registry lock; the read/write hold is the candidate's B49-R10 mechanism, and the i2s arm needs it for the same reason the i2r arm does."
+   ],
+   "tests": [
+    "x509::v3_prn::tests::i2s_callbacks_print_end_to_end",
+    "x509::v3_prn::tests::i2s_is_not_called_when_the_value_does_not_decode",
+    "x509::v3_prn::tests::print_an_octet_string_extension_owns_the_i2s_result",
+    "x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue"
+   ],
+   "tests_note": "i2s_callbacks_print_end_to_end drives group_ac, crl_reason and crl_number end to end; print_an_octet_string_extension_owns_the_i2s_result drives subject_key_identifier end to end; i2s_is_not_called_when_the_value_does_not_decode is the dispatcher-guard canary. The other seven callbacks are covered by contract review and the shared dispatcher tests, not by a per-callback end-to-end case."
+  },
+  {
+   "id": "B50-I2S-003",
+   "file": "src/x509/v3_ia5.rs",
+   "line": 180,
+   "line_current": 191,
+   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the candidate working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ia5_i2s",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char",
+   "registration": "row constructor ext_ia5string (src/x509/v3_ia5.rs:141), used by ossl_v3_ns_ia5_list (src/x509/v3_ia5.rs:210); i2s slot at src/x509/v3_ia5.rs:150",
+   "guard": "X509V3_EXT_print refuses NULL out/ext (src/x509/v3_prn.rs:263-265), takes the registry read hold (:271-273), refuses a NULL row (:284-287), resolves the row item once and refuses a NULL item (:296-304), refuses a NULL decode (:317-320), and adopts the callback result as Option<OwnedStr> (:346). No new guard was added: the i2s arm uses exactly these dispatcher checks, and a callback body check would not establish anything the dispatch does not already establish.",
+   "disposition": "SAFETY_DISCHARGED (scope: ia5_i2s and its dispatch path; src/x509/v3_ia5.rs:191)",
+   "contract": "i2s slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print refuses a NULL out/ext in its prologue (src/x509/v3_prn.rs:263-265), takes the extension registry's read hold for the whole dispatch (:271-273), resolves the row (:283) and refuses a NULL row (:284-287), resolves the row's own ASN.1 item once (ext_method_item, :296) and refuses a NULL item (:296-304), decodes through that item (:308) and refuses a NULL decode before the slot (:317-320), reads the i2s slot (:323-332), and calls it at :346. The non-NULL result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381. `method` is the live row and `ext_str` the dispatcher-owned decoded value for the whole call; the callback must not free, retain or replace either, and must return NULL or one whole CRYPTO_*-allocated NUL-terminated block whose ownership transfers to the dispatcher. This body casts `value` to the `ASN1_IA5STRING` the row's `ASN1_IA5STRING_it` decoded; the callee reads only `value->data`/`value->length`.",
+   "established": [
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) while holding the registry read hold (:271-273) and refuses a NULL row (:284-287).",
+    "The read hold spans the slot read (:323-332) and the callback (:346), so a DYNAMIC alias row cannot be released while the callback runs; that matters because the callback receives `method` and enum_i2s reads `method->usr_data`.",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any slot (:317-320).",
+    "The result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_prn.c:96 assigns method->i2s(method, ext_str) to `char *value`; crypto/x509/v3_prn.c:130 runs OPENSSL_free(value).",
+    "The authority null-checks none of out/ext, the item or the decoded value; the B49 prologue/item/decode refusals are recorded safety divergences (B49-R5, B49-R6, B49-R7).",
+    "The callback body is transcribed from crypto/x509/v3_ia5.c:17-26 (row) and crypto/x509/v3_ia5.c:28-39 (i2s_ASN1_IA5STRING).",
+    "The authority has no registry lock; the read/write hold is the candidate's B49-R10 mechanism, and the i2s arm needs it for the same reason the i2r arm does."
+   ],
+   "tests": [
+    "x509::v3_prn::tests::i2s_callbacks_print_end_to_end",
+    "x509::v3_prn::tests::i2s_is_not_called_when_the_value_does_not_decode",
+    "x509::v3_prn::tests::print_an_octet_string_extension_owns_the_i2s_result",
+    "x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue"
+   ],
+   "tests_note": "i2s_callbacks_print_end_to_end drives group_ac, crl_reason and crl_number end to end; print_an_octet_string_extension_owns_the_i2s_result drives subject_key_identifier end to end; i2s_is_not_called_when_the_value_does_not_decode is the dispatcher-guard canary. The other seven callbacks are covered by contract review and the shared dispatcher tests, not by a per-callback end-to-end case."
+  },
+  {
+   "id": "B50-I2S-004",
+   "file": "src/x509/v3_ind_iss.rs",
+   "line": 64,
+   "line_current": 74,
+   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the candidate working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_INDIRECT_ISSUER",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char",
+   "registration": "row ossl_v3_indirect_issuer, i2s slot at src/x509/v3_ind_iss.rs:104",
+   "guard": "X509V3_EXT_print refuses NULL out/ext (src/x509/v3_prn.rs:263-265), takes the registry read hold (:271-273), refuses a NULL row (:284-287), resolves the row item once and refuses a NULL item (:296-304), refuses a NULL decode (:317-320), and adopts the callback result as Option<OwnedStr> (:346). No new guard was added: the i2s arm uses exactly these dispatcher checks, and a callback body check would not establish anything the dispatch does not already establish.",
+   "disposition": "SAFETY_DISCHARGED (scope: i2s_INDIRECT_ISSUER and its dispatch path; src/x509/v3_ind_iss.rs:74)",
+   "contract": "i2s slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print refuses a NULL out/ext in its prologue (src/x509/v3_prn.rs:263-265), takes the extension registry's read hold for the whole dispatch (:271-273), resolves the row (:283) and refuses a NULL row (:284-287), resolves the row's own ASN.1 item once (ext_method_item, :296) and refuses a NULL item (:296-304), decodes through that item (:308) and refuses a NULL decode before the slot (:317-320), reads the i2s slot (:323-332), and calls it at :346. The non-NULL result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381. `method` is the live row and `ext_str` the dispatcher-owned decoded value for the whole call; the callback must not free, retain or replace either, and must return NULL or one whole CRYPTO_*-allocated NUL-terminated block whose ownership transfers to the dispatcher. Neither argument is read; the body duplicates the compile-time constant `\"NULL\"` and retains nothing.",
+   "established": [
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) while holding the registry read hold (:271-273) and refuses a NULL row (:284-287).",
+    "The read hold spans the slot read (:323-332) and the callback (:346), so a DYNAMIC alias row cannot be released while the callback runs; that matters because the callback receives `method` and enum_i2s reads `method->usr_data`.",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any slot (:317-320).",
+    "The result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_prn.c:96 assigns method->i2s(method, ext_str) to `char *value`; crypto/x509/v3_prn.c:130 runs OPENSSL_free(value).",
+    "The authority null-checks none of out/ext, the item or the decoded value; the B49 prologue/item/decode refusals are recorded safety divergences (B49-R5, B49-R6, B49-R7).",
+    "The callback body is transcribed from crypto/x509/v3_ind_iss.c:30-33.",
+    "The authority has no registry lock; the read/write hold is the candidate's B49-R10 mechanism, and the i2s arm needs it for the same reason the i2r arm does."
+   ],
+   "tests": [
+    "x509::v3_prn::tests::i2s_callbacks_print_end_to_end",
+    "x509::v3_prn::tests::i2s_is_not_called_when_the_value_does_not_decode",
+    "x509::v3_prn::tests::print_an_octet_string_extension_owns_the_i2s_result",
+    "x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue"
+   ],
+   "tests_note": "i2s_callbacks_print_end_to_end drives group_ac, crl_reason and crl_number end to end; print_an_octet_string_extension_owns_the_i2s_result drives subject_key_identifier end to end; i2s_is_not_called_when_the_value_does_not_decode is the dispatcher-guard canary. The other seven callbacks are covered by contract review and the shared dispatcher tests, not by a per-callback end-to-end case."
+  },
+  {
+   "id": "B50-I2S-005",
+   "file": "src/x509/v3_int.rs",
+   "line": 29,
+   "line_current": 41,
+   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the candidate working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "int_i2s",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char",
+   "registration": "rows ossl_v3_crl_num (src/x509/v3_int.rs:64), ossl_v3_delta_crl (:83) and ossl_v3_inhibit_anyp (:103); i2s slots at src/x509/v3_int.rs:72, :91, :111",
+   "guard": "X509V3_EXT_print refuses NULL out/ext (src/x509/v3_prn.rs:263-265), takes the registry read hold (:271-273), refuses a NULL row (:284-287), resolves the row item once and refuses a NULL item (:296-304), refuses a NULL decode (:317-320), and adopts the callback result as Option<OwnedStr> (:346). No new guard was added: the i2s arm uses exactly these dispatcher checks, and a callback body check would not establish anything the dispatch does not already establish.",
+   "disposition": "SAFETY_DISCHARGED (scope: int_i2s and its dispatch path; src/x509/v3_int.rs:41)",
+   "contract": "i2s slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print refuses a NULL out/ext in its prologue (src/x509/v3_prn.rs:263-265), takes the extension registry's read hold for the whole dispatch (:271-273), resolves the row (:283) and refuses a NULL row (:284-287), resolves the row's own ASN.1 item once (ext_method_item, :296) and refuses a NULL item (:296-304), decodes through that item (:308) and refuses a NULL decode before the slot (:317-320), reads the i2s slot (:323-332), and calls it at :346. The non-NULL result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381. `method` is the live row and `ext_str` the dispatcher-owned decoded value for the whole call; the callback must not free, retain or replace either, and must return NULL or one whole CRYPTO_*-allocated NUL-terminated block whose ownership transfers to the dispatcher. This body casts `value` to the `ASN1_INTEGER` the row's `ASN1_INTEGER_it` decoded; `meth` is unread by the callee, which reads only the integer.",
+   "established": [
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) while holding the registry read hold (:271-273) and refuses a NULL row (:284-287).",
+    "The read hold spans the slot read (:323-332) and the callback (:346), so a DYNAMIC alias row cannot be released while the callback runs; that matters because the callback receives `method` and enum_i2s reads `method->usr_data`.",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any slot (:317-320).",
+    "The result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_prn.c:96 assigns method->i2s(method, ext_str) to `char *value`; crypto/x509/v3_prn.c:130 runs OPENSSL_free(value).",
+    "The authority null-checks none of out/ext, the item or the decoded value; the B49 prologue/item/decode refusals are recorded safety divergences (B49-R5, B49-R6, B49-R7).",
+    "The callback body is transcribed from crypto/x509/v3_int.c:15-21,23-29,37-43 (rows); the i2s slot forwards to i2s_ASN1_INTEGER in crypto/x509/v3_utl.c.",
+    "The authority has no registry lock; the read/write hold is the candidate's B49-R10 mechanism, and the i2s arm needs it for the same reason the i2r arm does."
+   ],
+   "tests": [
+    "x509::v3_prn::tests::i2s_callbacks_print_end_to_end",
+    "x509::v3_prn::tests::i2s_is_not_called_when_the_value_does_not_decode",
+    "x509::v3_prn::tests::print_an_octet_string_extension_owns_the_i2s_result",
+    "x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue"
+   ],
+   "tests_note": "i2s_callbacks_print_end_to_end drives group_ac, crl_reason and crl_number end to end; print_an_octet_string_extension_owns_the_i2s_result drives subject_key_identifier end to end; i2s_is_not_called_when_the_value_does_not_decode is the dispatcher-guard canary. The other seven callbacks are covered by contract review and the shared dispatcher tests, not by a per-callback end-to-end case."
+  },
+  {
+   "id": "B50-I2S-006",
+   "file": "src/x509/v3_no_ass.rs",
+   "line": 72,
+   "line_current": 82,
+   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the candidate working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_NO_ASSERTION",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char",
+   "registration": "row ossl_v3_no_assertion, i2s slot at src/x509/v3_no_ass.rs:116",
+   "guard": "X509V3_EXT_print refuses NULL out/ext (src/x509/v3_prn.rs:263-265), takes the registry read hold (:271-273), refuses a NULL row (:284-287), resolves the row item once and refuses a NULL item (:296-304), refuses a NULL decode (:317-320), and adopts the callback result as Option<OwnedStr> (:346). No new guard was added: the i2s arm uses exactly these dispatcher checks, and a callback body check would not establish anything the dispatch does not already establish.",
+   "disposition": "SAFETY_DISCHARGED (scope: i2s_NO_ASSERTION and its dispatch path; src/x509/v3_no_ass.rs:82)",
+   "contract": "i2s slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print refuses a NULL out/ext in its prologue (src/x509/v3_prn.rs:263-265), takes the extension registry's read hold for the whole dispatch (:271-273), resolves the row (:283) and refuses a NULL row (:284-287), resolves the row's own ASN.1 item once (ext_method_item, :296) and refuses a NULL item (:296-304), decodes through that item (:308) and refuses a NULL decode before the slot (:317-320), reads the i2s slot (:323-332), and calls it at :346. The non-NULL result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381. `method` is the live row and `ext_str` the dispatcher-owned decoded value for the whole call; the callback must not free, retain or replace either, and must return NULL or one whole CRYPTO_*-allocated NUL-terminated block whose ownership transfers to the dispatcher. Neither argument is read; the body duplicates the compile-time constant `\"NULL\"` and retains nothing.",
+   "established": [
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) while holding the registry read hold (:271-273) and refuses a NULL row (:284-287).",
+    "The read hold spans the slot read (:323-332) and the callback (:346), so a DYNAMIC alias row cannot be released while the callback runs; that matters because the callback receives `method` and enum_i2s reads `method->usr_data`.",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any slot (:317-320).",
+    "The result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_prn.c:96 assigns method->i2s(method, ext_str) to `char *value`; crypto/x509/v3_prn.c:130 runs OPENSSL_free(value).",
+    "The authority null-checks none of out/ext, the item or the decoded value; the B49 prologue/item/decode refusals are recorded safety divergences (B49-R5, B49-R6, B49-R7).",
+    "The callback body is transcribed from crypto/x509/v3_no_ass.c:30-33.",
+    "The authority has no registry lock; the read/write hold is the candidate's B49-R10 mechanism, and the i2s arm needs it for the same reason the i2r arm does."
+   ],
+   "tests": [
+    "x509::v3_prn::tests::i2s_callbacks_print_end_to_end",
+    "x509::v3_prn::tests::i2s_is_not_called_when_the_value_does_not_decode",
+    "x509::v3_prn::tests::print_an_octet_string_extension_owns_the_i2s_result",
+    "x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue"
+   ],
+   "tests_note": "i2s_callbacks_print_end_to_end drives group_ac, crl_reason and crl_number end to end; print_an_octet_string_extension_owns_the_i2s_result drives subject_key_identifier end to end; i2s_is_not_called_when_the_value_does_not_decode is the dispatcher-guard canary. The other seven callbacks are covered by contract review and the shared dispatcher tests, not by a per-callback end-to-end case."
+  },
+  {
+   "id": "B50-I2S-007",
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "line": 64,
+   "line_current": 74,
+   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the candidate working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_NO_REV_AVAIL",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char",
+   "registration": "row ossl_v3_no_rev_avail, i2s slot at src/x509/v3_no_rev_avail.rs:104",
+   "guard": "X509V3_EXT_print refuses NULL out/ext (src/x509/v3_prn.rs:263-265), takes the registry read hold (:271-273), refuses a NULL row (:284-287), resolves the row item once and refuses a NULL item (:296-304), refuses a NULL decode (:317-320), and adopts the callback result as Option<OwnedStr> (:346). No new guard was added: the i2s arm uses exactly these dispatcher checks, and a callback body check would not establish anything the dispatch does not already establish.",
+   "disposition": "SAFETY_DISCHARGED (scope: i2s_NO_REV_AVAIL and its dispatch path; src/x509/v3_no_rev_avail.rs:74)",
+   "contract": "i2s slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print refuses a NULL out/ext in its prologue (src/x509/v3_prn.rs:263-265), takes the extension registry's read hold for the whole dispatch (:271-273), resolves the row (:283) and refuses a NULL row (:284-287), resolves the row's own ASN.1 item once (ext_method_item, :296) and refuses a NULL item (:296-304), decodes through that item (:308) and refuses a NULL decode before the slot (:317-320), reads the i2s slot (:323-332), and calls it at :346. The non-NULL result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381. `method` is the live row and `ext_str` the dispatcher-owned decoded value for the whole call; the callback must not free, retain or replace either, and must return NULL or one whole CRYPTO_*-allocated NUL-terminated block whose ownership transfers to the dispatcher. Neither argument is read; the body duplicates the compile-time constant `\"NULL\"` and retains nothing.",
+   "established": [
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) while holding the registry read hold (:271-273) and refuses a NULL row (:284-287).",
+    "The read hold spans the slot read (:323-332) and the callback (:346), so a DYNAMIC alias row cannot be released while the callback runs; that matters because the callback receives `method` and enum_i2s reads `method->usr_data`.",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any slot (:317-320).",
+    "The result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_prn.c:96 assigns method->i2s(method, ext_str) to `char *value`; crypto/x509/v3_prn.c:130 runs OPENSSL_free(value).",
+    "The authority null-checks none of out/ext, the item or the decoded value; the B49 prologue/item/decode refusals are recorded safety divergences (B49-R5, B49-R6, B49-R7).",
+    "The callback body is transcribed from crypto/x509/v3_no_rev_avail.c:30-33.",
+    "The authority has no registry lock; the read/write hold is the candidate's B49-R10 mechanism, and the i2s arm needs it for the same reason the i2r arm does."
+   ],
+   "tests": [
+    "x509::v3_prn::tests::i2s_callbacks_print_end_to_end",
+    "x509::v3_prn::tests::i2s_is_not_called_when_the_value_does_not_decode",
+    "x509::v3_prn::tests::print_an_octet_string_extension_owns_the_i2s_result",
+    "x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue"
+   ],
+   "tests_note": "i2s_callbacks_print_end_to_end drives group_ac, crl_reason and crl_number end to end; print_an_octet_string_extension_owns_the_i2s_result drives subject_key_identifier end to end; i2s_is_not_called_when_the_value_does_not_decode is the dispatcher-guard canary. The other seven callbacks are covered by contract review and the shared dispatcher tests, not by a per-callback end-to-end case."
+  },
+  {
+   "id": "B50-I2S-008",
+   "file": "src/x509/v3_single_use.rs",
+   "line": 65,
+   "line_current": 75,
+   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the candidate working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_SINGLE_USE",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char",
+   "registration": "row ossl_v3_single_use, i2s slot at src/x509/v3_single_use.rs:105",
+   "guard": "X509V3_EXT_print refuses NULL out/ext (src/x509/v3_prn.rs:263-265), takes the registry read hold (:271-273), refuses a NULL row (:284-287), resolves the row item once and refuses a NULL item (:296-304), refuses a NULL decode (:317-320), and adopts the callback result as Option<OwnedStr> (:346). No new guard was added: the i2s arm uses exactly these dispatcher checks, and a callback body check would not establish anything the dispatch does not already establish.",
+   "disposition": "SAFETY_DISCHARGED (scope: i2s_SINGLE_USE and its dispatch path; src/x509/v3_single_use.rs:75)",
+   "contract": "i2s slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print refuses a NULL out/ext in its prologue (src/x509/v3_prn.rs:263-265), takes the extension registry's read hold for the whole dispatch (:271-273), resolves the row (:283) and refuses a NULL row (:284-287), resolves the row's own ASN.1 item once (ext_method_item, :296) and refuses a NULL item (:296-304), decodes through that item (:308) and refuses a NULL decode before the slot (:317-320), reads the i2s slot (:323-332), and calls it at :346. The non-NULL result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381. `method` is the live row and `ext_str` the dispatcher-owned decoded value for the whole call; the callback must not free, retain or replace either, and must return NULL or one whole CRYPTO_*-allocated NUL-terminated block whose ownership transfers to the dispatcher. Neither argument is read; the body duplicates the compile-time constant `\"NULL\"` and retains nothing.",
+   "established": [
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) while holding the registry read hold (:271-273) and refuses a NULL row (:284-287).",
+    "The read hold spans the slot read (:323-332) and the callback (:346), so a DYNAMIC alias row cannot be released while the callback runs; that matters because the callback receives `method` and enum_i2s reads `method->usr_data`.",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any slot (:317-320).",
+    "The result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_prn.c:96 assigns method->i2s(method, ext_str) to `char *value`; crypto/x509/v3_prn.c:130 runs OPENSSL_free(value).",
+    "The authority null-checks none of out/ext, the item or the decoded value; the B49 prologue/item/decode refusals are recorded safety divergences (B49-R5, B49-R6, B49-R7).",
+    "The callback body is transcribed from crypto/x509/v3_single_use.c:30-33.",
+    "The authority has no registry lock; the read/write hold is the candidate's B49-R10 mechanism, and the i2s arm needs it for the same reason the i2r arm does."
+   ],
+   "tests": [
+    "x509::v3_prn::tests::i2s_callbacks_print_end_to_end",
+    "x509::v3_prn::tests::i2s_is_not_called_when_the_value_does_not_decode",
+    "x509::v3_prn::tests::print_an_octet_string_extension_owns_the_i2s_result",
+    "x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue"
+   ],
+   "tests_note": "i2s_callbacks_print_end_to_end drives group_ac, crl_reason and crl_number end to end; print_an_octet_string_extension_owns_the_i2s_result drives subject_key_identifier end to end; i2s_is_not_called_when_the_value_does_not_decode is the dispatcher-guard canary. The other seven callbacks are covered by contract review and the shared dispatcher tests, not by a per-callback end-to-end case."
+  },
+  {
+   "id": "B50-I2S-009",
+   "file": "src/x509/v3_skid.rs",
+   "line": 249,
+   "line_current": 262,
+   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the candidate working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "skid_i2s",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char",
+   "registration": "row ossl_v3_skey_id, i2s slot at src/x509/v3_skid.rs:280",
+   "guard": "X509V3_EXT_print refuses NULL out/ext (src/x509/v3_prn.rs:263-265), takes the registry read hold (:271-273), refuses a NULL row (:284-287), resolves the row item once and refuses a NULL item (:296-304), refuses a NULL decode (:317-320), and adopts the callback result as Option<OwnedStr> (:346). No new guard was added: the i2s arm uses exactly these dispatcher checks, and a callback body check would not establish anything the dispatch does not already establish.",
+   "disposition": "SAFETY_DISCHARGED (scope: skid_i2s and its dispatch path; src/x509/v3_skid.rs:262)",
+   "contract": "i2s slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print refuses a NULL out/ext in its prologue (src/x509/v3_prn.rs:263-265), takes the extension registry's read hold for the whole dispatch (:271-273), resolves the row (:283) and refuses a NULL row (:284-287), resolves the row's own ASN.1 item once (ext_method_item, :296) and refuses a NULL item (:296-304), decodes through that item (:308) and refuses a NULL decode before the slot (:317-320), reads the i2s slot (:323-332), and calls it at :346. The non-NULL result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381. `method` is the live row and `ext_str` the dispatcher-owned decoded value for the whole call; the callback must not free, retain or replace either, and must return NULL or one whole CRYPTO_*-allocated NUL-terminated block whose ownership transfers to the dispatcher. This body casts `value` to the `ASN1_OCTET_STRING` the row's `ASN1_OCTET_STRING_it` decoded; the callee reads only `value->data`/`value->length` and does not null-check `value`, which the dispatcher's decode guard establishes.",
+   "established": [
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) while holding the registry read hold (:271-273) and refuses a NULL row (:284-287).",
+    "The read hold spans the slot read (:323-332) and the callback (:346), so a DYNAMIC alias row cannot be released while the callback runs; that matters because the callback receives `method` and enum_i2s reads `method->usr_data`.",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any slot (:317-320).",
+    "The result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_prn.c:96 assigns method->i2s(method, ext_str) to `char *value`; crypto/x509/v3_prn.c:130 runs OPENSSL_free(value).",
+    "The authority null-checks none of out/ext, the item or the decoded value; the B49 prologue/item/decode refusals are recorded safety divergences (B49-R5, B49-R6, B49-R7).",
+    "The callback body is transcribed from crypto/x509/v3_skid.c:18-25 (row) and crypto/x509/v3_skid.c:27-31 (i2s_ASN1_OCTET_STRING).",
+    "The authority has no registry lock; the read/write hold is the candidate's B49-R10 mechanism, and the i2s arm needs it for the same reason the i2r arm does."
+   ],
+   "tests": [
+    "x509::v3_prn::tests::i2s_callbacks_print_end_to_end",
+    "x509::v3_prn::tests::i2s_is_not_called_when_the_value_does_not_decode",
+    "x509::v3_prn::tests::print_an_octet_string_extension_owns_the_i2s_result",
+    "x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue"
+   ],
+   "tests_note": "i2s_callbacks_print_end_to_end drives group_ac, crl_reason and crl_number end to end; print_an_octet_string_extension_owns_the_i2s_result drives subject_key_identifier end to end; i2s_is_not_called_when_the_value_does_not_decode is the dispatcher-guard canary. The other seven callbacks are covered by contract review and the shared dispatcher tests, not by a per-callback end-to-end case."
+  },
+  {
+   "id": "B50-I2S-010",
+   "file": "src/x509/v3_soa_id.rs",
+   "line": 64,
+   "line_current": 74,
+   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the candidate working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_SOA_IDENTIFIER",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char",
+   "registration": "row ossl_v3_soa_identifier, i2s slot at src/x509/v3_soa_id.rs:104",
+   "guard": "X509V3_EXT_print refuses NULL out/ext (src/x509/v3_prn.rs:263-265), takes the registry read hold (:271-273), refuses a NULL row (:284-287), resolves the row item once and refuses a NULL item (:296-304), refuses a NULL decode (:317-320), and adopts the callback result as Option<OwnedStr> (:346). No new guard was added: the i2s arm uses exactly these dispatcher checks, and a callback body check would not establish anything the dispatch does not already establish.",
+   "disposition": "SAFETY_DISCHARGED (scope: i2s_SOA_IDENTIFIER and its dispatch path; src/x509/v3_soa_id.rs:74)",
+   "contract": "i2s slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print refuses a NULL out/ext in its prologue (src/x509/v3_prn.rs:263-265), takes the extension registry's read hold for the whole dispatch (:271-273), resolves the row (:283) and refuses a NULL row (:284-287), resolves the row's own ASN.1 item once (ext_method_item, :296) and refuses a NULL item (:296-304), decodes through that item (:308) and refuses a NULL decode before the slot (:317-320), reads the i2s slot (:323-332), and calls it at :346. The non-NULL result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381. `method` is the live row and `ext_str` the dispatcher-owned decoded value for the whole call; the callback must not free, retain or replace either, and must return NULL or one whole CRYPTO_*-allocated NUL-terminated block whose ownership transfers to the dispatcher. Neither argument is read; the body duplicates the compile-time constant `\"NULL\"` and retains nothing.",
+   "established": [
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) while holding the registry read hold (:271-273) and refuses a NULL row (:284-287).",
+    "The read hold spans the slot read (:323-332) and the callback (:346), so a DYNAMIC alias row cannot be released while the callback runs; that matters because the callback receives `method` and enum_i2s reads `method->usr_data`.",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any slot (:317-320).",
+    "The result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_prn.c:96 assigns method->i2s(method, ext_str) to `char *value`; crypto/x509/v3_prn.c:130 runs OPENSSL_free(value).",
+    "The authority null-checks none of out/ext, the item or the decoded value; the B49 prologue/item/decode refusals are recorded safety divergences (B49-R5, B49-R6, B49-R7).",
+    "The callback body is transcribed from crypto/x509/v3_soa_id.c:30-33.",
+    "The authority has no registry lock; the read/write hold is the candidate's B49-R10 mechanism, and the i2s arm needs it for the same reason the i2r arm does."
+   ],
+   "tests": [
+    "x509::v3_prn::tests::i2s_callbacks_print_end_to_end",
+    "x509::v3_prn::tests::i2s_is_not_called_when_the_value_does_not_decode",
+    "x509::v3_prn::tests::print_an_octet_string_extension_owns_the_i2s_result",
+    "x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue"
+   ],
+   "tests_note": "i2s_callbacks_print_end_to_end drives group_ac, crl_reason and crl_number end to end; print_an_octet_string_extension_owns_the_i2s_result drives subject_key_identifier end to end; i2s_is_not_called_when_the_value_does_not_decode is the dispatcher-guard canary. The other seven callbacks are covered by contract review and the shared dispatcher tests, not by a per-callback end-to-end case."
+  },
+  {
+   "id": "B50-I2S-011",
+   "file": "src/x509/v3_utf8.rs",
+   "line": 164,
+   "line_current": 176,
+   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the candidate working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "utf8_i2s",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char",
+   "registration": "row constructor ext_utf8string (src/x509/v3_utf8.rs:144), used by ossl_v3_utf8_list (src/x509/v3_utf8.rs:195); i2s slot at src/x509/v3_utf8.rs:153",
+   "guard": "X509V3_EXT_print refuses NULL out/ext (src/x509/v3_prn.rs:263-265), takes the registry read hold (:271-273), refuses a NULL row (:284-287), resolves the row item once and refuses a NULL item (:296-304), refuses a NULL decode (:317-320), and adopts the callback result as Option<OwnedStr> (:346). No new guard was added: the i2s arm uses exactly these dispatcher checks, and a callback body check would not establish anything the dispatch does not already establish.",
+   "disposition": "SAFETY_DISCHARGED (scope: utf8_i2s and its dispatch path; src/x509/v3_utf8.rs:176)",
+   "contract": "i2s slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print refuses a NULL out/ext in its prologue (src/x509/v3_prn.rs:263-265), takes the extension registry's read hold for the whole dispatch (:271-273), resolves the row (:283) and refuses a NULL row (:284-287), resolves the row's own ASN.1 item once (ext_method_item, :296) and refuses a NULL item (:296-304), decodes through that item (:308) and refuses a NULL decode before the slot (:317-320), reads the i2s slot (:323-332), and calls it at :346. The non-NULL result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381. `method` is the live row and `ext_str` the dispatcher-owned decoded value for the whole call; the callback must not free, retain or replace either, and must return NULL or one whole CRYPTO_*-allocated NUL-terminated block whose ownership transfers to the dispatcher. This body casts `value` to the `ASN1_UTF8STRING` the row's `ASN1_UTF8STRING_it` decoded; the callee reads only `value->data`/`value->length`.",
+   "established": [
+    "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) while holding the registry read hold (:271-273) and refuses a NULL row (:284-287).",
+    "The read hold spans the slot read (:323-332) and the callback (:346), so a DYNAMIC alias row cannot be released while the callback runs; that matters because the callback receives `method` and enum_i2s reads `method->usr_data`.",
+    "The row item is resolved once by ext_method_item (:296) and a NULL item is treated as a failed decode (:296-304).",
+    "The value is decoded through that item (:308) and a NULL decode is refused before any slot (:317-320).",
+    "The result is adopted as Option<OwnedStr> (:346) and released once at :374; the decoded value is released with the same item at :374-381."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_prn.c:96 assigns method->i2s(method, ext_str) to `char *value`; crypto/x509/v3_prn.c:130 runs OPENSSL_free(value).",
+    "The authority null-checks none of out/ext, the item or the decoded value; the B49 prologue/item/decode refusals are recorded safety divergences (B49-R5, B49-R6, B49-R7).",
+    "The callback body is transcribed from crypto/x509/v3_utf8.c:24-26 (row) and crypto/x509/v3_utf8.c:28-42 (i2s_ASN1_UTF8STRING).",
+    "The authority has no registry lock; the read/write hold is the candidate's B49-R10 mechanism, and the i2s arm needs it for the same reason the i2r arm does."
+   ],
+   "tests": [
+    "x509::v3_prn::tests::i2s_callbacks_print_end_to_end",
+    "x509::v3_prn::tests::i2s_is_not_called_when_the_value_does_not_decode",
+    "x509::v3_prn::tests::print_an_octet_string_extension_owns_the_i2s_result",
+    "x509::v3_prn::tests::null_out_or_ext_is_refused_by_the_prologue"
+   ],
+   "tests_note": "i2s_callbacks_print_end_to_end drives group_ac, crl_reason and crl_number end to end; print_an_octet_string_extension_owns_the_i2s_result drives subject_key_identifier end to end; i2s_is_not_called_when_the_value_does_not_decode is the dispatcher-guard canary. The other seven callbacks are covered by contract review and the shared dispatcher tests, not by a per-callback end-to-end case."
+  }
+ ],
+ "hidden_obligations": 0,
+ "hidden_obligations_note": "The retained obligations are stated in the fn-level contracts and in B50-R1/R2/R3/R4: the registrar must keep each row's `it` and `usr_data` paired with its i2s, caller-registered row storage must outlive the list, the result must be one whole seam block with a NUL terminator, and the decoded value is exclusively the dispatcher's. Row liveness for DYNAMIC rows is enforced by the B49 read/write hold. None is hidden.",
+ "new_unsafe_assumptions": 0,
+ "new_unsafe_assumptions_note": "No production unsafe fn was added. The i2s arm reuses the B49 read hold and the existing decoder/item guards. The only new unsafe operation is the test-only recording_i2s callback.",
+ "unsafe_operations_removed": 0,
+ "unsafe_operations_introduced": 0,
+ "test_only_unsafe_added": 1,
+ "test_only_unsafe_added_note": "The test-only `unsafe extern \"C\" fn recording_i2s(...)` in src/x509/v3_prn.rs tests, used by the dispatcher-guard canary.",
+ "boundary_size": "11 boundary operations: the 11 i2s slot callbacks of registered extension rows, over 11 files. 11 V1 census sites retained; no new boundary rows for the 42 untouched sites.",
+ "safe_callers_can_cause_ub": true,
+ "safe_callers_can_cause_ub_note": "Kept true: all 11 sites remain reachable only as unsafe extern \"C\" callbacks through the unsafe X509V3_EXT_print entry point. The dispatcher refuses a NULL out/ext, a NULL item and a NULL decode before the slot. The remaining stated obligations are the registrar's row/usr_data pairing (B50-R2, B50-R4), the caller-registered row's lifetime (B50-R1) and the callback result's seam/NUL contract (B50-R3). No safe Rust path to these callbacks exists.",
+ "negative_control": {
+  "id": "B50-C1",
+  "name": "x509::v3_prn::tests::i2s_is_not_called_when_the_value_does_not_decode",
+  "kind": "court functional test, lib unittest",
+  "result": "PASS (1 passed, 0 failed, 0 ignored at --test-threads=1 after restore)",
+  "observation": "A dynamic probe row with GENERAL_NAME_it and a recording i2s receives a value that does not decode; X509V3_EXT_print answers 0 before the slot and the callback flag stays false.",
+  "mutation_sensitive": true,
+  "mutation": "the decode guard `if ext_str.is_null() { ... return unknown_ext_print(...) }` at src/x509/v3_prn.rs:317-320 removed",
+  "fails_if": "observed FAILED rc 101 at src/x509/v3_prn.rs:800: 'the i2s callback must not run when the value did not decode' (0 passed, 1 failed)",
+  "restore": "byte-for-byte: sha256 7794c3ac10b31e9ecb96090e7aa4e8099df46b6aaa95343b89ac4881b8fada59 before and after the mutation; the test then passes again",
+  "limits": "The canary observes the callback flag rather than a fault; under the mutation the callback receives NULL and answers NULL, so the print still answers 0. It pins the last dispatcher guard before the i2s slot; it does not exercise a callback that returns an unterminated block (B50-R3).",
+  "coordinate_note": "The mutation removes four lines at :317-320, so the panic coordinate reported by the mutated tree is :800 while the restored assertion sits at :804. The quoted failure is the mutated-tree coordinate."
+ },
+ "positive_control": {
+  "id": "B50-P1",
+  "name": "x509::v3_prn::tests::i2s_callbacks_print_end_to_end",
+  "kind": "court functional test, lib unittest",
+  "result": "PASS (included in the 145 x509:: tests, --test-threads=4)",
+  "observation": "Three standard rows print through their i2s slot: NID_group_ac -> 'NULL' (i2s_GROUP_AC), NID_crl_reason with ENUMERATED 1 -> 'Key Compromise' (enum_i2s), NID_crl_number with INTEGER 42 -> '42' (int_i2s). Each result is adopted and released once by the dispatcher.",
+  "limits": "Three of the 11 callbacks; the other eight are covered by contract review and the shared dispatcher tests."
+ },
+ "positive_control_2": {
+  "id": "B50-P2",
+  "name": "x509::v3_prn::tests::print_an_octet_string_extension_owns_the_i2s_result",
+  "kind": "existing court functional test, lib unittest",
+  "result": "PASS (included in the 145 x509:: tests, --test-threads=4)",
+  "observation": "NID_subject_key_identifier prints through skid_i2s; the result is adopted by OwnedStr and released once.",
+  "limits": "Covers skid_i2s only."
+ },
+ "evidence": {
+  "fast": {
+   "fmt": "cargo fmt --all -- --check: PASS (exit 0, no output) at the candidate hashes above",
+   "clippy": "cargo clippy --all-targets -- -D warnings: PASS (Finished dev profile) at the same source",
+   "focused_tests": "cargo test --lib -- x509:: -- --test-threads=4: PASS, 145 passed / 0 failed / 0 ignored (2169 filtered out). The count is B49's 143 plus the two B50 tests."
+  },
+  "mutation": {
+   "canary": "B50-C1 (the NULL-decode refusal before the i2s slot)",
+   "guarded_check": "if ext_str.is_null() { ... return unknown_ext_print(...) } (src/x509/v3_prn.rs:317-320)",
+   "observed": "removing the refusal calls recording_i2s with a NULL value; the canary fails at src/x509/v3_prn.rs:800 with 'the i2s callback must not run when the value did not decode'",
+   "restore": "byte-for-byte sha256 match (7794c3ac10b31e9ecb96090e7aa4e8099df46b6aaa95343b89ac4881b8fada59)"
+  }
+ },
+ "residuals": [
+  {
+   "id": "B50-R1",
+   "severity": "medium",
+   "disposition": "STATED-CALLER-OBLIGATION",
+   "description": "X509V3_EXT_add accepts a caller-owned row and the list borrows it (only X509V3_EXT_DYNAMIC rows are released by cleanup). The registry lock protects list mutation, not the caller's storage; a caller that frees a registered row while a print uses it retains that obligation. The authority has the same contract."
+  },
+  {
+   "id": "B50-R2",
+   "severity": "medium",
+   "disposition": "STATED-CALLER-OBLIGATION",
+   "description": "The dispatcher establishes that the value was decoded through the row's declared item, not that the item is the type the i2s body expects. A caller may register a row whose `it` and `i2s` disagree; the row pairing is the registrar's ABI obligation (carried from B49-R2)."
+  },
+  {
+   "id": "B50-R3",
+   "severity": "medium",
+   "disposition": "STATED-CALLER-OBLIGATION",
+   "description": "A non-NULL i2s result must be one whole seam block and NUL-terminated within it; the dispatcher adopts it and prints it with `%s`, then frees it once. A callback that returns static, borrowed or unterminated storage violates the contract and can cause UB; this cannot be checked cheaply."
+  },
+  {
+   "id": "B50-R4",
+   "severity": "low",
+   "disposition": "STATED-CALLER-OBLIGATION",
+   "description": "enum_i2s reads `method->usr_data` as a `BitStringBitname` array terminated by a NULL `lname`. The standard row pairs it with CRL_REASONS; a caller-registered row must make the same pairing."
+  },
+  {
+   "id": "B50-R5",
+   "severity": "low",
+   "disposition": "STATED-CALLER-OBLIGATION",
+   "description": "An external caller that obtains a row through X509V3_EXT_get/_get_nid and then calls `method->i2s` outside X509V3_EXT_print gets no registry read hold: the ABI cannot carry the guard past the return. Such a caller must exclude a concurrent X509V3_EXT_cleanup itself."
+  },
+  {
+   "id": "B50-R6",
+   "severity": "low",
+   "disposition": "AUTHORITY-DIVERGENCE",
+   "description": "If the registry lock cannot be created or acquired, X509V3_EXT_print answers 0 without running the callback; the authority has no lock and would proceed. Valid-call return values and printed bytes are unchanged."
+  },
+  {
+   "id": "B50-R7",
+   "severity": "low",
+   "disposition": "AUTHORITY-DIVERGENCE",
+   "description": "A NULL out/ext, a NULL item accessor and a NULL decode are refused before the i2s slot; the authority would fault or pass NULL onward. These are the B49-R5/R6/R7 divergences, inherited unchanged."
+  },
+  {
+   "id": "B50-R8",
+   "severity": "high",
+   "disposition": "BLOCKED",
+   "description": "The other 42 X509_VERIFY_POLICY sites remain BLOCKED: v2i 10, s2i 9, i2v 7, r2i 6, print 4, audit 2, bitst 2, non-method 2. No contract or guard is claimed for them."
+  },
+  {
+   "id": "B50-R9",
+   "severity": "low",
+   "disposition": "NOT_RUN",
+   "description": "No Miri (Stacked/Tree Borrows), ASan, TSan, dudect, authority differential or full library suite was run. Only the FAST gate and the focused x509:: tests were observed."
+  },
+  {
+   "id": "B50-R10",
+   "severity": "low",
+   "disposition": "NOT_RUN",
+   "description": "Only four of the 11 callbacks are driven end-to-end (group_ac, crl_reason, crl_number, subject_key_identifier); the other seven are covered by contract review and the shared dispatcher tests."
+  }
+ ],
+ "not_run": [
+  {
+   "gate": "Miri (Stacked/Tree Borrows)",
+   "blocker": "not invoked; no new aliasing model claim"
+  },
+  {
+   "gate": "ASan / TSan / dudect",
+   "blocker": "no instrument run; no secret-dependent operation is touched"
+  },
+  {
+   "gate": "authority differential",
+   "blocker": "no differential court run; the authority statements are read from the pinned 3.6.4 source"
+  },
+  {
+   "gate": "full library suite",
+   "blocker": "only the x509:: filter was run; the full suite is a BATCH/SEAL gate"
+  },
+  {
+   "gate": "consumer closure and CAMPAIGN-STATUS application",
+   "blocker": "deliberately not run; this subphase establishes the receipt, not the discharge"
+  },
+  {
+   "gate": "per-callback end-to-end coverage for seven of the eleven sites",
+   "blocker": "contract review plus the shared dispatcher tests only (B50-R10)"
+  }
+ ],
+ "non_claims": [
+  "B50 scopes the claim to the 11 i2s boundary operations and their dispatch path; X509_VERIFY_POLICY stays at its current mechanism state and is not discharged mechanism-wide.",
+  "The B50 dispositions are receipts, not applied adjudications: the closure was not run and CAMPAIGN-STATUS.json was not edited.",
+  "No sanitizer, Miri, dudect or authority differential was run; no cryptographic or constant-time claim is made.",
+  "The i2s type/usr_data pairing is a registrar ABI obligation, not a checked property (B50-R2, B50-R4).",
+  "Only four of the eleven callbacks are driven end-to-end; the other seven are covered by contract review and the dispatcher tests (B50-R10).",
+  "The read hold keeps a DYNAMIC row live across the callback (B49-R10); it does not keep a caller-owned row registered through X509V3_EXT_add alive, and it does not extend the borrowed-row ABI of X509V3_EXT_get[_nid] (B50-R1, B50-R5).",
+  "Every candidate line number is bound to candidate.files_sha256; any source edit invalidates these coordinates and the receipt."
+ ],
+ "review_conditions": {
+  "C1_identity": "base_head is db85674a0 with the B50 delta uncommitted; the worktree delta is bound by files_sha256 and must be committed and re-frozen before application.",
+  "C2_hold_design": "The B49 read hold already spans the i2s arm (:271-273 through :374-381). i2s needs the row live through the callback because it passes `method` and enum_i2s reads `method->usr_data`; no second hold was added, and none is needed.",
+  "C3_guard_canary": "x509::v3_prn::tests::i2s_is_not_called_when_the_value_does_not_decode fails deterministically when the NULL-decode refusal is removed, and the file is restored byte-for-byte (sha256 7794c3ac...).",
+  "C4_positive_path": "x509::v3_prn::tests::i2s_callbacks_print_end_to_end drives group_ac, crl_reason and crl_number; print_an_octet_string_extension_owns_the_i2s_result drives subject_key_identifier.",
+  "source_changed": true,
+  "note": "C2 does not change src/x509/v3_lib.rs; the source delta is the eleven # Safety contracts, one v3_prn.rs comment and two tests. The candidate still must be committed, rebuilt and re-frozen (S') and FAST re-run before application."
+ },
+ "applied": false,
+ "review": {
+  "reviewer": "pending independent adjudication",
+  "verdict": "UNAPPLIED",
+  "applied": false,
+  "date": "2026-11-01",
+  "prohibition": "Do not apply these dispositions to CAMPAIGN-STATUS.json or run the closure against them in this subphase."
+ }
+}

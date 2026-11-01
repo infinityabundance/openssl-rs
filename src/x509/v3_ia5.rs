@@ -177,6 +177,17 @@ const EXT_END: X509V3ExtMethod = X509V3ExtMethod {
 };
 
 /// The `i2s` slot for `i2s_ASN1_IA5STRING`.
+///
+/// # Safety
+///
+/// The `i2s` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `X509V3_EXT_print`'s `i2s` arm (`src/x509/v3_prn.rs:334-352`), which resolved `meth` under
+/// the extension registry's read hold and decoded `value` through the row's declared
+/// `ASN1_IA5STRING` item, refusing a NULL decode (`:317-320`). `meth` stays live for the call;
+/// `value` is the decoded string, owned by the dispatcher and released after this returns
+/// (`:374-381`). The callee reads only `value->data`/`value->length`.
+///
+/// Authority-derived: `crypto/x509/v3_prn.c:96`; `crypto/x509/v3_ia5.c:28-39`.
 unsafe extern "C" fn ia5_i2s(meth: *const X509V3ExtMethod, value: *mut c_void) -> *mut c_char {
     // SAFETY: `meth` is the table's live row (read only); `value` is the IA5 string in the slot.
     unsafe { i2s_ASN1_IA5STRING(meth.cast_mut().cast::<c_void>(), value.cast::<Asn1String>()) }

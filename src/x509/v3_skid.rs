@@ -246,6 +246,19 @@ unsafe extern "C" fn s2i_skey_id(
     unsafe { ossl_x509_pubkey_hash(pubkey) }.cast::<c_void>()
 }
 /// The `i2s` slot for `i2s_ASN1_OCTET_STRING`.
+///
+/// # Safety
+///
+/// The `i2s` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `X509V3_EXT_print`'s `i2s` arm (`src/x509/v3_prn.rs:334-352`), which resolved `meth` under
+/// the extension registry's read hold and decoded `value` through the row's declared
+/// `ASN1_OCTET_STRING` item, refusing a NULL decode (`:317-320`). `meth` stays live for the call
+/// but is unread by the callee; `value` is the decoded octet string, owned by the dispatcher and
+/// released after this returns (`:374-381`). The callee reads only
+/// `value->data`/`value->length` and does not null-check `value`, which the dispatcher's decode
+/// guard establishes.
+///
+/// Authority-derived: `crypto/x509/v3_prn.c:96`; `crypto/x509/v3_skid.c:27-31`.
 unsafe extern "C" fn skid_i2s(meth: *const X509V3ExtMethod, value: *mut c_void) -> *mut c_char {
     // SAFETY: `meth` is the table's live row (read only); `value` is the `ASN1_OCTET_STRING` in
     // the slot.
