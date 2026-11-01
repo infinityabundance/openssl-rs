@@ -4,12 +4,12 @@
  "campaign": "safe-c33 scoped mechanism discharge (SSL_SESSION S2/S3/S4: the remaining BLOCKED sites)",
  "subphase": "B47: the eleven remaining BLOCKED SSL_SESSION UNSAFE_FN_DEF sites outside the seven B46 ConfCmdFn rows. This refresh keeps the fn-level # Safety contracts and the C3 canary, corrects the falsified min_max_proto write-order clause and the stale coordinates, and does not apply the discharge or edit CAMPAIGN-STATUS.json.",
  "candidate": {
-  "base_commit": "a62adfb2a239aa336be81eb8974044d32a6edccb",
-  "base_commit_subject": "evidence(ssl): B46 and B47 rejected; a self-authored contract is not a witness",
-  "branch": "stage/p25/ssl-session-s1",
-  "working_tree": "dirty: the B46/B47 refresh, the B46-D2 in-use guard and three guard tests in src/ssl/ssl_conf.rs, plus the B47 fn-level contracts in src/ssl/{ssl_ciph,ssl_rsa,t1_trce,ssl_lib}.rs; nothing committed, nothing rebuilt into the install",
-  "src_sha256_final": "399096901c94dd2cc3c89dd17845da542cf7efd82b417645c0374d65021f16e7",
-  "src_sha256_final_scope": "sha256 over the sorted \"<sha256>  <path>\" lines of the five changed files; per-file hashes in files_sha256",
+  "base_commit": "3061a264b669897fc00d94f4e0d90103842a95f4",
+  "base_commit_subject": "evidence(evp): apply B48 -- 36 obligations discharged, nothing else moved",
+  "branch": "stage/p25/element7-s2b",
+  "working_tree": "clean at 31cea14c577e4017baaadd64c5b06de8ea91eef7 (candidate source tree; nothing pushed, no install rebuild)",
+  "src_sha256_final": "e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
+  "src_sha256_final_scope": "sha256 of src/ssl/ssl_conf.rs at 31cea14c577e4017baaadd64c5b06de8ea91eef7 (clean working tree); the other four B47 boundary files are unchanged and still match files_sha256",
   "files": [
    "src/ssl/ssl_conf.rs",
    "src/ssl/ssl_ciph.rs",
@@ -18,13 +18,15 @@
    "src/ssl/ssl_lib.rs"
   ],
   "files_sha256": {
-   "src/ssl/ssl_conf.rs": "880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
+   "src/ssl/ssl_conf.rs": "e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
    "src/ssl/ssl_ciph.rs": "8d3d77be1fe724e4f15ce080fa76875c74930924638edfa8008f6a2acf7dd993",
    "src/ssl/ssl_rsa.rs": "e757321bb8019b6357a339bd561d50bb31a594379aaedc2910da96c3057e7771",
    "src/ssl/t1_trce.rs": "7a28ef67208e42c8870cab94414367711f7c5491fe99ddfdafa795077f5a51b1",
    "src/ssl/ssl_lib.rs": "b221695b5657e04ebf1f259da7ca3fe100c528efc129b86c88f6e566bb0cf9c2"
   },
-  "note": "No freeze tag was created and nothing was committed (per the subphase instruction). The obligation coordinates (line fields) are the V1 census coordinates and are retained as provenance; line_current and every embedded candidate line reference have been refreshed to the current working tree. Every quoted candidate line number is bound to these hashes. The ssl_conf.rs hash includes the B46-D2 guard; the eleven B47 sites themselves are unchanged apart from fn-level # Safety documentation."
+  "note": "No freeze tag was created. The source candidate is 31cea14c577e4017baaadd64c5b06de8ea91eef7 (clean working tree; src/ssl/ssl_conf.rs sha256 e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8). This receipt is evidence about that frozen candidate, not a source edit. V1 census coordinates in boundaries[].line remain provenance. boundaries[].line_current, every structured callers[].line, and every anchor in entry_point_inventory/exclusivity_model/free_policy are refreshed to the 31cea14c5 coordinates (symbol anchors: ssl_conf_cmd_inner :1542, dispatch :1575, SSL_CONF_cmd :1621, argv :1666, value_type :1758, commands() :1092). Prose line references embedded in the older boundary contracts, including caller_closure entries, are symbol-anchored witnesses written against the prior snapshots 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656/39b89b9695f5071699c51eb45293734acd5b2f24803e9784b23efc5e05b989e6 and are not presented as current line numbers; the structured anchors are authoritative.",
+  "head_commit": "31cea14c577e4017baaadd64c5b06de8ea91eef7",
+  "head_commit_subject": "fix(ssl): make SSL_CONF_CTX_free an explicit serialisation point"
  },
  "authority": {
   "id": "openssl-3.5.9",
@@ -37,7 +39,14 @@
   "directive": "doc/man3/SSL_CONF_cmd.pod:12-22, 700-780",
   "ssl_ctx_new_pod": "doc/man3/SSL_CTX_new.pod:97-99 (SSL_CTX must not be changed from multiple threads concurrently; the implementation provides no serialization)",
   "quic_multi_stream_pod": "doc/man7/ossl-guide-quic-multi-stream.pod:51-53 (the same SSL object cannot be used on two threads at once without application-level locking)",
-  "note": "The authority documentation states no rule for SSL_CONF_CTX itself and performs no overlap check in ssl/ssl_conf.c. It does state an application obligation for SSL/SSL_CTX (ssl_ctx_new_pod, quic_multi_stream_pod), in advisory wording. The candidate restates that obligation in the exported SSL_CONF_cmd/SSL_CONF_cmd_argv contracts (B46-D1) and, for same-thread overlap of the SSL_CONF_CTX, refuses deterministically with 0 via the in-use guard (B46-D2). For the callbacks in this receipt the authority supplies the ABI signature and the pointer contracts: CONF_parse_list element pointers, custom-extension parse/add callbacks, and the CT validation callback."
+  "note": "The authority documentation states no rule for SSL_CONF_CTX itself and performs no overlap check in ssl/ssl_conf.c. It does state an application obligation for SSL/SSL_CTX (ssl_ctx_new_pod, quic_multi_stream_pod), in advisory wording. The candidate restates that obligation in the exported SSL_CONF_cmd/SSL_CONF_cmd_argv contracts (B46-D1) and, for same-thread overlap of the SSL_CONF_CTX, refuses deterministically with 0 via the in-use guard (B46-D2). For the callbacks in this receipt the authority supplies the ABI signature and the pointer contracts: CONF_parse_list element pointers, custom-extension parse/add callbacks, and the CT validation callback.",
+  "divergence_free": {
+   "id": "B46-D3",
+   "section": "AGENTS.md section 17",
+   "divergence": "The authority frees the SSL_CONF_CTX immediately from SSL_CONF_CTX_free. The candidate, when an entry point holds the context, poisons it (CTX_FREE_PENDING) and defers the single release to the holder's RAII guard; later entry points are refused. Free remains void and exactly one release occurs.",
+   "effect": "The block outlives the free call by at most the remaining in-flight call. No silent leak on a terminating program, and no guard can write into freed memory. If the in-flight call never returns the block is not released, the same liveness premise as any scope-bound resource.",
+   "disposition": "RECORDED AS A DOCUMENTED DIVERGENCE; the rejected alternative (refuse and return) has no in-band signal because free is void"
+  }
  },
  "scope": {
   "aggregation": "python3: [o for o in closure-ssh-v1u.obligations if o['mechanism']=='SSL_SESSION' and o['status']=='BLOCKED']",
@@ -53,13 +62,14 @@
    "id": "B47-SSL-CONF-001",
    "file": "src/ssl/ssl_conf.rs",
    "line": 240,
-   "line_current": 332,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_v1": 240,
+   "line_current": 434,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to 31cea14c5 at src_sha256_final e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
    "kind": "UNSAFE_FN_DEF",
    "operation": "ssl_match_option",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe fn(*mut SslConfCtx, &SslFlagTbl, *const c_char, c_int, c_int) -> bool",
-   "disposition": "SAFETY_DISCHARGED (scope: ssl_match_option and its dispatch path; src/ssl/ssl_conf.rs:240)",
+   "disposition": "SAFETY_DISCHARGED (scope: ssl_match_option and its dispatch path; src/ssl/ssl_conf.rs:434)",
    "contract": "`ssl_match_option` is a private helper whose only caller is `ssl_set_option_list` (`src/ssl/ssl_conf.rs:424`), inside the `CONF_parse_list` parse started by `parse_option_list` (`:542`; callback installed at `:558`). Preconditions: (1) `cctx` is non-NULL, aligned, live, initialised and exclusively accessible: it comes from `SSL_CONF_cmd` (`:1516`, dispatch `:1473`), which refuses NULL at `:1522` and whose public `# Safety` (`:1489`) requires exclusivity; on a match this function calls `ssl_set_option` (`:361`), which takes `&mut *cctx` and writes one field of the referenced `SSL`/`SSL_CTX`. (2) `tbl` is a safe `&SslFlagTbl`; the caller borrows it from `cctx.tbl`, which `parse_option_list` points at a frame-local table for the duration and clears at `:566-567`. (3) `elem` is readable for `len` bytes when `len >= 0` and NUL-terminated when `len == -1`, exactly `CONF_parse_list`'s element contract; `onoff` is an integer. (4) No pointer is retained.",
    "callers": [
     {
@@ -91,19 +101,21 @@
    ],
    "asserted_not_established": [
     "a malformed (elem,len) or unaligned cctx is not rejected by a runtime check; it is outside the stated contract"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_conf.rs:240 to the current census coordinate src/ssl/ssl_conf.rs:434; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-SSL-CONF-002",
    "file": "src/ssl/ssl_conf.rs",
    "line": 274,
-   "line_current": 384,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_v1": 274,
+   "line_current": 486,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to 31cea14c5 at src_sha256_final e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
    "kind": "UNSAFE_FN_DEF",
    "operation": "ssl_set_option_list",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*const c_char, c_int, *mut c_void) -> c_int",
-   "disposition": "SAFETY_DISCHARGED (scope: ssl_set_option_list and its dispatch path; src/ssl/ssl_conf.rs:274)",
+   "disposition": "SAFETY_DISCHARGED (scope: ssl_set_option_list and its dispatch path; src/ssl/ssl_conf.rs:486)",
    "contract": "`ssl_set_option_list` is the `CONF_parse_list` element callback, installed only by `parse_option_list` (`src/ssl/ssl_conf.rs:558`) with `usr = cctx` (`:559`). Preconditions: (1) `usr` is non-NULL and points to a live, initialised, exclusively accessible `SslConfCtx`; the callback reads `tbl`/`ntbl` at `:417` (installed at `:549-550`) and on a match reaches `ssl_match_option` (`:424`) -> `ssl_set_option` (`:361`), which takes `&mut *cctx`. (2) `cctx.tbl` is NULL or a live array of `ntbl` `SslFlagTbl` values that outlives the callback; `parse_option_list` installs a frame-local table and clears it before returning (`:566-567`). (3) `elem` is NULL or readable for `len` bytes (`len >= 0`) or NUL-terminated (`len == -1`); a NULL `elem` returns 0 at `:394`. (4) `CONF_parse_list` invokes synchronously and retains nothing, and the callback stores no pointer.",
    "callers": [
     {
@@ -135,19 +147,21 @@
    ],
    "asserted_not_established": [
     "a caller that bypasses parse_option_list and supplies a different usr is outside the contract"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_conf.rs:274 to the current census coordinate src/ssl/ssl_conf.rs:486; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-SSL-CONF-003",
    "file": "src/ssl/ssl_conf.rs",
    "line": 379,
-   "line_current": 514,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_v1": 379,
+   "line_current": 616,
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to 31cea14c5 at src_sha256_final e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
    "kind": "UNSAFE_FN_DEF",
    "operation": "min_max_proto",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe fn(*mut SslConfCtx, *const c_char, *mut c_int) -> c_int",
-   "disposition": "SAFETY_DISCHARGED (scope: min_max_proto and its dispatch path; src/ssl/ssl_conf.rs:379)",
+   "disposition": "SAFETY_DISCHARGED (scope: min_max_proto and its dispatch path; src/ssl/ssl_conf.rs:616)",
    "contract": "`min_max_proto` is called only by `cmd_MinProtocol` (`src/ssl/ssl_conf.rs:853`) and `cmd_MaxProtocol` (`:885`), `ConfCmdFn` rows stored by `commands()` (`:990`; rows `:1067`/`:1068`) and reached only through the single dispatch `f(cctx, value)` in `SSL_CONF_cmd` (`:1473`). Preconditions: (1) `cctx` is live, initialised and exclusively accessible (public `# Safety` `:1489`; dispatch guard `:1522`). (2) `cctx.ctx` (live `SSL_CTX`) or `cctx.ssl` (live `SSL`) is selected; its `method`/`defltmeth` is a live non-NULL method table established by `SSL_CTX_new`/`SSL_new`. (3) `value` is non-NULL and NUL-terminated: the dispatch refuses NULL for a typed row at `:1490`, and the body reads it with `CStr::from_ptr` at `:527`. (4) `bound` is never NULL at a dereference: it is the live, aligned `min_proto_version`/`max_proto_version` field supplied from `cctx`. `SSL_CONF_CTX_set_ssl` (`:1795`, assigns `:1812-1813`) and `SSL_CONF_CTX_set_ssl_ctx` (`:1839`, assigns `:1856-1857`) set it whenever `ctx`/`ssl` is non-NULL; when both are NULL the body returns 0 at `:524` before reading `value` or `bound`, so the NULL case is never dereferenced. (5) An unrecognised protocol name returns 0 at `:530`. The accepted `None` name parses to version 0, which `ssl_set_version_bound` writes at `:470-473` before any range test; a nonzero accepted version is range-checked before its write; the method-mismatch `_` arm accepts without writing.",
    "callers": [
     {
@@ -162,8 +176,8 @@
     },
     {
      "file": "src/ssl/ssl_conf.rs",
-     "line": 1473,
-     "role": "sole dispatch f(cctx, value) in SSL_CONF_cmd"
+     "line": 1575,
+     "role": "sole dispatch f(cctx, value) at :1575 inside ssl_conf_cmd_inner (:1542)"
     },
     {
      "file": "src/ssl/ssl_conf.rs",
@@ -184,19 +198,21 @@
    ],
    "asserted_not_established": [
     "the DTLS method-version and method-mismatch arms are not exercised by C3"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_conf.rs:379 to the current census coordinate src/ssl/ssl_conf.rs:616; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-CIPH-001",
    "file": "src/ssl/ssl_ciph.rs",
    "line": 741,
+   "line_v1": 741,
    "line_current": 756,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "update_cipher_list_by_id",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe fn(*mut *mut OpenSslStack, *mut OpenSslStack) -> bool",
-   "disposition": "SAFETY_DISCHARGED (scope: update_cipher_list_by_id and its dispatch path; src/ssl/ssl_ciph.rs:741)",
+   "disposition": "SAFETY_DISCHARGED (scope: update_cipher_list_by_id and its dispatch path; src/ssl/ssl_ciph.rs:756)",
    "contract": "`update_cipher_list_by_id` is a private helper with two callers: `update_cipher_list` (`src/ssl/ssl_ciph.rs:828`) and `ssl_create_cipher_list` (`:1208`). Preconditions: (1) `cipher_list_by_id` is non-NULL, points to a writable slot exclusively accessible to the call, and holds NULL or a live stack owned by the same `SSL_CTX`/`SSL`; the old value is freed at `:767`. (2) `cipherstack` is a live stack of NULL-or-live `*const SSL_CIPHER` entries owned by the caller; the body duplicates it at `:761` and never frees it. (3) The installed comparator is `ssl_cipher_ptr_id_cmp` (`:769`), whose own `# Safety` requires each element to be NULL or a table-row cipher. (4) No other reference to the slot or the installed stack is live for the call. Both callers pass a slot reached from a live `SSL_CTX`.",
    "callers": [
     {
@@ -222,19 +238,21 @@
    ],
    "asserted_not_established": [
     "no runtime test exercises a NULL/dangling cipher_list_by_id or a non-stack cipherstack"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_ciph.rs:741 to the current census coordinate src/ssl/ssl_ciph.rs:756; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-CIPH-002",
    "file": "src/ssl/ssl_ciph.rs",
    "line": 851,
+   "line_v1": 851,
    "line_current": 880,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "set_ciphersuites",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe fn(*mut *mut OpenSslStack, *const c_char) -> bool",
-   "disposition": "SAFETY_DISCHARGED (scope: set_ciphersuites and its dispatch path; src/ssl/ssl_ciph.rs:851)",
+   "disposition": "SAFETY_DISCHARGED (scope: set_ciphersuites and its dispatch path; src/ssl/ssl_ciph.rs:880)",
    "contract": "`set_ciphersuites` is a private helper called by `SSL_CTX_set_ciphersuites` (`src/ssl/ssl_ciph.rs:1638`) and `SSL_set_ciphersuites` (`:1668`). Preconditions: (1) `currciphers` is non-NULL, points to a writable slot owned by a live `SSL_CTX`/`SSL` that the call exclusively accesses, and holds NULL or a stack the object owns; the old value is freed at `:907-908`. (2) `str_` is NULL or a NUL-terminated byte string readable for the whole call; the NULL arm is the authority's empty-list behaviour, and `CONF_parse_list` (call at `:891-897`) retains no pointer. (3) The parse callback `ciphersuite_cb` receives a fresh, exclusively owned stack as `arg`. (4) No other reference to the object or its stack slot is live.",
    "callers": [
     {
@@ -260,19 +278,21 @@
    ],
    "asserted_not_established": [
     "no runtime test exercises a NULL currciphers or a non-NUL-terminated str_"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_ciph.rs:851 to the current census coordinate src/ssl/ssl_ciph.rs:880; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-RSA-001",
    "file": "src/ssl/ssl_rsa.rs",
    "line": 1007,
+   "line_v1": 1007,
    "line_current": 1021,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "serverinfoex_srv_parse_cb",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*mut Ssl, c_uint, c_uint, *const u8, usize, *mut X509, usize, *mut c_int, *mut c_void) -> c_int",
-   "disposition": "SAFETY_DISCHARGED (scope: serverinfoex_srv_parse_cb and its dispatch path; src/ssl/ssl_rsa.rs:1007)",
+   "disposition": "SAFETY_DISCHARGED (scope: serverinfoex_srv_parse_cb and its dispatch path; src/ssl/ssl_rsa.rs:1021)",
    "contract": "`serverinfoex_srv_parse_cb` is installed by `serverinfo_process_buffer` (`src/ssl/ssl_rsa.rs:1176`) as an `SSL_custom_ext_parse_cb_ex` and is never invoked at this identity: `src/ssl/statem/extensions_cust.rs` stores the erased pointer and records that this slice calls neither callback. The discharge is therefore ABI-only. If an invocation path is added, the preconditions are: `s` is a live connection; `in` is NULL or readable for `inlen` bytes; `al` is non-NULL and points to a writable `int` (the body writes `*al = SSL_AD_DECODE_ERROR` at `:1034` whenever `inlen != 0`). `ext_type`, `context`, `x`, `chainidx` and `arg` are unread.",
    "callers": [
     {
@@ -303,19 +323,21 @@
    ],
    "asserted_not_established": [
     "future invocation must re-open this boundary and establish s/in/al"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_rsa.rs:1007 to the current census coordinate src/ssl/ssl_rsa.rs:1021; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-RSA-002",
    "file": "src/ssl/ssl_rsa.rs",
    "line": 1033,
+   "line_v1": 1033,
    "line_current": 1057,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "serverinfo_srv_parse_cb",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*mut Ssl, c_uint, *const u8, usize, *mut c_int, *mut c_void) -> c_int",
-   "disposition": "SAFETY_DISCHARGED (scope: serverinfo_srv_parse_cb and its dispatch path; src/ssl/ssl_rsa.rs:1033)",
+   "disposition": "SAFETY_DISCHARGED (scope: serverinfo_srv_parse_cb and its dispatch path; src/ssl/ssl_rsa.rs:1057)",
    "contract": "`serverinfo_srv_parse_cb` is installed by `serverinfo_process_buffer` (`src/ssl/ssl_rsa.rs:1165`) as the old-style `custom_ext_parse_cb` and is never invoked at this identity. The discharge is ABI-only. If an invocation path is added, `s` must be live, `in` NULL or readable for `inlen`, and `al` non-NULL and writable; the body forwards every pointer unchanged to `serverinfoex_srv_parse_cb` (`:1066`), so the ex-callback's contract applies.",
    "callers": [
     {
@@ -346,19 +368,21 @@
    ],
    "asserted_not_established": [
     "future invocation must re-open this boundary"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_rsa.rs:1033 to the current census coordinate src/ssl/ssl_rsa.rs:1057; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-RSA-003",
    "file": "src/ssl/ssl_rsa.rs",
    "line": 1046,
+   "line_v1": 1046,
    "line_current": 1082,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "serverinfoex_srv_add_cb",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*mut Ssl, c_uint, c_uint, *mut *const u8, *mut usize, *mut X509, usize, *mut c_int, *mut c_void) -> c_int",
-   "disposition": "SAFETY_DISCHARGED (scope: serverinfoex_srv_add_cb and its dispatch path; src/ssl/ssl_rsa.rs:1046)",
+   "disposition": "SAFETY_DISCHARGED (scope: serverinfoex_srv_add_cb and its dispatch path; src/ssl/ssl_rsa.rs:1082)",
    "contract": "`serverinfoex_srv_add_cb` is installed by `serverinfo_process_buffer` (`src/ssl/ssl_rsa.rs:1173`) as an `SSL_custom_ext_add_cb_ex` and is never invoked at this identity. Its body ignores `s`, `out`, `outlen`, `x`, `al` and `arg` and returns 0 (`:1083-1089`), so no caller-supplied pointer is dereferenced. The obligation is the ABI: it may only be installed as the ex-style add callback of `SSL_CTX_add_custom_ext`.",
    "callers": [
     {
@@ -388,19 +412,21 @@
    ],
    "asserted_not_established": [
     "future invocation must re-open this boundary"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_rsa.rs:1046 to the current census coordinate src/ssl/ssl_rsa.rs:1082; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-TRACE-001",
    "file": "src/ssl/t1_trce.rs",
    "line": 1064,
+   "line_v1": 1064,
    "line_current": 1075,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "is_tls13",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe fn(*const Ssl) -> bool",
-   "disposition": "SAFETY_DISCHARGED (scope: is_tls13 and its dispatch path; src/ssl/t1_trce.rs:1064)",
+   "disposition": "SAFETY_DISCHARGED (scope: is_tls13 and its dispatch path; src/ssl/t1_trce.rs:1075)",
    "contract": "`is_tls13` is a private trace predicate called only from the trace printers (`src/ssl/t1_trce.rs:2357`, `:2395`, `:2429`, `:2533`, `:2662`, `:2712`, `:2742`) and from `is_dtls`-guarded code. Preconditions: `sc` is non-NULL, aligned and points to a live `Ssl` that is not concurrently written for the call; its `method` field is NULL or a live method table. The body only reads `method`/`version` (`:1077-1085`) and calls `is_dtls` (`:1058`). Each printing caller's `# Safety` requires `sc` live (for example `ssl_print_certificates` at `:2344`, `ssl_print_signature` at `:1255`).",
    "callers": [
     {
@@ -450,19 +476,21 @@
    ],
    "asserted_not_established": [
     "a caller that violates the trace printers' live-sc contract is outside the contract"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/t1_trce.rs:1064 to the current census coordinate src/ssl/t1_trce.rs:1075; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-TRACE-002",
    "file": "src/ssl/t1_trce.rs",
    "line": 1077,
+   "line_v1": 1077,
    "line_current": 1098,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "use_sigalgs",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe fn(*const Ssl) -> bool",
-   "disposition": "SAFETY_DISCHARGED (scope: use_sigalgs and its dispatch path; src/ssl/t1_trce.rs:1077)",
+   "disposition": "SAFETY_DISCHARGED (scope: use_sigalgs and its dispatch path; src/ssl/t1_trce.rs:1098)",
    "contract": "`use_sigalgs` is a private trace predicate called only from `ssl_print_signature` (`src/ssl/t1_trce.rs:1267`) and one further trace printer (`:2566`). Preconditions: `sc` is non-NULL, aligned and points to a live `Ssl` that is not concurrently written for the call; its `method` field is NULL or a live method table. The body only reads `method`/`enc_flags` (`:1101-1105`) and dereferences nothing else.",
    "callers": [
     {
@@ -487,19 +515,21 @@
    ],
    "asserted_not_established": [
     "a caller that violates the trace printers' live-sc contract is outside the contract"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/t1_trce.rs:1077 to the current census coordinate src/ssl/t1_trce.rs:1098; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-CT-001",
    "file": "src/ssl/ssl_lib.rs",
    "line": 8845,
+   "line_v1": 8845,
    "line_current": 8857,
-   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the current working tree (ssl_conf.rs 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656)",
+   "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "ct_permissive",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*const c_void, *const c_void, *mut c_void) -> c_int",
-   "disposition": "SAFETY_DISCHARGED (scope: ct_permissive and its dispatch path; src/ssl/ssl_lib.rs:8845)",
+   "disposition": "SAFETY_DISCHARGED (scope: ct_permissive and its dispatch path; src/ssl/ssl_lib.rs:8857)",
    "contract": "`ct_permissive` is installed by `SSL_CTX_enable_ct` (`src/ssl/ssl_lib.rs:8897`) and `SSL_enable_ct` (`:8920`) as an `ssl_ct_validation_cb` and is never invoked at this identity: the callback is stored in `ct_validation_callback` and copied on `SSL_new`/`SSL_dup`, but no candidate path calls it. Its body ignores `_ctx`, `_scts` and `_arg` and returns 1 (`:8858-8860`), so no caller-supplied pointer is dereferenced. The obligation is the ABI: it may only be installed as the `SSL_CTX_set_ct_validation_callback`/`SSL_set_ct_validation_callback` callback.",
    "callers": [
     {
@@ -529,7 +559,8 @@
    ],
    "asserted_not_established": [
     "future invocation must re-open this boundary"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_lib.rs:8845 to the current census coordinate src/ssl/ssl_lib.rs:8857; the operation symbol was verified on the current line"
   }
  ],
  "supersedes": [
@@ -590,21 +621,29 @@
  ],
  "evidence": {
   "fast": {
-   "fmt": "cargo fmt --all -- --check: PASS (exit 0, no output) in the court container at the candidate hashes above",
-   "clippy": "cargo clippy --all-targets -- -D warnings: PASS (Finished dev profile in 15.50s) at the same source",
-   "focused_tests": "cargo test --lib -- ssl:: -- --test-threads=4: PASS, 348 passed / 0 failed / 16 ignored (1926 filtered out), including C2, C3 and the three B46-D2 guard tests"
+   "fmt": "cargo fmt --all -- --check: PASS (exit 0, no output) in the court container at ssl_conf.rs sha256 39b89b9695f5071699c51eb45293734acd5b2f24803e9784b23efc5e05b989e6",
+   "clippy": "cargo clippy --all-targets -- -D warnings: PASS (Finished dev profile in 18.39s) at the same source",
+   "focused_tests": "cargo test --lib -- ssl::ssl_conf -- --test-threads=4: PASS, 11 passed / 0 failed / 0 ignored at the same source",
+   "ssl_suite": "cargo test --lib -- ssl:: -- --test-threads=4: PASS, 351 passed / 0 failed / 16 ignored (1938 filtered out) at the same source"
   },
-  "mutation": {
-   "canary": "C3(ssl::ssl_conf::tests::conf_cmd_min_max_protocol_bounds_are_range_checked)",
-   "guarded_check": "protocol_from_string's unrecognised-name return (`-1` at src/ssl/ssl_conf.rs:448)",
-   "pre_mutation_sha256": "880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
-   "mutation": "replaced the `-1` return with `t::TLS1_2_VERSION as c_int`",
-   "command": "cargo test --lib -- ssl::ssl_conf::tests::conf_cmd_min_max_protocol_bounds_are_range_checked -- --exact --test-threads=1",
-   "observed": "FAILED: panicked at src/ssl/ssl_conf.rs:2046:9: assertion `left == right` failed: an unrecognised protocol name is refused; left: 2, right: 0; test result 0 passed / 1 failed",
-   "restore": "restored from the snapshot with `cp`; `sha256sum -c` reported OK for 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
-   "later_comment_only_edits": "none after the mutation run; the restored file is byte-identical to the measured identity"
-  },
-  "bounded_reuse": "These eleven census lines had no prior SAFETY_DISCHARGED receipt. B46 listed ssl_conf.rs:240/274/379 as retained_blocked/out of scope; B47 supersedes those three entries. No measurement is reused from a different boundary."
+  "mutation": [
+   {
+    "guard": "SSL_CONF_CTX_set1_prefix",
+    "mutation": "removed the `let Some(_in_use) = enter_use(cctx) else { return 0; }` acquisition",
+    "test": "ssl::ssl_conf::tests::every_entry_point_refuses_an_overlap_and_works_when_idle",
+    "observed": "FAILED at src/ssl/ssl_conf.rs:2643: 'set1_prefix refuses an overlap', left 1, right 0",
+    "restore": "cp from snapshot; sha256 unchanged at 39b89b9695f5071699c51eb45293734acd5b2f24803e9784b23efc5e05b989e6 and cmp reported identical"
+   },
+   {
+    "guard": "SSL_CONF_cmd_value_type",
+    "mutation": "removed the `let Some(_in_use) = enter_use(cctx) else { return SSL_CONF_TYPE_UNKNOWN }` acquisition",
+    "test": "ssl::ssl_conf::tests::value_type_is_refused_while_in_use_and_correct_when_idle",
+    "observed": "FAILED at src/ssl/ssl_conf.rs:2848: 'the accessor refuses while the context is held', left 1 (STRING), right 0 (UNKNOWN)",
+    "restore": "cp from snapshot; sha256 unchanged at 39b89b9695f5071699c51eb45293734acd5b2f24803e9784b23efc5e05b989e6 and cmp reported identical"
+   }
+  ],
+  "bounded_reuse": "These eleven census lines had no prior SAFETY_DISCHARGED receipt. B46 listed ssl_conf.rs:240/274/379 as retained_blocked/out of scope; B47 supersedes those three entries. No measurement is reused from a different boundary.",
+  "mutation_note": "Both mutations were applied one at a time to the measured source 39b89b9695f5071699c51eb45293734acd5b2f24803e9784b23efc5e05b989e6, the failing test was run in the court container, and the file was restored from a snapshot; cmp and sha256 both confirmed byte identity after each restore."
  },
  "negative_control": {
   "id": "C3",
@@ -617,15 +656,15 @@
   "limits": "Does not exercise the DTLS method-version arm, the method-mismatch arm that accepts without writing, a malformed/non-NUL-terminated value, or exclusivity (not observable from safe test code)."
  },
  "hidden_obligations": 0,
- "hidden_obligations_note": "No hidden obligation was found within these eleven sites. Every retained precondition is stated either in the fn-level # Safety or as an authority-derived note. The four installed-but-never-invoked callbacks are a conditional residual, recorded openly, not a hidden obligation. The B46-R1 exclusivity split (cross-thread authority obligation; same-thread in-use guard) is reported in boundary-sweep-B46.json and is not an obligation of these eleven sites.",
- "new_unsafe_assumptions": 0,
- "new_unsafe_assumptions_note": "For the eleven B47 sites themselves: only fn-level # Safety documentation and one test were added; no production unsafe operation, signature, layout or exported symbol changed at these sites. The shared src/ssl/ssl_conf.rs hash also carries the B46-D2 guard, which is accounted for in boundary-sweep-B46.json.",
+ "hidden_obligations_note": "No unreported obligation in the exclusivity model. The prior B46-R1 split is now fully reported: the intra-context half is enforced for all 11 exported entry points (B46-D2) and the free case is deferred (B46-D3); the remaining external obligations are (a) exclusive use of the wrapped SSL/SSL_CTX and (b) not using the cctx pointer after free returns, and (c) externally serialising SSL_CONF_CTX_free against every other call. All are caller obligations stated in the public # Safety, not hidden crate assumptions. hidden_obligations=0 is a reporting statement, not a discharge: the REJECT verdict is preserved.",
+ "new_unsafe_assumptions": 1,
+ "new_unsafe_assumptions_note": "One production unsafe abstraction: the exclusion guard. It consists of `state` (AtomicU8), `enter_use` (addr_of! + compare_exchange), `InUseGuard::drop` (load/compare_exchange, and the FREE_PENDING arm that calls destroy_and_release), `destroy_and_release`, and the SSL_CONF_CTX_free retry loop (addr_of! + compare_exchange). Every operation carries a SAFETY comment. No signature, exported symbol or #[repr(C)] layout changed; the type is opaque and not repr(C), and the block is allocated through the crate's own seam at size_of::<SslConfCtx>().",
  "unsafe_operations_removed": 0,
- "unsafe_operations_introduced": 0,
- "test_only_unsafe_added": 1,
- "boundary_size": "Eleven sites: three private helpers in ssl_conf.rs, two private cipher helpers in ssl_ciph.rs, three installed custom-extension callbacks in ssl_rsa.rs, two trace predicates in t1_trce.rs, and one installed CT callback in ssl_lib.rs. The eleven site bodies are unchanged apart from fn-level # Safety docs; C3 adds test-only unsafe blocks. The ssl_conf.rs hash additionally carries the B46-D2 guard, which is B46 scope.",
+ "unsafe_operations_introduced": 15,
+ "test_only_unsafe_added": 34,
+ "boundary_size": "Eleven exported C entry points in one file plus the private ConfCmdFn handler cluster and its helpers. The exclusion boundary is one AtomicU8 state machine (`enter_use`, `InUseGuard`, `destroy_and_release`, the free retry loop) that every context-taking entry point crosses; it adds no C-visible symbol. The B46 ConfCmdFn dispatch edge and the B47 helper callees remain the unsafe interiors behind that boundary.",
  "safe_callers_can_cause_ub": false,
- "safe_callers_can_cause_ub_note": "All eleven are private `unsafe fn`/`unsafe extern \"C\"` bodies or function-pointer slots. The exported entry points that reach them remain `unsafe extern \"C\"` with stated contracts, so no safe-Rust caller can install or invoke one.",
+ "safe_callers_can_cause_ub_note": "The confirmation slot, commands table and handlers are private, so no safe Rust caller can install a ConfCmdFn or construct the guard. Every exported entry point is `unsafe extern \"C\"` and carries a # Safety contract; no safe Rust function in the crate constructs an SslConfCtx reference outside a guarded entry point. The guard is a raw-pointer RAII token, not a value a safe caller can hold after the entry point returns.",
  "retained_blocked": [],
  "retained_blocked_note": "No BLOCKED obligation remains in scope. The three serverinfo callbacks and ct_permissive are conditionally discharged: their ABI contracts are stated, but adding an invocation path must re-open them (B47-R1).",
  "residuals": [
@@ -658,6 +697,22 @@
    "severity": "low",
    "disposition": "AUTHORITY-PARITY",
    "description": "The min/max bound is written only for version 0 and the matching TLS_ANY/DTLS_ANY arm; the method-mismatch arm returns true without writing. C3 pins the refusal/acceptance path, not every method-version combination."
+  },
+  {
+   "id": "B47-R7",
+   "severity": "low",
+   "disposition": "REPORTED, accepted consequence of B46-D3",
+   "description": "If the entry point that holds the context never returns (a non-terminating callback or a deadlocked call), SSL_CONF_CTX_free leaves the block poisoned and unreleased. This is a liveness premise, not an ownership defect: the release is exactly once on every terminating path, and the alternative (immediate free) is the use-after-free/guard-dangling defect this repair removes.",
+   "not_established": "That an in-flight call always terminates.",
+   "consequence": "A non-terminating in-flight call keeps the block alive; no other entry point can use it."
+  },
+  {
+   "id": "B47-R6",
+   "severity": "medium",
+   "disposition": "EXTERNAL CALLER OBLIGATION / NOT ENFORCED",
+   "description": "SSL_CONF_CTX_free is an external serialisation point: a second concurrent free, or an entry point racing the release, can perform an atomic access on state inside the freed block. No leak-free, ABI-preserving refusal exists, so this remains a caller precondition and is not covered by the B46-D2/B46-D3 hardening.",
+   "not_established": "Concurrent-free / free-vs-entry-point safety.",
+   "consequence": "Only a caller that externally serialises SSL_CONF_CTX_free is within the contract."
   }
  ],
  "not_run": [
@@ -687,7 +742,7 @@
   "The B47 dispositions are receipts, not applied adjudications: consumer_closure was not run and CAMPAIGN-STATUS.json was not edited.",
   "No sanitizer, Miri, dudect or authority differential was run; no cryptographic or constant-time claim is made.",
   "The four installed-but-never-invoked callbacks are ABI-only discharges; the absence of an invocation path is a finding of this identity, not a permanent property.",
-  "Cross-thread mutation of the wrapped SSL/SSL_CTX and NUL-termination remain obligations on the exported SSL_CONF_cmd/SSL_CONF_cmd_argv caller; they are not mechanically enforced. Same-thread overlap of the two dispatch entry points IS refused by the B46-D2 guard (B46 scope).",
+  "Cross-thread mutation of the wrapped SSL/SSL_CTX and NUL-termination remain obligations on the exported SSL_CONF_cmd/SSL_CONF_cmd_argv caller; they are not mechanically enforced. Same-thread overlap of every exported SSL_CONF_CTX entry point on the same context IS refused by the B46-D2 guard, and a free observed while an entry point is in flight is deferred by B46-D3. SSL_CONF_CTX_free itself remains an external serialisation point (no concurrent free, no entry point in flight): the void ABI and the address-only pointer cannot make a second free safe.",
   "Every candidate line number is bound to candidate.files_sha256; any source edit invalidates these coordinates and the receipt.",
   "Part A is a contract narrowing (B46-D1); the B46-D2 guard is a behaviour change only for an overlapping invocation on the same dispatch entry point (returns 0 where the authority would proceed). No non-overlapping return value or state transition changed."
  ],
@@ -709,6 +764,318 @@
   "prohibition": [
    "Do not apply B46 or B47. All 18 sites stay BLOCKED and SSL_SESSION stays OWNERSHIP_RECONSTRUCTED.",
    "Do not substitute our own documentation for an external witness, and do not widen a disposition range to move a count."
+  ],
+  "review_history": [
+   {
+    "round": "fourth review",
+    "date": "2026-11-01",
+    "scope": "receipt-only identity, residual-identity and stale-coordinate repair; no source change and no re-adjudication",
+    "candidate_head_commit": "31cea14c577e4017baaadd64c5b06de8ea91eef7",
+    "verdict": "REJECT",
+    "applied": false,
+    "outcome": "The fourth rejection stands. This entry records the receipt repair only; the decisive_reason above remains the operative rejection and nothing was applied."
+   }
   ]
- }
+ },
+ "refresh_date": "2026-11-01",
+ "applied": false,
+ "refresh_note": "Repair refresh after the second rejection: the in-use guard now covers every exported entry point that takes a *mut SslConfCtx, and free-while-in-use is a deferred release. The free contract now states that free is an external serialisation point and that the deferred arm is outside the contract. The REJECT verdict and its history are preserved verbatim and are not re-adjudicated; this receipt remains UNAPPLIED. New sections: entry_point_inventory, exclusivity_model, free_policy, divergences. Candidate identity is src/ssl/ssl_conf.rs sha256 e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8 at 31cea14c577e4017baaadd64c5b06de8ea91eef7 (clean working tree).",
+ "divergences": [
+  {
+   "id": "B46-D1",
+   "kind": "contract narrowing, no behaviour change",
+   "text": "The authority's SSL_CONF_cmd(3) documents no exclusive-access or no-concurrent-mutation requirement and ssl_conf.c checks none. The candidate's public # Safety requires both (src/ssl/ssl_conf.rs:1574 onward for SSL_CONF_cmd, :1651 for argv and the accessor/mutator contracts at their anchors).",
+   "effect": "Narrows what is accepted; a caller following the authority's documented single-context usage already satisfies it."
+  },
+  {
+   "id": "B46-D2",
+   "kind": "runtime refusal (authority would proceed)",
+   "text": "The authority performs no check for an overlapping invocation on the same SSL_CONF_CTX. The candidate refuses every overlapping entry point through one AtomicU8 state (CTX_IDLE/CTX_IN_USE/CTX_FREE_PENDING) and one RAII guard, with the documented refusal answer per entry point (0 for cmd/argv/finish/set1_prefix/set_flags/clear_flags, SSL_CONF_TYPE_UNKNOWN for cmd_value_type, void no-op for set_ssl/set_ssl_ctx).",
+   "effect": "Changes behaviour only for an overlapping or re-entrant call; non-overlapping callers observe the authority's behaviour. It also covers the previously unguarded set_ssl, set_ssl_ctx, set1_prefix, set_flags, clear_flags, finish and cmd_value_type."
+  },
+  {
+   "id": "B46-D3",
+   "kind": "deferred free (authority frees immediately)",
+   "text": "SSL_CONF_CTX_free while the context is held poisons it and defers the single release to the holder's guard instead of freeing immediately. Free remains void and exactly one release occurs.",
+   "effect": "The block's lifetime is extended by at most the remaining in-flight call; later entry points are refused; no dangling guard and no silent leak. See free_policy for the rejected alternative."
+  }
+ ],
+ "entry_point_inventory": {
+  "scope": "The SSL_CONF_CTX entry points relevant to the three B47-SSL-CONF helper sites; the eight non-ssl_conf B47 boundaries are reached by their own module callers and are outside this inventory.",
+  "source_sha256": "e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
+  "entry_points": [
+   {
+    "symbol": "SSL_CONF_cmd",
+    "file": "src/ssl/ssl_conf.rs",
+    "line": 1621,
+    "class": "mutating",
+    "guard": "enter_use (CTX_IDLE -> CTX_IN_USE); refusal answer 0",
+    "refusal": "0; no handler runs and no field is written",
+    "authority": "ssl/ssl_conf.c:970-1010",
+    "note": "the only indirect ConfCmdFn dispatch; it transiently writes cctx.tbl/ntbl and writes fields of the wrapped SSL/SSL_CTX"
+   },
+   {
+    "symbol": "SSL_CONF_cmd_argv",
+    "file": "src/ssl/ssl_conf.rs",
+    "line": 1666,
+    "class": "mutating",
+    "guard": "enter_use before any read of pargc/pargv and before the flags rewrite; refusal answer 0",
+    "refusal": "0; cctx.flags, *pargc and *pargv are unchanged",
+    "authority": "ssl/ssl_conf.c:1012-1044",
+    "note": "writes cctx.flags (FILE cleared, CMDLINE set) before dispatch; the guard is taken first, so a refusal does not half-apply the mode change"
+   },
+   {
+    "symbol": "SSL_CONF_cmd_value_type",
+    "file": "src/ssl/ssl_conf.rs",
+    "line": 1758,
+    "class": "read-only accessor, guarded because partial state is observable",
+    "guard": "enter_use; refusal answer SSL_CONF_TYPE_UNKNOWN (0)",
+    "refusal": "SSL_CONF_TYPE_UNKNOWN (0)",
+    "authority": "ssl/ssl_conf.c:1046-1055",
+    "note": "reads flags/prefix/prefixlen. set1_prefix frees the old prefix before writing prefix and prefixlen as separate stores, and argv rewrites flags in two stores, so a reader entering between them could observe a freed pointer with a new length. Read-only concurrency is therefore not claimed."
+   },
+   {
+    "symbol": "SSL_CONF_CTX_new",
+    "file": "src/ssl/ssl_conf.rs",
+    "line": 1793,
+    "class": "constructor (no context argument)",
+    "guard": "none needed; allocates one zeroed block, CTX_IDLE",
+    "refusal": "NULL on allocation failure",
+    "authority": "ssl/ssl_conf.c:1057-1062",
+    "note": "size_of::<SslConfCtx>() is the crate's own opaque size; adding the AtomicU8 state changes no exported symbol or #[repr(C)] layout"
+   },
+   {
+    "symbol": "SSL_CONF_CTX_finish",
+    "file": "src/ssl/ssl_conf.rs",
+    "line": 1816,
+    "class": "mutating by authority contract (currently a no-op body)",
+    "guard": "enter_use; refusal answer 0",
+    "refusal": "0",
+    "authority": "ssl/ssl_conf.c:1064-1101",
+    "note": "the authority consumes canames and may back-fill keys; the slice does not, but the entry point is guarded so a later implementation does not reopen the gap"
+   },
+   {
+    "symbol": "SSL_CONF_CTX_free",
+    "file": "src/ssl/ssl_conf.rs",
+    "line": 1868,
+    "class": "free",
+    "guard": "attempts enter_use; on success releases immediately; when held, sets CTX_FREE_PENDING and returns",
+    "refusal": "not applicable (void); a free while held is deferred, not refused",
+    "authority": "ssl/ssl_conf.c:1114-1122",
+    "note": "the holder's guard performs destroy_and_release exactly once on drop (B46-D3)"
+   },
+   {
+    "symbol": "SSL_CONF_CTX_set_flags",
+    "file": "src/ssl/ssl_conf.rs",
+    "line": 1918,
+    "class": "mutating",
+    "guard": "enter_use; refusal answer 0 (no field is read)",
+    "refusal": "0; nothing is read or written",
+    "authority": "ssl/ssl_conf.c:1124-1128",
+    "note": "The refusal path returns 0 without reading the non-atomic flag word, so a hostile cross-thread interleaving does not turn the refusal into a data race."
+   },
+   {
+    "symbol": "SSL_CONF_CTX_clear_flags",
+    "file": "src/ssl/ssl_conf.rs",
+    "line": 1947,
+    "class": "mutating",
+    "guard": "enter_use; refusal answer 0 (no field is read)",
+    "refusal": "0; nothing is read or written",
+    "authority": "ssl/ssl_conf.c:1130-1134",
+    "note": "The refusal path returns 0 without reading the non-atomic flag word, so a hostile cross-thread interleaving does not turn the refusal into a data race."
+   },
+   {
+    "symbol": "SSL_CONF_CTX_set1_prefix",
+    "file": "src/ssl/ssl_conf.rs",
+    "line": 1978,
+    "class": "mutating",
+    "guard": "enter_use held across CRYPTO_strdup/CRYPTO_free; refusal answer 0",
+    "refusal": "0; the old prefix and prefixlen are unchanged and nothing is freed",
+    "authority": "ssl/ssl_conf.c:1136-1151",
+    "note": "the allocator hook is a reentrancy edge; the guard prevents a hook from observing the half-rewritten pair"
+   },
+   {
+    "symbol": "SSL_CONF_CTX_set_ssl",
+    "file": "src/ssl/ssl_conf.rs",
+    "line": 2023,
+    "class": "mutating",
+    "guard": "enter_use; void refusal is a no-op",
+    "refusal": "void; no pointer is changed and cert_filename is not released",
+    "authority": "ssl/ssl_conf.c:1153-1179",
+    "note": "free_cert_filename and CRYPTO_zalloc are reentrancy edges; the guard is held across both"
+   },
+   {
+    "symbol": "SSL_CONF_CTX_set_ssl_ctx",
+    "file": "src/ssl/ssl_conf.rs",
+    "line": 2080,
+    "class": "mutating",
+    "guard": "enter_use; void refusal is a no-op",
+    "refusal": "void; no pointer is changed and cert_filename is not released",
+    "authority": "ssl/ssl_conf.c:1181-1203",
+    "note": "same shape as set_ssl"
+   }
+  ],
+  "not_exported_but_reaching": [
+   {
+    "file": "src/ssl/ssl_conf.rs",
+    "items": "the private ConfCmdFn handlers (cmd_Protocol, cmd_Options, cmd_VerifyMode, cmd_CipherString, cmd_Ciphersuites, cmd_MinProtocol, cmd_MaxProtocol, cmd_NumTickets, cmd_RecordPadding, cmd_unwired) and the helpers ssl_set_option/ssl_match_option/ssl_set_option_list/min_max_proto/skip_prefix/cmd_lookup/ctrl_switch_option/ssl_conf_cmd_inner",
+    "class": "private, no exported symbol",
+    "guarded_by": "the caller's guard: only SSL_CONF_cmd/SSL_CONF_cmd_argv reach them, and both hold CTX_IN_USE for the whole dispatch"
+   },
+   {
+    "file": "src/ssl/ssl_mcnf.rs",
+    "line": 119,
+    "items": "finish_do_config: SSL_CONF_CTX_new (:119), _set_ssl (:135), _set_ssl_ctx (:143), _set_flags (:168), SSL_CONF_cmd (:179), _finish (:186), _free (:209)",
+    "class": "sequential in-crate caller, not an exported entry point",
+    "guarded_by": "each call acquires and releases the state before the next begins; free at :209 runs with no guard held"
+   },
+   {
+    "file": "src/ssl/mod.rs",
+    "line": 266,
+    "items": "module documentation only",
+    "class": "no entry point"
+   }
+  ],
+  "coverage_claim": "11/11 exported entry points are classified. Nine acquire the exclusion state directly: the eight mutating entry points (cmd, cmd_argv, finish, set_flags, clear_flags, set1_prefix, set_ssl, set_ssl_ctx) and the read-only accessor cmd_value_type. SSL_CONF_CTX_free acquires when idle and otherwise poisons and defers. SSL_CONF_CTX_new takes no context. No exported entry point that receives a context is left unguarded."
+ },
+ "exclusivity_model": {
+  "id": "B46-EXCL",
+  "source_sha256": "e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
+  "previous_model_sha256": "880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656",
+  "state": {
+   "representation": "SslConfCtx.state: AtomicU8 (candidate-only field; src/ssl/ssl_conf.rs:167)",
+   "states": [
+    {
+     "name": "CTX_IDLE",
+     "value": 0,
+     "anchor": "src/ssl/ssl_conf.rs:176",
+     "meaning": "no entry point holds the context and no free is pending; the zeroed state SSL_CONF_CTX_new produces"
+    },
+    {
+     "name": "CTX_IN_USE",
+     "value": 1,
+     "anchor": "src/ssl/ssl_conf.rs:178",
+     "meaning": "exactly one entry point holds the context; every other entry point is refused"
+    },
+    {
+     "name": "CTX_FREE_PENDING",
+     "value": 2,
+     "anchor": "src/ssl/ssl_conf.rs:182",
+     "meaning": "a holder is still live and SSL_CONF_CTX_free requested the release; poisoned: every other entry point is refused"
+    }
+   ],
+   "transitions": [
+    "IDLE -> IN_USE: enter_use compare_exchange (Acquire), src/ssl/ssl_conf.rs:252",
+    "IN_USE -> IDLE: InUseGuard::drop compare_exchange (AcqRel), src/ssl/ssl_conf.rs:196",
+    "IN_USE -> FREE_PENDING: SSL_CONF_CTX_free compare_exchange (AcqRel), src/ssl/ssl_conf.rs:1868",
+    "FREE_PENDING -> released: InUseGuard::drop calls destroy_and_release, src/ssl/ssl_conf.rs:277",
+    "FREE_PENDING -> any entry point: refused (no transition); IDLE -> freed: SSL_CONF_CTX_free owns the block directly"
+   ],
+   "race_closed": "If free's CAS loses to the guard's IN_USE->IDLE release, free loops and acquires IDLE itself; if it loses to another free request (FREE_PENDING), it returns and the single holder guard releases. This closes the single-overlap release race only. It does not close a second concurrent free or an entry point racing the release, which remain external caller obligations (criterion_7_2)."
+  },
+  "guard": {
+   "type": "InUseGuard { ctx: *mut SslConfCtx }",
+   "anchor": "src/ssl/ssl_conf.rs:191-266",
+   "drop_behaviour": "reads the state; IN_USE -> IDLE on the normal path; FREE_PENDING -> destroy_and_release and return without touching the context again",
+   "why_raw": "the guard stores the raw context pointer, not a reference, so no shared borrow is live while a handler takes &mut *cctx (B46-H1 shape)"
+  },
+  "reentrancy_rule": "Only a successful acquisition creates a guard, and only that guard transitions the state. A nested call cannot clear the outer flag: it fails the IDLE->IN_USE CAS, receives the entry point's refusal answer, and its frame owns no guard. An allocator hook, ex_data callback or provider callback that re-enters any entry point is refused by the same CAS.",
+  "read_only_decision": "SSL_CONF_cmd_value_type is the only exported accessor that borrows the context. It reads flags/prefix/prefixlen, which are not updated atomically as a group: set1_prefix frees the old prefix and then writes prefix/prefixlen as separate stores, and SSL_CONF_cmd_argv updates flags with two read-modify-write stores. A reader that entered between those steps could observe a freed pointer with a new length or half-updated flags. Read-only concurrency therefore could not be established, so the accessor takes the same exclusion guard and answers SSL_CONF_TYPE_UNKNOWN when refused.",
+  "criterion_7_2": {
+   "established_by_this_model": "For every non-free entry point, the intra-context precondition is now established by the entry point itself: each caller either acquires the state or is refused, and every exit path (including unwind) releases it. SSL_CONF_CTX_free performs its single release on the immediate path only when it has acquired CTX_IDLE. This covers all 11 exported entry points, but it does not establish the caller's serialisation of free against other calls (see remains_an_external_caller_obligation (c)).",
+   "remains_an_external_caller_obligation": "(a) exclusive use of the wrapped SSL/SSL_CTX: the authority documents (advisory) that one SSL/SSL_CTX must not be changed from multiple threads; the state machine serialises this context's exported API but does not lock those objects. (b) pointer discipline: a C caller must not use the cctx pointer after SSL_CONF_CTX_free returns. (c) free is an external serialisation point: while SSL_CONF_CTX_free runs, no other thread may be inside any SSL_CONF_CTX entry point and no second free may be concurrent. This cannot be enforced in the callee: a second concurrent free, or an entry point racing the release, performs an atomic access on state inside the released block; the void ABI carries no refusal, and an address-keyed check cannot distinguish a freed context from a fresh allocation at the same address without an out-of-band identity or an unavoidable leak. The CTX_FREE_PENDING arm is a best-effort hardening for a single in-flight holder, not a safety guarantee for concurrent use. These are C ABI caller obligations, not hidden crate assumptions."
+  },
+  "applies_to": "B47-SSL-CONF-001..003 (the three ssl_conf.rs helper sites). The other eight B47 sites (ssl_ciph.rs, ssl_rsa.rs, t1_trce.rs, ssl_lib.rs) do not take an SSL_CONF_CTX and are unchanged by this repair; their line_current values remain valid because those files were not edited."
+ },
+ "free_policy": {
+  "id": "B46-D3",
+  "problem": "SSL_CONF_CTX_free can run while an entry point holds the context. The rejected guard stored a pointer to a field inside the block, so freeing the block made the guard's Drop write into released memory; a naive 'refuse and return' would leak because the function returns void.",
+  "options": [
+   {
+    "option": "(a) refuse to free and record the refusal so the caller can retry",
+    "rejected_because": "SSL_CONF_CTX_free returns void. There is no in-band signal, so a C caller cannot distinguish 'freed' from 'refused'. It will normally drop its pointer and leak, or keep it and race; recording the refusal in the context is unobservable through the ABI and is not a contract the caller can act on."
+   },
+   {
+    "option": "(b) poison and defer: mark CTX_FREE_PENDING; refuse later entry points; release when the last user exits",
+    "chosen_because": "It preserves the authority's exactly-one-release postcondition without requiring a signal the ABI cannot carry. The block cannot be released while a guard exists, so no guard Drop can write into freed memory; the holder's guard performs the same destroy_and_release exactly once. It also keeps the C caller's existing obligation unchanged: stop using the pointer after free."
+   }
+  ],
+  "behaviour": [
+   "no holder: SSL_CONF_CTX_free acquires IDLE, releases members and the block once, and forgets its guard before releasing",
+   "holder present: SSL_CONF_CTX_free CASes IN_USE -> FREE_PENDING and returns without releasing anything; every later entry point is refused",
+   "the holder's guard drops: sees FREE_PENDING, runs destroy_and_release (free_cert_filename, prefix, canames, then the OwnedBuf block) and returns without a further store",
+   "another free while FREE_PENDING: returns; the single holder guard still performs exactly one release",
+   "guard wins the release race: free's CAS fails with IDLE, loops, acquires and releases immediately"
+  ],
+  "consequence": "Bounded lifetime extension: the block outlives the free call by at most the remaining in-flight call. No leak on a terminating program; if the in-flight call never returns, the block is not released, which is the same liveness premise as any scope-bound resource. A dangling guard is unreachable. Free nevertheless remains an external serialisation point: a second concurrent free, or an entry point racing the release, is outside the contract and is not made safe by this arm (see criterion_7_2).",
+  "test": "ssl::ssl_conf::tests::free_while_in_use_is_deferred_and_released_exactly_once",
+  "divergence": "B46-D3"
+ },
+ "test_matrix": {
+  "new": [
+   {
+    "id": "C7",
+    "name": "ssl::ssl_conf::tests::every_entry_point_refuses_an_overlap_and_works_when_idle",
+    "covers": "all guarded entry points: refusal while held, positive sequential use, cmd codes 2/-2/-3, argv consumption",
+    "result": "PASS"
+   },
+   {
+    "id": "C8",
+    "name": "ssl::ssl_conf::tests::free_while_in_use_is_deferred_and_released_exactly_once",
+    "covers": "free-while-in-use: no release while held, CTX_FREE_PENDING, later entry points refused, block and prefix released exactly once on guard drop (free_probe)",
+    "result": "PASS"
+   },
+   {
+    "id": "C9",
+    "name": "ssl::ssl_conf::tests::value_type_is_refused_while_in_use_and_correct_when_idle",
+    "covers": "the read-only accessor decision: UNKNOWN under use, correct type when idle, recovery after release",
+    "result": "PASS"
+   },
+   {
+    "id": "C4-C6",
+    "name": "existing reentrancy, error-exit and sequential controls",
+    "covers": "unchanged",
+    "result": "PASS"
+   }
+  ],
+  "mutation": [
+   {
+    "guard": "SSL_CONF_CTX_set1_prefix",
+    "mutation": "removed the `let Some(_in_use) = enter_use(cctx) else { return 0; }` acquisition",
+    "test": "ssl::ssl_conf::tests::every_entry_point_refuses_an_overlap_and_works_when_idle",
+    "observed": "FAILED at src/ssl/ssl_conf.rs:2643: 'set1_prefix refuses an overlap', left 1, right 0",
+    "restore": "cp from snapshot; sha256 unchanged at 39b89b9695f5071699c51eb45293734acd5b2f24803e9784b23efc5e05b989e6 and cmp reported identical"
+   },
+   {
+    "guard": "SSL_CONF_cmd_value_type",
+    "mutation": "removed the `let Some(_in_use) = enter_use(cctx) else { return SSL_CONF_TYPE_UNKNOWN }` acquisition",
+    "test": "ssl::ssl_conf::tests::value_type_is_refused_while_in_use_and_correct_when_idle",
+    "observed": "FAILED at src/ssl/ssl_conf.rs:2848: 'the accessor refuses while the context is held', left 1 (STRING), right 0 (UNKNOWN)",
+    "restore": "cp from snapshot; sha256 unchanged at 39b89b9695f5071699c51eb45293734acd5b2f24803e9784b23efc5e05b989e6 and cmp reported identical"
+   },
+   {
+    "guard": "InUseGuard::drop CTX_FREE_PENDING arm (deferral completion)",
+    "mutation": "removed the `CTX_FREE_PENDING => { destroy_and_release(self.ctx); return; }` arm in `InUseGuard::drop`, so a poisoned context fell through to `_ => return` and the deferred release never ran",
+    "test": "ssl::ssl_conf::tests::free_while_in_use_is_deferred_and_released_exactly_once",
+    "observed": "FAILED at src/ssl/ssl_conf.rs:2838: 'the context block is released exactly once', left 0, right 1 (the prefix buffer likewise stayed live)",
+    "restore": "cp from the /tmp snapshot; sha256 unchanged at e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8 and cmp reported identical"
+   }
+  ]
+ },
+ "negative_control_exclusivity": {
+  "id": "C7-C9",
+  "names": [
+   "ssl::ssl_conf::tests::every_entry_point_refuses_an_overlap_and_works_when_idle",
+   "ssl::ssl_conf::tests::free_while_in_use_is_deferred_and_released_exactly_once",
+   "ssl::ssl_conf::tests::value_type_is_refused_while_in_use_and_correct_when_idle"
+  ],
+  "kind": "court functional tests, lib unittests",
+  "result": "PASS",
+  "observation": "C7 drives every guarded entry point twice: once idle (positive controls, including cmd codes 2/-2/-3 and argv consumption) and once with the context held (every call refused with its documented answer and no state changed). C8 constructs the free-while-in-use interleaving and uses the test-only allocator funnel probe to show zero releases while held, CTX_FREE_PENDING, refusal of later calls, and exactly one release of both the prefix and the block after the guard drops. C9 shows the read-only accessor answers UNKNOWN under use and the correct type when idle.",
+  "mutation_sensitive": true,
+  "fails_if": "the set1_prefix or cmd_value_type acquisition is removed: observed left 1 / right 0 in both cases (see evidence.mutation); removing InUseGuard::drop's CTX_FREE_PENDING arm leaves the context block unreleased and C8 fails with left 0 / right 1",
+  "limits": "The in-flight state is presented through the same enter_use acquisition a real entry point performs; C8 likewise drives enter_use directly rather than a real entry point in flight, and six of the nine context-taking entry points (cmd, cmd_argv, cmd_value_type, clear_flags, set_ssl, set_ssl_ctx) have no free-pending refusal test (C8 covers set_flags, set1_prefix and finish). No production handler in this slice calls back, so C7 is a model-level interleaving rather than a production callback trace. Cross-thread use of the wrapped SSL/SSL_CTX and free's external serialisation are not claimed."
+ },
+ "unsafe_operations_introduced_note": "Counted as new `unsafe {`/`unsafe fn`/`unsafe extern` expressions in the production region relative to HEAD 3061a264b (103 -> 118): the nine entry-point acquisitions, the free retry loop, the guard Drop and destroy_and_release. The four member releases that moved from the old free body are not counted as new.",
+ "test_only_unsafe_added_note": "Counted as new unsafe expressions in the test module relative to HEAD (37 -> 71)."
 }

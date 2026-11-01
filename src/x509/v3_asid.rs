@@ -683,6 +683,19 @@ pub unsafe extern "C" fn i2d_ASIdentifiers(
 ///
 /// A null choice prints nothing and answers 1. An inherit choice prints `inherit`; a list prints one
 /// line per element, rendering each integer through `i2s_ASN1_INTEGER` and releasing it.
+///
+/// # Safety
+///
+/// Not a method slot: the only caller is `i2r_ASIdentifiers` (this file), the row's `i2r`,
+/// which passes `(*asid).asnum` or `(*asid).rdi` — each NULL or a choice the ASN.1 decoder
+/// built — the dispatcher's non-NULL BIO, and a static message literal. `choice` is therefore
+/// NULL or a live `ASIdentifierChoice` whose selector and active union arm agree (the decoder
+/// built them; this body does not re-check the pairing), and whose selected stack and its
+/// `AsIdOrRange` elements, or `AsRange` bounds, are the decoder's own and stay live for the
+/// call. `out` is a non-NULL BIO; `msg` is a live NUL-terminated string. Neither is retained.
+///
+/// Authority-derived: `crypto/x509/v3_asid.c:62-104`; the null-choice arm is the authority's
+/// own `if (choice == NULL) return 1;`.
 unsafe fn i2r_ASIdentifierChoice(
     out: *mut crate::runtime::bio::Bio,
     choice: *mut AsIdentifierChoice,

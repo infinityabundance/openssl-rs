@@ -38,6 +38,7 @@ use crate::asn1::a_print::ASN1_STRING_print;
 use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::der::ASN1_parse_dump;
 use crate::asn1::fre::ASN1_item_free;
+use crate::asn1::layout::Asn1Item;
 use crate::asn1::string::{ASN1_STRING_get0_data, ASN1_STRING_length};
 use crate::asn1::text::i2a_ASN1_OBJECT;
 use crate::runtime::bio::dump::BIO_dump_indent;
@@ -50,7 +51,9 @@ use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_authority_key_identifier, NID_subject_key_identifier, OBJ_obj2nid};
 use crate::runtime::owned_str::OwnedStr;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_value, OpenSslStack};
-use crate::x509::v3_lib::{X509V3_EXT_get, X509V3_EXT_MULTILINE};
+use crate::x509::v3_lib::{
+    RegistryReadGuard, X509V3ExtMethod, X509V3_EXT_get, X509V3_EXT_MULTILINE,
+};
 use crate::x509::v3_utl::X509V3_conf_free;
 use crate::x509::x509_v3::{
     X509_EXTENSION_get_critical, X509_EXTENSION_get_data, X509_EXTENSION_get_object,
@@ -197,6 +200,38 @@ unsafe fn unknown_ext_print(
     }
 }
 
+/// Resolve a method row's declared `ASN1_ITEM` exactly once.
+///
+/// `X509V3_EXT_METHOD.it` is an `ASN1_ITEM_EXP *`: a function returning the item the row's
+/// value has (`include/openssl/asn1.h.in:378-384`). The authority expands
+/// `ASN1_ITEM_ptr(method->it)` separately at its decode site and at its release site
+/// (`crypto/x509/v3_prn.c:86-89,131-135`). One resolution makes those two halves agree even
+/// for a caller-registered row whose accessor is not stable, and it is the dispatcher's
+/// guard for the `i2r` family: that slot is reached only with a value decoded by the row's
+/// declared item, never with a NULL item.
+///
+/// # Safety
+///
+/// `method` must be a live `X509V3_EXT_METHOD`. `X509V3_EXT_print` establishes this by holding
+/// the extension registry's read hold for the whole call, so a concurrent
+/// `X509V3_EXT_add`/`_add_alias`/`_cleanup` cannot release a DYNAMIC row underneath it. `Ok(None)`
+/// means the row declares no `it` (its old-style `d2i`/`ext_free` pair is the codec); `Err(())`
+/// means the declared accessor answered NULL, which the caller must treat as a failed decode
+/// rather than pass a NULL item to `ASN1_item_d2i`/`ASN1_item_free`.
+unsafe fn ext_method_item(method: *const X509V3ExtMethod) -> Result<Option<*const Asn1Item>, ()> {
+    // SAFETY: `method` is live per the contract.
+    let Some(it) = (unsafe { (*method).it }) else {
+        return Ok(None);
+    };
+    // SAFETY: `it` is the row's `ASN1_ITEM_ref` accessor.
+    let item = unsafe { it() };
+    if item.is_null() {
+        Err(())
+    } else {
+        Ok(Some(item))
+    }
+}
+
 /// `int X509V3_EXT_print(BIO *out, X509_EXTENSION *ext, unsigned long flag, int indent)` —
 /// `crypto/x509/v3_prn.c:69-136`.
 ///
@@ -207,7 +242,14 @@ unsafe fn unknown_ext_print(
 ///
 /// # Safety
 ///
-/// `out` must be a live BIO; `ext` must be a live `X509_EXTENSION`.
+/// `out` must be a live BIO and `ext` a live `X509_EXTENSION`; the prologue refuses NULL for either with 0 before the first dereference, establishing non-NULLness only.
+/// The method row `X509V3_EXT_get` resolves is protected for the whole call by the extension
+/// registry's read hold: `X509V3_EXT_add`/`_add_list`/`_add_alias`/`_cleanup` take the write hold,
+/// so a DYNAMIC alias row cannot be released while this frame resolves or uses it (B49-R10). The
+/// 22 i2r printers and their helpers do not call any registry entry point, so the nested read
+/// taken by `X509V3_EXT_get` is a reader/reader acquisition. A caller-registered `i2s`/`i2v`/`i2r`
+/// callback that itself calls a registry **writer** will block until this call returns; the
+/// authority would instead free the in-use row (see the §17 divergence in the B49 receipt).
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_EXT_print(
     out: *mut Bio,
@@ -215,6 +257,20 @@ pub unsafe extern "C" fn X509V3_EXT_print(
     flag: c_ulong,
     indent: c_int,
 ) -> c_int {
+    // The `i2s`/`i2v`/`i2r` slots all require a live output BIO, and the `i2r` slot is handed
+    // the extension this frame decodes. Both are cheap necessary conditions the dispatcher
+    // can refuse before any callback runs; the authority faults on either.
+    if out.is_null() || ext.is_null() {
+        return 0;
+    }
+    // Hold the registry read lock across the row resolution **and** every use of that row below.
+    // A DYNAMIC row (an `X509V3_EXT_add_alias` copy) is released by `X509V3_EXT_cleanup`; the
+    // writer's write hold cannot be taken while this guard is alive, so the row stays live for
+    // this whole call (B49-R10). The printers never touch the registry, so the nested read inside
+    // `X509V3_EXT_get` is a reader/reader acquisition rather than a self-deadlock.
+    let Some(_registry) = RegistryReadGuard::acquire() else {
+        return 0;
+    };
     // SAFETY: `ext` is live per the contract.
     let extoct = unsafe { X509_EXTENSION_get_data(ext) };
     // SAFETY: `extoct` is the extension's embedded octet string.
@@ -223,19 +279,33 @@ pub unsafe extern "C" fn X509V3_EXT_print(
     let extlen = unsafe { ASN1_STRING_length(extoct) };
     let mut ok = 1;
 
-    // SAFETY: `ext` is live.
+    // SAFETY: `ext` is live, and the read hold taken above protects the row this resolves.
     let method = unsafe { X509V3_EXT_get(ext) };
     if method.is_null() {
         // SAFETY: `out` is live; `p`/`extlen` describe the (still raw) value.
         return unsafe { unknown_ext_print(out, p, extlen, flag, indent, 0) };
     }
+    // Resolve the row's declared item once, before the decode, and reuse that same item for
+    // the release below. The authority expands `ASN1_ITEM_ptr(method->it)` at both sites
+    // (`crypto/x509/v3_prn.c:86-89,131-135`); resolving once makes the decode and the free
+    // agree even if a caller-registered row supplies an accessor that does not answer a
+    // stable item, and it refuses a NULL item instead of passing it to `ASN1_item_d2i` /
+    // `ASN1_item_free`, whose contracts require a live item. This is the dispatcher's
+    // `i2r`-family guard: the slot is reached only with a value decoded by the declared item.
     // SAFETY: `method` is live.
-    let it = unsafe { (*method).it };
+    let item = match unsafe { ext_method_item(method) } {
+        Ok(item) => item,
+        // The row's accessor answered NULL: there is no type to decode with, so the printer
+        // is never handed a value. This is the authority's failed-decode path.
+        Err(()) => {
+            // SAFETY: `out` is live; `p`/`extlen` describe the raw value.
+            return unsafe { unknown_ext_print(out, p, extlen, flag, indent, 1) };
+        }
+    };
     let mut ext_str: *mut c_void = ptr::null_mut();
-    if let Some(it) = it {
-        // SAFETY: `p` borrows the value for `extlen` bytes; `it()` answers the item the
-        // `ASN1_ITEM_ref` macro names.
-        ext_str = unsafe { ASN1_item_d2i(ptr::null_mut(), &raw mut p, extlen as c_long, it()) };
+    if let Some(item) = item {
+        // SAFETY: `p` borrows the value for `extlen` bytes; `item` is the row's live item.
+        ext_str = unsafe { ASN1_item_d2i(ptr::null_mut(), &raw mut p, extlen as c_long, item) };
     } else {
         // SAFETY: `method` is live.
         let d2i = unsafe { (*method).d2i };
@@ -296,9 +366,10 @@ pub unsafe extern "C" fn X509V3_EXT_print(
     unsafe { OPENSSL_sk_pop_free(nval, Some(conf_value_free_thunk)) };
     // The authority's `err:` order: release the value at :130, then the decoded structure.
     drop(value);
-    if let Some(it) = it {
-        // SAFETY: `ext_str` is the item value; `it()` answers the item it describes.
-        unsafe { ASN1_item_free(ext_str, it()) };
+    if let Some(item) = item {
+        // SAFETY: `ext_str` is the value the same `item` decoded; the one resolution is used
+        // for both halves, so a value is never released through a different item.
+        unsafe { ASN1_item_free(ext_str, item) };
     } else if let Some(f) = ext_free {
         // SAFETY: `ext_str` is the old-style value `f` releases.
         unsafe { f(ext_str) };
@@ -423,9 +494,160 @@ mod tests {
     };
     use crate::asn1::typ::i2d_ASN1_OCTET_STRING;
     use crate::runtime::bio::bss_mem::BIO_s_mem;
-    use crate::runtime::bio::{BIO_free, BIO_new};
+    use crate::runtime::bio::{BIO_ctrl, BIO_free, BIO_new, BIO_CTRL_INFO};
+    use crate::runtime::obj::{NID_issued_on_behalf_of, OBJ_create};
+    use crate::x509::v3_lib::{X509V3_EXT_add, X509V3_EXT_add_alias, X509V3_EXT_cleanup};
     use crate::x509::x509_v3::X509_EXTENSION_create_by_NID;
     use crate::x509::x_exten::X509_EXTENSION_free;
+
+    /// A minimal live row for the item-resolution guard: only `it` is read.
+    fn probe_row(it: Option<unsafe extern "C" fn() -> *const Asn1Item>) -> X509V3ExtMethod {
+        X509V3ExtMethod {
+            ext_nid: 0,
+            ext_flags: 0,
+            it,
+            ext_new: None,
+            ext_free: None,
+            d2i: None,
+            i2d: None,
+            i2s: None,
+            s2i: None,
+            i2v: None,
+            v2i: None,
+            i2r: None,
+            r2i: None,
+            usr_data: ptr::null_mut(),
+        }
+    }
+
+    /// A row's `it` accessor that answers NULL: there is no item to decode with.
+    unsafe extern "C" fn null_item() -> *const Asn1Item {
+        ptr::null()
+    }
+
+    /// The guard's canary: a row whose `it` accessor answers NULL is reported as a failed
+    /// resolution, so the dispatcher never hands `ASN1_item_d2i`/`ASN1_item_free` a NULL
+    /// item. Removing the `is_null` refusal resolves `Some(null)` and this assertion fails.
+    #[test]
+    fn ext_method_item_refuses_an_accessor_that_answers_null() {
+        let row = probe_row(Some(null_item));
+        // SAFETY: `row` is a live local row.
+        let resolved = unsafe { ext_method_item(&raw const row) };
+        assert_eq!(resolved, Err(()), "a NULL ASN.1 item must not be resolved");
+    }
+
+    /// The same helper still resolves a real accessor, and reports a row that declares none.
+    #[test]
+    fn ext_method_item_resolves_the_declared_item() {
+        let row = probe_row(Some(crate::x509::v3_genn::GENERAL_NAME_it));
+        let expected = crate::x509::v3_genn::GENERAL_NAME_it();
+        // SAFETY: `row` is a live local row and its accessor is the item function itself.
+        let resolved = unsafe { ext_method_item(&raw const row) };
+        assert_eq!(resolved, Ok(Some(expected)));
+        let none = probe_row(None);
+        // SAFETY: `none` is a live local row.
+        let absent = unsafe { ext_method_item(&raw const none) };
+        assert_eq!(absent, Ok(None));
+    }
+
+    /// Build an extension of `nid` whose value is `der`. `issuedOnBehalfOf` carries a bare
+    /// `GENERAL_NAME` and its row installs no `i2s`/`i2v`, so printing it runs the `i2r` arm
+    /// this family is about; a `dNSName` (`[2] IA5String`) is `82 03 66 6f 6f`.
+    fn extension_with_der(nid: c_int, der: &[u8]) -> *mut X509Extension {
+        let value = ASN1_OCTET_STRING_new();
+        assert!(!value.is_null(), "the extension value must be allocatable");
+        // SAFETY: `value` is live and uniquely owned; `der` is `der.len()` readable bytes.
+        let set = unsafe { ASN1_OCTET_STRING_set(value, der.as_ptr(), der.len() as c_int) };
+        assert_eq!(set, 1);
+        // SAFETY: `value` is live; the constructor copies its contents.
+        let ext = unsafe { X509_EXTENSION_create_by_NID(ptr::null_mut(), nid, 0, value) };
+        // SAFETY: the extension copied the octets; release this test's reference.
+        unsafe { ASN1_OCTET_STRING_free(value) };
+        assert!(!ext.is_null(), "the extension must be created");
+        ext
+    }
+
+    fn issued_on_behalf_of_extension() -> *mut X509Extension {
+        extension_with_der(NID_issued_on_behalf_of, &[0x82, 0x03, b'f', b'o', b'o'])
+    }
+
+    /// The `i2r` arm still runs for a well-formed value.
+    #[test]
+    fn i2r_printer_still_prints_through_a_live_bio() {
+        let ext = issued_on_behalf_of_extension();
+        // SAFETY: `BIO_s_mem` is a live method table and `BIO_new` returns a fresh BIO.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null(), "the memory BIO must be created");
+        // A non-zero indent: the authority's body treats a zero-length first write as a
+        // refusal, so indent 0 would make this printer answer 0 by design.
+        // SAFETY: `bio` and `ext` are live; this row's only print slot is `i2r`.
+        let ret = unsafe { X509V3_EXT_print(bio, ext, 0, 4) };
+        assert_eq!(ret, 1, "the i2r path must print successfully");
+        // SAFETY: both objects are this test's own.
+        unsafe {
+            BIO_free(bio);
+            X509_EXTENSION_free(ext);
+        }
+    }
+
+    /// The prologue refuses a NULL `out` or `ext` with 0 before the method lookup, the decode
+    /// or any callback. `X509V3_EXT_ERROR_UNKNOWN` makes the refusal observable: without the
+    /// guard the NULL-`ext` call takes the unknown path and answers 1, and the NULL-`out` call
+    /// reaches the failed-decode path and answers 1 as well.
+    #[test]
+    fn null_out_or_ext_is_refused_by_the_prologue() {
+        let malformed = extension_with_der(NID_issued_on_behalf_of, &[0xFF, 0xFF]);
+        // SAFETY: `BIO_s_mem` is a live method table and `BIO_new` returns a fresh BIO.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null(), "the memory BIO must be created");
+        // SAFETY: each call passes one NULL argument to the prologue's refusal path. The
+        // implementation returns before dereferencing it and before the lookup, so no invalid
+        // access occurs; the other argument is live. Without the guard the first calls would
+        // reach the decode/unknown paths and answer 1 under `X509V3_EXT_ERROR_UNKNOWN`.
+        unsafe {
+            assert_eq!(
+                X509V3_EXT_print(ptr::null_mut(), malformed, X509V3_EXT_ERROR_UNKNOWN, 4),
+                0,
+                "a NULL out must be refused"
+            );
+            assert_eq!(
+                X509V3_EXT_print(bio, ptr::null_mut(), X509V3_EXT_ERROR_UNKNOWN, 4),
+                0,
+                "a NULL ext must be refused"
+            );
+            assert_eq!(
+                X509V3_EXT_print(
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    X509V3_EXT_ERROR_UNKNOWN,
+                    4
+                ),
+                0,
+                "two NULL arguments must be refused"
+            );
+            BIO_free(bio);
+            X509_EXTENSION_free(malformed);
+        }
+    }
+
+    /// A value that does not decode as the row's item never reaches `i2r`, so the printers
+    /// that dereference the decoded value unconditionally (e.g. `sxnet_i2r`) are never handed
+    /// NULL. This is the decode guard the `i2r` contracts name as their establishing path.
+    #[test]
+    fn i2r_printer_is_refused_when_the_value_does_not_decode() {
+        let ext = extension_with_der(NID_issued_on_behalf_of, &[0xFF, 0xFF]);
+        // SAFETY: `BIO_s_mem` is a live method table and `BIO_new` returns a fresh BIO.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null(), "the memory BIO must be created");
+        // SAFETY: `bio` and `ext` are live; the default unknown-extension policy answers 0.
+        let ret = unsafe { X509V3_EXT_print(bio, ext, 0, 4) };
+        assert_eq!(ret, 0, "a failed decode must not reach the i2r slot");
+        // SAFETY: both objects are this test's own.
+        unsafe {
+            BIO_free(bio);
+            X509_EXTENSION_free(ext);
+        }
+    }
 
     /// Drive the `method->i2s` arm that owns the callback result through
     /// `OwnedStr`: the standard subject-key-identifier method builds its string
@@ -472,6 +694,201 @@ mod tests {
         assert_eq!(ret, 1, "the i2s path must print successfully");
 
         // SAFETY: both objects are this test's own.
+        unsafe {
+            BIO_free(bio);
+            X509_EXTENSION_free(ext);
+        }
+    }
+
+    /// Serialises the tests that mutate the process-global extension registry. The registry's own
+    /// read/write lock protects memory safety; this test-only mutex keeps one test's
+    /// `X509V3_EXT_cleanup` from removing another test's alias between its add and its print.
+    static REGISTRY_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// Register a fresh object and answer its NID. A fresh NID has no `STANDARD_EXTS` row, so a
+    /// dynamic alias registered for it is reached only through the dynamic `EXT_LIST` fallback.
+    fn fresh_nid(oid: &CStr, sn: &CStr, ln: &CStr) -> c_int {
+        // SAFETY: all three strings are NUL-terminated and `OBJ_create` copies them.
+        let nid = unsafe { OBJ_create(oid.as_ptr(), sn.as_ptr(), ln.as_ptr()) };
+        assert_ne!(nid, 0, "the object must be registered under a fresh NID");
+        nid
+    }
+
+    /// A live row over `GENERAL_NAME` carrying `i2r`; used only by the registry tests below.
+    fn general_name_row(nid: c_int, i2r: crate::x509::v3_lib::X509V3ExtI2r) -> X509V3ExtMethod {
+        X509V3ExtMethod {
+            ext_nid: nid,
+            ext_flags: 0,
+            it: Some(crate::x509::v3_genn::GENERAL_NAME_it),
+            ext_new: None,
+            ext_free: None,
+            d2i: None,
+            i2d: None,
+            i2s: None,
+            s2i: None,
+            i2v: None,
+            v2i: None,
+            i2r,
+            r2i: None,
+            usr_data: ptr::null_mut(),
+        }
+    }
+
+    /// Read a memory BIO's contents as a byte slice.
+    ///
+    /// # Safety
+    /// `bio` must be a live memory BIO; the returned slice borrows its buffer and must not
+    /// outlive the BIO or a write to it.
+    unsafe fn bio_bytes<'a>(bio: *mut Bio) -> &'a [u8] {
+        let mut data: *mut c_char = ptr::null_mut();
+        // SAFETY: `bio` is live; `data` is this frame's out-parameter slot.
+        let len = unsafe { BIO_ctrl(bio, BIO_CTRL_INFO, 0, ptr::addr_of_mut!(data).cast()) };
+        assert!(len > 0 && !data.is_null(), "the memory BIO must hold text");
+        // SAFETY: the control answered the BIO's own buffer and byte count.
+        unsafe { core::slice::from_raw_parts(data.cast::<u8>(), len as usize) }
+    }
+
+    /// B49 functional: a DYNAMIC alias of a standard row prints through the copied `i2r`, and
+    /// `X509V3_EXT_cleanup` then releases it. The read hold keeps the row live for the print.
+    #[test]
+    fn a_dynamic_alias_prints_and_cleanup_releases_it() {
+        let _serial = REGISTRY_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let nid_to = fresh_nid(
+            c"1.3.6.1.4.1.57264.49.1",
+            c"b49-alias-print",
+            c"B49 alias print test",
+        );
+        // SAFETY: two integer NIDs; `nid_from` names a STANDARD_EXTS row.
+        let added = unsafe { X509V3_EXT_add_alias(nid_to, NID_issued_on_behalf_of) };
+        assert_eq!(added, 1, "the alias must register");
+        let ext = extension_with_der(nid_to, &[0x82, 0x03, b'f', b'o', b'o']);
+        // SAFETY: `BIO_s_mem` is a live method table and `BIO_new` returns a fresh BIO.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null(), "the memory BIO must be created");
+        // SAFETY: both live; the alias row carries the standard row's i2r.
+        let ret = unsafe { X509V3_EXT_print(bio, ext, 0, 4) };
+        assert_eq!(ret, 1, "the alias's i2r must print");
+        // SAFETY: `bio` is the live memory BIO just written.
+        let text = unsafe { bio_bytes(bio) };
+        assert!(
+            text.windows(3).any(|window| window == b"foo"),
+            "the copied printer must emit the dNSName: {text:?}"
+        );
+        // SAFETY: both objects are this frame's own.
+        unsafe {
+            BIO_free(bio);
+            X509_EXTENSION_free(ext);
+        }
+        // SAFETY: no pointer arguments; the write hold releases every DYNAMIC row.
+        unsafe { X509V3_EXT_cleanup() };
+
+        // After cleanup the alias no longer resolves, so the default unknown path answers 0.
+        let gone = extension_with_der(nid_to, &[0x82, 0x03, b'f', b'o', b'o']);
+        // SAFETY: `BIO_s_mem` is a live method table and `BIO_new` returns a fresh BIO.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null(), "the memory BIO must be created");
+        // SAFETY: `bio`/`gone` are live; the row is gone and the flag is the default.
+        let ret = unsafe { X509V3_EXT_print(bio, gone, 0, 4) };
+        assert_eq!(ret, 0, "cleanup must have released the alias");
+        // SAFETY: both objects are this frame's own.
+        unsafe {
+            BIO_free(bio);
+            X509_EXTENSION_free(gone);
+        }
+    }
+
+    /// The load-bearing canary: a print that is inside its row's `i2r` must prevent
+    /// `X509V3_EXT_cleanup` from completing. Removing the read hold in `X509V3_EXT_print` (or
+    /// the write hold in `X509V3_EXT_cleanup`) lets the cleanup thread finish while the printer
+    /// is still using the row, and this test fails on the recorded observation.
+    static PRINT_ENTERED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    static CLEANUP_DONE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    static CLEANUP_RAN_DURING_PRINT: std::sync::atomic::AtomicBool =
+        std::sync::atomic::AtomicBool::new(false);
+
+    /// An `i2r` that keeps the print inside its use of the row long enough for a concurrent
+    /// `X509V3_EXT_cleanup` to try to free it, and records whether that cleanup completed.
+    unsafe extern "C" fn blocking_i2r(
+        _method: *const X509V3ExtMethod,
+        _value: *mut c_void,
+        _out: *mut Bio,
+        _indent: c_int,
+    ) -> c_int {
+        use std::sync::atomic::Ordering as AtomicOrdering;
+        PRINT_ENTERED.store(true, AtomicOrdering::SeqCst);
+        // Bounded, so a broken lock cannot hang the suite. With the read hold absent the
+        // cleanup thread completes in microseconds; with it present it cannot complete at all.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_millis(500);
+        while std::time::Instant::now() < deadline {
+            if CLEANUP_DONE.load(AtomicOrdering::SeqCst) {
+                CLEANUP_RAN_DURING_PRINT.store(true, AtomicOrdering::SeqCst);
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        1
+    }
+
+    #[test]
+    fn cleanup_cannot_release_a_row_while_a_print_uses_it() {
+        use std::sync::atomic::Ordering as AtomicOrdering;
+        let _serial = REGISTRY_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        PRINT_ENTERED.store(false, AtomicOrdering::SeqCst);
+        CLEANUP_DONE.store(false, AtomicOrdering::SeqCst);
+        CLEANUP_RAN_DURING_PRINT.store(false, AtomicOrdering::SeqCst);
+
+        let nid_src = fresh_nid(
+            c"1.3.6.1.4.1.57264.49.2",
+            c"b49-blocking-src",
+            c"B49 blocking source",
+        );
+        let nid_dst = fresh_nid(
+            c"1.3.6.1.4.1.57264.49.3",
+            c"b49-blocking-dst",
+            c"B49 blocking destination",
+        );
+        let mut row = general_name_row(nid_src, Some(blocking_i2r));
+        // SAFETY: `row` is a live local that outlives the registry entry; `_cleanup` below runs
+        // before this frame returns.
+        let added = unsafe { X509V3_EXT_add(&raw mut row) };
+        assert_eq!(added, 1);
+        // SAFETY: two integer NIDs; `nid_src` now names the caller-owned row above.
+        let aliased = unsafe { X509V3_EXT_add_alias(nid_dst, nid_src) };
+        assert_eq!(aliased, 1);
+
+        let ext = extension_with_der(nid_dst, &[0x82, 0x03, b'f', b'o', b'o']);
+        // SAFETY: `BIO_s_mem` is a live method table and `BIO_new` returns a fresh BIO.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null(), "the memory BIO must be created");
+
+        let cleanup = std::thread::spawn(|| {
+            use std::sync::atomic::Ordering as AtomicOrdering;
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+            while !PRINT_ENTERED.load(AtomicOrdering::SeqCst)
+                && std::time::Instant::now() < deadline
+            {
+                std::thread::sleep(std::time::Duration::from_millis(1));
+            }
+            // SAFETY: no pointer arguments; the registry lock serialises this with the print.
+            unsafe { X509V3_EXT_cleanup() };
+            CLEANUP_DONE.store(true, AtomicOrdering::SeqCst);
+        });
+
+        // SAFETY: both live; the alias is a DYNAMIC copy of `row` and runs `blocking_i2r`.
+        let ret = unsafe { X509V3_EXT_print(bio, ext, 0, 4) };
+        assert_eq!(ret, 1, "the blocking printer must run");
+        let joined = cleanup.join();
+        assert!(joined.is_ok(), "the cleanup thread must not panic");
+        assert!(
+            !CLEANUP_RAN_DURING_PRINT.load(AtomicOrdering::SeqCst),
+            "X509V3_EXT_cleanup completed while X509V3_EXT_print was still using the row: \
+             the registry read hold is not excluding the writer"
+        );
+        // SAFETY: both objects are this frame's own.
         unsafe {
             BIO_free(bio);
             X509_EXTENSION_free(ext);

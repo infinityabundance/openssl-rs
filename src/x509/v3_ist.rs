@@ -328,6 +328,21 @@ unsafe extern "C" fn v2i_issuer_sign_tool(
 
 /// `static int i2r_issuer_sign_tool(X509V3_EXT_METHOD *method, ISSUER_SIGN_TOOL *ist, BIO *out,
 /// int indent)` — `crypto/x509/v3_ist.c:90-130`.
+///
+/// # Safety
+///
+/// The `i2r` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `X509V3_EXT_print`'s `i2r` arm (`src/x509/v3_prn.rs:341`), which decoded the extension
+/// through the row's `ISSUER_SIGN_TOOL` item and refused a NULL result (`:300-303`), and
+/// refused a NULL `out`/`ext` prologue (`:254-256`). `ist` is therefore non-NULL and a
+/// decoded `ISSUER_SIGN_TOOL`; each of its three string members is NULL or the decoder's own
+/// live `ASN1_IA5STRING` whose `data` is readable for `length` bytes — this body reads exactly
+/// that extent with `BIO_write` and never past it. The body also tolerates a NULL `ist` (it
+/// raises and answers 0), but the dispatcher never supplies one. `out` is a non-NULL BIO and
+/// `method` the live row, neither retained. Non-NULLness is the dispatcher's; liveness and the
+/// row's `it`↔`i2r` pairing are the caller's/registrar's obligations.
+///
+/// Authority-derived: `crypto/x509/v3_ist.c:90-130`.
 unsafe extern "C" fn i2r_issuer_sign_tool(
     _method: *const X509V3ExtMethod,
     ist: *mut c_void,
