@@ -1471,7 +1471,8 @@
    "signature": "unsafe fn(c_int) -> c_int",
    "registration": "not a vtable slot; called at src/evp/e_rc2.rs:389 from rc2_get_asn1_type_and_iv (:371)",
    "guard": "none needed: no pointer is read",
-   "disposition": "SAFETY_DISCHARGED (scope: rc2_magic_to_meth; src/evp/e_rc2.rs:354)",
+   "disposition": "BLOCKED (not discharged: co-boundary P25-VESTIGIAL-MARKER-002 is BLOCKED and residual B48-R8 is NOT_RUN)",
+   "status_reason": "Retained BLOCKED and excluded from the applied boundary-sweep-B48 row. This site is co-owned by P25-VESTIGIAL-MARKER-002, which remains BLOCKED, and the receipt's own residual B48-R8 records that no library test covers the magic-to-key-length mapping (NOT_RUN). A site cannot be SAFETY_DISCHARGED while a co-owning boundary is blocked and its residual test is not run, so the earlier SAFETY_DISCHARGED disposition on this row is withdrawn; B48-RC2-001 stays BLOCKED.",
    "contract": "No caller precondition beyond the integer argument: the function maps the three RC2 magic values to key lengths and raises `E_RC2_125` (returning 0) otherwise. It reads no memory, retains nothing and cannot be re-entered through application code. The `unsafe` qualifier is retained because the error arm enters the crate's `raise_site`, not because a caller can cause undefined behaviour. Its sole caller passes the integer decoded by `ASN1_TYPE_get_int_octetstring` and treats 0 as a refusal.",
    "established": [
     "`rc2_get_asn1_type_and_iv` (:365) reads `num` at :378 and calls this helper at :383; the cipher table installs `rc2_get_asn1_type_and_iv` as `EVP_CIPHER::get_asn1_parameters`."
