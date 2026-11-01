@@ -2933,5 +2933,31 @@
   "what_changed": "full-surface enumeration (68 rows), 15 NULL-data guards, shake_ctrl negative-length guard, shared adversarial test module, refreshed getter/app-datasize docs and coordinates",
   "review_verdict_retained": "REJECT",
   "next": "independent re-review against candidate.files_sha256; CAMPAIGN-STATUS.json untouched and closure not run"
- }
+ },
+ "review_history": [
+  {
+   "reviewer": "independent adversarial reviewer (re-review of the repaired surface)",
+   "date": "2026-10-30",
+   "verdict": "REJECT",
+   "applied": false,
+   "decisive_reason": "The required adversarial evidence does not exist: three of the nine surface tests never invoke a table callback. undersized/wrong_typed/zero_ctx_size build a method with EVP_MD_meth_new and never install a callback, so EVP_MD_meth_get_* returns None, assert_callbacks_refuse executes no branch, and the test passes on the unchanged-block assertion alone. The u64 case also cannot exercise cast-time sizing because its block is 8 bytes and is refused by extent, not by type.",
+   "remedy": "Obtain each callback from its table (or install it with EVP_MD_meth_set_init/update/final/ctrl), pass the caller-sized context, and re-prove mutation sensitivity for each guard.",
+   "passing_checks": [
+    "surface completeness: 22 entry points x {init,update,final} + 4 ctrl over 53 distinct functions, matching the receipt; no omitted callback",
+    "guard correctness: the sampled init/update/ctrl guards refuse before the first write, preserve NULL+count 0, and do not change valid results",
+    "residual honesty: extent_is_not_type is true of the code, and a correctly sized wrong-typed block cannot cause OOB because every access is bounded by the callback's own size_of",
+    "receipt coordinates and file hashes match HEAD"
+   ],
+   "failing_checks": {
+    "adversarial_tests": "FAIL: three tests are vacuous, so B48-C2/C3/C8 overstate the coverage",
+    "criterion_2": "the extent half is mechanically established; the concrete block type (hence field validity) for a caller-created METH method is still an external caller obligation, not a discharged precondition",
+    "receipt_integrity": "FAIL: the full-surface, mutation-sensitive coverage claim is unsupported by the vacuous tests"
+   },
+   "arithmetic_note": "the commit breakdown sums to 67 not 68; 68 includes the retained RC2 integer helper",
+   "prohibition": [
+    "Do not apply B48. All sites stay BLOCKED.",
+    "Do not fix this by deleting the vacuous tests; install the callbacks and make them exercise the guards."
+   ]
+  }
+ ]
 }
