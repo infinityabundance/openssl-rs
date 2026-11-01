@@ -1029,7 +1029,31 @@
    "retained_state": "BLOCKED",
    "hidden_obligations": 0,
    "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B50.json",
-   "note": "Site-scoped only. X509_VERIFY_POLICY remains OWNERSHIP_RECONSTRUCTED mechanism-wide; the other 42 X509_VERIFY_POLICY sites (v2i 10, s2i 9, i2v 7, r2i 6, print 4, audit 2, bitst 2, non-method 2) stay BLOCKED and no contract or guard is claimed for them. Applied at this candidate."
+   "note": "Site-scoped only. X509_VERIFY_POLICY remains OWNERSHIP_RECONSTRUCTED mechanism-wide; the other 42 X509_VERIFY_POLICY sites (v2i 10, s2i 9, i2v 7, r2i 6, print 4, audit 2, bitst 2, non-method 2) stay BLOCKED and no contract or guard is claimed for them. Applied at this candidate.",
+   "adjudicated": true,
+   "adjudication": {
+    "verdict": "APPROVE",
+    "date": "2026-11-01",
+    "reviewer": "independent adversarial adjudicator (session f0cc8617-9d59-4694-9164-2413bfefd8ee); transcribed verbatim by the orchestrator",
+    "verdict_text": "No claim in the receipt or ledger row is contradicted by the evidence I read. Verdict is conditional only on the residuals below being recorded, not on any repair.",
+    "cond3_ruling": "COND3-SATISFIED: safe_callers_can_cause_ub is a retained-unsafe-entry-point marker (B45 false; B48/B49/B50 true), and no safe Rust item takes or returns X509V3ExtMethod",
+    "applied_ledger_effect": "11 scoped boundaries BLOCKED -> SAFETY_DISCHARGED (scoped); ssh and sshd 156/156/0 -> 167/145/0; no other mechanism or site moved",
+    "mechanism_state_unchanged": "X509_VERIFY_POLICY remains OWNERSHIP_RECONSTRUCTED mechanism-wide",
+    "fast_gate": "observed at a source-identical tree (HEAD a80792455, src identical to S 84f624012): fmt exit 0; clippy --all-targets exit 0, 0 warnings; x509:: 145 passed / 0 failed; mutation control reproduced independently (FAILED rc 101 under mutation, PASSED after byte-identical restore, sha256 7794c3ac... unchanged)",
+    "identity": "receipt restamped to S = 84f624012; all 12 files_sha256 re-checked against the commit and matching; authoring base db85674a0 preserved in candidate.authored_base_head and review_history",
+    "dirty_tree_explanation": "sourced: at S the ledger had 21 scoped rows and no B50 row, and CAMPAIGN-STATUS.json is the only tracked file modified between S and HEAD, so the applied closure ran with this row as its sole dirty tracked file",
+    "residuals_open": ["ADJ-R6: the registry-liveness hold and non-NUL-terminated result have no test or sanitizer; BOUNDARY gate", "ADJ-R8: stale status_reason prose on the baseline rows; corrected by the next closure regeneration"],
+    "residuals_retained": ["B50-R1..R5 stated caller obligations", "B50-R6/R7 authority divergences"],
+    "schema_residual": "consumer_closure.py records tracked_tree_dirty without a path list; it must emit tracked_tree_dirty_paths",
+    "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B50.json"
+   },
+   "review_history": [
+    {
+     "verdict": "UNAPPLIED",
+     "date": "2026-11-01",
+     "note": "Authoring-time state preserved: the receipt carried applied = false and a prohibition against application. Superseded only by the independent APPROVE above, after the observed FAST gate and the reproduced mutation control."
+    }
+   ]
   }
  ],
  "defects_closed": [
@@ -1936,6 +1960,22 @@
     "build_link_atlas_sha256": "d2f93a4244ac02712cceac8c65efe67af7e28924e01d18fb2d26ce4b14cdb81c"
    }
   }
+ },
+ "current_applied_state": {
+  "as_of": "2026-11-01",
+  "branch": "stage/p25/element7-s2b",
+  "evidence_head": "a80792455",
+  "candidate_S": "84f624012",
+  "candidate_source_identity": "src/, Cargo.toml, Cargo.lock and build.rs are identical to 84f624012; `git diff 84f624012..a80792455 -- src/ Cargo.toml Cargo.lock build.rs` is empty",
+  "closure": {
+   "ssh": {"DISCHARGED": 167, "BLOCKED": 145, "UNKNOWN": 0, "verdict": "ACCEPTED", "refusals": 0, "safe_compatible": false},
+   "sshd": {"DISCHARGED": 167, "BLOCKED": 145, "UNKNOWN": 0, "verdict": "ACCEPTED", "refusals": 0, "safe_compatible": false},
+   "obligations_total": 312
+  },
+  "closure_receipts": ["evidence/closure-ssh-b50-baseline.json", "evidence/closure-ssh-b50.json", "evidence/inventory-sshd-b50-baseline.json", "evidence/inventory-sshd-b50.json"],
+  "derived_from": "the scoped_boundary_discharges rows applied at base_head 84f624012: openssh-v1i 74, B48 36, B49 22, openssl-v1l 15, B50 11, B45 9 = 167",
+  "staleness_of_blocks_above": ["generated_date", "branch", "source_head", "source_head_subject", "source_head_note", "release_candidate", "closure"],
+  "note": "The top-level generated_date/branch/source_head/release_candidate/closure blocks remain the 0.0.44 release snapshot (90 DISCHARGED / 222 BLOCKED at v1r) and are NOT the current applied closure. They are marked stale for current reading rather than overwritten, because they are a true record of that release. Counts here are read from the B50 applied closures and imply no mechanism-level discharge and no SAFE_COMPATIBLE graduation."
  },
  "closure": {
   "receipt": "evidence/closure-ssh-v1r.json; evidence/inventory-sshd-v1r.json",
