@@ -69,6 +69,16 @@ unsafe extern "C" fn r2i_NO_ASSERTION(
 /// The returned `char *` is a fresh block owned by the caller: the extension machinery
 /// releases it through the allocator seam. There is no local release, so the transfer edge
 /// is the raw return rather than an owner that would free a returned block.
+///
+/// # Safety
+///
+/// The `i2s` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `X509V3_EXT_print`'s `i2s` arm (`src/x509/v3_prn.rs:334-352`), which resolved the row under
+/// the extension registry's read hold and decoded a non-NULL value through the row's item.
+/// Neither argument is read, so no further property is required.
+///
+/// Authority-derived: `crypto/x509/v3_no_ass.c:30-33` reads no argument and duplicates
+/// `"NULL"`.
 unsafe extern "C" fn i2s_NO_ASSERTION(
     _method: *const X509V3ExtMethod,
     _val: *mut c_void,

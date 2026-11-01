@@ -62,6 +62,16 @@ unsafe extern "C" fn r2i_SINGLE_USE(
 
 /// `static char *i2s_SINGLE_USE(const X509V3_EXT_METHOD *method, void *val)`
 /// — `crypto/x509/v3_single_use.c:30-33`.
+///
+/// # Safety
+///
+/// The `i2s` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `X509V3_EXT_print`'s `i2s` arm (`src/x509/v3_prn.rs:334-352`), which resolved the row under
+/// the extension registry's read hold and decoded a non-NULL value through the row's item.
+/// Neither argument is read, so no further property is required.
+///
+/// Authority-derived: `crypto/x509/v3_single_use.c:30-33` reads no argument and duplicates
+/// `"NULL"`.
 unsafe extern "C" fn i2s_SINGLE_USE(
     _method: *const X509V3ExtMethod,
     _val: *mut c_void,

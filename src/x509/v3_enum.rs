@@ -117,6 +117,20 @@ static CRL_REASONS: [BitStringBitname; 11] = [
 ];
 
 /// The `i2s` slot for `i2s_ASN1_ENUMERATED_TABLE`.
+///
+/// # Safety
+///
+/// The `i2s` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `X509V3_EXT_print`'s `i2s` arm (`src/x509/v3_prn.rs:334-352`), which resolved `meth` under
+/// the extension registry's read hold and decoded `value` through that row's declared
+/// `ASN1_ENUMERATED` item, refusing a NULL decode (`:317-320`). `meth` stays live for the whole
+/// call and `value` is non-NULL and owned by the dispatcher, which releases it after this
+/// returns (`:374-381`); this body retains neither. The row's `usr_data` table pairing (a
+/// `BitStringBitname` array terminated by a NULL `lname`) is the registrar's obligation.
+///
+/// Authority-derived: `crypto/x509/v3_prn.c:96` calls `method->i2s(method, ext_str)` and
+/// `crypto/x509/v3_enum.c:41-53` walks `method->usr_data` without null-checking either
+/// argument.
 unsafe extern "C" fn enum_i2s(meth: *const X509V3ExtMethod, value: *mut c_void) -> *mut c_char {
     // SAFETY: `meth` is the table's live row (read only); `value` is the `ASN1_ENUMERATED` in the
     // slot.

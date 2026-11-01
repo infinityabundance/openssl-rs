@@ -26,6 +26,18 @@ use crate::x509::v3_lib::X509V3ExtMethod;
 use crate::x509::v3_utl::{i2s_ASN1_INTEGER, s2i_ASN1_INTEGER};
 
 /// The `i2s` slot for `i2s_ASN1_INTEGER`.
+///
+/// # Safety
+///
+/// The `i2s` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `X509V3_EXT_print`'s `i2s` arm (`src/x509/v3_prn.rs:334-352`), which resolved `meth` under
+/// the extension registry's read hold and decoded `value` through the row's declared
+/// `ASN1_INTEGER` item, refusing a NULL decode (`:317-320`). `meth` stays live for the call but
+/// is unread by the callee; `value` is the decoded integer, owned by the dispatcher and
+/// released after this returns (`:374-381`).
+///
+/// Authority-derived: `crypto/x509/v3_prn.c:96`; `crypto/x509/v3_int.c:31-35` forwards to
+/// `i2s_ASN1_INTEGER`.
 unsafe extern "C" fn int_i2s(meth: *const X509V3ExtMethod, value: *mut c_void) -> *mut c_char {
     // SAFETY: `meth` is the table's live row (read only); `value` is the `ASN1_INTEGER` in the
     // slot.

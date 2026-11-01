@@ -332,6 +332,12 @@ pub unsafe extern "C" fn X509V3_EXT_print(
     let mut nval: *mut OpenSslStack = ptr::null_mut();
     let mut value: Option<OwnedStr> = None;
     if let Some(f) = i2s {
+        // The row stays live across this call: the read hold taken at :271 is held until
+        // dispatch ends, and `i2s` receives `method` (the enumerated-table slot reads
+        // `method->usr_data`), so a DYNAMIC alias row must not be released until this callback
+        // returns. The hold is required for the whole callback, not only for the slot read
+        // above (B49-R10).
+        //
         // SAFETY: `method`/`ext_str` are the callback's contract. The result is NULL or the
         // callback's exclusively owned seam block per `X509V3ExtI2s`: whole-block base,
         // NUL-terminated within its `strlen + 1`-byte C-string extent, ownership transferred to
@@ -495,7 +501,9 @@ mod tests {
     use crate::asn1::typ::i2d_ASN1_OCTET_STRING;
     use crate::runtime::bio::bss_mem::BIO_s_mem;
     use crate::runtime::bio::{BIO_ctrl, BIO_free, BIO_new, BIO_CTRL_INFO};
-    use crate::runtime::obj::{NID_issued_on_behalf_of, OBJ_create};
+    use crate::runtime::obj::{
+        NID_crl_number, NID_crl_reason, NID_group_ac, NID_issued_on_behalf_of, OBJ_create,
+    };
     use crate::x509::v3_lib::{X509V3_EXT_add, X509V3_EXT_add_alias, X509V3_EXT_cleanup};
     use crate::x509::x509_v3::X509_EXTENSION_create_by_NID;
     use crate::x509::x_exten::X509_EXTENSION_free;
@@ -697,6 +705,111 @@ mod tests {
         unsafe {
             BIO_free(bio);
             X509_EXTENSION_free(ext);
+        }
+    }
+
+    /// Positive path: three of the eleven `i2s` slots run end-to-end through
+    /// `X509V3_EXT_print` over standard rows: a constant slot, the enumerated-table slot and
+    /// the integer-forwarding slot. Each printed string is the callback's answer, and each
+    /// result is released once by the dispatcher's `OwnedStr`.
+    #[test]
+    fn i2s_callbacks_print_end_to_end() {
+        let cases: [(c_int, &[u8], &[u8]); 3] = [
+            // group_ac: an ASN.1 NULL; `i2s_GROUP_AC` answers a fresh "NULL".
+            (NID_group_ac, &[0x05, 0x00], b"NULL"),
+            // crl_reason: ENUMERATED 1; `enum_i2s` walks the row's table to "Key Compromise".
+            (NID_crl_reason, &[0x0A, 0x01, 0x01], b"Key Compromise"),
+            // crl_number: INTEGER 42; `int_i2s` forwards to `i2s_ASN1_INTEGER`.
+            (NID_crl_number, &[0x02, 0x01, 0x2A], b"42"),
+        ];
+        for (nid, der, expected) in cases {
+            let ext = extension_with_der(nid, der);
+            // SAFETY: `BIO_s_mem` is a live method table and `BIO_new` returns a fresh BIO.
+            let bio = unsafe { BIO_new(BIO_s_mem()) };
+            assert!(!bio.is_null(), "the memory BIO must be created");
+            // SAFETY: `bio`/`ext` are live and the standard row's print slot is `i2s`.
+            let ret = unsafe { X509V3_EXT_print(bio, ext, 0, 0) };
+            assert_eq!(ret, 1, "the i2s path must print successfully for NID {nid}");
+            // SAFETY: `bio` is the live memory BIO just written.
+            let text = unsafe { bio_bytes(bio) };
+            assert_eq!(text, expected, "NID {nid} i2s output");
+            // SAFETY: both objects are this test's own.
+            unsafe {
+                BIO_free(bio);
+                X509_EXTENSION_free(ext);
+            }
+        }
+    }
+
+    /// A probe `i2s` that records that it ran and answers NULL.
+    static I2S_CALLED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+    /// The recording callback: it must never run for a value that failed to decode.
+    unsafe extern "C" fn recording_i2s(
+        _method: *const X509V3ExtMethod,
+        _value: *mut c_void,
+    ) -> *mut c_char {
+        I2S_CALLED.store(true, std::sync::atomic::Ordering::SeqCst);
+        ptr::null_mut()
+    }
+
+    /// A dynamic row whose `it` is `GENERAL_NAME` and whose only slot is the recording `i2s`.
+    fn i2s_probe_row(nid: c_int) -> X509V3ExtMethod {
+        X509V3ExtMethod {
+            ext_nid: nid,
+            ext_flags: 0,
+            it: Some(crate::x509::v3_genn::GENERAL_NAME_it),
+            ext_new: None,
+            ext_free: None,
+            d2i: None,
+            i2d: None,
+            i2s: Some(recording_i2s),
+            s2i: None,
+            i2v: None,
+            v2i: None,
+            i2r: None,
+            r2i: None,
+            usr_data: ptr::null_mut(),
+        }
+    }
+
+    /// The `i2s` decode guard: a value that does not decode as the row's item answers before
+    /// the slot, exactly as the `i2r` family does. Removing the `ext_str.is_null()` refusal
+    /// (`src/x509/v3_prn.rs:317-320`) hands the callback a NULL value and this test fails on
+    /// the recorded call.
+    #[test]
+    fn i2s_is_not_called_when_the_value_does_not_decode() {
+        let _serial = REGISTRY_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        I2S_CALLED.store(false, std::sync::atomic::Ordering::SeqCst);
+        let nid = fresh_nid(
+            c"1.3.6.1.4.1.57264.50.1",
+            c"b50-i2s-guard",
+            c"B50 i2s decode guard",
+        );
+        let mut row = i2s_probe_row(nid);
+        // SAFETY: `row` is a live stack row that outlives the registry (cleanup runs below);
+        // the call takes the write hold.
+        let added = unsafe { X509V3_EXT_add(&raw mut row) };
+        assert_eq!(added, 1, "the probe row must register");
+        // A `GENERAL_NAME` row whose value is not a valid name.
+        let ext = extension_with_der(nid, &[0xFF, 0xFF]);
+        // SAFETY: `BIO_s_mem` is a live method table and `BIO_new` returns a fresh BIO.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null(), "the memory BIO must be created");
+        // SAFETY: `bio`/`ext` are live; the default policy answers 0 for a failed decode.
+        let ret = unsafe { X509V3_EXT_print(bio, ext, 0, 4) };
+        assert_eq!(ret, 0, "a failed decode must not print");
+        assert!(
+            !I2S_CALLED.load(std::sync::atomic::Ordering::SeqCst),
+            "the i2s callback must not run when the value did not decode"
+        );
+        // SAFETY: both objects are this test's own; cleanup releases the dynamic probe row.
+        unsafe {
+            BIO_free(bio);
+            X509_EXTENSION_free(ext);
+            X509V3_EXT_cleanup();
         }
     }
 
