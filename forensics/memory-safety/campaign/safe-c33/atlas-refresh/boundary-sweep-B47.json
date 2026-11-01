@@ -62,13 +62,14 @@
    "id": "B47-SSL-CONF-001",
    "file": "src/ssl/ssl_conf.rs",
    "line": 240,
+   "line_v1": 240,
    "line_current": 434,
    "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to 31cea14c5 at src_sha256_final e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
    "kind": "UNSAFE_FN_DEF",
    "operation": "ssl_match_option",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe fn(*mut SslConfCtx, &SslFlagTbl, *const c_char, c_int, c_int) -> bool",
-   "disposition": "SAFETY_DISCHARGED (scope: ssl_match_option and its dispatch path; src/ssl/ssl_conf.rs:240)",
+   "disposition": "SAFETY_DISCHARGED (scope: ssl_match_option and its dispatch path; src/ssl/ssl_conf.rs:434)",
    "contract": "`ssl_match_option` is a private helper whose only caller is `ssl_set_option_list` (`src/ssl/ssl_conf.rs:424`), inside the `CONF_parse_list` parse started by `parse_option_list` (`:542`; callback installed at `:558`). Preconditions: (1) `cctx` is non-NULL, aligned, live, initialised and exclusively accessible: it comes from `SSL_CONF_cmd` (`:1516`, dispatch `:1473`), which refuses NULL at `:1522` and whose public `# Safety` (`:1489`) requires exclusivity; on a match this function calls `ssl_set_option` (`:361`), which takes `&mut *cctx` and writes one field of the referenced `SSL`/`SSL_CTX`. (2) `tbl` is a safe `&SslFlagTbl`; the caller borrows it from `cctx.tbl`, which `parse_option_list` points at a frame-local table for the duration and clears at `:566-567`. (3) `elem` is readable for `len` bytes when `len >= 0` and NUL-terminated when `len == -1`, exactly `CONF_parse_list`'s element contract; `onoff` is an integer. (4) No pointer is retained.",
    "callers": [
     {
@@ -100,19 +101,21 @@
    ],
    "asserted_not_established": [
     "a malformed (elem,len) or unaligned cctx is not rejected by a runtime check; it is outside the stated contract"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_conf.rs:240 to the current census coordinate src/ssl/ssl_conf.rs:434; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-SSL-CONF-002",
    "file": "src/ssl/ssl_conf.rs",
    "line": 274,
+   "line_v1": 274,
    "line_current": 486,
    "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to 31cea14c5 at src_sha256_final e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
    "kind": "UNSAFE_FN_DEF",
    "operation": "ssl_set_option_list",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*const c_char, c_int, *mut c_void) -> c_int",
-   "disposition": "SAFETY_DISCHARGED (scope: ssl_set_option_list and its dispatch path; src/ssl/ssl_conf.rs:274)",
+   "disposition": "SAFETY_DISCHARGED (scope: ssl_set_option_list and its dispatch path; src/ssl/ssl_conf.rs:486)",
    "contract": "`ssl_set_option_list` is the `CONF_parse_list` element callback, installed only by `parse_option_list` (`src/ssl/ssl_conf.rs:558`) with `usr = cctx` (`:559`). Preconditions: (1) `usr` is non-NULL and points to a live, initialised, exclusively accessible `SslConfCtx`; the callback reads `tbl`/`ntbl` at `:417` (installed at `:549-550`) and on a match reaches `ssl_match_option` (`:424`) -> `ssl_set_option` (`:361`), which takes `&mut *cctx`. (2) `cctx.tbl` is NULL or a live array of `ntbl` `SslFlagTbl` values that outlives the callback; `parse_option_list` installs a frame-local table and clears it before returning (`:566-567`). (3) `elem` is NULL or readable for `len` bytes (`len >= 0`) or NUL-terminated (`len == -1`); a NULL `elem` returns 0 at `:394`. (4) `CONF_parse_list` invokes synchronously and retains nothing, and the callback stores no pointer.",
    "callers": [
     {
@@ -144,19 +147,21 @@
    ],
    "asserted_not_established": [
     "a caller that bypasses parse_option_list and supplies a different usr is outside the contract"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_conf.rs:274 to the current census coordinate src/ssl/ssl_conf.rs:486; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-SSL-CONF-003",
    "file": "src/ssl/ssl_conf.rs",
    "line": 379,
+   "line_v1": 379,
    "line_current": 616,
    "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to 31cea14c5 at src_sha256_final e2aa58f7a83803a2b641c2da4d5c0f8f0fad9dd72e112f269c1287da226000b8",
    "kind": "UNSAFE_FN_DEF",
    "operation": "min_max_proto",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe fn(*mut SslConfCtx, *const c_char, *mut c_int) -> c_int",
-   "disposition": "SAFETY_DISCHARGED (scope: min_max_proto and its dispatch path; src/ssl/ssl_conf.rs:379)",
+   "disposition": "SAFETY_DISCHARGED (scope: min_max_proto and its dispatch path; src/ssl/ssl_conf.rs:616)",
    "contract": "`min_max_proto` is called only by `cmd_MinProtocol` (`src/ssl/ssl_conf.rs:853`) and `cmd_MaxProtocol` (`:885`), `ConfCmdFn` rows stored by `commands()` (`:990`; rows `:1067`/`:1068`) and reached only through the single dispatch `f(cctx, value)` in `SSL_CONF_cmd` (`:1473`). Preconditions: (1) `cctx` is live, initialised and exclusively accessible (public `# Safety` `:1489`; dispatch guard `:1522`). (2) `cctx.ctx` (live `SSL_CTX`) or `cctx.ssl` (live `SSL`) is selected; its `method`/`defltmeth` is a live non-NULL method table established by `SSL_CTX_new`/`SSL_new`. (3) `value` is non-NULL and NUL-terminated: the dispatch refuses NULL for a typed row at `:1490`, and the body reads it with `CStr::from_ptr` at `:527`. (4) `bound` is never NULL at a dereference: it is the live, aligned `min_proto_version`/`max_proto_version` field supplied from `cctx`. `SSL_CONF_CTX_set_ssl` (`:1795`, assigns `:1812-1813`) and `SSL_CONF_CTX_set_ssl_ctx` (`:1839`, assigns `:1856-1857`) set it whenever `ctx`/`ssl` is non-NULL; when both are NULL the body returns 0 at `:524` before reading `value` or `bound`, so the NULL case is never dereferenced. (5) An unrecognised protocol name returns 0 at `:530`. The accepted `None` name parses to version 0, which `ssl_set_version_bound` writes at `:470-473` before any range test; a nonzero accepted version is range-checked before its write; the method-mismatch `_` arm accepts without writing.",
    "callers": [
     {
@@ -193,19 +198,21 @@
    ],
    "asserted_not_established": [
     "the DTLS method-version and method-mismatch arms are not exercised by C3"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_conf.rs:379 to the current census coordinate src/ssl/ssl_conf.rs:616; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-CIPH-001",
    "file": "src/ssl/ssl_ciph.rs",
    "line": 741,
+   "line_v1": 741,
    "line_current": 756,
    "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "update_cipher_list_by_id",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe fn(*mut *mut OpenSslStack, *mut OpenSslStack) -> bool",
-   "disposition": "SAFETY_DISCHARGED (scope: update_cipher_list_by_id and its dispatch path; src/ssl/ssl_ciph.rs:741)",
+   "disposition": "SAFETY_DISCHARGED (scope: update_cipher_list_by_id and its dispatch path; src/ssl/ssl_ciph.rs:756)",
    "contract": "`update_cipher_list_by_id` is a private helper with two callers: `update_cipher_list` (`src/ssl/ssl_ciph.rs:828`) and `ssl_create_cipher_list` (`:1208`). Preconditions: (1) `cipher_list_by_id` is non-NULL, points to a writable slot exclusively accessible to the call, and holds NULL or a live stack owned by the same `SSL_CTX`/`SSL`; the old value is freed at `:767`. (2) `cipherstack` is a live stack of NULL-or-live `*const SSL_CIPHER` entries owned by the caller; the body duplicates it at `:761` and never frees it. (3) The installed comparator is `ssl_cipher_ptr_id_cmp` (`:769`), whose own `# Safety` requires each element to be NULL or a table-row cipher. (4) No other reference to the slot or the installed stack is live for the call. Both callers pass a slot reached from a live `SSL_CTX`.",
    "callers": [
     {
@@ -231,19 +238,21 @@
    ],
    "asserted_not_established": [
     "no runtime test exercises a NULL/dangling cipher_list_by_id or a non-stack cipherstack"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_ciph.rs:741 to the current census coordinate src/ssl/ssl_ciph.rs:756; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-CIPH-002",
    "file": "src/ssl/ssl_ciph.rs",
    "line": 851,
+   "line_v1": 851,
    "line_current": 880,
    "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "set_ciphersuites",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe fn(*mut *mut OpenSslStack, *const c_char) -> bool",
-   "disposition": "SAFETY_DISCHARGED (scope: set_ciphersuites and its dispatch path; src/ssl/ssl_ciph.rs:851)",
+   "disposition": "SAFETY_DISCHARGED (scope: set_ciphersuites and its dispatch path; src/ssl/ssl_ciph.rs:880)",
    "contract": "`set_ciphersuites` is a private helper called by `SSL_CTX_set_ciphersuites` (`src/ssl/ssl_ciph.rs:1638`) and `SSL_set_ciphersuites` (`:1668`). Preconditions: (1) `currciphers` is non-NULL, points to a writable slot owned by a live `SSL_CTX`/`SSL` that the call exclusively accesses, and holds NULL or a stack the object owns; the old value is freed at `:907-908`. (2) `str_` is NULL or a NUL-terminated byte string readable for the whole call; the NULL arm is the authority's empty-list behaviour, and `CONF_parse_list` (call at `:891-897`) retains no pointer. (3) The parse callback `ciphersuite_cb` receives a fresh, exclusively owned stack as `arg`. (4) No other reference to the object or its stack slot is live.",
    "callers": [
     {
@@ -269,19 +278,21 @@
    ],
    "asserted_not_established": [
     "no runtime test exercises a NULL currciphers or a non-NUL-terminated str_"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_ciph.rs:851 to the current census coordinate src/ssl/ssl_ciph.rs:880; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-RSA-001",
    "file": "src/ssl/ssl_rsa.rs",
    "line": 1007,
+   "line_v1": 1007,
    "line_current": 1021,
    "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "serverinfoex_srv_parse_cb",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*mut Ssl, c_uint, c_uint, *const u8, usize, *mut X509, usize, *mut c_int, *mut c_void) -> c_int",
-   "disposition": "SAFETY_DISCHARGED (scope: serverinfoex_srv_parse_cb and its dispatch path; src/ssl/ssl_rsa.rs:1007)",
+   "disposition": "SAFETY_DISCHARGED (scope: serverinfoex_srv_parse_cb and its dispatch path; src/ssl/ssl_rsa.rs:1021)",
    "contract": "`serverinfoex_srv_parse_cb` is installed by `serverinfo_process_buffer` (`src/ssl/ssl_rsa.rs:1176`) as an `SSL_custom_ext_parse_cb_ex` and is never invoked at this identity: `src/ssl/statem/extensions_cust.rs` stores the erased pointer and records that this slice calls neither callback. The discharge is therefore ABI-only. If an invocation path is added, the preconditions are: `s` is a live connection; `in` is NULL or readable for `inlen` bytes; `al` is non-NULL and points to a writable `int` (the body writes `*al = SSL_AD_DECODE_ERROR` at `:1034` whenever `inlen != 0`). `ext_type`, `context`, `x`, `chainidx` and `arg` are unread.",
    "callers": [
     {
@@ -312,19 +323,21 @@
    ],
    "asserted_not_established": [
     "future invocation must re-open this boundary and establish s/in/al"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_rsa.rs:1007 to the current census coordinate src/ssl/ssl_rsa.rs:1021; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-RSA-002",
    "file": "src/ssl/ssl_rsa.rs",
    "line": 1033,
+   "line_v1": 1033,
    "line_current": 1057,
    "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "serverinfo_srv_parse_cb",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*mut Ssl, c_uint, *const u8, usize, *mut c_int, *mut c_void) -> c_int",
-   "disposition": "SAFETY_DISCHARGED (scope: serverinfo_srv_parse_cb and its dispatch path; src/ssl/ssl_rsa.rs:1033)",
+   "disposition": "SAFETY_DISCHARGED (scope: serverinfo_srv_parse_cb and its dispatch path; src/ssl/ssl_rsa.rs:1057)",
    "contract": "`serverinfo_srv_parse_cb` is installed by `serverinfo_process_buffer` (`src/ssl/ssl_rsa.rs:1165`) as the old-style `custom_ext_parse_cb` and is never invoked at this identity. The discharge is ABI-only. If an invocation path is added, `s` must be live, `in` NULL or readable for `inlen`, and `al` non-NULL and writable; the body forwards every pointer unchanged to `serverinfoex_srv_parse_cb` (`:1066`), so the ex-callback's contract applies.",
    "callers": [
     {
@@ -355,19 +368,21 @@
    ],
    "asserted_not_established": [
     "future invocation must re-open this boundary"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_rsa.rs:1033 to the current census coordinate src/ssl/ssl_rsa.rs:1057; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-RSA-003",
    "file": "src/ssl/ssl_rsa.rs",
    "line": 1046,
+   "line_v1": 1046,
    "line_current": 1082,
    "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "serverinfoex_srv_add_cb",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*mut Ssl, c_uint, c_uint, *mut *const u8, *mut usize, *mut X509, usize, *mut c_int, *mut c_void) -> c_int",
-   "disposition": "SAFETY_DISCHARGED (scope: serverinfoex_srv_add_cb and its dispatch path; src/ssl/ssl_rsa.rs:1046)",
+   "disposition": "SAFETY_DISCHARGED (scope: serverinfoex_srv_add_cb and its dispatch path; src/ssl/ssl_rsa.rs:1082)",
    "contract": "`serverinfoex_srv_add_cb` is installed by `serverinfo_process_buffer` (`src/ssl/ssl_rsa.rs:1173`) as an `SSL_custom_ext_add_cb_ex` and is never invoked at this identity. Its body ignores `s`, `out`, `outlen`, `x`, `al` and `arg` and returns 0 (`:1083-1089`), so no caller-supplied pointer is dereferenced. The obligation is the ABI: it may only be installed as the ex-style add callback of `SSL_CTX_add_custom_ext`.",
    "callers": [
     {
@@ -397,19 +412,21 @@
    ],
    "asserted_not_established": [
     "future invocation must re-open this boundary"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_rsa.rs:1046 to the current census coordinate src/ssl/ssl_rsa.rs:1082; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-TRACE-001",
    "file": "src/ssl/t1_trce.rs",
    "line": 1064,
+   "line_v1": 1064,
    "line_current": 1075,
    "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "is_tls13",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe fn(*const Ssl) -> bool",
-   "disposition": "SAFETY_DISCHARGED (scope: is_tls13 and its dispatch path; src/ssl/t1_trce.rs:1064)",
+   "disposition": "SAFETY_DISCHARGED (scope: is_tls13 and its dispatch path; src/ssl/t1_trce.rs:1075)",
    "contract": "`is_tls13` is a private trace predicate called only from the trace printers (`src/ssl/t1_trce.rs:2357`, `:2395`, `:2429`, `:2533`, `:2662`, `:2712`, `:2742`) and from `is_dtls`-guarded code. Preconditions: `sc` is non-NULL, aligned and points to a live `Ssl` that is not concurrently written for the call; its `method` field is NULL or a live method table. The body only reads `method`/`version` (`:1077-1085`) and calls `is_dtls` (`:1058`). Each printing caller's `# Safety` requires `sc` live (for example `ssl_print_certificates` at `:2344`, `ssl_print_signature` at `:1255`).",
    "callers": [
     {
@@ -459,19 +476,21 @@
    ],
    "asserted_not_established": [
     "a caller that violates the trace printers' live-sc contract is outside the contract"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/t1_trce.rs:1064 to the current census coordinate src/ssl/t1_trce.rs:1075; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-TRACE-002",
    "file": "src/ssl/t1_trce.rs",
    "line": 1077,
+   "line_v1": 1077,
    "line_current": 1098,
    "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "use_sigalgs",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe fn(*const Ssl) -> bool",
-   "disposition": "SAFETY_DISCHARGED (scope: use_sigalgs and its dispatch path; src/ssl/t1_trce.rs:1077)",
+   "disposition": "SAFETY_DISCHARGED (scope: use_sigalgs and its dispatch path; src/ssl/t1_trce.rs:1098)",
    "contract": "`use_sigalgs` is a private trace predicate called only from `ssl_print_signature` (`src/ssl/t1_trce.rs:1267`) and one further trace printer (`:2566`). Preconditions: `sc` is non-NULL, aligned and points to a live `Ssl` that is not concurrently written for the call; its `method` field is NULL or a live method table. The body only reads `method`/`enc_flags` (`:1101-1105`) and dereferences nothing else.",
    "callers": [
     {
@@ -496,19 +515,21 @@
    ],
    "asserted_not_established": [
     "a caller that violates the trace printers' live-sc contract is outside the contract"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/t1_trce.rs:1077 to the current census coordinate src/ssl/t1_trce.rs:1098; the operation symbol was verified on the current line"
   },
   {
    "id": "B47-CT-001",
    "file": "src/ssl/ssl_lib.rs",
    "line": 8845,
+   "line_v1": 8845,
    "line_current": 8857,
    "line_provenance": "V1 census coordinate at the inventory source head; line_current refreshed to the prior ssl_conf.rs snapshot 880587fc777336257a5b8be8cf2a90128d7dcac2ff53e23d58c60b60884d4656 (the surrounding file is unchanged at 31cea14c5)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "ct_permissive",
    "mechanism": "SSL_SESSION",
    "signature": "unsafe extern \"C\" fn(*const c_void, *const c_void, *mut c_void) -> c_int",
-   "disposition": "SAFETY_DISCHARGED (scope: ct_permissive and its dispatch path; src/ssl/ssl_lib.rs:8845)",
+   "disposition": "SAFETY_DISCHARGED (scope: ct_permissive and its dispatch path; src/ssl/ssl_lib.rs:8857)",
    "contract": "`ct_permissive` is installed by `SSL_CTX_enable_ct` (`src/ssl/ssl_lib.rs:8897`) and `SSL_enable_ct` (`:8920`) as an `ssl_ct_validation_cb` and is never invoked at this identity: the callback is stored in `ct_validation_callback` and copied on `SSL_new`/`SSL_dup`, but no candidate path calls it. Its body ignores `_ctx`, `_scts` and `_arg` and returns 1 (`:8858-8860`), so no caller-supplied pointer is dereferenced. The obligation is the ABI: it may only be installed as the `SSL_CTX_set_ct_validation_callback`/`SSL_set_ct_validation_callback` callback.",
    "callers": [
     {
@@ -538,7 +559,8 @@
    ],
    "asserted_not_established": [
     "future invocation must re-open this boundary"
-   ]
+   ],
+   "disposition_history": "re-derived at candidate c5 (ca9ca3144) from the V1 coordinate src/ssl/ssl_lib.rs:8845 to the current census coordinate src/ssl/ssl_lib.rs:8857; the operation symbol was verified on the current line"
   }
  ],
  "supersedes": [
