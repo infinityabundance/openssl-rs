@@ -284,6 +284,19 @@ unsafe fn print_notice(out: *mut Bio, notice: *mut UserNotice, indent: c_int) ->
 
 /// `static int i2r_USER_NOTICE_SYNTAX(X509V3_EXT_METHOD *method, OSSL_USER_NOTICE_SYNTAX *uns,
 /// BIO *out, int indent)` — `crypto/x509/v3_usernotice.c:66-84`.
+///
+/// # Safety
+///
+/// The `i2r` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `X509V3_EXT_print`'s `i2r` arm (`src/x509/v3_prn.rs:341`), which decoded the extension
+/// through the row's `OSSL_USER_NOTICE_SYNTAX` item and refused a NULL result (`:300-303`),
+/// and refused a NULL `out`/`ext` prologue (`:254-256`). `uns` is therefore non-NULL and a
+/// decoded stack of `USERNOTICE`; each notice, its `noticeRef` and `exptext` members and the
+/// strings they name are the decoder's own and stay live for the call. `out` is a non-NULL
+/// BIO and `method` the live row, neither retained. Non-NULLness is the dispatcher's;
+/// liveness and the row's `it`↔`i2r` pairing are the caller's/registrar's obligations.
+///
+/// Authority-derived: `crypto/x509/v3_usernotice.c:66-84`.
 unsafe extern "C" fn i2r_USER_NOTICE_SYNTAX(
     _method: *const X509V3ExtMethod,
     uns: *mut c_void,

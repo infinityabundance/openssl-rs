@@ -36,13 +36,40 @@
 //!   documented divergence (`AGENTS.md` §17) that narrows what we accept; it changes no return
 //!   value for a conforming caller (B46-D1).
 //! * **An overlapping invocation is refused at run time (B46-D2).** The authority performs no
-//!   check, so a re-entrant or aliased `SSL_CONF_cmd` on the same context would proceed into
-//!   aliasing/UB. `SslConfCtx` now carries an `in_use` flag set on entry to
-//!   [`SSL_CONF_cmd`]/[`SSL_CONF_cmd_argv`] and cleared by an RAII guard on every exit path,
-//!   including panic. A second invocation while the flag is set returns the API's ordinary
-//!   failure value (`0`) instead of aliasing. This is a deliberate, documented divergence: it
-//!   refuses where the authority would proceed, and it is the only same-context, same-thread
-//!   guarantee this crate adds beyond the authority.
+//!   check, so a re-entrant or aliased call on the same context would proceed into
+//!   aliasing/UB. Every exported entry point that takes a `*mut SslConfCtx` now acquires one
+//!   candidate-only exclusion state before touching a field, and an RAII guard releases it on
+//!   every exit path, including panic. A second call while the state is held is answered by
+//!   the entry point's documented refusal value (`0` for `SSL_CONF_cmd`, `SSL_CONF_cmd_argv`,
+//!   `SSL_CONF_CTX_finish`, `SSL_CONF_CTX_set1_prefix`, `SSL_CONF_CTX_set_flags` and
+//!   `SSL_CONF_CTX_clear_flags`; `SSL_CONF_TYPE_UNKNOWN` for `SSL_CONF_cmd_value_type`; a silent
+//!   no-op for the two `void` setters). `SSL_CONF_cmd_value_type` is included even though it only
+//!   reads, because `set1_prefix` rewrites `prefix`/`prefixlen` as two separate stores and a reader
+//!   that entered between them could observe a freed pointer with a new length. This is a
+//!   deliberate, documented divergence: it refuses where the authority would proceed.
+//!
+//! * **A free issued while the context is in use is deferred, not applied or refused
+//!   (B46-D3).** `SSL_CONF_CTX_free` returns `void`, so a refusal has no in-band signal: the
+//!   caller cannot distinguish "freed" from "not freed", and either drops the pointer and
+//!   leaks or keeps it and races. The candidate instead poisons the context
+//!   (`CTX_FREE_PENDING`) and leaves the single release to the in-flight entry point's RAII
+//!   guard, which performs the member teardown and the block release exactly once when it
+//!   drops. Later entry points are refused while the context is poisoned. The consequence is a
+//!   bounded lifetime extension (the block outlives the free call by at most the remaining
+//!   in-flight call), not a leak: the release is still exactly once. On that single-overlap
+//!   interleaving no guard writes into freed memory. If the in-flight call never returns, the
+//!   block is not released, the same liveness premise every scope-bound resource has. The
+//!   authority frees immediately and has no such state; this is recorded as a documented
+//!   divergence.
+//!
+//!   The deferral is a defensive arm, **not** a licence for concurrent use. `SSL_CONF_CTX_free`
+//!   is an external serialisation point: its `# Safety` contract requires that no other thread
+//!   is inside any `SSL_CONF_CTX` entry point and that free is not entered concurrently. Under
+//!   that contract the context is `CTX_IDLE` and the immediate path is taken; the deferred arm
+//!   is reachable only by a caller that has already violated the contract. It cannot make a
+//!   second concurrent free, or an entry point racing the release, safe: each can perform an
+//!   atomic access on `state` inside the released block, and the `void` ABI carries no refusal
+//!   that an address-keyed check could distinguish from a fresh allocation at the same address.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -50,7 +77,7 @@
 
 use core::ffi::{c_char, c_int, c_long, c_uint, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicBool, Ordering};
+use core::sync::atomic::{AtomicU8, Ordering};
 
 use crate::ffi::guard_ffi;
 use crate::runtime::conf::modparse::CONF_parse_list;
@@ -112,7 +139,7 @@ struct SslConfCmdTbl {
 ///
 /// The type is deliberately **not** `#[repr(C)]`: the authority allocates one block and
 /// hands out only the pointer, so no consumer observes the field order or the size. The
-/// `in_use` field is a candidate-only addition (it has no authority counterpart) and does
+/// `state` field is a candidate-only addition (it has no authority counterpart) and does
 /// not change any exported symbol or ABI: `SSL_CONF_CTX_new` allocates
 /// `size_of::<SslConfCtx>()` through the crate's own `CRYPTO_*` seam, and every other
 /// exported entry point takes/returns the opaque pointer.
@@ -132,58 +159,133 @@ pub struct SslConfCtx {
     tbl: *const SslFlagTbl,
     ntbl: usize,
     canames: *mut OpenSslStack,
-    /// Non-authority field: nonzero while a public dispatch is running on this context.
-    /// All-zero (free) is the state `SSL_CONF_CTX_new`/`zeroed` produce. It is atomic so
-    /// the check-and-set itself introduces no data race; it does **not** make the rest of
-    /// the context thread-safe (cross-thread mutation remains outside the contract).
-    in_use: AtomicBool,
+    /// Non-authority field: the candidate-only exclusion/poison state (B46-D2/B46-D3).
+    /// All-zero (`CTX_IDLE`) is the state `SSL_CONF_CTX_new`/`zeroed` produce. The state is
+    /// atomic so the acquisition, release and free-request transitions introduce no data race
+    /// and cannot interleave into a lost release; it does **not** make the wrapped
+    /// `SSL`/`SSL_CTX` thread-safe, and the public contract still requires exclusive access.
+    state: AtomicU8,
 }
 
 // ---------------------------------------------------------------------------------------------
-// Same-context overlap refusal (candidate-only; see B46-D2)
+// Same-context exclusion, reentrancy refusal and deferred free (candidate-only; B46-D2/D3)
 // ---------------------------------------------------------------------------------------------
 
-/// RAII release of [`SslConfCtx::in_use`].
+/// No entry point holds the context, and no free is pending. The zeroed state of
+/// `SSL_CONF_CTX_new`.
+const CTX_IDLE: u8 = 0;
+/// Exactly one entry point holds the context. Every other entry point is refused.
+const CTX_IN_USE: u8 = 1;
+/// One entry point still holds the context and `SSL_CONF_CTX_free` has asked for its
+/// release. The holder's guard performs the teardown when it drops; every other entry point
+/// is refused (the context is poisoned).
+const CTX_FREE_PENDING: u8 = 2;
+
+/// RAII release of [`SslConfCtx::state`].
 ///
-/// The guard stores the flag's address rather than a reference so that no shared borrow of
-/// the context is live while the dispatch takes `&mut *cctx` for its handlers (the aliasing
-/// shape B46-H1 removed). Its `Drop` clears the flag on every exit path, including the early
-/// returns and the unwind that `guard_ffi` catches.
+/// The guard stores the raw context pointer rather than a reference so that no shared borrow
+/// of the context is live while the dispatch takes `&mut *cctx` for its handlers (the aliasing
+/// shape B46-H1 removed). Its `Drop` releases the flag on every exit path, including the early
+/// returns and the unwind that `guard_ffi` catches. If a free was requested while the guard
+/// was live, the same `Drop` performs the deferred teardown and block release, exactly once.
 struct InUseGuard {
-    /// Address of the `in_use` field of a context that outlives this guard.
-    busy: *const AtomicBool,
+    /// A live, initialised context this guard has placed in `CTX_IN_USE`.
+    ctx: *mut SslConfCtx,
 }
 
 impl Drop for InUseGuard {
     fn drop(&mut self) {
-        // SAFETY: the context whose flag this guard marked is live for at least as long as
-        // the guard: the guard is created and dropped inside one public dispatch call that
-        // holds exclusive access to the context, and nothing in that call releases it.
-        unsafe { (*self.busy).store(false, Ordering::Release) };
+        // SAFETY: `self.ctx` is live for at least as long as the guard: the guard is created
+        // and dropped inside one public entry point that holds exclusive access, and the
+        // deferred-free arm below is the only path that releases the block, after reading the
+        // state that authorises it. Nothing here touches `self.ctx` after that release.
+        let state = unsafe { core::ptr::addr_of!((*self.ctx).state) };
+        loop {
+            // SAFETY: `state` is a live, aligned `AtomicU8` per the guard's provenance.
+            match unsafe { (*state).load(Ordering::Acquire) } {
+                CTX_IN_USE => {
+                    // A free may race this release. If the CAS loses to the free request the
+                    // next iteration observes `CTX_FREE_PENDING` and performs the teardown.
+                    // SAFETY: `state` is live and aligned.
+                    if unsafe {
+                        (*state).compare_exchange(
+                            CTX_IN_USE,
+                            CTX_IDLE,
+                            Ordering::AcqRel,
+                            Ordering::Acquire,
+                        )
+                    }
+                    .is_ok()
+                    {
+                        return;
+                    }
+                }
+                CTX_FREE_PENDING => {
+                    // SAFETY: the state authorises this guard, the sole holder, to release the
+                    // context exactly once; no later access to `self.ctx` occurs in this frame.
+                    unsafe { destroy_and_release(self.ctx) };
+                    return;
+                }
+                // No other value can be written, and a freed block is never observable to a
+                // guard that owns it. Returning leaves the state untouched.
+                _ => return,
+            }
+        }
     }
 }
 
-/// Marks `cctx` in use for the lifetime of the returned guard, or returns `None` when a
-/// public dispatch is already running on the same context.
+/// Marks `cctx` in use for the lifetime of the returned guard, or returns `None` when the
+/// context is already held or poisoned.
 ///
 /// This is not an authority operation: the authority performs no such check (B46-D2). It is
-/// the candidate's deterministic replacement for allowing two overlapping dispatches to
+/// the candidate's deterministic replacement for allowing two overlapping entry points to
 /// alias the context.
 ///
 /// # Safety
 /// `cctx` must be non-NULL, aligned and point to a live, initialised `SslConfCtx` that
-/// outlives the returned guard. The caller must hold the exclusive-access precondition of
-/// the public dispatch for the whole guard lifetime.
+/// outlives the returned guard, and no other call may release that block during the guard's
+/// lifetime. The caller must hold the exclusive-access precondition of the public entry point
+/// for the whole guard lifetime: a non-free entry point requires that no `SSL_CONF_CTX_free`
+/// can complete a release while it runs, and `SSL_CONF_CTX_free` itself requires, per its own
+/// contract, that no other entry point is in flight and that no second free is concurrent.
+/// Those are external caller obligations; the atomic transition below cannot establish them.
 unsafe fn enter_use(cctx: *mut SslConfCtx) -> Option<InUseGuard> {
     // SAFETY: `cctx` is live and aligned per the caller's contract; `addr_of!` creates no
     // reference, so it does not conflict with the `&mut *cctx` the handlers later take.
-    let busy = unsafe { core::ptr::addr_of!((*cctx).in_use) };
-    // SAFETY: `busy` is a live, aligned `AtomicBool` per the caller's contract.
-    if unsafe { (*busy).swap(true, Ordering::Acquire) } {
-        None
-    } else {
-        Some(InUseGuard { busy })
+    let state = unsafe { core::ptr::addr_of!((*cctx).state) };
+    // SAFETY: `state` is a live, aligned `AtomicU8` per the caller's contract.
+    if unsafe {
+        (*state).compare_exchange(CTX_IDLE, CTX_IN_USE, Ordering::Acquire, Ordering::Relaxed)
     }
+    .is_ok()
+    {
+        Some(InUseGuard { ctx: cctx })
+    } else {
+        None
+    }
+}
+
+/// Releases the context's member buffers and then the context block, once.
+///
+/// # Safety
+/// `cctx` must be non-NULL and point to a live, initialised `SslConfCtx` that this call owns
+/// exclusively: the state is either `CTX_IN_USE` for this call or `CTX_FREE_PENDING` held by
+/// this call's own guard, and no other reference to the context or its members is live. The
+/// block's provenance is the single `OwnedBuf::new_zeroed` in [`SSL_CONF_CTX_new`]; the
+/// member pointers satisfy [`free_cert_filename`]'s contract. The caller must not access
+/// `cctx` again after this returns.
+unsafe fn destroy_and_release(cctx: *mut SslConfCtx) {
+    // SAFETY: `cctx` is live and exclusively owned per the contract; the member teardown is
+    // the authority's own `ssl_conf.c:1114-1122` sequence.
+    unsafe {
+        free_cert_filename(&mut *cctx);
+        CRYPTO_free((*cctx).prefix.cast(), FILE, 0);
+        OPENSSL_sk_free((*cctx).canames);
+    }
+    // Reclaim the block a matching `SSL_CONF_CTX_new` handed out; its single release is
+    // `Drop`. SAFETY: `cctx` is the live block `SSL_CONF_CTX_new` gave up per the contract,
+    // not released before.
+    drop(unsafe { OwnedBuf::adopt_plain(cctx.cast(), FILE_SEAM, 1120) });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1508,10 +1610,13 @@ unsafe fn ssl_conf_cmd_inner(
 /// one context at a time) already satisfies it, while concurrent use is outside the
 /// supported contract rather than silently treated as safe.
 ///
-/// Same-thread overlap (`AGENTS.md` §17, B46-D2): an invocation that overlaps a dispatch
-/// already in progress on the same `cctx` is refused deterministically with `0`; it is not
-/// allowed to alias the context. This diverges from the authority, which would proceed, and
-/// is the mechanism that closes the same-thread half of the exclusivity gap.
+/// Same-context overlap (`AGENTS.md` §17, B46-D2): every exported entry point that takes a
+/// `*mut SslConfCtx` acquires one exclusion state before touching a field. An invocation
+/// that overlaps a call already in progress on the same `cctx` is refused deterministically
+/// with `0`; it is not allowed to alias the context. This diverges from the authority, which
+/// would proceed. Cross-thread use of the wrapped `SSL`/`SSL_CTX` is still outside the
+/// contract; the guard serialises this context's exported API, not other users of those
+/// objects.
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CONF_cmd(
     cctx: *mut SslConfCtx,
@@ -1553,9 +1658,10 @@ pub unsafe extern "C" fn SSL_CONF_cmd(
 ///
 /// Authority-derived / documented divergence (`AGENTS.md` §17): as for [`SSL_CONF_cmd`],
 /// the authority's documentation does not require exclusive access; this contract
-/// narrows what the crate accepts without changing behaviour. An invocation overlapping a
-/// dispatch already in progress on the same context is refused with `0` (B46-D2), and a
-/// NULL `cctx` is now rechecked and answered with `0` instead of being dereferenced.
+/// narrows what the crate accepts without changing behaviour. An invocation overlapping any
+/// entry point already in progress on the same context is refused with `0` (B46-D2) without
+/// changing `cctx.flags`, `*pargc` or `*pargv`; a NULL `cctx` is answered with `0` instead of
+/// being dereferenced.
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CONF_cmd_argv(
     cctx: *mut SslConfCtx,
@@ -1638,7 +1744,16 @@ pub unsafe extern "C" fn SSL_CONF_cmd_argv(
 /// `ssl/ssl_conf.c:1046-1055`.
 ///
 /// # Safety
-/// `cctx` live; `cmd` NULL or NUL-terminated.
+/// `cctx` must be NULL or point to a live, initialised `SslConfCtx` that this call has
+/// exclusive access to for its whole duration; `cmd` must be NULL or NUL-terminated and
+/// readable for the call.
+///
+/// The lookup itself only reads `flags`, `prefix` and `prefixlen`. Those fields are not
+/// updated atomically as a group (`set1_prefix` frees the old prefix and then writes
+/// `prefix`/`prefixlen` as separate stores), so a reader that entered during that window could
+/// observe a freed pointer with a new length. The accessor therefore takes the same exclusion
+/// guard as the mutators: while another entry point holds the context it answers
+/// `SSL_CONF_TYPE_UNKNOWN` instead of reading a partially mutated state (B46-D2).
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CONF_cmd_value_type(
     cctx: *mut SslConfCtx,
@@ -1648,13 +1763,19 @@ pub unsafe extern "C" fn SSL_CONF_cmd_value_type(
         if cctx.is_null() {
             return t::SSL_CONF_TYPE_UNKNOWN as c_int;
         }
+        // SAFETY: `cctx` is non-NULL and live per the caller's contract and outlives this
+        // call. The guard is held to the end of the lookup, so the fields it reads cannot be
+        // rewritten by an overlapping entry point.
+        let Some(_in_use) = (unsafe { enter_use(cctx) }) else {
+            return t::SSL_CONF_TYPE_UNKNOWN as c_int;
+        };
         let mut p = cmd;
-        // SAFETY: `cctx` is live.
+        // SAFETY: `cctx` is live and held exclusively by this call.
         if unsafe { skip_prefix(cctx, &mut p) } {
             // SAFETY: `p` points into the command string.
             let name = unsafe { core::ffi::CStr::from_ptr(p) }.to_bytes();
             let table = commands();
-            // SAFETY: `cctx` is live.
+            // SAFETY: `cctx` is live and held exclusively by this call.
             let c = unsafe { &*cctx };
             if let Some(idx) = cmd_lookup(c, name, &table) {
                 return table[idx].value_type as c_int;
@@ -1684,13 +1805,24 @@ pub unsafe extern "C" fn SSL_CONF_CTX_new() -> *mut SslConfCtx {
 /// `int SSL_CONF_CTX_finish(SSL_CONF_CTX *cctx)` — `ssl/ssl_conf.c:1064-1101`.
 ///
 /// # Safety
-/// `cctx` must point to a live configuration context.
+/// `cctx` must be NULL or point to a live, initialised configuration context that this call
+/// has exclusive access to for its whole duration.
+///
+/// The authority's finish consumes `canames` and may back-fill private keys, so it is a
+/// mutating entry point even though this slice's body has no such hand-off yet. It therefore
+/// takes the exclusion guard: an overlapping or re-entrant call answers `0` (failure) and
+/// changes nothing (B46-D2).
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CONF_CTX_finish(cctx: *mut SslConfCtx) -> c_int {
     guard_ffi(0, || {
         if cctx.is_null() {
             return 0;
         }
+        // SAFETY: `cctx` is non-NULL and live per the caller's contract and outlives this
+        // call; the guard is released on every exit path.
+        let Some(_in_use) = (unsafe { enter_use(cctx) }) else {
+            return 0;
+        };
         // The private-key back-fill runs only under `SSL_CONF_FLAG_REQUIRE_PRIVATE`, which this
         // slice never installs; `canames` is always NULL, so the hand-off is a no-op.
         1
@@ -1700,25 +1832,74 @@ pub unsafe extern "C" fn SSL_CONF_CTX_finish(cctx: *mut SslConfCtx) -> c_int {
 /// `void SSL_CONF_CTX_free(SSL_CONF_CTX *cctx)` — `ssl/ssl_conf.c:1114-1122`.
 ///
 /// # Safety
-/// `cctx` must be NULL or a live context, and not used after this call.
+/// `cctx` must be NULL or a live, initialised context, and the caller must not use it through
+/// any pointer after this call returns. **The caller must externally serialise this call:**
+/// while it runs, no other thread may be inside any `SSL_CONF_CTX` entry point (including a
+/// second `SSL_CONF_CTX_free` of the same context), and no thread may enter one afterwards.
+/// Equivalently, this call is the sole user of the context and is not entered concurrently.
+///
+/// That exclusivity is a stated external caller obligation, not something this function can
+/// enforce. It is required because the single release here returns the block to the
+/// allocator: a second concurrent free, or an entry point that races this call's `enter_use`,
+/// would perform an atomic access to `state` inside the released block. The `void` ABI carries
+/// no refusal signal, and an address-keyed out-of-band check cannot distinguish a freed context
+/// from a new allocation at the same address, so the callee cannot discharge it. A conforming
+/// caller therefore enters this function with the context in `CTX_IDLE`, which is exactly the
+/// `enter_use` precondition above.
+///
+/// Free policy (B46-D3, documented divergence). The authority frees immediately. Here:
+///
+/// * the contract path: the context is idle and exclusive to this call, so this call acquires
+///   the exclusion state, tears the members down and releases the block once;
+/// * a defensive arm outside the contract: if the caller violates the obligation above by
+///   leaving exactly one entry point in flight, this call poisons the context
+///   (`CTX_FREE_PENDING`) and returns without releasing anything. That holder's RAII guard
+///   performs the same teardown and release exactly once when it drops, and every later entry
+///   point is refused while poisoned. This arm is a hardening retained from the B46/B47
+///   repair; it does not extend the contract, is unreachable from a conforming caller, and
+///   does not make concurrent use safe.
+///
+/// A refusal was rejected as the policy because the authority's signature is `void`: a caller
+/// could not observe the refusal, would drop its pointer and leak, or would keep it and race.
+/// Deferral keeps the authority's "one call, exactly one release" postcondition and, on the
+/// single-overlap interleaving it covers, never leaves a guard whose `Drop` would write into
+/// freed memory.
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CONF_CTX_free(cctx: *mut SslConfCtx) {
     guard_ffi((), || {
         if cctx.is_null() {
             return;
         }
-        // The authority's teardown of the context's member buffers, before the block release.
-        // SAFETY: `cctx` is live and owned here.
-        unsafe {
-            free_cert_filename(&mut *cctx);
-            CRYPTO_free((*cctx).prefix.cast(), FILE, 0);
-            OPENSSL_sk_free((*cctx).canames);
+        loop {
+            // SAFETY: `cctx` is non-NULL and live per the caller's contract.
+            if let Some(guard) = unsafe { enter_use(cctx) } {
+                // The guard must not clear the state of a block that is about to be released.
+                core::mem::forget(guard);
+                // SAFETY: this call holds `CTX_IN_USE` and is the sole owner of the block.
+                unsafe { destroy_and_release(cctx) };
+                return;
+            }
+            // SAFETY: `cctx` is live and non-NULL; `addr_of!` creates no reference.
+            let state = unsafe { core::ptr::addr_of!((*cctx).state) };
+            // SAFETY: `state` is a live, aligned `AtomicU8`.
+            match unsafe {
+                (*state).compare_exchange(
+                    CTX_IN_USE,
+                    CTX_FREE_PENDING,
+                    Ordering::AcqRel,
+                    Ordering::Acquire,
+                )
+            } {
+                // The holder reads this state when its guard drops and performs the release.
+                Ok(_) => return,
+                // Another free already requested the same deferred release; one release is
+                // still exactly one.
+                Err(CTX_FREE_PENDING) => return,
+                // The holder released between the acquisition attempt and this CAS; retry the
+                // immediate path so the block is not leaked.
+                Err(_) => continue,
+            }
         }
-        // Reclaim the block a matching `SSL_CONF_CTX_new` handed out; its single release is `Drop`.
-        // SAFETY: `cctx` is the live block `SSL_CONF_CTX_new` gave up per the caller's contract,
-        // not released before.
-        // SAFETY: the pointer is NULL or a live block this frame exclusively owns from the crate's CRYPTO_* seam; NULL is the authority's own no-op `free(NULL)`.
-        drop(unsafe { OwnedBuf::adopt_plain(cctx.cast(), FILE_SEAM, 1120) });
     })
 }
 
@@ -1726,11 +1907,25 @@ pub unsafe extern "C" fn SSL_CONF_CTX_free(cctx: *mut SslConfCtx) {
 /// `ssl/ssl_conf.c:1124-1128`.
 ///
 /// # Safety
-/// `cctx` must point to a live configuration context.
+/// `cctx` must be NULL or point to a live, initialised configuration context that this call
+/// has exclusive access to for its whole duration.
+///
+/// An overlapping or re-entrant call is refused with `0` and writes nothing. It deliberately
+/// does not read the current flag word on the refusal path: reading a non-atomic field while
+/// another thread's holder may be writing it would be a data race, and `0` is the only answer
+/// that requires no field access (B46-D2).
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CONF_CTX_set_flags(cctx: *mut SslConfCtx, flags: c_uint) -> c_uint {
     guard_ffi(0, || {
-        // SAFETY: `cctx` is live per the caller's contract.
+        if cctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `cctx` is non-NULL and live per the caller's contract and outlives this
+        // call; the guard is released on every exit path.
+        let Some(_in_use) = (unsafe { enter_use(cctx) }) else {
+            return 0;
+        };
+        // SAFETY: `cctx` is live and held exclusively by this call.
         unsafe {
             (*cctx).flags |= flags;
             (*cctx).flags
@@ -1742,11 +1937,24 @@ pub unsafe extern "C" fn SSL_CONF_CTX_set_flags(cctx: *mut SslConfCtx, flags: c_
 /// `ssl/ssl_conf.c:1130-1134`.
 ///
 /// # Safety
-/// `cctx` must point to a live configuration context.
+/// `cctx` must be NULL or point to a live, initialised configuration context that this call
+/// has exclusive access to for its whole duration.
+///
+/// An overlapping or re-entrant call is refused with `0` and writes nothing; the refusal path
+/// does not read the non-atomic flag word for the reason given on [`SSL_CONF_CTX_set_flags`]
+/// (B46-D2).
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CONF_CTX_clear_flags(cctx: *mut SslConfCtx, flags: c_uint) -> c_uint {
     guard_ffi(0, || {
-        // SAFETY: `cctx` is live per the caller's contract.
+        if cctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `cctx` is non-NULL and live per the caller's contract and outlives this
+        // call; the guard is released on every exit path.
+        let Some(_in_use) = (unsafe { enter_use(cctx) }) else {
+            return 0;
+        };
+        // SAFETY: `cctx` is live and held exclusively by this call.
         unsafe {
             (*cctx).flags &= !flags;
             (*cctx).flags
@@ -1758,13 +1966,28 @@ pub unsafe extern "C" fn SSL_CONF_CTX_clear_flags(cctx: *mut SslConfCtx, flags: 
 /// `ssl/ssl_conf.c:1136-1151`.
 ///
 /// # Safety
-/// `cctx` live; `pre` NULL or NUL-terminated.
+/// `cctx` must be NULL or point to a live, initialised configuration context that this call
+/// has exclusive access to for its whole duration; `pre` must be NULL or NUL-terminated and
+/// readable for the call.
+///
+/// The `CRYPTO_strdup`/`CRYPTO_free` calls may reach a caller-installed allocator hook. The
+/// guard is held across them, so a hook that re-enters any entry point is refused instead of
+/// observing the half-rewritten `prefix`/`prefixlen` pair (B46-D2). A refused call answers `0`
+/// (the authority's failure value) and frees nothing.
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CONF_CTX_set1_prefix(
     cctx: *mut SslConfCtx,
     pre: *const c_char,
 ) -> c_int {
     guard_ffi(0, || {
+        if cctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `cctx` is non-NULL and live per the caller's contract and outlives this
+        // call; the guard is released on every exit path.
+        let Some(_in_use) = (unsafe { enter_use(cctx) }) else {
+            return 0;
+        };
         let mut tmp: *mut c_char = ptr::null_mut();
         if !pre.is_null() {
             // SAFETY: `pre` is NUL-terminated; `CRYPTO_strdup` copies it.
@@ -1773,7 +1996,7 @@ pub unsafe extern "C" fn SSL_CONF_CTX_set1_prefix(
                 return 0;
             }
         }
-        // SAFETY: `cctx` is live per the caller's contract.
+        // SAFETY: `cctx` is live and held exclusively by this call.
         unsafe {
             CRYPTO_free((*cctx).prefix.cast(), FILE, 0);
             (*cctx).prefix = tmp;
@@ -1790,11 +2013,24 @@ pub unsafe extern "C" fn SSL_CONF_CTX_set1_prefix(
 /// `void SSL_CONF_CTX_set_ssl(SSL_CONF_CTX *cctx, SSL *ssl)` — `ssl/ssl_conf.c:1153-1179`.
 ///
 /// # Safety
-/// `cctx` live; `ssl` NULL or live.
+/// `cctx` must be NULL or point to a live, initialised configuration context that this call
+/// has exclusive access to for its whole duration; `ssl` must be NULL or a live `SSL` that
+/// this call also has exclusive access to.
+///
+/// An overlapping or re-entrant call is refused silently (the function returns `void`): it
+/// changes no pointer and frees no certificate-filename array (B46-D2).
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CONF_CTX_set_ssl(cctx: *mut SslConfCtx, ssl: *mut Ssl) {
     guard_ffi((), || {
-        // SAFETY: `cctx` is live per the caller's contract.
+        if cctx.is_null() {
+            return;
+        }
+        // SAFETY: `cctx` is non-NULL and live per the caller's contract and outlives this
+        // call; the guard is released on every exit path.
+        let Some(_in_use) = (unsafe { enter_use(cctx) }) else {
+            return;
+        };
+        // SAFETY: `cctx` is live and held exclusively by this call.
         unsafe {
             let c = &mut *cctx;
             c.ssl = ssl;
@@ -1834,11 +2070,24 @@ pub unsafe extern "C" fn SSL_CONF_CTX_set_ssl(cctx: *mut SslConfCtx, ssl: *mut S
 /// `void SSL_CONF_CTX_set_ssl_ctx(SSL_CONF_CTX *cctx, SSL_CTX *ctx)` — `ssl/ssl_conf.c:1181-1203`.
 ///
 /// # Safety
-/// `cctx` live; `ctx` NULL or live.
+/// `cctx` must be NULL or point to a live, initialised configuration context that this call
+/// has exclusive access to for its whole duration; `ctx` must be NULL or a live `SSL_CTX`
+/// that this call also has exclusive access to.
+///
+/// An overlapping or re-entrant call is refused silently (the function returns `void`): it
+/// changes no pointer and frees no certificate-filename array (B46-D2).
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CONF_CTX_set_ssl_ctx(cctx: *mut SslConfCtx, ctx: *mut SslCtx) {
     guard_ffi((), || {
-        // SAFETY: `cctx` is live per the caller's contract.
+        if cctx.is_null() {
+            return;
+        }
+        // SAFETY: `cctx` is non-NULL and live per the caller's contract and outlives this
+        // call; the guard is released on every exit path.
+        let Some(_in_use) = (unsafe { enter_use(cctx) }) else {
+            return;
+        };
+        // SAFETY: `cctx` is live and held exclusively by this call.
         unsafe {
             let c = &mut *cctx;
             c.ctx = ctx;
@@ -1904,8 +2153,9 @@ unsafe fn free_cert_filename(c: &mut SslConfCtx) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runtime::mem::free_probe;
     use crate::ssl::methods::TLS_method;
-    use crate::ssl::ssl_lib::{SSL_CTX_free, SSL_CTX_new};
+    use crate::ssl::ssl_lib::{SSL_CTX_free, SSL_CTX_new, SSL_free, SSL_new};
 
     /// The verify-mode words of an `SSL`/`SSL_CTX` are `int`s. Writing them through
     /// a widened `u64` view (as the pre-repair code did for both flag classes) runs
@@ -2148,8 +2398,8 @@ mod tests {
     #[test]
     fn a_reentrant_dispatch_is_refused_and_leaves_the_context_usable() {
         let mut options: u64 = 0;
-        // SAFETY: all-zero is the authority's `OPENSSL_zalloc` state; the added `in_use`
-        // field is an `AtomicBool`, whose all-zero value is `false`.
+        // SAFETY: all-zero is the authority's `OPENSSL_zalloc` state; the added `state`
+        // field is an `AtomicU8`, whose all-zero value is `CTX_IDLE`.
         let mut cctx: SslConfCtx = unsafe { core::mem::zeroed() };
         cctx.flags = (t::SSL_CONF_FLAG_FILE | t::SSL_CONF_FLAG_CLIENT) as c_uint;
         cctx.poptions = &raw mut options;
@@ -2171,8 +2421,9 @@ mod tests {
             in_flight.is_some(),
             "the context was free before the overlap"
         );
-        assert!(
-            cctx.in_use.load(Ordering::Acquire),
+        assert_eq!(
+            cctx.state.load(Ordering::Acquire),
+            CTX_IN_USE,
             "the guard marks the context in use"
         );
 
@@ -2189,8 +2440,9 @@ mod tests {
 
         // Releasing the in-flight guard makes the context usable again.
         drop(in_flight);
-        assert!(
-            !cctx.in_use.load(Ordering::Acquire),
+        assert_eq!(
+            cctx.state.load(Ordering::Acquire),
+            CTX_IDLE,
             "dropping the guard clears the flag"
         );
         // SAFETY: as above; the literal is NUL-terminated.
@@ -2219,8 +2471,9 @@ mod tests {
         let unknown =
             unsafe { SSL_CONF_cmd(&raw mut cctx, c"NoSuchCommand".as_ptr(), c"x".as_ptr()) };
         assert_eq!(unknown, -2, "an unrecognised command is refused");
-        assert!(
-            !cctx.in_use.load(Ordering::Acquire),
+        assert_eq!(
+            cctx.state.load(Ordering::Acquire),
+            CTX_IDLE,
             "the guard is cleared after the -2 exit"
         );
 
@@ -2228,8 +2481,9 @@ mod tests {
         // SAFETY: as above; the dispatch refuses NULL before reading it.
         let null = unsafe { SSL_CONF_cmd(&raw mut cctx, c"Options".as_ptr(), ptr::null()) };
         assert_eq!(null, -3, "a NULL value for a typed row is refused");
-        assert!(
-            !cctx.in_use.load(Ordering::Acquire),
+        assert_eq!(
+            cctx.state.load(Ordering::Acquire),
+            CTX_IDLE,
             "the guard is cleared after the -3 exit"
         );
 
@@ -2238,8 +2492,9 @@ mod tests {
         let unmatched =
             unsafe { SSL_CONF_cmd(&raw mut cctx, c"Options".as_ptr(), c"NoSuchOption".as_ptr()) };
         assert_eq!(unmatched, 0, "an unmatched option is rejected");
-        assert!(
-            !cctx.in_use.load(Ordering::Acquire),
+        assert_eq!(
+            cctx.state.load(Ordering::Acquire),
+            CTX_IDLE,
             "the guard is cleared after the handler error exit"
         );
 
@@ -2273,10 +2528,366 @@ mod tests {
                 expected_set,
                 "each sequential dispatch applied its own value"
             );
-            assert!(
-                !cctx.in_use.load(Ordering::Acquire),
+            assert_eq!(
+                cctx.state.load(Ordering::Acquire),
+                CTX_IDLE,
                 "the guard is released before the next sequential call"
             );
         }
+    }
+
+    /// C7 control for the complete exclusivity model (B46-D2): every entry point that takes a
+    /// `*mut SslConfCtx` must refuse an overlap, and every one must still work sequentially.
+    ///
+    /// The mutation witness removes the `enter_use` guard from `SSL_CONF_CTX_set1_prefix`; the
+    /// in-use arm then returns 1 and rewrites `prefix`, so the `assert_eq!(..., 0)` and the
+    /// pointer/content assertions below fail (recorded in the B46/B47 refresh).
+    #[test]
+    fn every_entry_point_refuses_an_overlap_and_works_when_idle() {
+        // SAFETY: the method is a process-lifetime static; the constructors return owned
+        // objects and the test releases them exactly once.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null(), "SSL_CTX_new");
+        // SAFETY: `ctx` is live and exclusively ours for this test.
+        let ssl = unsafe { SSL_new(ctx) };
+        assert!(!ssl.is_null(), "SSL_new");
+        // SAFETY: no arguments; the returned context is owned here.
+        let cctx = unsafe { SSL_CONF_CTX_new() };
+        assert!(!cctx.is_null(), "SSL_CONF_CTX_new");
+
+        // ---- Idle positive controls: the ordinary sequential program still works. ----
+        // SAFETY: all objects are live and exclusively ours.
+        unsafe {
+            let flags = SSL_CONF_CTX_set_flags(
+                cctx,
+                (t::SSL_CONF_FLAG_FILE | t::SSL_CONF_FLAG_CLIENT) as c_uint,
+            );
+            assert_ne!(flags & t::SSL_CONF_FLAG_FILE as c_uint, 0);
+            assert_ne!(flags & t::SSL_CONF_FLAG_CLIENT as c_uint, 0);
+        }
+        // SAFETY: `cctx` is live; the literal is NUL-terminated.
+        let prefix_rv = unsafe { SSL_CONF_CTX_set1_prefix(cctx, c"ssl_".as_ptr()) };
+        assert_eq!(prefix_rv, 1);
+        // SAFETY: `prefix` is NULL or the string `set1_prefix` just installed.
+        unsafe {
+            assert_eq!(
+                core::ffi::CStr::from_ptr((*cctx).prefix).to_bytes(),
+                b"ssl_"
+            );
+            assert_eq!((*cctx).prefixlen, 4);
+            SSL_CONF_CTX_set_ssl_ctx(cctx, ctx);
+            assert_eq!((*cctx).ctx, ctx);
+            SSL_CONF_CTX_set_ssl(cctx, ssl);
+            assert_eq!((*cctx).ssl, ssl);
+            assert!((*cctx).ctx.is_null());
+            assert_eq!(SSL_CONF_CTX_finish(cctx), 1);
+        }
+        // `set_ssl` leaves `flags` alone. Clear the prefix so the file-mode rows are
+        // selectable by their bare names, then make the file flags current.
+        // SAFETY: `cctx` is live; NULL clears the prefix as the authority allows.
+        unsafe {
+            assert_eq!(SSL_CONF_CTX_set1_prefix(cctx, ptr::null()), 1);
+            assert!((*cctx).prefix.is_null());
+            assert_eq!((*cctx).prefixlen, 0);
+            SSL_CONF_CTX_set_flags(
+                cctx,
+                (t::SSL_CONF_FLAG_FILE | t::SSL_CONF_FLAG_CLIENT) as c_uint,
+            );
+        }
+        // Documented codes: 2 for an applied typed row, -2 unrecognised, -3 bad value.
+        // SAFETY: `cctx` and `ssl` are live; the literals are NUL-terminated.
+        unsafe {
+            assert_eq!(
+                SSL_CONF_cmd(cctx, c"MinProtocol".as_ptr(), c"TLSv1.2".as_ptr()),
+                2
+            );
+            assert_eq!((*ssl).min_proto_version, t::TLS1_2_VERSION as c_int);
+            assert_eq!(
+                SSL_CONF_cmd(cctx, c"NoSuchCommand".as_ptr(), c"x".as_ptr()),
+                -2
+            );
+            assert_eq!(SSL_CONF_cmd(cctx, c"Options".as_ptr(), ptr::null()), -3);
+        }
+        // A two-argument command through the argv entry point, idle.
+        // SAFETY: the literals are NUL-terminated; `argv` is a live two-slot array.
+        let mut argc: c_int = 2;
+        let mut args: [*mut c_char; 2] = [
+            c"-min_protocol".as_ptr() as *mut c_char,
+            c"TLSv1.3".as_ptr() as *mut c_char,
+        ];
+        let base = args.as_mut_ptr();
+        let mut argv = base;
+        // SAFETY: `cctx` and `argc` are live; `argv` points at the live two-slot array.
+        let argv_rv = unsafe { SSL_CONF_cmd_argv(cctx, &raw mut argc, &raw mut argv) };
+        assert_eq!(argv_rv, 2, "the idle argv dispatch succeeds");
+        assert_eq!(argc, 0, "both arguments are consumed");
+        // SAFETY: `base` is the array start and two slots were consumed.
+        assert_eq!(argv, unsafe { base.add(2) });
+        // SAFETY: `ssl` is live and `set_ssl` installed its bound pointer.
+        unsafe { assert_eq!((*ssl).min_proto_version, t::TLS1_3_VERSION as c_int) };
+
+        // Restore file mode and a prefix for the in-use controls.
+        // SAFETY: `cctx` is live; the literal is NUL-terminated.
+        unsafe {
+            SSL_CONF_CTX_set_flags(
+                cctx,
+                (t::SSL_CONF_FLAG_FILE | t::SSL_CONF_FLAG_CLIENT) as c_uint,
+            );
+            assert_eq!(SSL_CONF_CTX_set1_prefix(cctx, c"ssl_".as_ptr()), 1);
+        }
+
+        // ---- Overlap: every entry point is refused and changes nothing. ----
+        // SAFETY: `cctx` is live and exclusively ours for this test.
+        let in_flight = unsafe { enter_use(cctx) };
+        assert!(
+            in_flight.is_some(),
+            "the context is idle before the overlap"
+        );
+        // SAFETY: this call is the holder; reading its own fields is serialised.
+        let (flags_before, prefix_before, ssl_before, version_before) = unsafe {
+            (
+                (*cctx).flags,
+                (*cctx).prefix,
+                (*cctx).ssl,
+                (*ssl).min_proto_version,
+            )
+        };
+
+        // SAFETY: the context is live; these calls must all refuse without mutating.
+        unsafe {
+            assert_eq!(
+                SSL_CONF_CTX_set_flags(cctx, t::SSL_CONF_FLAG_SERVER as c_uint),
+                0,
+                "set_flags refusal is 0 and reads no field"
+            );
+            assert_eq!((*cctx).flags, flags_before);
+            assert_eq!(
+                SSL_CONF_CTX_clear_flags(cctx, t::SSL_CONF_FLAG_FILE as c_uint),
+                0,
+                "clear_flags refusal is 0 and reads no field"
+            );
+            assert_eq!((*cctx).flags, flags_before);
+            assert_eq!(SSL_CONF_CTX_finish(cctx), 0, "finish refuses an overlap");
+            assert_eq!(
+                SSL_CONF_cmd_value_type(cctx, c"ssl_Options".as_ptr()),
+                t::SSL_CONF_TYPE_UNKNOWN as c_int,
+                "the read-only accessor refuses an overlap"
+            );
+            assert_eq!(
+                SSL_CONF_CTX_set1_prefix(cctx, c"other_".as_ptr()),
+                0,
+                "set1_prefix refuses an overlap"
+            );
+            assert_eq!((*cctx).prefix, prefix_before);
+            assert_eq!(
+                core::ffi::CStr::from_ptr((*cctx).prefix).to_bytes(),
+                b"ssl_",
+                "the refused call did not rewrite the prefix"
+            );
+            SSL_CONF_CTX_set_ssl_ctx(cctx, ptr::null_mut());
+            assert_eq!(
+                (*cctx).ssl,
+                ssl_before,
+                "set_ssl_ctx refusal keeps the connection pointer"
+            );
+            SSL_CONF_CTX_set_ssl(cctx, ptr::null_mut());
+            assert_eq!(
+                (*cctx).ssl,
+                ssl_before,
+                "set_ssl refusal keeps the connection pointer"
+            );
+            assert_eq!(
+                SSL_CONF_cmd(cctx, c"MinProtocol".as_ptr(), c"TLSv1.0".as_ptr()),
+                0,
+                "cmd refuses an overlap"
+            );
+            assert_eq!(
+                (*ssl).min_proto_version,
+                version_before,
+                "the refused cmd wrote no bound"
+            );
+        }
+        // The argv entry point must not touch `flags`, `argc` or `argv` when refused.
+        let mut argc = 2;
+        let mut argv = base;
+        // SAFETY: `cctx` is live; `argc`/`argv` are this frame's live slots.
+        let refused_argv = unsafe { SSL_CONF_cmd_argv(cctx, &raw mut argc, &raw mut argv) };
+        assert_eq!(refused_argv, 0, "cmd_argv refuses an overlap");
+        assert_eq!(argc, 2, "the refused call consumes no argument");
+        assert_eq!(argv, base, "the refused call does not advance argv");
+        // SAFETY: this call is the holder.
+        unsafe { assert_eq!((*cctx).flags, flags_before) };
+
+        // Releasing the guard restores the context.
+        drop(in_flight);
+        // SAFETY: the guard was released and the context is live.
+        unsafe {
+            assert_eq!((*cctx).state.load(Ordering::Acquire), CTX_IDLE);
+            assert_eq!(
+                SSL_CONF_cmd_value_type(cctx, c"ssl_Options".as_ptr()),
+                t::SSL_CONF_TYPE_STRING as c_int,
+                "the accessor works again after the overlap"
+            );
+            assert_eq!(SSL_CONF_CTX_set1_prefix(cctx, c"new_".as_ptr()), 1);
+            assert_eq!(
+                core::ffi::CStr::from_ptr((*cctx).prefix).to_bytes(),
+                b"new_"
+            );
+            assert_eq!(SSL_CONF_CTX_finish(cctx), 1);
+        }
+
+        // SAFETY: both objects are live and exclusively ours; each is released once, and the
+        // context is released before the objects it points into.
+        unsafe {
+            SSL_CONF_CTX_free(cctx);
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// C8 control for the free-while-in-use policy (B46-D3).
+    ///
+    /// The interleaving is the one the second rejection named: a holder is inside an entry
+    /// point (represented by the same `enter_use` acquisition a real entry point performs) and
+    /// `SSL_CONF_CTX_free` is called. The required behaviour is: no block release while the
+    /// holder is live, the context poisoned against every later entry point, and exactly one
+    /// release (block and prefix) when the holder's guard drops, so no guard `Drop` writes into
+    /// freed memory and nothing leaks.
+    #[test]
+    fn free_while_in_use_is_deferred_and_released_exactly_once() {
+        // SAFETY: no arguments; the returned context is owned here.
+        let cctx = unsafe { SSL_CONF_CTX_new() };
+        assert!(!cctx.is_null(), "SSL_CONF_CTX_new");
+        let addr = cctx.cast::<c_void>();
+        // Observe only this test's releases; the probe is thread-local and test-only.
+        free_probe::reset();
+        // A prefix gives the deferred teardown a member buffer to release.
+        // SAFETY: `cctx` is live; the literal is NUL-terminated.
+        let prefix_rv = unsafe { SSL_CONF_CTX_set1_prefix(cctx, c"ssl_".as_ptr()) };
+        assert_eq!(prefix_rv, 1);
+        // SAFETY: `set1_prefix` installed a live NUL-terminated copy.
+        let prefix_addr = unsafe { (*cctx).prefix }.cast::<c_void>();
+        assert!(!prefix_addr.is_null());
+
+        // The in-flight entry point.
+        // SAFETY: `cctx` is live and exclusively ours for this test.
+        let in_flight = unsafe { enter_use(cctx) };
+        assert!(
+            in_flight.is_some(),
+            "the context is idle before the interleaving"
+        );
+
+        // Free while in use: poison, do not release.
+        // SAFETY: `cctx` is live; free is defined for this interleaving.
+        unsafe { SSL_CONF_CTX_free(cctx) };
+        // SAFETY: the free was deferred, so the block is still live and readable.
+        unsafe {
+            assert_eq!(
+                (*cctx).state.load(Ordering::Acquire),
+                CTX_FREE_PENDING,
+                "free poisons the context"
+            );
+        }
+        assert_eq!(
+            free_probe::count(addr),
+            0,
+            "the block is not released while a user is live"
+        );
+        assert_eq!(
+            free_probe::count(prefix_addr),
+            0,
+            "the member buffer is not released while a user is live"
+        );
+
+        // Every later entry point is refused while poisoned.
+        // SAFETY: the deferred free left the block live; these calls only refuse.
+        unsafe {
+            let flags = (*cctx).flags;
+            assert_eq!(
+                SSL_CONF_CTX_set_flags(cctx, t::SSL_CONF_FLAG_FILE as c_uint),
+                0,
+                "a poisoned context refuses set_flags with 0"
+            );
+            assert_eq!((*cctx).flags, flags);
+            assert_eq!(
+                SSL_CONF_CTX_set1_prefix(cctx, c"other_".as_ptr()),
+                0,
+                "a poisoned context refuses set1_prefix"
+            );
+            assert_eq!(
+                SSL_CONF_CTX_finish(cctx),
+                0,
+                "a poisoned context refuses finish"
+            );
+        }
+        assert_eq!(
+            free_probe::count(prefix_addr),
+            0,
+            "a refused mutation releases nothing"
+        );
+
+        // A second free request is absorbed; exactly one release is still pending.
+        // SAFETY: `cctx` is live (the free is deferred).
+        unsafe { SSL_CONF_CTX_free(cctx) };
+        assert_eq!(free_probe::count(addr), 0);
+
+        // Leaving the in-flight call performs the deferred teardown exactly once.
+        drop(in_flight);
+        assert_eq!(
+            free_probe::count(addr),
+            1,
+            "the context block is released exactly once"
+        );
+        assert_eq!(
+            free_probe::count(prefix_addr),
+            1,
+            "the member buffer is released exactly once"
+        );
+        // No further access to `cctx` after the deferred release.
+    }
+
+    /// C9 control for the read-only accessor decision (B46-D2): `SSL_CONF_cmd_value_type` only
+    /// reads, but it reads `flags`/`prefix`/`prefixlen`, which `set1_prefix` rewrites as two
+    /// stores. It is therefore guarded, and answers `SSL_CONF_TYPE_UNKNOWN` under use.
+    ///
+    /// The mutation witness removes the `enter_use` guard from `SSL_CONF_cmd_value_type`; the
+    /// in-use call then returns the looked-up type and the assertion below fails (recorded in
+    /// the B46/B47 refresh).
+    #[test]
+    fn value_type_is_refused_while_in_use_and_correct_when_idle() {
+        // SAFETY: no arguments; the returned context is owned here.
+        let cctx = unsafe { SSL_CONF_CTX_new() };
+        assert!(!cctx.is_null(), "SSL_CONF_CTX_new");
+        // SAFETY: `cctx` is live.
+        unsafe {
+            SSL_CONF_CTX_set_flags(
+                cctx,
+                (t::SSL_CONF_FLAG_FILE | t::SSL_CONF_FLAG_CLIENT) as c_uint,
+            );
+        }
+        // SAFETY: `cctx` is live; the literal is NUL-terminated.
+        let idle = unsafe { SSL_CONF_cmd_value_type(cctx, c"Options".as_ptr()) };
+        assert_eq!(idle, t::SSL_CONF_TYPE_STRING as c_int, "idle lookup works");
+
+        // SAFETY: `cctx` is live and exclusively ours for this test.
+        let in_flight = unsafe { enter_use(cctx) };
+        assert!(
+            in_flight.is_some(),
+            "the context is idle before the overlap"
+        );
+        // SAFETY: `cctx` is live; the accessor must refuse rather than read a state that
+        // `set1_prefix` could be rewriting.
+        let refused = unsafe { SSL_CONF_cmd_value_type(cctx, c"Options".as_ptr()) };
+        assert_eq!(
+            refused,
+            t::SSL_CONF_TYPE_UNKNOWN as c_int,
+            "the accessor refuses while the context is held"
+        );
+        drop(in_flight);
+        // SAFETY: the guard was released and the context is live.
+        let after = unsafe { SSL_CONF_cmd_value_type(cctx, c"Options".as_ptr()) };
+        assert_eq!(after, idle, "the accessor recovers after the overlap");
+        // SAFETY: the context is live and owned here; released exactly once.
+        unsafe { SSL_CONF_CTX_free(cctx) };
     }
 }

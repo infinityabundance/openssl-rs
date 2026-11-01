@@ -1387,6 +1387,16 @@ unsafe fn i2r_OSSL_TIME_SPEC_ABSOLUTE(
 
 /// `static int i2r_OSSL_DAY_TIME(X509V3_EXT_METHOD *method, OSSL_DAY_TIME *dt, BIO *out, int
 /// indent)` — `crypto/x509/v3_timespec.c:158-175`.
+///
+/// # Safety
+///
+/// Not a method slot: the only caller is `i2r_OSSL_DAY_TIME_BAND` (this file), which passes
+/// one of the band's `startDayTime`/`endDayTime` values after its own non-NULL test, so `dt`
+/// is a live `OSSL_DAY_TIME` of the decoder's construction, its `hour` a live `ASN1_INTEGER`
+/// and `minute`/`second` NULL or live integers. `out` is the dispatcher's non-NULL BIO; the
+/// body formats the decoded integers without retaining anything.
+///
+/// Authority-derived: `crypto/x509/v3_timespec.c:158-175`.
 unsafe fn i2r_OSSL_DAY_TIME(
     _method: *const X509V3ExtMethod,
     dt: *mut OsslDayTime,
@@ -1416,6 +1426,17 @@ unsafe fn i2r_OSSL_DAY_TIME(
 
 /// `static int i2r_OSSL_DAY_TIME_BAND(X509V3_EXT_METHOD *method, OSSL_DAY_TIME_BAND *band, BIO
 /// *out, int indent)` — `crypto/x509/v3_timespec.c:177-196`.
+///
+/// # Safety
+///
+/// Not a method slot: the only caller is `i2r_OSSL_PERIOD` (this file), which passes an
+/// element of the decoded `timesOfDay` stack, so `band` is a live `OSSL_DAY_TIME_BAND` of the
+/// decoder's construction and its `startDayTime`/`endDayTime` are NULL or live
+/// `OSSL_DAY_TIME` values (each adopted only after the non-NULL test). `out` is the
+/// dispatcher's non-NULL BIO and `method` the live row, passed through unchanged. Nothing is
+/// retained.
+///
+/// Authority-derived: `crypto/x509/v3_timespec.c:177-196`.
 unsafe fn i2r_OSSL_DAY_TIME_BAND(
     method: *const X509V3ExtMethod,
     band: *mut OsslDayTimeBand,
@@ -1600,6 +1621,18 @@ unsafe fn print_bit_named_day(out: *mut Bio, bs: *mut Asn1String) -> c_int {
 
 /// `static int i2r_OSSL_PERIOD(X509V3_EXT_METHOD *method, OSSL_TIME_PERIOD *p, BIO *out, int
 /// indent)` — `crypto/x509/v3_timespec.c:338-535`.
+///
+/// # Safety
+///
+/// Not a method slot: the only caller is `i2r_OSSL_TIME_SPEC_TIME` (this file), which passes
+/// an element of the decoded periodic stack, so `p` is a live `OSSL_TIME_PERIOD` of the
+/// decoder's construction. Its `timesOfDay` is NULL or a live stack of
+/// `OSSL_DAY_TIME_BAND`, and `days`/`weeks`/`months`/`years` are NULL or the decoder's own
+/// live values; the selector/union correspondence inside them is the ASN.1 item's invariant,
+/// not re-checked here. `out` is the dispatcher's non-NULL BIO and `method` the live row,
+/// passed through unchanged. Nothing is retained.
+///
+/// Authority-derived: `crypto/x509/v3_timespec.c:338-535`.
 unsafe fn i2r_OSSL_PERIOD(
     method: *const X509V3ExtMethod,
     p: *mut OsslTimePeriod,
@@ -1990,6 +2023,18 @@ unsafe fn i2r_OSSL_PERIOD(
 
 /// `static int i2r_OSSL_TIME_SPEC_TIME(X509V3_EXT_METHOD *method, OSSL_TIME_SPEC_TIME *time, BIO
 /// *out, int indent)` — `crypto/x509/v3_timespec.c:537-566`.
+///
+/// # Safety
+///
+/// Not a method slot: the only caller is `i2r_OSSL_TIME_SPEC` (this file), which passes the
+/// decoded `(*ts).time`, so `time` is a live `OSSL_TIME_SPEC_TIME` whose `type_` selector and
+/// active `choice` arm agree because the ASN.1 decoder built them (this body does not re-check
+/// the pairing; an unknown selector answers 0). The selected arm's `OSSL_TIME_SPEC_ABSOLUTE`
+/// or periodic stack and its elements are the decoder's own and stay live for the call.
+/// `out` is the dispatcher's non-NULL BIO and `method` the live row, passed through unchanged.
+/// Nothing is retained.
+///
+/// Authority-derived: `crypto/x509/v3_timespec.c:537-566`.
 unsafe fn i2r_OSSL_TIME_SPEC_TIME(
     method: *const X509V3ExtMethod,
     time: *mut OsslTimeSpecTime,
@@ -2044,6 +2089,20 @@ unsafe fn i2r_OSSL_TIME_SPEC_TIME(
 
 /// `static int i2r_OSSL_TIME_SPEC(X509V3_EXT_METHOD *method, OSSL_TIME_SPEC *time, BIO *out, int
 /// indent)` — `crypto/x509/v3_timespec.c:568-587`. The row's `i2r` callback.
+///
+/// # Safety
+///
+/// The `i2r` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `X509V3_EXT_print`'s `i2r` arm (`src/x509/v3_prn.rs:341`), which decoded the extension
+/// through the row's `OSSL_TIME_SPEC` item and refused a NULL result (`:300-303`), and refused
+/// a NULL `out`/`ext` prologue (`:254-256`). `ts` is therefore non-NULL and a decoded
+/// `OSSL_TIME_SPEC`; its `timeZone` is NULL or a live `ASN1_INTEGER` and its `time` a live
+/// `OSSL_TIME_SPEC_TIME` of the decoder's construction, handed to the helper with `out` and
+/// the live row. `out` is a non-NULL BIO and `method` the live row, neither retained.
+/// Non-NULLness is the dispatcher's; liveness and the row's `it`↔`i2r` pairing are the
+/// caller's/registrar's obligations.
+///
+/// Authority-derived: `crypto/x509/v3_timespec.c:568-587`.
 unsafe extern "C" fn i2r_OSSL_TIME_SPEC(
     method: *const X509V3ExtMethod,
     time: *mut c_void,

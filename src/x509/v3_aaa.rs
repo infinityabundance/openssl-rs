@@ -379,6 +379,21 @@ pub unsafe extern "C" fn i2d_OSSL_ALLOWED_ATTRIBUTES_SYNTAX(
 /// The `OSSL_AAA_ATTRIBUTE_TYPE` arm prints the bare object; the `OSSL_AAA_ATTRIBUTE_VALUES` arm
 /// prints the object and one `ossl_print_attribute_value` line per value; any other selector is
 /// refused `0`.
+///
+/// # Safety
+///
+/// The `i2r` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `X509V3_EXT_print`'s `i2r` arm (`src/x509/v3_prn.rs:341`), which has already decoded the
+/// extension through the row's `OSSL_ALLOWED_ATTRIBUTES_SYNTAX` item and refused a NULL result
+/// (`:300-303`), and refused a NULL `out`/`ext` in its prologue (`:254-256`). Hence `a` is
+/// non-NULL and is a decoded `OSSL_ALLOWED_ATTRIBUTES_CHOICE`: its `type_` and the active union
+/// arm agree because the ASN.1 decoder built the value (this body does not re-check the
+/// pairing), and the arm's object, attribute and value pointers are the decoder's own and stay
+/// live for the call. `out` is a non-NULL BIO and `method` the live row; both live for the
+/// call, neither is retained. Non-NULLness is established by the dispatcher; liveness and the
+/// row's `it`↔`i2r` pairing are the caller's/registrar's obligations.
+///
+/// Authority-derived: `crypto/x509/v3_aaa.c:38-76`.
 unsafe extern "C" fn i2r_ALLOWED_ATTRIBUTES_CHOICE(
     _method: *const X509V3ExtMethod,
     a: *mut c_void,
@@ -449,6 +464,19 @@ unsafe extern "C" fn i2r_ALLOWED_ATTRIBUTES_CHOICE(
 
 /// `static int i2r_ALLOWED_ATTRIBUTES_ITEM(X509V3_EXT_METHOD *method, OSSL_ALLOWED_ATTRIBUTES_ITEM
 /// *aai, BIO *out, int indent)` — `crypto/x509/v3_aaa.c:78-99`.
+///
+/// # Safety
+///
+/// The `i2r` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Reached from
+/// `i2r_ALLOWED_ATTRIBUTES_SYNTAX` (this file) or from `X509V3_EXT_print`'s `i2r` arm
+/// (`src/x509/v3_prn.rs:341`); in both cases `aai` is a decoded
+/// `OSSL_ALLOWED_ATTRIBUTES_ITEM` whose `attributes` stack and each element are the decoder's
+/// own, live for the call. `out` is a non-NULL BIO (`:254-256`), `method` the live row, and
+/// `indent` any `int`. The frame allocates nothing it retains. The dispatcher establishes
+/// non-NULLness; liveness and the row's `it`↔`i2r` pairing are the caller's/registrar's
+/// obligations.
+///
+/// Authority-derived: `crypto/x509/v3_aaa.c:78-99`.
 unsafe extern "C" fn i2r_ALLOWED_ATTRIBUTES_ITEM(
     method: *const X509V3ExtMethod,
     aai: *mut c_void,
@@ -497,6 +525,19 @@ unsafe extern "C" fn i2r_ALLOWED_ATTRIBUTES_ITEM(
 
 /// `static int i2r_ALLOWED_ATTRIBUTES_SYNTAX(X509V3_EXT_METHOD *method,
 /// OSSL_ALLOWED_ATTRIBUTES_SYNTAX *aaa, BIO *out, int indent)` — `crypto/x509/v3_aaa.c:101-116`.
+///
+/// # Safety
+///
+/// The `i2r` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `X509V3_EXT_print`'s `i2r` arm (`src/x509/v3_prn.rs:341`), which decoded the extension
+/// through the row's `OSSL_ALLOWED_ATTRIBUTES_SYNTAX` item and refused a NULL result
+/// (`:300-303`), and refused a NULL `out`/`ext` prologue (`:254-256`). Hence `aaa` is non-NULL
+/// and is a decoded stack of `OSSL_ALLOWED_ATTRIBUTES_ITEM`; its elements are the decoder's
+/// own, live for the call. `out` is a non-NULL BIO, `method` the live row. The dispatcher
+/// establishes non-NULLness; liveness and the row's `it`↔`i2r` pairing are the
+/// caller's/registrar's obligations.
+///
+/// Authority-derived: `crypto/x509/v3_aaa.c:101-116`.
 unsafe extern "C" fn i2r_ALLOWED_ATTRIBUTES_SYNTAX(
     method: *const X509V3ExtMethod,
     aaa: *mut c_void,
