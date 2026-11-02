@@ -478,15 +478,60 @@ impl RegistryReadGuard {
         if unsafe { CRYPTO_THREAD_read_lock(lock) } == 0 {
             return None;
         }
+        #[cfg(test)]
+        read_hold_probe::enter();
         Some(Self { lock })
     }
 }
 
 impl Drop for RegistryReadGuard {
     fn drop(&mut self) {
+        #[cfg(test)]
+        read_hold_probe::leave();
         // SAFETY: this guard acquired the read hold and releases it exactly once.
         unsafe { CRYPTO_THREAD_unlock(self.lock) };
     }
+}
+
+/// Test-only observation of the registry **read** holds the calling thread holds.
+///
+/// `CRYPTO_THREAD_unlock` does not attribute reader ownership to a thread, so this counter is not
+/// a locking primitive: it exists so a unit test can observe that a dispatcher's hold is the
+/// calling thread's hold at the moment a slot accessor or callback runs. It is thread-local, so a
+/// test on another thread cannot satisfy the assertion, and it is compiled out of every non-test
+/// build.
+#[cfg(test)]
+mod read_hold_probe {
+    use core::cell::Cell;
+
+    std::thread_local! {
+        static DEPTH: Cell<usize> = const { Cell::new(0) };
+    }
+
+    /// Record one read hold taken on this thread.
+    pub(super) fn enter() {
+        DEPTH.with(|d| d.set(d.get() + 1));
+    }
+
+    /// Record one read hold released on this thread.
+    pub(super) fn leave() {
+        DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
+    }
+
+    /// Whether this thread holds at least one registry read hold.
+    pub(super) fn held() -> bool {
+        DEPTH.with(|d| d.get() > 0)
+    }
+}
+
+/// Test-only: whether the calling thread currently holds the extension registry's read hold.
+///
+/// A dispatcher that must keep a resolved row live across a slot callback takes
+/// [`RegistryReadGuard`]; a test-only slot accessor asserts this probe, so removing the guard makes
+/// the assertion fail rather than merely documenting the duty.
+#[cfg(test)]
+pub(crate) fn registry_read_held_on_this_thread() -> bool {
+    read_hold_probe::held()
 }
 
 /// A held registry **write** hold; dropping it unlocks. Private because every writer is here.
@@ -833,10 +878,21 @@ pub unsafe extern "C" fn X509V3_EXT_add_alias(nid_to: c_int, nid_from: c_int) ->
 ///
 /// # Safety
 ///
-/// `ext` must be a live `X509_EXTENSION`.
+/// `ext` must be a live `X509_EXTENSION`. The method row this resolves is protected for the whole
+/// call by the registry read hold: `X509V3_EXT_add`/`_add_list`/`_add_alias`/`_cleanup` take the
+/// write hold, so a DYNAMIC alias row cannot be released between the resolution and the `it`/`d2i`
+/// slot read below (B51).
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_EXT_d2i(ext: *mut X509Extension) -> *mut c_void {
-    // SAFETY: `ext` is live per the contract.
+    // Hold the registry read lock across the row resolution **and** the slot read below. Without
+    // it, a concurrent `X509V3_EXT_cleanup` could release a DYNAMIC row returned by
+    // `X509V3_EXT_get` before `(*method).it`/`(*method).d2i` are read (B51). The nested read
+    // inside `X509V3_EXT_get` is a reader/reader acquisition, not a self-deadlock. A failure to
+    // take the hold answers NULL exactly as the nested lookup's own failure would.
+    let Some(_registry) = RegistryReadGuard::acquire() else {
+        return ptr::null_mut();
+    };
+    // SAFETY: `ext` is live per the contract, and the read hold taken above protects the row.
     let method = unsafe { X509V3_EXT_get(ext) };
     if method.is_null() {
         return ptr::null_mut();

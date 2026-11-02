@@ -103,7 +103,7 @@ use crate::runtime::obj::{NID_undef, OBJ_nid2sn, OBJ_sn2nid, OBJ_txt2obj};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_value, OpenSslStack};
 use crate::runtime::str::OPENSSL_hexstr2buf;
-use crate::x509::v3_lib::{X509V3ExtMethod, X509V3_EXT_get_nid};
+use crate::x509::v3_lib::{RegistryReadGuard, X509V3ExtMethod, X509V3_EXT_get_nid};
 use crate::x509::v3_utl::{X509V3_conf_free, X509V3_parse_list};
 use crate::x509::x509_req::{X509Req, X509_REQ_add_extensions};
 use crate::x509::x509_v3::{
@@ -725,14 +725,26 @@ unsafe fn do_ext_i2d_err(ext_der: OwnedBuf, ext_oct: *mut Asn1String) -> *mut X5
 ///
 /// # Safety
 ///
-/// `ext_struc` is NULL or the internal structure the `ext_nid` method's `it`/`i2d` encodes.
+/// `ext_struc` is NULL or the internal structure the `ext_nid` method's `it`/`i2d` encodes. The row
+/// `X509V3_EXT_get_nid` resolves is protected for the whole call by the registry read hold, so a
+/// DYNAMIC row cannot be released between the lookup and `do_ext_i2d`'s read of it (B51).
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_EXT_i2d(
     ext_nid: c_int,
     crit: c_int,
     ext_struc: *mut c_void,
 ) -> *mut X509Extension {
-    // SAFETY: `ext_nid` is an integer NID.
+    // Hold the registry read lock across the row resolution and the encoder's use of it:
+    // `do_ext_i2d` reads and calls the row's `it`/`i2d` after `X509V3_EXT_get_nid` returns, and a
+    // concurrent `X509V3_EXT_cleanup` would otherwise be free to release a DYNAMIC row first
+    // (B51). The nested read inside the lookup is a reader/reader acquisition. A failure to take
+    // the hold raises the same unknown-extension site the lookup's own failure raises.
+    let Some(_registry) = RegistryReadGuard::acquire() else {
+        // SAFETY: the site is a declared constant.
+        unsafe { raise_site(&V3_CONF_196) };
+        return ptr::null_mut();
+    };
+    // SAFETY: `ext_nid` is an integer NID; the read hold protects the row.
     let method = unsafe { X509V3_EXT_get_nid(ext_nid) };
     if method.is_null() {
         // SAFETY: the site is a declared constant.
@@ -994,7 +1006,9 @@ unsafe fn v3_generic_extension(
 ///
 /// # Safety
 ///
-/// `conf` NULL or live; `ctx` NULL or live; `value` NUL-terminated.
+/// `conf` NULL or live; `ctx` NULL or live; `value` NUL-terminated. The method row the dispatcher
+/// resolves is protected for the whole call by the registry read hold, so a DYNAMIC row stays live
+/// through the `v2i`/`s2i`/`r2i` callback and through `do_ext_i2d`'s use of it (B51).
 unsafe fn do_ext_nconf(
     conf: *mut Conf,
     ctx: *mut X509V3Ctx,
@@ -1009,7 +1023,21 @@ unsafe fn do_ext_nconf(
         unsafe { raise_site(&V3_CONF_88) };
         return ptr::null_mut();
     }
-    // SAFETY: `ext_nid` is an integer NID.
+    // Hold the registry read lock across the row resolution **and** every use of that row below:
+    // the `v2i`/`s2i`/`r2i` dispatch (the callbacks receive `method`), the `it`/`i2d` read and call
+    // inside `do_ext_i2d`, and the release. A DYNAMIC row (an `X509V3_EXT_add_alias` copy) is
+    // released by `X509V3_EXT_cleanup`; its write hold cannot be taken while this guard is alive,
+    // so the row stays live for the whole call. This mirrors the B49 hold in
+    // `X509V3_EXT_print`: the callbacks below never take the registry's write hold, so the nested
+    // read inside `X509V3_EXT_get_nid` is a reader/reader acquisition, not a self-deadlock. A
+    // failure to take the hold raises the same unknown-extension site the lookup's own failure
+    // raises.
+    let Some(_registry) = RegistryReadGuard::acquire() else {
+        // SAFETY: the site is a declared constant.
+        unsafe { raise_site(&V3_CONF_92) };
+        return ptr::null_mut();
+    };
+    // SAFETY: `ext_nid` is an integer NID; the read hold protects the row.
     let method = unsafe { X509V3_EXT_get_nid(ext_nid) };
     if method.is_null() {
         // SAFETY: the site is a declared constant.
@@ -1546,4 +1574,306 @@ pub unsafe extern "C" fn X509V3_EXT_REQ_add_conf(
     // SAFETY: `ctmp` is this call's own.
     unsafe { NCONF_free(ctmp) };
     ret
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::err::{ERR_clear_error, ERR_get_error};
+    use crate::runtime::obj::{
+        NID_basic_att_constraints, NID_basic_constraints, NID_ext_key_usage, NID_info_access,
+        NID_issuerSignTool, NID_policy_constraints, NID_policy_mappings, NID_sbgp_autonomousSysNum,
+        NID_sxnet, NID_tlsfeature, OBJ_obj2nid,
+    };
+    use crate::x509::v3_lib::{
+        X509V3ExtMethod, X509V3_EXT_add, X509V3_EXT_cleanup, X509V3_EXT_d2i,
+    };
+    use crate::x509::x509_v3::X509_EXTENSION_get_data;
+
+    use core::sync::atomic::{AtomicBool, Ordering};
+
+    use crate::asn1::layout::Asn1Item;
+    use crate::runtime::obj::OBJ_create;
+    use crate::x509::v3_bcons::{
+        BASIC_CONSTRAINTS_free, BASIC_CONSTRAINTS_it, BASIC_CONSTRAINTS_new,
+    };
+
+    /// Set by [`hold_probe_v2i`] to whether the callback ran under the registry read hold.
+    static HOLD_SEEN_IN_V2I: AtomicBool = AtomicBool::new(false);
+    /// Set by [`hold_probe_it`] to whether the row's `it` accessor ran under the hold.
+    static HOLD_SEEN_IN_IT: AtomicBool = AtomicBool::new(false);
+
+    /// A `v2i` probe: it records the hold **on entry**, before anything else can take a read hold of
+    /// its own, then builds a `BASIC_CONSTRAINTS` for the row's declared item.
+    unsafe extern "C" fn hold_probe_v2i(
+        _method: *const X509V3ExtMethod,
+        _ctx: *mut c_void,
+        _values: *mut OpenSslStack,
+    ) -> *mut c_void {
+        HOLD_SEEN_IN_V2I.store(
+            crate::x509::v3_lib::registry_read_held_on_this_thread(),
+            Ordering::SeqCst,
+        );
+        BASIC_CONSTRAINTS_new().cast::<c_void>()
+    }
+
+    /// The row's `it` accessor. `do_ext_i2d` and `X509V3_EXT_d2i` call it *after* the lookup has
+    /// returned, so it records the hold at the last point a dispatcher still uses the row.
+    unsafe extern "C" fn hold_probe_it() -> *const Asn1Item {
+        HOLD_SEEN_IN_IT.store(
+            crate::x509::v3_lib::registry_read_held_on_this_thread(),
+            Ordering::SeqCst,
+        );
+        BASIC_CONSTRAINTS_it()
+    }
+
+    /// A caller-owned row pairing the two probes with the `BASIC_CONSTRAINTS` item.
+    fn hold_probe_row(nid: c_int) -> X509V3ExtMethod {
+        X509V3ExtMethod {
+            ext_nid: nid,
+            ext_flags: 0,
+            it: Some(hold_probe_it),
+            ext_new: None,
+            ext_free: None,
+            d2i: None,
+            i2d: None,
+            i2s: None,
+            s2i: None,
+            i2v: None,
+            v2i: Some(hold_probe_v2i),
+            i2r: None,
+            r2i: None,
+            usr_data: ptr::null_mut(),
+        }
+    }
+
+    /// Register a fresh object and answer its NID. A fresh NID has no `STANDARD_EXTS` row, so the
+    /// probe row registered for it is reached only through the dynamic `EXT_LIST` fallback.
+    fn fresh_nid(oid: &CStr, sn: &CStr, ln: &CStr) -> c_int {
+        // SAFETY: all three strings are NUL-terminated and `OBJ_create` copies them.
+        let nid = unsafe { OBJ_create(oid.as_ptr(), sn.as_ptr(), ln.as_ptr()) };
+        assert_ne!(nid, 0, "the object must be registered under a fresh NID");
+        nid
+    }
+
+    /// Build an extension of `nid` whose value is `der`.
+    fn extension_with_der(nid: c_int, der: &[u8]) -> *mut X509Extension {
+        let value = ASN1_OCTET_STRING_new();
+        assert!(!value.is_null(), "the extension value must be allocatable");
+        // SAFETY: `value` is live and uniquely owned; `der` is `der.len()` readable bytes.
+        let set = unsafe {
+            crate::asn1::string::ASN1_OCTET_STRING_set(value, der.as_ptr(), der.len() as c_int)
+        };
+        assert_eq!(set, 1);
+        // SAFETY: `value` is live; the constructor copies its contents.
+        let ext = unsafe { X509_EXTENSION_create_by_NID(ptr::null_mut(), nid, 0, value) };
+        // SAFETY: the extension copied the octets; release this test's reference.
+        unsafe { ASN1_OCTET_STRING_free(value) };
+        assert!(!ext.is_null(), "the extension must be created");
+        ext
+    }
+
+    /// Registers a probe row under a fresh NID and answers `(nid, row)`.
+    ///
+    /// The registry **borrows** the caller's row: it stores the pointer and, on
+    /// `X509V3_EXT_cleanup`, frees only a `X509V3_EXT_DYNAMIC` copy. The row must therefore outlive
+    /// the registry entry. Leaking it gives it the `'static` lifetime that borrow requires; this is
+    /// sound here because the tests run in a dedicated test process, every call registers its own
+    /// fresh row under a fresh NID, cleanup must not free a non-`DYNAMIC` row, and the leak is
+    /// bounded by that process's lifetime. Keeping the row as a stack local instead leaves the
+    /// registry pointing into a dead helper frame.
+    fn register_hold_probe(
+        oid: &CStr,
+        sn: &CStr,
+        ln: &CStr,
+    ) -> (c_int, &'static mut X509V3ExtMethod) {
+        let nid = fresh_nid(oid, sn, ln);
+        let row = Box::leak(Box::new(hold_probe_row(nid)));
+        // SAFETY: `row` is a leaked `'static` row that outlives the registry entry; the call takes
+        // the write hold and stores the pointer without taking ownership.
+        let added = unsafe { X509V3_EXT_add(row as *mut X509V3ExtMethod) };
+        assert_eq!(added, 1, "the probe row must register");
+        (nid, row)
+    }
+
+    /// The B51 liveness canary: `do_ext_nconf` must hold the registry read lock from the row
+    /// lookup, across the `v2i` callback that receives `method`, and on through the encoder that
+    /// reads the row's `it`. Removing the guard makes both probes observe no hold and this test
+    /// fails deterministically (no second thread is involved; the probe is thread-local).
+    #[test]
+    fn the_v2i_dispatch_holds_the_registry_read_lock_across_the_callback() {
+        let _serial = crate::test_support::lock_global_state();
+        HOLD_SEEN_IN_V2I.store(false, Ordering::SeqCst);
+        HOLD_SEEN_IN_IT.store(false, Ordering::SeqCst);
+        // Neutral control: outside any dispatch this thread must not already hold the registry
+        // read lock, otherwise a probe observing `false` below would prove nothing.
+        assert!(
+            !crate::x509::v3_lib::registry_read_held_on_this_thread(),
+            "the neutral control must observe no registry read hold outside a dispatch"
+        );
+        let (nid, _row) =
+            register_hold_probe(c"1.3.6.1.4.1.57264.51.1", c"b51-hold-v2i", c"B51 hold v2i");
+        // SAFETY: the value is NUL-terminated; NULL `conf`/`ctx` are what the contract allows.
+        let ext = unsafe {
+            X509V3_EXT_nconf_nid(ptr::null_mut(), ptr::null_mut(), nid, c"CA:TRUE".as_ptr())
+        };
+        // SAFETY: no pointer arguments; cleanup retires this test's registry entry. The row is
+        // caller-owned, so cleanup does not release it.
+        unsafe { X509V3_EXT_cleanup() };
+        assert!(!ext.is_null(), "the probe row must build an extension");
+        assert!(
+            HOLD_SEEN_IN_V2I.load(Ordering::SeqCst),
+            "the v2i callback ran without the registry read hold: do_ext_nconf released the row"
+        );
+        assert!(
+            HOLD_SEEN_IN_IT.load(Ordering::SeqCst),
+            "the encoder used the row after the registry read hold was released"
+        );
+        // SAFETY: `ext` is this frame's own.
+        unsafe { X509_EXTENSION_free(ext) };
+    }
+
+    /// The `X509V3_EXT_i2d` caller has the same window as `do_ext_nconf`: it resolves the row and
+    /// then `do_ext_i2d` reads `it`/`i2d` from it. Removing that guard makes the accessor probe
+    /// observe no hold.
+    #[test]
+    fn the_i2d_entry_point_holds_the_registry_read_lock_across_the_encoder() {
+        let _serial = crate::test_support::lock_global_state();
+        HOLD_SEEN_IN_IT.store(false, Ordering::SeqCst);
+        let (nid, _row) =
+            register_hold_probe(c"1.3.6.1.4.1.57264.51.2", c"b51-hold-i2d", c"B51 hold i2d");
+        let value = BASIC_CONSTRAINTS_new();
+        assert!(!value.is_null(), "the value must be allocatable");
+        // SAFETY: `value` is the internal structure the row's `it` encodes; the row is live.
+        let ext = unsafe { X509V3_EXT_i2d(nid, 0, value.cast::<c_void>()) };
+        // SAFETY: no pointer arguments; cleanup retires this test's registry entry.
+        unsafe { X509V3_EXT_cleanup() };
+        assert!(!ext.is_null(), "the probe row must encode");
+        assert!(
+            HOLD_SEEN_IN_IT.load(Ordering::SeqCst),
+            "the encoder read the row after X509V3_EXT_i2d released the read hold"
+        );
+        // SAFETY: both values are this frame's own.
+        unsafe {
+            BASIC_CONSTRAINTS_free(value);
+            X509_EXTENSION_free(ext);
+        }
+    }
+
+    /// `X509V3_EXT_d2i` resolves the row through `X509V3_EXT_get` and then reads its `it`/`d2i`
+    /// slot; it is the decoder's instance of the same window. Removing that guard makes the
+    /// accessor probe observe no hold.
+    #[test]
+    fn the_d2i_entry_point_holds_the_registry_read_lock_across_the_decoder() {
+        let _serial = crate::test_support::lock_global_state();
+        HOLD_SEEN_IN_IT.store(false, Ordering::SeqCst);
+        let (nid, _row) =
+            register_hold_probe(c"1.3.6.1.4.1.57264.51.3", c"b51-hold-d2i", c"B51 hold d2i");
+        // `BASIC_CONSTRAINTS ::= SEQUENCE { ca BOOLEAN DEFAULT FALSE }`, ca = TRUE.
+        let ext = extension_with_der(nid, &[0x30, 0x03, 0x01, 0x01, 0xFF]);
+        // SAFETY: `ext` is a live extension this frame owns.
+        let decoded = unsafe { X509V3_EXT_d2i(ext) };
+        // SAFETY: no pointer arguments; cleanup retires this test's registry entry.
+        unsafe { X509V3_EXT_cleanup() };
+        assert!(!decoded.is_null(), "the probe row must decode");
+        assert!(
+            HOLD_SEEN_IN_IT.load(Ordering::SeqCst),
+            "the decoder read the row after X509V3_EXT_d2i released the read hold"
+        );
+        // SAFETY: both values are this frame's own.
+        unsafe {
+            BASIC_CONSTRAINTS_free(decoded.cast());
+            X509_EXTENSION_free(ext);
+        }
+    }
+
+    /// One `(nid, config value)` pair per `v2i` decoder B51 discharges. Each value is accepted by
+    /// the standard row's only construction slot, so a non-NULL extension proves the callback ran.
+    const V2I_ACCEPT: [(c_int, &core::ffi::CStr); 10] = [
+        (NID_sbgp_autonomousSysNum, c"AS:1"),
+        (NID_basic_att_constraints, c"authority:TRUE,pathlen:1"),
+        (NID_basic_constraints, c"CA:TRUE,pathlen:1"),
+        (NID_ext_key_usage, c"serverAuth"),
+        (NID_info_access, c"OCSP;URI:http://example.com"),
+        (NID_issuerSignTool, c"signTool:tool"),
+        (NID_policy_constraints, c"requireExplicitPolicy:1"),
+        (NID_policy_mappings, c"1.2.3.4:1.2.3.5"),
+        (NID_sxnet, c"1:user"),
+        (NID_tlsfeature, c"status_request"),
+    ];
+
+    /// The same rows with a value each decoder must refuse. Every arm drives a distinct
+    /// partial-decode release path in its callback.
+    const V2I_REJECT: [(c_int, &core::ffi::CStr); 10] = [
+        (NID_sbgp_autonomousSysNum, c"XX:1"),
+        (NID_basic_att_constraints, c"authority:bogus"),
+        (NID_basic_constraints, c"CA:bogus"),
+        (NID_ext_key_usage, c"notanoid"),
+        (NID_info_access, c"OCSP"),
+        (NID_issuerSignTool, c"bogusTool:tool"),
+        (NID_policy_constraints, c"requireExplicitPolicy:bogus"),
+        (NID_policy_mappings, c"1.2.3.4"),
+        (NID_sxnet, c"notanint:user"),
+        (NID_tlsfeature, c"notafeature"),
+    ];
+
+    /// Every discharged decoder builds its object end-to-end through the real `v2i` dispatcher.
+    /// `X509V3_EXT_nconf_nid` resolves the standard row and, because these rows carry only `v2i`
+    /// among the construction slots, a non-NULL, correctly tagged extension can be produced only
+    /// by the callback under test.
+    #[test]
+    fn v2i_callbacks_build_end_to_end() {
+        ERR_clear_error();
+        for &(nid, value) in V2I_ACCEPT.iter() {
+            // SAFETY: `value` is NUL-terminated; NULL `conf`/`ctx` are what the contract allows.
+            let ext = unsafe {
+                X509V3_EXT_nconf_nid(ptr::null_mut(), ptr::null_mut(), nid, value.as_ptr())
+            };
+            assert!(!ext.is_null(), "nid {nid} must build an extension");
+            // SAFETY: `ext` is live and this frame owns it.
+            unsafe {
+                let obj = X509_EXTENSION_get_object(ext);
+                assert_eq!(OBJ_obj2nid(obj), nid, "nid {nid} must tag the extension");
+                let data = X509_EXTENSION_get_data(ext);
+                assert!(!data.is_null(), "nid {nid} must carry encoded data");
+                assert!((*data).length > 0, "nid {nid} must carry non-empty DER");
+                X509_EXTENSION_free(ext);
+            }
+        }
+    }
+
+    /// The same rows refuse a bad value through the callback, releasing the partial object and
+    /// answering NULL before `do_ext_i2d`'s encoder runs.
+    #[test]
+    fn v2i_callbacks_reject_bad_values() {
+        ERR_clear_error();
+        for &(nid, value) in V2I_REJECT.iter() {
+            // SAFETY: `value` is NUL-terminated; NULL `conf`/`ctx` are what the contract allows.
+            let ext = unsafe {
+                X509V3_EXT_nconf_nid(ptr::null_mut(), ptr::null_mut(), nid, value.as_ptr())
+            };
+            assert!(ext.is_null(), "nid {nid} must refuse the bad value");
+            ERR_clear_error();
+        }
+    }
+
+    /// The dispatcher's pre-slot guard: a value `X509V3_parse_list` cannot turn into even one
+    /// `CONF_VALUE` is refused before any `v2i` callback. Removing the
+    /// `nval.is_null() || num <= 0` refusal (`src/x509/v3_conf.rs:1041`) lets the callback build an
+    /// empty object and this assertion fails.
+    #[test]
+    fn an_empty_value_is_refused_before_the_v2i_slot() {
+        ERR_clear_error();
+        // SAFETY: the value is NUL-terminated; NULL `conf`/`ctx` are what the contract allows.
+        let ext = unsafe {
+            X509V3_EXT_nconf_nid(
+                ptr::null_mut(),
+                ptr::null_mut(),
+                NID_basic_constraints,
+                c" ".as_ptr(),
+            )
+        };
+        assert!(ext.is_null(), "an empty value must not reach the v2i slot");
+        assert_ne!(ERR_get_error(), 0, "the refusal must raise");
+    }
 }

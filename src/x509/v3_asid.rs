@@ -962,7 +962,9 @@ pub unsafe extern "C" fn X509v3_asid_add_inherit(asid: *mut AsIdentifiers, which
 /// # Safety
 ///
 /// `asid` is NULL or a live `ASIdentifiers`; `min`/`max` are NULL or live integers whose ownership
-/// transfers to `asid` on success (and to the caller on failure).
+/// transfers to `asid` on success and stays with the caller when this function answers 0. Every
+/// failure arm honours that: the failed-push arm detaches the integers from the wrapper it releases
+/// (B51-R4), so the caller may free both without a second release.
 #[no_mangle]
 pub unsafe extern "C" fn X509v3_asid_add_id_or_range(
     asid: *mut AsIdentifiers,
@@ -1056,8 +1058,24 @@ pub unsafe extern "C" fn X509v3_asid_add_id_or_range(
     // Cannot fail due to the reservation above. `ossl_assert(push)` under `NDEBUG` is `push != 0`.
     // SAFETY: `list` was reserved for one element, so the push cannot fail.
     if unsafe { OPENSSL_sk_push(list, aor.cast::<c_void>()) } == 0 {
-        // SAFETY: `aor` is this call's own value; the failed push left it off the list.
-        unsafe { ASIdOrRange_free(aor) };
+        // The caller owns `min`/`max` whenever this function answers 0, which the `# Safety`
+        // contract above states and `v2i_ASIdentifiers`' cleanup relies on. They are installed in
+        // `aor` by now, so detach them before releasing the wrapper: `ASIdOrRange_free` would
+        // otherwise release the caller's integers here and the caller's own cleanup would release
+        // them a second time (B51-R4). The authority frees them on this arm, which it holds
+        // unreachable behind `ossl_assert`; returning them to the caller preserves the documented
+        // ownership contract on every failure path.
+        // SAFETY: `aor` is live, and the arm selected above makes the indirection it holds live.
+        unsafe {
+            if max.is_null() {
+                (*aor).u = ptr::null_mut();
+            } else {
+                let range = (*aor).u.cast::<AsRange>();
+                (*range).min = ptr::null_mut();
+                (*range).max = ptr::null_mut();
+            }
+            ASIdOrRange_free(aor);
+        }
         return 0;
     }
     1
@@ -1450,6 +1468,32 @@ unsafe fn strspn(s: *const c_char, accept: &[u8]) -> usize {
 ///
 /// Reads `name:value` pairs naming `AS` or `RDI`, each value an inherited list, a number or a range,
 /// then canonizes the result.
+///
+/// # Safety
+///
+/// The `v2i` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `do_ext_nconf`'s `v2i` arm (`src/x509/v3_conf.rs:1029-1066`). Before the call it resolves
+/// `method` through `X509V3_EXT_get_nid` (a **borrowed** row; `do_ext_nconf` holds the registry
+/// read hold across that lookup, this callback and the encoder), refuses `ext_nid == NID_undef` and
+/// a NULL row, builds `values` with
+/// `X509V3_parse_list` (an owning list freed immediately after this call) or `NCONF_get_section`
+/// (a section-owned stack it does not free), and refuses a NULL `values` or
+/// `OPENSSL_sk_num(values) <= 0`. `values` is therefore a live, non-empty stack of live
+/// `CONF_VALUE` elements; every element has a non-NULL NUL-terminated `name` (both producers
+/// check it: `X509V3_parse_list` checks `ntmp`, the config loader checks `(*v).name`) and a
+/// NULL-or-NUL-terminated `value`. This body relies on exactly that and does not null-check
+/// `values`, an element or its `name`. It ignores `ctx` and `method`, reads an element's `name`
+/// unconditionally and null-checks its `value`, refusing an unknown name or a malformed range,
+/// then canonizes the result. On success it returns a fresh `ASIdentifiers` exclusively owned by
+/// the dispatcher, which encodes it with this row's `it` and releases it exactly once with
+/// `ASN1_item_free(ext_struc, it())` (`src/x509/v3_conf.rs:1097-1105`; this row's `ext_free` is
+/// NULL). On failure it releases every partial value it built and returns NULL. The returned
+/// object's type must be the one this row's `it` names (`ASIdentifiers_it`); that pairing is the
+/// registrar's obligation. A concurrent `X509V3_EXT_cleanup` of a DYNAMIC row cannot release it
+/// while this callback uses `method`: the dispatcher holds the registry read hold across the
+/// lookup, this call and the encoder (B51).
+///
+/// Authority-derived: `crypto/x509/v3_conf.c:96-112`; `crypto/x509/v3_asid.c:495-609`.
 unsafe extern "C" fn v2i_ASIdentifiers(
     _method: *const X509V3ExtMethod,
     _ctx: *mut c_void,
@@ -1509,18 +1553,21 @@ unsafe extern "C" fn v2i_ASIdentifiers(
             unsafe { conf_add_error_name_value(val) };
             break 'each ptr::null_mut();
         }
-        // SAFETY: `value` is NUL-terminated, so `strspn` reads in bounds.
-        let i1 = unsafe { strspn(value, b"0123456789") } as c_int;
+        // SAFETY: `value` is NUL-terminated, so `strspn` reads in bounds. The offsets stay `usize`:
+        // a config value's length is not bounded by any type here (`CONF_VALUE` stores a bare
+        // NUL-terminated `char *`), so narrowing a `strspn` result to `c_int` would wrap a run
+        // longer than `INT_MAX` and make the `value.add(..)` below read out of bounds (B51-R3).
+        let i1 = unsafe { strspn(value, b"0123456789") };
         let is_range;
         // SAFETY: `i1` is within the NUL-terminated buffer.
-        if unsafe { *value.add(i1 as usize) } == 0 {
+        if unsafe { *value.add(i1) } == 0 {
             is_range = false;
         } else {
             is_range = true;
             // SAFETY: `value + i1` points at a non-terminator; `strspn` reads in bounds.
-            let i2a = i1 + unsafe { strspn(value.add(i1 as usize), b" \t") } as c_int;
+            let i2a = i1 + unsafe { strspn(value.add(i1), b" \t") };
             // SAFETY: `i2a` is within the buffer.
-            if unsafe { *value.add(i2a as usize) } != b'-' as c_char {
+            if unsafe { *value.add(i2a) } != b'-' as c_char {
                 // SAFETY: the site is a compiled-in constant.
                 unsafe { raise_site(&V3_ASID_551) };
                 // SAFETY: `val` is live per the stack contract.
@@ -1529,11 +1576,11 @@ unsafe extern "C" fn v2i_ASIdentifiers(
             }
             let i2 = i2a + 1;
             // SAFETY: `i2` is within the buffer; `strspn` reads in bounds.
-            let i2b = i2 + unsafe { strspn(value.add(i2 as usize), b" \t") } as c_int;
+            let i2b = i2 + unsafe { strspn(value.add(i2), b" \t") };
             // SAFETY: as above.
-            let i3 = i2b + unsafe { strspn(value.add(i2b as usize), b"0123456789") } as c_int;
+            let i3 = i2b + unsafe { strspn(value.add(i2b), b"0123456789") };
             // SAFETY: `i3` is within the buffer.
-            if unsafe { *value.add(i3 as usize) } != 0 {
+            if unsafe { *value.add(i3) } != 0 {
                 // SAFETY: the site is a compiled-in constant.
                 unsafe { raise_site(&V3_ASID_559) };
                 // SAFETY: `val` is live per the stack contract.
@@ -2065,4 +2112,71 @@ pub unsafe extern "C" fn X509v3_asid_validate_resource_set(
     }
     // SAFETY: `chain` and `ext` are live per the checks above.
     unsafe { asid_validate_path_internal(ptr::null_mut(), chain, ext) }
+}
+
+#[cfg(test)]
+#[allow(clippy::panic, clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use crate::runtime::mem::free_probe;
+    use crate::runtime::stack::test_hooks;
+    use crate::x509::v3_utl::s2i_ASN1_INTEGER;
+
+    /// B51-R4 — the failed-push arm returns the caller's integers instead of releasing them.
+    ///
+    /// `X509v3_asid_add_id_or_range` states that `min`/`max` stay the caller's whenever it answers
+    /// 0, and `v2i_ASIdentifiers` frees them on that path. The push-failure arm used to release
+    /// them through `ASIdOrRange_free` *and* let the caller release them again: a double release of
+    /// the same block. The seam's release probe observes the release wherever it happens, so the
+    /// assertion below fails deterministically if the detach is removed (the failure is injected
+    /// through the crate's test-only insert fault, because a real `reserve(1)` makes the push
+    /// infallible).
+    #[test]
+    fn a_failed_push_returns_the_caller_integers_instead_of_releasing_them() {
+        let _serial = crate::test_support::lock_global_state();
+        free_probe::reset();
+        // SAFETY: both strings are NUL-terminated; a NULL method is what the contract allows.
+        let min = unsafe { s2i_ASN1_INTEGER(ptr::null_mut(), c"1".as_ptr()) };
+        // SAFETY: as above.
+        let max = unsafe { s2i_ASN1_INTEGER(ptr::null_mut(), c"2".as_ptr()) };
+        assert!(
+            !min.is_null() && !max.is_null(),
+            "both integers must be built"
+        );
+        let asid = ASIdentifiers_new();
+        assert!(!asid.is_null(), "the container must be built");
+        // The push below is this call's only insert, so the fault lands on it.
+        test_hooks::fail_next_insert();
+        // SAFETY: `asid` is live; the integers are this test's own and their ownership is exactly
+        // what the assertion measures.
+        let rc = unsafe { X509v3_asid_add_id_or_range(asid, V3_ASID_ASNUM, min, max) };
+        assert_eq!(rc, 0, "the injected push failure must be reported");
+        assert_eq!(
+            free_probe::count(min.cast()),
+            0,
+            "a failed push released the caller's min: the caller's own free would be a second one"
+        );
+        assert_eq!(
+            free_probe::count(max.cast()),
+            0,
+            "a failed push released the caller's max: the caller's own free would be a second one"
+        );
+        // SAFETY: the contract returned both integers on failure; release them once each, then the
+        // container that owns the (empty) choice list.
+        unsafe {
+            ASN1_INTEGER_free(min);
+            ASN1_INTEGER_free(max);
+            ASIdentifiers_free(asid);
+        }
+        assert_eq!(
+            free_probe::count(min.cast()),
+            1,
+            "min is released exactly once"
+        );
+        assert_eq!(
+            free_probe::count(max.cast()),
+            1,
+            "max is released exactly once"
+        );
+    }
 }
