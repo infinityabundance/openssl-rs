@@ -15761,6 +15761,30 @@ def obligation_candidates(contracts: dict, files_upper: set[str],
     return obligations, enrollment
 
 
+def load_span_migration(boundary_dir: Path) -> dict:
+    """Load the logged span-hash migration map (content-addressed coverage).
+
+    The map is the migration record: one entry per site whose OLD coordinate
+    predicate discharged it at the migration candidate.  A malformed or absent
+    map is fail-closed: sites without a recorded hash are refused as
+    ``unmigrated`` rather than accepted on their coordinate.
+    """
+    path = Path(boundary_dir) / "span-hash-migration.json"
+    if not path.is_file():
+        return {}
+    try:
+        doc = json.loads(path.read_text())
+    except Exception:
+        return {}
+    out = {}
+    for site in doc.get("sites") or []:
+        receipt = site.get("receipt")
+        boundary_id = site.get("boundary_id") or site.get("id")
+        if receipt and boundary_id and site.get("span_sha256"):
+            out[f"{receipt}::{boundary_id}"] = site
+    return out
+
+
 def load_boundaries(boundary_dir: Path) -> tuple[dict, dict]:
     """Return (by_file, by_id) across every boundary receipt.
 
@@ -15774,6 +15798,7 @@ def load_boundaries(boundary_dir: Path) -> tuple[dict, dict]:
     """
     by_file = collections.defaultdict(list)
     by_id = {}
+    migration = load_span_migration(boundary_dir)
     paths = sorted(boundary_dir.glob("boundary-sweep-B*.json"))
     for p in sorted(boundary_dir.glob("*-sites.json")):
         try:
@@ -15795,12 +15820,33 @@ def load_boundaries(boundary_dir: Path) -> tuple[dict, dict]:
                 "id": b.get("id"),
                 "file": b.get("file"),
                 "line": b.get("line"),
+                "line_current": b.get("line_current"),
+                "inventory_line": b.get("inventory_line"),
                 "kind": b.get("kind"),
                 "operation": b.get("operation"),
                 "mechanism": b.get("mechanism"),
                 "disposition": b.get("disposition"),
                 "date": doc.get("date"),
+                "span_sha256": b.get("span_sha256"),
+                "span_schema": b.get("span_schema"),
+                "span_normalisation": b.get("span_normalisation"),
+                "span_claim_scope": b.get("span_claim_scope"),
+                "span_hash_source": ("receipt" if b.get("span_sha256") else None),
             }
+            if not rec["span_sha256"]:
+                migrated = migration.get(f"{receipt}::{rec['id']}")
+                if migrated:
+                    rec["span_sha256"] = migrated.get("span_sha256")
+                    rec["span_schema"] = migrated.get("schema") or SPAN_HASH_SCHEMA
+                    rec["span_normalisation"] = migrated.get("normalisation")
+                    rec["span_claim_scope"] = migrated.get("claim_scope")
+                    rec["span_hash_source"] = migrated.get("span_hash_source") or (
+                        "migration-map:" + str(migrated.get("migration_candidate")))
+                    rec["span_migration"] = {
+                        "candidate": migrated.get("migration_candidate"),
+                        "old_coordinate": migrated.get("old_coordinate"),
+                        "old_predicate": migrated.get("old_predicate"),
+                    }
             if rec["file"]:
                 by_file[rec["file"]].append(rec)
             if rec["id"]:
@@ -15892,8 +15938,633 @@ def scope_item(name) -> str | None:
     return item or None
 
 
+# --------------------------------------------------------------------------- #
+# content-addressed operation spans (safe-c33 lineage C, independent review)
+# --------------------------------------------------------------------------- #
+
+SPAN_HASH_SCHEMA = "safe-c33/operation-span-sha256/v1"
+SPAN_NORMALISATION = (
+    "split on universal newlines (Python str.splitlines), rstrip() every line, "
+    "join with '\\n', sha256 over UTF-8 bytes (no trailing newline)")
+SPAN_CLAIM_SCOPE = (
+    "The span hash covers only the operation's own text and its attributes: from "
+    "the first non-documentation attribute/qualifier line through the "
+    "brace-matched closing brace. Documentation comments (///, //!, /** */) "
+    "above the attributes are excluded. The hash does NOT cover dispatchers, "
+    "shared guards, macro headers/invocations, caller closures, or any other "
+    "code outside that span; those remain governed by the existing freeze and "
+    "mechanism-scope rules. This is a narrowing claim, not a strengthening one.")
+SPAN_CLASSIFICATIONS = ("unmigrated", "span-unparsable", "ambiguous-identity",
+                        "span-hash-mismatch", "span-unbound")
+
+_SPAN_IDENT = r"[A-Za-z_][A-Za-z0-9_]*"
+_SPAN_DEF_RE = re.compile(
+    r"\b(?:fn|trait|struct|enum|union|type|static|const)\s+"
+    r"(?!fn\b|unsafe\b|extern\b|async\b|const\b|static\b|type\b|mut\b|"
+    r"where\b|impl\b|trait\b|struct\b|enum\b|union\b)(" + _SPAN_IDENT + r")\b")
+_SPAN_QUALIFIER_RE = re.compile(
+    r"^(?:(?:pub(?:\s*\([^)]*\))?|unsafe|async|const|extern|default|auto|safe)\s*)+$")
+_SPAN_CACHE: dict = {}
+_BLOB_CACHE: dict = {}
+
+
+class SpanResolutionError(Exception):
+    """A span could not be computed exactly; ``classification`` is the refusal."""
+
+    def __init__(self, classification: str, detail: str, **info):
+        super().__init__(detail)
+        self.classification = classification
+        self.detail = detail
+        self.info = info
+
+
+def clear_span_cache() -> None:
+    """Test hook: a caller that mutates a source file must not reuse a hash."""
+    _SPAN_CACHE.clear()
+
+
+def _span_mask(text: str) -> str:
+    """Mask Rust comments, strings and char literals, preserving offsets.
+
+    Braces in a masked position are lexical content and can never close the
+    operation span.  Nested block comments, ordinary and raw strings (including
+    ``br"..."``/``cr"..."``), and char/byte-char literals (including ``'{'``)
+    are all consumed here.
+    """
+    out = list(text)
+    n = len(text)
+
+    def blank(a: int, b: int) -> None:
+        for k in range(a, b):
+            if out[k] != "\n":
+                out[k] = " "
+
+    i = 0
+    while i < n:
+        c = text[i]
+        if c == "/" and i + 1 < n and text[i + 1] == "/":
+            j = i + 2
+            while j < n and text[j] != "\n":
+                j += 1
+            blank(i, j)
+            i = j
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "*":
+            depth = 1
+            j = i + 2
+            while j < n and depth:
+                if text[j] == "/" and j + 1 < n and text[j + 1] == "*":
+                    depth += 1
+                    j += 2
+                elif text[j] == "*" and j + 1 < n and text[j + 1] == "/":
+                    depth -= 1
+                    j += 2
+                else:
+                    j += 1
+            blank(i, j)
+            i = j
+            continue
+        raw = None
+        if c in "bcr" and i + 1 < n:
+            p = i
+            if c in "bc" and text[i + 1] == "r":
+                p = i + 1
+            if text[p] == "r":
+                q = p + 1
+                hashes = 0
+                while q < n and text[q] == "#":
+                    hashes += 1
+                    q += 1
+                if q < n and text[q] == '"':
+                    raw = (i, q, hashes)
+        if raw is not None:
+            start, q, hashes = raw
+            close = '"' + "#" * hashes
+            j = q + 1
+            while j < n:
+                if text[j] == '"' and text.startswith(close, j):
+                    j += len(close)
+                    break
+                j += 1
+            blank(start, j)
+            i = j
+            continue
+        if c == '"':
+            j = i + 1
+            while j < n:
+                if text[j] == "\\":
+                    j += 2
+                    continue
+                if text[j] == '"':
+                    j += 1
+                    break
+                j += 1
+            blank(i, j)
+            i = j
+            continue
+        if c == "'":
+            # A char literal has a closing quote after one char or one escape; a
+            # lifetime such as 'a does not, so it stays ordinary code.
+            j = i + 1
+            ok = False
+            if j < n:
+                if text[j] == "\\":
+                    j += 1
+                    if j < n and text[j] == "u":
+                        j += 1
+                        if j < n and text[j] == "{":
+                            while j < n and text[j] != "}":
+                                j += 1
+                            j += 1
+                    else:
+                        j += 1
+                else:
+                    j += 1
+                if j < n and text[j] == "'":
+                    ok = True
+                    j += 1
+            if ok:
+                blank(i, j)
+                i = j
+                continue
+            i += 1
+            continue
+        i += 1
+    return "".join(out)
+
+
+def _span_line_starts(text: str) -> list[int]:
+    starts = [0]
+    for i, ch in enumerate(text):
+        if ch == "\n":
+            starts.append(i + 1)
+    return starts
+
+
+def _span_line_of(starts: list[int], pos: int) -> int:
+    lo, hi = 0, len(starts)
+    while lo + 1 < hi:
+        mid = (lo + hi) // 2
+        if starts[mid] <= pos:
+            lo = mid
+        else:
+            hi = mid
+    return lo
+
+
+def _span_line_text(masked: str, starts: list[int], idx: int) -> str:
+    a = starts[idx]
+    b = starts[idx + 1] - 1 if idx + 1 < len(starts) else len(masked)
+    return masked[a:b]
+
+
+def _span_match_brace(masked: str, open_pos: int) -> int | None:
+    depth = 0
+    for k in range(open_pos, len(masked)):
+        if masked[k] == "{":
+            depth += 1
+        elif masked[k] == "}":
+            depth -= 1
+            if depth == 0:
+                return k
+    return None
+
+
+def _span_attribute_start(masked: str, starts: list[int], idx: int) -> int | None:
+    """First line of the attribute that line ``idx`` belongs to, if any.
+
+    A normal code line must never be mistaken for a multi-line attribute tail.
+    The bracket balance is therefore required to be *negative* (an unclosed
+    closing `]` from the attribute) all the way up to the `#[` opening line;
+    a balanced line such as `}` or `let x = a[0];` stops the scan immediately.
+    """
+    line = _span_line_text(masked, starts, idx).lstrip()
+    if line.startswith("#"):
+        return idx
+    if not line:
+        return None
+    depth = 0
+    j = idx
+    while j >= 0:
+        ln = _span_line_text(masked, starts, j)
+        if not ln.strip():
+            return None
+        if ln.lstrip().startswith("#"):
+            return j
+        depth += ln.count("]") - ln.count("[")
+        if depth == 0:
+            return None
+        j -= 1
+    return None
+
+
+def _span_start_line(masked: str, starts: list[int], def_line: int) -> int:
+    """First non-documentation attribute/qualifier line for a definition."""
+    start = def_line
+    j = def_line - 1
+    while j >= 0:
+        s = _span_line_text(masked, starts, j).strip()
+        if s == "":
+            j -= 1
+            continue
+        if s.startswith("///") or s.startswith("//!") or s.startswith("//"):
+            j -= 1
+            continue
+        attr = _span_attribute_start(masked, starts, j)
+        if attr is not None:
+            start = min(start, attr)
+            j = attr - 1
+            continue
+        if _SPAN_QUALIFIER_RE.match(s):
+            start = j
+            j -= 1
+            continue
+        break
+    return start
+
+
+def _span_containers(masked: str, starts: list[int]) -> list[dict]:
+    """Named brace-delimited Rust containers (mod/macro_rules/trait/impl/type)."""
+    found = []
+    patterns = [
+        re.compile(r"\bmod\s+(" + _SPAN_IDENT + r")"),
+        re.compile(r"\bmacro_rules!\s*(" + _SPAN_IDENT + r")"),
+        re.compile(r"\btrait\s+(" + _SPAN_IDENT + r")"),
+        re.compile(r"\b(?:struct|enum|union)\s+(" + _SPAN_IDENT + r")"),
+    ]
+    for pat in patterns:
+        for m in pat.finditer(masked):
+            open_pos = masked.find("{", m.end())
+            if open_pos < 0:
+                continue
+            close_pos = _span_match_brace(masked, open_pos)
+            if close_pos is None:
+                continue
+            found.append({"name": m.group(1),
+                          "start": _span_line_of(starts, m.start()),
+                          "end": _span_line_of(starts, close_pos)})
+    for m in re.finditer(r"\bimpl\b", masked):
+        open_pos = masked.find("{", m.end())
+        if open_pos < 0:
+            continue
+        close_pos = _span_match_brace(masked, open_pos)
+        if close_pos is None:
+            continue
+        header = masked[m.end():open_pos]
+        names = re.findall(_SPAN_IDENT, header)
+        for_part = re.search(r"\bfor\s+(" + _SPAN_IDENT + r")", header)
+        name = for_part.group(1) if for_part else (names[0] if names else None)
+        if name:
+            found.append({"name": name,
+                          "start": _span_line_of(starts, m.start()),
+                          "end": _span_line_of(starts, close_pos)})
+    return found
+
+
+def _span_body_open(masked: str, pos: int) -> int | None:
+    """First `{` at parenthesis/bracket depth zero, or None before a top-level `;`.
+
+    A const-generic expression such as `[u8; {N}]` or a type inside `(...)`
+    contains braces that are not the function body.  A bodyless declaration
+    (`fn f(&self);`) reaches a top-level `;` first and returns None, so it can
+    never be extended to the next item's `{`.
+    """
+    depth = 0
+    i = pos
+    while i < len(masked):
+        ch = masked[i]
+        if ch in "([":
+            depth += 1
+        elif ch in ")]":
+            if depth > 0:
+                depth -= 1
+        elif ch == "{" and depth == 0:
+            return i
+        elif ch == ";" and depth == 0:
+            return None
+        elif (ch == "<" and i + 1 < len(masked)
+              and masked[i + 1] == "{"):
+            raise SpanResolutionError(
+                "span-unparsable",
+                ("a `<{` const expression appears in the signature before the "
+                 "body brace; angle brackets are not depth-tracked, so the "
+                 "span cannot be bounded exactly"))
+        i += 1
+    return None
+
+
+def _span_def_span(masked: str, starts: list[int], m: re.Match
+                   ) -> tuple[int, int, bool] | None:
+    def_line = _span_line_of(starts, m.start())
+    start = _span_start_line(masked, starts, def_line)
+    open_pos = _span_body_open(masked, m.end())
+    if open_pos is None:
+        # No body brace before a top-level `;`: a bodyless declaration.  Keep
+        # the definition as a candidate (so identity ambiguity is still
+        # detected) but mark it as having no balanced body.
+        return start, def_line, False
+    close_pos = _span_match_brace(masked, open_pos)
+    if close_pos is None:
+        return start, def_line, False
+    return start, _span_line_of(starts, close_pos), True
+
+
+def _git_commit_exists(root: Path, commit: str) -> bool:
+    if not commit:
+        return False
+    try:
+        subprocess.run(["git", "-C", str(root), "cat-file", "-e",
+                        f"{commit}^{{commit}}"],
+                       check=True, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL)
+        return True
+    except (subprocess.CalledProcessError, OSError):
+        return False
+
+
+def span_source_commit(inventory: dict, repo) -> str | None:
+    """The git commit that span hashes must be bound to, or None.
+
+    A returned None means the caller must not fall back to the worktree; the
+    content-addressed path then refuses as ``span-unbound``.
+    """
+    head = (inventory.get("identity") or {}).get("source_head")
+    if not head:
+        return None
+    root = Path(repo) if repo is not None else _repo_root()
+    if root is None or not _git_commit_exists(root, head):
+        return None
+    return head
+
+
+def _require_span_source(repo, file, source_text, source_commit,
+                         allow_worktree: bool) -> None:
+    if source_text is not None:
+        return
+    root = Path(repo) if repo is not None else _repo_root()
+    if root is None:
+        raise SpanResolutionError(
+            "span-unbound", "no repository root is available for span binding")
+    if source_commit:
+        if not _git_commit_exists(root, source_commit):
+            raise SpanResolutionError(
+                "span-unbound",
+                f"source commit {source_commit} is not resolvable; refusing to "
+                "read the worktree for span content")
+        return
+    if allow_worktree:
+        return
+    raise SpanResolutionError(
+        "span-unbound",
+        ("no source commit is bound to this closure; span content is refused "
+         "rather than read from the live worktree (test-only opt-in: "
+         "allow_worktree_span)") )
+
+
+def _git_blob_text(root: Path, commit: str, file: str) -> tuple[str, str]:
+    """Read ``file`` from the git-verified blob at ``commit``.
+
+    Returns ``(text, content_sha256)``.  The worktree is never consulted: a
+    hash must be bound to the candidate's committed bytes, not to whatever a
+    live checkout happens to contain.
+    """
+    key = (str(root), commit, file)
+    if key in _BLOB_CACHE:
+        return _BLOB_CACHE[key]
+    try:
+        raw = subprocess.check_output(
+            ["git", "-C", str(root), "show", f"{commit}:{file}"],
+            stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError as exc:
+        detail = exc.stderr.decode(errors="replace").strip()[:200]
+        raise SpanResolutionError(
+            "span-unbound",
+            f"cannot read git blob {commit}:{file}: {detail}") from exc
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise SpanResolutionError(
+            "span-unbound", f"{commit}:{file} is not UTF-8") from exc
+    value = (text, hashlib.sha256(raw).hexdigest())
+    _BLOB_CACHE[key] = value
+    return value
+
+
+def _span_source_and_candidates(repo, file, item, source_text=None,
+                                source_commit=None):
+    """Return ``(text, masked, starts, candidates, containers, meta)``."""
+    if not item or not re.fullmatch(_SPAN_IDENT, str(item)):
+        raise SpanResolutionError(
+            "span-unparsable", f"operation {item!r} does not name one Rust item")
+    root = Path(repo) if repo is not None else _repo_root()
+    if root is None:
+        raise SpanResolutionError(
+            "span-unparsable", "no repository root is available to locate the source")
+    if source_text is not None:
+        text = source_text
+        meta = {"source": "provided-text",
+                "content_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest()}
+    elif source_commit:
+        text, content_sha = _git_blob_text(root, source_commit, file)
+        meta = {"source": "git-blob", "commit": source_commit,
+                "content_sha256": content_sha}
+    else:
+        path = root / file
+        try:
+            st = path.stat()
+            text = path.read_text()
+        except OSError as exc:
+            raise SpanResolutionError(
+                "span-unparsable", f"cannot read {file}: {exc}") from exc
+        meta = {"source": "worktree", "path": str(path),
+                "mtime_ns": st.st_mtime_ns, "size": st.st_size,
+                "content_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest()}
+
+    masked = _span_mask(text)
+    starts = _span_line_starts(masked)
+    candidates = []
+    for m in _SPAN_DEF_RE.finditer(masked):
+        if m.group(1) != item:
+            continue
+        sp = _span_def_span(masked, starts, m)
+        if sp is not None:
+            candidates.append({"def_line": _span_line_of(starts, m.start()),
+                               "start": sp[0], "end": sp[1],
+                               "has_body": sp[2]})
+    containers = _span_containers(masked, starts)
+    return text, masked, starts, candidates, containers, meta
+
+
+def _span_cache_key(file, operation, item, meta, line=None):
+    if meta["source"] == "provided-text":
+        return ("text", meta["content_sha256"], operation, item, line)
+    if meta["source"] == "git-blob":
+        return ("git", meta["commit"], file, operation, item, line)
+    return ("worktree", meta["path"], meta["mtime_ns"], meta["size"],
+            operation, item, line)
+
+
+def _span_qualified_identity(selected, containers, item):
+    chain = [x for x in containers
+             if x["start"] <= selected["def_line"] <= x["end"]]
+    chain.sort(key=lambda x: (x["end"] - x["start"]), reverse=True)
+    names = [x["name"] for x in chain]
+    return "::".join(names + [item]) if names else item
+
+
+def _span_result(text, selected, containers, item, meta, resolution,
+                 collision=None):
+    if not selected.get("has_body", False):
+        raise SpanResolutionError(
+            "span-unparsable",
+            (f"{item!r} at line {selected['def_line'] + 1} has no balanced body "
+             "brace before a top-level `;` (bodyless declaration or unbalanced "
+             "body); refusing rather than extending to another item"))
+    lines = text.splitlines()
+    body = lines[selected["start"]:selected["end"] + 1]
+    norm = "\n".join(x.rstrip() for x in body)
+    return {
+        "schema": SPAN_HASH_SCHEMA,
+        "sha256": hashlib.sha256(norm.encode("utf-8")).hexdigest(),
+        "start_line": selected["start"] + 1,
+        "end_line": selected["end"] + 1,
+        "def_line": selected["def_line"] + 1,
+        "qualified_identity": _span_qualified_identity(selected, containers, item),
+        "resolution": resolution,
+        "collision": collision,
+        "source": meta,
+        "normalisation": SPAN_NORMALISATION,
+        "claim_scope": SPAN_CLAIM_SCOPE,
+    }
+
+
+def resolve_operation_span(repo, file, operation, item, locators=None,
+                           source_text=None, source_commit=None,
+                           allow_worktree=False) -> dict:
+    """Locate ``item`` in ``file`` and hash its brace-matched span.
+
+    Identity is the fully-qualified operation: the operation's own qualifier
+    resolves a repeated last component (``sha1::dupctx``).  A census or receipt
+    coordinate is never used to pick a definition: an unresolved collision
+    refuses with ``ambiguous-identity``.  The operation span's content hash, not
+    its coordinate, establishes acceptance.
+
+    ``source_text``/``source_commit`` bind the hash to candidate bytes.  When
+    neither is supplied, the live worktree is read (self-test/control use).
+    """
+    _require_span_source(repo, file, source_text, source_commit, allow_worktree)
+    text, masked, starts, candidates, containers, meta = _span_source_and_candidates(
+        repo, file, item, source_text=source_text, source_commit=source_commit)
+    key = _span_cache_key(file, operation, item, meta)
+    if key in _SPAN_CACHE:
+        cached = _SPAN_CACHE[key]
+        if isinstance(cached, SpanResolutionError):
+            raise cached
+        return dict(cached)
+    if not candidates:
+        err = SpanResolutionError(
+            "span-unparsable", f"no brace-delimited definition of {item!r} in {file}")
+        _SPAN_CACHE[key] = err
+        raise err
+
+    resolution = "unique"
+    selected = None
+    collision = None
+    if len(candidates) > 1:
+        collision = {"last_component": item,
+                     "def_lines": sorted(c["def_line"] + 1 for c in candidates)}
+        qualifier = operation.rsplit("::", 1)[0] if "::" in str(operation) else ""
+        parts = [p for p in re.findall(_SPAN_IDENT, qualifier)
+                 if p not in ("crate", "self", "super")]
+        if parts:
+            # A qualifier may name a shared macro row rather than a literal
+            # container (``blake2b/blake2s::dupctx`` is produced by
+            # ``mod blake2 { macro_rules! blake_row ... }``).  Prefix matching is
+            # accepted only to find the one *defining* container; it still has
+            # to select exactly one candidate and never widens the item identity.
+            matches = []
+            for c in candidates:
+                chain = [x["name"] for x in containers
+                         if x["start"] <= c["def_line"] <= x["end"]]
+                if all(any(name == p or (min(len(name), len(p)) >= 3
+                                         and (p.startswith(name) or name.startswith(p)))
+                           for name in chain) for p in parts):
+                    matches.append(c)
+            if len(matches) == 1:
+                selected = matches[0]
+                resolution = "qualified"
+        if selected is None:
+            err = SpanResolutionError(
+                "ambiguous-identity",
+                (f"{item!r} is defined {len(candidates)} times in {file} "
+                 f"({', '.join(str(c['def_line'] + 1) for c in candidates)}); "
+                 f"operation {operation!r} does not resolve exactly one"),
+                collision=collision)
+            _SPAN_CACHE[key] = err
+            raise err
+    else:
+        selected = candidates[0]
+
+    result = _span_result(text, selected, containers, item, meta, resolution,
+                          collision)
+    _SPAN_CACHE[key] = result
+    return dict(result)
+
+
+def resolve_operation_at_line(repo, file, item, line, source_text=None,
+                              source_commit=None, allow_worktree=False) -> dict:
+    """Resolve the definition of ``item`` that occupies census ``line``.
+
+    This is the obligation-side binding: it identifies the *definition* at the
+    obligation's own census line, not the boundary's operation.  A line inside
+    more than one definition is ambiguous and refuses.  A line that is not a
+    definition raises ``span-unparsable``; the caller may then fall back to the
+    boundary span's containment check for drifted carry-forward coordinates.
+    """
+    _require_span_source(repo, file, source_text, source_commit, allow_worktree)
+    text, masked, starts, candidates, containers, meta = _span_source_and_candidates(
+        repo, file, item, source_text=source_text, source_commit=source_commit)
+    key = _span_cache_key(file, "<line>", item, meta, line=line)
+    if key in _SPAN_CACHE:
+        cached = _SPAN_CACHE[key]
+        if isinstance(cached, SpanResolutionError):
+            raise cached
+        return dict(cached)
+    if not candidates:
+        err = SpanResolutionError(
+            "span-unparsable", f"no brace-delimited definition of {item!r} in {file}")
+        _SPAN_CACHE[key] = err
+        raise err
+    hits = [c for c in candidates if c["start"] <= (line - 1) <= c["end"]]
+    if len(hits) == 1:
+        selected, resolution = hits[0], "census-line-inside"
+    elif len(hits) > 1:
+        collision = {"last_component": item,
+                     "def_lines": sorted(c["def_line"] + 1 for c in hits)}
+        err = SpanResolutionError(
+            "ambiguous-identity",
+            (f"census line {line} for {item!r} in {file} lies inside "
+             f"{len(hits)} definitions ({', '.join(str(c['def_line'] + 1) for c in hits)})"),
+            collision=collision)
+        _SPAN_CACHE[key] = err
+        raise err
+    else:
+        exact = [c for c in candidates if c["def_line"] == (line - 1)]
+        if len(exact) != 1:
+            err = SpanResolutionError(
+                "span-unparsable",
+                f"census line {line} is not the definition line of {item!r} in {file}")
+            _SPAN_CACHE[key] = err
+            raise err
+        selected, resolution = exact[0], "census-def-line"
+    result = _span_result(text, selected, containers, item, meta, resolution)
+    _SPAN_CACHE[key] = result
+    return dict(result)
+
+
 def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
-               plane: dict) -> dict:
+               plane: dict, repo=None, allow_worktree_span=False) -> dict:
+    repo = repo if repo is not None else _repo_root()
     mechanism = obligation["mechanism"]
     state = mechanisms.get(mechanism, {}).get("state") if mechanism else None
     boundary_ids = [b["id"] for b in boundaries]
@@ -15933,12 +16604,13 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
         return obligation
 
     # 2. a scoped discharge, only for the *stable identity* its disposition
-    #    names.  A line range may narrow that match; it may never establish it.
-    #    The range is checked against the operation's current census coordinate,
-    #    not the coordinate the previous closure enumerated, so a discharge
-    #    cannot be inherited by a drifted (or different) operation.
+    #    names, and only when the operation's recorded content hash matches the
+    #    span's current content hash.  A line range is retained for reporting and
+    #    for the pre-migration stale accounting; it may never establish a
+    #    discharge, and it is not part of the acceptance predicate.
     scoped_attempt = []
     stale_rejections = []
+    span_rejections = []
     current_line = (obligation.get("current_census_line")
                     if isinstance(obligation.get("current_census_line"), int)
                     else obligation["line"])
@@ -15952,33 +16624,182 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
         covers_previous = any(lo <= obligation["line"] <= hi
                               for lo, hi in file_ranges)
         boundary_item = scope_item(b.get("operation"))
-        identity_match = (
+        item_match = (
             b.get("file") == obligation["file"]
             and b.get("kind") == obligation.get("kind")
             and boundary_item is not None
             and obligation.get("item") is not None
             and boundary_item == obligation["item"])
+        boundary_span = None
+        obligation_span = None
+        binding = None
+        span_classification = None
+        span_detail = None
+        span_info = {}
+        source_commit = _EVIDENCE_ENV.get("source_commit")
+        if item_match:
+            try:
+                boundary_span = resolve_operation_span(
+                    repo, obligation["file"], b.get("operation"),
+                    obligation.get("item"),
+                    locators=(b.get("line"), b.get("inventory_line"),
+                              b.get("line_current"), current_line,
+                              obligation["line"]),
+                    source_commit=source_commit,
+                    allow_worktree=allow_worktree_span)
+            except SpanResolutionError as exc:
+                span_classification = exc.classification
+                span_detail = exc.detail
+                span_info = dict(exc.info)
+            if boundary_span is not None:
+                try:
+                    obligation_span = resolve_operation_at_line(
+                        repo, obligation["file"], obligation.get("item"),
+                        current_line, source_commit=source_commit,
+                        allow_worktree=allow_worktree_span)
+                    same_definition = (
+                        obligation_span["start_line"] == boundary_span["start_line"]
+                        and obligation_span["end_line"] == boundary_span["end_line"])
+                    if (same_definition
+                            or obligation_span["qualified_identity"]
+                            == boundary_span["qualified_identity"]):
+                        binding = ("same-resolved-definition" if same_definition
+                                   else "qualified-identity")
+                    else:
+                        span_classification = "ambiguous-identity"
+                        span_detail = (
+                            "boundary operation "
+                            f"{b.get('operation')!r} resolves to "
+                            f"{boundary_span['qualified_identity']} "
+                            f"(lines {boundary_span['start_line']}-"
+                            f"{boundary_span['end_line']}), but the obligation "
+                            f"at line {current_line} resolves to "
+                            f"{obligation_span['qualified_identity']} "
+                            f"(lines {obligation_span['start_line']}-"
+                            f"{obligation_span['end_line']}); a same-file sibling "
+                            "with the same last component is not this site")
+                        span_info = {"collision": {
+                            "last_component": obligation.get("item"),
+                            "boundary_qualified_identity":
+                                boundary_span["qualified_identity"],
+                            "obligation_qualified_identity":
+                                obligation_span["qualified_identity"]}}
+                except SpanResolutionError as exc:
+                    if exc.classification == "ambiguous-identity":
+                        span_classification = exc.classification
+                        span_detail = exc.detail
+                        span_info = dict(exc.info)
+                    elif (boundary_span["start_line"] <= current_line
+                          <= boundary_span["end_line"]):
+                        binding = "census-line-inside-boundary-span"
+                    else:
+                        span_classification = exc.classification
+                        span_detail = (
+                            "the obligation's census line "
+                            f"{current_line} is neither a definition of "
+                            f"{obligation.get('item')!r} nor inside the "
+                            f"boundary's resolved span "
+                            f"{boundary_span['start_line']}-"
+                            f"{boundary_span['end_line']}: {exc.detail}")
+                        span_info = dict(exc.info)
+                if binding is not None and span_classification is None:
+                    recorded = b.get("span_sha256")
+                    if not recorded:
+                        span_classification = "unmigrated"
+                        span_detail = (
+                            "the boundary carries no recorded span_sha256; a "
+                            "coordinate cannot establish a content-addressed "
+                            "discharge")
+                    elif recorded != boundary_span["sha256"]:
+                        span_classification = "span-hash-mismatch"
+                        span_detail = (
+                            "recorded span_sha256 " + str(recorded)[:16] +
+                            " does not match the current span " +
+                            boundary_span["sha256"][:16])
+        identity_match = item_match and binding is not None
+        content_accepts = (identity_match and span_classification is None)
+        span = boundary_span
         scoped_attempt.append({
             "boundary": b["id"], "receipt": rec.get("receipt"),
             "declared_ranges": {k: v for k, v in ranges.items()},
             "boundary_operation": b.get("operation"),
+            "item_match": item_match,
             "identity_match": identity_match,
+            "obligation_qualified_identity": (obligation_span or {}).get(
+                "qualified_identity"),
+            "boundary_qualified_identity": (boundary_span or {}).get(
+                "qualified_identity"),
+            "binding": binding,
             "covers_current_coordinate": covers_current,
             "covers_previous_coordinate": covers_previous,
             "previous_coordinate": obligation["line"],
             "current_coordinate": current_line,
-            "covers_site": identity_match and covers_current,
+            "covers_site": item_match and covers_current,
+            "obligation_span_lines": ((obligation_span or {}).get("start_line"),
+                                      (obligation_span or {}).get("end_line")),
+            "span_hash_present": bool(b.get("span_sha256")),
+            "span_hash": b.get("span_sha256"),
+            "span_hash_source": b.get("span_hash_source"),
+            "span_current_hash": (span or {}).get("sha256"),
+            "span_lines": ((span or {}).get("start_line"),
+                           (span or {}).get("end_line")),
+            "span_resolution": (span or {}).get("resolution"),
+            "span_classification": span_classification,
+            "span_collision": span_info.get("collision"),
+            "content_address_accepts": content_accepts,
         })
-        if identity_match and covers_current:
+        if content_accepts:
             obligation["status"] = "DISCHARGED"
             obligation["discharge_receipt"] = rec.get("receipt") or rec.get("artifact")
             obligation["status_reason"] = (
-                f"boundary {b['id']} is scoped-SAFETY_DISCHARGED and names the "
-                f"operation by stable identity ({obligation['file']}, "
-                f"{obligation.get('kind')}, {obligation.get('item')}) at its "
-                f"current census coordinate {current_line}")
+                f"boundary {b['id']} is scoped-SAFETY_DISCHARGED; the operation "
+                f"is bound to the boundary site by {binding} "
+                f"({obligation['file']}, {obligation.get('kind')}, "
+                f"{boundary_span['qualified_identity']}, lines "
+                f"{boundary_span['start_line']}-"
+                f"{boundary_span['end_line']}) and its recorded span hash "
+                f"matches the current content ({boundary_span['sha256'][:16]}, "
+                f"source {boundary_span['source']['source']}); the declared "
+                f"coordinate {current_line} is not part of acceptance")
+            obligation["span_discharge"] = {
+                "sha256": boundary_span["sha256"],
+                "start_line": boundary_span["start_line"],
+                "end_line": boundary_span["end_line"],
+                "qualified_identity": boundary_span["qualified_identity"],
+                "obligation_qualified_identity": (obligation_span or {}).get(
+                    "qualified_identity"),
+                "binding": binding,
+                "resolution": boundary_span["resolution"],
+                "source": boundary_span["source"],
+                "normalisation": SPAN_NORMALISATION,
+                "claim_scope": SPAN_CLAIM_SCOPE,
+                "schema": SPAN_HASH_SCHEMA,
+            }
             obligation["scoped_discharge_attempts"] = scoped_attempt
             return obligation
+        if item_match and span_classification is not None:
+            # A refusal that names the same last component (including a
+            # same-file sibling or a hash refusal) is recorded, not hidden.
+            span_rejections.append({
+                "boundary": b["id"],
+                "receipt": rec.get("receipt") or rec.get("artifact"),
+                "boundary_operation": b.get("operation"),
+                "operation": obligation.get("item"),
+                "classification": span_classification,
+                "detail": span_detail,
+                "binding": binding,
+                "collision": span_info.get("collision"),
+                "collision_class": ("scope_item"
+                                    if span_info.get("collision") else None),
+                "obligation_qualified_identity": (obligation_span or {}).get(
+                    "qualified_identity"),
+                "boundary_qualified_identity": (boundary_span or {}).get(
+                    "qualified_identity"),
+                "span_lines": ((span or {}).get("start_line"),
+                               (span or {}).get("end_line")),
+                "recorded_hash": b.get("span_sha256"),
+                "current_hash": (span or {}).get("sha256"),
+            })
         if (not covers_current and covers_previous
                 and (identity_match or obligation.get("carried_forward_from"))):
             stale_rejections.append({
@@ -15992,6 +16813,7 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                 "identity_match": identity_match,
                 "previous_coordinate": obligation["line"],
                 "current_coordinate": current_line,
+                "span_classification": span_classification,
                 "reason": (
                     "the receipt's declared range covers the previous "
                     "enumerated coordinate but not the operation's current "
@@ -16000,6 +16822,8 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
             })
     if scoped_attempt:
         obligation["scoped_discharge_attempts"] = scoped_attempt
+    if span_rejections:
+        obligation["span_discharge_rejections"] = span_rejections
     if stale_rejections:
         obligation["stale_discharge_rejections"] = stale_rejections
         first = stale_rejections[0]
@@ -16014,6 +16838,21 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
             f"{first['previous_coordinate']}); the declared range does not "
             "cover the current coordinate, and a line range may only narrow a "
             "stable-identity match, never establish it")
+        if first.get("span_classification"):
+            obligation["status_reason"] += (
+                "; content-addressed check also refused: "
+                f"{first['span_classification']}")
+        return obligation
+    if span_rejections:
+        first = span_rejections[0]
+        obligation["status"] = "BLOCKED"
+        obligation["discharge_receipt"] = None
+        obligation["status_reason"] = (
+            "content-addressed scoped discharge refused: boundary "
+            f"{first['boundary']} names ({obligation['file']}, "
+            f"{obligation.get('kind')}, {obligation.get('item')}) but "
+            f"{first['classification']}: {first['detail']}.  A coordinate "
+            "alone never establishes a discharge.")
         return obligation
 
     # 3. no boundary receipt at all
@@ -16340,6 +17179,18 @@ def build_receipt(args) -> dict:
 
     artifact_sha = sha256_file(artifact)
     inventory_head = (inventory.get("identity") or {}).get("source_head")
+    # Span hashes are bound to the inventory candidate's committed blobs, not
+    # to whatever the live worktree currently contains.  A missing/unresolvable
+    # commit is fail-closed: content-addressed dispositions refuse as
+    # `span-unbound`; the worktree is never read on the production path.
+    resolved_span_commit = span_source_commit(inventory, repo)
+    _EVIDENCE_ENV["source_commit"] = resolved_span_commit
+    if resolved_span_commit is None:
+        notes.append(
+            "span content: inventory.identity.source_head is absent or "
+            "unresolvable; every content-addressed disposition is refused as "
+            "span-unbound and the live worktree is not read (test-only opt-in "
+            "allow_worktree_span is never set by a real closure run)")
     binaries = ((inventory.get("identity") or {}).get("binary") or {}).get("artefacts") or {}
 
     # stale-hash check: every resolved OpenSSL DSO must be the inventory's DSO
@@ -16695,7 +17546,8 @@ def build_receipt(args) -> dict:
         o["discharge_receipt"] = None
         o["status_reason"] = None
     for o in obligations:
-        adjudicate(o, mechanisms, boundaries_by_file.get(o["file"], []), plane)
+        adjudicate(o, mechanisms, boundaries_by_file.get(o["file"], []), plane,
+                   repo=repo)
         if o.get("contract") == "contracted":
             if o.get("status") == "DISCHARGED":
                 # The queue note explains why a documented operation stayed
@@ -16905,6 +17757,10 @@ def build_receipt(args) -> dict:
             "tracked_tree_dirty": dirty,
             "inventory_path": rel(inventory_path, repo),
             "inventory_source_head": inventory_head,
+            "span_source_commit": _EVIDENCE_ENV.get("source_commit"),
+            "span_source_binding": ("git-blob"
+                                    if _EVIDENCE_ENV.get("source_commit")
+                                    else "span-unbound"),
             "inventory_is_ancestor_or_equal": (
                 run(["git", "-C", str(repo), "merge-base", "--is-ancestor",
                      inventory_head or "HEAD", "HEAD"]).returncode == 0),
@@ -17731,9 +18587,13 @@ def self_test() -> int:
         if current is not None:
             rec["current_census_line"] = current
         return rec
-    def bound(file, kind, operation, disposition):
-        return {"id": "B23-WPKT-1", "file": file, "kind": kind,
-                "operation": operation, "disposition": disposition}
+    def bound(file, kind, operation, disposition, span_sha256=None, line=None):
+        rec = {"id": "B23-WPKT-1", "file": file, "kind": kind,
+               "operation": operation, "disposition": disposition,
+               "span_sha256": span_sha256}
+        if line is not None:
+            rec["line"] = line
+        return rec
     check("discharged exact", adjudicate(ob("src/runtime/err.rs", 15, "ERR"), mechs, [],
                                          plane)["status"], "DISCHARGED")
     check("unknown err outside surface",
@@ -17758,34 +18618,109 @@ def self_test() -> int:
                             "SAFETY_DISCHARGED")],
                      plane)["status"],
           "BLOCKED")
+    # Content-addressed truth table: a temp repo exercises the real span reader.
+    import tempfile
+    span_td = tempfile.TemporaryDirectory()
+    span_repo = Path(span_td.name)
+    (span_repo / "src/ssl").mkdir(parents=True)
+    (span_repo / "src/ssl/x.rs").write_text(
+        "pub unsafe fn f() -> u8 {\n"
+        "    let _brace = '{';\n"
+        "    1\n"
+        "}\n\n"
+        "pub unsafe fn g() -> u8 {\n"
+        "    2\n"
+        "}\n\n"
+        "/// leading documentation with a brace }\n"
+        "#[cfg(test)]\n"
+        "pub unsafe fn h() -> u8 {\n"
+        "    3\n"
+        "}\n")
+    (span_repo / "src/ssl/y.rs").write_text(
+        "fn dup() -> u8 { 1 }\n"
+        "fn dup() -> u8 { 2 }\n")
+    clear_span_cache()
+    hash_f = resolve_operation_span(
+        span_repo, "src/ssl/x.rs", "f", "f", allow_worktree=True)["sha256"]
+    hash_h = resolve_operation_span(
+        span_repo, "src/ssl/x.rs", "h", "h", allow_worktree=True)["sha256"]
+
+    def adj(o, bounds):
+        return adjudicate(o, mechs, bounds, plane, repo=span_repo,
+                          allow_worktree_span=True)
+
     check("scoped range covers site",
-          adjudicate(ob("src/ssl/x.rs", 40, "SSL_SESSION"), mechs,
-                     [bound("src/ssl/x.rs", "UNSAFE_FN_DEF", "f",
-                            "SAFETY_DISCHARGED (scope: src/ssl/x.rs:30-50)")],
-                     plane)["status"],
+          adj(ob("src/ssl/x.rs", 1, "SSL_SESSION"),
+              [bound("src/ssl/x.rs", "UNSAFE_FN_DEF", "f",
+                     "SAFETY_DISCHARGED (scope: src/ssl/x.rs:1-20)",
+                     span_sha256=hash_f)])["status"],
           "DISCHARGED")
+    check("leading doc comment is outside the span",
+          adj(ob("src/ssl/x.rs", 12, "SSL_SESSION", item="h"),
+              [bound("src/ssl/x.rs", "UNSAFE_FN_DEF", "h",
+                     "SAFETY_DISCHARGED (scope: src/ssl/x.rs:1-20)",
+                     span_sha256=hash_h)])["status"],
+          "DISCHARGED")
+    missing = adj(ob("src/ssl/x.rs", 1, "SSL_SESSION"),
+                  [bound("src/ssl/x.rs", "UNSAFE_FN_DEF", "f",
+                         "SAFETY_DISCHARGED (scope: src/ssl/x.rs:1-20)")])
+    check("missing hash is unmigrated",
+          (missing["status"],
+           (missing.get("span_discharge_rejections") or [{}])[0].get("classification")),
+          ("BLOCKED", "unmigrated"))
+    mismatch = adj(ob("src/ssl/x.rs", 1, "SSL_SESSION"),
+                   [bound("src/ssl/x.rs", "UNSAFE_FN_DEF", "f",
+                          "SAFETY_DISCHARGED (scope: src/ssl/x.rs:1-20)",
+                          span_sha256="0" * 64)])
+    check("hash mismatch is refused",
+          (mismatch["status"],
+           (mismatch.get("span_discharge_rejections") or [{}])[0].get("classification")),
+          ("BLOCKED", "span-hash-mismatch"))
+    ambiguous = adj(ob("src/ssl/y.rs", 1, "SSL_SESSION", item="dup"),
+                    [bound("src/ssl/y.rs", "UNSAFE_FN_DEF", "dup",
+                           "SAFETY_DISCHARGED (scope: src/ssl/y.rs:1-2)",
+                           span_sha256="0" * 64)])
+    check("ambiguous identity is refused",
+          (ambiguous["status"],
+           (ambiguous.get("span_discharge_rejections") or [{}])[0].get("classification")),
+          ("BLOCKED", "ambiguous-identity"))
     # a line range may only narrow a stable-identity match, never establish it
     check("scoped range alone does not establish identity",
-          adjudicate(ob("src/ssl/x.rs", 40, "SSL_SESSION"), mechs,
+          adjudicate(ob("src/ssl/x.rs", 1, "SSL_SESSION"), mechs,
                      [bound("src/ssl/x.rs", "UNSAFE_FN_DEF", "other",
-                            "SAFETY_DISCHARGED (scope: src/ssl/x.rs:30-50)")],
+                            "SAFETY_DISCHARGED (scope: src/ssl/x.rs:1-20)")],
                      plane)["status"],
           "BLOCKED")
-    check("scoped range does not blanket-discharge",
-          adjudicate(ob("src/ssl/x.rs", 999, "SSL_SESSION"), mechs,
+    check("scoped range does not blanket-discharge a different operation",
+          adjudicate(ob("src/ssl/x.rs", 6, "SSL_SESSION", item="g"), mechs,
                      [bound("src/ssl/x.rs", "UNSAFE_FN_DEF", "f",
-                            "SAFETY_DISCHARGED (scope: src/ssl/x.rs:30-50)")],
-                     plane)["status"],
+                            "SAFETY_DISCHARGED (scope: src/ssl/x.rs:1-20)",
+                            span_sha256=hash_f)],
+                     plane, repo=Path(span_td.name),
+                     allow_worktree_span=True)["status"],
           "BLOCKED")
-    # the range is checked against the current census coordinate, not a stale one
-    stale_ob = adjudicate(ob("src/ssl/x.rs", 40, "SSL_SESSION", current=60),
+    # Content addressing accepts an unchanged operation after a coordinate drift;
+    # a hashless boundary still falls back to the pre-migration stale accounting.
+    moved = adjudicate(ob("src/ssl/x.rs", 40, "SSL_SESSION", current=1),
+                       mechs,
+                       [bound("src/ssl/x.rs", "UNSAFE_FN_DEF", "f",
+                              "SAFETY_DISCHARGED (scope: src/ssl/x.rs:1-20)",
+                              span_sha256=hash_f)],
+                       plane, repo=Path(span_td.name),
+                       allow_worktree_span=True)
+    check("content address discharges a drifted coordinate",
+          moved["status"], "DISCHARGED")
+    stale_ob = adjudicate(ob("src/ssl/x.rs", 40, "SSL_SESSION", current=1),
                           mechs,
                           [bound("src/ssl/x.rs", "UNSAFE_FN_DEF", "f",
                                  "SAFETY_DISCHARGED (scope: src/ssl/x.rs:30-50)")],
-                          plane)
-    check("stale range does not discharge a drifted coordinate",
+                          plane, repo=Path(span_td.name),
+                          allow_worktree_span=True)
+    check("stale range does not discharge a hashless drifted coordinate",
           (stale_ob["status"], bool(stale_ob.get("stale_discharge_rejections"))),
           ("BLOCKED", True))
+    span_td.cleanup()
+    clear_span_cache()
     check("scoped range parser", scoped_ranges(
         "SAFETY_DISCHARGED (scope: src/ui/ui_openssl.rs:111-124, 269-290)"),
         {"src/ui/ui_openssl.rs": [(111, 124), (269, 290)]})
