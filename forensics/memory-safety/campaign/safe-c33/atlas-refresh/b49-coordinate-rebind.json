@@ -1,0 +1,80 @@
+{
+ "receipt": "b49-coordinate-rebind",
+ "kind": "coordinate-rebind-evidence",
+ "date": "2026-11-02",
+ "subphase": "B51",
+ "finding": "The B51 source candidate moved one already-discharged B49 site's coordinate. The closure instrument refused the disposition because its declared range no longer covers the current coordinate, which is the correct conservative behaviour. This receipt records the proof that the site itself is unchanged and proposes a coordinate re-bind; it does not re-assert the B49 contract.",
+ "site": {
+  "stable_identity": "src/x509/v3_ist.rs::UNSAFE_FN_DEF::i2r_issuer_sign_tool",
+  "file": "src/x509/v3_ist.rs",
+  "kind": "UNSAFE_FN_DEF",
+  "operation": "i2r_issuer_sign_tool",
+  "discharged_by": "boundary-sweep-B49, boundary B49-I2R-009"
+ },
+ "movement": {
+  "from_candidate": "84f624012 (B49/B50 candidate)",
+  "to_candidate": "8b9a03e28 (B51 candidate)",
+  "from_line_current": 346,
+  "to_line_current": 372,
+  "v1_census_line_unchanged": 331,
+  "direction": "+26 lines"
+ },
+ "proof_of_content_identity": {
+  "method": "Extract the function text by name and brace matching from `git show <candidate>:src/x509/v3_ist.rs` for both candidates and hash it.",
+  "function_span_at_84f624012": [
+   346,
+   427
+  ],
+  "function_span_at_8b9a03e28": [
+   372,
+   453
+  ],
+  "function_text_sha256_both": "6988c6ab335eb1204d84718d4c0537704e6dc97b7e4842d4b3c2adf244e07864",
+  "function_text_identical": true,
+  "diff_hunk": "@@ -244,4 +244,30 @@ unsafe fn ist_member_guard(...): 26 added lines, all `///` documentation lines forming the `# Safety` block of `v2i_issuer_sign_tool`; no statement, expression, attribute, signature or item order changed",
+  "hunk_classification": "comment-only",
+  "checked_by": "orchestrator, 2026-11-02, `git diff --unified=2 84f624012 8b9a03e28 -- src/x509/v3_ist.rs`",
+  "function_text_sha256_84f624012": "6988c6ab335eb1204d84718d4c0537704e6dc97b7e4842d4b3c2adf244e07864",
+  "function_text_sha256_8b9a03e28": "6988c6ab335eb1204d84718d4c0537704e6dc97b7e4842d4b3c2adf244e07864",
+  "hashes_recomputed_by": "orchestrator, 2026-11-02, from `git show <candidate>:src/x509/v3_ist.rs`"
+ },
+ "why_the_b49_evidence_still_applies": [
+  "The discharged scope is the operation `i2r_issuer_sign_tool` and its dispatch path, not a line number.",
+  "The operation's source text is byte-identical at both candidates; only its line number changed, because a documentation block was inserted above a different function in the same file.",
+  "No precondition the B49 discharge relies on was edited: the dispatcher (`X509V3_EXT_print`), the registry lock, the `it`/`ext_free` pairing and the callback body are unchanged.",
+  "No other B49 site lapsed at this candidate; the closure instrument reported exactly one stale disposition."
+ ],
+ "proposed_disposition": {
+  "field": "boundaries[B49-I2R-009].line_current",
+  "from": 346,
+  "to": 372,
+  "disposition_string_from": "SAFETY_DISCHARGED (scope: i2r_issuer_sign_tool and its dispatch path; src/x509/v3_ist.rs:346)",
+  "disposition_string_to": "SAFETY_DISCHARGED (scope: i2r_issuer_sign_tool and its dispatch path; src/x509/v3_ist.rs:372)",
+  "verdict_unchanged": "SAFETY_DISCHARGED",
+  "original_preserved_in": "coordinate_history"
+ },
+ "non_claims": [
+  "This is not a new discharge and not a re-review of the B49 contract.",
+  "It does not re-bind any other site, and it does not extend the B49 scope.",
+  "It does not claim the coordinate will stay valid: any later edit above the function must re-bind again, which the closure instrument will continue to refuse until it does."
+ ],
+ "applied": true,
+ "review": {
+  "reviewer": "independent adversarial adjudicator (session f0cc8617-9d59-4694-9164-2413bfefd8ee); transcribed verbatim by the orchestrator",
+  "verdict": "REBIND-APPROVED",
+  "applied": true,
+  "date": "2026-11-02",
+  "authorised_edits": [
+   "boundaries[B49-I2R-009].line_current: 346 -> 372",
+   "boundaries[B49-I2R-009].disposition coordinate: src/x509/v3_ist.rs:346 -> :372 (verdict text unchanged)"
+  ],
+  "reviewer_independent_checks": {
+   "hashes": "recomputed independently; 6988c6ab335eb1204d84718d4c0537704e6dc97b7e4842d4b3c2adf244e07864 at both candidates, and a second independent extraction rule reproduced identical spans",
+   "diff": "git diff --numstat 84f624012 8b9a03e28 -- src/x509/v3_ist.rs = 26 added / 0 removed, all added lines ///",
+   "scope": "B49-I2R-009 names the operation and its dispatch path; the line number is an attached coordinate, not the identifier",
+   "instrument": "312 obligations, 166/146/0, exactly one refused disposition, none added or removed",
+   "canary": "re-run not required: B49-C1 mutates src/x509/v3_prn.rs:227-231, which this diff does not touch, and the callback body is byte-identical"
+  },
+  "residual": "that entry's registration (:430/:442) and guard prose still cite pre-shift coordinates; cosmetic and outside the authorised edits"
+ }
+}
