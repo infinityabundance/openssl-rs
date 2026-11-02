@@ -433,9 +433,17 @@ unsafe fn push_cstr(buf: &mut Vec<u8>, p: *const c_char) {
 /// `ASN1_item_free(ext_struc, it())` (`src/x509/v3_conf.rs:1097-1105`; this row's `ext_free` is
 /// NULL). On failure it releases every partial value it built and returns NULL. The returned
 /// object's type must be the one this row's `it` names (`AUTHORITY_INFO_ACCESS_it`); that pairing
-/// is the registrar's obligation. A concurrent `X509V3_EXT_cleanup` of a DYNAMIC row cannot release
-/// it while this callback uses `method`: the dispatcher holds the registry read hold across the
-/// lookup, this call and the encoder (B51).
+/// — and the meaning of any `usr_data` the row supplies — is the registrar's obligation. Row
+/// liveness while this callback runs is enforced, not a caller duty: `do_ext_nconf` holds the
+/// registry read hold across the lookup, this call and the encoder (B51), so a concurrent
+/// `X509V3_EXT_cleanup` cannot release a DYNAMIC row under this callback and the caller need not
+/// exclude it for the duration of the call. That hold does not extend the row's storage lifetime:
+/// `X509V3_EXT_add` borrows a caller-owned row (only `X509V3_EXT_DYNAMIC` rows are
+/// registry-owned), so the registrar must keep the row storage live and unmodified while it is
+/// registered. The read hold is not re-entrant for registry writers, so this callback must not
+/// call `X509V3_EXT_add`, `X509V3_EXT_add_list`, `X509V3_EXT_add_alias` or
+/// `X509V3_EXT_cleanup` (B51-R9). `ctx` is NULL-or-live per the slot contract; this body forwards
+/// it unchanged to `v2i_GENERAL_NAME_ex`, which documents the same contract.
 ///
 /// Authority-derived: `crypto/x509/v3_conf.c:96-112`; `crypto/x509/v3_info.c:101-149`.
 unsafe extern "C" fn v2i_AUTHORITY_INFO_ACCESS(
