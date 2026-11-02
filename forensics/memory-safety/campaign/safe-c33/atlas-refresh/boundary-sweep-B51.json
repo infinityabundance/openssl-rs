@@ -692,10 +692,23 @@
  ],
  "applied": false,
  "review": {
-  "reviewer": "pending independent adjudication",
-  "verdict": "UNAPPLIED",
+  "reviewer": "independent adversarial adjudicator (session b5cd6489-f5c3-410d-b557-c4dddbcce39c); transcribed verbatim by the orchestrator",
+  "verdict": "REJECT",
   "applied": false,
-  "prohibition": "This receipt is a DRAFT. It must not be applied, copied into CAMPAIGN-STATUS.json, or used to mark any obligation SAFETY_DISCHARGED until an independent adjudicator has frozen the candidate S', re-run the FAST gate at S', and verified every candidate.files_sha256 against the committed tree. The adjudicator must also rule on B51-R1 (no read hold across the v2i callback) and B51-R7 (the brief's signature/release discrepancy)."
+  "date": "2026-11-02",
+  "verdict_text": "REJECT -- not for site unsoundness (the structural hold is real and I reproduced it), but because the receipt materially misdescribes its own delta and its own review conditions. It cannot be applied to the ledger as written.",
+  "not_rejected_for": "The ten sites are structurally sound and were verified at their current coordinates; the read hold spans the callback, reader/reader nesting cannot stall, the probe is test-only, no exported item was added, and one liveness canary was independently reproduced (FAILED rc 101 under mutation, PASSED byte-identically after restore).",
+  "reasons": [
+   "R3 is false as written: the delta REMOVED the `as c_int` narrowing (6 deleted cast lines), so the INT_MAX wrap was eliminated; it must be recorded as a functional fix, not an unreachable unfixed residual.",
+   "R4 is false as written: the delta FIXED the asid push-failure path (detach min/max before ASIdOrRange_free, src/x509/v3_asid.rs:1060-1079); no reachable double-free remains, and it must be recorded as a fix.",
+   "hidden_obligations: 0 is not defensible: the read hold is non-reentrant, so a v2i callback that calls a registry WRITER self-deadlocks (the read-holding thread has writer_id None, so write_lock cannot detect re-entry). Static callbacks do not, but caller rows registered through X509V3_EXT_add can. This is a B49-R11 analogue and is unrecorded.",
+   "The ten boundary contracts still state that a concurrent X509V3_EXT_cleanup must not run during the call (B51-R1), which contradicts marking R1 CLOSED-STRUCTURALLY.",
+   "The delta description is false: the measured change is 748 insertions / 18 deletions, including two functional fixes, not \"348 insertions, 0 deletions / additive only / no functional defect fixed\".",
+   "review_conditions C3_no_hold states that no read hold spans the v2i callback and none was added -- the opposite of the implemented mechanism; C1 still names base_head 3d32259e6 and an uncommitted worktree instead of 8b9a03e28 and a clean tree.",
+   "Control id B51-C2 is duplicated between negative_control and hold_canaries."
+  ],
+  "authorisation_condition": "A corrected receipt (R3/R4 recorded as fixes, the additive-only claim removed, C1/C3 corrected, the read-to-write re-entrancy residual added, the ten contracts reworded, the duplicate id fixed), frozen as S-prime with the FAST gate re-run. The sites themselves need no re-work.",
+  "would_be_applied_delta": "X509_VERIFY_POLICY stays site-scoped: v2i 10 -> 0 BLOCKED, bitst 2 unchanged, s2i 9 / i2v 7 / r2i 6 / print 4 / audit 2 / non-method 2 unchanged; mechanism 42B/38D -> 32B/48D; closure 145B/167D -> 135B/177D."
  },
  "schema_note": "Same shape as boundary-sweep-B50.json, plus the scope.excluded entry, the B51-R7 brief-discrepancy residual, and the B51-C2 documented non-canaried negative result. `line` is the V1 census coordinate; `line_current` is the candidate working-tree coordinate bound by files_sha256.",
  "hold_canaries": [
@@ -734,5 +747,56 @@
   "observed": "All three liveness tests failed at ext.is_null() (v3_conf.rs:1706/1734/1761) before reaching the probe; the gate reported FAILED 149 passed / 3 failed.",
   "resolution": "Box::leak in the #[cfg(test)] harness gives the row a static lifetime (dedicated test process; the registry borrows it; ext_flags stays non-DYNAMIC so X509V3_EXT_cleanup cannot free it). No assertion was weakened.",
   "recorded_because": "A vacuous or crashed liveness test cannot support a discharge; the failure and its fix are part of the evidence."
- }
+ },
+ "review_history": [
+  {
+   "reviewer": "pending independent adjudication",
+   "verdict": "UNAPPLIED",
+   "applied": false,
+   "prohibition": "This receipt is a DRAFT. It must not be applied, copied into CAMPAIGN-STATUS.json, or used to mark any obligation SAFETY_DISCHARGED until an independent adjudicator has frozen the candidate S', re-run the FAST gate at S', and verified every candidate.files_sha256 against the committed tree. The adjudicator must also rule on B51-R1 (no read hold across the v2i callback) and B51-R7 (the brief's signature/release discrepancy).",
+   "superseded_by": "independent adjudication, REJECT, 2026-11-02; the dispositions are unchanged and remain unapplied"
+  }
+ ],
+ "rejection_findings": [
+  {
+   "id": "B51-REJ-1",
+   "class": "false-residual",
+   "detail": "R3 obsolete: the narrowing was removed; record the fix and its test."
+  },
+  {
+   "id": "B51-REJ-2",
+   "class": "false-residual",
+   "detail": "R4 obsolete: the double-free was fixed; record the fix and its test."
+  },
+  {
+   "id": "B51-REJ-3",
+   "class": "hidden-obligation",
+   "detail": "the read hold is non-reentrant; a callback re-entering a registry writer self-deadlocks. Record as a retained obligation with the code citation."
+  },
+  {
+   "id": "B51-REJ-4",
+   "class": "contradiction",
+   "detail": "the ten contracts still impose the cleanup-exclusion caller duty; reword to reflect the enforced hold, keeping only the caller-owned-row lifetime duty."
+  },
+  {
+   "id": "B51-REJ-5",
+   "class": "false-delta",
+   "detail": "claimed 348/0 additive; measured 748/18 with two functional fixes."
+  },
+  {
+   "id": "B51-REJ-6",
+   "class": "stale-condition",
+   "detail": "review_conditions C1 and C3 describe a different mechanism and a different candidate."
+  },
+  {
+   "id": "B51-REJ-7",
+   "class": "control-id",
+   "detail": "duplicate B51-C2 in negative_control and hold_canaries."
+  },
+  {
+   "id": "B51-REJ-8",
+   "class": "identity-hygiene",
+   "detail": "the working tree was not literally clean at receipt time; state the untracked set explicitly."
+  }
+ ]
 }
