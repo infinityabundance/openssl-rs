@@ -1,0 +1,44 @@
+{
+ "receipt": "coordinate-coverage-finding",
+ "kind": "instrument-finding",
+ "date": "2026-11-02",
+ "subphase": "B51",
+ "state": "PROPOSED — NOT APPLIED",
+ "finding": "The closure instrument's scoped-discharge coverage test is line-based (a receipt declares a line or a line range and the disposition counts only if the current coordinate is covered). Two properties of this toolchain and this campaign make line-based coverage systematically fragile: (1) any edit above a discharged operation, including a documentation edit, shifts its coordinate; (2) comment-only source edits are not artefact-neutral, because panic Location constants embed line numbers, so they also force a rebuild, a relink and a new freeze. The combination means that writing a contract, which the campaign requires, invalidates the receipts that justify other discharges in the same file.",
+ "observed_evidence": [
+  {
+   "candidate_before": "8b9a03e28",
+   "candidate_after": "cb9c4c64c",
+   "change": "113 added / 34 removed lines in ten src/x509 files, every line a comment, zero non-comment lines",
+   "effect_on_b51_coordinates": "all 10 of 10 proposed B51 v2i coordinates shifted by +8 lines (v3_asid 1497->1505, v3_battcons 234->241, v3_bcons 234->242, v3_extku 237->245, v3_info 441->449, v3_ist 272->280, v3_pcons 204->212, v3_pmaps 255->263, v3_sxnet 445->453, v3_tlsf 233->241)",
+   "effect_on_discharged_b49_coordinate": "B49-I2R-009 (src/x509/v3_ist.rs i2r_issuer_sign_tool) moved 372 -> 380; its independent coordinate rebind (2026-11-02, REBIND-APPROVED) is therefore stale again at S-prime",
+   "effect_on_artefacts": "the six installed artefacts all changed digest, although .text/.rodata/.data are byte-identical and only .data.rel.ro differs, by exactly 8 panic Location.line values; archives differ only by LLVM CGU section-name suffixes. Census classification changed by 0."
+  }
+ ],
+ "impact": [
+  "A documentation edit in a discharged file forces: rebuild, relink both consumers, a new freeze, a new baseline closure and a re-bind (or loss) of every line-pinned receipt in that file.",
+  "The conservative refusal is correct and must be preserved; the defect is that the evidence is pinned to a coordinate rather than to the operation it proves.",
+  "Left unfixed, the campaign pays a full cycle per contract edit and accumulates re-bind records that carry no new safety information."
+ ],
+ "proposed_resolution": {
+  "summary": "Make scoped coverage content-addressed. Record, per disposition, the sha256 of the operation's own text (signature through brace-matched close, excluding its leading documentation comment) in addition to its coordinate. Accept the disposition when the stable identity matches AND the current operation text hash equals the recorded hash. Treat the line coordinate as advisory.",
+  "why_this_is_stronger_not_weaker": [
+   "A line range proves only that some line inside a declared span currently holds something; a text hash binds the disposition to the exact code that was reviewed.",
+   "Any semantic change inside the operation changes the hash and the disposition is refused, which is strictly more sensitive than a coordinate check.",
+   "Moving an operation without editing it (comment insertion elsewhere, item reordering) no longer destroys evidence, so the incentive to avoid documenting contracts disappears."
+  ],
+  "required_before_application": [
+   "Independent adjudication of the instrument change (the reviewer must not be the author).",
+   "Adversarial mutation controls, each reproduced: (a) change one code line inside a discharged operation -> disposition MUST be refused; (b) insert comments above the operation -> disposition MUST still be accepted; (c) reorder two untouched operations -> behaviour must be explicitly decided and tested, not left undefined; (d) rename the operation -> refused (identity changes).",
+   "A recorded decision that existing line-based evidence remains valid after migration, with the migration itself logged per site rather than silently reinterpreted.",
+   "No weakening of any other gate: the closure's refusal counts, family verdicts and element-7 instrumentation are untouched by this proposal."
+  ],
+  "alternative_rejected": "Re-binding by hand on every documentation edit. It is defensible but unbounded: it adds review cycles that prove only that a function did not move, and it makes the cheapest correct action (documenting a contract) the most expensive."
+ },
+ "current_delta_if_applied_now": "NONE. No receipt, ledger row or tool has been changed by this finding.",
+ "non_claims": [
+  "This is not a discharge and not a claim that any current receipt is sound.",
+  "It does not propose to relax any refusal: every currently refused disposition stays refused until its operation text hash is recorded and checked.",
+  "It does not assert that content-addressing alone establishes safety; the contract, caller closure and negative controls remain the substance of every discharge."
+ ]
+}
