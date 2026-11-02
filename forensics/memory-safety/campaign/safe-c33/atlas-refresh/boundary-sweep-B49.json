@@ -649,12 +649,22 @@
    "id": "B49-I2R-009",
    "file": "src/x509/v3_ist.rs",
    "line": 331,
-   "line_current": 372,
+   "line_current": 380,
    "line_current_history": [
     {
      "value": 346,
      "candidate": "84f624012",
      "note": "B49/B50 coordinate; superseded by the B51 comment-only insertion above v2i_issuer_sign_tool"
+    },
+    {
+     "value": 372,
+     "candidate": "8b9a03e28",
+     "note": "coordinate at the B51 rebind; superseded by the cb9c4c64c comment-only contract rewording"
+    },
+    {
+     "value": 380,
+     "candidate": "cb9c4c64c",
+     "note": "coordinate at cb9c4c64c; content hash unchanged from 8b9a03e28"
     }
    ],
    "rebind": {
@@ -664,7 +674,16 @@
     "receipt": "b49-coordinate-rebind",
     "proof": "the i2r_issuer_sign_tool text is byte-identical at 84f624012 (lines 346-427) and 8b9a03e28 (lines 372-453), sha256 6988c6ab335eb1204d84718d4c0537704e6dc97b7e4842d4b3c2adf244e07864; the only diff in the file is 26 added /// lines above v2i_issuer_sign_tool",
     "review": "independent adjudicator, REBIND-APPROVED, 2026-11-02",
-    "residual": "this entry's registration (:430/:442) and guard prose still cite pre-shift coordinates; cosmetic, not covered by the authorised rebind"
+    "residual": "this entry's registration (:430/:442) and guard prose still cite pre-shift coordinates; cosmetic, not covered by the authorised rebind",
+    "second_stage": {
+     "from": 372,
+     "to": 380,
+     "candidate": "cb9c4c64c",
+     "cause": "comment-only contract rewording in the same file",
+     "proof": "recompute the function text sha256 at cb9c4c64c and at 8b9a03e28 and confirm equality; record both",
+     "proof_sha256_8b9a03e28": "6988c6ab335eb1204d84718d4c0537704e6dc97b7e4842d4b3c2adf244e07864",
+     "proof_sha256_cb9c4c64c": "6988c6ab335eb1204d84718d4c0537704e6dc97b7e4842d4b3c2adf244e07864"
+    }
    },
    "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the candidate working tree",
    "kind": "UNSAFE_FN_DEF",
@@ -673,7 +692,7 @@
    "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int",
    "registration": "ossl_v3_issuer_sign_tool (v3_ist.rs:430), i2r slot at v3_ist.rs:442",
    "guard": "dispatcher prologue refuses NULL out/ext (src/x509/v3_prn.rs:263-265); ext_method_item resolves the row item once and refuses a NULL item (:296-304); a NULL decode is refused before the slot (:317-320)",
-   "disposition": "SAFETY_DISCHARGED (scope: i2r_issuer_sign_tool and its dispatch path; src/x509/v3_ist.rs:372)",
+   "disposition": "SAFETY_DISCHARGED (scope: i2r_issuer_sign_tool and its dispatch path; src/x509/v3_ist.rs:380)",
    "contract": "i2r slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). X509V3_EXT_print resolves the row's own ASN.1 item once (ext_method_item, src/x509/v3_prn.rs:296) and treats a NULL item as a failed decode (:296-304); it refuses a NULL out or ext in its prologue (:263-265) and a NULL decode before the slot (:317-320); it calls i2r at :358 and releases the decoded value with the same item at :372. `ext` is exclusively the dispatcher's for the call: the callback must not free, retain or replace it. `out` must be a live BIO (the caller's obligation; the guard establishes non-NULL only). This body additionally relies on: `ist` is a live decoded ISSUER_SIGN_TOOL; each of its three string members is NULL or a live ASN1_IA5STRING whose `data` is readable for exactly `length` bytes, which is the extent BIO_write reads.",
    "established": [
     "X509V3_EXT_print obtains the row from X509V3_EXT_get (:283) and refuses a NULL row (:284-287).",
@@ -692,7 +711,12 @@
     "x509::v3_prn::tests::i2r_printer_still_prints_through_a_live_bio",
     "x509::v3_prn::tests::i2r_printer_is_refused_when_the_value_does_not_decode"
    ],
-   "tests_note": "reached by contract review only; not driven end-to-end"
+   "tests_note": "reached by contract review only; not driven end-to-end",
+   "span_sha256": "6988c6ab335eb1204d84718d4c0537704e6dc97b7e4842d4b3c2adf244e07864",
+   "span_start_line": 380,
+   "span_end_line": 461,
+   "span_source_commit": "cb9c4c64c4749b796603cddf0736049d37ea12b0",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline"
   },
   {
    "id": "B49-I2R-010",

@@ -230,7 +230,7 @@
       "id": "B51-V2I-001",
       "file": "src/x509/v3_asid.rs",
       "line": 1453,
-      "line_current": 1497,
+      "line_current": 1505,
       "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
       "kind": "UNSAFE_FN_DEF",
       "operation": "v2i_ASIdentifiers",
@@ -256,13 +256,25 @@
         "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
         "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
       ],
-      "tests_note": "The build test drives NID_sbgp_autonomousSysNum with 'AS:1'; the reject test drives 'XX:1'. The shared pre-slot guard is mutation-proven by B51-C1."
+      "tests_note": "The build test drives NID_sbgp_autonomousSysNum with 'AS:1'; the reject test drives 'XX:1'. The shared pre-slot guard is mutation-proven by B51-C1.",
+      "span_sha256": "747deab93607879df356fdcf171793c52d4bf01ddf9f51c2b5f7f9833b6007f6",
+      "span_start_line": 1505,
+      "span_end_line": 1675,
+      "span_source_commit": "cb9c4c64c4749b796603cddf0736049d37ea12b0",
+      "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+      "line_current_history": [
+        {
+          "value": 1497,
+          "candidate": "8b9a03e28",
+          "note": "prior coordinate at the B51 base candidate; superseded by the cb9c4c64c comment-only doc edits"
+        }
+      ]
     },
     {
       "id": "B51-V2I-002",
       "file": "src/x509/v3_battcons.rs",
       "line": 208,
-      "line_current": 234,
+      "line_current": 241,
       "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
       "kind": "UNSAFE_FN_DEF",
       "operation": "v2i_OSSL_BASIC_ATTR_CONSTRAINTS",
@@ -287,13 +299,25 @@
         "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
         "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
       ],
-      "tests_note": "Driven with 'authority:TRUE,pathlen:1' and rejected with 'authority:bogus'."
+      "tests_note": "Driven with 'authority:TRUE,pathlen:1' and rejected with 'authority:bogus'.",
+      "span_sha256": "2a306bf301a494133538d95d28f4672dec10cec7b08d21ef5c46030706b22f7d",
+      "span_start_line": 241,
+      "span_end_line": 288,
+      "span_source_commit": "cb9c4c64c4749b796603cddf0736049d37ea12b0",
+      "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+      "line_current_history": [
+        {
+          "value": 234,
+          "candidate": "8b9a03e28",
+          "note": "prior coordinate at the B51 base candidate; superseded by the cb9c4c64c comment-only doc edits"
+        }
+      ]
     },
     {
       "id": "B51-V2I-003",
       "file": "src/x509/v3_bcons.rs",
       "line": 209,
-      "line_current": 234,
+      "line_current": 242,
       "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
       "kind": "UNSAFE_FN_DEF",
       "operation": "v2i_BASIC_CONSTRAINTS",
@@ -318,13 +342,25 @@
         "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
         "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
       ],
-      "tests_note": "Driven with 'CA:TRUE,pathlen:1' and rejected with 'CA:bogus'; the build case is also the B51-C1 empty-value target row."
+      "tests_note": "Driven with 'CA:TRUE,pathlen:1' and rejected with 'CA:bogus'; the build case is also the B51-C1 empty-value target row.",
+      "span_sha256": "27f004feb49a5375ca574e910c1015d0302bd71d7b5c655e5b9b0698aa03900b",
+      "span_start_line": 242,
+      "span_end_line": 289,
+      "span_source_commit": "cb9c4c64c4749b796603cddf0736049d37ea12b0",
+      "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+      "line_current_history": [
+        {
+          "value": 234,
+          "candidate": "8b9a03e28",
+          "note": "prior coordinate at the B51 base candidate; superseded by the cb9c4c64c comment-only doc edits"
+        }
+      ]
     },
     {
       "id": "B51-V2I-004",
       "file": "src/x509/v3_extku.rs",
       "line": 212,
-      "line_current": 237,
+      "line_current": 245,
       "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
       "kind": "UNSAFE_FN_DEF",
       "operation": "v2i_EXTENDED_KEY_USAGE",
@@ -349,13 +385,25 @@
         "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
         "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
       ],
-      "tests_note": "Driven with 'serverAuth' and rejected with 'notanoid'."
+      "tests_note": "Driven with 'serverAuth' and rejected with 'notanoid'.",
+      "span_sha256": "2c67932b8fee909fedeefdce4355e6a8f938ab0e5e19c0badbf3643532f9b16d",
+      "span_start_line": 245,
+      "span_end_line": 286,
+      "span_source_commit": "cb9c4c64c4749b796603cddf0736049d37ea12b0",
+      "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+      "line_current_history": [
+        {
+          "value": 237,
+          "candidate": "8b9a03e28",
+          "note": "prior coordinate at the B51 base candidate; superseded by the cb9c4c64c comment-only doc edits"
+        }
+      ]
     },
     {
       "id": "B51-V2I-005",
       "file": "src/x509/v3_info.rs",
       "line": 414,
-      "line_current": 441,
+      "line_current": 449,
       "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
       "kind": "UNSAFE_FN_DEF",
       "operation": "v2i_AUTHORITY_INFO_ACCESS",
@@ -380,13 +428,25 @@
         "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
         "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
       ],
-      "tests_note": "Driven with 'OCSP;URI:http://example.com' and rejected with 'OCSP' (no ';' prefix)."
+      "tests_note": "Driven with 'OCSP;URI:http://example.com' and rejected with 'OCSP' (no ';' prefix).",
+      "span_sha256": "070893b8d932de42f67ea5f956b6b87d3aabe3a6ab13e44f1da256c30228b48e",
+      "span_start_line": 449,
+      "span_end_line": 540,
+      "span_source_commit": "cb9c4c64c4749b796603cddf0736049d37ea12b0",
+      "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+      "line_current_history": [
+        {
+          "value": 441,
+          "candidate": "8b9a03e28",
+          "note": "prior coordinate at the B51 base candidate; superseded by the cb9c4c64c comment-only doc edits"
+        }
+      ]
     },
     {
       "id": "B51-V2I-006",
       "file": "src/x509/v3_ist.rs",
       "line": 246,
-      "line_current": 272,
+      "line_current": 280,
       "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
       "kind": "UNSAFE_FN_DEF",
       "operation": "v2i_issuer_sign_tool",
@@ -411,13 +471,25 @@
         "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
         "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
       ],
-      "tests_note": "Driven with 'signTool:tool' and rejected with 'bogusTool:tool'."
+      "tests_note": "Driven with 'signTool:tool' and rejected with 'bogusTool:tool'.",
+      "span_sha256": "f53b7f8d4280b4fd24ee16633074db60cf24081a1f7988ea2c1605a34500dcb9",
+      "span_start_line": 280,
+      "span_end_line": 361,
+      "span_source_commit": "cb9c4c64c4749b796603cddf0736049d37ea12b0",
+      "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+      "line_current_history": [
+        {
+          "value": 272,
+          "candidate": "8b9a03e28",
+          "note": "prior coordinate at the B51 base candidate; superseded by the cb9c4c64c comment-only doc edits"
+        }
+      ]
     },
     {
       "id": "B51-V2I-007",
       "file": "src/x509/v3_pcons.rs",
       "line": 179,
-      "line_current": 204,
+      "line_current": 212,
       "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
       "kind": "UNSAFE_FN_DEF",
       "operation": "v2i_POLICY_CONSTRAINTS",
@@ -442,13 +514,25 @@
         "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
         "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
       ],
-      "tests_note": "Driven with 'requireExplicitPolicy:1' and rejected with 'requireExplicitPolicy:bogus'."
+      "tests_note": "Driven with 'requireExplicitPolicy:1' and rejected with 'requireExplicitPolicy:bogus'.",
+      "span_sha256": "2e56bbde1a65eb6857ed22e819ee3ef1742ec864cf4391475b9d387477a17ccd",
+      "span_start_line": 212,
+      "span_end_line": 270,
+      "span_source_commit": "cb9c4c64c4749b796603cddf0736049d37ea12b0",
+      "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+      "line_current_history": [
+        {
+          "value": 204,
+          "candidate": "8b9a03e28",
+          "note": "prior coordinate at the B51 base candidate; superseded by the cb9c4c64c comment-only doc edits"
+        }
+      ]
     },
     {
       "id": "B51-V2I-008",
       "file": "src/x509/v3_pmaps.rs",
       "line": 229,
-      "line_current": 255,
+      "line_current": 263,
       "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
       "kind": "UNSAFE_FN_DEF",
       "operation": "v2i_POLICY_MAPPINGS",
@@ -473,13 +557,25 @@
         "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
         "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
       ],
-      "tests_note": "Driven with '1.2.3.4:1.2.3.5' and rejected with '1.2.3.4' (NULL value)."
+      "tests_note": "Driven with '1.2.3.4:1.2.3.5' and rejected with '1.2.3.4' (NULL value).",
+      "span_sha256": "d48172585cbaf5169389227c67b458262c29edb912febadc6445059e18bea507",
+      "span_start_line": 263,
+      "span_end_line": 321,
+      "span_source_commit": "cb9c4c64c4749b796603cddf0736049d37ea12b0",
+      "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+      "line_current_history": [
+        {
+          "value": 255,
+          "candidate": "8b9a03e28",
+          "note": "prior coordinate at the B51 base candidate; superseded by the cb9c4c64c comment-only doc edits"
+        }
+      ]
     },
     {
       "id": "B51-V2I-009",
       "file": "src/x509/v3_sxnet.rs",
       "line": 420,
-      "line_current": 445,
+      "line_current": 453,
       "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
       "kind": "UNSAFE_FN_DEF",
       "operation": "sxnet_v2i",
@@ -504,13 +600,25 @@
         "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
         "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
       ],
-      "tests_note": "Driven with '1:user' and rejected with 'notanint:user'."
+      "tests_note": "Driven with '1:user' and rejected with 'notanint:user'.",
+      "span_sha256": "e91dd5a8b890319d86aa4f1a57647cc83556c6135739ae3b3b68b5f3a42e591a",
+      "span_start_line": 453,
+      "span_end_line": 475,
+      "span_source_commit": "cb9c4c64c4749b796603cddf0736049d37ea12b0",
+      "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+      "line_current_history": [
+        {
+          "value": 445,
+          "candidate": "8b9a03e28",
+          "note": "prior coordinate at the B51 base candidate; superseded by the cb9c4c64c comment-only doc edits"
+        }
+      ]
     },
     {
       "id": "B51-V2I-010",
       "file": "src/x509/v3_tlsf.rs",
       "line": 208,
-      "line_current": 233,
+      "line_current": 241,
       "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
       "kind": "UNSAFE_FN_DEF",
       "operation": "v2i_TLS_FEATURE",
@@ -535,7 +643,19 @@
         "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
         "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
       ],
-      "tests_note": "Driven with 'status_request' and rejected with 'notafeature'."
+      "tests_note": "Driven with 'status_request' and rejected with 'notafeature'.",
+      "span_sha256": "b036d1df826dae21be97207316b9f0b714b9680cf66884f9973e8c53bb2cb5e6",
+      "span_start_line": 241,
+      "span_end_line": 315,
+      "span_source_commit": "cb9c4c64c4749b796603cddf0736049d37ea12b0",
+      "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+      "line_current_history": [
+        {
+          "value": 233,
+          "candidate": "8b9a03e28",
+          "note": "prior coordinate at the B51 base candidate; superseded by the cb9c4c64c comment-only doc edits"
+        }
+      ]
     }
   ],
   "hidden_obligations": 0,
