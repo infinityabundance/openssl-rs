@@ -83,7 +83,7 @@
     }
    },
    "committed_blob_sha256": null,
-   "committed_install_matches_this_source": false,
+   "committed_install_matches_this_source": true,
    "match_basis": "the install was rebuilt at S in this step; the artefacts are on-disk outputs of S but are not yet committed, so their digests bind the working-tree bytes rather than a committed blob. They become committed bytes when the orchestrator commits the candidate.",
    "build_metadata": {
     "rebuild_performed": true,
@@ -240,5 +240,30 @@
    "path": "/tmp/clippy-gate-b51.log (court-local, not committed)",
    "exit": 0
   }
+ },
+ "commit_binding": {
+  "commit": "4ab4282cfb754e91260c476c69c22997580a8153",
+  "verified_on": "2026-11-02",
+  "method": "tracked artefacts re-hashed from `git show HEAD:<path>`; court-local, gitignored artefacts re-hashed from the working tree at the same revision",
+  "committed_artefacts": [
+   "artifacts/phase2/install/lib/libcrypto.so.3",
+   "artifacts/phase2/install/lib/libssl.so.3",
+   "artifacts/phase2/install/lib/libcrypto.a",
+   "artifacts/phase2/install/lib/libssl.a",
+   "artifacts/phase2/install/bin/openssl",
+   "artifacts/phase2/install/lib/ossl-modules/legacy.so",
+   "artifacts/phase2/COURTS.json",
+   "artifacts/phase2/install/lib/libcrypto.so.3"
+  ],
+  "court_local_artefacts": [
+   "court/freeze-b51/clippy-b51.jsonl",
+   "court/freeze-b51/build-openssh-b51.sh",
+   "court/tmp/openssh-closure/client-b51/openssh-9.9p1/ssh",
+   "court/tmp/openssh-closure/server-b51/openssh-9.9p1/sshd",
+   "court/freeze-b51/openssh-build-timings.json",
+   "court/freeze-b51/census-b51.json"
+  ],
+  "all_match": true,
+  "note": "Binds the freeze to the commit containing the measured bytes. Not a re-measurement: no tool was re-run and no recorded digest was altered."
  }
 }
