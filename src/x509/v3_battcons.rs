@@ -205,6 +205,32 @@ unsafe extern "C" fn i2v_OSSL_BASIC_ATTR_CONSTRAINTS(
 
 /// `static OSSL_BASIC_ATTR_CONSTRAINTS *v2i_OSSL_BASIC_ATTR_CONSTRAINTS(X509V3_EXT_METHOD *method,
 /// X509V3_CTX *ctx, STACK_OF(CONF_VALUE) *values)` — `crypto/x509/v3_battcons.c:55-86`.
+///
+/// # Safety
+///
+/// The `v2i` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `do_ext_nconf`'s `v2i` arm (`src/x509/v3_conf.rs:1029-1066`). Before the call it resolves
+/// `method` through `X509V3_EXT_get_nid` (a **borrowed** row; `do_ext_nconf` holds the registry
+/// read hold across that lookup, this callback and the encoder), refuses `ext_nid == NID_undef` and
+/// a NULL row, builds `values` with
+/// `X509V3_parse_list` (an owning list freed immediately after this call) or `NCONF_get_section`
+/// (a section-owned stack it does not free), and refuses a NULL `values` or
+/// `OPENSSL_sk_num(values) <= 0`. `values` is therefore a live, non-empty stack of live
+/// `CONF_VALUE` elements; every element has a non-NULL NUL-terminated `name` (both producers
+/// check it: `X509V3_parse_list` checks `ntmp`, the config loader checks `(*v).name`) and a
+/// NULL-or-NUL-terminated `value`. This body relies on exactly that and does not null-check
+/// `values`, an element or its `name`. It ignores `ctx` and `method`;
+/// `X509V3_get_value_bool`/`_int` accept a NULL `value`. On success it returns a fresh
+/// `OSSL_BASIC_ATTR_CONSTRAINTS` exclusively owned by the dispatcher, which encodes it with this
+/// row's `it` and releases it exactly once with `ASN1_item_free(ext_struc, it())`
+/// (`src/x509/v3_conf.rs:1097-1105`; this row's `ext_free` is NULL). On failure it releases every
+/// partial value it built and returns NULL. The returned object's type must be the one this row's
+/// `it` names (`OSSL_BASIC_ATTR_CONSTRAINTS_it`); that pairing is the registrar's obligation. A
+/// concurrent `X509V3_EXT_cleanup` of a DYNAMIC row cannot release it while this callback uses
+/// `method`: the dispatcher holds the registry read hold across the lookup, this call and the
+/// encoder (B51).
+///
+/// Authority-derived: `crypto/x509/v3_conf.c:96-112`; `crypto/x509/v3_battcons.c:55-86`.
 unsafe extern "C" fn v2i_OSSL_BASIC_ATTR_CONSTRAINTS(
     _method: *const X509V3ExtMethod,
     _ctx: *mut c_void,
