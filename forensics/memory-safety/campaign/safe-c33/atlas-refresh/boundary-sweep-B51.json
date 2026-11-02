@@ -1,802 +1,877 @@
 {
- "receipt": "boundary-sweep-B51",
- "date": "2026-11-01",
- "campaign": "safe-c33 shared-contract establishment (E2 follow-on: the X509_VERIFY_POLICY extension-method v2i config decoders)",
- "subphase": "B51 takes the 10 v2i config-decoder sites left BLOCKED by B50. Unlike the i2s/i2r print path, v2i is dispatched by do_ext_nconf (src/x509/v3_conf.rs:998-1107), not X509V3_EXT_print, and that dispatcher does NOT hold the registry read hold across the callback: X509V3_EXT_get_nid takes and releases the read hold before returning the borrowed row. B51 therefore adds fn-level # Safety contracts to the 10 callbacks and three end-to-end tests, and records the row-liveness obligation as the authority's borrowed-row ABI rather than adding a second lock or hold. No functional defect was found to be reachable through the dispatcher, so the source delta is contracts plus tests only (348 insertions, 0 deletions). The discharge is NOT applied: CAMPAIGN-STATUS.json is untouched and the closure was not run.",
- "candidate": {
-  "base_head": "8b9a03e28",
-  "base_commit": "8b9a03e280e4f053fc5e081947d17584dfbca92f",
-  "base_commit_subject": "x509: hold the registry read lock across the v2i/i2d/d2i slots (B51 candidate)",
-  "branch": "stage/p25/element7-s2b",
-  "source_state": "committed as S2 = 8b9a03e28; working tree clean at receipt revision",
-  "working_tree": "clean",
-  "files": [
-   "src/x509/v3_asid.rs",
-   "src/x509/v3_battcons.rs",
-   "src/x509/v3_bcons.rs",
-   "src/x509/v3_conf.rs",
-   "src/x509/v3_extku.rs",
-   "src/x509/v3_info.rs",
-   "src/x509/v3_ist.rs",
-   "src/x509/v3_lib.rs",
-   "src/x509/v3_pcons.rs",
-   "src/x509/v3_pmaps.rs",
-   "src/x509/v3_sxnet.rs",
-   "src/x509/v3_tlsf.rs"
+  "receipt": "boundary-sweep-B51",
+  "date": "2026-11-01",
+  "campaign": "safe-c33 shared-contract establishment (E2 follow-on: the X509_VERIFY_POLICY extension-method v2i config decoders)",
+  "subphase": "B51 takes the 10 v2i config-decoder sites left BLOCKED by B50. Unlike the i2s/i2r print path, v2i is dispatched by do_ext_nconf (src/x509/v3_conf.rs:998-1107), not X509V3_EXT_print. B51 contracts the 10 callbacks and B51b adds the registry read hold across the config-decode slots: RegistryReadGuard spans do_ext_nconf's lookup-through-callback-and-encode span (src/x509/v3_conf.rs:1035), X509V3_EXT_i2d's encoder (src/x509/v3_conf.rs:742) and X509V3_EXT_d2i's decoder (src/x509/v3_lib.rs:892). Row liveness for a DYNAMIC row is therefore enforced rather than a caller duty. The measured source delta 3d32259e6..8b9a03e28 is 748 insertions / 18 deletions across 12 files, not additive: it also fixes (B51-R3) the `strspn` offset narrowing in v2i_ASIdentifiers and (B51-R4) the asid push-failure double release, with a discriminating free-probe test for R4. The discharge is NOT applied: CAMPAIGN-STATUS.json is untouched and the closure was not run.",
+  "candidate": {
+    "base_head": "8b9a03e28",
+    "base_commit": "8b9a03e280e4f053fc5e081947d17584dfbca92f",
+    "base_commit_subject": "x509: hold the registry read lock across the v2i/i2d/d2i slots (B51 candidate)",
+    "branch": "stage/p25/element7-s2b",
+    "source_state": "candidate S = 8b9a03e28 (commit 8b9a03e280e4f053fc5e081947d17584dfbca92f); the B51b registry read hold and the ten fn-level contracts are in that commit, and candidate.files_sha256 binds that tree. At authoring time two evidence baselines were untracked (see authoring_untracked); the build-relevant src/ tree was committed.",
+    "working_tree": "src/ committed at 8b9a03e28 at authoring; two untracked evidence baselines existed (see authoring_untracked), so the tree was not literally clean. This correction then adds a documentation-only src/ delta and receipt edits, both uncommitted (see working_delta).",
+    "files": [
+      "src/x509/v3_asid.rs",
+      "src/x509/v3_battcons.rs",
+      "src/x509/v3_bcons.rs",
+      "src/x509/v3_conf.rs",
+      "src/x509/v3_extku.rs",
+      "src/x509/v3_info.rs",
+      "src/x509/v3_ist.rs",
+      "src/x509/v3_lib.rs",
+      "src/x509/v3_pcons.rs",
+      "src/x509/v3_pmaps.rs",
+      "src/x509/v3_sxnet.rs",
+      "src/x509/v3_tlsf.rs"
+    ],
+    "note": "line_current is bound to the committed candidate; files_sha256 below is that commit.",
+    "files_sha256": {
+      "src/x509/v3_asid.rs": "085f5edeada2f212b1c37e09ad66cff71b7db9c78eac2f81f62c8f484c226355",
+      "src/x509/v3_battcons.rs": "38825b0991f6e624537677af5409f0edd9e3df2d48ecdc832474494c39f0f883",
+      "src/x509/v3_bcons.rs": "df7650e3d9379c8d1e602692b8467538cca82fa1d3c31fda1a1a4165434f1191",
+      "src/x509/v3_conf.rs": "ffa78ab9e5c21364a63a07f73790d70fee958aa47bbc558593f4e3bc5987cd68",
+      "src/x509/v3_extku.rs": "2f3b6aafe54bc20f268ead1df71799cf6f231b6cd76eadc50a5336f0338c29d2",
+      "src/x509/v3_info.rs": "e994a459a38dec7aac43f16a12c68a6e14d9b68d7cbc55682834c02870ffbbbb",
+      "src/x509/v3_ist.rs": "b8f22c78ae41beef1b6cce4ac1a7134e18ca47c19aec5597fb79e5825f7ab28e",
+      "src/x509/v3_lib.rs": "fd61b37c8db0244ed68e5210cc33275e6aa92d043a1d4ce431284b083d0ee44d",
+      "src/x509/v3_pcons.rs": "ea06ec00604d22e6ec4a454e5289e64a9240ca173ab32098b82a61768e47cf91",
+      "src/x509/v3_pmaps.rs": "27285cb6f4e0a23d0d11d17ee0d7ff7891e08827f3c7bd5973a12ea9cb6a3241",
+      "src/x509/v3_sxnet.rs": "dfd28bf83f1612ac51196b0aa2288e1a8c13e929f5b7c7227c173fc96ee45acd",
+      "src/x509/v3_tlsf.rs": "c738922b80fbc6cb5a824afebb5f67b0e6df7d487c3b29e8923872361703f6af"
+    },
+    "authoring_untracked": [
+      "evidence/closure-ssh-b51-baseline.json",
+      "evidence/inventory-sshd-b51-baseline.json"
+    ],
+    "working_delta": {
+      "basis": "documentation-only rewording of the ten fn-level # Safety blocks (B51-REJ-4); no statement, expression, signature or attribute changed",
+      "uncommitted": true,
+      "files_sha256": {
+        "src/x509/v3_asid.rs": "ca8a24119f3d225544f9d1278170be6e52516c452cf20f30efd1fc4ac4267aef",
+        "src/x509/v3_battcons.rs": "a643d1792631360c26ebeca8c68ef32ee43f7a71be42ba95fafda1fedf163c00",
+        "src/x509/v3_bcons.rs": "9bfcd4599e11aaa22bcdb4cf5a43efd4f5127704416a80496e2778735a9f789b",
+        "src/x509/v3_extku.rs": "b0fc92ab21b250cb6913fcde6e8d6adbc63b512a7813266eefe9fd5abb3f9e64",
+        "src/x509/v3_info.rs": "cc445cacca272f43d51cdbe5a948557a6815f9c35fbfc59c972538926ba417b8",
+        "src/x509/v3_ist.rs": "b33c21bd62cdb851ca3f3cd014cd4155d7b5094eb65ff7c3e7e86fa189119f22",
+        "src/x509/v3_pcons.rs": "bcbee5fe35120f43326006ad6060aca39e02e93c2766aa19bc82b5d31845c742",
+        "src/x509/v3_pmaps.rs": "c553353ad11ec87e81fe363cc05324cc777d0f6d62ef23e133c2c2dd6b3349f4",
+        "src/x509/v3_sxnet.rs": "f843192e4321b6f11d1eea7cbbde43f35f02bab38aaa3d148ecb22be89ab07bc",
+        "src/x509/v3_tlsf.rs": "15820e00b3f7dfd5ec787e8bb067fadb7f35c0ae18fd77df0765893edde3dcf6"
+      },
+      "note": "candidate.files_sha256 stays bound to S = 8b9a03e28. This delta must be committed as S-prime and the FAST gate re-run before application."
+    }
+  },
+  "authority": {
+    "id": "openssl-3.6.4-production",
+    "source": "forensics/authorities/src/openssl-3.6.4",
+    "header": "include/openssl/x509v3.h.in:51-53 (X509V3_EXT_V2I) and :65-85 (the method struct)",
+    "dispatch": "crypto/x509/v3_conf.c:79-135 (do_ext_nconf) and crypto/x509/v3_lib.c:52-71 (X509V3_EXT_get_nid)",
+    "note": "The authority builds STACK_OF(CONF_VALUE) from X509V3_parse_list(value) or NCONF_get_section(conf, value + 1), refuses NULL or empty, calls the first of v2i/s2i/r2i that is set, encodes the result through method->it or method->i2d, then frees it with method->ext_free or ASN1_item_free. The candidate's do_ext_nconf is the same shape; it adds no refusal the authority lacks except the guards recorded here. The brief's stated v2i signature (method, unsigned char **, long) and ext_free release belong to the d2i/print path, not to v2i; the actual slot is (method, X509V3_CTX *, STACK_OF(CONF_VALUE) *) and all ten rows release through `it` with ext_free NULL. That discrepancy is recorded in B51-R7 and is not silently repaired."
+  },
+  "mechanism": {
+    "id": "X509_VERIFY_POLICY",
+    "state": "OWNERSHIP_RECONSTRUCTED",
+    "state_source": "state.json#/mechanisms[id=X509_VERIFY_POLICY]",
+    "discharge": "SITE-SCOPED: the ten v2i boundaries below only. The mechanism state is unchanged and is not discharged mechanism-wide."
+  },
+  "scope": {
+    "aggregation": ".obligations[] | select(.mechanism == \"X509_VERIFY_POLICY\" and .status == \"BLOCKED\") over evidence/closure-ssh-b50.json",
+    "raw_blocked_count": 42,
+    "v2i_named_blocked_count": 11,
+    "chosen_family": {
+      "family": "v2i",
+      "count": 10,
+      "why": "The closure has 11 BLOCKED obligations whose item is v2i-named: the ten below plus bitst_v2i. B50's not_touched taxonomy counts bitst_v2i under family bitst (2 = bitst_i2v + bitst_v2i), because bitst_v2i is a one-line forwarder to the same v2i_ASN1_BIT_STRING helper and usr_data table as its i2v sibling, so the campaign's v2i count is 10. B51 takes those ten. bitst_v2i stays BLOCKED in the bitst family and is NOT claimed here."
+    },
+    "per_file": [
+      {
+        "file": "src/x509/v3_asid.rs",
+        "v2i_count": 1,
+        "operations": [
+          "v2i_ASIdentifiers"
+        ]
+      },
+      {
+        "file": "src/x509/v3_battcons.rs",
+        "v2i_count": 1,
+        "operations": [
+          "v2i_OSSL_BASIC_ATTR_CONSTRAINTS"
+        ]
+      },
+      {
+        "file": "src/x509/v3_bcons.rs",
+        "v2i_count": 1,
+        "operations": [
+          "v2i_BASIC_CONSTRAINTS"
+        ]
+      },
+      {
+        "file": "src/x509/v3_extku.rs",
+        "v2i_count": 1,
+        "operations": [
+          "v2i_EXTENDED_KEY_USAGE"
+        ]
+      },
+      {
+        "file": "src/x509/v3_info.rs",
+        "v2i_count": 1,
+        "operations": [
+          "v2i_AUTHORITY_INFO_ACCESS"
+        ]
+      },
+      {
+        "file": "src/x509/v3_ist.rs",
+        "v2i_count": 1,
+        "operations": [
+          "v2i_issuer_sign_tool"
+        ]
+      },
+      {
+        "file": "src/x509/v3_pcons.rs",
+        "v2i_count": 1,
+        "operations": [
+          "v2i_POLICY_CONSTRAINTS"
+        ]
+      },
+      {
+        "file": "src/x509/v3_pmaps.rs",
+        "v2i_count": 1,
+        "operations": [
+          "v2i_POLICY_MAPPINGS"
+        ]
+      },
+      {
+        "file": "src/x509/v3_sxnet.rs",
+        "v2i_count": 1,
+        "operations": [
+          "sxnet_v2i"
+        ]
+      },
+      {
+        "file": "src/x509/v3_tlsf.rs",
+        "v2i_count": 1,
+        "operations": [
+          "v2i_TLS_FEATURE"
+        ]
+      }
+    ],
+    "excluded": [
+      {
+        "operation": "bitst_v2i",
+        "file": "src/x509/v3_bitst.rs",
+        "line": 360,
+        "line_current": 360,
+        "reason": "Belongs to B50's bitst family (shared v2i_ASN1_BIT_STRING helper and usr_data table with bitst_i2v); outside the ten-site v2i scope. Remains BLOCKED, not claimed."
+      }
+    ],
+    "not_touched": [
+      {
+        "family": "s2i",
+        "count": 9
+      },
+      {
+        "family": "i2v",
+        "count": 7
+      },
+      {
+        "family": "r2i",
+        "count": 6
+      },
+      {
+        "family": "print",
+        "count": 4
+      },
+      {
+        "family": "audit",
+        "count": 2
+      },
+      {
+        "family": "bitst",
+        "count": 2
+      },
+      {
+        "family": "non-method",
+        "count": 2
+      }
+    ]
+  },
+  "shared_contract": "v2i slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). do_ext_nconf resolves the row through X509V3_EXT_get_nid under a short registry read hold (src/x509/v3_conf.rs:1013) and uses the returned borrowed row after that hold is released; it refuses ext_nid == NID_undef (:1007), a NULL row (:1014), and a NULL or empty value stack (:1041); it builds STACK_OF(CONF_VALUE) from X509V3_parse_list (own, freed at :1060-1063) or NCONF_get_section (section-owned, not freed); it calls cb(method, ctx, nval) at :1059; on a non-NULL result it encodes through do_ext_i2d at :1098 and releases with ASN1_item_free(ext_struc, it()) at :1099-1101. The callback must consume `nval` read-only, must not free/retain it or its members, must not retain `method`/`ctx`, and must return a fresh object of exactly the row's `it` type, releasing any partial value itself on failure.",
+  "dispatch_paths": {
+    "entry_points": [
+      "X509V3_EXT_nconf (src/x509/v3_conf.rs:1195) -> X509V3_EXT_nconf_int(:1142) -> do_ext_nconf(:998).",
+      "X509V3_EXT_nconf_nid (src/x509/v3_conf.rs:1212) -> do_ext_nconf(:998); this is the entry the three tests drive.",
+      "X509V3_EXT_conf (src/x509/v3_conf.rs:1426) and X509V3_EXT_conf_nid (:1455) build a temporary NCONF and call the two above.",
+      "X509V3_EXT_add_nconf_sk (src/x509/v3_conf.rs:1245) walks a config section and calls X509V3_EXT_nconf_int(:1291)."
+    ],
+    "lookup": "X509V3_EXT_get_nid (src/x509/v3_lib.rs:748) takes a registry read hold for the lookup only and returns a BORROWED row (documented at :740-746). do_ext_nconf takes its own RegistryReadGuard at :1035 and holds it across the v2i/s2i/r2i slot read, the callback and do_ext_i2d, so a concurrent X509V3_EXT_cleanup cannot release the row for the whole dispatch. The lookup's short hold nests as a second read on the same thread.",
+    "values": "at_section = (*value == '@') (:1031); X509V3_parse_list(value) (:1037) is an owning list the dispatcher frees after the call (:1060-1063); NCONF_get_section(conf, value + 1) (:1034) is a section-owned stack it must not free.",
+    "guard": "nval.is_null() || OPENSSL_sk_num(nval) <= 0 is refused at :1041-1057 before any callback; this is the pre-slot guard the callback contracts rely on (B51-C1).",
+    "slot": "cb(method, ctx.cast::<c_void>(), nval) at :1059.",
+    "encode": "do_ext_i2d(method, ext_nid, crit, ext_struc) at :1098; it uses method->it when set (:614-633) else method->i2d (:634-647).",
+    "free": "ASN1_item_free(ext_struc, it()) at :1099-1101 when `it` is set; method->ext_free at :1102-1104 when it is not. All ten rows set `it` and ext_free is None.",
+    "lifetime": "`method` is borrowed from X509V3_EXT_get_nid and is protected by do_ext_nconf's RegistryReadGuard (src/x509/v3_conf.rs:1035) across the callback and encoder; the caller is not required to exclude X509V3_EXT_cleanup for the duration of the call. The hold ends at dispatch return and does not extend caller-owned row storage (X509V3_EXT_add's own Safety). `nval` is live across the call and is freed only after it when the dispatcher owns it; `ext_struc` is exclusively the dispatcher's from the callback return to :1098/:1101. The callback retains neither `method`, `nval`, nor its members.",
+    "allocator": "ext_struc is a fresh value from the row's item allocator on the CRYPTO_* seam; the DER block is CRYPTO_malloc'd by ASN1_item_i2d and owned by do_ext_i2d's OwnedBuf (drop site :184). The dispatch itself allocates nothing beyond the parse list.",
+    "second_reader": "The only production reads of a v2i slot are do_ext_nconf's :1020-1028. No test or other unit reads a v2i slot.",
+    "ctx": "ctx is NULL or a live X509V3_CTX; do_ext_nconf does not check it. Only v2i_AUTHORITY_INFO_ACCESS forwards it (to v2i_GENERAL_NAME_ex, which documents NULL-or-live); the other nine ignore it.",
+    "retention": "The callback may retain nothing. Its non-NULL result transfers to the dispatcher, which encodes it and releases it exactly once; a NULL result is reported as a failed extension build."
+  },
+  "row_liveness": {
+    "question": "Does the registry read hold span the v2i dispatch, as it spans the i2s/i2r print path?",
+    "answer": "YES, ENFORCED. B49/B50 relied on a hold in X509V3_EXT_print; the config-decode path had none, because X509V3_EXT_get_nid takes and releases the read lock at return. B51b adds RegistryReadGuard over the whole lookup-through-slot span in do_ext_nconf, X509V3_EXT_i2d and X509V3_EXT_d2i, so a concurrent X509V3_EXT_cleanup cannot release a DYNAMIC row under the callback. The duty is no longer documentary.",
+    "enforcement": "src/x509/v3_conf.rs do_ext_nconf (~:1035), X509V3_EXT_i2d (~:742); src/x509/v3_lib.rs X509V3_EXT_d2i (~:892). RAII: RegistryReadGuard::Drop unlocks on every path, including early NULL returns.",
+    "observation": "A #[cfg(test)] thread-local probe (v3_lib.rs read_hold_probe) is incremented by RegistryReadGuard::acquire and decremented by Drop; registry_read_held_on_this_thread() is absent from non-test builds and adds no exported item. A neutral control asserts the probe is false before dispatch, so true readings are not vacuous.",
+    "static_rows": "The ten rows are process-lifetime pub static values reached through STANDARD_EXTS; X509V3_EXT_cleanup cannot release them.",
+    "dynamic_rows": "X509V3_EXT_add_alias can copy a row containing a v2i slot into a DYNAMIC allocation released by ext_list_free; the added read hold now excludes that release for the whole dispatch.",
+    "caller_rows": "X509V3_EXT_add still accepts a caller-owned row and the list borrows it (only DYNAMIC rows are freed). Caller storage lifetime stays a stated caller obligation on X509V3_EXT_add's own # Safety block; the registry lock does not and cannot protect the caller memory. A callback registered by a caller must also not re-enter a registry writer (B51-R9)."
+  },
+  "defect_class": "uncontracted unsafe fn definitions at 10 X509_VERIFY_POLICY v2i sites. The blocks already carried per-line SAFETY comments but no fn-level # Safety. The dispatcher evidence is unchanged (name non-NULL from both producers, value NULL-or-NUL-terminated, NULL-safe stack/parse helpers, correct partial frees). The delta is not additive: besides the ten contracts and three end-to-end tests it adds the registry read hold (B51b) and fixes two functional defects in v2i_ASIdentifiers -- the `strspn` offset narrowing (B51-R3) and the failed-push double release (B51-R4).",
+  "boundaries": [
+    {
+      "id": "B51-V2I-001",
+      "file": "src/x509/v3_asid.rs",
+      "line": 1453,
+      "line_current": 1497,
+      "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "v2i_ASIdentifiers",
+      "mechanism": "X509_VERIFY_POLICY",
+      "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
+      "registration": "row ossl_v3_asid, v2i slot at src/x509/v3_asid.rs:1782",
+      "guard": "do_ext_nconf refuses ext_nid == NID_undef (:1007), a NULL row (:1014), and a NULL or empty `nval` (:1041-1057) before the v2i slot; no new guard was added.",
+      "disposition": "SAFETY_DISCHARGED (scope: v2i_ASIdentifiers and its do_ext_nconf dispatch path; src/x509/v3_asid.rs:1497)",
+      "contract": "v2i slot contract on X509V3ExtMethod. Caller do_ext_nconf's v2i arm (:1029-1066) establishes: method is a live borrowed row; nval is a live non-empty stack of live CONF_VALUE elements with non-NULL NUL-terminated name and NULL-or-NUL-terminated value; ctx is NULL or live. The body ignores ctx/method, reads name unconditionally, null-checks value, and canonizes the result. On success it returns a fresh ASIdentifiers owned by the dispatcher, encoded with ASIdentifiers_it and freed once with ASN1_item_free; on failure it frees the partial value. The returned type must match the row's `it` (registrar obligation). Row liveness while the callback runs is enforced by the dispatcher's registry read hold (B51-R1; canary B51-H1), so the caller need not exclude `X509V3_EXT_cleanup` during the call. `X509V3_EXT_add` still borrows caller-owned row storage, the `it`/`usr_data` pairing is the registrar's obligation, and a callback must not call a registry writer (B51-R9).",
+      "established": [
+        "do_ext_nconf resolves method under X509V3_EXT_get_nid and refuses NID_undef/NULL (:1007-1018).",
+        "do_ext_nconf refuses a NULL or empty STACK_OF(CONF_VALUE) before the slot (:1041-1057).",
+        "X509V3_parse_list stores only a checked non-NULL `ntmp` name; the config loader refuses a NULL (*v).name, so every element name is non-NULL.",
+        "nval is live for the whole call and is freed only after it when the dispatcher owns it (:1060-1063).",
+        "The non-NULL result is encoded and released exactly once with the row's own item (:1097-1105)."
+      ],
+      "authority_derived": [
+        "crypto/x509/v3_conf.c:96-112 calls method->v2i(method, ctx, nval) and frees ext_struc at :127-134.",
+        "The callback is transcribed from crypto/x509/v3_asid.c:495-609.",
+        "The authority has no registry lock across the v2i call; the borrowed-row contract is the ABI's own."
+      ],
+      "tests": [
+        "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
+        "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
+      ],
+      "tests_note": "The build test drives NID_sbgp_autonomousSysNum with 'AS:1'; the reject test drives 'XX:1'. The shared pre-slot guard is mutation-proven by B51-C1."
+    },
+    {
+      "id": "B51-V2I-002",
+      "file": "src/x509/v3_battcons.rs",
+      "line": 208,
+      "line_current": 234,
+      "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "v2i_OSSL_BASIC_ATTR_CONSTRAINTS",
+      "mechanism": "X509_VERIFY_POLICY",
+      "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
+      "registration": "row ossl_v3_battcons, v2i slot at src/x509/v3_battcons.rs:294",
+      "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
+      "disposition": "SAFETY_DISCHARGED (scope: v2i_OSSL_BASIC_ATTR_CONSTRAINTS and its do_ext_nconf dispatch path; src/x509/v3_battcons.rs:234)",
+      "contract": "Same v2i/dispatcher contract as B51-V2I-001. The body ignores ctx/method; X509V3_get_value_bool/_int accept a NULL value. Success returns a fresh OSSL_BASIC_ATTR_CONSTRAINTS owned by the dispatcher, encoded with OSSL_BASIC_ATTR_CONSTRAINTS_it and freed once with ASN1_item_free; failure frees the partial value. The `it` pairing is the registrar's obligation; Row liveness while the callback runs is enforced by the dispatcher's registry read hold (B51-R1; canary B51-H1), so the caller need not exclude `X509V3_EXT_cleanup` during the call. `X509V3_EXT_add` still borrows caller-owned row storage, the `it`/`usr_data` pairing is the registrar's obligation, and a callback must not call a registry writer (B51-R9).",
+      "established": [
+        "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
+        "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
+        "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated.",
+        "X509V3_get_value_bool/_int accept a NULL value.",
+        "The result is encoded and released once with the row's own item (:1097-1105)."
+      ],
+      "authority_derived": [
+        "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_battcons.c:55-86.",
+        "The authority has no registry lock across the v2i call."
+      ],
+      "tests": [
+        "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
+        "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
+      ],
+      "tests_note": "Driven with 'authority:TRUE,pathlen:1' and rejected with 'authority:bogus'."
+    },
+    {
+      "id": "B51-V2I-003",
+      "file": "src/x509/v3_bcons.rs",
+      "line": 209,
+      "line_current": 234,
+      "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "v2i_BASIC_CONSTRAINTS",
+      "mechanism": "X509_VERIFY_POLICY",
+      "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
+      "registration": "row ossl_v3_bcons, v2i slot at src/x509/v3_bcons.rs:294",
+      "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
+      "disposition": "SAFETY_DISCHARGED (scope: v2i_BASIC_CONSTRAINTS and its do_ext_nconf dispatch path; src/x509/v3_bcons.rs:234)",
+      "contract": "Same v2i/dispatcher contract as B51-V2I-001. The body ignores ctx/method; X509V3_get_value_bool/_int accept a NULL value. Success returns a fresh BasicConstraints owned by the dispatcher, encoded with BASIC_CONSTRAINTS_it and freed once with ASN1_item_free; failure frees the partial value. The `it` pairing is the registrar's obligation; Row liveness while the callback runs is enforced by the dispatcher's registry read hold (B51-R1; canary B51-H1), so the caller need not exclude `X509V3_EXT_cleanup` during the call. `X509V3_EXT_add` still borrows caller-owned row storage, the `it`/`usr_data` pairing is the registrar's obligation, and a callback must not call a registry writer (B51-R9).",
+      "established": [
+        "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
+        "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
+        "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated.",
+        "X509V3_get_value_bool/_int accept a NULL value.",
+        "The result is encoded and released once with the row's own item (:1097-1105)."
+      ],
+      "authority_derived": [
+        "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_bcons.c:55-85.",
+        "The authority has no registry lock across the v2i call."
+      ],
+      "tests": [
+        "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
+        "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
+      ],
+      "tests_note": "Driven with 'CA:TRUE,pathlen:1' and rejected with 'CA:bogus'; the build case is also the B51-C1 empty-value target row."
+    },
+    {
+      "id": "B51-V2I-004",
+      "file": "src/x509/v3_extku.rs",
+      "line": 212,
+      "line_current": 237,
+      "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "v2i_EXTENDED_KEY_USAGE",
+      "mechanism": "X509_VERIFY_POLICY",
+      "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
+      "registration": "row ossl_v3_ext_ku and the three ext_key_usage_row rows (OCSP acceptable responses, acceptable cert/privilege policies), v2i slot at src/x509/v3_extku.rs:300",
+      "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
+      "disposition": "SAFETY_DISCHARGED (scope: v2i_EXTENDED_KEY_USAGE and its do_ext_nconf dispatch path; src/x509/v3_extku.rs:237)",
+      "contract": "Same v2i/dispatcher contract as B51-V2I-001. The body ignores ctx/method, reads name unconditionally and uses value only when non-NULL. Success returns a fresh STACK_OF(ASN1_OBJECT) owned by the dispatcher, encoded with EXTENDED_KEY_USAGE_it and freed once with ASN1_item_free; failure frees the partial stack. The `it` pairing is the registrar's obligation; Row liveness while the callback runs is enforced by the dispatcher's registry read hold (B51-R1; canary B51-H1), so the caller need not exclude `X509V3_EXT_cleanup` during the call. `X509V3_EXT_add` still borrows caller-owned row storage, the `it`/`usr_data` pairing is the registrar's obligation, and a callback must not call a registry writer (B51-R9).",
+      "established": [
+        "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
+        "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
+        "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated and the body falls back to name.",
+        "OBJ_txt2obj is NULL-safe.",
+        "The result is encoded and released once with the row's own item (:1097-1105)."
+      ],
+      "authority_derived": [
+        "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_extku.c:92-125.",
+        "The authority has no registry lock across the v2i call."
+      ],
+      "tests": [
+        "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
+        "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
+      ],
+      "tests_note": "Driven with 'serverAuth' and rejected with 'notanoid'."
+    },
+    {
+      "id": "B51-V2I-005",
+      "file": "src/x509/v3_info.rs",
+      "line": 414,
+      "line_current": 441,
+      "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "v2i_AUTHORITY_INFO_ACCESS",
+      "mechanism": "X509_VERIFY_POLICY",
+      "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
+      "registration": "rows ossl_v3_info and ossl_v3_sinfo (info_access_row), v2i slot at src/x509/v3_info.rs:571",
+      "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
+      "disposition": "SAFETY_DISCHARGED (scope: v2i_AUTHORITY_INFO_ACCESS and its do_ext_nconf dispatch path; src/x509/v3_info.rs:441)",
+      "contract": "Same v2i/dispatcher contract as B51-V2I-001. This body forwards method and ctx to v2i_GENERAL_NAME_ex, which documents ctx NULL-or-live and refuses a NULL value; it reads name unconditionally and requires a ';' prefix. Success returns a fresh AUTHORITY_INFO_ACCESS owned by the dispatcher, encoded with AUTHORITY_INFO_ACCESS_it and freed once with ASN1_item_free; failure frees the partial list. The `it` pairing is the registrar's obligation; Row liveness while the callback runs is enforced by the dispatcher's registry read hold (B51-R1; canary B51-H1), so the caller need not exclude `X509V3_EXT_cleanup` during the call. `X509V3_EXT_add` still borrows caller-owned row storage, the `it`/`usr_data` pairing is the registrar's obligation, and a callback must not call a registry writer (B51-R9).",
+      "established": [
+        "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
+        "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
+        "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated.",
+        "v2i_GENERAL_NAME_ex accepts a NULL ctx and refuses a NULL value.",
+        "The result is encoded and released once with the row's own item (:1097-1105)."
+      ],
+      "authority_derived": [
+        "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_info.c:101-149.",
+        "The authority has no registry lock across the v2i call."
+      ],
+      "tests": [
+        "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
+        "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
+      ],
+      "tests_note": "Driven with 'OCSP;URI:http://example.com' and rejected with 'OCSP' (no ';' prefix)."
+    },
+    {
+      "id": "B51-V2I-006",
+      "file": "src/x509/v3_ist.rs",
+      "line": 246,
+      "line_current": 272,
+      "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "v2i_issuer_sign_tool",
+      "mechanism": "X509_VERIFY_POLICY",
+      "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
+      "registration": "row ossl_v3_issuer_sign_tool, v2i slot at src/x509/v3_ist.rs:466",
+      "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
+      "disposition": "SAFETY_DISCHARGED (scope: v2i_issuer_sign_tool and its do_ext_nconf dispatch path; src/x509/v3_ist.rs:272)",
+      "contract": "Same v2i/dispatcher contract as B51-V2I-001. The body ignores ctx/method, skips a NULL element (unreachable under the stack contract), reads name unconditionally and passes value to ist_member_guard, which refuses NULL. Success returns a fresh IssuerSignTool owned by the dispatcher, encoded with ISSUER_SIGN_TOOL_it and freed once with ASN1_item_free; failure frees the partial value. The `it` pairing is the registrar's obligation; Row liveness while the callback runs is enforced by the dispatcher's registry read hold (B51-R1; canary B51-H1), so the caller need not exclude `X509V3_EXT_cleanup` during the call. `X509V3_EXT_add` still borrows caller-owned row storage, the `it`/`usr_data` pairing is the registrar's obligation, and a callback must not call a registry writer (B51-R9).",
+      "established": [
+        "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
+        "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
+        "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated.",
+        "ist_member_guard refuses a NULL value.",
+        "The result is encoded and released once with the row's own item (:1097-1105)."
+      ],
+      "authority_derived": [
+        "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_ist.c:34-88.",
+        "The authority has no registry lock across the v2i call."
+      ],
+      "tests": [
+        "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
+        "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
+      ],
+      "tests_note": "Driven with 'signTool:tool' and rejected with 'bogusTool:tool'."
+    },
+    {
+      "id": "B51-V2I-007",
+      "file": "src/x509/v3_pcons.rs",
+      "line": 179,
+      "line_current": 204,
+      "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "v2i_POLICY_CONSTRAINTS",
+      "mechanism": "X509_VERIFY_POLICY",
+      "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
+      "registration": "row ossl_v3_policy_constraints, v2i slot at src/x509/v3_pcons.rs:275",
+      "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
+      "disposition": "SAFETY_DISCHARGED (scope: v2i_POLICY_CONSTRAINTS and its do_ext_nconf dispatch path; src/x509/v3_pcons.rs:204)",
+      "contract": "Same v2i/dispatcher contract as B51-V2I-001. The body ignores ctx/method; X509V3_get_value_int accepts a NULL value. Success returns a fresh PolicyConstraints owned by the dispatcher, encoded with POLICY_CONSTRAINTS_it and freed once with ASN1_item_free; failure frees the partial value. The `it` pairing is the registrar's obligation; Row liveness while the callback runs is enforced by the dispatcher's registry read hold (B51-R1; canary B51-H1), so the caller need not exclude `X509V3_EXT_cleanup` during the call. `X509V3_EXT_add` still borrows caller-owned row storage, the `it`/`usr_data` pairing is the registrar's obligation, and a callback must not call a registry writer (B51-R9).",
+      "established": [
+        "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
+        "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
+        "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated.",
+        "X509V3_get_value_int accepts a NULL value.",
+        "The result is encoded and released once with the row's own item (:1097-1105)."
+      ],
+      "authority_derived": [
+        "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_pcons.c:55-91.",
+        "The authority has no registry lock across the v2i call."
+      ],
+      "tests": [
+        "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
+        "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
+      ],
+      "tests_note": "Driven with 'requireExplicitPolicy:1' and rejected with 'requireExplicitPolicy:bogus'."
+    },
+    {
+      "id": "B51-V2I-008",
+      "file": "src/x509/v3_pmaps.rs",
+      "line": 229,
+      "line_current": 255,
+      "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "v2i_POLICY_MAPPINGS",
+      "mechanism": "X509_VERIFY_POLICY",
+      "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
+      "registration": "row ossl_v3_policy_mappings, v2i slot at src/x509/v3_pmaps.rs:345",
+      "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
+      "disposition": "SAFETY_DISCHARGED (scope: v2i_POLICY_MAPPINGS and its do_ext_nconf dispatch path; src/x509/v3_pmaps.rs:255)",
+      "contract": "Same v2i/dispatcher contract as B51-V2I-001. The body ignores ctx/method, reads name/value and refuses the entry when either is NULL (the authority's own guard), then parses both as objects. Success returns a fresh POLICY_MAPPINGS owned by the dispatcher, encoded with POLICY_MAPPINGS_it and freed once with ASN1_item_free; failure frees the partial list and objects. The `it` pairing is the registrar's obligation; Row liveness while the callback runs is enforced by the dispatcher's registry read hold (B51-R1; canary B51-H1), so the caller need not exclude `X509V3_EXT_cleanup` during the call. `X509V3_EXT_add` still borrows caller-owned row storage, the `it`/`usr_data` pairing is the registrar's obligation, and a callback must not call a registry writer (B51-R9).",
+      "established": [
+        "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
+        "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
+        "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated.",
+        "The body refuses a NULL name/value before OBJ_txt2obj.",
+        "The result is encoded and released once with the row's own item (:1097-1105)."
+      ],
+      "authority_derived": [
+        "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_pmaps.c:64-109.",
+        "The authority has no registry lock across the v2i call."
+      ],
+      "tests": [
+        "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
+        "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
+      ],
+      "tests_note": "Driven with '1.2.3.4:1.2.3.5' and rejected with '1.2.3.4' (NULL value)."
+    },
+    {
+      "id": "B51-V2I-009",
+      "file": "src/x509/v3_sxnet.rs",
+      "line": 420,
+      "line_current": 445,
+      "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sxnet_v2i",
+      "mechanism": "X509_VERIFY_POLICY",
+      "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
+      "registration": "row ossl_v3_sxnet, v2i slot at src/x509/v3_sxnet.rs:741",
+      "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
+      "disposition": "SAFETY_DISCHARGED (scope: sxnet_v2i and its do_ext_nconf dispatch path; src/x509/v3_sxnet.rs:445)",
+      "contract": "Same v2i/dispatcher contract as B51-V2I-001. The body ignores ctx/method, reads name unconditionally and passes the possibly-NULL value to SXNET_add_id_asc, which rejects it. Success returns a fresh Sxnet owned by the dispatcher, encoded with SXNET_it and freed once with ASN1_item_free; failure frees the partial value. The `it` pairing is the registrar's obligation; Row liveness while the callback runs is enforced by the dispatcher's registry read hold (B51-R1; canary B51-H1), so the caller need not exclude `X509V3_EXT_cleanup` during the call. `X509V3_EXT_add` still borrows caller-owned row storage, the `it`/`usr_data` pairing is the registrar's obligation, and a callback must not call a registry writer (B51-R9).",
+      "established": [
+        "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
+        "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
+        "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated.",
+        "SXNET_add_id_asc/s2i_ASN1_INTEGER reject a NULL value.",
+        "The result is encoded and released once with the row's own item (:1097-1105)."
+      ],
+      "authority_derived": [
+        "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_sxnet.c:98-112.",
+        "The authority has no registry lock across the v2i call."
+      ],
+      "tests": [
+        "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
+        "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
+      ],
+      "tests_note": "Driven with '1:user' and rejected with 'notanint:user'."
+    },
+    {
+      "id": "B51-V2I-010",
+      "file": "src/x509/v3_tlsf.rs",
+      "line": 208,
+      "line_current": 233,
+      "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "v2i_TLS_FEATURE",
+      "mechanism": "X509_VERIFY_POLICY",
+      "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
+      "registration": "row ossl_v3_tls_feature, v2i slot at src/x509/v3_tlsf.rs:320",
+      "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
+      "disposition": "SAFETY_DISCHARGED (scope: v2i_TLS_FEATURE and its do_ext_nconf dispatch path; src/x509/v3_tlsf.rs:233)",
+      "contract": "Same v2i/dispatcher contract as B51-V2I-001. The body ignores ctx/method, reads name unconditionally and uses value only when non-NULL. Success returns a fresh STACK_OF(ASN1_INTEGER) owned by the dispatcher, encoded with tls_feature_it and freed once with ASN1_item_free; failure frees the partial list. The `it` pairing is the registrar's obligation; Row liveness while the callback runs is enforced by the dispatcher's registry read hold (B51-R1; canary B51-H1), so the caller need not exclude `X509V3_EXT_cleanup` during the call. `X509V3_EXT_add` still borrows caller-owned row storage, the `it`/`usr_data` pairing is the registrar's obligation, and a callback must not call a registry writer (B51-R9). Note: the closure still marks this operation's owning boundary ELIMINATED at a different coordinate (:146) while the source at :232 is still an uncontracted unsafe fn before this delta; B51 contracts it anyway and records the inconsistency in B51-R2.",
+      "established": [
+        "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
+        "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
+        "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated and the body falls back to name.",
+        "OPENSSL_strcasecmp/strtol are NULL-safe only after the fallback; name is non-NULL.",
+        "The result is encoded and released once with the row's own item (:1097-1105)."
+      ],
+      "authority_derived": [
+        "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_tlsf.c:85-137.",
+        "The authority has no registry lock across the v2i call."
+      ],
+      "tests": [
+        "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
+        "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
+      ],
+      "tests_note": "Driven with 'status_request' and rejected with 'notafeature'."
+    }
   ],
-  "note": "line_current is bound to the committed candidate; files_sha256 below is that commit.",
-  "files_sha256": {
-   "src/x509/v3_asid.rs": "085f5edeada2f212b1c37e09ad66cff71b7db9c78eac2f81f62c8f484c226355",
-   "src/x509/v3_battcons.rs": "38825b0991f6e624537677af5409f0edd9e3df2d48ecdc832474494c39f0f883",
-   "src/x509/v3_bcons.rs": "df7650e3d9379c8d1e602692b8467538cca82fa1d3c31fda1a1a4165434f1191",
-   "src/x509/v3_conf.rs": "ffa78ab9e5c21364a63a07f73790d70fee958aa47bbc558593f4e3bc5987cd68",
-   "src/x509/v3_extku.rs": "2f3b6aafe54bc20f268ead1df71799cf6f231b6cd76eadc50a5336f0338c29d2",
-   "src/x509/v3_info.rs": "e994a459a38dec7aac43f16a12c68a6e14d9b68d7cbc55682834c02870ffbbbb",
-   "src/x509/v3_ist.rs": "b8f22c78ae41beef1b6cce4ac1a7134e18ca47c19aec5597fb79e5825f7ab28e",
-   "src/x509/v3_lib.rs": "fd61b37c8db0244ed68e5210cc33275e6aa92d043a1d4ce431284b083d0ee44d",
-   "src/x509/v3_pcons.rs": "ea06ec00604d22e6ec4a454e5289e64a9240ca173ab32098b82a61768e47cf91",
-   "src/x509/v3_pmaps.rs": "27285cb6f4e0a23d0d11d17ee0d7ff7891e08827f3c7bd5973a12ea9cb6a3241",
-   "src/x509/v3_sxnet.rs": "dfd28bf83f1612ac51196b0aa2288e1a8c13e929f5b7c7227c173fc96ee45acd",
-   "src/x509/v3_tlsf.rs": "c738922b80fbc6cb5a824afebb5f67b0e6df7d487c3b29e8923872361703f6af"
-  }
- },
- "authority": {
-  "id": "openssl-3.6.4-production",
-  "source": "forensics/authorities/src/openssl-3.6.4",
-  "header": "include/openssl/x509v3.h.in:51-53 (X509V3_EXT_V2I) and :65-85 (the method struct)",
-  "dispatch": "crypto/x509/v3_conf.c:79-135 (do_ext_nconf) and crypto/x509/v3_lib.c:52-71 (X509V3_EXT_get_nid)",
-  "note": "The authority builds STACK_OF(CONF_VALUE) from X509V3_parse_list(value) or NCONF_get_section(conf, value + 1), refuses NULL or empty, calls the first of v2i/s2i/r2i that is set, encodes the result through method->it or method->i2d, then frees it with method->ext_free or ASN1_item_free. The candidate's do_ext_nconf is the same shape; it adds no refusal the authority lacks except the guards recorded here. The brief's stated v2i signature (method, unsigned char **, long) and ext_free release belong to the d2i/print path, not to v2i; the actual slot is (method, X509V3_CTX *, STACK_OF(CONF_VALUE) *) and all ten rows release through `it` with ext_free NULL. That discrepancy is recorded in B51-R7 and is not silently repaired."
- },
- "mechanism": {
-  "id": "X509_VERIFY_POLICY",
-  "state": "OWNERSHIP_RECONSTRUCTED",
-  "state_source": "state.json#/mechanisms[id=X509_VERIFY_POLICY]",
-  "discharge": "SITE-SCOPED: the ten v2i boundaries below only. The mechanism state is unchanged and is not discharged mechanism-wide."
- },
- "scope": {
-  "aggregation": ".obligations[] | select(.mechanism == \"X509_VERIFY_POLICY\" and .status == \"BLOCKED\") over evidence/closure-ssh-b50.json",
-  "raw_blocked_count": 42,
-  "v2i_named_blocked_count": 11,
-  "chosen_family": {
-   "family": "v2i",
-   "count": 10,
-   "why": "The closure has 11 BLOCKED obligations whose item is v2i-named: the ten below plus bitst_v2i. B50's not_touched taxonomy counts bitst_v2i under family bitst (2 = bitst_i2v + bitst_v2i), because bitst_v2i is a one-line forwarder to the same v2i_ASN1_BIT_STRING helper and usr_data table as its i2v sibling, so the campaign's v2i count is 10. B51 takes those ten. bitst_v2i stays BLOCKED in the bitst family and is NOT claimed here."
-  },
-  "per_file": [
-   {
-    "file": "src/x509/v3_asid.rs",
-    "v2i_count": 1,
-    "operations": [
-     "v2i_ASIdentifiers"
-    ]
-   },
-   {
-    "file": "src/x509/v3_battcons.rs",
-    "v2i_count": 1,
-    "operations": [
-     "v2i_OSSL_BASIC_ATTR_CONSTRAINTS"
-    ]
-   },
-   {
-    "file": "src/x509/v3_bcons.rs",
-    "v2i_count": 1,
-    "operations": [
-     "v2i_BASIC_CONSTRAINTS"
-    ]
-   },
-   {
-    "file": "src/x509/v3_extku.rs",
-    "v2i_count": 1,
-    "operations": [
-     "v2i_EXTENDED_KEY_USAGE"
-    ]
-   },
-   {
-    "file": "src/x509/v3_info.rs",
-    "v2i_count": 1,
-    "operations": [
-     "v2i_AUTHORITY_INFO_ACCESS"
-    ]
-   },
-   {
-    "file": "src/x509/v3_ist.rs",
-    "v2i_count": 1,
-    "operations": [
-     "v2i_issuer_sign_tool"
-    ]
-   },
-   {
-    "file": "src/x509/v3_pcons.rs",
-    "v2i_count": 1,
-    "operations": [
-     "v2i_POLICY_CONSTRAINTS"
-    ]
-   },
-   {
-    "file": "src/x509/v3_pmaps.rs",
-    "v2i_count": 1,
-    "operations": [
-     "v2i_POLICY_MAPPINGS"
-    ]
-   },
-   {
-    "file": "src/x509/v3_sxnet.rs",
-    "v2i_count": 1,
-    "operations": [
-     "sxnet_v2i"
-    ]
-   },
-   {
-    "file": "src/x509/v3_tlsf.rs",
-    "v2i_count": 1,
-    "operations": [
-     "v2i_TLS_FEATURE"
-    ]
-   }
+  "hidden_obligations": 0,
+  "hidden_obligations_note": "No obligation is hidden. Every duty the callbacks do not enforce is stated in each contract and enumerated as a residual: (1) a callback supplied by a caller-registered row must not call a registry writer, because the read hold is non-reentrant (B51-R9); (2) caller-owned row storage must outlive registration (X509V3_EXT_add's own Safety block); (3) the returned object's type must match the row's `it` and the meaning of its `usr_data` (B51-R6); (4) `ctx` is NULL-or-live where the callback reads it (B51-R8). Row liveness for a DYNAMIC row is not an obligation: it is enforced (B51-R1). A hidden obligation is one that is neither enforced nor stated; none was found.",
+  "new_unsafe_assumptions": 0,
+  "new_unsafe_assumptions_note": "B51b adds the RegistryReadGuard abstraction; its unsafe work is the crate's audited CRYPTO_THREAD_read_lock seam, not a new obligation on callers. The ten contracts and three tests add no unsafe fn and no exported item. This correction's source delta is documentation only.",
+  "unsafe_operations_removed": 0,
+  "unsafe_operations_introduced": 0,
+  "test_only_unsafe_added": 0,
+  "boundary_size": "10 callback bodies (unchanged), 10 fn-level # Safety contracts, one shared dispatcher arm (do_ext_nconf v2i branch, src/x509/v3_conf.rs:1029-1066), and 3 tests (two loops over all ten rows plus one pre-slot canary). No second lock or hold was added. B51b adds one structural hold mechanism (registry read guard on the config/i2d/d2i paths) shared by all ten sites, with three mutation-proven liveness canaries and one neutral control.",
+  "safe_callers_can_cause_ub": false,
+  "safe_callers_can_cause_ub_note": "Every entry point that can reach a v2i callback is `unsafe extern \"C\"` (X509V3_EXT_nconf, X509V3_EXT_nconf_nid, X509V3_EXT_conf, X509V3_EXT_conf_nid, X509V3_EXT_add_nconf_sk). The callback type is Option<unsafe extern \"C\" fn>, and no safe Rust item accepts or returns X509V3ExtMethod. A safe Rust caller can therefore not reach these callbacks without an unsafe block; the C ABI obligations are stated in each contract.",
+  "negative_control": [
+    {
+      "id": "B51-C1",
+      "name": "x509::v3_conf::tests::an_empty_value_is_refused_before_the_v2i_slot",
+      "kind": "court functional test, lib unittest",
+      "guard": "do_ext_nconf's pre-slot refusal `if nval.is_null() || OPENSSL_sk_num(nval) <= 0` (src/x509/v3_conf.rs:1041-1057)",
+      "result": "PASS after restore (1 passed, 0 failed at --test-threads=1)",
+      "observation": "A value (' ') that X509V3_parse_list cannot turn into even one CONF_VALUE is refused before any v2i callback, so the callback never builds an empty object.",
+      "mutation_sensitive": true,
+      "mutation": "`if nval.is_null() || num <= 0 {` at src/x509/v3_conf.rs:1041 replaced by `if false {`",
+      "fails_if": "observed FAILED, rc 101, at src/x509/v3_conf.rs:1648: 'an empty value must not reach the v2i slot' (0 passed; 1 failed; 2316 filtered out)",
+      "restore": "byte-for-byte: sha256 8e84b916d7394e739c51e44260af166d2bb7f1fdb7e74a33a9c3a0210c988c9e before and after the mutation; src/x509/v3_conf.rs is the same file hash in candidate.files_sha256; the test then passes again",
+      "limits": "The canary observes the refusal (NULL extension) rather than a fault. Under the mutation the callback receives a NULL stack, OPENSSL_sk_num answers -1, the loop is skipped and an empty BASIC_CONSTRAINTS is encoded, so the extension is non-NULL. It pins the one pre-slot guard the v2i contracts rely on; it does not exercise the per-callback value-NULL checks (B51-C2)."
+    },
+    {
+      "id": "B51-C2",
+      "name": "per-callback value-NULL guards are not independently mutation-canaried",
+      "kind": "negative result, not a canary",
+      "guards": [
+        "v2i_POLICY_MAPPINGS value.is_null() || name.is_null() (src/x509/v3_pmaps.rs)",
+        "v2i_ASIdentifiers value.is_null() (src/x509/v3_asid.rs)",
+        "v2i_issuer_sign_tool cnf.is_null() (src/x509/v3_ist.rs)"
+      ],
+      "mutation_sensitive": false,
+      "reason": "These are authority-derived defensive checks, not the path that establishes the callbacks' preconditions. Removing the pmaps guard is behaviour-neutral (OBJ_txt2obj is NULL-safe and the next obj1/obj2 check still returns NULL), so a clean assertion cannot distinguish it; removing the asid guard would call strcmp on NULL and fault the harness rather than produce an assertion; the ist cnf.is_null() arm is unreachable because OPENSSL_sk_value answers NULL only out of range. They were therefore verified by contract review and exercised negatively by v2i_callbacks_reject_bad_values, not faked as mutation canaries. The producer-side non-NULL name checks (X509V3_parse_list checks ntmp; the config loader checks (*v).name) are shared by many units and are recorded as established facts by inspection."
+    }
   ],
-  "excluded": [
-   {
-    "operation": "bitst_v2i",
-    "file": "src/x509/v3_bitst.rs",
-    "line": 360,
-    "line_current": 360,
-    "reason": "Belongs to B50's bitst family (shared v2i_ASN1_BIT_STRING helper and usr_data table with bitst_i2v); outside the ten-site v2i scope. Remains BLOCKED, not claimed."
-   }
+  "positive_control": [
+    {
+      "id": "B51-P1",
+      "name": "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
+      "kind": "court functional test, lib unittest",
+      "result": "PASS (included in the 148 x509:: tests at --test-threads=4; 3 passed in the x509::v3_conf::tests filter)",
+      "observation": "All ten standard rows build a non-NULL extension through X509V3_EXT_nconf_nid: asid 'AS:1', battcons 'authority:TRUE,pathlen:1', bcons 'CA:TRUE,pathlen:1', extku 'serverAuth', info 'OCSP;URI:http://example.com', ist 'signTool:tool', pcons 'requireExplicitPolicy:1', pmaps '1.2.3.4:1.2.3.5', sxnet '1:user', tlsf 'status_request'. Each result is tagged with the requested NID and carries non-empty DER; because these rows carry only v2i among their construction slots, a non-NULL tagged extension can be produced only by the callback under test.",
+      "limits": "This proves the callback ran and produced an object the dispatcher could encode; it does not compare the DER against the authority's bytes."
+    },
+    {
+      "id": "B51-P2",
+      "name": "x509::v3_conf::tests::v2i_callbacks_reject_bad_values",
+      "kind": "court functional test, lib unittest",
+      "result": "PASS (included in the 148 x509:: tests at --test-threads=4)",
+      "observation": "The same ten rows refuse a bad value and answer NULL: asid 'XX:1', battcons 'authority:bogus', bcons 'CA:bogus', extku 'notanoid', info 'OCSP', ist 'bogusTool:tool', pcons 'requireExplicitPolicy:bogus', pmaps '1.2.3.4', sxnet 'notanint:user', tlsf 'notafeature'. Each exercises that callback's partial-decode release path.",
+      "limits": "NULL-return proves the callback refused the value and did not reach the encoder; it does not measure the absence of a leak (no allocator-hook test was run)."
+    }
   ],
-  "not_touched": [
-   {
-    "family": "s2i",
-    "count": 9
-   },
-   {
-    "family": "i2v",
-    "count": 7
-   },
-   {
-    "family": "r2i",
-    "count": 6
-   },
-   {
-    "family": "print",
-    "count": 4
-   },
-   {
-    "family": "audit",
-    "count": 2
-   },
-   {
-    "family": "bitst",
-    "count": 2
-   },
-   {
-    "family": "non-method",
-    "count": 2
-   }
-  ]
- },
- "shared_contract": "v2i slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). do_ext_nconf resolves the row through X509V3_EXT_get_nid under a short registry read hold (src/x509/v3_conf.rs:1013) and uses the returned borrowed row after that hold is released; it refuses ext_nid == NID_undef (:1007), a NULL row (:1014), and a NULL or empty value stack (:1041); it builds STACK_OF(CONF_VALUE) from X509V3_parse_list (own, freed at :1060-1063) or NCONF_get_section (section-owned, not freed); it calls cb(method, ctx, nval) at :1059; on a non-NULL result it encodes through do_ext_i2d at :1098 and releases with ASN1_item_free(ext_struc, it()) at :1099-1101. The callback must consume `nval` read-only, must not free/retain it or its members, must not retain `method`/`ctx`, and must return a fresh object of exactly the row's `it` type, releasing any partial value itself on failure.",
- "dispatch_paths": {
-  "entry_points": [
-   "X509V3_EXT_nconf (src/x509/v3_conf.rs:1195) -> X509V3_EXT_nconf_int(:1142) -> do_ext_nconf(:998).",
-   "X509V3_EXT_nconf_nid (src/x509/v3_conf.rs:1212) -> do_ext_nconf(:998); this is the entry the three tests drive.",
-   "X509V3_EXT_conf (src/x509/v3_conf.rs:1426) and X509V3_EXT_conf_nid (:1455) build a temporary NCONF and call the two above.",
-   "X509V3_EXT_add_nconf_sk (src/x509/v3_conf.rs:1245) walks a config section and calls X509V3_EXT_nconf_int(:1291)."
+  "fast_gate_at_candidate": {
+    "candidate": "8b9a03e28",
+    "ran_at_head": "8b9a03e280e4f053fc5e081947d17584dfbca92f",
+    "container": "docker/openssl-rs-court.sh (never the host)",
+    "toolchain": "pinned by the court image; CARGO_BUILD_JOBS=4; tests --test-threads=4 unless stated",
+    "fmt": "cargo fmt --all -- --check: exit 0",
+    "clippy": "cargo clippy --all-targets -- -D warnings: exit 0, Finished dev profile, 0 warnings, 0 errors",
+    "focused_tests": "cargo test --lib -- x509:: -- --test-threads=4: ok. 152 passed; 0 failed; 0 ignored; 2169 filtered out",
+    "conf_tests": "cargo test --lib -- x509::v3_conf::tests:: -- --test-threads=1: ok. 6 passed; 0 failed",
+    "scope_note": "FAST evidence only. Full library suite, Miri/ASan/TSan/dudect, authority differential and the consumer closures are NOT_RUN at this candidate.",
+    "correction_gate": {
+      "date": "2026-11-02",
+      "candidate": "8b9a03e28 + documentation-only contract rewording (uncommitted; see candidate.working_delta)",
+      "container": "docker/openssl-rs-court.sh (never the host)",
+      "fmt": "cargo fmt --all -- --check: exit 0 (FMT_EXIT=0)",
+      "clippy": "cargo clippy --all-targets -- -D warnings: exit 0 (CLIPPY_EXIT=0); Finished `dev` profile in 17.62s",
+      "focused_tests": "cargo test --lib -- x509:: -- --test-threads=4: exit 0; test result: ok. 152 passed; 0 failed; 0 ignored; 0 measured; 2169 filtered out; finished in 0.50s",
+      "r3_r4_test": "cargo test --lib -- x509::v3_asid::tests::a_failed_push_returns_the_caller_integers_instead_of_releasing_them -- --test-threads=1: exit 0; test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2320 filtered out; finished in 0.00s",
+      "scope_note": "FAST only. The source delta is documentation-only but S-prime is not committed; BATCH/SEAL gates remain NOT_RUN."
+    }
+  },
+  "residuals": [
+    {
+      "id": "B51-R1",
+      "severity": "medium",
+      "disposition": "CLOSED-STRUCTURALLY",
+      "description": "Row liveness for DYNAMIC rows across the config-decode slot. Originally a documented caller duty (same class as the refused B46/B47 argument); now enforced by a read hold spanning the callback.",
+      "closed_by": "B51b: RegistryReadGuard over do_ext_nconf, X509V3_EXT_i2d and X509V3_EXT_d2i, each with a mutation-proven liveness canary"
+    },
+    {
+      "id": "B51-R2",
+      "severity": "low",
+      "disposition": "OBSERVATION",
+      "description": "The closure names 11 BLOCKED v2i-named obligations but B50's taxonomy counts v2i as 10 because bitst_v2i is grouped with bitst_i2v under family bitst. B51 follows the 10-site family and leaves bitst_v2i BLOCKED. Separately, v2i_TLS_FEATURE's owning boundary is recorded ELIMINATED at src/x509/v3_tlsf.rs:146 while the source at :232 was still an uncontracted unsafe fn before this delta; B51 contracts it and records the inconsistency rather than silently reclassifying it."
+    },
+    {
+      "id": "B51-R3",
+      "severity": "low",
+      "disposition": "FIXED",
+      "description": "v2i_ASIdentifiers used to narrow each `strspn` result to `c_int` before using it as a `usize` offset into the NUL-terminated value; a digit/space run longer than INT_MAX would wrap negative. 8b9a03e28 removed the six `as c_int` casts and keeps every offset `usize` (src/x509/v3_asid.rs:1553-1583). Verified with `git diff 3d32259e6 8b9a03e28 -- src/x509/v3_asid.rs`: the removed `as c_int` lines and the `usize` arithmetic are the whole change. No discriminating test is possible: reaching the old wrap needs a single NUL-terminated config value with a run longer than INT_MAX, i.e. a multi-gigabyte input. The fix is a type/flow correction (strspn returns usize; pointer::add takes usize) enforced at compile time, so there is no smaller behaviour to assert.",
+      "closed_by": "8b9a03e28; bounded diff verification recorded here (B51-REJ-1)"
+    },
+    {
+      "id": "B51-R4",
+      "severity": "low",
+      "disposition": "FIXED",
+      "description": "X509v3_asid_add_id_or_range installed min/max into a fresh ASIdOrRange before OPENSSL_sk_push; on a failed push ASIdOrRange_free released them and v2i_ASIdentifiers' cleanup released them again. 8b9a03e28 detaches both pointers (the range's min/max, or the plain-id choice pointer) before ASIdOrRange_free on that arm (src/x509/v3_asid.rs:1060-1079), so the caller keeps exactly the ownership the contract promises. Verified with `git diff 3d32259e6 8b9a03e28 -- src/x509/v3_asid.rs` and by the discriminating test below, which injects the push failure through the test-only insert fault.",
+      "closed_by": "8b9a03e28; test x509::v3_asid::tests::a_failed_push_returns_the_caller_integers_instead_of_releasing_them (free_probe count 0 before the caller frees, 1 after) recorded and run (B51-REJ-2)"
+    },
+    {
+      "id": "B51-R5",
+      "severity": "medium",
+      "disposition": "NOT-RUN",
+      "description": "Partial-decode ownership is exercised by v2i_callbacks_reject_bad_values but not proven leak-free: no allocator-hook or LeakSanitizer run was made, so a missing release in a failure path would not be detected."
+    },
+    {
+      "id": "B51-R6",
+      "severity": "medium",
+      "disposition": "STATED-REGISTRAR-OBLIGATION",
+      "description": "The dispatcher encodes and frees the returned object with the row's `it` (ASN1_item_i2d / ASN1_item_free; all ten rows set `it` and ext_free is NULL). The callback must return exactly the item's type; a registrar that pairs a v2i callback with a mismatched `it` causes an invalid encode/free. That pairing is not checked by X509V3_EXT_add and is the registrar's obligation."
+    },
+    {
+      "id": "B51-R7",
+      "severity": "high",
+      "disposition": "BRIEF-DISCREPANCY",
+      "description": "The subphase brief described v2i as `(X509V3_EXT_METHOD*, unsigned char**, long)` returning `*mut c_void` freed through `ext_free`, and pointed at X509V3_EXT_print. The actual v2i slot is `(const X509V3_EXT_METHOD*, X509V3_CTX*, STACK_OF(CONF_VALUE)*)`, dispatched by do_ext_nconf (v3_conf.c:79-135), and all ten rows are freed through `it` with ASN1_item_free, not ext_free. This receipt follows the code and the closure's v2i items; the brief's signature/release description is recorded here rather than silently adopted."
+    },
+    {
+      "id": "B51-R8",
+      "severity": "low",
+      "disposition": "STATED-CALLER-OBLIGATION",
+      "description": "ctx may be NULL (do_ext_nconf's contract allows it and does not check it). Only v2i_AUTHORITY_INFO_ACCESS forwards ctx, to v2i_GENERAL_NAME_ex, which documents NULL-or-live; the other nine ignore it. A callback that begins reading ctx would inherit the caller's obligation to supply one."
+    },
+    {
+      "id": "B51-R9",
+      "severity": "high",
+      "disposition": "STATED-ABI-OBLIGATION",
+      "description": "The enforced registry read hold is non-reentrant for writers. src/runtime/thread.rs: LockState { writer, writer_id: Option<CryptoThreadId>, readers } (:177-181); write_lock (:437-447) loops while `writer || readers > 0` and detects re-entry only with `writer_id == Some(me)`; read_lock (:404-411) only increments `readers` and never sets `writer_id`, so a read-holding thread has `writer_id == None`. A v2i/i2d/d2i callback invoked under the B51b hold that calls a registry writer (X509V3_EXT_add, X509V3_EXT_add_list, X509V3_EXT_add_alias, X509V3_EXT_cleanup) therefore self-deadlocks: it waits for its own read count to drop, which cannot happen. Reachability: none of the ten standard rows' callbacks calls a registry writer, so the built-in table cannot trigger it; a caller-registered row's v2i/i2d/d2i can (X509V3_EXT_add registers caller code). Recorded as a named ABI obligation on the registrar/caller: a callback that may run under the registry read hold must not call a registry writer. No deadlocking test is written; the obligation is stated in the ten contracts and here.",
+      "closed_by": "not closed; stated ABI obligation (B51-REJ-3)"
+    }
   ],
-  "lookup": "X509V3_EXT_get_nid (src/x509/v3_lib.rs:748) takes a registry read hold for the lookup only and returns a BORROWED row; the hold is released at return (documented at :740-746). do_ext_nconf reads v2i/s2i/r2i/it/ext_free at :1020-1028.",
-  "values": "at_section = (*value == '@') (:1031); X509V3_parse_list(value) (:1037) is an owning list the dispatcher frees after the call (:1060-1063); NCONF_get_section(conf, value + 1) (:1034) is a section-owned stack it must not free.",
-  "guard": "nval.is_null() || OPENSSL_sk_num(nval) <= 0 is refused at :1041-1057 before any callback; this is the pre-slot guard the callback contracts rely on (B51-C1).",
-  "slot": "cb(method, ctx.cast::<c_void>(), nval) at :1059.",
-  "encode": "do_ext_i2d(method, ext_nid, crit, ext_struc) at :1098; it uses method->it when set (:614-633) else method->i2d (:634-647).",
-  "free": "ASN1_item_free(ext_struc, it()) at :1099-1101 when `it` is set; method->ext_free at :1102-1104 when it is not. All ten rows set `it` and ext_free is None.",
-  "lifetime": "`method` is borrowed from X509V3_EXT_get_nid and is NOT protected by a read hold across the callback; `nval` is live across the call and is freed only after it when the dispatcher owns it; `ext_struc` is exclusively the dispatcher's from the callback return to :1098/:1101. The callback retains neither `method`, `nval`, nor its members.",
-  "allocator": "ext_struc is a fresh value from the row's item allocator on the CRYPTO_* seam; the DER block is CRYPTO_malloc'd by ASN1_item_i2d and owned by do_ext_i2d's OwnedBuf (drop site :184). The dispatch itself allocates nothing beyond the parse list.",
-  "second_reader": "The only production reads of a v2i slot are do_ext_nconf's :1020-1028. No test or other unit reads a v2i slot.",
-  "ctx": "ctx is NULL or a live X509V3_CTX; do_ext_nconf does not check it. Only v2i_AUTHORITY_INFO_ACCESS forwards it (to v2i_GENERAL_NAME_ex, which documents NULL-or-live); the other nine ignore it.",
-  "retention": "The callback may retain nothing. Its non-NULL result transfers to the dispatcher, which encodes it and releases it exactly once; a NULL result is reported as a failed extension build."
- },
- "row_liveness": {
-  "question": "Does the registry read hold span the v2i dispatch, as it spans the i2s/i2r print path?",
-  "answer": "YES, ENFORCED. B49/B50 relied on a hold in X509V3_EXT_print; the config-decode path had none, because X509V3_EXT_get_nid takes and releases the read lock at return. B51b adds RegistryReadGuard over the whole lookup-through-slot span in do_ext_nconf, X509V3_EXT_i2d and X509V3_EXT_d2i, so a concurrent X509V3_EXT_cleanup cannot release a DYNAMIC row under the callback. The duty is no longer documentary.",
-  "enforcement": "src/x509/v3_conf.rs do_ext_nconf (~:1035), X509V3_EXT_i2d (~:742); src/x509/v3_lib.rs X509V3_EXT_d2i (~:892). RAII: RegistryReadGuard::Drop unlocks on every path, including early NULL returns.",
-  "observation": "A #[cfg(test)] thread-local probe (v3_lib.rs read_hold_probe) is incremented by RegistryReadGuard::acquire and decremented by Drop; registry_read_held_on_this_thread() is absent from non-test builds and adds no exported item. A neutral control asserts the probe is false before dispatch, so true readings are not vacuous.",
-  "static_rows": "The ten rows are process-lifetime pub static values reached through STANDARD_EXTS; X509V3_EXT_cleanup cannot release them.",
-  "dynamic_rows": "X509V3_EXT_add_alias can copy a row containing a v2i slot into a DYNAMIC allocation released by ext_list_free; the added read hold now excludes that release for the whole dispatch.",
-  "caller_rows": "X509V3_EXT_add still accepts a caller-owned row and the list borrows it (only DYNAMIC rows are freed). Caller storage lifetime stays a stated caller obligation (B51-R8); the registry lock does not and cannot protect the caller memory."
- },
- "defect_class": "uncontracted unsafe fn definitions at 10 X509_VERIFY_POLICY v2i sites. The blocks already carried per-line SAFETY comments but no fn-level # Safety. No functional defect was found reachable through do_ext_nconf: name is non-NULL from both producers (X509V3_parse_list checks `ntmp`; the config loader checks `(*v).name`), value is NULL-or-NUL-terminated, OPENSSL_sk_num/OPENSSL_sk_value are NULL-safe, OBJ_txt2obj/s2i_ASN1_INTEGER/X509V3_get_value_bool/int accept NULL, and the partial-value frees are correct. Two latent but unreachable hazards are recorded (B51-R3, B51-R4). The diff is therefore additive only.",
- "boundaries": [
-  {
-   "id": "B51-V2I-001",
-   "file": "src/x509/v3_asid.rs",
-   "line": 1453,
-   "line_current": 1497,
-   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
-   "kind": "UNSAFE_FN_DEF",
-   "operation": "v2i_ASIdentifiers",
-   "mechanism": "X509_VERIFY_POLICY",
-   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
-   "registration": "row ossl_v3_asid, v2i slot at src/x509/v3_asid.rs:1782",
-   "guard": "do_ext_nconf refuses ext_nid == NID_undef (:1007), a NULL row (:1014), and a NULL or empty `nval` (:1041-1057) before the v2i slot; no new guard was added.",
-   "disposition": "SAFETY_DISCHARGED (scope: v2i_ASIdentifiers and its do_ext_nconf dispatch path; src/x509/v3_asid.rs:1497)",
-   "contract": "v2i slot contract on X509V3ExtMethod. Caller do_ext_nconf's v2i arm (:1029-1066) establishes: method is a live borrowed row; nval is a live non-empty stack of live CONF_VALUE elements with non-NULL NUL-terminated name and NULL-or-NUL-terminated value; ctx is NULL or live. The body ignores ctx/method, reads name unconditionally, null-checks value, and canonizes the result. On success it returns a fresh ASIdentifiers owned by the dispatcher, encoded with ASIdentifiers_it and freed once with ASN1_item_free; on failure it frees the partial value. The returned type must match the row's `it` (registrar obligation). A concurrent X509V3_EXT_cleanup of a DYNAMIC row must not run during the call (B51-R1).",
-   "established": [
-    "do_ext_nconf resolves method under X509V3_EXT_get_nid and refuses NID_undef/NULL (:1007-1018).",
-    "do_ext_nconf refuses a NULL or empty STACK_OF(CONF_VALUE) before the slot (:1041-1057).",
-    "X509V3_parse_list stores only a checked non-NULL `ntmp` name; the config loader refuses a NULL (*v).name, so every element name is non-NULL.",
-    "nval is live for the whole call and is freed only after it when the dispatcher owns it (:1060-1063).",
-    "The non-NULL result is encoded and released exactly once with the row's own item (:1097-1105)."
-   ],
-   "authority_derived": [
-    "crypto/x509/v3_conf.c:96-112 calls method->v2i(method, ctx, nval) and frees ext_struc at :127-134.",
-    "The callback is transcribed from crypto/x509/v3_asid.c:495-609.",
-    "The authority has no registry lock across the v2i call; the borrowed-row contract is the ABI's own."
-   ],
-   "tests": [
-    "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
-    "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
-   ],
-   "tests_note": "The build test drives NID_sbgp_autonomousSysNum with 'AS:1'; the reject test drives 'XX:1'. The shared pre-slot guard is mutation-proven by B51-C1."
-  },
-  {
-   "id": "B51-V2I-002",
-   "file": "src/x509/v3_battcons.rs",
-   "line": 208,
-   "line_current": 234,
-   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
-   "kind": "UNSAFE_FN_DEF",
-   "operation": "v2i_OSSL_BASIC_ATTR_CONSTRAINTS",
-   "mechanism": "X509_VERIFY_POLICY",
-   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
-   "registration": "row ossl_v3_battcons, v2i slot at src/x509/v3_battcons.rs:294",
-   "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
-   "disposition": "SAFETY_DISCHARGED (scope: v2i_OSSL_BASIC_ATTR_CONSTRAINTS and its do_ext_nconf dispatch path; src/x509/v3_battcons.rs:234)",
-   "contract": "Same v2i/dispatcher contract as B51-V2I-001. The body ignores ctx/method; X509V3_get_value_bool/_int accept a NULL value. Success returns a fresh OSSL_BASIC_ATTR_CONSTRAINTS owned by the dispatcher, encoded with OSSL_BASIC_ATTR_CONSTRAINTS_it and freed once with ASN1_item_free; failure frees the partial value. The `it` pairing is the registrar's obligation; a concurrent cleanup of a DYNAMIC row must not run during the call (B51-R1).",
-   "established": [
-    "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
-    "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
-    "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated.",
-    "X509V3_get_value_bool/_int accept a NULL value.",
-    "The result is encoded and released once with the row's own item (:1097-1105)."
-   ],
-   "authority_derived": [
-    "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_battcons.c:55-86.",
-    "The authority has no registry lock across the v2i call."
-   ],
-   "tests": [
-    "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
-    "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
-   ],
-   "tests_note": "Driven with 'authority:TRUE,pathlen:1' and rejected with 'authority:bogus'."
-  },
-  {
-   "id": "B51-V2I-003",
-   "file": "src/x509/v3_bcons.rs",
-   "line": 209,
-   "line_current": 234,
-   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
-   "kind": "UNSAFE_FN_DEF",
-   "operation": "v2i_BASIC_CONSTRAINTS",
-   "mechanism": "X509_VERIFY_POLICY",
-   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
-   "registration": "row ossl_v3_bcons, v2i slot at src/x509/v3_bcons.rs:294",
-   "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
-   "disposition": "SAFETY_DISCHARGED (scope: v2i_BASIC_CONSTRAINTS and its do_ext_nconf dispatch path; src/x509/v3_bcons.rs:234)",
-   "contract": "Same v2i/dispatcher contract as B51-V2I-001. The body ignores ctx/method; X509V3_get_value_bool/_int accept a NULL value. Success returns a fresh BasicConstraints owned by the dispatcher, encoded with BASIC_CONSTRAINTS_it and freed once with ASN1_item_free; failure frees the partial value. The `it` pairing is the registrar's obligation; a concurrent cleanup of a DYNAMIC row must not run during the call (B51-R1).",
-   "established": [
-    "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
-    "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
-    "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated.",
-    "X509V3_get_value_bool/_int accept a NULL value.",
-    "The result is encoded and released once with the row's own item (:1097-1105)."
-   ],
-   "authority_derived": [
-    "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_bcons.c:55-85.",
-    "The authority has no registry lock across the v2i call."
-   ],
-   "tests": [
-    "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
-    "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
-   ],
-   "tests_note": "Driven with 'CA:TRUE,pathlen:1' and rejected with 'CA:bogus'; the build case is also the B51-C1 empty-value target row."
-  },
-  {
-   "id": "B51-V2I-004",
-   "file": "src/x509/v3_extku.rs",
-   "line": 212,
-   "line_current": 237,
-   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
-   "kind": "UNSAFE_FN_DEF",
-   "operation": "v2i_EXTENDED_KEY_USAGE",
-   "mechanism": "X509_VERIFY_POLICY",
-   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
-   "registration": "row ossl_v3_ext_ku and the three ext_key_usage_row rows (OCSP acceptable responses, acceptable cert/privilege policies), v2i slot at src/x509/v3_extku.rs:300",
-   "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
-   "disposition": "SAFETY_DISCHARGED (scope: v2i_EXTENDED_KEY_USAGE and its do_ext_nconf dispatch path; src/x509/v3_extku.rs:237)",
-   "contract": "Same v2i/dispatcher contract as B51-V2I-001. The body ignores ctx/method, reads name unconditionally and uses value only when non-NULL. Success returns a fresh STACK_OF(ASN1_OBJECT) owned by the dispatcher, encoded with EXTENDED_KEY_USAGE_it and freed once with ASN1_item_free; failure frees the partial stack. The `it` pairing is the registrar's obligation; a concurrent cleanup of a DYNAMIC row must not run during the call (B51-R1).",
-   "established": [
-    "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
-    "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
-    "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated and the body falls back to name.",
-    "OBJ_txt2obj is NULL-safe.",
-    "The result is encoded and released once with the row's own item (:1097-1105)."
-   ],
-   "authority_derived": [
-    "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_extku.c:92-125.",
-    "The authority has no registry lock across the v2i call."
-   ],
-   "tests": [
-    "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
-    "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
-   ],
-   "tests_note": "Driven with 'serverAuth' and rejected with 'notanoid'."
-  },
-  {
-   "id": "B51-V2I-005",
-   "file": "src/x509/v3_info.rs",
-   "line": 414,
-   "line_current": 441,
-   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
-   "kind": "UNSAFE_FN_DEF",
-   "operation": "v2i_AUTHORITY_INFO_ACCESS",
-   "mechanism": "X509_VERIFY_POLICY",
-   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
-   "registration": "rows ossl_v3_info and ossl_v3_sinfo (info_access_row), v2i slot at src/x509/v3_info.rs:571",
-   "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
-   "disposition": "SAFETY_DISCHARGED (scope: v2i_AUTHORITY_INFO_ACCESS and its do_ext_nconf dispatch path; src/x509/v3_info.rs:441)",
-   "contract": "Same v2i/dispatcher contract as B51-V2I-001. This body forwards method and ctx to v2i_GENERAL_NAME_ex, which documents ctx NULL-or-live and refuses a NULL value; it reads name unconditionally and requires a ';' prefix. Success returns a fresh AUTHORITY_INFO_ACCESS owned by the dispatcher, encoded with AUTHORITY_INFO_ACCESS_it and freed once with ASN1_item_free; failure frees the partial list. The `it` pairing is the registrar's obligation; a concurrent cleanup of a DYNAMIC row must not run during the call (B51-R1).",
-   "established": [
-    "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
-    "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
-    "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated.",
-    "v2i_GENERAL_NAME_ex accepts a NULL ctx and refuses a NULL value.",
-    "The result is encoded and released once with the row's own item (:1097-1105)."
-   ],
-   "authority_derived": [
-    "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_info.c:101-149.",
-    "The authority has no registry lock across the v2i call."
-   ],
-   "tests": [
-    "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
-    "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
-   ],
-   "tests_note": "Driven with 'OCSP;URI:http://example.com' and rejected with 'OCSP' (no ';' prefix)."
-  },
-  {
-   "id": "B51-V2I-006",
-   "file": "src/x509/v3_ist.rs",
-   "line": 246,
-   "line_current": 272,
-   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
-   "kind": "UNSAFE_FN_DEF",
-   "operation": "v2i_issuer_sign_tool",
-   "mechanism": "X509_VERIFY_POLICY",
-   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
-   "registration": "row ossl_v3_issuer_sign_tool, v2i slot at src/x509/v3_ist.rs:466",
-   "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
-   "disposition": "SAFETY_DISCHARGED (scope: v2i_issuer_sign_tool and its do_ext_nconf dispatch path; src/x509/v3_ist.rs:272)",
-   "contract": "Same v2i/dispatcher contract as B51-V2I-001. The body ignores ctx/method, skips a NULL element (unreachable under the stack contract), reads name unconditionally and passes value to ist_member_guard, which refuses NULL. Success returns a fresh IssuerSignTool owned by the dispatcher, encoded with ISSUER_SIGN_TOOL_it and freed once with ASN1_item_free; failure frees the partial value. The `it` pairing is the registrar's obligation; a concurrent cleanup of a DYNAMIC row must not run during the call (B51-R1).",
-   "established": [
-    "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
-    "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
-    "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated.",
-    "ist_member_guard refuses a NULL value.",
-    "The result is encoded and released once with the row's own item (:1097-1105)."
-   ],
-   "authority_derived": [
-    "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_ist.c:34-88.",
-    "The authority has no registry lock across the v2i call."
-   ],
-   "tests": [
-    "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
-    "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
-   ],
-   "tests_note": "Driven with 'signTool:tool' and rejected with 'bogusTool:tool'."
-  },
-  {
-   "id": "B51-V2I-007",
-   "file": "src/x509/v3_pcons.rs",
-   "line": 179,
-   "line_current": 204,
-   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
-   "kind": "UNSAFE_FN_DEF",
-   "operation": "v2i_POLICY_CONSTRAINTS",
-   "mechanism": "X509_VERIFY_POLICY",
-   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
-   "registration": "row ossl_v3_policy_constraints, v2i slot at src/x509/v3_pcons.rs:275",
-   "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
-   "disposition": "SAFETY_DISCHARGED (scope: v2i_POLICY_CONSTRAINTS and its do_ext_nconf dispatch path; src/x509/v3_pcons.rs:204)",
-   "contract": "Same v2i/dispatcher contract as B51-V2I-001. The body ignores ctx/method; X509V3_get_value_int accepts a NULL value. Success returns a fresh PolicyConstraints owned by the dispatcher, encoded with POLICY_CONSTRAINTS_it and freed once with ASN1_item_free; failure frees the partial value. The `it` pairing is the registrar's obligation; a concurrent cleanup of a DYNAMIC row must not run during the call (B51-R1).",
-   "established": [
-    "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
-    "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
-    "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated.",
-    "X509V3_get_value_int accepts a NULL value.",
-    "The result is encoded and released once with the row's own item (:1097-1105)."
-   ],
-   "authority_derived": [
-    "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_pcons.c:55-91.",
-    "The authority has no registry lock across the v2i call."
-   ],
-   "tests": [
-    "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
-    "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
-   ],
-   "tests_note": "Driven with 'requireExplicitPolicy:1' and rejected with 'requireExplicitPolicy:bogus'."
-  },
-  {
-   "id": "B51-V2I-008",
-   "file": "src/x509/v3_pmaps.rs",
-   "line": 229,
-   "line_current": 255,
-   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
-   "kind": "UNSAFE_FN_DEF",
-   "operation": "v2i_POLICY_MAPPINGS",
-   "mechanism": "X509_VERIFY_POLICY",
-   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
-   "registration": "row ossl_v3_policy_mappings, v2i slot at src/x509/v3_pmaps.rs:345",
-   "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
-   "disposition": "SAFETY_DISCHARGED (scope: v2i_POLICY_MAPPINGS and its do_ext_nconf dispatch path; src/x509/v3_pmaps.rs:255)",
-   "contract": "Same v2i/dispatcher contract as B51-V2I-001. The body ignores ctx/method, reads name/value and refuses the entry when either is NULL (the authority's own guard), then parses both as objects. Success returns a fresh POLICY_MAPPINGS owned by the dispatcher, encoded with POLICY_MAPPINGS_it and freed once with ASN1_item_free; failure frees the partial list and objects. The `it` pairing is the registrar's obligation; a concurrent cleanup of a DYNAMIC row must not run during the call (B51-R1).",
-   "established": [
-    "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
-    "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
-    "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated.",
-    "The body refuses a NULL name/value before OBJ_txt2obj.",
-    "The result is encoded and released once with the row's own item (:1097-1105)."
-   ],
-   "authority_derived": [
-    "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_pmaps.c:64-109.",
-    "The authority has no registry lock across the v2i call."
-   ],
-   "tests": [
-    "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
-    "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
-   ],
-   "tests_note": "Driven with '1.2.3.4:1.2.3.5' and rejected with '1.2.3.4' (NULL value)."
-  },
-  {
-   "id": "B51-V2I-009",
-   "file": "src/x509/v3_sxnet.rs",
-   "line": 420,
-   "line_current": 445,
-   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
-   "kind": "UNSAFE_FN_DEF",
-   "operation": "sxnet_v2i",
-   "mechanism": "X509_VERIFY_POLICY",
-   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
-   "registration": "row ossl_v3_sxnet, v2i slot at src/x509/v3_sxnet.rs:741",
-   "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
-   "disposition": "SAFETY_DISCHARGED (scope: sxnet_v2i and its do_ext_nconf dispatch path; src/x509/v3_sxnet.rs:445)",
-   "contract": "Same v2i/dispatcher contract as B51-V2I-001. The body ignores ctx/method, reads name unconditionally and passes the possibly-NULL value to SXNET_add_id_asc, which rejects it. Success returns a fresh Sxnet owned by the dispatcher, encoded with SXNET_it and freed once with ASN1_item_free; failure frees the partial value. The `it` pairing is the registrar's obligation; a concurrent cleanup of a DYNAMIC row must not run during the call (B51-R1).",
-   "established": [
-    "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
-    "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
-    "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated.",
-    "SXNET_add_id_asc/s2i_ASN1_INTEGER reject a NULL value.",
-    "The result is encoded and released once with the row's own item (:1097-1105)."
-   ],
-   "authority_derived": [
-    "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_sxnet.c:98-112.",
-    "The authority has no registry lock across the v2i call."
-   ],
-   "tests": [
-    "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
-    "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
-   ],
-   "tests_note": "Driven with '1:user' and rejected with 'notanint:user'."
-  },
-  {
-   "id": "B51-V2I-010",
-   "file": "src/x509/v3_tlsf.rs",
-   "line": 208,
-   "line_current": 233,
-   "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
-   "kind": "UNSAFE_FN_DEF",
-   "operation": "v2i_TLS_FEATURE",
-   "mechanism": "X509_VERIFY_POLICY",
-   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *mut OpenSslStack) -> *mut c_void",
-   "registration": "row ossl_v3_tls_feature, v2i slot at src/x509/v3_tlsf.rs:320",
-   "guard": "do_ext_nconf refuses NID_undef, a NULL row, and a NULL or empty nval (:1007-1057) before the slot; no new guard was added.",
-   "disposition": "SAFETY_DISCHARGED (scope: v2i_TLS_FEATURE and its do_ext_nconf dispatch path; src/x509/v3_tlsf.rs:233)",
-   "contract": "Same v2i/dispatcher contract as B51-V2I-001. The body ignores ctx/method, reads name unconditionally and uses value only when non-NULL. Success returns a fresh STACK_OF(ASN1_INTEGER) owned by the dispatcher, encoded with tls_feature_it and freed once with ASN1_item_free; failure frees the partial list. The `it` pairing is the registrar's obligation; a concurrent cleanup of a DYNAMIC row must not run during the call (B51-R1). Note: the closure still marks this operation's owning boundary ELIMINATED at a different coordinate (:146) while the source at :232 is still an uncontracted unsafe fn before this delta; B51 contracts it anyway and records the inconsistency in B51-R2.",
-   "established": [
-    "do_ext_nconf refuses NID_undef/NULL row (:1007-1018).",
-    "do_ext_nconf refuses a NULL or empty values stack (:1041-1057).",
-    "Element name is non-NULL from both producers; value is NULL-or-NUL-terminated and the body falls back to name.",
-    "OPENSSL_strcasecmp/strtol are NULL-safe only after the fallback; name is non-NULL.",
-    "The result is encoded and released once with the row's own item (:1097-1105)."
-   ],
-   "authority_derived": [
-    "crypto/x509/v3_conf.c:96-112; crypto/x509/v3_tlsf.c:85-137.",
-    "The authority has no registry lock across the v2i call."
-   ],
-   "tests": [
-    "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
-    "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
-   ],
-   "tests_note": "Driven with 'status_request' and rejected with 'notafeature'."
-  }
- ],
- "hidden_obligations": 0,
- "hidden_obligations_note": "No obligation is hidden. The three obligations the callbacks do not enforce are stated in every contract above and enumerated as residuals: (1) a borrowed row must not be released concurrently (B51-R1); (2) the ASIdentifiers range parser assumes the config value fits in c_int (B51-R3); (3) the returned object's type must match the row's `it` (B51-R6). A hidden obligation is one that is neither enforced nor stated; none was found.",
- "new_unsafe_assumptions": 0,
- "new_unsafe_assumptions_note": "The delta adds documentation and tests only; no new unsafe operation or assumption was introduced. The tests call existing unsafe extern C APIs under per-call SAFETY comments and add no unsafe fn.",
- "unsafe_operations_removed": 0,
- "unsafe_operations_introduced": 0,
- "test_only_unsafe_added": 0,
- "boundary_size": "10 callback bodies (unchanged), 10 fn-level # Safety contracts, one shared dispatcher arm (do_ext_nconf v2i branch, src/x509/v3_conf.rs:1029-1066), and 3 tests (two loops over all ten rows plus one pre-slot canary). No second lock or hold was added. B51b adds one structural hold mechanism (registry read guard on the config/i2d/d2i paths) shared by all ten sites, with three mutation-proven liveness canaries and one neutral control.",
- "safe_callers_can_cause_ub": false,
- "safe_callers_can_cause_ub_note": "Every entry point that can reach a v2i callback is `unsafe extern \"C\"` (X509V3_EXT_nconf, X509V3_EXT_nconf_nid, X509V3_EXT_conf, X509V3_EXT_conf_nid, X509V3_EXT_add_nconf_sk). The callback type is Option<unsafe extern \"C\" fn>, and no safe Rust item accepts or returns X509V3ExtMethod. A safe Rust caller can therefore not reach these callbacks without an unsafe block; the C ABI obligations are stated in each contract.",
- "negative_control": [
-  {
-   "id": "B51-C1",
-   "name": "x509::v3_conf::tests::an_empty_value_is_refused_before_the_v2i_slot",
-   "kind": "court functional test, lib unittest",
-   "guard": "do_ext_nconf's pre-slot refusal `if nval.is_null() || OPENSSL_sk_num(nval) <= 0` (src/x509/v3_conf.rs:1041-1057)",
-   "result": "PASS after restore (1 passed, 0 failed at --test-threads=1)",
-   "observation": "A value (' ') that X509V3_parse_list cannot turn into even one CONF_VALUE is refused before any v2i callback, so the callback never builds an empty object.",
-   "mutation_sensitive": true,
-   "mutation": "`if nval.is_null() || num <= 0 {` at src/x509/v3_conf.rs:1041 replaced by `if false {`",
-   "fails_if": "observed FAILED, rc 101, at src/x509/v3_conf.rs:1648: 'an empty value must not reach the v2i slot' (0 passed; 1 failed; 2316 filtered out)",
-   "restore": "byte-for-byte: sha256 8e84b916d7394e739c51e44260af166d2bb7f1fdb7e74a33a9c3a0210c988c9e before and after the mutation; src/x509/v3_conf.rs is the same file hash in candidate.files_sha256; the test then passes again",
-   "limits": "The canary observes the refusal (NULL extension) rather than a fault. Under the mutation the callback receives a NULL stack, OPENSSL_sk_num answers -1, the loop is skipped and an empty BASIC_CONSTRAINTS is encoded, so the extension is non-NULL. It pins the one pre-slot guard the v2i contracts rely on; it does not exercise the per-callback value-NULL checks (B51-C2)."
-  },
-  {
-   "id": "B51-C2",
-   "name": "per-callback value-NULL guards are not independently mutation-canaried",
-   "kind": "negative result, not a canary",
-   "guards": [
-    "v2i_POLICY_MAPPINGS value.is_null() || name.is_null() (src/x509/v3_pmaps.rs)",
-    "v2i_ASIdentifiers value.is_null() (src/x509/v3_asid.rs)",
-    "v2i_issuer_sign_tool cnf.is_null() (src/x509/v3_ist.rs)"
-   ],
-   "mutation_sensitive": false,
-   "reason": "These are authority-derived defensive checks, not the path that establishes the callbacks' preconditions. Removing the pmaps guard is behaviour-neutral (OBJ_txt2obj is NULL-safe and the next obj1/obj2 check still returns NULL), so a clean assertion cannot distinguish it; removing the asid guard would call strcmp on NULL and fault the harness rather than produce an assertion; the ist cnf.is_null() arm is unreachable because OPENSSL_sk_value answers NULL only out of range. They were therefore verified by contract review and exercised negatively by v2i_callbacks_reject_bad_values, not faked as mutation canaries. The producer-side non-NULL name checks (X509V3_parse_list checks ntmp; the config loader checks (*v).name) are shared by many units and are recorded as established facts by inspection."
-  }
- ],
- "positive_control": [
-  {
-   "id": "B51-P1",
-   "name": "x509::v3_conf::tests::v2i_callbacks_build_end_to_end",
-   "kind": "court functional test, lib unittest",
-   "result": "PASS (included in the 148 x509:: tests at --test-threads=4; 3 passed in the x509::v3_conf::tests filter)",
-   "observation": "All ten standard rows build a non-NULL extension through X509V3_EXT_nconf_nid: asid 'AS:1', battcons 'authority:TRUE,pathlen:1', bcons 'CA:TRUE,pathlen:1', extku 'serverAuth', info 'OCSP;URI:http://example.com', ist 'signTool:tool', pcons 'requireExplicitPolicy:1', pmaps '1.2.3.4:1.2.3.5', sxnet '1:user', tlsf 'status_request'. Each result is tagged with the requested NID and carries non-empty DER; because these rows carry only v2i among their construction slots, a non-NULL tagged extension can be produced only by the callback under test.",
-   "limits": "This proves the callback ran and produced an object the dispatcher could encode; it does not compare the DER against the authority's bytes."
-  },
-  {
-   "id": "B51-P2",
-   "name": "x509::v3_conf::tests::v2i_callbacks_reject_bad_values",
-   "kind": "court functional test, lib unittest",
-   "result": "PASS (included in the 148 x509:: tests at --test-threads=4)",
-   "observation": "The same ten rows refuse a bad value and answer NULL: asid 'XX:1', battcons 'authority:bogus', bcons 'CA:bogus', extku 'notanoid', info 'OCSP', ist 'bogusTool:tool', pcons 'requireExplicitPolicy:bogus', pmaps '1.2.3.4', sxnet 'notanint:user', tlsf 'notafeature'. Each exercises that callback's partial-decode release path.",
-   "limits": "NULL-return proves the callback refused the value and did not reach the encoder; it does not measure the absence of a leak (no allocator-hook test was run)."
-  }
- ],
- "fast_gate_at_candidate": {
-  "candidate": "8b9a03e28",
-  "ran_at_head": "8b9a03e280e4f053fc5e081947d17584dfbca92f",
-  "container": "docker/openssl-rs-court.sh (never the host)",
-  "toolchain": "pinned by the court image; CARGO_BUILD_JOBS=4; tests --test-threads=4 unless stated",
-  "fmt": "cargo fmt --all -- --check: exit 0",
-  "clippy": "cargo clippy --all-targets -- -D warnings: exit 0, Finished dev profile, 0 warnings, 0 errors",
-  "focused_tests": "cargo test --lib -- x509:: -- --test-threads=4: ok. 152 passed; 0 failed; 0 ignored; 2169 filtered out",
-  "conf_tests": "cargo test --lib -- x509::v3_conf::tests:: -- --test-threads=1: ok. 6 passed; 0 failed",
-  "scope_note": "FAST evidence only. Full library suite, Miri/ASan/TSan/dudect, authority differential and the consumer closures are NOT_RUN at this candidate."
- },
- "residuals": [
-  {
-   "id": "B51-R1",
-   "severity": "medium",
-   "disposition": "CLOSED-STRUCTURALLY",
-   "description": "Row liveness for DYNAMIC rows across the config-decode slot. Originally a documented caller duty (same class as the refused B46/B47 argument); now enforced by a read hold spanning the callback.",
-   "closed_by": "B51b: RegistryReadGuard over do_ext_nconf, X509V3_EXT_i2d and X509V3_EXT_d2i, each with a mutation-proven liveness canary"
-  },
-  {
-   "id": "B51-R2",
-   "severity": "low",
-   "disposition": "OBSERVATION",
-   "description": "The closure names 11 BLOCKED v2i-named obligations but B50's taxonomy counts v2i as 10 because bitst_v2i is grouped with bitst_i2v under family bitst. B51 follows the 10-site family and leaves bitst_v2i BLOCKED. Separately, v2i_TLS_FEATURE's owning boundary is recorded ELIMINATED at src/x509/v3_tlsf.rs:146 while the source at :232 was still an uncontracted unsafe fn before this delta; B51 contracts it and records the inconsistency rather than silently reclassifying it."
-  },
-  {
-   "id": "B51-R3",
-   "severity": "low",
-   "disposition": "NOT-FIXED-UNREACHABLE-IN-PRACTICE",
-   "description": "v2i_ASIdentifiers computes offset candidates with `strspn(...) as c_int` and then uses them as usize indices into the NUL-terminated value. A config value longer than INT_MAX would make the cast negative and the offset invalid. The authority has the same int cast. It is not reachable with any practical config value and cannot be given a failing test without a multi-gigabyte input, so it was not changed; the contract retains the input-length assumption."
-  },
-  {
-   "id": "B51-R4",
-   "severity": "low",
-   "disposition": "NOT-FIXED-UNREACHABLE",
-   "description": "X509v3_asid_add_id_or_range installs min/max into a fresh ASIdOrRange before OPENSSL_sk_push. If that push failed, the callee would free the range (and min/max), and v2i_ASIdentifiers's failure cleanup would free min/max again. The push cannot fail after OPENSSL_sk_reserve(list, 1) succeeds, so the branch is unreachable; no failing test can be written. Recorded, not changed."
-  },
-  {
-   "id": "B51-R5",
-   "severity": "medium",
-   "disposition": "NOT-RUN",
-   "description": "Partial-decode ownership is exercised by v2i_callbacks_reject_bad_values but not proven leak-free: no allocator-hook or LeakSanitizer run was made, so a missing release in a failure path would not be detected."
-  },
-  {
-   "id": "B51-R6",
-   "severity": "medium",
-   "disposition": "STATED-REGISTRAR-OBLIGATION",
-   "description": "The dispatcher encodes and frees the returned object with the row's `it` (ASN1_item_i2d / ASN1_item_free; all ten rows set `it` and ext_free is NULL). The callback must return exactly the item's type; a registrar that pairs a v2i callback with a mismatched `it` causes an invalid encode/free. That pairing is not checked by X509V3_EXT_add and is the registrar's obligation."
-  },
-  {
-   "id": "B51-R7",
-   "severity": "high",
-   "disposition": "BRIEF-DISCREPANCY",
-   "description": "The subphase brief described v2i as `(X509V3_EXT_METHOD*, unsigned char**, long)` returning `*mut c_void` freed through `ext_free`, and pointed at X509V3_EXT_print. The actual v2i slot is `(const X509V3_EXT_METHOD*, X509V3_CTX*, STACK_OF(CONF_VALUE)*)`, dispatched by do_ext_nconf (v3_conf.c:79-135), and all ten rows are freed through `it` with ASN1_item_free, not ext_free. This receipt follows the code and the closure's v2i items; the brief's signature/release description is recorded here rather than silently adopted."
-  },
-  {
-   "id": "B51-R8",
-   "severity": "low",
-   "disposition": "STATED-CALLER-OBLIGATION",
-   "description": "ctx may be NULL (do_ext_nconf's contract allows it and does not check it). Only v2i_AUTHORITY_INFO_ACCESS forwards ctx, to v2i_GENERAL_NAME_ex, which documents NULL-or-live; the other nine ignore it. A callback that begins reading ctx would inherit the caller's obligation to supply one."
-  }
- ],
- "not_run": [
-  {
-   "gate": "Miri (Stacked/Tree Borrows)",
-   "blocker": "not invoked; no new aliasing model claim"
-  },
-  {
-   "gate": "ASan / LeakSanitizer",
-   "blocker": "not invoked; partial-release ownership is exercised but not measured"
-  },
-  {
-   "gate": "TSan",
-   "blocker": "not invoked; the registry concurrency argument is B49's, not re-measured"
-  },
-  {
-   "gate": "dudect / constant-time",
-   "blocker": "no secret-dependent operation is touched"
-  },
-  {
-   "gate": "authority differential",
-   "blocker": "no differential court run; the authority statements are read from the pinned 3.6.4 source"
-  },
-  {
-   "gate": "full library suite serial and threaded",
-   "blocker": "only the x509:: filter and the two sweeps were run; the full suite is a BATCH/SEAL gate"
-  },
-  {
-   "gate": "consumer closure",
-   "blocker": "deliberately not run"
-  },
-  {
-   "gate": "CAMPAIGN-STATUS application",
-   "blocker": "deliberately not run; this subphase establishes a receipt draft, not a discharge"
-  },
-  {
-   "gate": "per-site DER comparison against the authority",
-   "blocker": "the build test asserts a tagged, non-empty DER, not byte equality"
-  }
- ],
- "non_claims": [
-  "B51 scopes the claim to the ten v2i boundary operations and their do_ext_nconf dispatch path; X509_VERIFY_POLICY stays at OWNERSHIP_RECONSTRUCTED and is not discharged mechanism-wide.",
-  "The B51 dispositions are receipts, not applied adjudications: the closure was not run and CAMPAIGN-STATUS.json was not edited.",
-  "No sanitizer, Miri, dudect, leak check or authority differential was run; no cryptographic or constant-time claim is made.",
-  "The v2i dispatch does not hold the registry read hold across the callback; row liveness is the authority's borrowed-row ABI obligation (B51-R1), not an enforced property.",
-  "The `it`-vs-returned-type pairing is a registrar ABI obligation, not a checked property (B51-R6).",
-  "The tests prove the callbacks ran and refused bad values; they do not prove the DER bytes equal the authority's or that failure paths are leak-free (B51-P1, B51-P2, B51-R5).",
-  "The binary diff is additive only; no functional defect was fixed, so no before/after failing functional test is claimed.",
-  "Every candidate line number is bound to candidate.files_sha256; any source edit invalidates these coordinates and the receipt."
- ],
- "review_conditions": [
-  "C1_identity: base_head is 3d32259e6 with the B51 delta uncommitted; the worktree delta is bound by files_sha256 and must be committed and frozen as S' before application.",
-  "C2_dispatch: v2i is dispatched by do_ext_nconf, not X509V3_EXT_print. The brief's signature and ext_free release description belong to the d2i/print path and are recorded in B51-R7, not adopted.",
-  "C3_no_hold: no registry read hold spans the v2i callback and none was added. The row-liveness obligation is the borrowed-row ABI (B51-R1); it must be adjudicated, not assumed.",
-  "C4_canary: an_empty_value_is_refused_before_the_v2i_slot fails deterministically when the pre-slot refusal is removed, and src/x509/v3_conf.rs is restored byte-for-byte (sha256 8e84b916...).",
-  "C5_positive: v2i_callbacks_build_end_to_end and v2i_callbacks_reject_bad_values drive all ten standard rows through X509V3_EXT_nconf_nid.",
-  "C6_scope: bitst_v2i is excluded by the B50 family taxonomy and remains BLOCKED; the ten claimed sites are the v2i-named BLOCKED obligations other than bitst_v2i."
- ],
- "applied": false,
- "review": {
-  "reviewer": "independent adversarial adjudicator (session b5cd6489-f5c3-410d-b557-c4dddbcce39c); transcribed verbatim by the orchestrator",
-  "verdict": "REJECT",
+  "not_run": [
+    {
+      "gate": "Miri (Stacked/Tree Borrows)",
+      "blocker": "not invoked; no new aliasing model claim"
+    },
+    {
+      "gate": "ASan / LeakSanitizer",
+      "blocker": "not invoked; partial-release ownership is exercised but not measured"
+    },
+    {
+      "gate": "TSan",
+      "blocker": "not invoked; the registry concurrency argument is B49's, not re-measured"
+    },
+    {
+      "gate": "dudect / constant-time",
+      "blocker": "no secret-dependent operation is touched"
+    },
+    {
+      "gate": "authority differential",
+      "blocker": "no differential court run; the authority statements are read from the pinned 3.6.4 source"
+    },
+    {
+      "gate": "full library suite serial and threaded",
+      "blocker": "only the x509:: filter and the two sweeps were run; the full suite is a BATCH/SEAL gate"
+    },
+    {
+      "gate": "consumer closure",
+      "blocker": "deliberately not run"
+    },
+    {
+      "gate": "CAMPAIGN-STATUS application",
+      "blocker": "deliberately not run; this subphase establishes a receipt draft, not a discharge"
+    },
+    {
+      "gate": "per-site DER comparison against the authority",
+      "blocker": "the build test asserts a tagged, non-empty DER, not byte equality"
+    }
+  ],
+  "non_claims": [
+    "B51 scopes the claim to the ten v2i boundary operations and their do_ext_nconf dispatch path; X509_VERIFY_POLICY stays at OWNERSHIP_RECONSTRUCTED and is not discharged mechanism-wide.",
+    "The B51 dispositions are receipts, not applied adjudications: the closure was not run and CAMPAIGN-STATUS.json was not edited.",
+    "No sanitizer, Miri, dudect, leak check or authority differential was run; no cryptographic or constant-time claim is made.",
+    "Row liveness across the v2i dispatch is an enforced property: RegistryReadGuard spans the callback in do_ext_nconf and the encoder/decoder in X509V3_EXT_i2d/X509V3_EXT_d2i (B51-R1, B51-H1..H3). Its caller-facing limit is the retained ABI obligation B51-R9 (a callback must not call a registry writer).",
+    "The `it`-vs-returned-type pairing is a registrar ABI obligation, not a checked property (B51-R6).",
+    "The tests prove the callbacks ran and refused bad values; they do not prove the DER bytes equal the authority's or that failure paths are leak-free (B51-P1, B51-P2, B51-R5).",
+    "The source delta is not additive: 748 insertions / 18 deletions (12 files), including the two functional fixes B51-R3 and B51-R4. R4 has a discriminating free-probe test; R3 is a type/flow fix that no practical-size input can discriminate.",
+    "Every candidate line number is bound to candidate.files_sha256; any source edit invalidates these coordinates and the receipt."
+  ],
+  "review_conditions": [
+    "C1_identity: candidate S is 8b9a03e28 (committed; candidate.base_commit and files_sha256 bind that exact tree; the B51b hold and the ten contracts are in it). Two evidence baselines were untracked at authoring (candidate.authoring_untracked), and this correction's documentation-only contract rewording plus receipt edits are uncommitted at authoring (candidate.working_delta). The delta must be committed as S-prime and the FAST gate re-run at S-prime before application.",
+    "C2_dispatch: v2i is dispatched by do_ext_nconf, not X509V3_EXT_print. The brief's signature and ext_free release description belong to the d2i/print path and are recorded in B51-R7, not adopted.",
+    "C3_hold: do_ext_nconf holds RegistryReadGuard across the v2i slot (canary B51-H1), X509V3_EXT_i2d across the encoder (B51-H2) and X509V3_EXT_d2i across the decoder (B51-H3). Each canary fails deterministically when its guard is released early and passes byte-identically after restore.",
+    "C4_canary: an_empty_value_is_refused_before_the_v2i_slot fails deterministically when the pre-slot refusal is removed, and src/x509/v3_conf.rs is restored byte-for-byte (sha256 8e84b916...).",
+    "C5_positive: v2i_callbacks_build_end_to_end and v2i_callbacks_reject_bad_values drive all ten standard rows through X509V3_EXT_nconf_nid.",
+    "C6_scope: bitst_v2i is excluded by the B50 family taxonomy and remains BLOCKED; the ten claimed sites are the v2i-named BLOCKED obligations other than bitst_v2i."
+  ],
   "applied": false,
-  "date": "2026-11-02",
-  "verdict_text": "REJECT -- not for site unsoundness (the structural hold is real and I reproduced it), but because the receipt materially misdescribes its own delta and its own review conditions. It cannot be applied to the ledger as written.",
-  "not_rejected_for": "The ten sites are structurally sound and were verified at their current coordinates; the read hold spans the callback, reader/reader nesting cannot stall, the probe is test-only, no exported item was added, and one liveness canary was independently reproduced (FAILED rc 101 under mutation, PASSED byte-identically after restore).",
-  "reasons": [
-   "R3 is false as written: the delta REMOVED the `as c_int` narrowing (6 deleted cast lines), so the INT_MAX wrap was eliminated; it must be recorded as a functional fix, not an unreachable unfixed residual.",
-   "R4 is false as written: the delta FIXED the asid push-failure path (detach min/max before ASIdOrRange_free, src/x509/v3_asid.rs:1060-1079); no reachable double-free remains, and it must be recorded as a fix.",
-   "hidden_obligations: 0 is not defensible: the read hold is non-reentrant, so a v2i callback that calls a registry WRITER self-deadlocks (the read-holding thread has writer_id None, so write_lock cannot detect re-entry). Static callbacks do not, but caller rows registered through X509V3_EXT_add can. This is a B49-R11 analogue and is unrecorded.",
-   "The ten boundary contracts still state that a concurrent X509V3_EXT_cleanup must not run during the call (B51-R1), which contradicts marking R1 CLOSED-STRUCTURALLY.",
-   "The delta description is false: the measured change is 748 insertions / 18 deletions, including two functional fixes, not \"348 insertions, 0 deletions / additive only / no functional defect fixed\".",
-   "review_conditions C3_no_hold states that no read hold spans the v2i callback and none was added -- the opposite of the implemented mechanism; C1 still names base_head 3d32259e6 and an uncommitted worktree instead of 8b9a03e28 and a clean tree.",
-   "Control id B51-C2 is duplicated between negative_control and hold_canaries."
+  "review": {
+    "reviewer": "independent adversarial adjudicator (session b5cd6489-f5c3-410d-b557-c4dddbcce39c); transcribed verbatim by the orchestrator",
+    "verdict": "REJECT",
+    "applied": false,
+    "date": "2026-11-02",
+    "verdict_text": "REJECT -- not for site unsoundness (the structural hold is real and I reproduced it), but because the receipt materially misdescribes its own delta and its own review conditions. It cannot be applied to the ledger as written.",
+    "not_rejected_for": "The ten sites are structurally sound and were verified at their current coordinates; the read hold spans the callback, reader/reader nesting cannot stall, the probe is test-only, no exported item was added, and one liveness canary was independently reproduced (FAILED rc 101 under mutation, PASSED byte-identically after restore).",
+    "reasons": [
+      "R3 is false as written: the delta REMOVED the `as c_int` narrowing (6 deleted cast lines), so the INT_MAX wrap was eliminated; it must be recorded as a functional fix, not an unreachable unfixed residual.",
+      "R4 is false as written: the delta FIXED the asid push-failure path (detach min/max before ASIdOrRange_free, src/x509/v3_asid.rs:1060-1079); no reachable double-free remains, and it must be recorded as a fix.",
+      "hidden_obligations: 0 is not defensible: the read hold is non-reentrant, so a v2i callback that calls a registry WRITER self-deadlocks (the read-holding thread has writer_id None, so write_lock cannot detect re-entry). Static callbacks do not, but caller rows registered through X509V3_EXT_add can. This is a B49-R11 analogue and is unrecorded.",
+      "The ten boundary contracts still state that a concurrent X509V3_EXT_cleanup must not run during the call (B51-R1), which contradicts marking R1 CLOSED-STRUCTURALLY.",
+      "The delta description is false: the measured change is 748 insertions / 18 deletions, including two functional fixes, not \"348 insertions, 0 deletions / additive only / no functional defect fixed\".",
+      "review_conditions C3_no_hold states that no read hold spans the v2i callback and none was added -- the opposite of the implemented mechanism; C1 still names base_head 3d32259e6 and an uncommitted worktree instead of 8b9a03e28 and a clean tree.",
+      "Control id B51-C2 is duplicated between negative_control and hold_canaries."
+    ],
+    "authorisation_condition": "A corrected receipt (R3/R4 recorded as fixes, the additive-only claim removed, C1/C3 corrected, the read-to-write re-entrancy residual added, the ten contracts reworded, the duplicate id fixed), frozen as S-prime with the FAST gate re-run. The sites themselves need no re-work.",
+    "would_be_applied_delta": "X509_VERIFY_POLICY stays site-scoped: v2i 10 -> 0 BLOCKED, bitst 2 unchanged, s2i 9 / i2v 7 / r2i 6 / print 4 / audit 2 / non-method 2 unchanged; mechanism 42B/38D -> 32B/48D; closure 145B/167D -> 135B/177D."
+  },
+  "schema_note": "Same shape as boundary-sweep-B50.json, plus scope.excluded, B51-R7 (brief discrepancy), the B51-C2 documented non-canaried negative result, B51-H1..H3 hold-canary ids, candidate.authoring_untracked/working_delta, and the corrections_applied ledger. `line` is the V1 census coordinate; `line_current` is the candidate coordinate.",
+  "hold_canaries": [
+    {
+      "id": "B51-H1",
+      "hold": "do_ext_nconf (src/x509/v3_conf.rs:1035-1039)",
+      "test": "x509::v3_conf::tests::the_v2i_dispatch_holds_the_registry_read_lock_across_the_callback",
+      "mutated": "FAILED rc 101: the v2i callback ran without the registry read hold",
+      "restored": "ok, rc 0; sha256 identical before and after",
+      "load_bearing": true
+    },
+    {
+      "id": "B51-H2",
+      "hold": "X509V3_EXT_i2d (src/x509/v3_conf.rs:742-746)",
+      "test": "x509::v3_conf::tests::the_i2d_entry_point_holds_the_registry_read_lock_across_the_encoder",
+      "mutated": "FAILED rc 101: the encoder read the row after X509V3_EXT_i2d released the read hold",
+      "restored": "ok, rc 0; sha256 identical before and after",
+      "load_bearing": true
+    },
+    {
+      "id": "B51-H3",
+      "hold": "X509V3_EXT_d2i (src/x509/v3_lib.rs:892-894)",
+      "test": "x509::v3_conf::tests::the_d2i_entry_point_holds_the_registry_read_lock_across_the_decoder",
+      "mutated": "FAILED rc 101: the decoder read the row after X509V3_EXT_d2i released the read hold",
+      "restored": "ok, rc 0; sha256 identical before and after",
+      "load_bearing": true
+    }
   ],
-  "authorisation_condition": "A corrected receipt (R3/R4 recorded as fixes, the additive-only claim removed, C1/C3 corrected, the read-to-write re-entrancy residual added, the ten contracts reworded, the duplicate id fixed), frozen as S-prime with the FAST gate re-run. The sites themselves need no re-work.",
-  "would_be_applied_delta": "X509_VERIFY_POLICY stays site-scoped: v2i 10 -> 0 BLOCKED, bitst 2 unchanged, s2i 9 / i2v 7 / r2i 6 / print 4 / audit 2 / non-method 2 unchanged; mechanism 42B/38D -> 32B/48D; closure 145B/167D -> 135B/177D."
- },
- "schema_note": "Same shape as boundary-sweep-B50.json, plus the scope.excluded entry, the B51-R7 brief-discrepancy residual, and the B51-C2 documented non-canaried negative result. `line` is the V1 census coordinate; `line_current` is the candidate working-tree coordinate bound by files_sha256.",
- "hold_canaries": [
-  {
-   "id": "B51-C2",
-   "hold": "do_ext_nconf (src/x509/v3_conf.rs:1035-1039)",
-   "test": "x509::v3_conf::tests::the_v2i_dispatch_holds_the_registry_read_lock_across_the_callback",
-   "mutated": "FAILED rc 101: the v2i callback ran without the registry read hold",
-   "restored": "ok, rc 0; sha256 identical before and after",
-   "load_bearing": true
+  "neutral_control": {
+    "id": "B51-N1",
+    "assertion": "assert!(!registry_read_held_on_this_thread()) before registration and dispatch in the v2i liveness test",
+    "observed": "PASS; the thread holds no read lock before dispatch, so the true readings inside the callback are not vacuous"
   },
-  {
-   "id": "B51-C3",
-   "hold": "X509V3_EXT_i2d (src/x509/v3_conf.rs:742-746)",
-   "test": "x509::v3_conf::tests::the_i2d_entry_point_holds_the_registry_read_lock_across_the_encoder",
-   "mutated": "FAILED rc 101: the encoder read the row after X509V3_EXT_i2d released the read hold",
-   "restored": "ok, rc 0; sha256 identical before and after",
-   "load_bearing": true
+  "test_harness_incident": {
+    "what": "The first liveness harness built an X509V3ExtMethod row as a helper local, passed &mut row to X509V3_EXT_add (which borrows the caller row by pointer), and returned the row by value. The registry kept a pointer into a dead frame.",
+    "observed": "All three liveness tests failed at ext.is_null() (v3_conf.rs:1706/1734/1761) before reaching the probe; the gate reported FAILED 149 passed / 3 failed.",
+    "resolution": "Box::leak in the #[cfg(test)] harness gives the row a static lifetime (dedicated test process; the registry borrows it; ext_flags stays non-DYNAMIC so X509V3_EXT_cleanup cannot free it). No assertion was weakened.",
+    "recorded_because": "A vacuous or crashed liveness test cannot support a discharge; the failure and its fix are part of the evidence."
   },
-  {
-   "id": "B51-C4",
-   "hold": "X509V3_EXT_d2i (src/x509/v3_lib.rs:892-894)",
-   "test": "x509::v3_conf::tests::the_d2i_entry_point_holds_the_registry_read_lock_across_the_decoder",
-   "mutated": "FAILED rc 101: the decoder read the row after X509V3_EXT_d2i released the read hold",
-   "restored": "ok, rc 0; sha256 identical before and after",
-   "load_bearing": true
-  }
- ],
- "neutral_control": {
-  "id": "B51-N1",
-  "assertion": "assert!(!registry_read_held_on_this_thread()) before registration and dispatch in the v2i liveness test",
-  "observed": "PASS; the thread holds no read lock before dispatch, so the true readings inside the callback are not vacuous"
- },
- "test_harness_incident": {
-  "what": "The first liveness harness built an X509V3ExtMethod row as a helper local, passed &mut row to X509V3_EXT_add (which borrows the caller row by pointer), and returned the row by value. The registry kept a pointer into a dead frame.",
-  "observed": "All three liveness tests failed at ext.is_null() (v3_conf.rs:1706/1734/1761) before reaching the probe; the gate reported FAILED 149 passed / 3 failed.",
-  "resolution": "Box::leak in the #[cfg(test)] harness gives the row a static lifetime (dedicated test process; the registry borrows it; ext_flags stays non-DYNAMIC so X509V3_EXT_cleanup cannot free it). No assertion was weakened.",
-  "recorded_because": "A vacuous or crashed liveness test cannot support a discharge; the failure and its fix are part of the evidence."
- },
- "review_history": [
-  {
-   "reviewer": "pending independent adjudication",
-   "verdict": "UNAPPLIED",
-   "applied": false,
-   "prohibition": "This receipt is a DRAFT. It must not be applied, copied into CAMPAIGN-STATUS.json, or used to mark any obligation SAFETY_DISCHARGED until an independent adjudicator has frozen the candidate S', re-run the FAST gate at S', and verified every candidate.files_sha256 against the committed tree. The adjudicator must also rule on B51-R1 (no read hold across the v2i callback) and B51-R7 (the brief's signature/release discrepancy).",
-   "superseded_by": "independent adjudication, REJECT, 2026-11-02; the dispositions are unchanged and remain unapplied"
-  }
- ],
- "rejection_findings": [
-  {
-   "id": "B51-REJ-1",
-   "class": "false-residual",
-   "detail": "R3 obsolete: the narrowing was removed; record the fix and its test."
-  },
-  {
-   "id": "B51-REJ-2",
-   "class": "false-residual",
-   "detail": "R4 obsolete: the double-free was fixed; record the fix and its test."
-  },
-  {
-   "id": "B51-REJ-3",
-   "class": "hidden-obligation",
-   "detail": "the read hold is non-reentrant; a callback re-entering a registry writer self-deadlocks. Record as a retained obligation with the code citation."
-  },
-  {
-   "id": "B51-REJ-4",
-   "class": "contradiction",
-   "detail": "the ten contracts still impose the cleanup-exclusion caller duty; reword to reflect the enforced hold, keeping only the caller-owned-row lifetime duty."
-  },
-  {
-   "id": "B51-REJ-5",
-   "class": "false-delta",
-   "detail": "claimed 348/0 additive; measured 748/18 with two functional fixes."
-  },
-  {
-   "id": "B51-REJ-6",
-   "class": "stale-condition",
-   "detail": "review_conditions C1 and C3 describe a different mechanism and a different candidate."
-  },
-  {
-   "id": "B51-REJ-7",
-   "class": "control-id",
-   "detail": "duplicate B51-C2 in negative_control and hold_canaries."
-  },
-  {
-   "id": "B51-REJ-8",
-   "class": "identity-hygiene",
-   "detail": "the working tree was not literally clean at receipt time; state the untracked set explicitly."
-  }
- ]
+  "review_history": [
+    {
+      "reviewer": "pending independent adjudication",
+      "verdict": "UNAPPLIED",
+      "applied": false,
+      "prohibition": "This receipt is a DRAFT. It must not be applied, copied into CAMPAIGN-STATUS.json, or used to mark any obligation SAFETY_DISCHARGED until an independent adjudicator has frozen the candidate S', re-run the FAST gate at S', and verified every candidate.files_sha256 against the committed tree. The adjudicator must also rule on B51-R1 (no read hold across the v2i callback) and B51-R7 (the brief's signature/release discrepancy).",
+      "superseded_by": "independent adjudication, REJECT, 2026-11-02; the dispositions are unchanged and remain unapplied"
+    }
+  ],
+  "rejection_findings": [
+    {
+      "id": "B51-REJ-1",
+      "class": "false-residual",
+      "detail": "R3 obsolete: the narrowing was removed; record the fix and its test."
+    },
+    {
+      "id": "B51-REJ-2",
+      "class": "false-residual",
+      "detail": "R4 obsolete: the double-free was fixed; record the fix and its test."
+    },
+    {
+      "id": "B51-REJ-3",
+      "class": "hidden-obligation",
+      "detail": "the read hold is non-reentrant; a callback re-entering a registry writer self-deadlocks. Record as a retained obligation with the code citation."
+    },
+    {
+      "id": "B51-REJ-4",
+      "class": "contradiction",
+      "detail": "the ten contracts still impose the cleanup-exclusion caller duty; reword to reflect the enforced hold, keeping only the caller-owned-row lifetime duty."
+    },
+    {
+      "id": "B51-REJ-5",
+      "class": "false-delta",
+      "detail": "claimed 348/0 additive; measured 748/18 with two functional fixes."
+    },
+    {
+      "id": "B51-REJ-6",
+      "class": "stale-condition",
+      "detail": "review_conditions C1 and C3 describe a different mechanism and a different candidate."
+    },
+    {
+      "id": "B51-REJ-7",
+      "class": "control-id",
+      "detail": "duplicate B51-C2 in negative_control and hold_canaries."
+    },
+    {
+      "id": "B51-REJ-8",
+      "class": "identity-hygiene",
+      "detail": "the working tree was not literally clean at receipt time; state the untracked set explicitly."
+    }
+  ],
+  "correction_date": "2026-11-02",
+  "corrections_applied": [
+    {
+      "finding": "B51-REJ-1",
+      "change": "B51-R3 recorded as FIXED: strspn offsets stay usize and the `as c_int` narrowing was removed in 8b9a03e28; verified by the bounded 3d32259e6..8b9a03e28 diff. No practical discriminating test exists (a run longer than INT_MAX needs a multi-GB input); the correction is enforced by the offset type."
+    },
+    {
+      "finding": "B51-REJ-2",
+      "change": "B51-R4 recorded as FIXED: min/max are detached before ASIdOrRange_free on the failed-push arm in 8b9a03e28; verified by the bounded diff and by x509::v3_asid::tests::a_failed_push_returns_the_caller_integers_instead_of_releasing_them, re-run in the correction gate (1 passed, free_probe 0 before / 1 after the caller frees)."
+    },
+    {
+      "finding": "B51-REJ-3",
+      "change": "B51-R9 added: the read hold is non-reentrant for writers, cited to src/runtime/thread.rs LockState/write_lock/read_lock; reachability is static rows cannot, caller-registered rows can. Stated as a registrar/caller ABI obligation and written into the ten contracts. No deadlocking test written."
+    },
+    {
+      "finding": "B51-REJ-4",
+      "change": "All ten # Safety blocks now state the enforced hold as the reason a DYNAMIC row stays live and impose no cleanup-exclusion duty; they retain the caller-owned row storage lifetime (X509V3_EXT_add borrows), the registrar it/usr_data pairing, ctx NULL-or-live, and the B51-R9 no-writer-re-entry duty. Documentation only: no statement, expression, signature or attribute changed. The ten receipt contract summaries were aligned with the same wording."
+    },
+    {
+      "finding": "B51-REJ-5",
+      "change": "Additive-only claim removed from subphase, defect_class and non_claims: the true delta is 748 insertions / 18 deletions across 12 files, with B51-R3 and B51-R4 enumerated as the two functional fixes."
+    },
+    {
+      "finding": "B51-REJ-6",
+      "change": "review_conditions C1 now names the committed candidate 8b9a03e28 and records the authoring untracked set plus the uncommitted docs-only correction; C3_no_hold is replaced by C3_hold naming do_ext_nconf / X509V3_EXT_i2d / X509V3_EXT_d2i and canaries B51-H1..B51-H3."
+    },
+    {
+      "finding": "B51-REJ-7",
+      "change": "Hold canaries renumbered B51-H1..B51-H3; B51-C2 now names only the documented non-canaried negative result. Cross-references in C3_hold, non_claims and the schema note updated."
+    },
+    {
+      "finding": "B51-REJ-8",
+      "change": "candidate no longer asserts a literally clean tree: authoring_untracked records evidence/closure-ssh-b51-baseline.json and evidence/inventory-sshd-b51-baseline.json, and working_delta records the uncommitted docs-only correction."
+    }
+  ]
 }
