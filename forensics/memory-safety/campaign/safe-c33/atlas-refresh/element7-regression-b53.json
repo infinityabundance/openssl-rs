@@ -3,7 +3,7 @@
  "kind": "instrument-finding",
  "date": "2026-11-03",
  "subphase": "B53",
- "state": "OPEN — element 7 worsened at this candidate; blocks graduation",
+ "state": "RULE-FIXED \u2014 verified; 4 sites remain target-bounded for a separate reason",
  "finding": "At the B53 candidate the element-7 classification moved in the wrong direction: target-bounded indirect sites rose from 67 to 80 while contract-bounded fell from 60 to 51 (reachable unresolved 127 -> 131, indirect sites 51844 -> 51918). Element 7 remains FAIL and is now further from PASS than at B52.",
  "comparison": {
   "candidate_b52": "378 obligations, 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN; element-7 FAIL: 127 reachable unresolved = 67 target-bounded + 60 contract-bounded (46 ABI_CONTRACT_EXPORT_CALLBACK + 14 ABI_CONTRACT_PROVIDER)",
@@ -21,15 +21,29 @@
   "not_claimed": "This is not asserted to be a soundness regression in the library. It is a measured regression in the element-7 instrument's precision at this candidate."
  },
  "required_resolution": [
-  "Identify the 13 sites that changed class (9 contract->target plus the provider/export deltas) by stable identity and record them.",
-  "Determine for each whether the contract binding was lost because the underlying fact changed, or because the rule failed to match (a precision bug).",
-  "If a rule stopped matching without a semantic change, fix the rule and add an adversarial mutation control that would have caught the loss (e.g. revert the binding for one site and require the classification to change back).",
-  "Do not restore the previous counts by relaxing a threshold or by widening a contract class: AGENTS.md is explicit that a generic contract class absorbing unrelated callbacks is a verifier defect.",
-  "Re-run after the fix and report the movement against B52 and against this candidate."
+  "resolved for the ten restored sites",
+  "the four capabilities sites need a source-backed contract or must remain target-bounded; element 7 remains FAIL either way"
  ],
  "non_claims": [
   "No obligation status changed: the queue is identical to B52 at 378/186/192/0.",
   "No discharge was added, removed or invalidated at this candidate; the DISCHARGED stable-identity set is identical.",
   "This finding does not itself block the B53 safety improvement, which is independently tested; it blocks the eventual element-7 PASS claim."
- ]
+ ],
+ "resolution": {
+  "date": "2026-11-03",
+  "change": "consumer_closure.py _base_fetch now recognises the public evp_generic_fetch wrapper and identifies the family from the materialised construct-callback argument, accepting only exactly one family writer",
+  "review": "independent adjudicator APPROVE; predicate excludes inner_* and _from_prov, no double count, 21 non-family sites refused, collateral exactly the ten, mutation reproduces at the ten",
+  "measured": "element-7 target/contract/unresolved 80/51/131 -> 70/61/131; ABI_CONTRACT_PROVIDER 4 -> 14; export-callback 47; closures ACCEPTED 378/186/192/0 at 194341af2 with tracked_tree_dirty false",
+  "remaining": {
+   "count": 4,
+   "sites": [
+    "0x4305e7",
+    "0x430677",
+    "0x430687",
+    "0x43069c"
+   ],
+   "reason": "ossl_prov_get_capabilities reg-value-partial[int]; base is an application argument and the function contains no fetch call, so the contract is genuinely unestablished rather than missed"
+  },
+  "why_131_exceeds_b52_127": "the four capabilities sites are new indirect sites produced by this rebuild (codegen shape), all honestly target-bounded; they are not rule misses"
+ }
 }
