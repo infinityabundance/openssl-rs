@@ -194,12 +194,26 @@ unsafe extern "C" fn ia5_i2s(meth: *const X509V3ExtMethod, value: *mut c_void) -
 }
 
 /// The `s2i` slot for `s2i_ASN1_IA5STRING`.
+///
+/// # Safety
+///
+/// The `s2i` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `do_ext_nconf`'s `s2i` arm (`src/x509/v3_conf.rs:1095`), which resolved `method` under the
+/// extension registry's read hold (held across the lookup, this callback and `do_ext_i2d`) and
+/// passes the caller's NUL-terminated configuration `value`; `ctx` is NULL or live. This adapter
+/// forwards `value` to [`s2i_ASN1_IA5STRING`], whose contract accepts NULL or a NUL-terminated
+/// string. That function either transfers a fresh `ASN1_IA5STRING` to the dispatcher or returns
+/// NULL after freeing its partial string, so this callback never retains or frees
+/// `value`/`ctx`, and `method` is not read.
+///
+/// Authority-derived: `crypto/x509/v3_ia5.c:41-61`; `crypto/x509/v3_conf.c:113-116`.
 unsafe extern "C" fn ia5_s2i(
     meth: *const X509V3ExtMethod,
     ctx: *mut c_void,
     value: *const c_char,
 ) -> *mut c_void {
-    // SAFETY: as `ia5_i2s`; the answer is a fresh IA5 string.
+    // SAFETY: `value` is NULL or NUL-terminated per the `s2i` contract above; `meth` and `ctx`
+    // are passed through unread by `s2i_ASN1_IA5STRING`.
     unsafe { s2i_ASN1_IA5STRING(meth.cast_mut().cast::<c_void>(), ctx, value).cast::<c_void>() }
 }
 

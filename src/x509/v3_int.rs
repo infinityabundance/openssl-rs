@@ -48,6 +48,20 @@ unsafe extern "C" fn int_i2s(meth: *const X509V3ExtMethod, value: *mut c_void) -
 /// — `crypto/x509/v3_int.c:31-35`.
 ///
 /// The authority ignores `ctx` and forwards to `s2i_ASN1_INTEGER`.
+///
+/// # Safety
+///
+/// The `s2i` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `do_ext_nconf`'s `s2i` arm (`src/x509/v3_conf.rs:1095`), which resolved `method` under the
+/// extension registry's read hold (held across the lookup, this callback and `do_ext_i2d`) and
+/// passes the caller's NUL-terminated configuration `value`; `ctx` is NULL or live and is
+/// ignored. `value` is NULL or NUL-terminated, which is exactly what [`s2i_ASN1_INTEGER`]
+/// enforces: it refuses NULL and frees its `BIGNUM`/`ASN1_INTEGER` on every parse failure. On
+/// success the fresh `ASN1_INTEGER` belongs to the dispatcher, which encodes it with this row's
+/// `ASN1_INTEGER_it` and releases it once (`src/x509/v3_conf.rs:1126-1132`); on failure nothing
+/// is retained. `value` is borrowed, not freed or retained, and `method` is not read.
+///
+/// Authority-derived: `crypto/x509/v3_int.c:31-35`; `crypto/x509/v3_utl.c:196-249`.
 unsafe extern "C" fn s2i_asn1_int(
     meth: *const X509V3ExtMethod,
     _ctx: *mut c_void,
