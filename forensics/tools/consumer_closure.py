@@ -15152,6 +15152,7 @@ def index_export_sites(repo: Path, inventory_files: list[str]) -> dict:
 # --------------------------------------------------------------------------- #
 
 SITE_RECEIPT_KIND = "site-enumerating-boundary-receipt"
+ENROLMENT_SCHEMA_PREFIX = "openssl-rs/campaign/safe-c33/callback-enrolment/"
 
 MECHANISM_RULES = [
     (re.compile(r"^src/runtime/err\.rs$|^src/runtime/dso_shared\.rs$"), "ERR"),
@@ -15214,6 +15215,15 @@ def mechanism_for(file: str, mechanisms: dict,
                     return r["mechanism"], (
                         "obligation-override:state.json#/obligation_mechanisms "
                         "(stable identity file/kind/operation; +N-line drift)")
+    # An admitted site may live in a file no directory rule maps (the CT
+    # extension-slot callbacks).  The admission source records the gate's
+    # mechanism classification; using it keeps the site classifiable without
+    # inventing a file-level rule for every such file.  The mechanism's own
+    # state and receipts still decide discharge: this only classifies.
+    if obligation is not None and obligation.get("enrolment_mechanism"):
+        return obligation["enrolment_mechanism"], (
+            "enrolment-source:supplementary callback-enumeration admission "
+            "(mechanism recorded by the gate)")
     for mid, rec in mechanisms.items():
         if file in (rec.get("converted_files_on_branch") or []):
             return mid, "converted_files_on_branch"
@@ -15243,6 +15253,205 @@ def operation_key(record: dict) -> tuple:
     if item:
         return (record.get("file"), record.get("kind"), item)
     return (record.get("file"), record.get("kind"), None, record.get("line"))
+
+
+def load_enrolment_blockers(repo: Path, path: str | None, contracts: dict,
+                            refusals: list[dict]) -> tuple[list[dict], dict]:
+    """Load the supplementary callback-enumeration admission source.
+
+    The source is the callback-enumeration completeness gate's proposal list
+    (``callback-enrolment-blockers.json``).  It is an *admission* source, never
+    a discharge: every record asks for ``BLOCKED`` status for a reachable
+    extension-slot callback that the inventory enumerates as a per-site
+    operation but that no obligation queue enumerated.  Admission does not
+    assert that the operation is uncontracted; the inventory's own per-site
+    enumeration is resolved by stable identity (file + kind + item) and the
+    record keeps the contract state the census records.
+
+    Every refusal here is fail-closed.  A malformed record, an unreadable or
+    unexpected source, or a request other than ``BLOCKED`` is reported rather
+    than guessed around.
+    """
+    summary = {
+        "applied": False,
+        "path": None,
+        "sha256": None,
+        "schema": None,
+        "requested_status": None,
+        "record_count": 0,
+        "distinct_stable_identities": 0,
+        "census_state_counts": {},
+        "source_duplicate_identities": [],
+        "malformed": [],
+        "entry_point": (
+            "consumer_closure.obligation_candidates source (d): a supplementary "
+            "admission source resolved against the inventory's per-site "
+            "enumeration by stable identity (file + kind + item)"),
+        "rule": (
+            "each record is admitted to the obligation queue as BLOCKED unless the "
+            "queue already enumerates the same stable identity; the census's own "
+            "contract state is preserved and an admission is never a discharge"),
+    }
+    if not path:
+        summary["reason"] = "no supplementary admission source was supplied"
+        return [], summary
+    p = Path(path)
+    if not p.is_absolute():
+        p = repo / p
+    summary["path"] = rel(p, repo)
+    if not p.is_file():
+        refusals.append({
+            "code": "ENROLMENT_SOURCE_MISSING",
+            "detail": (f"supplementary admission source {summary['path']} does "
+                       "not exist")})
+        summary["reason"] = "source missing"
+        return [], summary
+    try:
+        doc = json.loads(p.read_text())
+    except Exception as exc:
+        refusals.append({
+            "code": "ENROLMENT_SOURCE_UNREADABLE",
+            "detail": (f"supplementary admission source {summary['path']} could "
+                       f"not be parsed: {exc}")})
+        summary["reason"] = "source unreadable"
+        return [], summary
+    summary["sha256"] = sha256_file(p)
+    summary["schema"] = doc.get("schema")
+    if not str(doc.get("schema") or "").startswith(ENROLMENT_SCHEMA_PREFIX):
+        refusals.append({
+            "code": "ENROLMENT_SOURCE_SCHEMA",
+            "detail": (f"supplementary admission source {summary['path']} has "
+                       f"schema {doc.get('schema')!r}, expected prefix "
+                       f"{ENROLMENT_SCHEMA_PREFIX!r}")})
+        summary["reason"] = "unexpected schema"
+        return [], summary
+    requested = (doc.get("plug_in") or {}).get("requested_status")
+    summary["requested_status"] = requested
+    if requested != "BLOCKED":
+        refusals.append({
+            "code": "ENROLMENT_SOURCE_STATUS",
+            "detail": (f"supplementary admission source {summary['path']} requests "
+                       f"status {requested!r}; an admission source may only "
+                       "request BLOCKED")})
+
+    census_blockers: dict[tuple, dict] = {}
+    for b in contracts.get("blockers") or []:
+        if b.get("item"):
+            census_blockers.setdefault(
+                (b.get("file"), b.get("kind"), b.get("item")), b)
+    census_contracted: dict[tuple, dict] = {}
+    for b in contracts.get("contracted_operations") or []:
+        if b.get("item"):
+            census_contracted.setdefault(
+                (b.get("file"), b.get("kind"), b.get("item")), b)
+
+    records = doc.get("blockers") or []
+    admissions: list[dict] = []
+    malformed: list[dict] = []
+    duplicates: list[dict] = []
+    seen_source: dict[tuple, int] = {}
+    state_counts: collections.Counter = collections.Counter()
+    for rec in records:
+        f, kind, item, line = (rec.get("file"), rec.get("kind"),
+                               rec.get("item"), rec.get("line"))
+        problem = None
+        if (not isinstance(f, str) or not f.startswith("src/")
+                or not isinstance(kind, str) or not isinstance(item, str)
+                or not isinstance(line, int)):
+            problem = "record is not a file-qualified src/ operation"
+        elif rec.get("partition") != V1_PARTITION_PRODUCTION:
+            problem = (f"record partition is {rec.get('partition')!r}, not "
+                       f"{V1_PARTITION_PRODUCTION!r}")
+        elif rec.get("requested_status") != "BLOCKED":
+            problem = (f"record requests {rec.get('requested_status')!r}, not "
+                       f"'BLOCKED'")
+        if problem:
+            malformed.append({"file": f, "line": line, "kind": kind,
+                              "item": item, "reason": problem})
+            continue
+        stable = (f, kind, item)
+        if stable in seen_source:
+            duplicates.append({
+                "stable_id": operation_stable_identity(f, kind, item, line),
+                "file": f, "item": item, "line": line,
+                "first_line": seen_source[stable],
+                "reason": ("the source repeats this stable identity; only the "
+                           "first record is admitted, the repeat is reported")})
+            continue
+        seen_source[stable] = line
+        if stable in census_blockers:
+            census_state = "uncontracted_blocker"
+            census_rec = census_blockers[stable]
+        elif stable in census_contracted:
+            census_state = "contracted_operation"
+            census_rec = census_contracted[stable]
+        else:
+            census_state = "absent_from_census"
+            census_rec = None
+        state_counts[census_state] += 1
+        use_line = line
+        if census_rec is not None and isinstance(census_rec.get("line"), int):
+            use_line = census_rec["line"]
+        if census_state == "contracted_operation":
+            contract = "contracted"
+            contract_basis = (
+                "inventory records this operation as contracted (an attached "
+                "# Safety/SAFETY contract) at the same stable identity; the "
+                "operation was admitted to the queue by the supplementary "
+                "callback-enumeration source, not by a site receipt, so the "
+                "contract is not a discharge")
+        elif census_state == "uncontracted_blocker":
+            contract = "uncontracted"
+            contract_basis = (
+                "inventory records this operation as an uncontracted production "
+                "blocker at the same stable identity; admission is by the "
+                "supplementary callback-enumeration source")
+        else:
+            contract = "uncontracted"
+            contract_basis = (
+                "the inventory's per-site enumeration has no record at this "
+                "stable identity; the admission record's own reason is the "
+                "basis and the site is enrolled BLOCKED pending adjudication")
+        line_provenance = (
+            "inventory coordinate at the matching stable identity"
+            if census_rec is not None and use_line != line
+            else ("admission record coordinate (matches the inventory at this "
+                  "stable identity)" if census_rec is not None else
+                  "admission record coordinate (no inventory record at this "
+                  "stable identity)"))
+        admissions.append({
+            "file": f,
+            "line": use_line,
+            "kind": kind,
+            "item": item,
+            "stable_id": (rec.get("stable_id")
+                          or operation_stable_identity(f, kind, item, use_line)),
+            "census_state": census_state,
+            "contract": contract,
+            "contract_basis": contract_basis,
+            "line_provenance": line_provenance,
+            "mechanism": rec.get("mechanism"),
+            "reason": rec.get("reason"),
+            "reachable_classification": (rec.get("gate_provenance") or {}).get(
+                "classification"),
+            "registrations": rec.get("registrations") or [],
+            "source_record_id": rec.get("id"),
+        })
+    if malformed:
+        refusals.append({
+            "code": "ENROLMENT_RECORD_MALFORMED",
+            "detail": (f"{len(malformed)} admission record(s) in {summary['path']} "
+                       "are not admissible"),
+            "records": malformed[:20]})
+    summary.update({
+        "applied": True,
+        "record_count": len(records),
+        "distinct_stable_identities": len(seen_source),
+        "census_state_counts": dict(sorted(state_counts.items())),
+        "source_duplicate_identities": duplicates,
+        "malformed": malformed,
+    })
+    return admissions, summary
 
 
 def carry_forward_candidates(previous: dict, contracts: dict,
@@ -15455,13 +15664,15 @@ def obligation_candidates(contracts: dict, files_upper: set[str],
                           boundaries_by_file: dict,
                           obligation_mechanisms: dict,
                           carry_forward: dict | None = None,
-                          reachability_evidence: dict | None = None
+                          reachability_evidence: dict | None = None,
+                          enrolment_admissions: list[dict] | None = None,
+                          enrolment_summary: dict | None = None
                           ) -> tuple[list[dict], dict]:
     """Build the obligation set: a union that cannot shrink on documentation.
 
     Enrollment rule
     ---------------
-    The queue is the union of three bounded sources:
+    The queue is the union of four bounded sources:
 
     (a) the reachable production operations that are still unsafe and have no
         attached contract;
@@ -15473,6 +15684,15 @@ def obligation_candidates(contracts: dict, files_upper: set[str],
         enclosing item) and whose file is still reachable, regardless of its
         contract state and regardless of the ledger -- passed in as
         ``carry_forward`` (see :func:`carry_forward_candidates`).
+    (d) the sites named by an explicit supplementary admission source -- the
+        callback-enumeration completeness gate's proposal list, passed in as
+        ``enrolment_admissions`` (see :func:`load_enrolment_blockers`).  Each
+        record is admitted BLOCKED unless the queue already enumerates the same
+        stable identity; the census's own contract state is preserved.  An
+        admission is an addition to the target set, never a discharge, and an
+        admitted site whose file lies outside the closure's file-mapped
+        reachable set requires the gate's ``REACHABLE_BOUND`` classification as
+        its reachability evidence.
 
     (c) is the monotonicity guard.  Source (b) is bounded by a receipt and the
     ledger, so attaching a ``# Safety`` prelude to an operation that no receipt
@@ -15727,6 +15947,89 @@ def obligation_candidates(contracts: dict, files_upper: set[str],
         cf_summary["carried_forward_count"] = len(cf_records) - len(
             cf_summary["suppressed"])
 
+    # (d) supplementary admission source.  Resolved last so that a site already
+    # enumerated by (a)-(c) is reported as a duplicate rather than re-added; the
+    # stable identity, not the coordinate, is the duplicate key.
+    enrolled_by_source: list[dict] = []
+    already_queued: list[dict] = []
+    admission_skipped: list[dict] = []
+    admitted_outside: list[dict] = []
+    enr_summary = dict(enrolment_summary or {})
+    if enrolment_admissions:
+        queued_stable = {(o["file"], o["kind"], o["item"])
+                         for o in obligations if o.get("item")}
+        for a in enrolment_admissions:
+            stable = (a["file"], a["kind"], a["item"])
+            entry = {
+                "id": f"V1:{a['file']}:{a['line']}:{a['kind']}",
+                "stable_id": a["stable_id"],
+                "file": a["file"], "line": a["line"], "kind": a["kind"],
+                "item": a["item"], "contract": a["contract"],
+                "census_state": a["census_state"],
+                "source_record_id": a.get("source_record_id"),
+            }
+            if stable in queued_stable:
+                already_queued.append(dict(entry, reason=(
+                    "stable identity already enumerated by the obligation queue; "
+                    "the admission source record is not counted twice")))
+                continue
+            reachable = a["file"] in files_upper
+            if not reachable and a.get("reachable_classification") != "REACHABLE_BOUND":
+                admission_skipped.append(dict(entry, reason=(
+                    "file is outside the closure's file-mapped reachable set and "
+                    "the admission record carries no REACHABLE_BOUND "
+                    "classification")))
+                continue
+            rec = {
+                "id": entry["id"],
+                "stable_id": a["stable_id"],
+                "file": a["file"],
+                "line": a["line"],
+                "line_provenance": a["line_provenance"],
+                "kind": a["kind"],
+                "item": a["item"],
+                "partition": V1_PARTITION_PRODUCTION,
+                "v1_reason": a.get("reason"),
+                "contract": a["contract"],
+                "contract_basis": a["contract_basis"],
+                "site_receipt": None,
+                "ledger_basis": None,
+                "enrolment_source": {
+                    "path": enr_summary.get("path"),
+                    "sha256": enr_summary.get("sha256"),
+                    "record_id": a.get("source_record_id"),
+                    "requested_status": "BLOCKED",
+                    "classification": a.get("reachable_classification"),
+                    "registrations": a.get("registrations") or [],
+                },
+                "enrolment_mechanism": a.get("mechanism"),
+                "enrolment_requested_status": "BLOCKED",
+            }
+            if not add(rec):
+                admission_skipped.append(dict(entry, reason=(
+                    "the admission coordinate is already occupied by a different "
+                    "stable identity")))
+                continue
+            queued_stable.add(stable)
+            admitted = dict(entry, admission_basis=(
+                "file in the closure's file-mapped reachable set" if reachable
+                else ("gate REACHABLE_BOUND classification; symbol reachable in "
+                      "the exact candidate linked code while the source file is "
+                      "outside the file-mapped set")))
+            enrolled_by_source.append(admitted)
+            if not reachable:
+                admitted_outside.append(admitted)
+    enr_summary.update({
+        "admitted": enrolled_by_source,
+        "admitted_count": len(enrolled_by_source),
+        "already_queued": already_queued,
+        "already_queued_count": len(already_queued),
+        "skipped": admission_skipped,
+        "skipped_count": len(admission_skipped),
+        "admitted_outside_reachable_files": admitted_outside,
+        "admitted_outside_reachable_files_count": len(admitted_outside),
+    })
+
     gaps = []
     for key, rec in sorted(obligation_mechanisms.items()):
         if key in planned or key in seen:
@@ -15750,13 +16053,15 @@ def obligation_candidates(contracts: dict, files_upper: set[str],
         "excluded_count": len(excluded),
         "ledger_entries_without_site_plan": gaps,
         "carry_forward": cf_summary,
+        "supplementary_enrolment": enr_summary,
         "rule": (
             "union of uncontracted production blockers + contracted production "
             "operations named by an in-scope site-enumerating boundary receipt "
             "and by state.json#/obligation_mechanisms + every obligation the "
             "previous ACCEPTED closure enumerated whose operation still exists "
-            "at the same stable identity; documentation state only changes the "
-            "contract field, never membership"),
+            "at the same stable identity + the sites named by the supplementary "
+            "callback-enumeration admission source; documentation state only "
+            "changes the contract field, never membership"),
     }
     return obligations, enrollment
 
@@ -16857,6 +17162,21 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
 
     # 3. no boundary receipt at all
     if not boundaries:
+        if obligation.get("enrolment_requested_status") == "BLOCKED":
+            # The supplementary admission source is evidence that the site is
+            # reachable, not evidence that any boundary owns it.  A site it
+            # admits with no owning receipt is therefore explicitly BLOCKED:
+            # the boundary gap must stay visible as an outstanding obligation,
+            # not disappear into the instrument's UNKNOWN state.  Nothing here
+            # can discharge.
+            obligation["status"] = "BLOCKED"
+            obligation["discharge_receipt"] = None
+            obligation["status_reason"] = (
+                "admitted by the supplementary callback-enumeration source: the "
+                "site is reachable but no boundary-sweep receipt owns its file, "
+                "so no ownership boundary is recorded; BLOCKED pending "
+                "site-scoped adjudication (an admission is never a discharge)")
+            return obligation
         obligation["status"] = "UNKNOWN"
         obligation["discharge_receipt"] = None
         obligation["status_reason"] = (
@@ -17534,10 +17854,14 @@ def build_receipt(args) -> dict:
                  "artifact; an unreachable file is recorded as removed with "
                  "reason no-longer-reachable-at-this-artifact"),
     }
+    enrolment_admissions, enrolment_source = load_enrolment_blockers(
+        repo, args.enrolment_blockers, contracts, refusals)
     obligations, enrollment = obligation_candidates(
         contracts, files_upper, boundaries_by_file, obligation_mechanisms,
         carry_forward=carry_forward,
-        reachability_evidence=reachability_evidence)
+        reachability_evidence=reachability_evidence,
+        enrolment_admissions=enrolment_admissions,
+        enrolment_summary=enrolment_source)
     for o in obligations:
         mech, basis = mechanism_for(o["file"], mechanisms, o, obligation_mechanisms)
         o["mechanism"] = mech
@@ -18468,6 +18792,8 @@ def build_receipt(args) -> dict:
         },
         "obligations": obligations,
         "documented_enrollment": enrollment,
+        "enrolment_source": (enrollment.get("supplementary_enrolment")
+                             or enrolment_source),
         "closure_scope": {
             "v1_production_operations": len(production),
             "included_in_upper_bound": len(obligations),
@@ -18475,6 +18801,9 @@ def build_receipt(args) -> dict:
             "carried_forward_obligations": (
                 enrollment.get("carry_forward") or {}).get(
                     "carried_forward_count", 0),
+            "supplementary_enrolment_admitted": (
+                enrollment.get("supplementary_enrolment") or {}).get(
+                    "admitted_count", 0),
             "excluded_from_upper_bound": excluded_production,
             "exclusion_basis": (
                 "a production operation is excluded only when its file has no function "
@@ -21640,6 +21969,13 @@ def main(argv=None) -> int:
         "--no-carry-forward", action="store_true",
         help="control only: do not carry forward a previous closure (the queue is "
              "then not monotone under documentation edits)")
+    ap.add_argument(
+        "--enrolment-blockers", default=None,
+        help="explicit supplementary admission source (the callback-enumeration "
+             "completeness gate's proposal list).  Every record is admitted to "
+             "the obligation queue as BLOCKED unless the queue already "
+             "enumerates the same stable identity; the source path and digest "
+             "are recorded in the receipt.  Omitted: no supplementary source")
     args = ap.parse_args(argv)
 
     if args.self_test:
