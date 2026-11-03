@@ -4907,8 +4907,15 @@ def _fetch_family_by_callee(name: str):
     return None
 
 
+def _is_generic_fetch_wrapper(name: str) -> bool:
+    """The public ``evp_generic_fetch`` wrapper, not the inner/from_prov forms."""
+    base = re.sub(r"\.llvm(?:\.[0-9]+)?$", "", name or "")
+    return (base.endswith("evp_generic_fetch")
+            and "inner_evp_generic_fetch" not in base)
+
+
 def _writer_reference(g: "DsoGraph", fstart: int, call_idx: int):
-    """The family writer materialised before an inner_evp_generic_fetch call."""
+    """The family writer materialised before a generic-fetch call."""
     insns = g.precision.insns_by_func.get(fstart, ())
     refs = set()
     for k in range(call_idx - 1, max(-1, call_idx - 48), -1):
@@ -4956,7 +4963,8 @@ def _base_fetch(g: "DsoGraph", fstart: int, idx: int, reg: str, depth=0):
         direct = _direct_call_target(g, fstart, k)
         if mn == "call" and direct is not None:
             cname = g.funcs.get(direct[1], "")
-            if "inner_evp_generic_fetch" in cname:
+            if ("inner_evp_generic_fetch" in cname
+                    or _is_generic_fetch_wrapper(cname)):
                 refs = _writer_reference(g, fstart, k)
                 matched = [spec for spec in FETCH_FAMILIES
                            if any(any(w in (n or "") for w in spec["writer"])
