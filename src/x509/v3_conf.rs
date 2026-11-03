@@ -1592,7 +1592,7 @@ mod tests {
     };
     use crate::x509::x509_v3::X509_EXTENSION_get_data;
 
-    use core::sync::atomic::{AtomicBool, Ordering};
+    use core::sync::atomic::{AtomicBool, AtomicI32, AtomicPtr, Ordering};
 
     use crate::asn1::layout::Asn1Item;
     use crate::runtime::obj::OBJ_create;
@@ -1606,6 +1606,42 @@ mod tests {
     static HOLD_SEEN_IN_S2I: AtomicBool = AtomicBool::new(false);
     /// Set by [`hold_probe_it`] to whether the row's `it` accessor ran under the hold.
     static HOLD_SEEN_IN_IT: AtomicBool = AtomicBool::new(false);
+    /// Set by [`reentrant_write_v2i`] to whether it observed the registry read hold.
+    static WRITER_HOLD_SEEN: AtomicBool = AtomicBool::new(false);
+    /// Set by [`reentrant_write_v2i`] to the value the re-entrant `X509V3_EXT_add` returned.
+    static WRITER_RESULT: AtomicI32 = AtomicI32::new(-1);
+    /// The row [`reentrant_write_v2i`] tries to add, installed by the test that uses it.
+    static REENTRANT_TARGET: AtomicPtr<X509V3ExtMethod> = AtomicPtr::new(ptr::null_mut());
+
+    /// The B53 canary: a `v2i` callback that, while `do_ext_nconf` holds the registry
+    /// **read** hold on this same thread, requests the registry **write** hold through
+    /// [`X509V3_EXT_add`]. With the per-thread reader accounting `write_lock` refuses (0);
+    /// without it the calling thread waits for its own read and the dispatch never returns.
+    unsafe extern "C" fn reentrant_write_v2i(
+        _method: *const X509V3ExtMethod,
+        _ctx: *mut c_void,
+        _values: *mut OpenSslStack,
+    ) -> *mut c_void {
+        WRITER_HOLD_SEEN.store(
+            crate::x509::v3_lib::registry_read_held_on_this_thread(),
+            Ordering::SeqCst,
+        );
+        let target = REENTRANT_TARGET.load(Ordering::SeqCst);
+        // SAFETY: `target` is the leaked `'static` row the test installed before spawning the
+        // dispatch; the write request must be refused while this thread holds the read.
+        let result = unsafe { X509V3_EXT_add(target) };
+        WRITER_RESULT.store(result, Ordering::SeqCst);
+        BASIC_CONSTRAINTS_new().cast::<c_void>()
+    }
+
+    /// A `v2i` row wrapping [`reentrant_write_v2i`]; it still carries the encoder probe so the
+    /// dispatch builds a real extension through `do_ext_i2d`.
+    fn reentrant_write_row(nid: c_int) -> X509V3ExtMethod {
+        X509V3ExtMethod {
+            v2i: Some(reentrant_write_v2i),
+            ..hold_probe_row(nid)
+        }
+    }
 
     /// A `v2i` probe: it records the hold **on entry**, before anything else can take a read hold of
     /// its own, then builds a `BASIC_CONSTRAINTS` for the row's declared item.
@@ -1867,6 +1903,105 @@ mod tests {
             BASIC_CONSTRAINTS_free(decoded.cast());
             X509_EXTENSION_free(ext);
         }
+    }
+
+    /// B53: a registry **writer** requested from inside a dispatcher callback that runs under the
+    /// registry **read** hold must be refused, not waited on. The dispatch runs on a spawned thread
+    /// so the harness can bound the wait; a self-deadlock reports "timed out — deadlock" and aborts
+    /// rather than leaving the process alive with a thread wedged on its own read (which would hang
+    /// every later registry user in the same test process).
+    #[test]
+    fn a_registry_writer_requested_under_a_read_hold_is_refused_not_deadlocked() {
+        let _serial = crate::test_support::lock_global_state();
+        WRITER_RESULT.store(-1, Ordering::SeqCst);
+        WRITER_HOLD_SEEN.store(false, Ordering::SeqCst);
+
+        // The row the callback tries to add. With the refusal it is never published, so it must
+        // remain caller-owned; if the write were admitted it would change the row count below.
+        let target_nid = fresh_nid(
+            c"1.3.6.1.4.1.57264.53.2",
+            c"b53-write-target",
+            c"B53 write target",
+        );
+        let target: &'static mut X509V3ExtMethod = Box::leak(Box::new(hold_probe_row(target_nid)));
+        REENTRANT_TARGET.store(target as *mut X509V3ExtMethod, Ordering::SeqCst);
+
+        let nid = fresh_nid(
+            c"1.3.6.1.4.1.57264.53.1",
+            c"b53-reentrant-write",
+            c"B53 reentrant write",
+        );
+        let row = Box::leak(Box::new(reentrant_write_row(nid)));
+        // SAFETY: `row` is a leaked `'static` row and no registry read is held on this thread here.
+        assert_eq!(unsafe { X509V3_EXT_add(row as *mut X509V3ExtMethod) }, 1);
+
+        let before = crate::x509::v3_lib::registry_row_count();
+        assert!(
+            before >= 1,
+            "the dispatcher row must be registered before the dispatch"
+        );
+
+        let (tx, rx) = std::sync::mpsc::channel::<bool>();
+        let worker = std::thread::spawn(move || {
+            // SAFETY: the value is NUL-terminated; NULL `conf`/`ctx` are what the contract allows.
+            let ext = unsafe {
+                X509V3_EXT_nconf_nid(ptr::null_mut(), ptr::null_mut(), nid, c"ignored".as_ptr())
+            };
+            let built = !ext.is_null();
+            if built {
+                // SAFETY: `ext` is this thread's own extension.
+                unsafe { X509_EXTENSION_free(ext) };
+            }
+            // A closed receiver is fine: the main thread may already have timed out.
+            let _ = tx.send(built);
+        });
+
+        // Bounded wait: a self-deadlock must surface as this explicit failure, not as a hung
+        // harness. `assert!` is the failing outcome here; the worker (still holding the read and
+        // blocked requesting the write) is left detached, so the process terminates once the
+        // harness writes its summary instead of waiting on the wedged thread.
+        let (completed, failure) = match rx.recv_timeout(std::time::Duration::from_secs(5)) {
+            Ok(built) => (
+                built,
+                "the re-entrant v2i callback must still build the extension",
+            ),
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => (
+                false,
+                "timed out — deadlock: write_lock waited on the caller's own read hold",
+            ),
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                (false, "the dispatch thread exited without reporting")
+            }
+        };
+        assert!(completed, "{failure}");
+        assert!(
+            worker.join().is_ok(),
+            "the dispatch thread must finish without panicking"
+        );
+
+        assert!(
+            WRITER_HOLD_SEEN.load(Ordering::SeqCst),
+            "the callback ran without the registry read hold: do_ext_nconf released the row"
+        );
+        assert_eq!(
+            WRITER_RESULT.load(Ordering::SeqCst),
+            0,
+            "X509V3_EXT_add must report the refusal (0) instead of waiting"
+        );
+        assert_eq!(
+            crate::x509::v3_lib::registry_row_count(),
+            before,
+            "a refused writer must leave the registry unchanged"
+        );
+
+        // SAFETY: no pointer arguments; cleanup retires the dispatcher row. The target row was
+        // never added, so it stays caller-owned and the leaks are bounded by the test process.
+        unsafe { X509V3_EXT_cleanup() };
+        assert_eq!(
+            crate::x509::v3_lib::registry_row_count(),
+            0,
+            "cleanup must empty the registry after the refusal"
+        );
     }
 
     /// One `(nid, config value)` pair per `v2i` decoder B51 discharges. Each value is accepted by
