@@ -2030,20 +2030,20 @@
  "current_applied_state": {
   "as_of": "2026-11-03",
   "branch": "stage/p25/element7-s2b",
-  "evidence_head": "a93c1ec43",
+  "evidence_head": "bb5b5965d",
   "candidate_S": "a8716b4f2",
-  "candidate_source_identity": "the source and the built install are S = a8716b4f2 (a8716b4f2112bde03c97db5ff7bd1caf3a483c35); libcrypto.so.3 ececbd98, ssh 560652df, sshd 51f00033, all rebuilt and relinked at S. Every field in this block is derived from the two enumerated closures cited below, not carried forward from an earlier candidate.",
+  "candidate_source_identity": "the source and the built install are S = a8716b4f2 (a8716b4f2112bde03c97db5ff7bd1caf3a483c35); libcrypto.so.3 ececbd98, ssh 560652df, sshd 51f00033, all rebuilt and relinked at S. Every field in this block is derived from the two owned closures cited below.",
   "closure": {
-   "ssh": {"DISCHARGED": 186, "BLOCKED": 192, "UNKNOWN": 0, "obligations_total": 378, "verdict": "REFUSED", "refusals": 1, "refusal_code": "MISSING_BOUNDARY_RECEIPT", "safe_compatible": false},
-   "sshd": {"DISCHARGED": 186, "BLOCKED": 192, "UNKNOWN": 0, "obligations_total": 378, "verdict": "REFUSED", "refusals": 1, "refusal_code": "MISSING_BOUNDARY_RECEIPT", "safe_compatible": false}
+   "ssh": {"DISCHARGED": 186, "BLOCKED": 192, "UNKNOWN": 0, "obligations_total": 378, "verdict": "ACCEPTED", "refusals": 0, "safe_compatible": false},
+   "sshd": {"DISCHARGED": 186, "BLOCKED": 192, "UNKNOWN": 0, "obligations_total": 378, "verdict": "ACCEPTED", "refusals": 0, "safe_compatible": false}
   },
-  "closure_receipts": ["evidence/closure-ssh-b52-enumerated.json", "evidence/inventory-sshd-b52-enumerated.json"],
-  "derived_from": "the scoped_boundary_discharges rows applied at or before S: openssh-v1i 74, B48 36, B49 22, openssl-v1l 15, B50 11, B45 9, B51 10, B52 9 = 186 DISCHARGED, plus 66 supplementary admissions from the callback-enumeration gate = 378 obligations at 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN",
-  "enrolment_source": {"path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json", "schema": "openssl-rs/campaign/safe-c33/callback-enrolment/v1", "records": 66, "requested_status": "BLOCKED", "gate": "callback_enumeration_gate.py exit 0 (0 missing)"},
-  "refusal_explanation": "MISSING_BOUNDARY_RECEIPT over 13 reachable files that carry production obligations but are not owned by any boundary-sweep receipt. This refusal appeared only when the gate's 66 admissions were enrolled; it is the closure declining to claim coverage it does not have, not a regression introduced by a source change.",
-  "coverage_instrument": "content-addressed (span_sha256 bound to the git blob at a8716b4f2); line coordinates are advisory. B51: 167/145/0 -> 177/135/0 (10 moved). B52: 177/135/0 -> 186/126/0 (9 moved). Enrolment: 186/126/0 -> 186/192/0 (66 admitted as BLOCKED, no discharge inherited).",
+  "closure_receipts": ["evidence/closure-ssh-b52-owned.json", "evidence/inventory-sshd-b52-owned.json"],
+  "derived_from": "the scoped_boundary_discharges rows applied at or before S: openssh-v1i 74, B48 36, B49 22, openssl-v1l 15, B50 11, B45 9, B51 10, B52 9 = 186 DISCHARGED, plus 66 supplementary admissions from the callback-enumeration gate, of which 40 are now owned by 13 new site-enumerating receipts and 26 by pre-existing site receipts. Totals 378 = 186 / 192 / 0.",
+  "enrolment_source": {"path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json", "schema": "openssl-rs/campaign/safe-c33/callback-enrolment/v1", "records": 66, "requested_status": "BLOCKED", "gate": "callback_enumeration_gate.py exit 0 (0 missing, 0 unresolved) plus compiled-artifact cross-check 0 unaccounted"},
+  "refusal_history": ["MISSING_BOUNDARY_RECEIPT over 13 files appeared when the 66 admissions were enrolled, because those files had no owning receipt. It was resolved by owning the files with site-enumerating receipts, NOT by discharging or excluding anything: all 40 records are RETAINED (BLOCKED). The refusal itself is preserved in evidence/closure-ssh-b52-enumerated.json."],
+  "coverage_instrument": "content-addressed (span_sha256 bound to the git blob at a8716b4f2); line coordinates are advisory. B51: 167/145/0 -> 177/135/0 (10 moved). B52: 177/135/0 -> 186/126/0 (9 moved). Enrolment: -> 186/192/0 (66 admitted BLOCKED, no discharge inherited). Ownership: 13 files owned, still 186/192/0.",
   "staleness_of_blocks_above": ["generated_date", "branch", "source_head", "source_head_subject", "source_head_note", "release_candidate", "closure"],
-  "note": "The top-level generated_date/branch/source_head/release_candidate/closure blocks remain the 0.0.44 release snapshot and are NOT the current applied state; they are marked stale for current reading rather than overwritten. Element 7 remains FAIL at this candidate (127 reachable unresolved, 67 target-bounded). SAFE_COMPATIBLE is false for both families. The 13 uncovered files are the immediate blocker, followed by the remaining 192 BLOCKED obligations."
+  "note": "The top-level generated_date/branch/source_head/release_candidate/closure blocks remain the 0.0.44 release snapshot and are NOT the current applied state; they are marked stale for current reading rather than overwritten. Element 7 remains FAIL at this candidate (127 reachable unresolved, 67 target-bounded). SAFE_COMPATIBLE is false for both families. ACCEPTED here means the closure raises no refusal on this universe; it does not mean the 192 BLOCKED obligations are safe, and no mechanism is discharged mechanism-wide."
  },
  "closure": {
   "receipt": "evidence/closure-ssh-v1r.json; evidence/inventory-sshd-v1r.json",
