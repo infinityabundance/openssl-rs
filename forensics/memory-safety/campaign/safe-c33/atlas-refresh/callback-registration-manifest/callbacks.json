@@ -1,0 +1,3775 @@
+{
+ "callbacks": [
+  {
+   "assumptions": [],
+   "callback": "SCT_LIST_free",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE",
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/ct/ct_sct.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 247,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ct/ct_sct.rs::SCT_LIST_free::ossl_v3_ct_scts[0]::ext_free",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[0]",
+     "slot": "ext_free"
+    },
+    {
+     "registration_id": "src/ct/ct_sct.rs::SCT_LIST_free::ossl_v3_ct_scts[2]::ext_free",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[2]",
+     "slot": "ext_free"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_SCT_LIST",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE",
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/ct/ct_x509v3.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 84,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ct/ct_x509v3.rs::i2r_SCT_LIST::ossl_v3_ct_scts[0]::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[0]",
+     "slot": "i2r"
+    },
+    {
+     "registration_id": "src/ct/ct_x509v3.rs::i2r_SCT_LIST::ossl_v3_ct_scts[2]::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[2]",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2s_poison",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/ct/ct_x509v3.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 59,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ct/ct_x509v3.rs::i2s_poison::ossl_v3_ct_scts[1]::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[1]",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "s2i_poison",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/ct/ct_x509v3.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 70,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ct/ct_x509v3.rs::s2i_poison::ossl_v3_ct_scts[1]::s2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[1]",
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_ocsp_acutoff",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 187,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_acutoff::ossl_v3_ocsp_acutoff::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_acutoff",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_ocsp_crlid",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 122,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_crlid::ossl_v3_ocsp_crlid::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_crlid",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_ocsp_nonce",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 344,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_nonce::ossl_v3_ocsp_nonce::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_nonce",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_ocsp_serviceloc",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 406,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_serviceloc::ossl_v3_ocsp_serviceloc::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_serviceloc",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "ocsp_nonce_free",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 325,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::ocsp_nonce_free::ossl_v3_ocsp_nonce::ext_free",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_nonce",
+     "slot": "ext_free"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_ALLOWED_ATTRIBUTES_CHOICE",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_aaa.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_aaa.rs",
+     "id": "V1:src/x509/v3_aaa.rs:382:UNSAFE_FN_DEF",
+     "line": 382,
+     "stable_id": "src/x509/v3_aaa.rs::UNSAFE_FN_DEF::i2r_ALLOWED_ATTRIBUTES_CHOICE",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 397,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_aaa.rs::i2r_ALLOWED_ATTRIBUTES_CHOICE::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_ALLOWED_ATTRIBUTES_ITEM",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_aaa.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_aaa.rs",
+     "id": "V1:src/x509/v3_aaa.rs:452:UNSAFE_FN_DEF",
+     "line": 452,
+     "stable_id": "src/x509/v3_aaa.rs::UNSAFE_FN_DEF::i2r_ALLOWED_ATTRIBUTES_ITEM",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 480,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_aaa.rs::i2r_ALLOWED_ATTRIBUTES_ITEM::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_ALLOWED_ATTRIBUTES_SYNTAX",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_aaa.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_aaa.rs",
+     "id": "V1:src/x509/v3_aaa.rs:500:UNSAFE_FN_DEF",
+     "line": 500,
+     "stable_id": "src/x509/v3_aaa.rs::UNSAFE_FN_DEF::i2r_ALLOWED_ATTRIBUTES_SYNTAX",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 541,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_aaa.rs::i2r_ALLOWED_ATTRIBUTES_SYNTAX::ossl_v3_allowed_attribute_assignments::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_allowed_attribute_assignments",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_ISSUER_SERIAL",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 624,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_ISSUER_SERIAL::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_OBJECT_DIGEST_INFO",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 688,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_OBJECT_DIGEST_INFO::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_TARGET",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 889,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGET::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_TARGETING_INFORMATION",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 962,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGETING_INFORMATION::ossl_v3_targeting_information::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_targeting_information",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_TARGETS",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 934,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGETS::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_TARGET_CERT",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 825,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGET_CERT::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_IPAddrBlocks",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_addr.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 921,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_addr.rs::i2r_IPAddrBlocks::ossl_v3_addr::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_addr",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_IPAddrBlocks",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_addr.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 2241,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_addr.rs::v2i_IPAddrBlocks::ossl_v3_addr::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_addr",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_ADMISSION_SYNTAX",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_admis.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 640,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_admis.rs::i2r_ADMISSION_SYNTAX::ossl_v3_ext_admission::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ext_admission",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_NAMING_AUTHORITY",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_admis.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 557,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_admis.rs::i2r_NAMING_AUTHORITY::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "akid_i2v",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_akid.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_akid.rs",
+     "id": "V1:src/x509/v3_akid.rs:182:UNSAFE_FN_DEF",
+     "line": 182,
+     "stable_id": "src/x509/v3_akid.rs::UNSAFE_FN_DEF::akid_i2v",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 182,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_akid.rs::akid_i2v::ossl_v3_akey_id::i2v",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_akey_id",
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "akid_v2i",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_akid.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_akid.rs",
+     "id": "V1:src/x509/v3_akid.rs:193:UNSAFE_FN_DEF",
+     "line": 193,
+     "stable_id": "src/x509/v3_akid.rs::UNSAFE_FN_DEF::akid_v2i",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 193,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_akid.rs::akid_v2i::ossl_v3_akey_id::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_akey_id",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2v_AUTHORITY_KEYID",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_akid.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 231,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_akid.rs::i2v_AUTHORITY_KEYID::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_AUTHORITY_KEYID",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_akid.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 359,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_akid.rs::v2i_AUTHORITY_KEYID::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_ASIdentifiers",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_asid.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 817,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_asid.rs::i2r_ASIdentifiers::ossl_v3_asid::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_asid",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_ASIdentifiers",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_asid.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_asid.rs",
+     "id": "V1:src/x509/v3_asid.rs:1453:UNSAFE_FN_DEF",
+     "line": 1453,
+     "stable_id": "src/x509/v3_asid.rs::UNSAFE_FN_DEF::v2i_ASIdentifiers",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 1505,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_asid.rs::v2i_ASIdentifiers::ossl_v3_asid::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_asid",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_HASH",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_attrdesc.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 637,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrdesc.rs::i2r_HASH::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_INFO_SYNTAX_POINTER",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_attrdesc.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 699,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrdesc.rs::i2r_INFO_SYNTAX_POINTER::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_attrdesc.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 850,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrdesc.rs::i2r_OSSL_ATTRIBUTE_DESCRIPTOR::ossl_v3_attribute_descriptor::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_attribute_descriptor",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_OSSL_INFO_SYNTAX",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_attrdesc.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 738,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrdesc.rs::i2r_OSSL_INFO_SYNTAX::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_OSSL_PRIVILEGE_POLICY_ID",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_attrdesc.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 794,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrdesc.rs::i2r_OSSL_PRIVILEGE_POLICY_ID::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_ATTRIBUTE_MAPPING",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_attrmap.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 576,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrmap.rs::i2r_ATTRIBUTE_MAPPING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_ATTRIBUTE_MAPPINGS",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_attrmap.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 653,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrmap.rs::i2r_ATTRIBUTE_MAPPINGS::ossl_v3_attribute_mappings::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_attribute_mappings",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "audit_i2s",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_audit_id.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_audit_id.rs",
+     "id": "V1:src/x509/v3_audit_id.rs:30:UNSAFE_FN_DEF",
+     "line": 30,
+     "stable_id": "src/x509/v3_audit_id.rs::UNSAFE_FN_DEF::audit_i2s",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 30,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_audit_id.rs::audit_i2s::ossl_v3_audit_identity::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_audit_identity",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "audit_s2i",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_audit_id.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_audit_id.rs",
+     "id": "V1:src/x509/v3_audit_id.rs:37:UNSAFE_FN_DEF",
+     "line": 37,
+     "stable_id": "src/x509/v3_audit_id.rs::UNSAFE_FN_DEF::audit_s2i",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 37,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_audit_id.rs::audit_s2i::ossl_v3_audit_identity::s2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_audit_identity",
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_ISSUER_SERIAL",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_authattid.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 164,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_authattid.rs::i2r_ISSUER_SERIAL::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_auth_attr_id",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_authattid.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 229,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_authattid.rs::i2r_auth_attr_id::ossl_v3_authority_attribute_identifier::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_authority_attribute_identifier",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2v_OSSL_BASIC_ATTR_CONSTRAINTS",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_battcons.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_battcons.rs",
+     "id": "V1:src/x509/v3_battcons.rs:191:UNSAFE_FN_DEF",
+     "line": 191,
+     "stable_id": "src/x509/v3_battcons.rs::UNSAFE_FN_DEF::i2v_OSSL_BASIC_ATTR_CONSTRAINTS",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 191,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_battcons.rs::i2v_OSSL_BASIC_ATTR_CONSTRAINTS::ossl_v3_battcons::i2v",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_battcons",
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_OSSL_BASIC_ATTR_CONSTRAINTS",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_battcons.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_battcons.rs",
+     "id": "V1:src/x509/v3_battcons.rs:208:UNSAFE_FN_DEF",
+     "line": 208,
+     "stable_id": "src/x509/v3_battcons.rs::UNSAFE_FN_DEF::v2i_OSSL_BASIC_ATTR_CONSTRAINTS",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 241,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_battcons.rs::v2i_OSSL_BASIC_ATTR_CONSTRAINTS::ossl_v3_battcons::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_battcons",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2v_BASIC_CONSTRAINTS",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_bcons.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_bcons.rs",
+     "id": "V1:src/x509/v3_bcons.rs:192:UNSAFE_FN_DEF",
+     "line": 192,
+     "stable_id": "src/x509/v3_bcons.rs::UNSAFE_FN_DEF::i2v_BASIC_CONSTRAINTS",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 192,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_bcons.rs::i2v_BASIC_CONSTRAINTS::ossl_v3_bcons::i2v",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_bcons",
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_BASIC_CONSTRAINTS",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_bcons.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_bcons.rs",
+     "id": "V1:src/x509/v3_bcons.rs:209:UNSAFE_FN_DEF",
+     "line": 209,
+     "stable_id": "src/x509/v3_bcons.rs::UNSAFE_FN_DEF::v2i_BASIC_CONSTRAINTS",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 242,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_bcons.rs::v2i_BASIC_CONSTRAINTS::ossl_v3_bcons::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_bcons",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "bitst_i2v",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE",
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_bitst.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_bitst.rs",
+     "id": "V1:src/x509/v3_bitst.rs:349:UNSAFE_FN_DEF",
+     "line": 349,
+     "stable_id": "src/x509/v3_bitst.rs::UNSAFE_FN_DEF::bitst_i2v",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 349,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_bitst.rs::bitst_i2v::ossl_v3_nscert::i2v",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_nscert",
+     "slot": "i2v"
+    },
+    {
+     "registration_id": "src/x509/v3_bitst.rs::bitst_i2v::ossl_v3_key_usage::i2v",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_key_usage",
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "bitst_v2i",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE",
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_bitst.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_bitst.rs",
+     "id": "V1:src/x509/v3_bitst.rs:360:UNSAFE_FN_DEF",
+     "line": 360,
+     "stable_id": "src/x509/v3_bitst.rs::UNSAFE_FN_DEF::bitst_v2i",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 360,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_bitst.rs::bitst_v2i::ossl_v3_nscert::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_nscert",
+     "slot": "v2i"
+    },
+    {
+     "registration_id": "src/x509/v3_bitst.rs::bitst_v2i::ossl_v3_key_usage::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_key_usage",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2v_ASN1_BIT_STRING",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_bitst.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 234,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_bitst.rs::i2v_ASN1_BIT_STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_ASN1_BIT_STRING",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_bitst.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 288,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_bitst.rs::v2i_ASN1_BIT_STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_certpol",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_cpols.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_cpols.rs",
+     "id": "V1:src/x509/v3_cpols.rs:1366:UNSAFE_FN_DEF",
+     "line": 1366,
+     "stable_id": "src/x509/v3_cpols.rs::UNSAFE_FN_DEF::i2r_certpol",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 1380,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_cpols.rs::i2r_certpol::ossl_v3_cpols::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_cpols",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "r2i_certpol",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_cpols.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1247,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_cpols.rs::r2i_certpol::ossl_v3_cpols::r2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_cpols",
+     "slot": "r2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_aaidp",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 2003,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_aaidp::ossl_v3_aa_issuing_dist_point::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_aa_issuing_dist_point",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_crl_invdate",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1685,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_crl_invdate::ossl_v3_crl_invdate::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crl_invdate",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_crldp",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE",
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1638,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_crldp::ossl_v3_crld::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crld",
+     "slot": "i2r"
+    },
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_crldp::ossl_v3_freshest_crl::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_freshest_crl",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_idp",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1471,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_idp::ossl_v3_idp::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_idp",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_object",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1710,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_object::ossl_v3_crl_hold::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crl_hold",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_aaidp",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1913,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::v2i_aaidp::ossl_v3_aa_issuing_dist_point::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_aa_issuing_dist_point",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_crld",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE",
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1325,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::v2i_crld::ossl_v3_crld::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crld",
+     "slot": "v2i"
+    },
+    {
+     "registration_id": "src/x509/v3_crld.rs::v2i_crld::ossl_v3_freshest_crl::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_freshest_crl",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_idp",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1554,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::v2i_idp::ossl_v3_idp::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_idp",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "enum_i2s",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_enum.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_enum.rs",
+     "id": "V1:src/x509/v3_enum.rs:120:UNSAFE_FN_DEF",
+     "line": 120,
+     "stable_id": "src/x509/v3_enum.rs::UNSAFE_FN_DEF::enum_i2s",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 134,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_enum.rs::enum_i2s::ossl_v3_crl_reason::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crl_reason",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2s_ASN1_ENUMERATED_TABLE",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_enum.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 156,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_enum.rs::i2s_ASN1_ENUMERATED_TABLE::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2v_EXTENDED_KEY_USAGE",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_extku.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_extku.rs",
+     "id": "V1:src/x509/v3_extku.rs:184:UNSAFE_FN_DEF",
+     "line": 184,
+     "stable_id": "src/x509/v3_extku.rs::UNSAFE_FN_DEF::i2v_EXTENDED_KEY_USAGE",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 184,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_extku.rs::i2v_EXTENDED_KEY_USAGE::fn:ext_key_usage_row::i2v",
+     "registration_kind": "slot-registration",
+     "row": "fn:ext_key_usage_row",
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_EXTENDED_KEY_USAGE",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_extku.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_extku.rs",
+     "id": "V1:src/x509/v3_extku.rs:212:UNSAFE_FN_DEF",
+     "line": 212,
+     "stable_id": "src/x509/v3_extku.rs::UNSAFE_FN_DEF::v2i_EXTENDED_KEY_USAGE",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 245,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_extku.rs::v2i_EXTENDED_KEY_USAGE::fn:ext_key_usage_row::v2i",
+     "registration_kind": "slot-registration",
+     "row": "fn:ext_key_usage_row",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_GROUP_AC",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_group_ac.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_group_ac.rs",
+     "id": "V1:src/x509/v3_group_ac.rs:33:UNSAFE_FN_DEF",
+     "line": 33,
+     "stable_id": "src/x509/v3_group_ac.rs::UNSAFE_FN_DEF::i2r_GROUP_AC",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 44,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_group_ac.rs::i2r_GROUP_AC::ossl_v3_group_ac::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_group_ac",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2s_GROUP_AC",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_group_ac.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_group_ac.rs",
+     "id": "V1:src/x509/v3_group_ac.rs:64:UNSAFE_FN_DEF",
+     "line": 64,
+     "stable_id": "src/x509/v3_group_ac.rs::UNSAFE_FN_DEF::i2s_GROUP_AC",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 74,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_group_ac.rs::i2s_GROUP_AC::ossl_v3_group_ac::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_group_ac",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "r2i_GROUP_AC",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_group_ac.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_group_ac.rs",
+     "id": "V1:src/x509/v3_group_ac.rs:54:UNSAFE_FN_DEF",
+     "line": 54,
+     "stable_id": "src/x509/v3_group_ac.rs::UNSAFE_FN_DEF::r2i_GROUP_AC",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 54,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_group_ac.rs::r2i_GROUP_AC::ossl_v3_group_ac::r2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_group_ac",
+     "slot": "r2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "s2i_GROUP_AC",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_group_ac.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_group_ac.rs",
+     "id": "V1:src/x509/v3_group_ac.rs:87:UNSAFE_FN_DEF",
+     "line": 87,
+     "stable_id": "src/x509/v3_group_ac.rs::UNSAFE_FN_DEF::s2i_GROUP_AC",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 101,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_group_ac.rs::s2i_GROUP_AC::ossl_v3_group_ac::s2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_group_ac",
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2s_ASN1_IA5STRING",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ia5.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 77,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ia5.rs::i2s_ASN1_IA5STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "ia5_i2s",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ia5.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_ia5.rs",
+     "id": "V1:src/x509/v3_ia5.rs:180:UNSAFE_FN_DEF",
+     "line": 180,
+     "stable_id": "src/x509/v3_ia5.rs::UNSAFE_FN_DEF::ia5_i2s",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 191,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ia5.rs::ia5_i2s::fn:ext_ia5string::i2s",
+     "registration_kind": "slot-registration",
+     "row": "fn:ext_ia5string",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "ia5_s2i",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ia5.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_ia5.rs",
+     "id": "V1:src/x509/v3_ia5.rs:197:UNSAFE_FN_DEF",
+     "line": 197,
+     "stable_id": "src/x509/v3_ia5.rs::UNSAFE_FN_DEF::ia5_s2i",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 210,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ia5.rs::ia5_s2i::fn:ext_ia5string::s2i",
+     "registration_kind": "slot-registration",
+     "row": "fn:ext_ia5string",
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "s2i_ASN1_IA5STRING",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ia5.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 113,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ia5.rs::s2i_ASN1_IA5STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_INDIRECT_ISSUER",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ind_iss.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_ind_iss.rs",
+     "id": "V1:src/x509/v3_ind_iss.rs:33:UNSAFE_FN_DEF",
+     "line": 33,
+     "stable_id": "src/x509/v3_ind_iss.rs::UNSAFE_FN_DEF::i2r_INDIRECT_ISSUER",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 44,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ind_iss.rs::i2r_INDIRECT_ISSUER::ossl_v3_indirect_issuer::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_indirect_issuer",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2s_INDIRECT_ISSUER",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ind_iss.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_ind_iss.rs",
+     "id": "V1:src/x509/v3_ind_iss.rs:64:UNSAFE_FN_DEF",
+     "line": 64,
+     "stable_id": "src/x509/v3_ind_iss.rs::UNSAFE_FN_DEF::i2s_INDIRECT_ISSUER",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 74,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ind_iss.rs::i2s_INDIRECT_ISSUER::ossl_v3_indirect_issuer::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_indirect_issuer",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "r2i_INDIRECT_ISSUER",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ind_iss.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_ind_iss.rs",
+     "id": "V1:src/x509/v3_ind_iss.rs:54:UNSAFE_FN_DEF",
+     "line": 54,
+     "stable_id": "src/x509/v3_ind_iss.rs::UNSAFE_FN_DEF::r2i_INDIRECT_ISSUER",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 54,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ind_iss.rs::r2i_INDIRECT_ISSUER::ossl_v3_indirect_issuer::r2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_indirect_issuer",
+     "slot": "r2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "s2i_INDIRECT_ISSUER",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ind_iss.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_ind_iss.rs",
+     "id": "V1:src/x509/v3_ind_iss.rs:87:UNSAFE_FN_DEF",
+     "line": 87,
+     "stable_id": "src/x509/v3_ind_iss.rs::UNSAFE_FN_DEF::s2i_INDIRECT_ISSUER",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 101,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ind_iss.rs::s2i_INDIRECT_ISSUER::ossl_v3_indirect_issuer::s2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_indirect_issuer",
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2v_AUTHORITY_INFO_ACCESS",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_info.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_info.rs",
+     "id": "V1:src/x509/v3_info.rs:323:UNSAFE_FN_DEF",
+     "line": 323,
+     "stable_id": "src/x509/v3_info.rs::UNSAFE_FN_DEF::i2v_AUTHORITY_INFO_ACCESS",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 323,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_info.rs::i2v_AUTHORITY_INFO_ACCESS::fn:info_access_row::i2v",
+     "registration_kind": "slot-registration",
+     "row": "fn:info_access_row",
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_AUTHORITY_INFO_ACCESS",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_info.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_info.rs",
+     "id": "V1:src/x509/v3_info.rs:414:UNSAFE_FN_DEF",
+     "line": 414,
+     "stable_id": "src/x509/v3_info.rs::UNSAFE_FN_DEF::v2i_AUTHORITY_INFO_ACCESS",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 449,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_info.rs::v2i_AUTHORITY_INFO_ACCESS::fn:info_access_row::v2i",
+     "registration_kind": "slot-registration",
+     "row": "fn:info_access_row",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "int_i2s",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE",
+    "PROVEN_REACHABLE",
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_int.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_int.rs",
+     "id": "V1:src/x509/v3_int.rs:29:UNSAFE_FN_DEF",
+     "line": 29,
+     "stable_id": "src/x509/v3_int.rs::UNSAFE_FN_DEF::int_i2s",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 41,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_int.rs::int_i2s::ossl_v3_crl_num::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crl_num",
+     "slot": "i2s"
+    },
+    {
+     "registration_id": "src/x509/v3_int.rs::int_i2s::ossl_v3_delta_crl::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_delta_crl",
+     "slot": "i2s"
+    },
+    {
+     "registration_id": "src/x509/v3_int.rs::int_i2s::ossl_v3_inhibit_anyp::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_inhibit_anyp",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "s2i_asn1_int",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_int.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_int.rs",
+     "id": "V1:src/x509/v3_int.rs:51:UNSAFE_FN_DEF",
+     "line": 51,
+     "stable_id": "src/x509/v3_int.rs::UNSAFE_FN_DEF::s2i_asn1_int",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 65,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_int.rs::s2i_asn1_int::ossl_v3_inhibit_anyp::s2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_inhibit_anyp",
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_ISSUED_ON_BEHALF_OF",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_iobo.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_iobo.rs",
+     "id": "V1:src/x509/v3_iobo.rs:42:UNSAFE_FN_DEF",
+     "line": 42,
+     "stable_id": "src/x509/v3_iobo.rs::UNSAFE_FN_DEF::i2r_ISSUED_ON_BEHALF_OF",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 55,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_iobo.rs::i2r_ISSUED_ON_BEHALF_OF::ossl_v3_issued_on_behalf_of::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_issued_on_behalf_of",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_issuer_sign_tool",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ist.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_ist.rs",
+     "id": "V1:src/x509/v3_ist.rs:331:UNSAFE_FN_DEF",
+     "line": 331,
+     "stable_id": "src/x509/v3_ist.rs::UNSAFE_FN_DEF::i2r_issuer_sign_tool",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 380,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ist.rs::i2r_issuer_sign_tool::ossl_v3_issuer_sign_tool::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_issuer_sign_tool",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_issuer_sign_tool",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ist.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_ist.rs",
+     "id": "V1:src/x509/v3_ist.rs:246:UNSAFE_FN_DEF",
+     "line": 246,
+     "stable_id": "src/x509/v3_ist.rs::UNSAFE_FN_DEF::v2i_issuer_sign_tool",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 280,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ist.rs::v2i_issuer_sign_tool::ossl_v3_issuer_sign_tool::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_issuer_sign_tool",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_NAME_CONSTRAINTS",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE",
+    "PROVEN_REACHABLE",
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ncons.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 588,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_name_constraints::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_name_constraints",
+     "slot": "i2r"
+    },
+    {
+     "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_holder_name_constraints::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_holder_name_constraints",
+     "slot": "i2r"
+    },
+    {
+     "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_delegated_name_constraints::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_delegated_name_constraints",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_NAME_CONSTRAINTS",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE",
+    "PROVEN_REACHABLE",
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_ncons.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 390,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ncons.rs::v2i_NAME_CONSTRAINTS::ossl_v3_name_constraints::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_name_constraints",
+     "slot": "v2i"
+    },
+    {
+     "registration_id": "src/x509/v3_ncons.rs::v2i_NAME_CONSTRAINTS::ossl_v3_holder_name_constraints::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_holder_name_constraints",
+     "slot": "v2i"
+    },
+    {
+     "registration_id": "src/x509/v3_ncons.rs::v2i_NAME_CONSTRAINTS::ossl_v3_delegated_name_constraints::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_delegated_name_constraints",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_NO_ASSERTION",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_no_ass.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_no_ass.rs",
+     "id": "V1:src/x509/v3_no_ass.rs:36:UNSAFE_FN_DEF",
+     "line": 36,
+     "stable_id": "src/x509/v3_no_ass.rs::UNSAFE_FN_DEF::i2r_NO_ASSERTION",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 47,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_no_ass.rs::i2r_NO_ASSERTION::ossl_v3_no_assertion::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_no_assertion",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2s_NO_ASSERTION",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_no_ass.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_no_ass.rs",
+     "id": "V1:src/x509/v3_no_ass.rs:72:UNSAFE_FN_DEF",
+     "line": 72,
+     "stable_id": "src/x509/v3_no_ass.rs::UNSAFE_FN_DEF::i2s_NO_ASSERTION",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 82,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_no_ass.rs::i2s_NO_ASSERTION::ossl_v3_no_assertion::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_no_assertion",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "r2i_NO_ASSERTION",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_no_ass.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_no_ass.rs",
+     "id": "V1:src/x509/v3_no_ass.rs:58:UNSAFE_FN_DEF",
+     "line": 58,
+     "stable_id": "src/x509/v3_no_ass.rs::UNSAFE_FN_DEF::r2i_NO_ASSERTION",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 58,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_no_ass.rs::r2i_NO_ASSERTION::ossl_v3_no_assertion::r2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_no_assertion",
+     "slot": "r2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "s2i_NO_ASSERTION",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_no_ass.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_no_ass.rs",
+     "id": "V1:src/x509/v3_no_ass.rs:96:UNSAFE_FN_DEF",
+     "line": 96,
+     "stable_id": "src/x509/v3_no_ass.rs::UNSAFE_FN_DEF::s2i_NO_ASSERTION",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 111,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_no_ass.rs::s2i_NO_ASSERTION::ossl_v3_no_assertion::s2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_no_assertion",
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_NO_REV_AVAIL",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_no_rev_avail.rs",
+     "id": "V1:src/x509/v3_no_rev_avail.rs:33:UNSAFE_FN_DEF",
+     "line": 33,
+     "stable_id": "src/x509/v3_no_rev_avail.rs::UNSAFE_FN_DEF::i2r_NO_REV_AVAIL",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 44,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_no_rev_avail.rs::i2r_NO_REV_AVAIL::ossl_v3_no_rev_avail::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_no_rev_avail",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2s_NO_REV_AVAIL",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_no_rev_avail.rs",
+     "id": "V1:src/x509/v3_no_rev_avail.rs:64:UNSAFE_FN_DEF",
+     "line": 64,
+     "stable_id": "src/x509/v3_no_rev_avail.rs::UNSAFE_FN_DEF::i2s_NO_REV_AVAIL",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 74,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_no_rev_avail.rs::i2s_NO_REV_AVAIL::ossl_v3_no_rev_avail::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_no_rev_avail",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "r2i_NO_REV_AVAIL",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_no_rev_avail.rs",
+     "id": "V1:src/x509/v3_no_rev_avail.rs:54:UNSAFE_FN_DEF",
+     "line": 54,
+     "stable_id": "src/x509/v3_no_rev_avail.rs::UNSAFE_FN_DEF::r2i_NO_REV_AVAIL",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 54,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_no_rev_avail.rs::r2i_NO_REV_AVAIL::ossl_v3_no_rev_avail::r2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_no_rev_avail",
+     "slot": "r2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "s2i_NO_REV_AVAIL",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_no_rev_avail.rs",
+     "id": "V1:src/x509/v3_no_rev_avail.rs:87:UNSAFE_FN_DEF",
+     "line": 87,
+     "stable_id": "src/x509/v3_no_rev_avail.rs::UNSAFE_FN_DEF::s2i_NO_REV_AVAIL",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 101,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_no_rev_avail.rs::s2i_NO_REV_AVAIL::ossl_v3_no_rev_avail::s2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_no_rev_avail",
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_pci",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_pci.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 581,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_pci.rs::i2r_pci::ossl_v3_pci::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_pci",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "r2i_pci",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_pci.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 647,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_pci.rs::r2i_pci::ossl_v3_pci::r2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_pci",
+     "slot": "r2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2v_POLICY_CONSTRAINTS",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_pcons.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_pcons.rs",
+     "id": "V1:src/x509/v3_pcons.rs:154:UNSAFE_FN_DEF",
+     "line": 154,
+     "stable_id": "src/x509/v3_pcons.rs::UNSAFE_FN_DEF::i2v_POLICY_CONSTRAINTS",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 154,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_pcons.rs::i2v_POLICY_CONSTRAINTS::ossl_v3_policy_constraints::i2v",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_policy_constraints",
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_POLICY_CONSTRAINTS",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_pcons.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_pcons.rs",
+     "id": "V1:src/x509/v3_pcons.rs:179:UNSAFE_FN_DEF",
+     "line": 179,
+     "stable_id": "src/x509/v3_pcons.rs::UNSAFE_FN_DEF::v2i_POLICY_CONSTRAINTS",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 212,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_pcons.rs::v2i_POLICY_CONSTRAINTS::ossl_v3_policy_constraints::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_policy_constraints",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_PKEY_USAGE_PERIOD",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_pku.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_pku.rs",
+     "id": "V1:src/x509/v3_pku.rs:164:UNSAFE_FN_DEF",
+     "line": 164,
+     "stable_id": "src/x509/v3_pku.rs::UNSAFE_FN_DEF::i2r_PKEY_USAGE_PERIOD",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 178,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_pku.rs::i2r_PKEY_USAGE_PERIOD::ossl_v3_pkey_usage_period::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_pkey_usage_period",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2v_POLICY_MAPPINGS",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_pmaps.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_pmaps.rs",
+     "id": "V1:src/x509/v3_pmaps.rs:200:UNSAFE_FN_DEF",
+     "line": 200,
+     "stable_id": "src/x509/v3_pmaps.rs::UNSAFE_FN_DEF::i2v_POLICY_MAPPINGS",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 200,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_pmaps.rs::i2v_POLICY_MAPPINGS::ossl_v3_policy_mappings::i2v",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_policy_mappings",
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_POLICY_MAPPINGS",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_pmaps.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_pmaps.rs",
+     "id": "V1:src/x509/v3_pmaps.rs:229:UNSAFE_FN_DEF",
+     "line": 229,
+     "stable_id": "src/x509/v3_pmaps.rs::UNSAFE_FN_DEF::v2i_POLICY_MAPPINGS",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 263,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_pmaps.rs::v2i_POLICY_MAPPINGS::ossl_v3_policy_mappings::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_policy_mappings",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_OSSL_ROLE_SPEC_CERT_ID",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_rolespec.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 297,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_rolespec.rs::i2r_OSSL_ROLE_SPEC_CERT_ID::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_rolespec.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 392,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_rolespec.rs::i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX::ossl_v3_role_spec_cert_identifier::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_role_spec_cert_identifier",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2v_GENERAL_NAME",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 356,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::i2v_GENERAL_NAME::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2v_GENERAL_NAMES",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 317,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::i2v_GENERAL_NAMES::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "san_i2v",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE",
+    "PROVEN_REACHABLE",
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_san.rs",
+     "id": "V1:src/x509/v3_san.rs:1163:UNSAFE_FN_DEF",
+     "line": 1163,
+     "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::san_i2v",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 1163,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::san_i2v::ossl_v3_alt[0]::i2v",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_alt[0]",
+     "slot": "i2v"
+    },
+    {
+     "registration_id": "src/x509/v3_san.rs::san_i2v::ossl_v3_alt[1]::i2v",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_alt[1]",
+     "slot": "i2v"
+    },
+    {
+     "registration_id": "src/x509/v3_san.rs::san_i2v::ossl_v3_alt[2]::i2v",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_alt[2]",
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "san_v2i",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_san.rs",
+     "id": "V1:src/x509/v3_san.rs:1174:UNSAFE_FN_DEF",
+     "line": 1174,
+     "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::san_v2i",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 1174,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::san_v2i::ossl_v3_alt[0]::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_alt[0]",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "san_v2i_issuer",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_san.rs",
+     "id": "V1:src/x509/v3_san.rs:1184:UNSAFE_FN_DEF",
+     "line": 1184,
+     "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::san_v2i_issuer",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 1184,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::san_v2i_issuer::ossl_v3_alt[1]::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_alt[1]",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_GENERAL_NAME",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1115,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_GENERAL_NAME::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_GENERAL_NAMES",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1131,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_GENERAL_NAMES::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_GENERAL_NAME_ex",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1058,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_GENERAL_NAME_ex::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_issuer_alt",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1231,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_issuer_alt::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_subject_alt",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1355,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_subject_alt::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_ATTRIBUTES_SYNTAX",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_sda.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_sda.rs",
+     "id": "V1:src/x509/v3_sda.rs:140:UNSAFE_FN_DEF",
+     "line": 140,
+     "stable_id": "src/x509/v3_sda.rs::UNSAFE_FN_DEF::i2r_ATTRIBUTES_SYNTAX",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 154,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_sda.rs::i2r_ATTRIBUTES_SYNTAX::fn:attributes_syntax_row::i2r",
+     "registration_kind": "slot-registration",
+     "row": "fn:attributes_syntax_row",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_SINGLE_USE",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_single_use.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_single_use.rs",
+     "id": "V1:src/x509/v3_single_use.rs:34:UNSAFE_FN_DEF",
+     "line": 34,
+     "stable_id": "src/x509/v3_single_use.rs::UNSAFE_FN_DEF::i2r_SINGLE_USE",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 45,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_single_use.rs::i2r_SINGLE_USE::ossl_v3_single_use::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_single_use",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2s_SINGLE_USE",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_single_use.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_single_use.rs",
+     "id": "V1:src/x509/v3_single_use.rs:65:UNSAFE_FN_DEF",
+     "line": 65,
+     "stable_id": "src/x509/v3_single_use.rs::UNSAFE_FN_DEF::i2s_SINGLE_USE",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 75,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_single_use.rs::i2s_SINGLE_USE::ossl_v3_single_use::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_single_use",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "r2i_SINGLE_USE",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_single_use.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_single_use.rs",
+     "id": "V1:src/x509/v3_single_use.rs:55:UNSAFE_FN_DEF",
+     "line": 55,
+     "stable_id": "src/x509/v3_single_use.rs::UNSAFE_FN_DEF::r2i_SINGLE_USE",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 55,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_single_use.rs::r2i_SINGLE_USE::ossl_v3_single_use::r2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_single_use",
+     "slot": "r2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "s2i_SINGLE_USE",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_single_use.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_single_use.rs",
+     "id": "V1:src/x509/v3_single_use.rs:88:UNSAFE_FN_DEF",
+     "line": 88,
+     "stable_id": "src/x509/v3_single_use.rs::UNSAFE_FN_DEF::s2i_SINGLE_USE",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 102,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_single_use.rs::s2i_SINGLE_USE::ossl_v3_single_use::s2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_single_use",
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2s_ASN1_OCTET_STRING",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_skid.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 73,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_skid.rs::i2s_ASN1_OCTET_STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "s2i_ASN1_OCTET_STRING",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_skid.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 90,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_skid.rs::s2i_ASN1_OCTET_STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "s2i_skey_id",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_skid.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 206,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_skid.rs::s2i_skey_id::ossl_v3_skey_id::s2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_skey_id",
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "skid_i2s",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_skid.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_skid.rs",
+     "id": "V1:src/x509/v3_skid.rs:249:UNSAFE_FN_DEF",
+     "line": 249,
+     "stable_id": "src/x509/v3_skid.rs::UNSAFE_FN_DEF::skid_i2s",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 262,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_skid.rs::skid_i2s::ossl_v3_skey_id::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_skey_id",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_SOA_IDENTIFIER",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_soa_id.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_soa_id.rs",
+     "id": "V1:src/x509/v3_soa_id.rs:33:UNSAFE_FN_DEF",
+     "line": 33,
+     "stable_id": "src/x509/v3_soa_id.rs::UNSAFE_FN_DEF::i2r_SOA_IDENTIFIER",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 44,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_soa_id.rs::i2r_SOA_IDENTIFIER::ossl_v3_soa_identifier::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_soa_identifier",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2s_SOA_IDENTIFIER",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_soa_id.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_soa_id.rs",
+     "id": "V1:src/x509/v3_soa_id.rs:64:UNSAFE_FN_DEF",
+     "line": 64,
+     "stable_id": "src/x509/v3_soa_id.rs::UNSAFE_FN_DEF::i2s_SOA_IDENTIFIER",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 74,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_soa_id.rs::i2s_SOA_IDENTIFIER::ossl_v3_soa_identifier::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_soa_identifier",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "r2i_SOA_IDENTIFIER",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_soa_id.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_soa_id.rs",
+     "id": "V1:src/x509/v3_soa_id.rs:54:UNSAFE_FN_DEF",
+     "line": 54,
+     "stable_id": "src/x509/v3_soa_id.rs::UNSAFE_FN_DEF::r2i_SOA_IDENTIFIER",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 54,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_soa_id.rs::r2i_SOA_IDENTIFIER::ossl_v3_soa_identifier::r2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_soa_identifier",
+     "slot": "r2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "s2i_SOA_IDENTIFIER",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_soa_id.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_soa_id.rs",
+     "id": "V1:src/x509/v3_soa_id.rs:87:UNSAFE_FN_DEF",
+     "line": 87,
+     "stable_id": "src/x509/v3_soa_id.rs::UNSAFE_FN_DEF::s2i_SOA_IDENTIFIER",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 101,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_soa_id.rs::s2i_SOA_IDENTIFIER::ossl_v3_soa_identifier::s2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_soa_identifier",
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "sxnet_i2r",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_sxnet.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_sxnet.rs",
+     "id": "V1:src/x509/v3_sxnet.rs:332:UNSAFE_FN_DEF",
+     "line": 332,
+     "stable_id": "src/x509/v3_sxnet.rs::UNSAFE_FN_DEF::sxnet_i2r",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 346,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_sxnet.rs::sxnet_i2r::ossl_v3_sxnet::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_sxnet",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "sxnet_v2i",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_sxnet.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_sxnet.rs",
+     "id": "V1:src/x509/v3_sxnet.rs:420:UNSAFE_FN_DEF",
+     "line": 420,
+     "stable_id": "src/x509/v3_sxnet.rs::UNSAFE_FN_DEF::sxnet_v2i",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 453,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_sxnet.rs::sxnet_v2i::ossl_v3_sxnet::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_sxnet",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_OSSL_TIME_SPEC",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_timespec.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_timespec.rs",
+     "id": "V1:src/x509/v3_timespec.rs:2047:UNSAFE_FN_DEF",
+     "line": 2047,
+     "stable_id": "src/x509/v3_timespec.rs::UNSAFE_FN_DEF::i2r_OSSL_TIME_SPEC",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 2106,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_timespec.rs::i2r_OSSL_TIME_SPEC::ossl_v3_time_specification::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_time_specification",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2v_TLS_FEATURE",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_tlsf.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_tlsf.rs",
+     "id": "V1:src/x509/v3_tlsf.rs:173:UNSAFE_FN_DEF",
+     "line": 173,
+     "stable_id": "src/x509/v3_tlsf.rs::UNSAFE_FN_DEF::i2v_TLS_FEATURE",
+     "status": "BLOCKED"
+    }
+   ],
+   "line": 173,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_tlsf.rs::i2v_TLS_FEATURE::ossl_v3_tls_feature::i2v",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_tls_feature",
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "v2i_TLS_FEATURE",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_tlsf.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_tlsf.rs",
+     "id": "V1:src/x509/v3_tlsf.rs:208:UNSAFE_FN_DEF",
+     "line": 208,
+     "stable_id": "src/x509/v3_tlsf.rs::UNSAFE_FN_DEF::v2i_TLS_FEATURE",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 241,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_tlsf.rs::v2i_TLS_FEATURE::ossl_v3_tls_feature::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_tls_feature",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2r_USER_NOTICE_SYNTAX",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_usernotice.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_usernotice.rs",
+     "id": "V1:src/x509/v3_usernotice.rs:287:UNSAFE_FN_DEF",
+     "line": 287,
+     "stable_id": "src/x509/v3_usernotice.rs::UNSAFE_FN_DEF::i2r_USER_NOTICE_SYNTAX",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 300,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_usernotice.rs::i2r_USER_NOTICE_SYNTAX::ossl_v3_user_notice::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_user_notice",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2s_ASN1_UTF8STRING",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_utf8.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 74,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utf8.rs::i2s_ASN1_UTF8STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "s2i_ASN1_UTF8STRING",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_utf8.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 114,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utf8.rs::s2i_ASN1_UTF8STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "utf8_i2s",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_utf8.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_utf8.rs",
+     "id": "V1:src/x509/v3_utf8.rs:164:UNSAFE_FN_DEF",
+     "line": 164,
+     "stable_id": "src/x509/v3_utf8.rs::UNSAFE_FN_DEF::utf8_i2s",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 176,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utf8.rs::utf8_i2s::fn:ext_utf8string::i2s",
+     "registration_kind": "slot-registration",
+     "row": "fn:ext_utf8string",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "utf8_s2i",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_utf8.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_utf8.rs",
+     "id": "V1:src/x509/v3_utf8.rs:182:UNSAFE_FN_DEF",
+     "line": 182,
+     "stable_id": "src/x509/v3_utf8.rs::UNSAFE_FN_DEF::utf8_s2i",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 195,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utf8.rs::utf8_s2i::fn:ext_utf8string::s2i",
+     "registration_kind": "slot-registration",
+     "row": "fn:ext_utf8string",
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2s_ASN1_ENUMERATED",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_utl.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 501,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utl.rs::i2s_ASN1_ENUMERATED::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "i2s_ASN1_INTEGER",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_utl.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 535,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utl.rs::i2s_ASN1_INTEGER::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "callback": "s2i_ASN1_INTEGER",
+   "classification": "PROVEN_REACHABLE",
+   "classifications": [
+    "PROVEN_REACHABLE"
+   ],
+   "file": "src/x509/v3_utl.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 573,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utl.rs::s2i_ASN1_INTEGER::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "s2i"
+    }
+   ]
+  }
+ ],
+ "part": "callbacks",
+ "schema": "openssl-rs/campaign/safe-c33/callback-registration-manifest/v1/part"
+}

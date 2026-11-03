@@ -1,0 +1,148 @@
+{
+ "part": "registrations",
+ "registrations": [
+  {
+   "assumption": "",
+   "callback": "x509_ext_d2i_SCT_LIST",
+   "callback_file": "src/ct/ct_x509v3.rs",
+   "callback_line": 127,
+   "classification": "PROVEN_REACHABLE",
+   "classification_basis": "reachable-functions-module-match",
+   "classification_evidence": {
+    "file": "src/ct/ct_x509v3.rs",
+    "module": "ct_x509v3",
+    "symbols": [
+     "libcrypto.so.3:0x4a5f40:_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v321x509_ext_d2i_SCT_LIST"
+    ]
+   },
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_d2i",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:414 &crate::ct::ct_x509v3::ossl_v3_ct_scts[0]",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": false,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/ct/ct_x509v3.rs::x509_ext_d2i_SCT_LIST::ossl_v3_ct_scts[0]::d2i",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_ct_scts[0]",
+   "row_file": "src/ct/ct_x509v3.rs",
+   "row_instances": [
+    {
+     "file": "src/ct/ct_x509v3.rs",
+     "index": 0,
+     "line": 238,
+     "name": "ossl_v3_ct_scts"
+    }
+   ],
+   "row_line": 240,
+   "slot": "d2i",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "callback": "ocsp_ext_d2i_SCT_LIST",
+   "callback_file": "src/ct/ct_x509v3.rs",
+   "callback_line": 154,
+   "classification": "PROVEN_REACHABLE",
+   "classification_basis": "reachable-functions-module-match",
+   "classification_evidence": {
+    "file": "src/ct/ct_x509v3.rs",
+    "module": "ct_x509v3",
+    "symbols": [
+     "libcrypto.so.3:0x4a5e60:_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v321ocsp_ext_d2i_SCT_LIST"
+    ]
+   },
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_d2i",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:416 &crate::ct::ct_x509v3::ossl_v3_ct_scts[2]",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": false,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/ct/ct_x509v3.rs::ocsp_ext_d2i_SCT_LIST::ossl_v3_ct_scts[2]::d2i",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_ct_scts[2]",
+   "row_file": "src/ct/ct_x509v3.rs",
+   "row_instances": [
+    {
+     "file": "src/ct/ct_x509v3.rs",
+     "index": 2,
+     "line": 238,
+     "name": "ossl_v3_ct_scts"
+    }
+   ],
+   "row_line": 274,
+   "slot": "d2i",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "callback": "d2i_ocsp_nonce",
+   "callback_file": "src/ocsp/v3_ocsp.rs",
+   "callback_line": 265,
+   "classification": "PROVEN_REACHABLE",
+   "classification_basis": "reachable-functions-module-match",
+   "classification_evidence": {
+    "file": "src/ocsp/v3_ocsp.rs",
+    "module": "v3_ocsp",
+    "symbols": [
+     "libcrypto.so.3:0x1a1560:_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14d2i_ocsp_nonce"
+    ]
+   },
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_d2i",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:395 &crate::ocsp::v3_ocsp::ossl_v3_ocsp_nonce",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": false,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/ocsp/v3_ocsp.rs::d2i_ocsp_nonce::ossl_v3_ocsp_nonce::d2i",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_ocsp_nonce",
+   "row_file": "src/ocsp/v3_ocsp.rs",
+   "row_instances": [
+    {
+     "file": "src/ocsp/v3_ocsp.rs",
+     "index": null,
+     "line": 498,
+     "name": "ossl_v3_ocsp_nonce"
+    }
+   ],
+   "row_line": 498,
+   "slot": "d2i",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  }
+ ],
+ "schema": "openssl-rs/campaign/safe-c33/callback-registration-manifest/v1/part",
+ "slot": "d2i"
+}
