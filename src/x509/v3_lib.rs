@@ -549,6 +549,26 @@ pub(crate) fn registry_read_held_on_this_thread() -> bool {
     read_hold_probe::held()
 }
 
+/// Test-only: the number of rows currently in the dynamic extension registry.
+///
+/// The count is taken under the registry **read** hold, so it cannot observe a
+/// concurrent mutation half-way. A caller that holds a read on this thread may
+/// call it (a nested read is a count increment); a caller that is the writer may
+/// not, because `read_lock` refuses a read while the write lock is held.
+#[cfg(test)]
+pub(crate) fn registry_row_count() -> usize {
+    let Some(_registry) = RegistryReadGuard::acquire() else {
+        return 0;
+    };
+    let list = EXT_LIST.load(Ordering::Acquire);
+    if list.is_null() {
+        return 0;
+    }
+    // SAFETY: `list` is the registry list this module built, and the read hold is
+    // held for this read.
+    usize::try_from(unsafe { OPENSSL_sk_num(list) }).unwrap_or(0)
+}
+
 /// A held registry **write** hold; dropping it unlocks. Private because every writer is here.
 struct RegistryWriteGuard {
     lock: *mut CryptoRwlock,
