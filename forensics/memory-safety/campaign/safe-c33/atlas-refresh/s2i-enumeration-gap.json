@@ -50,14 +50,19 @@
  ],
  "gate": {
   "instrument": "forensics/tools/callback_enumeration_gate.py",
+  "instrument_sha256": "648ecd9b00d9941746a73558f96d3ea60fc9b01142a54eda92b0367ed12966a6",
   "manifest_index": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-registration-manifest.json",
   "manifest_parts_dir": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-registration-manifest/",
   "report": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-report.json",
   "enrolment": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json",
   "controls": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/control-results.json",
   "source_identity": {
+   "instrument": {
+    "path": "forensics/tools/callback_enumeration_gate.py",
+    "sha256": "648ecd9b00d9941746a73558f96d3ea60fc9b01142a54eda92b0367ed12966a6"
+   },
    "inventory_source_head": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
-   "repository_head": "38a1548be633f3d1be4e55330cbdcb29ef0b8de8",
+   "repository_head": "f2a8110cdc7dc94cc6cf5a3af92bd7c3c234a04f",
    "source_mode": "worktree",
    "src_tree_unchanged_vs_inventory_head": true
   },
@@ -72,12 +77,42 @@
   "pass": false,
   "classification": {
    "PROVEN_EXCLUDED": 0,
-   "PROVEN_REACHABLE": 135,
+   "REACHABLE_BOUND": 135,
    "UNRESOLVED": 0
   },
+  "classification_labels": {
+   "reachable": "REACHABLE_BOUND",
+   "reachable_bases": [
+    "edge-witness",
+    "module-name-match",
+    "unique-name-match",
+    "dispatcher-row-binding"
+   ],
+   "reachable_is_proof": false
+  },
+  "basis_counts": {
+   "dispatcher-row-binding": 7,
+   "edge-witness": 38,
+   "module-name-match": 104,
+   "unique-name-match": 0
+  },
+  "callback_basis_counts": {
+   "dispatcher-row-binding": 7,
+   "edge-witness": 37,
+   "module-name-match": 91,
+   "unique-name-match": 0
+  },
   "inventory_matched_callbacks": 69,
-  "missing_entries": 66,
-  "missing_distinct_names": 65,
+  "inventory_accounting": {
+   "inventory_callbacks_accounted": 69,
+   "slot_prefix_inventory_not_seen": [],
+   "slot_prefix_inventory_without_source_definition": [],
+   "unaccounted": [],
+   "unit": "distinct inventory callbacks accounted for by the source enumeration; entries are file-qualified"
+  },
+  "missing_entry_count": 66,
+  "missing_distinct_name_count": 65,
+  "missing_count_unit": "entries are per file-qualified callback definition; distinct_names counts callback names",
   "missing_first_10": [
    "src/ct/ct_sct.rs:247 SCT_LIST_free",
    "src/ct/ct_x509v3.rs:59 i2s_poison",
@@ -93,7 +128,8 @@
   "enrolment_count": 66,
   "reconciliation": {
    "ext_free_callbacks_absent_from_queue": 2,
-   "gate_missing_distinct_callbacks": 66,
+   "gate_missing_distinct_definitions": 66,
+   "gate_missing_distinct_names": 65,
    "gate_missing_entries": 66,
    "note": "name-prefix matching is not the enumeration; these counts reconcile the six-prefix definition census with the slot-driven manifest and explain why the gate's missing set differs from a raw prefix grep",
    "prefix_definitions_absent_and_definition_only": 34,
@@ -111,14 +147,15 @@
    "C2": true,
    "C3": true,
    "C4": true,
-   "C5": true
+   "C5": true,
+   "C6": true
   },
   "determinism": {
    "identical": true,
-   "report_sha256": "7f38381f13ac7b344ab5043de699e778cb547541bbf4f467b6e030b6268f3dc6",
-   "manifest_sha256": "5a44cb3f66abfacc091379981448357a21eb5ac2b28a4f48fb29979f80b2531d"
+   "report_sha256": "b900e24e8db67b5221d3d3d290af930e4b85698903e680274b991a612aa33ef3",
+   "manifest_sha256": "e34d1e92179959acb215f047f77cc161345fd012c22f666459a770525ce2bdcb"
   },
-  "interpretation": "The gate accounts for all 114 six-prefix definitions (115 definitions) and 2 additional ext_free callbacks. Of the 63 distinct prefix-named definitions absent from the 312-obligation queue, 30 are slot registrations and 33 are definition-only helpers; all 63 are now accounted for, and 2 ext_free callbacks are added, producing 66 file-qualified missing entries (65 distinct names). 69 registered callbacks are already inventoried, including 51 prefix-named definitions and 18 callbacks whose names do not match their slot prefix.",
-  "non_claims": "The gate proves inventory-vs-source agreement for its parsed registrations and for the six-prefix definition census; it does not prove that macro-generated or build-script-generated rows were parsed, and its dispatcher bindings are source-level METHOD-table/call-site witnesses, not execution proofs."
+  "interpretation": "REACHABLE_BOUND is a may-bound, not a proof. The gate accounts for all 114 six-prefix definitions (115 definitions) and 2 additional ext_free callbacks. Of the 63 distinct prefix-named definitions absent from the 312-obligation queue, 30 are slot registrations and 33 are definition-only helpers; all 63 are accounted for, and 2 ext_free callbacks are added, producing 66 file-qualified missing entries (65 distinct names). 69 registered callbacks are already inventoried, including 51 prefix-named definitions and 18 callbacks whose names do not match their slot prefix.",
+  "non_claims": "The gate proves inventory-vs-source agreement for its parsed registrations and for the six-prefix definition census; REACHABLE_BOUND rests on the closure's converged MAY-bound reachable_functions set unless the record carries an edge-witness, and dispatcher-row-binding is a table witness, not execution. Macro/build-script-generated rows are outside the parser."
  }
 }

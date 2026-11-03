@@ -3,7 +3,7 @@
   {
    "file": "src/ct/ct_sct.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/ct/ct_sct.rs:247:UNSAFE_FN_DEF",
@@ -13,7 +13,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -37,7 +37,7 @@
   {
    "file": "src/ct/ct_x509v3.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/ct/ct_x509v3.rs:59:UNSAFE_FN_DEF",
@@ -47,7 +47,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -65,7 +65,7 @@
   {
    "file": "src/ct/ct_x509v3.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/ct/ct_x509v3.rs:70:UNSAFE_FN_DEF",
@@ -75,7 +75,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -93,7 +93,7 @@
   {
    "file": "src/ct/ct_x509v3.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/ct/ct_x509v3.rs:84:UNSAFE_FN_DEF",
@@ -103,7 +103,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -127,7 +127,7 @@
   {
    "file": "src/ocsp/v3_ocsp.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/ocsp/v3_ocsp.rs:122:UNSAFE_FN_DEF",
@@ -137,7 +137,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -155,7 +155,7 @@
   {
    "file": "src/ocsp/v3_ocsp.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/ocsp/v3_ocsp.rs:187:UNSAFE_FN_DEF",
@@ -165,7 +165,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -183,7 +183,7 @@
   {
    "file": "src/ocsp/v3_ocsp.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/ocsp/v3_ocsp.rs:325:UNSAFE_FN_DEF",
@@ -193,7 +193,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -211,7 +211,7 @@
   {
    "file": "src/ocsp/v3_ocsp.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/ocsp/v3_ocsp.rs:344:UNSAFE_FN_DEF",
@@ -221,7 +221,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -239,7 +239,7 @@
   {
    "file": "src/ocsp/v3_ocsp.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/ocsp/v3_ocsp.rs:406:UNSAFE_FN_DEF",
@@ -249,7 +249,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -267,7 +267,7 @@
   {
    "file": "src/x509/v3_ac_tgt.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_ac_tgt.rs:624:UNSAFE_FN_DEF",
@@ -277,7 +277,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -295,7 +295,7 @@
   {
    "file": "src/x509/v3_ac_tgt.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_ac_tgt.rs:688:UNSAFE_FN_DEF",
@@ -305,7 +305,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -323,7 +323,7 @@
   {
    "file": "src/x509/v3_ac_tgt.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_ac_tgt.rs:825:UNSAFE_FN_DEF",
@@ -333,7 +333,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -351,7 +351,7 @@
   {
    "file": "src/x509/v3_ac_tgt.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_ac_tgt.rs:889:UNSAFE_FN_DEF",
@@ -361,7 +361,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -379,7 +379,7 @@
   {
    "file": "src/x509/v3_ac_tgt.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_ac_tgt.rs:934:UNSAFE_FN_DEF",
@@ -389,7 +389,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -407,7 +407,7 @@
   {
    "file": "src/x509/v3_ac_tgt.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_ac_tgt.rs:962:UNSAFE_FN_DEF",
@@ -417,7 +417,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -435,7 +435,7 @@
   {
    "file": "src/x509/v3_addr.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_addr.rs:921:UNSAFE_FN_DEF",
@@ -445,7 +445,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -463,7 +463,7 @@
   {
    "file": "src/x509/v3_addr.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_addr.rs:2241:UNSAFE_FN_DEF",
@@ -473,7 +473,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -491,7 +491,7 @@
   {
    "file": "src/x509/v3_admis.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_admis.rs:557:UNSAFE_FN_DEF",
@@ -501,7 +501,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -519,7 +519,7 @@
   {
    "file": "src/x509/v3_admis.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_admis.rs:640:UNSAFE_FN_DEF",
@@ -529,7 +529,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -547,7 +547,7 @@
   {
    "file": "src/x509/v3_akid.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_akid.rs:231:UNSAFE_FN_DEF",
@@ -557,7 +557,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -575,7 +575,7 @@
   {
    "file": "src/x509/v3_akid.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_akid.rs:359:UNSAFE_FN_DEF",
@@ -585,7 +585,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -603,7 +603,7 @@
   {
    "file": "src/x509/v3_asid.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_asid.rs:817:UNSAFE_FN_DEF",
@@ -613,7 +613,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -631,7 +631,7 @@
   {
    "file": "src/x509/v3_attrdesc.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_attrdesc.rs:637:UNSAFE_FN_DEF",
@@ -641,7 +641,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -659,7 +659,7 @@
   {
    "file": "src/x509/v3_attrdesc.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_attrdesc.rs:699:UNSAFE_FN_DEF",
@@ -669,7 +669,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -687,7 +687,7 @@
   {
    "file": "src/x509/v3_attrdesc.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_attrdesc.rs:738:UNSAFE_FN_DEF",
@@ -697,7 +697,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -715,7 +715,7 @@
   {
    "file": "src/x509/v3_attrdesc.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_attrdesc.rs:794:UNSAFE_FN_DEF",
@@ -725,7 +725,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -743,7 +743,7 @@
   {
    "file": "src/x509/v3_attrdesc.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_attrdesc.rs:850:UNSAFE_FN_DEF",
@@ -753,7 +753,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -771,7 +771,7 @@
   {
    "file": "src/x509/v3_attrmap.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_attrmap.rs:576:UNSAFE_FN_DEF",
@@ -781,7 +781,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -799,7 +799,7 @@
   {
    "file": "src/x509/v3_attrmap.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_attrmap.rs:653:UNSAFE_FN_DEF",
@@ -809,7 +809,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -827,7 +827,7 @@
   {
    "file": "src/x509/v3_authattid.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_authattid.rs:164:UNSAFE_FN_DEF",
@@ -837,7 +837,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -855,7 +855,7 @@
   {
    "file": "src/x509/v3_authattid.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_authattid.rs:229:UNSAFE_FN_DEF",
@@ -865,7 +865,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -883,7 +883,7 @@
   {
    "file": "src/x509/v3_bitst.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_bitst.rs:234:UNSAFE_FN_DEF",
@@ -893,7 +893,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -911,7 +911,7 @@
   {
    "file": "src/x509/v3_bitst.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_bitst.rs:288:UNSAFE_FN_DEF",
@@ -921,7 +921,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -939,7 +939,7 @@
   {
    "file": "src/x509/v3_cpols.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_cpols.rs:1247:UNSAFE_FN_DEF",
@@ -949,7 +949,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -967,7 +967,7 @@
   {
    "file": "src/x509/v3_crld.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_crld.rs:1325:UNSAFE_FN_DEF",
@@ -977,7 +977,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -1001,7 +1001,7 @@
   {
    "file": "src/x509/v3_crld.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_crld.rs:1471:UNSAFE_FN_DEF",
@@ -1011,7 +1011,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -1029,7 +1029,7 @@
   {
    "file": "src/x509/v3_crld.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_crld.rs:1554:UNSAFE_FN_DEF",
@@ -1039,7 +1039,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -1057,7 +1057,7 @@
   {
    "file": "src/x509/v3_crld.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_crld.rs:1638:UNSAFE_FN_DEF",
@@ -1067,7 +1067,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -1091,7 +1091,7 @@
   {
    "file": "src/x509/v3_crld.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_crld.rs:1685:UNSAFE_FN_DEF",
@@ -1101,7 +1101,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -1119,7 +1119,7 @@
   {
    "file": "src/x509/v3_crld.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_crld.rs:1710:UNSAFE_FN_DEF",
@@ -1129,7 +1129,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -1147,7 +1147,7 @@
   {
    "file": "src/x509/v3_crld.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_crld.rs:1913:UNSAFE_FN_DEF",
@@ -1157,7 +1157,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -1175,7 +1175,7 @@
   {
    "file": "src/x509/v3_crld.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_crld.rs:2003:UNSAFE_FN_DEF",
@@ -1185,7 +1185,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -1203,7 +1203,7 @@
   {
    "file": "src/x509/v3_enum.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_enum.rs:156:UNSAFE_FN_DEF",
@@ -1213,7 +1213,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1231,7 +1231,7 @@
   {
    "file": "src/x509/v3_ia5.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_ia5.rs:77:UNSAFE_FN_DEF",
@@ -1241,7 +1241,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1259,7 +1259,7 @@
   {
    "file": "src/x509/v3_ia5.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_ia5.rs:113:UNSAFE_FN_DEF",
@@ -1269,7 +1269,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1287,7 +1287,7 @@
   {
    "file": "src/x509/v3_ncons.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_ncons.rs:390:UNSAFE_FN_DEF",
@@ -1297,7 +1297,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -1327,7 +1327,7 @@
   {
    "file": "src/x509/v3_ncons.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_ncons.rs:588:UNSAFE_FN_DEF",
@@ -1337,7 +1337,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -1367,7 +1367,7 @@
   {
    "file": "src/x509/v3_pci.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_pci.rs:581:UNSAFE_FN_DEF",
@@ -1377,7 +1377,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -1395,7 +1395,7 @@
   {
    "file": "src/x509/v3_pci.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_pci.rs:647:UNSAFE_FN_DEF",
@@ -1405,7 +1405,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -1423,7 +1423,7 @@
   {
    "file": "src/x509/v3_rolespec.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_rolespec.rs:297:UNSAFE_FN_DEF",
@@ -1433,7 +1433,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1451,7 +1451,7 @@
   {
    "file": "src/x509/v3_rolespec.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_rolespec.rs:392:UNSAFE_FN_DEF",
@@ -1461,7 +1461,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -1479,7 +1479,7 @@
   {
    "file": "src/x509/v3_san.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_san.rs:317:UNSAFE_FN_DEF",
@@ -1489,7 +1489,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1507,7 +1507,7 @@
   {
    "file": "src/x509/v3_san.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_san.rs:356:UNSAFE_FN_DEF",
@@ -1517,7 +1517,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1535,7 +1535,7 @@
   {
    "file": "src/x509/v3_san.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_san.rs:1058:UNSAFE_FN_DEF",
@@ -1545,7 +1545,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1563,7 +1563,7 @@
   {
    "file": "src/x509/v3_san.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_san.rs:1115:UNSAFE_FN_DEF",
@@ -1573,7 +1573,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1591,7 +1591,7 @@
   {
    "file": "src/x509/v3_san.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_san.rs:1131:UNSAFE_FN_DEF",
@@ -1601,7 +1601,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1619,7 +1619,7 @@
   {
    "file": "src/x509/v3_san.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_san.rs:1231:UNSAFE_FN_DEF",
@@ -1629,7 +1629,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1647,7 +1647,7 @@
   {
    "file": "src/x509/v3_san.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_san.rs:1355:UNSAFE_FN_DEF",
@@ -1657,7 +1657,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1675,7 +1675,7 @@
   {
    "file": "src/x509/v3_skid.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_skid.rs:73:UNSAFE_FN_DEF",
@@ -1685,7 +1685,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1703,7 +1703,7 @@
   {
    "file": "src/x509/v3_skid.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_skid.rs:90:UNSAFE_FN_DEF",
@@ -1713,7 +1713,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1731,7 +1731,7 @@
   {
    "file": "src/x509/v3_skid.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_skid.rs:206:UNSAFE_FN_DEF",
@@ -1741,7 +1741,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "slot-registration"
    ],
@@ -1759,7 +1759,7 @@
   {
    "file": "src/x509/v3_utf8.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_utf8.rs:74:UNSAFE_FN_DEF",
@@ -1769,7 +1769,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1787,7 +1787,7 @@
   {
    "file": "src/x509/v3_utf8.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_utf8.rs:114:UNSAFE_FN_DEF",
@@ -1797,7 +1797,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1815,7 +1815,7 @@
   {
    "file": "src/x509/v3_utl.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_utl.rs:501:UNSAFE_FN_DEF",
@@ -1825,7 +1825,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1843,7 +1843,7 @@
   {
    "file": "src/x509/v3_utl.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_utl.rs:535:UNSAFE_FN_DEF",
@@ -1853,7 +1853,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1871,7 +1871,7 @@
   {
    "file": "src/x509/v3_utl.rs",
    "gate_provenance": {
-    "classification": "PROVEN_REACHABLE",
+    "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
    "id": "V1:src/x509/v3_utl.rs:573:UNSAFE_FN_DEF",
@@ -1881,7 +1881,7 @@
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
-   "reason": "extension-slot callback is PROVEN_REACHABLE from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
    "registration_kinds": [
     "definition-only"
    ],
@@ -1903,6 +1903,8 @@
   "sha256": "40d25c558c48962d9df7b17f344c01aae4c22f6781fec75b9e3653c563f47e94"
  },
  "count": 66,
+ "count_unit": "entries are per file-qualified callback definition; distinct_name_count counts callback names",
+ "distinct_name_count": 65,
  "plug_in": {
   "note": "enrol these records before the next census/closure run; do not hand-edit the applied ledger",
   "requested_status": "BLOCKED",
@@ -1911,8 +1913,12 @@
  },
  "schema": "openssl-rs/campaign/safe-c33/callback-enrolment/v1",
  "source_identity": {
+  "instrument": {
+   "path": "forensics/tools/callback_enumeration_gate.py",
+   "sha256": "648ecd9b00d9941746a73558f96d3ea60fc9b01142a54eda92b0367ed12966a6"
+  },
   "inventory_source_head": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
-  "repository_head": "38a1548be633f3d1be4e55330cbdcb29ef0b8de8",
+  "repository_head": "f2a8110cdc7dc94cc6cf5a3af92bd7c3c234a04f",
   "source_mode": "worktree",
   "src_tree_unchanged_vs_inventory_head": true
  }

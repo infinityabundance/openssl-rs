@@ -199,6 +199,27 @@ jobs:
           print("no dependencies declared (ok)")
           PY
 
+      # Extension-slot callbacks are enumerated by slot (never by name prefix)
+      # and compared with the obligation inventory. This is a blocking gate:
+      # the closure is a hard prerequisite, not a skip, and the gate exits
+      # non-zero until the measured enrolment step lands. The out-dir is a
+      # fresh RUNNER_TEMP path, which also exercises the gate's mkdir contract.
+      - name: Callback enumeration completeness (extension-slot registrations vs inventory)
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
+        run: |
+          set -euo pipefail
+          closure=evidence/closure-ssh-b52-applied.json
+          if [ ! -f "$closure" ]; then
+            echo "::error::callback gate prerequisite missing: $closure"
+            exit 1
+          fi
+          python3 forensics/tools/callback_enumeration_gate.py \
+            --root . --closure "$closure" \
+            --out-dir "${RUNNER_TEMP}/callback-enumeration-gate"
+
       # Every generated artefact is a function of committed inputs, so
       # regenerating it must reproduce it. Build-product digests are normalised
       # and reported; everything else is compared exactly.

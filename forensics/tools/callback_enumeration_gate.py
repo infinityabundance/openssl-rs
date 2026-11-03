@@ -12,7 +12,7 @@ registration is either:
 * present in the obligation inventory (any status), or
 * ``PROVEN_EXCLUDED`` with an explicit, written closed-world assumption.
 
-An ``UNRESOLVED`` classification is always a failure.  ``PROVEN_REACHABLE``
+An ``UNRESOLVED`` classification is always a failure.  ``REACHABLE_BOUND``
 callbacks that are absent from the inventory are reported in the enrolment
 list.  The gate is deterministic: stable ordering, no timestamps, no absolute
 paths in the payload.
@@ -50,9 +50,16 @@ SLOT_FIELDS = ("i2s", "s2i", "i2v", "v2i", "i2r", "r2i")
 AUX_SLOT_FIELDS = ("it", "ext_free", "d2i", "i2d", "ext_new")
 GATED_SLOTS = frozenset(SLOT_FIELDS) | {"it", "ext_free"}
 
-REACHABLE = "PROVEN_REACHABLE"
+REACHABLE = "REACHABLE_BOUND"
 EXCLUDED = "PROVEN_EXCLUDED"
 UNRESOLVED = "UNRESOLVED"
+
+BASIS_EDGE = "edge-witness"
+BASIS_MODULE = "module-name-match"
+BASIS_UNIQUE = "unique-name-match"
+BASIS_DISPATCH = "dispatcher-row-binding"
+BASIS_ORDER = (BASIS_EDGE, BASIS_MODULE, BASIS_UNIQUE, BASIS_DISPATCH)
+BASIS_VOCABULARY = frozenset(BASIS_ORDER)
 
 CLOSED_WORLD_ASSUMPTION = (
     "Closed-world assumption CE-1 (pinned-consumer reachability): a "
@@ -72,10 +79,14 @@ NON_CLAIMS = [
     "parser can see; it does not prove that every registration in the source "
     "was parsed (macro-generated rows and build-script-generated source are "
     "outside the parser).",
-    "A dispatcher binding is a source-level METHOD-table / call-site witness. "
-    "It is not a proof that an indirect call actually executes for a given "
-    "input, and it is not an edge-level proof for callbacks reached only "
-    "through unresolved indirect sites.",
+    "REACHABLE_BOUND is a bound, not a proof. edge-witness records a concrete "
+    "source call-graph edge from a caller that is itself reachable-bound; "
+    "module-name-match and unique-name-match rest only on the closure's "
+    "converged MAY-bound reachable_functions set (unresolved-site-bound/v1, "
+    "whose own contract says monotonicity is not completeness); "
+    "dispatcher-row-binding records a STANDARD_EXTS row plus a reachable "
+    "dispatcher and states that no callback symbol was found in the reachable "
+    "set.",
     "PROVEN_EXCLUDED carries the written closed-world assumption CE-1; it is "
     "a scoped reachability claim about the pinned consumer family, not a "
     "property of the callback in general.",
@@ -752,7 +763,7 @@ TABLE_DISPATCHERS = {
     "r2i": ["do_ext_nconf"],
     "i2v": ["X509V3_EXT_i2d"],
     "it": ["X509V3_EXT_print", "X509V3_EXT_d2i"],
-    "ext_free": ["X509V3_EXT_print", "X509V3_EXT_D2i"],
+    "ext_free": ["X509V3_EXT_print", "X509V3_EXT_d2i"],
     "d2i": ["X509V3_EXT_d2i"],
     "i2d": ["X509V3_EXT_i2d"],
     "ext_new": ["X509V3_EXT_d2i"],
@@ -875,29 +886,36 @@ def source_definitions_by_name(parsed: dict) -> dict:
     return {name: defs for name, defs in parsed["definitions"].items()}
 
 
-def callback_reachability(cb: str, parsed: dict, reach: dict) -> dict:
+def definition_key(name: str, d: dict) -> tuple[str, int, str]:
+    """Per-definition identity: (file, definition line, item)."""
+    return (d["file"], d["line"], name)
+
+
+def definition_reachability(cb: str, d: dict, parsed: dict,
+                            reach: dict) -> dict:
+    """Membership evidence for one *definition*, never for a bare name."""
     defs = parsed["definitions"].get(cb, [])
-    if not defs:
-        return {"reachable": False, "basis": "no-source-definition"}
-    for d in defs:
-        parts = module_parts(d["file"])
-        stem = parts[-1] if parts else ""
-        if (stem, cb) in reach["qualified"]:
-            syms = reach["symbols_by_name"].get(cb, [])
-            exact = [s for s in syms if cb in s]
-            return {
-                "reachable": True,
-                "basis": "reachable-functions-module-match",
-                "evidence": {"file": d["file"], "module": stem,
-                             "symbols": exact[:3]},
-            }
-    # Name-only match is accepted only when the source defines the name once.
+    parts = module_parts(d["file"])
+    stem = parts[-1] if parts else ""
+    if (stem, cb) in reach["qualified"]:
+        syms = reach["symbols_by_name"].get(cb, [])
+        exact = [x for x in syms if cb in x]
+        return {
+            "reachable": True,
+            "basis": BASIS_MODULE,
+            "evidence": {"file": d["file"], "module": stem,
+                         "symbols": exact[:3], "may_bound": True,
+                         "proof": False},
+        }
+    # A name-only closure hit is accepted only when the source defines the
+    # name once; with two definitions it cannot identify which one is meant.
     if len(defs) == 1 and cb in reach["names"]:
         return {
             "reachable": True,
-            "basis": "reachable-functions-unique-name-match",
+            "basis": BASIS_UNIQUE,
             "evidence": {"file": defs[0]["file"],
-                         "symbols": reach["symbols_by_name"].get(cb, [])[:3]},
+                         "symbols": reach["symbols_by_name"].get(cb, [])[:3],
+                         "may_bound": True, "proof": False},
         }
     if defs and cb in reach["names"]:
         return {
@@ -909,38 +927,86 @@ def callback_reachability(cb: str, parsed: dict, reach: dict) -> dict:
     return {"reachable": False, "basis": "absent-from-reachable-functions"}
 
 
-def compute_callback_reach(parsed: dict, reach: dict) -> set[str]:
-    """Propagate closure reachability through direct calls among callbacks.
+def resolve_callee_keys(name: str, caller_file: str,
+                        parsed: dict) -> list[tuple[str, int, str]]:
+    """Resolve a call to ``name`` to definition identities.
 
-    A helper such as ``i2r_OBJECT_DIGEST_INFO`` may not appear in the closure's
-    reachable-function set because the closure could not resolve the indirect
-    edge to it, yet it is called directly by ``i2r_ISSUER_SERIAL``, which is
-    reachable.  Scan each callback body for calls to other callbacks and take
-    the transitive closure from the closure-reachable names.
+    Same-file resolution wins; otherwise a globally unique definition wins.
+    An ambiguous cross-file call is not attributed to either definition.
+    """
+    defs = parsed["definitions"].get(name, [])
+    if not defs:
+        return []
+    same = [d for d in defs if d["file"] == caller_file]
+    if len(same) == 1:
+        return [definition_key(name, same[0])]
+    if len(defs) == 1:
+        return [definition_key(name, defs[0])]
+    return []
+
+
+def enclosing_fn_decl_key(path: str, pos: int, parsed: dict):
+    """Return (definition key, bare name) of the enclosing function."""
+    decls = parsed["decls"][path]
+    depth = parsed["depths"][path][pos]
+    for d in reversed(decls):
+        if d["pos"] < pos and d["depth"] <= depth and d["kind"] == "fn":
+            line = line_of(parsed["files"][path], d["pos"])
+            key = (path, line, d["name"])
+            if key in parsed.get("definition_keys", set()):
+                return key, d["name"]
+            return None, d["name"]
+    return None, None
+
+
+def compute_callback_reach(parsed: dict, reach: dict
+                           ) -> set[tuple[str, int, str]]:
+    """Per-definition direct-call closure from closure-reachable seeds.
+
+    Nodes are (file, definition line, item).  A helper may not appear in the
+    closure's reachable-function set yet be called directly by a callback that
+    is reachable-bound; this propagates such edges without collapsing two
+    same-named definitions into one result.
     """
     universe = {d["callback"] for d in parsed.get("slot_prefix_definitions", [])}
     universe.update(r["callback"] for r in parsed["registrations"])
-    edges = defaultdict(set)
+    nodes = {}
     for name in sorted(universe):
         for d in parsed["definitions"].get(name, []):
-            path = d["file"]
-            m = parsed["files"].get(path)
-            if not m or "pos" not in d:
+            nodes[definition_key(name, d)] = d
+    parsed["definition_keys"] = set(nodes)
+
+    edges: dict[tuple[str, int, str], set[tuple[str, int, str]]] = defaultdict(set)
+    edge_sites: dict[tuple[str, int, str], dict] = defaultdict(dict)
+    for key in sorted(nodes):
+        d = nodes[key]
+        name = key[2]
+        path = d["file"]
+        m = parsed["files"].get(path)
+        if not m or "pos" not in d:
+            continue
+        brace = m.find("{", d["pos"])
+        if brace < 0:
+            continue
+        end = match_brace(m, brace)
+        body = m[brace:end]
+        for other in universe:
+            if other == name:
                 continue
-            brace = m.find("{", d["pos"])
-            if brace < 0:
+            hit = re.search(r"\b" + re.escape(other) + r"\s*\(", body)
+            if not hit:
                 continue
-            # Function signature end: the first `{` at or after the name that
-            # is followed by a body.  match_brace from there.
-            end = match_brace(m, brace)
-            body = m[brace:end]
-            for other in universe:
-                if other == name:
-                    continue
-                if re.search(r"\b" + re.escape(other) + r"\s*\(", body):
-                    edges[name].add(other)
-    reachable = {n for n in universe if n in reach["names"]}
-    frontier = set(reachable)
+            site = f"{path}:{line_of(m, brace + hit.start())}"
+            for target in resolve_callee_keys(other, path, parsed):
+                edges[key].add(target)
+                edge_sites[key].setdefault(target, site)
+
+    seeds = {
+        key for key, d in nodes.items()
+        if definition_reachability(key[2], d, parsed, reach)["reachable"]
+    }
+    reachable = set(seeds)
+    frontier = set(seeds)
     while frontier:
         nxt = set()
         for n in frontier:
@@ -948,29 +1014,48 @@ def compute_callback_reach(parsed: dict, reach: dict) -> set[str]:
         nxt -= reachable
         reachable |= nxt
         frontier = nxt
-    parsed["callback_edges"] = {k: sorted(v) for k, v in edges.items()}
-    parsed["callback_reachable"] = sorted(reachable)
+    parsed["callback_edges"] = {key: sorted(v) for key, v in edges.items()}
+    parsed["callback_edge_sites"] = {
+        key: dict(v) for key, v in edge_sites.items()
+    }
+    parsed["callback_reachable_keys"] = sorted(reachable)
     return reachable
 
 
 def direct_calls(cb: str, parsed: dict, reach: dict,
-                 cb_reach: set[str] | None = None) -> list[dict]:
+                 reachable_keys: set | None = None,
+                 target_key: tuple[str, int, str] | None = None) -> list[dict]:
+    """Call sites that resolve to one specific definition of ``cb``."""
     calls = []
     pat = re.compile(r"\b" + re.escape(cb) + r"\s*\(")
     for path, m in parsed["files"].items():
         for hit in pat.finditer(m):
             if in_spans(hit.start(), parsed["spans"][path]):
                 continue
-            fn = enclosing_fn(parsed["decls"][path], hit.start(),
-                              parsed["depths"][path][hit.start()])
-            if fn == cb:
+            if re.search(r"\bfn\s+$", m[max(0, hit.start() - 24):hit.start()]):
                 continue
+            if target_key is not None:
+                matches = resolve_callee_keys(cb, path, parsed)
+                if target_key not in matches:
+                    continue
+            caller_key, caller_name = enclosing_fn_decl_key(
+                path, hit.start(), parsed)
+            if target_key is not None and caller_key == target_key:
+                continue
+            closure_hit = bool(caller_name and caller_name in reach["names"])
+            bound_hit = bool(caller_key and reachable_keys
+                             and caller_key in reachable_keys)
             calls.append({
                 "file": path,
                 "line": line_of(m, hit.start()),
-                "caller": fn,
-                "caller_reachable": bool(fn and (fn in reach["names"]
-                                                 or fn in (cb_reach or set()))),
+                "site": f"{path}:{line_of(m, hit.start())}",
+                "caller": caller_name,
+                "caller_key": list(caller_key) if caller_key else None,
+                "callee": cb,
+                "callee_key": list(target_key) if target_key else None,
+                "caller_reachable_closure_name": closure_hit,
+                "caller_reachable_call_bound": bound_hit,
+                "caller_reachable": closure_hit or bound_hit,
             })
     return calls
 
@@ -1055,30 +1140,62 @@ def build_gate(root: str, closure: dict, parsed: dict, overrides: dict,
                         "evidence": f"{e['file']}:{e['line']} {e['text']}",
                     })
 
-        # Source-level direct callers.
-        calls = direct_calls(cb, parsed, reach, cb_reach)
-        reachable_calls = [c for c in calls if c["caller_reachable"]]
-
-        reachr = callback_reachability(cb, parsed, reach)
+        # Source-level direct callers, resolved to *this* definition.
+        def_key = (def_file, def_line, cb)
+        calls = direct_calls(cb, parsed, reach, cb_reach, def_key)
+        reachable_calls = sorted(
+            [c for c in calls if c["caller_reachable"]],
+            key=lambda c: (not c["caller_reachable_closure_name"], c["site"]))
+        reachr = definition_reachability(
+            cb, {"file": def_file, "line": def_line}, parsed, reach)
         inv_hit = (def_file, cb) in inventory["identity"]
 
-        # Classification (conservative).
+        # Classification (conservative).  basis is exactly one of the four
+        # reachability bases for REACHABLE_BOUND; non-reachable records carry
+        # an explicit non-reachability basis instead.
         classification = None
         assumption = ""
         basis = ""
-        if reachr["reachable"]:
+        if reachable_calls:
+            classification = REACHABLE
+            basis = BASIS_EDGE
+            evidence = {"witness": reachable_calls[0],
+                        "witnesses": reachable_calls[:4]}
+        elif reachr["reachable"]:
             classification = REACHABLE
             basis = reachr["basis"]
             evidence = reachr.get("evidence", {})
-        elif reachable_calls:
-            classification = REACHABLE
-            basis = "direct-call-from-reachable-function"
-            evidence = {"calls": reachable_calls[:4]}
         elif any(b["dispatcher_reachable"] for b in bindings):
             classification = REACHABLE
-            basis = "reachable-dispatcher-method-table-binding"
-            evidence = {"bindings": [b for b in bindings
-                                     if b["dispatcher_reachable"]][:4]}
+            basis = BASIS_DISPATCH
+            evidence = {
+                "bindings": [b for b in bindings
+                             if b["dispatcher_reachable"]][:4],
+                "callback_symbol_in_reachable_set": False,
+                "note": ("table binding only; no callback symbol was found in "
+                         "the closure reachable set"),
+            }
+        elif def_key in cb_reach:
+            classification = REACHABLE
+            basis = BASIS_EDGE
+            incoming = [
+                (caller, site)
+                for caller, callees in parsed.get("callback_edges", {}).items()
+                if def_key in callees and caller in cb_reach
+                for site in [parsed.get("callback_edge_sites", {})
+                             .get(caller, {}).get(def_key)]
+            ]
+            witness = None
+            if incoming:
+                caller, site = incoming[0]
+                witness = {
+                    "caller": list(caller),
+                    "callee": list(def_key),
+                    "site": site,
+                    "caller_reachable_call_bound": True,
+                }
+            evidence = {"witness": witness,
+                        "note": "direct-call closure witness"}
         else:
             # PROVEN_EXCLUDED only under the full closed-world conditions.
             file_reach = is_file_reachable(def_file, reach)
@@ -1103,7 +1220,7 @@ def build_gate(root: str, closure: dict, parsed: dict, overrides: dict,
                               f"row installs it; no reachable caller names it"))
             else:
                 classification = UNRESOLVED
-                basis = "not-provable-either-way"
+                basis = "unresolved"
                 evidence = {
                     "file_reachable": file_reach,
                     "reachable_functions_basis": reachr["basis"],
@@ -1129,6 +1246,7 @@ def build_gate(root: str, closure: dict, parsed: dict, overrides: dict,
             "callback": cb,
             "callback_file": def_file,
             "callback_line": def_line,
+            "definition_key": list(def_key),
             "slot": reg["slot"],
             "gated": reg["gated"],
             "row": reg["row"],
@@ -1144,6 +1262,7 @@ def build_gate(root: str, closure: dict, parsed: dict, overrides: dict,
             "dispatcher_binding_status": ("bound" if bindings else "none-found"),
             "direct_callers": calls[:8],
             "classification": classification,
+            "basis": basis,
             "classification_basis": basis,
             "classification_evidence": evidence,
             "assumption": assumption,
@@ -1166,24 +1285,48 @@ def build_gate(root: str, closure: dict, parsed: dict, overrides: dict,
         cb = d["callback"]
         def_file = d["file"]
         def_line = d["line"]
-        calls = direct_calls(cb, parsed, reach, cb_reach)
-        reachable_calls = [c for c in calls if c["caller_reachable"]]
-        reachr = callback_reachability(cb, parsed, reach)
+        def_key = (def_file, def_line, cb)
+        calls = direct_calls(cb, parsed, reach, cb_reach, def_key)
+        reachable_calls = sorted(
+            [c for c in calls if c["caller_reachable"]],
+            key=lambda c: (not c["caller_reachable_closure_name"], c["site"]))
+        reachr = definition_reachability(
+            cb, {"file": def_file, "line": def_line}, parsed, reach)
         inv_hit = (def_file, cb) in inventory["identity"]
         file_reach = is_file_reachable(def_file, reach)
         assumption = ""
-        if reachr["reachable"] or cb in cb_reach:
+        if reachable_calls:
             classification = REACHABLE
-            basis = (reachr["basis"] if reachr["reachable"]
-                     else "direct-call-closure-from-reachable-callback")
+            basis = BASIS_EDGE
             evidence = {"definition_only": True,
-                        "reachable": reachr.get("evidence", {}),
-                        "call_closure": cb in cb_reach}
-        elif reachable_calls:
+                        "witness": reachable_calls[0],
+                        "witnesses": reachable_calls[:4]}
+        elif reachr["reachable"]:
             classification = REACHABLE
-            basis = "direct-call-from-reachable-function"
+            basis = reachr["basis"]
             evidence = {"definition_only": True,
-                        "calls": reachable_calls[:4]}
+                        "reachable": reachr.get("evidence", {})}
+        elif def_key in cb_reach:
+            classification = REACHABLE
+            basis = BASIS_EDGE
+            incoming = [
+                (caller, site)
+                for caller, callees in parsed.get("callback_edges", {}).items()
+                if def_key in callees and caller in cb_reach
+                for site in [parsed.get("callback_edge_sites", {})
+                             .get(caller, {}).get(def_key)]
+            ]
+            witness = None
+            if incoming:
+                caller, site = incoming[0]
+                witness = {
+                    "caller": list(caller),
+                    "callee": list(def_key),
+                    "site": site,
+                    "caller_reachable_call_bound": True,
+                }
+            evidence = {"definition_only": True, "witness": witness,
+                        "note": "direct-call closure witness"}
         elif not file_reach:
             classification = EXCLUDED
             basis = "closed-world-ce-1-definition-only"
@@ -1198,7 +1341,7 @@ def build_gate(root: str, closure: dict, parsed: dict, overrides: dict,
                           f"is not in reachable_files; no reachable caller names it"))
         else:
             classification = UNRESOLVED
-            basis = "not-provable-either-way"
+            basis = "unresolved"
             evidence = {
                 "definition_only": True,
                 "file_reachable": file_reach,
@@ -1225,6 +1368,7 @@ def build_gate(root: str, closure: dict, parsed: dict, overrides: dict,
             "callback": cb,
             "callback_file": def_file,
             "callback_line": def_line,
+            "definition_key": list(def_key),
             "slot": cb.split("_", 1)[0],
             "gated": True,
             "row": None,
@@ -1239,6 +1383,7 @@ def build_gate(root: str, closure: dict, parsed: dict, overrides: dict,
             "dispatcher_bindings": [],
             "direct_callers": calls[:8],
             "classification": classification,
+            "basis": basis,
             "classification_basis": basis,
             "classification_evidence": evidence,
             "assumption": assumption,
@@ -1251,7 +1396,7 @@ def build_gate(root: str, closure: dict, parsed: dict, overrides: dict,
         if (not r["gated"] or not r["source_defined"]
                 or not r["unsafe_fn"] or r["test_only"]):
             continue
-        key = (r["callback_file"], r["callback"])
+        key = (r["callback_file"], r["callback_line"], r["callback"])
         agg = callbacks.get(key)
         if agg is None:
             agg = {
@@ -1261,11 +1406,13 @@ def build_gate(root: str, closure: dict, parsed: dict, overrides: dict,
                 "in_inventory": r["in_inventory"],
                 "inventory_rows": r["inventory_rows"],
                 "classifications": [],
+                "bases": [],
                 "registrations": [],
                 "registration_kinds": [],
             }
             callbacks[key] = agg
         agg["classifications"].append(r["classification"])
+        agg["bases"].append(r["basis"])
         agg["registration_kinds"].append(r["registration_kind"])
         agg["registrations"].append({
             "row": r["row"],
@@ -1292,10 +1439,12 @@ def build_gate(root: str, closure: dict, parsed: dict, overrides: dict,
         cls = aggregate_class(c["classifications"])
         assumptions = [
             r["assumption"] for r in reg_results
-            if (r["callback_file"], r["callback"]) == key
+            if (r["callback_file"], r["callback_line"], r["callback"]) == key
             and r["classification"] == EXCLUDED and r["assumption"].strip()
         ]
         c["classification"] = cls
+        c["basis"] = next((b for b in BASIS_ORDER if b in c["bases"]),
+                          c["bases"][0] if c["bases"] else "unresolved")
         c["assumptions"] = sorted(set(assumptions))
         if c["in_inventory"]:
             in_inventory.append(c)
@@ -1309,9 +1458,9 @@ def build_gate(root: str, closure: dict, parsed: dict, overrides: dict,
         missing.append(c)
 
     # Ensure excluded-without-assumption is a failure even if also missing.
-    missing_ids = {(c["file"], c["callback"]) for c in missing}
+    missing_ids = {(c["file"], c["line"], c["callback"]) for c in missing}
     for c in excluded_without_assumption:
-        if (c["file"], c["callback"]) not in missing_ids:
+        if (c["file"], c["line"], c["callback"]) not in missing_ids:
             missing.append(c)
 
     missing.sort(key=lambda c: (c["file"], c["line"] or 0, c["callback"]))
@@ -1324,6 +1473,12 @@ def build_gate(root: str, closure: dict, parsed: dict, overrides: dict,
     reg_counts = Counter(r["classification"] for r in reg_results
                          if r["gated"] and r["source_defined"]
                          and r["unsafe_fn"] and not r["test_only"])
+    basis_counts = Counter(
+        r["basis"] for r in reg_results
+        if r["gated"] and r["source_defined"] and r["unsafe_fn"]
+        and not r["test_only"] and r["basis"] in BASIS_VOCABULARY)
+    callback_basis_counts = Counter(
+        c["basis"] for c in callbacks.values() if c["basis"] in BASIS_VOCABULARY)
 
     enrolment = []
     for c in missing:
@@ -1335,7 +1490,7 @@ def build_gate(root: str, closure: dict, parsed: dict, overrides: dict,
             "kind": "UNSAFE_FN_DEF",
             "item": c["callback"],
             "partition": "production",
-            "reason": ("extension-slot callback is PROVEN_REACHABLE from the "
+            "reason": ("extension-slot callback is REACHABLE_BOUND from the "
                        "pinned consumer family and absent from the obligation "
                        "queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED "
                        "pending site-scoped adjudication "
@@ -1353,7 +1508,55 @@ def build_gate(root: str, closure: dict, parsed: dict, overrides: dict,
             },
         })
 
-    pass_gate = not missing and not unresolved and not excluded_without_assumption
+    # Inventory accounting: every inventoried callback the source enumeration
+    # sees is accounted for, and a slot-named unsafe definition that the
+    # inventory carries may not disappear from the enumeration.
+    gate_keys = {(c["file"], c["callback"]) for c in callbacks.values()}
+    inventory_accounted = [
+        c for c in callbacks.values() if c["in_inventory"]
+    ]
+    inventory_unaccounted = [
+        c for c in inventory_accounted
+        if (c["file"], c["line"], c["callback"])
+        in {(x["file"], x["line"], x["callback"]) for x in missing}
+    ]
+    extern_slot_names = {
+        d["callback"] for d in parsed.get("slot_prefix_definitions", [])
+    }
+    slot_prefix_inventory = {
+        (f, i) for (f, i) in inventory["identity"]
+        if re.match(r"^(?:s2i|i2s|i2r|i2v|r2i|v2i)_", i)
+        and i in extern_slot_names
+    }
+    slot_prefix_not_seen = sorted(slot_prefix_inventory - gate_keys)
+    # A slot-prefixed inventory item with no source definition at all is a lost
+    # callback (not an internal `unsafe fn` helper, which is still defined).
+    slot_prefix_lost_definition = sorted(
+        (f, i) for (f, i) in inventory["identity"]
+        if re.match(r"^(?:s2i|i2s|i2r|i2v|r2i|v2i)_", i)
+        and i not in parsed["definitions"]
+    )
+    inventory_accounting = {
+        "inventory_callbacks_accounted": len(inventory_accounted),
+        "unaccounted": [
+            f'{c["file"]}::{c["line"]}::{c["callback"]}'
+            for c in inventory_unaccounted
+        ],
+        "slot_prefix_inventory_not_seen": [
+            f"{f}::{i}" for f, i in slot_prefix_not_seen
+        ],
+        "slot_prefix_inventory_without_source_definition": [
+            f"{f}::{i}" for f, i in slot_prefix_lost_definition
+        ],
+        "unit": ("distinct inventory callbacks accounted for by the source "
+                 "enumeration; entries are file-qualified"),
+    }
+
+    pass_gate = (not missing and not unresolved
+                 and not excluded_without_assumption
+                 and not inventory_unaccounted
+                 and not slot_prefix_not_seen
+                 and not slot_prefix_lost_definition)
     return {
         "registration_results": reg_results,
         "callbacks": [callbacks[k] for k in sorted(callbacks)],
@@ -1371,7 +1574,16 @@ def build_gate(root: str, closure: dict, parsed: dict, overrides: dict,
             EXCLUDED: reg_counts.get(EXCLUDED, 0),
             UNRESOLVED: reg_counts.get(UNRESOLVED, 0),
         },
+        "basis_counts": {b: basis_counts.get(b, 0) for b in BASIS_ORDER},
+        "callback_basis_counts": {
+            b: callback_basis_counts.get(b, 0) for b in BASIS_ORDER
+        },
         "enrolment": enrolment,
+        "missing_entry_count": len(missing),
+        "missing_distinct_name_count": len({c["callback"] for c in missing}),
+        "missing_count_unit": ("entries are per file-qualified callback "
+                               "definition; distinct_names counts callback names"),
+        "inventory_accounting": inventory_accounting,
         "pass": pass_gate,
         "exit_code": 0 if pass_gate else 1,
     }
@@ -1441,6 +1653,7 @@ def write_manifest(out_dir: str, name: str, manifest: dict) -> tuple[bytes, dict
     split, it names every part with a sha256 so a reader can verify the parts
     without loading the whole set.
     """
+    os.makedirs(out_dir, exist_ok=True)
     path = os.path.join(out_dir, name)
     full = json.dumps(manifest, indent=1, sort_keys=True,
                       ensure_ascii=False).encode("utf-8") + b"\n"
@@ -1473,17 +1686,45 @@ def write_manifest(out_dir: str, name: str, manifest: dict) -> tuple[bytes, dict
     for slot in sorted(by_slot):
         rows = sorted(by_slot[slot], key=lambda r: (
             r["row_file"], r["row_line"] or 0, r["callback"], r["slot"]))
-        write_part(f"registrations.{slot}.json", {
-            "schema": manifest["schema"] + "/part",
-            "part": "registrations",
-            "slot": slot,
-            "registrations": rows,
-        }, len(rows))
+        # A slot part may itself exceed the context budget; chunk
+        # deterministically at ~150 KB while preserving order.
+        chunks = []
+        current = []
+        for row in rows:
+            current.append(row)
+            probe = {
+                "schema": manifest["schema"] + "/part",
+                "part": "registrations",
+                "slot": slot,
+                "registrations": current,
+            }
+            if len(json.dumps(probe, indent=1, sort_keys=True,
+                              ensure_ascii=False).encode("utf-8")) > 150_000:
+                current.pop()
+                if current:
+                    chunks.append(current)
+                current = [row]
+        if current:
+            chunks.append(current)
+        for index, chunk in enumerate(chunks or [[]]):
+            suffix = "" if len(chunks) <= 1 else f".part{index + 1}"
+            write_part(f"registrations.{slot}{suffix}.json", {
+                "schema": manifest["schema"] + "/part",
+                "part": "registrations",
+                "slot": slot,
+                "chunk": index,
+                "chunks": len(chunks),
+                "registrations": chunk,
+            }, len(chunk))
     write_part("callbacks.json", {
         "schema": manifest["schema"] + "/part",
         "part": "callbacks",
         "callbacks": manifest["callbacks"],
     }, len(manifest["callbacks"]))
+    # Remove stale parts from an earlier run so the index is the only truth.
+    for existing in sorted(os.listdir(part_dir)):
+        if existing.endswith(".json") and existing not in parts:
+            os.remove(os.path.join(part_dir, existing))
 
     index = {k: v for k, v in manifest.items()
              if k not in ("registrations", "callbacks")}
@@ -1569,9 +1810,12 @@ def main(argv: list[str] | None = None) -> int:
     slot_by_slot = Counter(r["slot"] for r in slot_regs)
     def_only_by_slot = Counter(r["slot"] for r in def_only)
     aux_by_slot = Counter(r["slot"] for r in aux_regs)
-    distinct_slot = sorted({(r["callback_file"], r["callback"]) for r in slot_regs})
-    distinct_def_only = sorted({(r["callback_file"], r["callback"]) for r in def_only})
-    distinct_aux = sorted({(r["callback_file"], r["callback"]) for r in aux_regs})
+    distinct_slot = sorted({(r["callback_file"], r["callback_line"], r["callback"])
+                            for r in slot_regs})
+    distinct_def_only = sorted({(r["callback_file"], r["callback_line"],
+                                 r["callback"]) for r in def_only})
+    distinct_aux = sorted({(r["callback_file"], r["callback_line"],
+                            r["callback"]) for r in aux_regs})
     distinct_gated = sorted(set(distinct_slot) | set(distinct_def_only))
     distinct_imported = sorted({(r["row_file"], r["callback"]) for r in imported})
     distinct_safe = sorted({(r["row_file"], r["callback"]) for r in safe_extern})
@@ -1579,8 +1823,8 @@ def main(argv: list[str] | None = None) -> int:
     inventory_matched = [c for c in gate["callbacks"] if c["in_inventory"]]
     false_missing = [
         c for c in gate["missing"]
-        if (c["file"], c["callback"]) in {
-            (x["file"], x["callback"]) for x in inventory_matched}
+        if (c["file"], c["line"], c["callback"]) in {
+            (x["file"], x["line"], x["callback"]) for x in inventory_matched}
     ]
 
     inv = build_inventory(inventory_doc.get("obligations", []))
@@ -1593,7 +1837,7 @@ def main(argv: list[str] | None = None) -> int:
     prefix_matched = sorted(k for k in prefix_keys if k in inv["identity"])
     prefix_unregistered = sorted(prefix_keys - registered_keys)
     registered_without_prefix = sorted(
-        cb for _f, cb in distinct_slot
+        cb for _f, _line, cb in distinct_slot
         if not re.match(r"^(?:s2i|i2s|i2r|i2v|r2i|v2i)_", cb))
     ext_free_missing = sorted(
         (c["file"], c["callback"]) for c in gate["missing"]
@@ -1613,8 +1857,10 @@ def main(argv: list[str] | None = None) -> int:
             prefix_keys & missing_keys - registered_keys),
         "registered_callbacks_with_non_prefix_names": len(registered_without_prefix),
         "ext_free_callbacks_absent_from_queue": len(ext_free_missing),
-        "gate_missing_distinct_callbacks": len({(c["file"], c["callback"])
-                                                for c in gate["missing"]}),
+        "gate_missing_distinct_definitions": len({
+            (c["file"], c["line"], c["callback"]) for c in gate["missing"]}),
+        "gate_missing_distinct_names": len({
+            c["callback"] for c in gate["missing"]}),
         "gate_missing_entries": len(gate["missing"]),
         "note": ("name-prefix matching is not the enumeration; these counts "
                  "reconcile the six-prefix definition census with the "
@@ -1628,6 +1874,10 @@ def main(argv: list[str] | None = None) -> int:
         "src_tree_unchanged_vs_inventory_head": drift,
         "source_mode": ("worktree" if os.path.abspath(root) == os.path.abspath(
             os.getcwd()) else "fixture-root"),
+        "instrument": {
+            "path": os.path.relpath(os.path.abspath(__file__), os.getcwd()),
+            "sha256": sha256_file(os.path.abspath(__file__)),
+        },
     }
 
     manifest = {
@@ -1671,6 +1921,20 @@ def main(argv: list[str] | None = None) -> int:
             for row in parsed["rows"]
         ],
         "callbacks": gate["callbacks"],
+        "labels": {
+            "reachable": REACHABLE,
+            "reachable_is_proof": False,
+            "reachable_bases": list(BASIS_ORDER),
+            "non_reachable_bases": ["closed-world-ce-1", "unresolved"],
+        },
+        "basis_counts": gate["basis_counts"],
+        "callback_basis_counts": gate["callback_basis_counts"],
+        "missing_counts": {
+            "entries": gate["missing_entry_count"],
+            "distinct_names": gate["missing_distinct_name_count"],
+            "unit": gate["missing_count_unit"],
+        },
+        "inventory_accounting": gate["inventory_accounting"],
         "reconciliation": reconciliation,
         "summary": {
             "rows_parsed": len(parsed["rows"]),
@@ -1721,9 +1985,20 @@ def main(argv: list[str] | None = None) -> int:
         "summary": manifest["summary"],
         "reconciliation": reconciliation,
         "classification": gate["counts"],
+        "classification_labels": {
+            "reachable": REACHABLE,
+            "reachable_is_proof": False,
+            "reachable_bases": list(BASIS_ORDER),
+        },
         "registration_classification": gate["registration_counts"],
+        "basis_counts": gate["basis_counts"],
+        "callback_basis_counts": gate["callback_basis_counts"],
         "inventory_matched_callbacks": len(inventory_matched),
-        "missing_count": len(gate["missing"]),
+        "inventory_accounting": gate["inventory_accounting"],
+        "missing_entry_count": gate["missing_entry_count"],
+        "missing_distinct_name_count": gate["missing_distinct_name_count"],
+        "missing_count_unit": gate["missing_count_unit"],
+        "missing_count": gate["missing_entry_count"],
         "missing": gate["missing"],
         "unresolved_count": len(gate["unresolved"]),
         "unresolved": gate["unresolved"],
@@ -1758,6 +2033,9 @@ def main(argv: list[str] | None = None) -> int:
                      "do not hand-edit the applied ledger"),
         },
         "count": len(gate["enrolment"]),
+        "distinct_name_count": len({b["item"] for b in gate["enrolment"]}),
+        "count_unit": ("entries are per file-qualified callback definition; "
+                       "distinct_name_count counts callback names"),
         "blockers": gate["enrolment"],
     }
     write_json(os.path.join(args.out_dir, args.enrolment_name), enrolment_doc)
@@ -1767,7 +2045,8 @@ def main(argv: list[str] | None = None) -> int:
         "exit_code": gate["exit_code"],
         "registrations": manifest["summary"],
         "classification": gate["counts"],
-        "missing_count": len(gate["missing"]),
+        "missing_entry_count": gate["missing_entry_count"],
+        "missing_distinct_name_count": gate["missing_distinct_name_count"],
         "unresolved_count": len(gate["unresolved"]),
         "enrolment_count": len(gate["enrolment"]),
         "manifest_sha256": hashlib.sha256(manifest_data).hexdigest(),

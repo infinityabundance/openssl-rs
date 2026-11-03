@@ -2,11 +2,16 @@
  "callbacks": [
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness",
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "SCT_LIST_free",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE",
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND"
    ],
    "file": "src/ct/ct_sct.rs",
    "in_inventory": false,
@@ -33,11 +38,70 @@
   },
   {
    "assumptions": [],
-   "callback": "i2r_SCT_LIST",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2s_poison",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE",
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/ct/ct_x509v3.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 59,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ct/ct_x509v3.rs::i2s_poison::ossl_v3_ct_scts[1]::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[1]",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "s2i_poison",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/ct/ct_x509v3.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 70,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ct/ct_x509v3.rs::s2i_poison::ossl_v3_ct_scts[1]::s2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[1]",
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match",
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_SCT_LIST",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND"
    ],
    "file": "src/ct/ct_x509v3.rs",
    "in_inventory": false,
@@ -64,79 +128,14 @@
   },
   {
    "assumptions": [],
-   "callback": "i2s_poison",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "module-name-match"
    ],
-   "file": "src/ct/ct_x509v3.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 59,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/ct/ct_x509v3.rs::i2s_poison::ossl_v3_ct_scts[1]::i2s",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_ct_scts[1]",
-     "slot": "i2s"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
-   "callback": "s2i_poison",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
-   ],
-   "file": "src/ct/ct_x509v3.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 70,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/ct/ct_x509v3.rs::s2i_poison::ossl_v3_ct_scts[1]::s2i",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_ct_scts[1]",
-     "slot": "s2i"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
-   "callback": "i2r_ocsp_acutoff",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
-   ],
-   "file": "src/ocsp/v3_ocsp.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 187,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_acutoff::ossl_v3_ocsp_acutoff::i2r",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_ocsp_acutoff",
-     "slot": "i2r"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "module-name-match",
    "callback": "i2r_ocsp_crlid",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/ocsp/v3_ocsp.rs",
    "in_inventory": false,
@@ -156,56 +155,41 @@
   },
   {
    "assumptions": [],
-   "callback": "i2r_ocsp_nonce",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_ocsp_acutoff",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/ocsp/v3_ocsp.rs",
    "in_inventory": false,
    "inventory_rows": [],
-   "line": 344,
+   "line": 187,
    "registration_kinds": [
     "slot-registration"
    ],
    "registrations": [
     {
-     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_nonce::ossl_v3_ocsp_nonce::i2r",
+     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_acutoff::ossl_v3_ocsp_acutoff::i2r",
      "registration_kind": "slot-registration",
-     "row": "ossl_v3_ocsp_nonce",
+     "row": "ossl_v3_ocsp_acutoff",
      "slot": "i2r"
     }
    ]
   },
   {
    "assumptions": [],
-   "callback": "i2r_ocsp_serviceloc",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "module-name-match"
    ],
-   "file": "src/ocsp/v3_ocsp.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 406,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_serviceloc::ossl_v3_ocsp_serviceloc::i2r",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_ocsp_serviceloc",
-     "slot": "i2r"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "module-name-match",
    "callback": "ocsp_nonce_free",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/ocsp/v3_ocsp.rs",
    "in_inventory": false,
@@ -225,10 +209,68 @@
   },
   {
    "assumptions": [],
-   "callback": "i2r_ALLOWED_ATTRIBUTES_CHOICE",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_ocsp_nonce",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 344,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_nonce::ossl_v3_ocsp_nonce::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_nonce",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_ocsp_serviceloc",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 406,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_serviceloc::ossl_v3_ocsp_serviceloc::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_serviceloc",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_ALLOWED_ATTRIBUTES_CHOICE",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_aaa.rs",
    "in_inventory": true,
@@ -256,10 +298,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "i2r_ALLOWED_ATTRIBUTES_ITEM",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_aaa.rs",
    "in_inventory": true,
@@ -287,10 +333,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2r_ALLOWED_ATTRIBUTES_SYNTAX",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_aaa.rs",
    "in_inventory": true,
@@ -318,10 +368,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "i2r_ISSUER_SERIAL",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_ac_tgt.rs",
    "in_inventory": false,
@@ -341,10 +395,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "i2r_OBJECT_DIGEST_INFO",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_ac_tgt.rs",
    "in_inventory": false,
@@ -364,79 +422,14 @@
   },
   {
    "assumptions": [],
-   "callback": "i2r_TARGET",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "edge-witness"
    ],
-   "file": "src/x509/v3_ac_tgt.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 889,
-   "registration_kinds": [
-    "definition-only"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGET::<definition-only>",
-     "registration_kind": "definition-only",
-     "row": null,
-     "slot": "i2r"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
-   "callback": "i2r_TARGETING_INFORMATION",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
-   ],
-   "file": "src/x509/v3_ac_tgt.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 962,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGETING_INFORMATION::ossl_v3_targeting_information::i2r",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_targeting_information",
-     "slot": "i2r"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
-   "callback": "i2r_TARGETS",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
-   ],
-   "file": "src/x509/v3_ac_tgt.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 934,
-   "registration_kinds": [
-    "definition-only"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGETS::<definition-only>",
-     "registration_kind": "definition-only",
-     "row": null,
-     "slot": "i2r"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "edge-witness",
    "callback": "i2r_TARGET_CERT",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_ac_tgt.rs",
    "in_inventory": false,
@@ -456,10 +449,95 @@
   },
   {
    "assumptions": [],
-   "callback": "i2r_IPAddrBlocks",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_TARGET",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 889,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGET::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_TARGETS",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 934,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGETS::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_TARGETING_INFORMATION",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 962,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGETING_INFORMATION::ossl_v3_targeting_information::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_targeting_information",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_IPAddrBlocks",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_addr.rs",
    "in_inventory": false,
@@ -479,10 +557,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "v2i_IPAddrBlocks",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_addr.rs",
    "in_inventory": false,
@@ -502,33 +584,14 @@
   },
   {
    "assumptions": [],
-   "callback": "i2r_ADMISSION_SYNTAX",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "edge-witness"
    ],
-   "file": "src/x509/v3_admis.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 640,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_admis.rs::i2r_ADMISSION_SYNTAX::ossl_v3_ext_admission::i2r",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_ext_admission",
-     "slot": "i2r"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "edge-witness",
    "callback": "i2r_NAMING_AUTHORITY",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_admis.rs",
    "in_inventory": false,
@@ -548,10 +611,41 @@
   },
   {
    "assumptions": [],
-   "callback": "akid_i2v",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_ADMISSION_SYNTAX",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_admis.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 640,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_admis.rs::i2r_ADMISSION_SYNTAX::ossl_v3_ext_admission::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ext_admission",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "akid_i2v",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_akid.rs",
    "in_inventory": true,
@@ -579,10 +673,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "akid_v2i",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_akid.rs",
    "in_inventory": true,
@@ -610,10 +708,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "i2v_AUTHORITY_KEYID",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_akid.rs",
    "in_inventory": false,
@@ -633,10 +735,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "v2i_AUTHORITY_KEYID",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_akid.rs",
    "in_inventory": false,
@@ -656,10 +762,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2r_ASIdentifiers",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_asid.rs",
    "in_inventory": false,
@@ -679,10 +789,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "v2i_ASIdentifiers",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_asid.rs",
    "in_inventory": true,
@@ -710,10 +824,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "i2r_HASH",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_attrdesc.rs",
    "in_inventory": false,
@@ -733,10 +851,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "i2r_INFO_SYNTAX_POINTER",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_attrdesc.rs",
    "in_inventory": false,
@@ -756,33 +878,14 @@
   },
   {
    "assumptions": [],
-   "callback": "i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "edge-witness"
    ],
-   "file": "src/x509/v3_attrdesc.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 850,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_attrdesc.rs::i2r_OSSL_ATTRIBUTE_DESCRIPTOR::ossl_v3_attribute_descriptor::i2r",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_attribute_descriptor",
-     "slot": "i2r"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "edge-witness",
    "callback": "i2r_OSSL_INFO_SYNTAX",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_attrdesc.rs",
    "in_inventory": false,
@@ -802,10 +905,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "i2r_OSSL_PRIVILEGE_POLICY_ID",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_attrdesc.rs",
    "in_inventory": false,
@@ -825,10 +932,41 @@
   },
   {
    "assumptions": [],
-   "callback": "i2r_ATTRIBUTE_MAPPING",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_attrdesc.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 850,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrdesc.rs::i2r_OSSL_ATTRIBUTE_DESCRIPTOR::ossl_v3_attribute_descriptor::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_attribute_descriptor",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_ATTRIBUTE_MAPPING",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_attrmap.rs",
    "in_inventory": false,
@@ -848,10 +986,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2r_ATTRIBUTE_MAPPINGS",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_attrmap.rs",
    "in_inventory": false,
@@ -871,10 +1013,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "audit_i2s",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_audit_id.rs",
    "in_inventory": true,
@@ -902,10 +1048,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "audit_s2i",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_audit_id.rs",
    "in_inventory": true,
@@ -933,10 +1083,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "i2r_ISSUER_SERIAL",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_authattid.rs",
    "in_inventory": false,
@@ -956,10 +1110,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2r_auth_attr_id",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_authattid.rs",
    "in_inventory": false,
@@ -979,10 +1137,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2v_OSSL_BASIC_ATTR_CONSTRAINTS",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_battcons.rs",
    "in_inventory": true,
@@ -1010,10 +1172,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "v2i_OSSL_BASIC_ATTR_CONSTRAINTS",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_battcons.rs",
    "in_inventory": true,
@@ -1041,10 +1207,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2v_BASIC_CONSTRAINTS",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_bcons.rs",
    "in_inventory": true,
@@ -1072,10 +1242,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "v2i_BASIC_CONSTRAINTS",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_bcons.rs",
    "in_inventory": true,
@@ -1103,11 +1277,70 @@
   },
   {
    "assumptions": [],
-   "callback": "bitst_i2v",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2v_ASN1_BIT_STRING",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE",
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_bitst.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 234,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_bitst.rs::i2v_ASN1_BIT_STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "v2i_ASN1_BIT_STRING",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_bitst.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 288,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_bitst.rs::v2i_ASN1_BIT_STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match",
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "bitst_i2v",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_bitst.rs",
    "in_inventory": true,
@@ -1142,11 +1375,16 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match",
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "bitst_v2i",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE",
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_bitst.rs",
    "in_inventory": true,
@@ -1181,56 +1419,41 @@
   },
   {
    "assumptions": [],
-   "callback": "i2v_ASN1_BIT_STRING",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "module-name-match"
    ],
-   "file": "src/x509/v3_bitst.rs",
+   "basis": "module-name-match",
+   "callback": "r2i_certpol",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_cpols.rs",
    "in_inventory": false,
    "inventory_rows": [],
-   "line": 234,
+   "line": 1247,
    "registration_kinds": [
-    "definition-only"
+    "slot-registration"
    ],
    "registrations": [
     {
-     "registration_id": "src/x509/v3_bitst.rs::i2v_ASN1_BIT_STRING::<definition-only>",
-     "registration_kind": "definition-only",
-     "row": null,
-     "slot": "i2v"
+     "registration_id": "src/x509/v3_cpols.rs::r2i_certpol::ossl_v3_cpols::r2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_cpols",
+     "slot": "r2i"
     }
    ]
   },
   {
    "assumptions": [],
-   "callback": "v2i_ASN1_BIT_STRING",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "module-name-match"
    ],
-   "file": "src/x509/v3_bitst.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 288,
-   "registration_kinds": [
-    "definition-only"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_bitst.rs::v2i_ASN1_BIT_STRING::<definition-only>",
-     "registration_kind": "definition-only",
-     "row": null,
-     "slot": "v2i"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "module-name-match",
    "callback": "i2r_certpol",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_cpols.rs",
    "in_inventory": true,
@@ -1258,180 +1481,16 @@
   },
   {
    "assumptions": [],
-   "callback": "r2i_certpol",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "module-name-match",
+    "module-name-match"
    ],
-   "file": "src/x509/v3_cpols.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 1247,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_cpols.rs::r2i_certpol::ossl_v3_cpols::r2i",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_cpols",
-     "slot": "r2i"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
-   "callback": "i2r_aaidp",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
-   ],
-   "file": "src/x509/v3_crld.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 2003,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_crld.rs::i2r_aaidp::ossl_v3_aa_issuing_dist_point::i2r",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_aa_issuing_dist_point",
-     "slot": "i2r"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
-   "callback": "i2r_crl_invdate",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
-   ],
-   "file": "src/x509/v3_crld.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 1685,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_crld.rs::i2r_crl_invdate::ossl_v3_crl_invdate::i2r",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_crl_invdate",
-     "slot": "i2r"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
-   "callback": "i2r_crldp",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE",
-    "PROVEN_REACHABLE"
-   ],
-   "file": "src/x509/v3_crld.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 1638,
-   "registration_kinds": [
-    "slot-registration",
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_crld.rs::i2r_crldp::ossl_v3_crld::i2r",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_crld",
-     "slot": "i2r"
-    },
-    {
-     "registration_id": "src/x509/v3_crld.rs::i2r_crldp::ossl_v3_freshest_crl::i2r",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_freshest_crl",
-     "slot": "i2r"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
-   "callback": "i2r_idp",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
-   ],
-   "file": "src/x509/v3_crld.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 1471,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_crld.rs::i2r_idp::ossl_v3_idp::i2r",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_idp",
-     "slot": "i2r"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
-   "callback": "i2r_object",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
-   ],
-   "file": "src/x509/v3_crld.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 1710,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_crld.rs::i2r_object::ossl_v3_crl_hold::i2r",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_crl_hold",
-     "slot": "i2r"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
-   "callback": "v2i_aaidp",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
-   ],
-   "file": "src/x509/v3_crld.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 1913,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_crld.rs::v2i_aaidp::ossl_v3_aa_issuing_dist_point::v2i",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_aa_issuing_dist_point",
-     "slot": "v2i"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "module-name-match",
    "callback": "v2i_crld",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE",
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_crld.rs",
    "in_inventory": false,
@@ -1458,10 +1517,41 @@
   },
   {
    "assumptions": [],
-   "callback": "v2i_idp",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_idp",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1471,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_idp::ossl_v3_idp::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_idp",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "v2i_idp",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_crld.rs",
    "in_inventory": false,
@@ -1481,10 +1571,158 @@
   },
   {
    "assumptions": [],
-   "callback": "enum_i2s",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "module-name-match",
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_crldp",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1638,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_crldp::ossl_v3_crld::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crld",
+     "slot": "i2r"
+    },
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_crldp::ossl_v3_freshest_crl::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_freshest_crl",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "dispatcher-row-binding"
+   ],
+   "basis": "dispatcher-row-binding",
+   "callback": "i2r_crl_invdate",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1685,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_crl_invdate::ossl_v3_crl_invdate::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crl_invdate",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_object",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1710,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_object::ossl_v3_crl_hold::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crl_hold",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "v2i_aaidp",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1913,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::v2i_aaidp::ossl_v3_aa_issuing_dist_point::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_aa_issuing_dist_point",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_aaidp",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 2003,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_aaidp::ossl_v3_aa_issuing_dist_point::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_aa_issuing_dist_point",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "enum_i2s",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_enum.rs",
    "in_inventory": true,
@@ -1512,10 +1750,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "i2s_ASN1_ENUMERATED_TABLE",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_enum.rs",
    "in_inventory": false,
@@ -1535,10 +1777,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2v_EXTENDED_KEY_USAGE",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_extku.rs",
    "in_inventory": true,
@@ -1566,10 +1812,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "v2i_EXTENDED_KEY_USAGE",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_extku.rs",
    "in_inventory": true,
@@ -1597,10 +1847,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2r_GROUP_AC",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_group_ac.rs",
    "in_inventory": true,
@@ -1628,41 +1882,14 @@
   },
   {
    "assumptions": [],
-   "callback": "i2s_GROUP_AC",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "module-name-match"
    ],
-   "file": "src/x509/v3_group_ac.rs",
-   "in_inventory": true,
-   "inventory_rows": [
-    {
-     "file": "src/x509/v3_group_ac.rs",
-     "id": "V1:src/x509/v3_group_ac.rs:64:UNSAFE_FN_DEF",
-     "line": 64,
-     "stable_id": "src/x509/v3_group_ac.rs::UNSAFE_FN_DEF::i2s_GROUP_AC",
-     "status": "DISCHARGED"
-    }
-   ],
-   "line": 74,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_group_ac.rs::i2s_GROUP_AC::ossl_v3_group_ac::i2s",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_group_ac",
-     "slot": "i2s"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "module-name-match",
    "callback": "r2i_GROUP_AC",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_group_ac.rs",
    "in_inventory": true,
@@ -1690,10 +1917,49 @@
   },
   {
    "assumptions": [],
-   "callback": "s2i_GROUP_AC",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2s_GROUP_AC",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_group_ac.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_group_ac.rs",
+     "id": "V1:src/x509/v3_group_ac.rs:64:UNSAFE_FN_DEF",
+     "line": 64,
+     "stable_id": "src/x509/v3_group_ac.rs::UNSAFE_FN_DEF::i2s_GROUP_AC",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 74,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_group_ac.rs::i2s_GROUP_AC::ossl_v3_group_ac::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_group_ac",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "dispatcher-row-binding"
+   ],
+   "basis": "dispatcher-row-binding",
+   "callback": "s2i_GROUP_AC",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_group_ac.rs",
    "in_inventory": true,
@@ -1721,10 +1987,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "i2s_ASN1_IA5STRING",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_ia5.rs",
    "in_inventory": false,
@@ -1744,10 +2014,41 @@
   },
   {
    "assumptions": [],
-   "callback": "ia5_i2s",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "s2i_ASN1_IA5STRING",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ia5.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 113,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ia5.rs::s2i_ASN1_IA5STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "ia5_i2s",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_ia5.rs",
    "in_inventory": true,
@@ -1775,10 +2076,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "ia5_s2i",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_ia5.rs",
    "in_inventory": true,
@@ -1806,33 +2111,14 @@
   },
   {
    "assumptions": [],
-   "callback": "s2i_ASN1_IA5STRING",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "module-name-match"
    ],
-   "file": "src/x509/v3_ia5.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 113,
-   "registration_kinds": [
-    "definition-only"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_ia5.rs::s2i_ASN1_IA5STRING::<definition-only>",
-     "registration_kind": "definition-only",
-     "row": null,
-     "slot": "s2i"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "module-name-match",
    "callback": "i2r_INDIRECT_ISSUER",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_ind_iss.rs",
    "in_inventory": true,
@@ -1860,41 +2146,14 @@
   },
   {
    "assumptions": [],
-   "callback": "i2s_INDIRECT_ISSUER",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "module-name-match"
    ],
-   "file": "src/x509/v3_ind_iss.rs",
-   "in_inventory": true,
-   "inventory_rows": [
-    {
-     "file": "src/x509/v3_ind_iss.rs",
-     "id": "V1:src/x509/v3_ind_iss.rs:64:UNSAFE_FN_DEF",
-     "line": 64,
-     "stable_id": "src/x509/v3_ind_iss.rs::UNSAFE_FN_DEF::i2s_INDIRECT_ISSUER",
-     "status": "DISCHARGED"
-    }
-   ],
-   "line": 74,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_ind_iss.rs::i2s_INDIRECT_ISSUER::ossl_v3_indirect_issuer::i2s",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_indirect_issuer",
-     "slot": "i2s"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "module-name-match",
    "callback": "r2i_INDIRECT_ISSUER",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_ind_iss.rs",
    "in_inventory": true,
@@ -1922,10 +2181,49 @@
   },
   {
    "assumptions": [],
-   "callback": "s2i_INDIRECT_ISSUER",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2s_INDIRECT_ISSUER",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ind_iss.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_ind_iss.rs",
+     "id": "V1:src/x509/v3_ind_iss.rs:64:UNSAFE_FN_DEF",
+     "line": 64,
+     "stable_id": "src/x509/v3_ind_iss.rs::UNSAFE_FN_DEF::i2s_INDIRECT_ISSUER",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 74,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ind_iss.rs::i2s_INDIRECT_ISSUER::ossl_v3_indirect_issuer::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_indirect_issuer",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "dispatcher-row-binding"
+   ],
+   "basis": "dispatcher-row-binding",
+   "callback": "s2i_INDIRECT_ISSUER",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_ind_iss.rs",
    "in_inventory": true,
@@ -1953,10 +2251,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2v_AUTHORITY_INFO_ACCESS",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_info.rs",
    "in_inventory": true,
@@ -1984,10 +2286,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "v2i_AUTHORITY_INFO_ACCESS",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_info.rs",
    "in_inventory": true,
@@ -2015,12 +2321,18 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match",
+    "module-name-match",
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "int_i2s",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE",
-    "PROVEN_REACHABLE",
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_int.rs",
    "in_inventory": true,
@@ -2062,10 +2374,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "s2i_asn1_int",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_int.rs",
    "in_inventory": true,
@@ -2093,10 +2409,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2r_ISSUED_ON_BEHALF_OF",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_iobo.rs",
    "in_inventory": true,
@@ -2124,41 +2444,14 @@
   },
   {
    "assumptions": [],
-   "callback": "i2r_issuer_sign_tool",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "module-name-match"
    ],
-   "file": "src/x509/v3_ist.rs",
-   "in_inventory": true,
-   "inventory_rows": [
-    {
-     "file": "src/x509/v3_ist.rs",
-     "id": "V1:src/x509/v3_ist.rs:331:UNSAFE_FN_DEF",
-     "line": 331,
-     "stable_id": "src/x509/v3_ist.rs::UNSAFE_FN_DEF::i2r_issuer_sign_tool",
-     "status": "DISCHARGED"
-    }
-   ],
-   "line": 380,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_ist.rs::i2r_issuer_sign_tool::ossl_v3_issuer_sign_tool::i2r",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_issuer_sign_tool",
-     "slot": "i2r"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "module-name-match",
    "callback": "v2i_issuer_sign_tool",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_ist.rs",
    "in_inventory": true,
@@ -2186,51 +2479,53 @@
   },
   {
    "assumptions": [],
-   "callback": "i2r_NAME_CONSTRAINTS",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE",
-    "PROVEN_REACHABLE",
-    "PROVEN_REACHABLE"
+   "bases": [
+    "module-name-match"
    ],
-   "file": "src/x509/v3_ncons.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 588,
+   "basis": "module-name-match",
+   "callback": "i2r_issuer_sign_tool",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ist.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_ist.rs",
+     "id": "V1:src/x509/v3_ist.rs:331:UNSAFE_FN_DEF",
+     "line": 331,
+     "stable_id": "src/x509/v3_ist.rs::UNSAFE_FN_DEF::i2r_issuer_sign_tool",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 380,
    "registration_kinds": [
-    "slot-registration",
-    "slot-registration",
     "slot-registration"
    ],
    "registrations": [
     {
-     "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_name_constraints::i2r",
+     "registration_id": "src/x509/v3_ist.rs::i2r_issuer_sign_tool::ossl_v3_issuer_sign_tool::i2r",
      "registration_kind": "slot-registration",
-     "row": "ossl_v3_name_constraints",
-     "slot": "i2r"
-    },
-    {
-     "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_holder_name_constraints::i2r",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_holder_name_constraints",
-     "slot": "i2r"
-    },
-    {
-     "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_delegated_name_constraints::i2r",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_delegated_name_constraints",
+     "row": "ossl_v3_issuer_sign_tool",
      "slot": "i2r"
     }
    ]
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match",
+    "module-name-match",
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "v2i_NAME_CONSTRAINTS",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE",
-    "PROVEN_REACHABLE",
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_ncons.rs",
    "in_inventory": false,
@@ -2264,10 +2559,59 @@
   },
   {
    "assumptions": [],
-   "callback": "i2r_NO_ASSERTION",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "module-name-match",
+    "module-name-match",
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_NAME_CONSTRAINTS",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ncons.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 588,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_name_constraints::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_name_constraints",
+     "slot": "i2r"
+    },
+    {
+     "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_holder_name_constraints::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_holder_name_constraints",
+     "slot": "i2r"
+    },
+    {
+     "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_delegated_name_constraints::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_delegated_name_constraints",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_NO_ASSERTION",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_no_ass.rs",
    "in_inventory": true,
@@ -2295,41 +2639,14 @@
   },
   {
    "assumptions": [],
-   "callback": "i2s_NO_ASSERTION",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "module-name-match"
    ],
-   "file": "src/x509/v3_no_ass.rs",
-   "in_inventory": true,
-   "inventory_rows": [
-    {
-     "file": "src/x509/v3_no_ass.rs",
-     "id": "V1:src/x509/v3_no_ass.rs:72:UNSAFE_FN_DEF",
-     "line": 72,
-     "stable_id": "src/x509/v3_no_ass.rs::UNSAFE_FN_DEF::i2s_NO_ASSERTION",
-     "status": "DISCHARGED"
-    }
-   ],
-   "line": 82,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_no_ass.rs::i2s_NO_ASSERTION::ossl_v3_no_assertion::i2s",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_no_assertion",
-     "slot": "i2s"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "module-name-match",
    "callback": "r2i_NO_ASSERTION",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_no_ass.rs",
    "in_inventory": true,
@@ -2357,10 +2674,49 @@
   },
   {
    "assumptions": [],
-   "callback": "s2i_NO_ASSERTION",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2s_NO_ASSERTION",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_no_ass.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_no_ass.rs",
+     "id": "V1:src/x509/v3_no_ass.rs:72:UNSAFE_FN_DEF",
+     "line": 72,
+     "stable_id": "src/x509/v3_no_ass.rs::UNSAFE_FN_DEF::i2s_NO_ASSERTION",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 82,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_no_ass.rs::i2s_NO_ASSERTION::ossl_v3_no_assertion::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_no_assertion",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "dispatcher-row-binding"
+   ],
+   "basis": "dispatcher-row-binding",
+   "callback": "s2i_NO_ASSERTION",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_no_ass.rs",
    "in_inventory": true,
@@ -2388,10 +2744,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2r_NO_REV_AVAIL",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_no_rev_avail.rs",
    "in_inventory": true,
@@ -2419,41 +2779,14 @@
   },
   {
    "assumptions": [],
-   "callback": "i2s_NO_REV_AVAIL",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "module-name-match"
    ],
-   "file": "src/x509/v3_no_rev_avail.rs",
-   "in_inventory": true,
-   "inventory_rows": [
-    {
-     "file": "src/x509/v3_no_rev_avail.rs",
-     "id": "V1:src/x509/v3_no_rev_avail.rs:64:UNSAFE_FN_DEF",
-     "line": 64,
-     "stable_id": "src/x509/v3_no_rev_avail.rs::UNSAFE_FN_DEF::i2s_NO_REV_AVAIL",
-     "status": "DISCHARGED"
-    }
-   ],
-   "line": 74,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_no_rev_avail.rs::i2s_NO_REV_AVAIL::ossl_v3_no_rev_avail::i2s",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_no_rev_avail",
-     "slot": "i2s"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "module-name-match",
    "callback": "r2i_NO_REV_AVAIL",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_no_rev_avail.rs",
    "in_inventory": true,
@@ -2481,10 +2814,49 @@
   },
   {
    "assumptions": [],
-   "callback": "s2i_NO_REV_AVAIL",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2s_NO_REV_AVAIL",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_no_rev_avail.rs",
+     "id": "V1:src/x509/v3_no_rev_avail.rs:64:UNSAFE_FN_DEF",
+     "line": 64,
+     "stable_id": "src/x509/v3_no_rev_avail.rs::UNSAFE_FN_DEF::i2s_NO_REV_AVAIL",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 74,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_no_rev_avail.rs::i2s_NO_REV_AVAIL::ossl_v3_no_rev_avail::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_no_rev_avail",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "dispatcher-row-binding"
+   ],
+   "basis": "dispatcher-row-binding",
+   "callback": "s2i_NO_REV_AVAIL",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_no_rev_avail.rs",
    "in_inventory": true,
@@ -2512,10 +2884,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2r_pci",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_pci.rs",
    "in_inventory": false,
@@ -2535,10 +2911,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "r2i_pci",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_pci.rs",
    "in_inventory": false,
@@ -2558,10 +2938,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2v_POLICY_CONSTRAINTS",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_pcons.rs",
    "in_inventory": true,
@@ -2589,10 +2973,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "v2i_POLICY_CONSTRAINTS",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_pcons.rs",
    "in_inventory": true,
@@ -2620,10 +3008,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2r_PKEY_USAGE_PERIOD",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_pku.rs",
    "in_inventory": true,
@@ -2651,10 +3043,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2v_POLICY_MAPPINGS",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_pmaps.rs",
    "in_inventory": true,
@@ -2682,10 +3078,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "v2i_POLICY_MAPPINGS",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_pmaps.rs",
    "in_inventory": true,
@@ -2713,10 +3113,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "i2r_OSSL_ROLE_SPEC_CERT_ID",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_rolespec.rs",
    "in_inventory": false,
@@ -2736,10 +3140,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_rolespec.rs",
    "in_inventory": false,
@@ -2759,33 +3167,14 @@
   },
   {
    "assumptions": [],
-   "callback": "i2v_GENERAL_NAME",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "edge-witness"
    ],
-   "file": "src/x509/v3_san.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 356,
-   "registration_kinds": [
-    "definition-only"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_san.rs::i2v_GENERAL_NAME::<definition-only>",
-     "registration_kind": "definition-only",
-     "row": null,
-     "slot": "i2v"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "edge-witness",
    "callback": "i2v_GENERAL_NAMES",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_san.rs",
    "in_inventory": false,
@@ -2805,12 +3194,126 @@
   },
   {
    "assumptions": [],
-   "callback": "san_i2v",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2v_GENERAL_NAME",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE",
-    "PROVEN_REACHABLE",
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 356,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::i2v_GENERAL_NAME::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "v2i_GENERAL_NAME_ex",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1058,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_GENERAL_NAME_ex::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "v2i_GENERAL_NAME",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1115,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_GENERAL_NAME::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "v2i_GENERAL_NAMES",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1131,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_GENERAL_NAMES::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match",
+    "module-name-match",
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "san_i2v",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_san.rs",
    "in_inventory": true,
@@ -2852,10 +3355,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "san_v2i",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_san.rs",
    "in_inventory": true,
@@ -2883,10 +3390,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "san_v2i_issuer",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_san.rs",
    "in_inventory": true,
@@ -2914,79 +3425,14 @@
   },
   {
    "assumptions": [],
-   "callback": "v2i_GENERAL_NAME",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "edge-witness"
    ],
-   "file": "src/x509/v3_san.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 1115,
-   "registration_kinds": [
-    "definition-only"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_san.rs::v2i_GENERAL_NAME::<definition-only>",
-     "registration_kind": "definition-only",
-     "row": null,
-     "slot": "v2i"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
-   "callback": "v2i_GENERAL_NAMES",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
-   ],
-   "file": "src/x509/v3_san.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 1131,
-   "registration_kinds": [
-    "definition-only"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_san.rs::v2i_GENERAL_NAMES::<definition-only>",
-     "registration_kind": "definition-only",
-     "row": null,
-     "slot": "v2i"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
-   "callback": "v2i_GENERAL_NAME_ex",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
-   ],
-   "file": "src/x509/v3_san.rs",
-   "in_inventory": false,
-   "inventory_rows": [],
-   "line": 1058,
-   "registration_kinds": [
-    "definition-only"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_san.rs::v2i_GENERAL_NAME_ex::<definition-only>",
-     "registration_kind": "definition-only",
-     "row": null,
-     "slot": "v2i"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "edge-witness",
    "callback": "v2i_issuer_alt",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_san.rs",
    "in_inventory": false,
@@ -3006,10 +3452,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "v2i_subject_alt",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_san.rs",
    "in_inventory": false,
@@ -3029,10 +3479,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2r_ATTRIBUTES_SYNTAX",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_sda.rs",
    "in_inventory": true,
@@ -3060,10 +3514,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2r_SINGLE_USE",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_single_use.rs",
    "in_inventory": true,
@@ -3091,41 +3549,14 @@
   },
   {
    "assumptions": [],
-   "callback": "i2s_SINGLE_USE",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "module-name-match"
    ],
-   "file": "src/x509/v3_single_use.rs",
-   "in_inventory": true,
-   "inventory_rows": [
-    {
-     "file": "src/x509/v3_single_use.rs",
-     "id": "V1:src/x509/v3_single_use.rs:65:UNSAFE_FN_DEF",
-     "line": 65,
-     "stable_id": "src/x509/v3_single_use.rs::UNSAFE_FN_DEF::i2s_SINGLE_USE",
-     "status": "DISCHARGED"
-    }
-   ],
-   "line": 75,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_single_use.rs::i2s_SINGLE_USE::ossl_v3_single_use::i2s",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_single_use",
-     "slot": "i2s"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "module-name-match",
    "callback": "r2i_SINGLE_USE",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_single_use.rs",
    "in_inventory": true,
@@ -3153,10 +3584,49 @@
   },
   {
    "assumptions": [],
-   "callback": "s2i_SINGLE_USE",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2s_SINGLE_USE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_single_use.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_single_use.rs",
+     "id": "V1:src/x509/v3_single_use.rs:65:UNSAFE_FN_DEF",
+     "line": 65,
+     "stable_id": "src/x509/v3_single_use.rs::UNSAFE_FN_DEF::i2s_SINGLE_USE",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 75,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_single_use.rs::i2s_SINGLE_USE::ossl_v3_single_use::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_single_use",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "dispatcher-row-binding"
+   ],
+   "basis": "dispatcher-row-binding",
+   "callback": "s2i_SINGLE_USE",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_single_use.rs",
    "in_inventory": true,
@@ -3184,10 +3654,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "i2s_ASN1_OCTET_STRING",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_skid.rs",
    "in_inventory": false,
@@ -3207,10 +3681,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "s2i_ASN1_OCTET_STRING",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_skid.rs",
    "in_inventory": false,
@@ -3230,10 +3708,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "s2i_skey_id",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_skid.rs",
    "in_inventory": false,
@@ -3253,10 +3735,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "skid_i2s",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_skid.rs",
    "in_inventory": true,
@@ -3284,10 +3770,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2r_SOA_IDENTIFIER",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_soa_id.rs",
    "in_inventory": true,
@@ -3315,41 +3805,14 @@
   },
   {
    "assumptions": [],
-   "callback": "i2s_SOA_IDENTIFIER",
-   "classification": "PROVEN_REACHABLE",
-   "classifications": [
-    "PROVEN_REACHABLE"
+   "bases": [
+    "module-name-match"
    ],
-   "file": "src/x509/v3_soa_id.rs",
-   "in_inventory": true,
-   "inventory_rows": [
-    {
-     "file": "src/x509/v3_soa_id.rs",
-     "id": "V1:src/x509/v3_soa_id.rs:64:UNSAFE_FN_DEF",
-     "line": 64,
-     "stable_id": "src/x509/v3_soa_id.rs::UNSAFE_FN_DEF::i2s_SOA_IDENTIFIER",
-     "status": "DISCHARGED"
-    }
-   ],
-   "line": 74,
-   "registration_kinds": [
-    "slot-registration"
-   ],
-   "registrations": [
-    {
-     "registration_id": "src/x509/v3_soa_id.rs::i2s_SOA_IDENTIFIER::ossl_v3_soa_identifier::i2s",
-     "registration_kind": "slot-registration",
-     "row": "ossl_v3_soa_identifier",
-     "slot": "i2s"
-    }
-   ]
-  },
-  {
-   "assumptions": [],
+   "basis": "module-name-match",
    "callback": "r2i_SOA_IDENTIFIER",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_soa_id.rs",
    "in_inventory": true,
@@ -3377,10 +3840,49 @@
   },
   {
    "assumptions": [],
-   "callback": "s2i_SOA_IDENTIFIER",
-   "classification": "PROVEN_REACHABLE",
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2s_SOA_IDENTIFIER",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_soa_id.rs",
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_soa_id.rs",
+     "id": "V1:src/x509/v3_soa_id.rs:64:UNSAFE_FN_DEF",
+     "line": 64,
+     "stable_id": "src/x509/v3_soa_id.rs::UNSAFE_FN_DEF::i2s_SOA_IDENTIFIER",
+     "status": "DISCHARGED"
+    }
+   ],
+   "line": 74,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_soa_id.rs::i2s_SOA_IDENTIFIER::ossl_v3_soa_identifier::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_soa_identifier",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "dispatcher-row-binding"
+   ],
+   "basis": "dispatcher-row-binding",
+   "callback": "s2i_SOA_IDENTIFIER",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_soa_id.rs",
    "in_inventory": true,
@@ -3408,10 +3910,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "sxnet_i2r",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_sxnet.rs",
    "in_inventory": true,
@@ -3439,10 +3945,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "sxnet_v2i",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_sxnet.rs",
    "in_inventory": true,
@@ -3470,10 +3980,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2r_OSSL_TIME_SPEC",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_timespec.rs",
    "in_inventory": true,
@@ -3501,10 +4015,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2v_TLS_FEATURE",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_tlsf.rs",
    "in_inventory": true,
@@ -3532,10 +4050,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "v2i_TLS_FEATURE",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_tlsf.rs",
    "in_inventory": true,
@@ -3563,10 +4085,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "i2r_USER_NOTICE_SYNTAX",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_usernotice.rs",
    "in_inventory": true,
@@ -3594,10 +4120,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "i2s_ASN1_UTF8STRING",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_utf8.rs",
    "in_inventory": false,
@@ -3617,10 +4147,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "s2i_ASN1_UTF8STRING",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_utf8.rs",
    "in_inventory": false,
@@ -3640,10 +4174,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "utf8_i2s",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_utf8.rs",
    "in_inventory": true,
@@ -3671,10 +4209,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
    "callback": "utf8_s2i",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_utf8.rs",
    "in_inventory": true,
@@ -3702,10 +4244,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "i2s_ASN1_ENUMERATED",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_utl.rs",
    "in_inventory": false,
@@ -3725,10 +4271,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "i2s_ASN1_INTEGER",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_utl.rs",
    "in_inventory": false,
@@ -3748,10 +4298,14 @@
   },
   {
    "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
    "callback": "s2i_ASN1_INTEGER",
-   "classification": "PROVEN_REACHABLE",
+   "classification": "REACHABLE_BOUND",
    "classifications": [
-    "PROVEN_REACHABLE"
+    "REACHABLE_BOUND"
    ],
    "file": "src/x509/v3_utl.rs",
    "in_inventory": false,
