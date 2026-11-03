@@ -65,7 +65,7 @@
   "discharge": "SITE-SCOPED: the nine s2i boundaries below only. The mechanism state is unchanged and is not discharged mechanism-wide."
  },
  "scope": {
-  "aggregation": ".obligations[] | select(.mechanism == \"X509_VERIFY_POLICY\" and .status == \"BLOCKED\") over evidence/closure-ssh-b51-applied.json (48 DISCHARGED / 32 BLOCKED / 0 UNKNOWN; span_source_binding=git-blob at 1ecc284e3)",
+  "aggregation": ".obligations[] | select(.mechanism == \"X509_VERIFY_POLICY\" and .status == \"BLOCKED\") over evidence/closure-ssh-b52-baseline.json (177 DISCHARGED / 135 BLOCKED / 0 UNKNOWN; span_source_binding=git-blob at a8716b4f2)",
   "raw_blocked_count": 32,
   "s2i_string_matched_blocked_count": 10,
   "chosen_family": {
@@ -79,6 +79,18 @@
     "file": "src/x509/v3_audit_id.rs",
     "line": 37,
     "reason": "B51/B50 taxonomy counts audit_i2s + audit_s2i as family audit (count 2), not s2i; outside the nine-site s2i scope. Remains BLOCKED, not claimed."
+   },
+   {
+    "operation": "s2i_skey_id",
+    "file": "src/x509/v3_skid.rs",
+    "why": "reachable s2i-slot callback ABSENT from the obligation queue; not claimed here and recorded in s2i-enumeration-gap.json",
+    "state": "BLOCKED or unenumerated; NOT discharged by B52"
+   },
+   {
+    "operation": "s2i_poison",
+    "file": "src/x509/ct_x509v3.rs",
+    "why": "reachable s2i-slot callback ABSENT from the obligation queue; not claimed here and recorded in s2i-enumeration-gap.json",
+    "state": "BLOCKED or unenumerated; NOT discharged by B52"
    }
   ],
   "not_touched": [
@@ -107,7 +119,7 @@
     "count": 2
    }
   ],
-  "baseline_receipt": "evidence/closure-ssh-b51-applied.json"
+  "baseline_receipt": "evidence/closure-ssh-b52-baseline.json"
  },
  "shared_contract": "s2i slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). do_ext_nconf holds RegistryReadGuard across the whole dispatch (src/x509/v3_conf.rs:1035), so the row resolved through X509V3_EXT_get_nid stays live across the lookup, the s2i callback and the encoder; it refuses ext_nid == NID_undef (:1007) and a NULL row (:1014). The s2i arm does not parse or pre-validate the value: it calls cb(method, ctx, value) at :1097 with the caller's NUL-terminated config string, which the callback must consume read-only and must not free or retain. On a non-NULL result the dispatcher encodes through do_ext_i2d (:1126) and releases with ASN1_item_free(ext_struc, it()) or ext_free (:1127-1131). The callback must return a fresh object of exactly the row's `it` type, releasing any partial value itself on failure.",
  "dispatch_paths": {
@@ -136,7 +148,7 @@
    "line": 87,
    "line_current": 101,
    "line_working_tree": 101,
-   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver span start at the committed candidate S = a8716b4f2",
    "kind": "UNSAFE_FN_DEF",
    "operation": "s2i_GROUP_AC",
    "mechanism": "X509_VERIFY_POLICY",
@@ -180,7 +192,7 @@
    "line": 197,
    "line_current": 210,
    "line_working_tree": 210,
-   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver span start at the committed candidate S = a8716b4f2",
    "kind": "UNSAFE_FN_DEF",
    "operation": "ia5_s2i",
    "mechanism": "X509_VERIFY_POLICY",
@@ -210,7 +222,7 @@
    "span_end_line": 218,
    "span_source_commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
    "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
-   "span_post_edit_note": "The wrapper's in-body SAFETY comment was corrected (it cited the i2s slot contract for a `*const c_char` argument); the candidate-bound hash is the acceptance binding, and the orchestrator must recompute at the applied candidate per AGENTS.md \u00a722.",
+   "span_post_edit_note": "Superseded: the in-body SAFETY comment was corrected before the commit, and the span was recomputed at S; the recorded span_sha256 is the candidate-bound acceptance hash.",
    "line_current_history": [
     {
      "value": 197,
@@ -225,7 +237,7 @@
    "line": 87,
    "line_current": 101,
    "line_working_tree": 101,
-   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver span start at the committed candidate S = a8716b4f2",
    "kind": "UNSAFE_FN_DEF",
    "operation": "s2i_INDIRECT_ISSUER",
    "mechanism": "X509_VERIFY_POLICY",
@@ -269,7 +281,7 @@
    "line": 51,
    "line_current": 65,
    "line_working_tree": 65,
-   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver span start at the committed candidate S = a8716b4f2",
    "kind": "UNSAFE_FN_DEF",
    "operation": "s2i_asn1_int",
    "mechanism": "X509_VERIFY_POLICY",
@@ -314,7 +326,7 @@
    "line": 96,
    "line_current": 111,
    "line_working_tree": 111,
-   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver span start at the committed candidate S = a8716b4f2",
    "kind": "UNSAFE_FN_DEF",
    "operation": "s2i_NO_ASSERTION",
    "mechanism": "X509_VERIFY_POLICY",
@@ -358,7 +370,7 @@
    "line": 87,
    "line_current": 101,
    "line_working_tree": 101,
-   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver span start at the committed candidate S = a8716b4f2",
    "kind": "UNSAFE_FN_DEF",
    "operation": "s2i_NO_REV_AVAIL",
    "mechanism": "X509_VERIFY_POLICY",
@@ -402,7 +414,7 @@
    "line": 88,
    "line_current": 102,
    "line_working_tree": 102,
-   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver span start at the committed candidate S = a8716b4f2",
    "kind": "UNSAFE_FN_DEF",
    "operation": "s2i_SINGLE_USE",
    "mechanism": "X509_VERIFY_POLICY",
@@ -446,7 +458,7 @@
    "line": 87,
    "line_current": 101,
    "line_working_tree": 101,
-   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver span start at the committed candidate S = a8716b4f2",
    "kind": "UNSAFE_FN_DEF",
    "operation": "s2i_SOA_IDENTIFIER",
    "mechanism": "X509_VERIFY_POLICY",
@@ -490,7 +502,7 @@
    "line": 182,
    "line_current": 195,
    "line_working_tree": 195,
-   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver span start at the committed candidate S = a8716b4f2",
    "kind": "UNSAFE_FN_DEF",
    "operation": "utf8_s2i",
    "mechanism": "X509_VERIFY_POLICY",
@@ -520,7 +532,7 @@
    "span_end_line": 203,
    "span_source_commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
    "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
-   "span_post_edit_note": "The wrapper's in-body SAFETY comment was corrected (it cited the i2s slot contract for a `*const c_char` argument); the candidate-bound hash is the acceptance binding, and the orchestrator must recompute at the applied candidate per AGENTS.md \u00a722.",
+   "span_post_edit_note": "Superseded: the in-body SAFETY comment was corrected before the commit, and the span was recomputed at S; the recorded span_sha256 is the candidate-bound acceptance hash.",
    "line_current_history": [
     {
      "value": 182,
@@ -612,8 +624,8 @@
   "observed": "PASS; the thread holds no read lock before dispatch, so the true readings inside the callback are not vacuous"
  },
  "fast_gate_at_candidate": {
-  "candidate": "1ecc284e3 (starting HEAD; working tree modified, uncommitted)",
-  "ran_at_head": "1ecc284e30a8092c66c56010fab80a2898b066ff",
+  "candidate": "S = a8716b4f2 (committed; the gate was run on this source before commit, then committed unchanged)",
+  "ran_at_head": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
   "container": "docker/openssl-rs-court.sh exec (never the host)",
   "toolchain": "pinned by the court image; CARGO_BUILD_JOBS=4; --test-threads=4",
   "fmt": "cargo fmt --all -- --check: exit 0",
@@ -622,7 +634,7 @@
   "x509_tests": "cargo test --lib -- x509:: -- --test-threads=4: ok. 155 passed; 0 failed; 0 ignored; 2169 filtered out",
   "canary_mutated": "FAILED as required (0 passed; 1 failed; panic at src/x509/v3_conf.rs:1801)",
   "canary_restored": "ok. 1 passed; 0 failed",
-  "scope_note": "FAST evidence only. Full-library serial/threaded BATCH runs, Miri/ASan/TSan, dudect and authority differentials are NOT_RUN."
+  "scope_note": "FAST only: fmt, clippy and the x509 filter. BATCH/SEAL gates remain NOT_RUN and are not implied."
  },
  "residuals": [
   {
@@ -647,7 +659,7 @@
    "id": "B52-R4",
    "severity": "medium",
    "disposition": "OPEN-FOR-ORCHESTRATOR",
-   "description": "The candidate is the starting HEAD, so span_sha256 is the pre-edit binding. For ia5_s2i and utf8_s2i the in-body SAFETY comment correction changes the span content; span_post_edit_sha256 records the worktree binding. AGENTS.md \u00a722 requires the orchestrator to re-freeze and recompute span hashes at the applied source candidate S'."
+   "description": "No authority differential, Miri, ASan or TSan was run; compatibility evidence is the unit tests plus the mutation canary. Every span hash is bound to the committed candidate S, not to a pre-edit worktree."
   },
   {
    "id": "B52-R5",
