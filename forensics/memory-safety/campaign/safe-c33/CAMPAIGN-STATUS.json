@@ -1055,6 +1055,40 @@
      "note": "Authoring-time state preserved: the receipt carried applied = false and a prohibition against application. Superseded only by the independent APPROVE above, after the observed FAST gate and the reproduced mutation control."
     }
    ]
+  },
+  {
+   "receipt": "boundary-sweep-B51",
+   "scope": "the 10 X509_VERIFY_POLICY v2i boundaries enumerated in boundary-sweep-B51.json (B51-V2I-001..B51-V2I-010) across src/x509/v3_asid.rs, v3_battcons.rs, v3_bcons.rs, v3_extku.rs, v3_info.rs, v3_ist.rs, v3_pcons.rs, v3_pmaps.rs, v3_sxnet.rs and v3_tlsf.rs, dispatched through do_ext_nconf in src/x509/v3_conf.rs; bitst_v2i is excluded by the B50 family taxonomy and stays BLOCKED",
+   "base_head": "cb9c4c64c",
+   "source_state": "committed",
+   "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+   "discharged_boundaries": ["B51-V2I-001", "B51-V2I-002", "B51-V2I-003", "B51-V2I-004", "B51-V2I-005", "B51-V2I-006", "B51-V2I-007", "B51-V2I-008", "B51-V2I-009", "B51-V2I-010"],
+   "retained_boundaries": [],
+   "retained_state": "BLOCKED",
+   "hidden_obligations": 0,
+   "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B51.json",
+   "note": "Site-scoped only. X509_VERIFY_POLICY remains OWNERSHIP_RECONSTRUCTED mechanism-wide; the remaining 32 X509_VERIFY_POLICY sites (s2i 9, i2v 7, r2i 6, print 4, bitst 2, audit 2, non-method 2) stay BLOCKED and no contract or guard is claimed for them. Applied at this candidate under content-addressed coverage.",
+   "adjudicated": true,
+   "adjudication": {
+    "verdict": "APPROVE",
+    "date": "2026-11-02",
+    "reviewer": "independent adversarial adjudicator (session b5cd6489-f5c3-410d-b557-c4dddbcce39c); transcribed verbatim by the orchestrator",
+    "verdict_text": "APPROVE, conditional on the text-only corrections in the new finding below.",
+    "prior_rejections": 2,
+    "rejection_summary": "REJECT #1: the receipt misdescribed its delta (R3/R4 stale, the additive-only claim false, a read-to-write re-entrancy obligation unrecorded, contracts still asserting the caller duty it claimed to close). REJECT #2: not one coherent evidence set (shared_contract asserted the pre-hold lookup, candidate bound the wrong S, scope cited a superseded closure, R9 omitted the s2i/r2i branches). Both are preserved verbatim in the receipt's review_history.",
+    "mechanism_state_unchanged": "X509_VERIFY_POLICY remains OWNERSHIP_RECONSTRUCTED mechanism-wide",
+    "structural_mechanism": "RegistryReadGuard across do_ext_nconf, X509V3_EXT_i2d and X509V3_EXT_d2i, with three mutation-proven liveness canaries (B51-H1..H3) and a neutral control. Row liveness is enforced, not a documented caller duty.",
+    "coverage_instrument": "content-addressed: acceptance requires a matching span_sha256 bound to the git blob at cb9c4c64c; the ten span hashes were verified through the real adjudicate path at the candidate with allow_worktree_span=False",
+    "baseline": "evidence/closure-ssh-b51d-baseline.json: 312 obligations, 167 DISCHARGED / 145 BLOCKED / 0 UNKNOWN, 0 refusals, span_source_binding=git-blob, 0 span-unbound, 0 unmigrated, stale_discharge_rejections 0",
+    "residuals_open": ["B51-R5: no leak or ASan run", "B51-R9: read-then-write self-deadlock is a stated ABI duty on the registrar/caller (v2i/i2d/d2i, and the s2i/r2i branches of the same guard)", "B51-R6/R7/R8 retained"],
+    "residuals_retained": ["B51-R1..R4 stated caller/registrar obligations", "B51-R6/R7 authority divergences"],
+    "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B51.json"
+   },
+   "review_history": [
+    {"verdict": "UNAPPLIED", "date": "2026-11-01", "note": "authoring state: applied = false with a prohibition against application"},
+    {"verdict": "REJECT", "date": "2026-11-02", "note": "eight self-description findings (see the receipt's rejection_findings)"},
+    {"verdict": "REJECT", "date": "2026-11-02", "note": "four evidence-coherence findings (see the receipt's review_history)"}
+   ]
   }
  ],
  "defects_closed": [
