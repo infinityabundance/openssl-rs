@@ -47,5 +47,78 @@
   "This is not a defect in the nine B52 sites, all of which were verified at their coordinates with enforced liveness and a reproduced canary.",
   "It is not a claim that all 63 absent sites are reachable, and it is not a claim that any specific absent site is unsafe.",
   "It does not by itself change the applied ledger; the B52 row is site-scoped and names only its nine boundaries."
- ]
+ ],
+ "gate": {
+  "instrument": "forensics/tools/callback_enumeration_gate.py",
+  "manifest_index": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-registration-manifest.json",
+  "manifest_parts_dir": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-registration-manifest/",
+  "report": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-report.json",
+  "enrolment": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json",
+  "controls": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/control-results.json",
+  "source_identity": {
+   "inventory_source_head": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+   "repository_head": "38a1548be633f3d1be4e55330cbdcb29ef0b8de8",
+   "source_mode": "worktree",
+   "src_tree_unchanged_vs_inventory_head": true
+  },
+  "inventory": {
+   "obligation_count": 312,
+   "path": "evidence/closure-ssh-b52-applied.json",
+   "sha256": "40d25c558c48962d9df7b17f344c01aae4c22f6781fec75b9e3653c563f47e94",
+   "unsafe_fn_identity_count": 286
+  },
+  "state": "FAIL",
+  "exit_code": 1,
+  "pass": false,
+  "classification": {
+   "PROVEN_EXCLUDED": 0,
+   "PROVEN_REACHABLE": 135,
+   "UNRESOLVED": 0
+  },
+  "inventory_matched_callbacks": 69,
+  "missing_entries": 66,
+  "missing_distinct_names": 65,
+  "missing_first_10": [
+   "src/ct/ct_sct.rs:247 SCT_LIST_free",
+   "src/ct/ct_x509v3.rs:59 i2s_poison",
+   "src/ct/ct_x509v3.rs:70 s2i_poison",
+   "src/ct/ct_x509v3.rs:84 i2r_SCT_LIST",
+   "src/ocsp/v3_ocsp.rs:122 i2r_ocsp_crlid",
+   "src/ocsp/v3_ocsp.rs:187 i2r_ocsp_acutoff",
+   "src/ocsp/v3_ocsp.rs:325 ocsp_nonce_free",
+   "src/ocsp/v3_ocsp.rs:344 i2r_ocsp_nonce",
+   "src/ocsp/v3_ocsp.rs:406 i2r_ocsp_serviceloc",
+   "src/x509/v3_ac_tgt.rs:624 i2r_ISSUER_SERIAL"
+  ],
+  "enrolment_count": 66,
+  "reconciliation": {
+   "ext_free_callbacks_absent_from_queue": 2,
+   "gate_missing_distinct_callbacks": 66,
+   "gate_missing_entries": 66,
+   "note": "name-prefix matching is not the enumeration; these counts reconcile the six-prefix definition census with the slot-driven manifest and explain why the gate's missing set differs from a raw prefix grep",
+   "prefix_definitions_absent_and_definition_only": 34,
+   "prefix_definitions_absent_and_registered": 30,
+   "prefix_definitions_absent_from_queue": 64,
+   "prefix_definitions_distinct": 114,
+   "prefix_definitions_in_queue_inventory": 51,
+   "prefix_definitions_not_registered_in_any_slot": 36,
+   "prefix_definitions_registered_in_a_slot": 79,
+   "prefix_definitions_total": 115,
+   "registered_callbacks_with_non_prefix_names": 20
+  },
+  "controls_summary": {
+   "C1": true,
+   "C2": true,
+   "C3": true,
+   "C4": true,
+   "C5": true
+  },
+  "determinism": {
+   "identical": true,
+   "report_sha256": "7f38381f13ac7b344ab5043de699e778cb547541bbf4f467b6e030b6268f3dc6",
+   "manifest_sha256": "5a44cb3f66abfacc091379981448357a21eb5ac2b28a4f48fb29979f80b2531d"
+  },
+  "interpretation": "The gate accounts for all 114 six-prefix definitions (115 definitions) and 2 additional ext_free callbacks. Of the 63 distinct prefix-named definitions absent from the 312-obligation queue, 30 are slot registrations and 33 are definition-only helpers; all 63 are now accounted for, and 2 ext_free callbacks are added, producing 66 file-qualified missing entries (65 distinct names). 69 registered callbacks are already inventoried, including 51 prefix-named definitions and 18 callbacks whose names do not match their slot prefix.",
+  "non_claims": "The gate proves inventory-vs-source agreement for its parsed registrations and for the six-prefix definition census; it does not prove that macro-generated or build-script-generated rows were parsed, and its dispatcher bindings are source-level METHOD-table/call-site witnesses, not execution proofs."
+ }
 }

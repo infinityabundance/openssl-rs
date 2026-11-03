@@ -1,0 +1,5160 @@
+{
+ "callback_count": 135,
+ "closure": {
+  "family": "openssh",
+  "path": "evidence/closure-ssh-b52-applied.json",
+  "sha256": "40d25c558c48962d9df7b17f344c01aae4c22f6781fec75b9e3653c563f47e94"
+ },
+ "inventory": {
+  "obligation_count": 312,
+  "path": "evidence/closure-ssh-b52-applied.json",
+  "sha256": "40d25c558c48962d9df7b17f344c01aae4c22f6781fec75b9e3653c563f47e94",
+  "unsafe_fn_identity_count": 286
+ },
+ "non_claims": [
+  "The gate proves inventory-vs-source agreement for the registrations this parser can see; it does not prove that every registration in the source was parsed (macro-generated rows and build-script-generated source are outside the parser).",
+  "A dispatcher binding is a source-level METHOD-table / call-site witness. It is not a proof that an indirect call actually executes for a given input, and it is not an edge-level proof for callbacks reached only through unresolved indirect sites.",
+  "PROVEN_EXCLUDED carries the written closed-world assumption CE-1; it is a scoped reachability claim about the pinned consumer family, not a property of the callback in general.",
+  "The gate does not adjudicate whether an inventoried callback is safe, and it does not change any obligation status."
+ ],
+ "parser": {
+  "aux_slot_fields": [
+   "it",
+   "ext_free",
+   "d2i",
+   "i2d",
+   "ext_new"
+  ],
+  "gated_slots": [
+   "ext_free",
+   "i2r",
+   "i2s",
+   "i2v",
+   "it",
+   "r2i",
+   "s2i",
+   "v2i"
+  ],
+  "method": "syntactic slot-field scan of X509V3ExtMethod literals; test-only registrations excluded; callbacks are matched by assigned identifier, never by name prefix",
+  "name_prefix_matching": false,
+  "slot_fields": [
+   "i2s",
+   "s2i",
+   "i2v",
+   "v2i",
+   "i2r",
+   "r2i"
+  ]
+ },
+ "parts": {
+  "callbacks.json": {
+   "bytes": 93162,
+   "count": 135,
+   "path": "callback-registration-manifest/callbacks.json",
+   "sha256": "e6b7b7a7dc7e8ad65bea34d983d3d144ead24e5590ee0b551474f2c1f75fe195"
+  },
+  "registrations.d2i.json": {
+   "bytes": 4192,
+   "count": 3,
+   "path": "callback-registration-manifest/registrations.d2i.json",
+   "sha256": "4c50ae4db030a6386f33fabf6d5e87174fe73ca3453af3264ed57c37fff26681"
+  },
+  "registrations.ext_free.json": {
+   "bytes": 5550,
+   "count": 3,
+   "path": "callback-registration-manifest/registrations.ext_free.json",
+   "sha256": "88e7c997a5b7643065bd1168a35f85d95b301eb2feed5291c3abe8f84e343276"
+  },
+  "registrations.ext_new.json": {
+   "bytes": 1499,
+   "count": 1,
+   "path": "callback-registration-manifest/registrations.ext_new.json",
+   "sha256": "19f062c5420706a0dba076d02009bc2e8aa35d9cbf7478ca4b10a767f2407287"
+  },
+  "registrations.i2d.json": {
+   "bytes": 3990,
+   "count": 3,
+   "path": "callback-registration-manifest/registrations.i2d.json",
+   "sha256": "984beb266551f47382605e271efdbe4703ef733e6dac71ed9adecd31a28569cb"
+  },
+  "registrations.i2r.json": {
+   "bytes": 86325,
+   "count": 56,
+   "path": "callback-registration-manifest/registrations.i2r.json",
+   "sha256": "65fd3b8483bf9c59208ca8db665273e8f57aebd391ca8d7e011767796da73793"
+  },
+  "registrations.i2s.json": {
+   "bytes": 32312,
+   "count": 22,
+   "path": "callback-registration-manifest/registrations.i2s.json",
+   "sha256": "65ec7528c69a30b669b9dbace7ded5c2630aa1ee5a2de0caabb74208f2f2d149"
+  },
+  "registrations.i2v.json": {
+   "bytes": 26135,
+   "count": 17,
+   "path": "callback-registration-manifest/registrations.i2v.json",
+   "sha256": "0d38b692a72b82fb679614777732c4fbafc24d16a1f5579bb948b1b3b722c6b6"
+  },
+  "registrations.it.json": {
+   "bytes": 133558,
+   "count": 63,
+   "path": "callback-registration-manifest/registrations.it.json",
+   "sha256": "22f866ea260ffcb6eeb196f0a3cb647a7c94acecf8a4ce397faee701c0fe1cdc"
+  },
+  "registrations.r2i.json": {
+   "bytes": 12413,
+   "count": 8,
+   "path": "callback-registration-manifest/registrations.r2i.json",
+   "sha256": "d3a141dc44a86f6815c2e98e25a639c67e95cc7cb3dcbc874c3ab8d6d8a012ae"
+  },
+  "registrations.s2i.json": {
+   "bytes": 26887,
+   "count": 18,
+   "path": "callback-registration-manifest/registrations.s2i.json",
+   "sha256": "9fcc6af6a654da8a55e2a42deee2ed70eab2441c1c39d7c1c355e31fe695b5f2"
+  },
+  "registrations.v2i.json": {
+   "bytes": 44664,
+   "count": 31,
+   "path": "callback-registration-manifest/registrations.v2i.json",
+   "sha256": "a516d6e15af809e967f15002b94e8c304bb323909f71df92e06e4806db40f3a4"
+  }
+ },
+ "reconciliation": {
+  "ext_free_callbacks_absent_from_queue": 2,
+  "gate_missing_distinct_callbacks": 66,
+  "gate_missing_entries": 66,
+  "note": "name-prefix matching is not the enumeration; these counts reconcile the six-prefix definition census with the slot-driven manifest and explain why the gate's missing set differs from a raw prefix grep",
+  "prefix_definitions_absent_and_definition_only": 34,
+  "prefix_definitions_absent_and_registered": 30,
+  "prefix_definitions_absent_from_queue": 64,
+  "prefix_definitions_distinct": 114,
+  "prefix_definitions_in_queue_inventory": 51,
+  "prefix_definitions_not_registered_in_any_slot": 36,
+  "prefix_definitions_registered_in_a_slot": 79,
+  "prefix_definitions_total": 115,
+  "registered_callbacks_with_non_prefix_names": 20
+ },
+ "registration_count": 225,
+ "rows": [
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/ct/ct_x509v3.rs",
+   "instances": [
+    {
+     "file": "src/ct/ct_x509v3.rs",
+     "index": 0,
+     "line": 238,
+     "name": "ossl_v3_ct_scts"
+    }
+   ],
+   "line": 240,
+   "row": "ossl_v3_ct_scts[0]",
+   "slots": {
+    "d2i": {
+     "callback": "x509_ext_d2i_SCT_LIST",
+     "gated": false,
+     "value": "as_d2i(x509_ext_d2i_SCT_LIST)"
+    },
+    "ext_free": {
+     "callback": "SCT_LIST_free",
+     "gated": true,
+     "value": "as_free(SCT_LIST_free)"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": "i2d_SCT_LIST",
+     "gated": false,
+     "value": "as_i2d(i2d_SCT_LIST)"
+    },
+    "i2r": {
+     "callback": "i2r_SCT_LIST",
+     "gated": true,
+     "value": "as_i2r(i2r_SCT_LIST)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/ct/ct_x509v3.rs",
+   "instances": [
+    {
+     "file": "src/ct/ct_x509v3.rs",
+     "index": 1,
+     "line": 238,
+     "name": "ossl_v3_ct_scts"
+    }
+   ],
+   "line": 257,
+   "row": "ossl_v3_ct_scts[1]",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": "i2s_poison",
+     "gated": true,
+     "value": "Some(i2s_poison)"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_NULL_it",
+     "gated": true,
+     "value": "Some(ASN1_NULL_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": "s2i_poison",
+     "gated": true,
+     "value": "Some(s2i_poison)"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/ct/ct_x509v3.rs",
+   "instances": [
+    {
+     "file": "src/ct/ct_x509v3.rs",
+     "index": 2,
+     "line": 238,
+     "name": "ossl_v3_ct_scts"
+    }
+   ],
+   "line": 274,
+   "row": "ossl_v3_ct_scts[2]",
+   "slots": {
+    "d2i": {
+     "callback": "ocsp_ext_d2i_SCT_LIST",
+     "gated": false,
+     "value": "as_d2i(ocsp_ext_d2i_SCT_LIST)"
+    },
+    "ext_free": {
+     "callback": "SCT_LIST_free",
+     "gated": true,
+     "value": "as_free(SCT_LIST_free)"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": "i2d_SCT_LIST",
+     "gated": false,
+     "value": "as_i2d(i2d_SCT_LIST)"
+    },
+    "i2r": {
+     "callback": "i2r_SCT_LIST",
+     "gated": true,
+     "value": "as_i2r(i2r_SCT_LIST)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "instances": [
+    {
+     "file": "src/ocsp/v3_ocsp.rs",
+     "index": null,
+     "line": 455,
+     "name": "ossl_v3_ocsp_crlid"
+    }
+   ],
+   "line": 455,
+   "row": "ossl_v3_ocsp_crlid",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_ocsp_crlid",
+     "gated": true,
+     "value": "Some(i2r_ocsp_crlid)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "OCSP_CRLID_it",
+     "gated": true,
+     "value": "Some(OCSP_CRLID_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "instances": [
+    {
+     "file": "src/ocsp/v3_ocsp.rs",
+     "index": null,
+     "line": 476,
+     "name": "ossl_v3_ocsp_acutoff"
+    }
+   ],
+   "line": 476,
+   "row": "ossl_v3_ocsp_acutoff",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_ocsp_acutoff",
+     "gated": true,
+     "value": "Some(i2r_ocsp_acutoff)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_GENERALIZEDTIME_it",
+     "gated": true,
+     "value": "Some(ASN1_GENERALIZEDTIME_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "instances": [
+    {
+     "file": "src/ocsp/v3_ocsp.rs",
+     "index": null,
+     "line": 498,
+     "name": "ossl_v3_ocsp_nonce"
+    }
+   ],
+   "line": 498,
+   "row": "ossl_v3_ocsp_nonce",
+   "slots": {
+    "d2i": {
+     "callback": "d2i_ocsp_nonce",
+     "gated": false,
+     "value": "Some(d2i_ocsp_nonce)"
+    },
+    "ext_free": {
+     "callback": "ocsp_nonce_free",
+     "gated": true,
+     "value": "Some(ocsp_nonce_free)"
+    },
+    "ext_new": {
+     "callback": "ocsp_nonce_new",
+     "gated": false,
+     "value": "Some(ocsp_nonce_new)"
+    },
+    "i2d": {
+     "callback": "i2d_ocsp_nonce",
+     "gated": false,
+     "value": "Some(i2d_ocsp_nonce)"
+    },
+    "i2r": {
+     "callback": "i2r_ocsp_nonce",
+     "gated": true,
+     "value": "Some(i2r_ocsp_nonce)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "instances": [
+    {
+     "file": "src/ocsp/v3_ocsp.rs",
+     "index": null,
+     "line": 519,
+     "name": "ossl_v3_ocsp_nocheck"
+    }
+   ],
+   "line": 519,
+   "row": "ossl_v3_ocsp_nocheck",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_ocsp_nocheck",
+     "gated": true,
+     "value": "Some(i2r_ocsp_nocheck)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_NULL_it",
+     "gated": true,
+     "value": "Some(ASN1_NULL_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": "s2i_ocsp_nocheck",
+     "gated": true,
+     "value": "Some(s2i_ocsp_nocheck)"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "instances": [
+    {
+     "file": "src/ocsp/v3_ocsp.rs",
+     "index": null,
+     "line": 540,
+     "name": "ossl_v3_ocsp_serviceloc"
+    }
+   ],
+   "line": 540,
+   "row": "ossl_v3_ocsp_serviceloc",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_ocsp_serviceloc",
+     "gated": true,
+     "value": "Some(i2r_ocsp_serviceloc)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "OCSP_SERVICELOC_it",
+     "gated": true,
+     "value": "Some(OCSP_SERVICELOC_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_aaa.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_aaa.rs",
+     "index": null,
+     "line": 576,
+     "name": "ossl_v3_allowed_attribute_assignments"
+    }
+   ],
+   "line": 576,
+   "row": "ossl_v3_allowed_attribute_assignments",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_ALLOWED_ATTRIBUTES_SYNTAX",
+     "gated": true,
+     "value": "Some(i2r_ALLOWED_ATTRIBUTES_SYNTAX)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "OSSL_ALLOWED_ATTRIBUTES_SYNTAX_it",
+     "gated": true,
+     "value": "Some(OSSL_ALLOWED_ATTRIBUTES_SYNTAX_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_ac_tgt.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_ac_tgt.rs",
+     "index": null,
+     "line": 992,
+     "name": "ossl_v3_targeting_information"
+    }
+   ],
+   "line": 992,
+   "row": "ossl_v3_targeting_information",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_TARGETING_INFORMATION",
+     "gated": true,
+     "value": "Some(i2r_TARGETING_INFORMATION)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "OSSL_TARGETING_INFORMATION_it",
+     "gated": true,
+     "value": "Some(OSSL_TARGETING_INFORMATION_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_addr.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_addr.rs",
+     "index": null,
+     "line": 2811,
+     "name": "ossl_v3_addr"
+    }
+   ],
+   "line": 2811,
+   "row": "ossl_v3_addr",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_IPAddrBlocks",
+     "gated": true,
+     "value": "Some(i2r_IPAddrBlocks)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "IPAddrBlocks_it",
+     "gated": true,
+     "value": "Some(IPAddrBlocks_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_IPAddrBlocks",
+     "gated": true,
+     "value": "Some(v2i_IPAddrBlocks)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_admis.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_admis.rs",
+     "index": null,
+     "line": 1289,
+     "name": "ossl_v3_ext_admission"
+    }
+   ],
+   "line": 1289,
+   "row": "ossl_v3_ext_admission",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_ADMISSION_SYNTAX",
+     "gated": true,
+     "value": "Some(i2r_ADMISSION_SYNTAX)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ADMISSION_SYNTAX_it",
+     "gated": true,
+     "value": "Some(ADMISSION_SYNTAX_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_akid.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_akid.rs",
+     "index": null,
+     "line": 207,
+     "name": "ossl_v3_akey_id"
+    }
+   ],
+   "line": 207,
+   "row": "ossl_v3_akey_id",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": "akid_i2v",
+     "gated": true,
+     "value": "Some(akid_i2v)"
+    },
+    "it": {
+     "callback": "AUTHORITY_KEYID_it",
+     "gated": true,
+     "value": "Some(AUTHORITY_KEYID_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "akid_v2i",
+     "gated": true,
+     "value": "Some(akid_v2i)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_asid.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_asid.rs",
+     "index": null,
+     "line": 1801,
+     "name": "ossl_v3_asid"
+    }
+   ],
+   "line": 1801,
+   "row": "ossl_v3_asid",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_ASIdentifiers",
+     "gated": true,
+     "value": "Some(i2r_ASIdentifiers)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASIdentifiers_it",
+     "gated": true,
+     "value": "Some(ASIdentifiers_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_ASIdentifiers",
+     "gated": true,
+     "value": "Some(v2i_ASIdentifiers)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_attrdesc.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_attrdesc.rs",
+     "index": null,
+     "line": 956,
+     "name": "ossl_v3_attribute_descriptor"
+    }
+   ],
+   "line": 956,
+   "row": "ossl_v3_attribute_descriptor",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
+     "gated": true,
+     "value": "Some(i2r_OSSL_ATTRIBUTE_DESCRIPTOR)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "OSSL_ATTRIBUTE_DESCRIPTOR_it",
+     "gated": true,
+     "value": "Some(OSSL_ATTRIBUTE_DESCRIPTOR_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_attrmap.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_attrmap.rs",
+     "index": null,
+     "line": 691,
+     "name": "ossl_v3_attribute_mappings"
+    }
+   ],
+   "line": 691,
+   "row": "ossl_v3_attribute_mappings",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_ATTRIBUTE_MAPPINGS",
+     "gated": true,
+     "value": "Some(i2r_ATTRIBUTE_MAPPINGS)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "OSSL_ATTRIBUTE_MAPPINGS_it",
+     "gated": true,
+     "value": "Some(OSSL_ATTRIBUTE_MAPPINGS_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_audit_id.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_audit_id.rs",
+     "index": null,
+     "line": 50,
+     "name": "ossl_v3_audit_identity"
+    }
+   ],
+   "line": 50,
+   "row": "ossl_v3_audit_identity",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": "audit_i2s",
+     "gated": true,
+     "value": "Some(audit_i2s)"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_OCTET_STRING_it",
+     "gated": true,
+     "value": "Some(ASN1_OCTET_STRING_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": "audit_s2i",
+     "gated": true,
+     "value": "Some(audit_s2i)"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_authattid.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_authattid.rs",
+     "index": null,
+     "line": 265,
+     "name": "ossl_v3_authority_attribute_identifier"
+    }
+   ],
+   "line": 265,
+   "row": "ossl_v3_authority_attribute_identifier",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_auth_attr_id",
+     "gated": true,
+     "value": "Some(i2r_auth_attr_id)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX_it",
+     "gated": true,
+     "value": "Some(OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_battcons.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_battcons.rs",
+     "index": null,
+     "line": 291,
+     "name": "ossl_v3_battcons"
+    }
+   ],
+   "line": 291,
+   "row": "ossl_v3_battcons",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": "i2v_OSSL_BASIC_ATTR_CONSTRAINTS",
+     "gated": true,
+     "value": "Some(i2v_OSSL_BASIC_ATTR_CONSTRAINTS)"
+    },
+    "it": {
+     "callback": "OSSL_BASIC_ATTR_CONSTRAINTS_it",
+     "gated": true,
+     "value": "Some(OSSL_BASIC_ATTR_CONSTRAINTS_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_OSSL_BASIC_ATTR_CONSTRAINTS",
+     "gated": true,
+     "value": "Some(v2i_OSSL_BASIC_ATTR_CONSTRAINTS)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_bcons.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_bcons.rs",
+     "index": null,
+     "line": 292,
+     "name": "ossl_v3_bcons"
+    }
+   ],
+   "line": 292,
+   "row": "ossl_v3_bcons",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": "i2v_BASIC_CONSTRAINTS",
+     "gated": true,
+     "value": "Some(i2v_BASIC_CONSTRAINTS)"
+    },
+    "it": {
+     "callback": "BASIC_CONSTRAINTS_it",
+     "gated": true,
+     "value": "Some(BASIC_CONSTRAINTS_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_BASIC_CONSTRAINTS",
+     "gated": true,
+     "value": "Some(v2i_BASIC_CONSTRAINTS)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_bitst.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_bitst.rs",
+     "index": null,
+     "line": 371,
+     "name": "ossl_v3_nscert"
+    }
+   ],
+   "line": 371,
+   "row": "ossl_v3_nscert",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": "bitst_i2v",
+     "gated": true,
+     "value": "Some(bitst_i2v)"
+    },
+    "it": {
+     "callback": "ASN1_BIT_STRING_it",
+     "gated": true,
+     "value": "Some(ASN1_BIT_STRING_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "bitst_v2i",
+     "gated": true,
+     "value": "Some(bitst_v2i)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_bitst.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_bitst.rs",
+     "index": null,
+     "line": 390,
+     "name": "ossl_v3_key_usage"
+    }
+   ],
+   "line": 390,
+   "row": "ossl_v3_key_usage",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": "bitst_i2v",
+     "gated": true,
+     "value": "Some(bitst_i2v)"
+    },
+    "it": {
+     "callback": "ASN1_BIT_STRING_it",
+     "gated": true,
+     "value": "Some(ASN1_BIT_STRING_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "bitst_v2i",
+     "gated": true,
+     "value": "Some(bitst_v2i)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "fn",
+   "file": "src/x509/v3_conf.rs",
+   "instances": [],
+   "line": 1650,
+   "row": "fn:hold_probe_row",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "hold_probe_it",
+     "gated": true,
+     "value": "Some(hold_probe_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "hold_probe_v2i",
+     "gated": true,
+     "value": "Some(hold_probe_v2i)"
+    }
+   },
+   "test_only": true
+  },
+  {
+   "constructor": null,
+   "container_kind": "fn",
+   "file": "src/x509/v3_conf.rs",
+   "instances": [],
+   "line": 1671,
+   "row": "fn:s2i_hold_probe_row",
+   "slots": {
+    "s2i": {
+     "callback": "hold_probe_s2i",
+     "gated": true,
+     "value": "Some(hold_probe_s2i)"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": true
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_cpols.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_cpols.rs",
+     "index": null,
+     "line": 1602,
+     "name": "ossl_v3_cpols"
+    }
+   ],
+   "line": 1602,
+   "row": "ossl_v3_cpols",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_certpol",
+     "gated": true,
+     "value": "Some(i2r_certpol)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "CERTIFICATEPOLICIES_it",
+     "gated": true,
+     "value": "Some(CERTIFICATEPOLICIES_it)"
+    },
+    "r2i": {
+     "callback": "r2i_certpol",
+     "gated": true,
+     "value": "Some(r2i_certpol)"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_crld.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_crld.rs",
+     "index": null,
+     "line": 2081,
+     "name": "ossl_v3_crld"
+    }
+   ],
+   "line": 2081,
+   "row": "ossl_v3_crld",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_crldp",
+     "gated": true,
+     "value": "Some(i2r_crldp)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "CRL_DIST_POINTS_it",
+     "gated": true,
+     "value": "Some(CRL_DIST_POINTS_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_crld",
+     "gated": true,
+     "value": "Some(v2i_crld)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_crld.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_crld.rs",
+     "index": null,
+     "line": 2102,
+     "name": "ossl_v3_freshest_crl"
+    }
+   ],
+   "line": 2102,
+   "row": "ossl_v3_freshest_crl",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_crldp",
+     "gated": true,
+     "value": "Some(i2r_crldp)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "CRL_DIST_POINTS_it",
+     "gated": true,
+     "value": "Some(CRL_DIST_POINTS_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_crld",
+     "gated": true,
+     "value": "Some(v2i_crld)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_crld.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_crld.rs",
+     "index": null,
+     "line": 2123,
+     "name": "ossl_v3_idp"
+    }
+   ],
+   "line": 2123,
+   "row": "ossl_v3_idp",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_idp",
+     "gated": true,
+     "value": "Some(i2r_idp)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ISSUING_DIST_POINT_it",
+     "gated": true,
+     "value": "Some(ISSUING_DIST_POINT_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_idp",
+     "gated": true,
+     "value": "Some(v2i_idp)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_crld.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_crld.rs",
+     "index": null,
+     "line": 2144,
+     "name": "ossl_v3_crl_invdate"
+    }
+   ],
+   "line": 2144,
+   "row": "ossl_v3_crl_invdate",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_crl_invdate",
+     "gated": true,
+     "value": "Some(i2r_crl_invdate)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_GENERALIZEDTIME_it",
+     "gated": true,
+     "value": "Some(ASN1_GENERALIZEDTIME_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_crld.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_crld.rs",
+     "index": null,
+     "line": 2165,
+     "name": "ossl_v3_crl_hold"
+    }
+   ],
+   "line": 2165,
+   "row": "ossl_v3_crl_hold",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_object",
+     "gated": true,
+     "value": "Some(i2r_object)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_OBJECT_it",
+     "gated": true,
+     "value": "Some(ASN1_OBJECT_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_crld.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_crld.rs",
+     "index": null,
+     "line": 2186,
+     "name": "ossl_v3_aa_issuing_dist_point"
+    }
+   ],
+   "line": 2186,
+   "row": "ossl_v3_aa_issuing_dist_point",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_aaidp",
+     "gated": true,
+     "value": "Some(i2r_aaidp)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "OSSL_AA_DIST_POINT_it",
+     "gated": true,
+     "value": "Some(OSSL_AA_DIST_POINT_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_aaidp",
+     "gated": true,
+     "value": "Some(v2i_aaidp)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_enum.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_enum.rs",
+     "index": null,
+     "line": 184,
+     "name": "ossl_v3_crl_reason"
+    }
+   ],
+   "line": 184,
+   "row": "ossl_v3_crl_reason",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": "enum_i2s",
+     "gated": true,
+     "value": "Some(enum_i2s)"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_ENUMERATED_it",
+     "gated": true,
+     "value": "Some(ASN1_ENUMERATED_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "fn",
+   "file": "src/x509/v3_extku.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_extku.rs",
+     "line": 317,
+     "name": "ossl_v3_ext_ku"
+    },
+    {
+     "file": "src/x509/v3_extku.rs",
+     "line": 323,
+     "name": "ossl_v3_ocsp_accresp"
+    },
+    {
+     "file": "src/x509/v3_extku.rs",
+     "line": 327,
+     "name": "ossl_v3_acc_cert_policies"
+    },
+    {
+     "file": "src/x509/v3_extku.rs",
+     "line": 331,
+     "name": "ossl_v3_acc_priv_policies"
+    }
+   ],
+   "line": 298,
+   "row": "fn:ext_key_usage_row",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": "i2v_EXTENDED_KEY_USAGE",
+     "gated": true,
+     "value": "Some(i2v_EXTENDED_KEY_USAGE)"
+    },
+    "it": {
+     "callback": "EXTENDED_KEY_USAGE_it",
+     "gated": true,
+     "value": "Some(EXTENDED_KEY_USAGE_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_EXTENDED_KEY_USAGE",
+     "gated": true,
+     "value": "as_v2i(v2i_EXTENDED_KEY_USAGE)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_group_ac.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_group_ac.rs",
+     "index": null,
+     "line": 110,
+     "name": "ossl_v3_group_ac"
+    }
+   ],
+   "line": 110,
+   "row": "ossl_v3_group_ac",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_GROUP_AC",
+     "gated": true,
+     "value": "Some(i2r_GROUP_AC)"
+    },
+    "i2s": {
+     "callback": "i2s_GROUP_AC",
+     "gated": true,
+     "value": "Some(i2s_GROUP_AC)"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_NULL_it",
+     "gated": true,
+     "value": "Some(ASN1_NULL_it)"
+    },
+    "r2i": {
+     "callback": "r2i_GROUP_AC",
+     "gated": true,
+     "value": "Some(r2i_GROUP_AC)"
+    },
+    "s2i": {
+     "callback": "s2i_GROUP_AC",
+     "gated": true,
+     "value": "Some(s2i_GROUP_AC)"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "fn",
+   "file": "src/x509/v3_ia5.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_ia5.rs",
+     "line": 224,
+     "name": "ossl_v3_ns_ia5_list"
+    },
+    {
+     "file": "src/x509/v3_ia5.rs",
+     "line": 224,
+     "name": "ossl_v3_ns_ia5_list"
+    },
+    {
+     "file": "src/x509/v3_ia5.rs",
+     "line": 224,
+     "name": "ossl_v3_ns_ia5_list"
+    },
+    {
+     "file": "src/x509/v3_ia5.rs",
+     "line": 224,
+     "name": "ossl_v3_ns_ia5_list"
+    },
+    {
+     "file": "src/x509/v3_ia5.rs",
+     "line": 224,
+     "name": "ossl_v3_ns_ia5_list"
+    },
+    {
+     "file": "src/x509/v3_ia5.rs",
+     "line": 224,
+     "name": "ossl_v3_ns_ia5_list"
+    },
+    {
+     "file": "src/x509/v3_ia5.rs",
+     "line": 224,
+     "name": "ossl_v3_ns_ia5_list"
+    }
+   ],
+   "line": 142,
+   "row": "fn:ext_ia5string",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": "ia5_i2s",
+     "gated": true,
+     "value": "Some(ia5_i2s)"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_IA5STRING_it",
+     "gated": true,
+     "value": "Some(ASN1_IA5STRING_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": "ia5_s2i",
+     "gated": true,
+     "value": "Some(ia5_s2i)"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "const",
+   "file": "src/x509/v3_ia5.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_ia5.rs",
+     "index": null,
+     "line": 162,
+     "name": "EXT_END"
+    }
+   ],
+   "line": 162,
+   "row": "EXT_END",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_ind_iss.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_ind_iss.rs",
+     "index": null,
+     "line": 110,
+     "name": "ossl_v3_indirect_issuer"
+    }
+   ],
+   "line": 110,
+   "row": "ossl_v3_indirect_issuer",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_INDIRECT_ISSUER",
+     "gated": true,
+     "value": "Some(i2r_INDIRECT_ISSUER)"
+    },
+    "i2s": {
+     "callback": "i2s_INDIRECT_ISSUER",
+     "gated": true,
+     "value": "Some(i2s_INDIRECT_ISSUER)"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_NULL_it",
+     "gated": true,
+     "value": "Some(ASN1_NULL_it)"
+    },
+    "r2i": {
+     "callback": "r2i_INDIRECT_ISSUER",
+     "gated": true,
+     "value": "Some(r2i_INDIRECT_ISSUER)"
+    },
+    "s2i": {
+     "callback": "s2i_INDIRECT_ISSUER",
+     "gated": true,
+     "value": "Some(s2i_INDIRECT_ISSUER)"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "fn",
+   "file": "src/x509/v3_info.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_info.rs",
+     "line": 588,
+     "name": "ossl_v3_info"
+    },
+    {
+     "file": "src/x509/v3_info.rs",
+     "line": 591,
+     "name": "ossl_v3_sinfo"
+    }
+   ],
+   "line": 569,
+   "row": "fn:info_access_row",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": "i2v_AUTHORITY_INFO_ACCESS",
+     "gated": true,
+     "value": "Some(i2v_AUTHORITY_INFO_ACCESS)"
+    },
+    "it": {
+     "callback": "AUTHORITY_INFO_ACCESS_it",
+     "gated": true,
+     "value": "Some(AUTHORITY_INFO_ACCESS_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_AUTHORITY_INFO_ACCESS",
+     "gated": true,
+     "value": "Some(v2i_AUTHORITY_INFO_ACCESS)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_int.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_int.rs",
+     "index": null,
+     "line": 78,
+     "name": "ossl_v3_crl_num"
+    }
+   ],
+   "line": 78,
+   "row": "ossl_v3_crl_num",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": "int_i2s",
+     "gated": true,
+     "value": "Some(int_i2s)"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_INTEGER_it",
+     "gated": true,
+     "value": "Some(ASN1_INTEGER_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_int.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_int.rs",
+     "index": null,
+     "line": 97,
+     "name": "ossl_v3_delta_crl"
+    }
+   ],
+   "line": 97,
+   "row": "ossl_v3_delta_crl",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": "int_i2s",
+     "gated": true,
+     "value": "Some(int_i2s)"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_INTEGER_it",
+     "gated": true,
+     "value": "Some(ASN1_INTEGER_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_int.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_int.rs",
+     "index": null,
+     "line": 117,
+     "name": "ossl_v3_inhibit_anyp"
+    }
+   ],
+   "line": 117,
+   "row": "ossl_v3_inhibit_anyp",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": "int_i2s",
+     "gated": true,
+     "value": "Some(int_i2s)"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_INTEGER_it",
+     "gated": true,
+     "value": "Some(ASN1_INTEGER_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": "s2i_asn1_int",
+     "gated": true,
+     "value": "Some(s2i_asn1_int)"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_iobo.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_iobo.rs",
+     "index": null,
+     "line": 77,
+     "name": "ossl_v3_issued_on_behalf_of"
+    }
+   ],
+   "line": 77,
+   "row": "ossl_v3_issued_on_behalf_of",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_ISSUED_ON_BEHALF_OF",
+     "gated": true,
+     "value": "Some(i2r_ISSUED_ON_BEHALF_OF)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "GENERAL_NAME_it",
+     "gated": true,
+     "value": "Some(GENERAL_NAME_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_ist.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_ist.rs",
+     "index": null,
+     "line": 464,
+     "name": "ossl_v3_issuer_sign_tool"
+    }
+   ],
+   "line": 464,
+   "row": "ossl_v3_issuer_sign_tool",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_issuer_sign_tool",
+     "gated": true,
+     "value": "Some(i2r_issuer_sign_tool)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ISSUER_SIGN_TOOL_it",
+     "gated": true,
+     "value": "Some(ISSUER_SIGN_TOOL_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_issuer_sign_tool",
+     "gated": true,
+     "value": "Some(v2i_issuer_sign_tool)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "fn",
+   "file": "src/x509/v3_lib.rs",
+   "instances": [],
+   "line": 743,
+   "row": "fn:standard_ext_lookup",
+   "slots": {},
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "fn",
+   "file": "src/x509/v3_lib.rs",
+   "instances": [],
+   "line": 771,
+   "row": "fn:ext_get_nid_locked",
+   "slots": {},
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "fn",
+   "file": "src/x509/v3_lib.rs",
+   "instances": [],
+   "line": 808,
+   "row": "fn:X509V3_EXT_get_nid",
+   "slots": {},
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "fn",
+   "file": "src/x509/v3_lib.rs",
+   "instances": [],
+   "line": 823,
+   "row": "fn:X509V3_EXT_get",
+   "slots": {},
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_ncons.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_ncons.rs",
+     "index": null,
+     "line": 1512,
+     "name": "ossl_v3_name_constraints"
+    }
+   ],
+   "line": 1512,
+   "row": "ossl_v3_name_constraints",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_NAME_CONSTRAINTS",
+     "gated": true,
+     "value": "Some(i2r_NAME_CONSTRAINTS)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "NAME_CONSTRAINTS_it",
+     "gated": true,
+     "value": "Some(NAME_CONSTRAINTS_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_NAME_CONSTRAINTS",
+     "gated": true,
+     "value": "Some(v2i_NAME_CONSTRAINTS)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_ncons.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_ncons.rs",
+     "index": null,
+     "line": 1532,
+     "name": "ossl_v3_holder_name_constraints"
+    }
+   ],
+   "line": 1532,
+   "row": "ossl_v3_holder_name_constraints",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_NAME_CONSTRAINTS",
+     "gated": true,
+     "value": "Some(i2r_NAME_CONSTRAINTS)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "NAME_CONSTRAINTS_it",
+     "gated": true,
+     "value": "Some(NAME_CONSTRAINTS_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_NAME_CONSTRAINTS",
+     "gated": true,
+     "value": "Some(v2i_NAME_CONSTRAINTS)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_ncons.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_ncons.rs",
+     "index": null,
+     "line": 1552,
+     "name": "ossl_v3_delegated_name_constraints"
+    }
+   ],
+   "line": 1552,
+   "row": "ossl_v3_delegated_name_constraints",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_NAME_CONSTRAINTS",
+     "gated": true,
+     "value": "Some(i2r_NAME_CONSTRAINTS)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "NAME_CONSTRAINTS_it",
+     "gated": true,
+     "value": "Some(NAME_CONSTRAINTS_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_NAME_CONSTRAINTS",
+     "gated": true,
+     "value": "Some(v2i_NAME_CONSTRAINTS)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_no_ass.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_no_ass.rs",
+     "index": null,
+     "line": 123,
+     "name": "ossl_v3_no_assertion"
+    }
+   ],
+   "line": 123,
+   "row": "ossl_v3_no_assertion",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_NO_ASSERTION",
+     "gated": true,
+     "value": "Some(i2r_NO_ASSERTION)"
+    },
+    "i2s": {
+     "callback": "i2s_NO_ASSERTION",
+     "gated": true,
+     "value": "Some(i2s_NO_ASSERTION)"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_NULL_it",
+     "gated": true,
+     "value": "Some(ASN1_NULL_it)"
+    },
+    "r2i": {
+     "callback": "r2i_NO_ASSERTION",
+     "gated": true,
+     "value": "Some(r2i_NO_ASSERTION)"
+    },
+    "s2i": {
+     "callback": "s2i_NO_ASSERTION",
+     "gated": true,
+     "value": "Some(s2i_NO_ASSERTION)"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_no_rev_avail.rs",
+     "index": null,
+     "line": 110,
+     "name": "ossl_v3_no_rev_avail"
+    }
+   ],
+   "line": 110,
+   "row": "ossl_v3_no_rev_avail",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_NO_REV_AVAIL",
+     "gated": true,
+     "value": "Some(i2r_NO_REV_AVAIL)"
+    },
+    "i2s": {
+     "callback": "i2s_NO_REV_AVAIL",
+     "gated": true,
+     "value": "Some(i2s_NO_REV_AVAIL)"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_NULL_it",
+     "gated": true,
+     "value": "Some(ASN1_NULL_it)"
+    },
+    "r2i": {
+     "callback": "r2i_NO_REV_AVAIL",
+     "gated": true,
+     "value": "Some(r2i_NO_REV_AVAIL)"
+    },
+    "s2i": {
+     "callback": "s2i_NO_REV_AVAIL",
+     "gated": true,
+     "value": "Some(s2i_NO_REV_AVAIL)"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_pci.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_pci.rs",
+     "index": null,
+     "line": 781,
+     "name": "ossl_v3_pci"
+    }
+   ],
+   "line": 781,
+   "row": "ossl_v3_pci",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_pci",
+     "gated": true,
+     "value": "Some(i2r_pci)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "PROXY_CERT_INFO_EXTENSION_it",
+     "gated": true,
+     "value": "Some(crate::x509::v3_pcia::PROXY_CERT_INFO_EXTENSION_it)"
+    },
+    "r2i": {
+     "callback": "r2i_pci",
+     "gated": true,
+     "value": "Some(r2i_pci)"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_pcons.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_pcons.rs",
+     "index": null,
+     "line": 273,
+     "name": "ossl_v3_policy_constraints"
+    }
+   ],
+   "line": 273,
+   "row": "ossl_v3_policy_constraints",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": "i2v_POLICY_CONSTRAINTS",
+     "gated": true,
+     "value": "Some(i2v_POLICY_CONSTRAINTS)"
+    },
+    "it": {
+     "callback": "POLICY_CONSTRAINTS_it",
+     "gated": true,
+     "value": "Some(POLICY_CONSTRAINTS_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_POLICY_CONSTRAINTS",
+     "gated": true,
+     "value": "Some(v2i_POLICY_CONSTRAINTS)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_pku.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_pku.rs",
+     "index": null,
+     "line": 209,
+     "name": "ossl_v3_pkey_usage_period"
+    }
+   ],
+   "line": 209,
+   "row": "ossl_v3_pkey_usage_period",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_PKEY_USAGE_PERIOD",
+     "gated": true,
+     "value": "Some(i2r_PKEY_USAGE_PERIOD)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "PKEY_USAGE_PERIOD_it",
+     "gated": true,
+     "value": "Some(PKEY_USAGE_PERIOD_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_pmaps.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_pmaps.rs",
+     "index": null,
+     "line": 343,
+     "name": "ossl_v3_policy_mappings"
+    }
+   ],
+   "line": 343,
+   "row": "ossl_v3_policy_mappings",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": "i2v_POLICY_MAPPINGS",
+     "gated": true,
+     "value": "Some(i2v_POLICY_MAPPINGS)"
+    },
+    "it": {
+     "callback": "POLICY_MAPPINGS_it",
+     "gated": true,
+     "value": "Some(POLICY_MAPPINGS_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_POLICY_MAPPINGS",
+     "gated": true,
+     "value": "Some(v2i_POLICY_MAPPINGS)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "fn",
+   "file": "src/x509/v3_prn.rs",
+   "instances": [],
+   "line": 513,
+   "row": "fn:probe_row",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "it",
+     "gated": true,
+     "value": "it"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": true
+  },
+  {
+   "constructor": null,
+   "container_kind": "fn",
+   "file": "src/x509/v3_prn.rs",
+   "instances": [],
+   "line": 758,
+   "row": "fn:i2s_probe_row",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": "recording_i2s",
+     "gated": true,
+     "value": "Some(recording_i2s)"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "GENERAL_NAME_it",
+     "gated": true,
+     "value": "Some(crate::x509::v3_genn::GENERAL_NAME_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": true
+  },
+  {
+   "constructor": null,
+   "container_kind": "fn",
+   "file": "src/x509/v3_prn.rs",
+   "instances": [],
+   "line": 832,
+   "row": "fn:general_name_row",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r",
+     "gated": true,
+     "value": "i2r"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "GENERAL_NAME_it",
+     "gated": true,
+     "value": "Some(crate::x509::v3_genn::GENERAL_NAME_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": true
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_rolespec.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_rolespec.rs",
+     "index": null,
+     "line": 443,
+     "name": "ossl_v3_role_spec_cert_identifier"
+    }
+   ],
+   "line": 443,
+   "row": "ossl_v3_role_spec_cert_identifier",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX",
+     "gated": true,
+     "value": "Some(i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "OSSL_ROLE_SPEC_CERT_ID_SYNTAX_it",
+     "gated": true,
+     "value": "Some(OSSL_ROLE_SPEC_CERT_ID_SYNTAX_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": "alt_row",
+   "container_kind": "helper-call",
+   "file": "src/x509/v3_san.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_san.rs",
+     "index": 0,
+     "line": 1219,
+     "name": "ossl_v3_alt"
+    }
+   ],
+   "line": 1220,
+   "row": "ossl_v3_alt[0]",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": "san_i2v",
+     "gated": true,
+     "value": "Some(san_i2v)"
+    },
+    "it": {
+     "callback": "GENERAL_NAMES_it",
+     "gated": true,
+     "value": "Some(GENERAL_NAMES_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "san_v2i",
+     "gated": true,
+     "value": "Some(san_v2i)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": "alt_row",
+   "container_kind": "helper-call",
+   "file": "src/x509/v3_san.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_san.rs",
+     "index": 1,
+     "line": 1219,
+     "name": "ossl_v3_alt"
+    }
+   ],
+   "line": 1221,
+   "row": "ossl_v3_alt[1]",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": "san_i2v",
+     "gated": true,
+     "value": "Some(san_i2v)"
+    },
+    "it": {
+     "callback": "GENERAL_NAMES_it",
+     "gated": true,
+     "value": "Some(GENERAL_NAMES_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "san_v2i_issuer",
+     "gated": true,
+     "value": "Some(san_v2i_issuer)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": "alt_row",
+   "container_kind": "helper-call",
+   "file": "src/x509/v3_san.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_san.rs",
+     "index": 2,
+     "line": 1219,
+     "name": "ossl_v3_alt"
+    }
+   ],
+   "line": 1222,
+   "row": "ossl_v3_alt[2]",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": "san_i2v",
+     "gated": true,
+     "value": "Some(san_i2v)"
+    },
+    "it": {
+     "callback": "GENERAL_NAMES_it",
+     "gated": true,
+     "value": "Some(GENERAL_NAMES_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "fn",
+   "file": "src/x509/v3_sda.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_sda.rs",
+     "line": 259,
+     "name": "ossl_v3_subj_dir_attrs"
+    },
+    {
+     "file": "src/x509/v3_sda.rs",
+     "line": 263,
+     "name": "ossl_v3_associated_info"
+    }
+   ],
+   "line": 240,
+   "row": "fn:attributes_syntax_row",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_ATTRIBUTES_SYNTAX",
+     "gated": true,
+     "value": "Some(i2r_ATTRIBUTES_SYNTAX)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "OSSL_ATTRIBUTES_SYNTAX_it",
+     "gated": true,
+     "value": "Some(OSSL_ATTRIBUTES_SYNTAX_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_single_use.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_single_use.rs",
+     "index": null,
+     "line": 111,
+     "name": "ossl_v3_single_use"
+    }
+   ],
+   "line": 111,
+   "row": "ossl_v3_single_use",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_SINGLE_USE",
+     "gated": true,
+     "value": "Some(i2r_SINGLE_USE)"
+    },
+    "i2s": {
+     "callback": "i2s_SINGLE_USE",
+     "gated": true,
+     "value": "Some(i2s_SINGLE_USE)"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_NULL_it",
+     "gated": true,
+     "value": "Some(ASN1_NULL_it)"
+    },
+    "r2i": {
+     "callback": "r2i_SINGLE_USE",
+     "gated": true,
+     "value": "Some(r2i_SINGLE_USE)"
+    },
+    "s2i": {
+     "callback": "s2i_SINGLE_USE",
+     "gated": true,
+     "value": "Some(s2i_SINGLE_USE)"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_skid.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_skid.rs",
+     "index": null,
+     "line": 272,
+     "name": "ossl_v3_skey_id"
+    }
+   ],
+   "line": 272,
+   "row": "ossl_v3_skey_id",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": "skid_i2s",
+     "gated": true,
+     "value": "Some(skid_i2s)"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_OCTET_STRING_it",
+     "gated": true,
+     "value": "Some(ASN1_OCTET_STRING_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": "s2i_skey_id",
+     "gated": true,
+     "value": "Some(s2i_skey_id)"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_soa_id.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_soa_id.rs",
+     "index": null,
+     "line": 110,
+     "name": "ossl_v3_soa_identifier"
+    }
+   ],
+   "line": 110,
+   "row": "ossl_v3_soa_identifier",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_SOA_IDENTIFIER",
+     "gated": true,
+     "value": "Some(i2r_SOA_IDENTIFIER)"
+    },
+    "i2s": {
+     "callback": "i2s_SOA_IDENTIFIER",
+     "gated": true,
+     "value": "Some(i2s_SOA_IDENTIFIER)"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_NULL_it",
+     "gated": true,
+     "value": "Some(ASN1_NULL_it)"
+    },
+    "r2i": {
+     "callback": "r2i_SOA_IDENTIFIER",
+     "gated": true,
+     "value": "Some(r2i_SOA_IDENTIFIER)"
+    },
+    "s2i": {
+     "callback": "s2i_SOA_IDENTIFIER",
+     "gated": true,
+     "value": "Some(s2i_SOA_IDENTIFIER)"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_sxnet.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_sxnet.rs",
+     "index": null,
+     "line": 739,
+     "name": "ossl_v3_sxnet"
+    }
+   ],
+   "line": 739,
+   "row": "ossl_v3_sxnet",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "sxnet_i2r",
+     "gated": true,
+     "value": "Some(sxnet_i2r)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "SXNET_it",
+     "gated": true,
+     "value": "Some(SXNET_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "sxnet_v2i",
+     "gated": true,
+     "value": "Some(sxnet_v2i)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_timespec.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_timespec.rs",
+     "index": null,
+     "line": 2153,
+     "name": "ossl_v3_time_specification"
+    }
+   ],
+   "line": 2153,
+   "row": "ossl_v3_time_specification",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_OSSL_TIME_SPEC",
+     "gated": true,
+     "value": "Some(i2r_OSSL_TIME_SPEC)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "OSSL_TIME_SPEC_it",
+     "gated": true,
+     "value": "Some(OSSL_TIME_SPEC_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_tlsf.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_tlsf.rs",
+     "index": null,
+     "line": 318,
+     "name": "ossl_v3_tls_feature"
+    }
+   ],
+   "line": 318,
+   "row": "ossl_v3_tls_feature",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": "i2v_TLS_FEATURE",
+     "gated": true,
+     "value": "Some(i2v_TLS_FEATURE)"
+    },
+    "it": {
+     "callback": "tls_feature_it",
+     "gated": true,
+     "value": "Some(tls_feature_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": "v2i_TLS_FEATURE",
+     "gated": true,
+     "value": "Some(v2i_TLS_FEATURE)"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "static",
+   "file": "src/x509/v3_usernotice.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_usernotice.rs",
+     "index": null,
+     "line": 331,
+     "name": "ossl_v3_user_notice"
+    }
+   ],
+   "line": 331,
+   "row": "ossl_v3_user_notice",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": "i2r_USER_NOTICE_SYNTAX",
+     "gated": true,
+     "value": "Some(i2r_USER_NOTICE_SYNTAX)"
+    },
+    "i2s": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "OSSL_USER_NOTICE_SYNTAX_it",
+     "gated": true,
+     "value": "Some(OSSL_USER_NOTICE_SYNTAX_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  },
+  {
+   "constructor": null,
+   "container_kind": "fn",
+   "file": "src/x509/v3_utf8.rs",
+   "instances": [
+    {
+     "file": "src/x509/v3_utf8.rs",
+     "line": 209,
+     "name": "ossl_v3_utf8_list"
+    }
+   ],
+   "line": 145,
+   "row": "fn:ext_utf8string",
+   "slots": {
+    "d2i": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "ext_free": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "ext_new": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2d": {
+     "callback": null,
+     "gated": false,
+     "value": "None"
+    },
+    "i2r": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "i2s": {
+     "callback": "utf8_i2s",
+     "gated": true,
+     "value": "Some(utf8_i2s)"
+    },
+    "i2v": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "it": {
+     "callback": "ASN1_UTF8STRING_it",
+     "gated": true,
+     "value": "Some(ASN1_UTF8STRING_it)"
+    },
+    "r2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    },
+    "s2i": {
+     "callback": "utf8_s2i",
+     "gated": true,
+     "value": "Some(utf8_s2i)"
+    },
+    "v2i": {
+     "callback": null,
+     "gated": true,
+     "value": "None"
+    }
+   },
+   "test_only": false
+  }
+ ],
+ "schema": "openssl-rs/campaign/safe-c33/callback-registration-manifest/v1",
+ "source_identity": {
+  "inventory_source_head": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+  "repository_head": "38a1548be633f3d1be4e55330cbdcb29ef0b8de8",
+  "source_mode": "worktree",
+  "src_tree_unchanged_vs_inventory_head": true
+ },
+ "split": true,
+ "summary": {
+  "aux_registrations_by_slot": {
+   "d2i": 3,
+   "i2d": 3
+  },
+  "aux_registrations_recorded_not_gated": 6,
+  "definition_only_by_slot": {
+   "i2r": 15,
+   "i2s": 6,
+   "i2v": 4,
+   "s2i": 4,
+   "v2i": 7
+  },
+  "definition_only_callbacks_gated": 36,
+  "distinct_aux_callbacks": 5,
+  "distinct_definition_only_callbacks": 36,
+  "distinct_gated_callbacks": 135,
+  "distinct_slot_registered_callbacks": 99,
+  "gate_scope_note": "gated = six extension slots + ext_free, source-defined `unsafe fn`, production only; safe extern item functions and imported/macro targets are recorded but are not census-eligible",
+  "imported_or_macro_callbacks_not_gated": 19,
+  "registrations_total": 225,
+  "rows_parsed": 72,
+  "safe_extern_callbacks_not_gated": 34,
+  "slot_prefix_definitions": 115,
+  "slot_registrations_by_slot": {
+   "ext_free": 3,
+   "i2r": 39,
+   "i2s": 15,
+   "i2v": 13,
+   "r2i": 8,
+   "s2i": 12,
+   "v2i": 23
+  },
+  "slot_registrations_gated": 113,
+  "standard_exts_entries": 73,
+  "test_only_registrations_excluded": 8
+ }
+}
