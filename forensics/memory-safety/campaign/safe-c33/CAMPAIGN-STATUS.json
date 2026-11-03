@@ -1089,6 +1089,37 @@
     {"verdict": "REJECT", "date": "2026-11-02", "note": "eight self-description findings (see the receipt's rejection_findings)"},
     {"verdict": "REJECT", "date": "2026-11-02", "note": "four evidence-coherence findings (see the receipt's review_history)"}
    ]
+  },
+  {
+   "receipt": "boundary-sweep-B52",
+   "scope": "the 9 X509_VERIFY_POLICY s2i boundaries enumerated in boundary-sweep-B52.json (B52-S2I-001..009): the seven s2i_* operations plus ia5_s2i and utf8_s2i, dispatched through do_ext_nconf's s2i arm in src/x509/v3_conf.rs. audit_s2i (audit family), s2i_skey_id and s2i_poison are explicitly excluded and remain unclaimed; the latter two are also absent from the obligation queue, recorded in s2i-enumeration-gap.json",
+   "base_head": "a8716b4f2",
+   "source_state": "committed",
+   "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+   "discharged_boundaries": ["B52-S2I-001", "B52-S2I-002", "B52-S2I-003", "B52-S2I-004", "B52-S2I-005", "B52-S2I-006", "B52-S2I-007", "B52-S2I-008", "B52-S2I-009"],
+   "retained_boundaries": [],
+   "retained_state": "BLOCKED",
+   "hidden_obligations": 0,
+   "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B52.json",
+   "note": "Site-scoped only. X509_VERIFY_POLICY remains OWNERSHIP_RECONSTRUCTED mechanism-wide. This row does not make the 's2i family' exhaustive: s2i-enumeration-gap.json records 63 slot callbacks absent from the obligation queue, which blocks graduation independently of this discharge.",
+   "adjudicated": true,
+   "adjudication": {
+    "verdict": "APPROVE",
+    "date": "2026-11-02",
+    "reviewer": "independent adversarial adjudicator (session 810ca847-fab2-4746-8b35-441542a1c60f); transcribed verbatim by the orchestrator",
+    "verdict_text": "APPROVE",
+    "conditions": "correct the stale identity fields to S in the evidence commit, regenerate the closure at S, recompute spans (expected identical), and keep audit_s2i / s2i_skey_id / s2i_poison unclaimed",
+    "conditions_met": "identity strings corrected to S; spans recomputed at S (bit-identical); the three exclusions declared; baseline regenerated at S",
+    "mechanism_state_unchanged": "X509_VERIFY_POLICY remains OWNERSHIP_RECONSTRUCTED mechanism-wide",
+    "structural_mechanism": "the B51b RegistryReadGuard already spans the s2i branch of do_ext_nconf; the canary is s2i-specific (own probe row, own observation flag) and fails when the guard is removed",
+    "delta_honesty": "11 files, 296 insertions / 5 deletions; the ten non-test files are comment-only; all 111 non-comment additions in v3_conf.rs are inside mod tests; no functional fix",
+    "residuals_open": ["B52-R4: no authority differential, Miri, ASan or TSan", "B52-R2: caller/registrar duties retained and stated"],
+    "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B52.json"
+   },
+   "review_history": [
+    {"verdict": "UNAPPLIED", "date": "2026-11-02", "note": "authoring state: applied = false with a prohibition against application"},
+    {"verdict": "APPROVE", "date": "2026-11-02", "note": "single review; no rejection preceded it"}
+   ]
   }
  ],
  "defects_closed": [
