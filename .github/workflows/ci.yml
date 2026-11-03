@@ -204,6 +204,13 @@ jobs:
       # the closure is a hard prerequisite, not a skip, and the gate exits
       # non-zero until the measured enrolment step lands. The out-dir is a
       # fresh RUNNER_TEMP path, which also exercises the gate's mkdir contract.
+      # The inventory this gate compares against is the ENUMERATED closure
+      # (378 obligations: 186 discharged / 192 blocked / 0 unknown), because the
+      # 66 admissions from this gate are part of the queue. Pointing it at the
+      # pre-enrolment closure would fail forever on entries that are now present.
+      # The closure itself is REFUSED (MISSING_BOUNDARY_RECEIPT over 13 files);
+      # that is recorded in CAMPAIGN-STATUS.json and does not make the enumeration
+      # incomplete -- the two gates measure different properties.
       - name: Callback enumeration completeness (extension-slot registrations vs inventory)
         if: >-
           github.ref == 'refs/heads/main'
@@ -211,7 +218,7 @@ jobs:
           || github.event_name == 'workflow_dispatch'
         run: |
           set -euo pipefail
-          closure=evidence/closure-ssh-b52-applied.json
+          closure=evidence/closure-ssh-b52-enumerated.json
           if [ ! -f "$closure" ]; then
             echo "::error::callback gate prerequisite missing: $closure"
             exit 1
@@ -219,6 +226,33 @@ jobs:
           python3 forensics/tools/callback_enumeration_gate.py \
             --root . --closure "$closure" \
             --out-dir "${RUNNER_TEMP}/callback-enumeration-gate"
+
+      # The gate above is syntactic: a row produced by a macro expansion, a
+      # const-fn instance, or a `..base` inherited slot is invisible to it.
+      # This step reads the committed built libcrypto.so.3 and fails when the
+      # compiled registration table contains a target the manifest does not
+      # account for (or a manifest registration is dead in the artifact).
+      # A missing artifact or manifest is a failure, never a skip.
+      - name: Callback artifact cross-check (compiled registration targets vs manifest)
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
+        run: |
+          set -euo pipefail
+          artifact=artifacts/phase2/install/lib/libcrypto.so.3
+          manifest=forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-registration-manifest.json
+          if [ ! -f "$artifact" ]; then
+            echo "::error::callback artifact cross-check prerequisite missing: $artifact"
+            exit 1
+          fi
+          if [ ! -f "$manifest" ]; then
+            echo "::error::callback artifact cross-check prerequisite missing: $manifest"
+            exit 1
+          fi
+          python3 forensics/tools/callback_artifact_crosscheck.py \
+            --artifact "$artifact" --manifest "$manifest" \
+            --out "${RUNNER_TEMP}/callback-artifact-crosscheck.json"
 
       # Every generated artefact is a function of committed inputs, so
       # regenerating it must reproduce it. Build-product digests are normalised
