@@ -1,0 +1,711 @@
+{
+ "receipt": "boundary-sweep-B52",
+ "date": "2026-11-03",
+ "campaign": "safe-c33 shared-contract establishment (E2 follow-on: the X509_VERIFY_POLICY extension-method s2i config decoders)",
+ "subphase": "B52 takes the nine s2i config-decoder sites left BLOCKED after B51. do_ext_nconf dispatches v2i first, then s2i (src/x509/v3_conf.rs:1095), then r2i; the s2i arm receives the raw NUL-terminated configuration string rather than a parsed stack. B51b already makes row liveness structural with RegistryReadGuard across the lookup, the slot and the encoder; B52 contracts the nine callbacks, adds the missing shared s2i slot contract, and adds an s2i-arm liveness canary (B51's canary exercised only the v2i arm). No functional defect was found and no production code changed.",
+ "candidate": {
+  "base_head": "a8716b4f2",
+  "base_commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+  "base_commit_subject": "x509: s2i contracts and dispatcher tests (B52 candidate)",
+  "branch": "stage/p25/element7-s2b",
+  "source_state": "candidate S = a8716b4f2 (commit a8716b4f2112bde03c97db5ff7bd1caf3a483c35); committed and clean",
+  "provenance": "Every span_sha256 was computed with consumer_closure.resolve_operation_span(..., source_commit='a8716b4f2112bde03c97db5ff7bd1caf3a483c35'). files_sha256 and working_tree_sha256 are sha256 over git show a8716b4f2112bde03c97db5ff7bd1caf3a483c35:<path>; the committed and clean worktree equals S. No span_post_edit_sha256 remains; each site has exactly one authoritative hash bound to S.",
+  "files": [
+   "src/x509/v3_group_ac.rs",
+   "src/x509/v3_ia5.rs",
+   "src/x509/v3_ind_iss.rs",
+   "src/x509/v3_int.rs",
+   "src/x509/v3_no_ass.rs",
+   "src/x509/v3_no_rev_avail.rs",
+   "src/x509/v3_single_use.rs",
+   "src/x509/v3_soa_id.rs",
+   "src/x509/v3_utf8.rs",
+   "src/x509/v3_lib.rs",
+   "src/x509/v3_conf.rs"
+  ],
+  "files_sha256": {
+   "src/x509/v3_group_ac.rs": "50541e2421e68c7e52ecfc7cc020e13558e215e120b57ee19fd6937b7dd95f58",
+   "src/x509/v3_ia5.rs": "9aa02ffc41f209505de5520857dced5c043d535bca4cea754580136faae92953",
+   "src/x509/v3_ind_iss.rs": "7ec07c61e400740471df25498b2f546237e01c75df1cea83fdc282150a64b4cb",
+   "src/x509/v3_int.rs": "a115aec83202654ef8dbba05a4f7f675720f6d3e6360a9a9d1456d25f304529d",
+   "src/x509/v3_no_ass.rs": "0eddf7501cf9475ed313be6c7061e61cb93ff9890def71d6899ab0b7895b0a4b",
+   "src/x509/v3_no_rev_avail.rs": "fb94c4b9f782a3abbad1954942d5524478b95f93d65e16000e23e6d5ba2b78f4",
+   "src/x509/v3_single_use.rs": "46ac6b7297118c4618b2dab1fabc78c360c223d6500920207f7b2d4eef6b20c5",
+   "src/x509/v3_soa_id.rs": "04e38eedb56479149f5500f8b0ac78692ff1bb0368f135a6aa268d2042b395ed",
+   "src/x509/v3_utf8.rs": "8768f06bc4423ee8634719b46437c3e974cb19c4f052d4bcfcb4bd7602cc5c68",
+   "src/x509/v3_lib.rs": "4386b195111a77621d5cb9f16c4a55a84f156f4d1169d88821f6ca17d3044300",
+   "src/x509/v3_conf.rs": "0f49230754d8a3e2fce4ecf980746ac5dcded7440d03c3595ed79af4884f2c86"
+  },
+  "working_tree_sha256": {
+   "src/x509/v3_group_ac.rs": "50541e2421e68c7e52ecfc7cc020e13558e215e120b57ee19fd6937b7dd95f58",
+   "src/x509/v3_ia5.rs": "9aa02ffc41f209505de5520857dced5c043d535bca4cea754580136faae92953",
+   "src/x509/v3_ind_iss.rs": "7ec07c61e400740471df25498b2f546237e01c75df1cea83fdc282150a64b4cb",
+   "src/x509/v3_int.rs": "a115aec83202654ef8dbba05a4f7f675720f6d3e6360a9a9d1456d25f304529d",
+   "src/x509/v3_no_ass.rs": "0eddf7501cf9475ed313be6c7061e61cb93ff9890def71d6899ab0b7895b0a4b",
+   "src/x509/v3_no_rev_avail.rs": "fb94c4b9f782a3abbad1954942d5524478b95f93d65e16000e23e6d5ba2b78f4",
+   "src/x509/v3_single_use.rs": "46ac6b7297118c4618b2dab1fabc78c360c223d6500920207f7b2d4eef6b20c5",
+   "src/x509/v3_soa_id.rs": "04e38eedb56479149f5500f8b0ac78692ff1bb0368f135a6aa268d2042b395ed",
+   "src/x509/v3_utf8.rs": "8768f06bc4423ee8634719b46437c3e974cb19c4f052d4bcfcb4bd7602cc5c68",
+   "src/x509/v3_lib.rs": "4386b195111a77621d5cb9f16c4a55a84f156f4d1169d88821f6ca17d3044300",
+   "src/x509/v3_conf.rs": "0f49230754d8a3e2fce4ecf980746ac5dcded7440d03c3595ed79af4884f2c86"
+  },
+  "note": "line is advisory under content addressing; span_sha256 is the acceptance binding. The candidate is committed at a8716b4f2112bde03c97db5ff7bd1caf3a483c35; spans and file hashes are bound to that commit, not the worktree."
+ },
+ "authority": {
+  "id": "openssl-3.6.4-production",
+  "source": "forensics/authorities/src/openssl-3.6.4",
+  "header": "include/openssl/x509v3.h.in:56-57 (X509V3_EXT_S2I) and :65-85 (the method struct)",
+  "dispatch": "crypto/x509/v3_conf.c:79-135 (do_ext_nconf) and crypto/x509/v3_lib.c:52-71 (X509V3_EXT_get_nid)",
+  "note": "The authority tests v2i, then s2i, then r2i; the s2i arm calls method->s2i(method, ctx, value) with the config string, encodes a non-NULL result through method->it/i2d, and frees it with method->ext_free or ASN1_item_free. The candidate's s2i arm is the same shape and adds no production guard."
+ },
+ "mechanism": {
+  "id": "X509_VERIFY_POLICY",
+  "state": "OWNERSHIP_RECONSTRUCTED",
+  "state_source": "state.json#/mechanisms[id=X509_VERIFY_POLICY]",
+  "discharge": "SITE-SCOPED: the nine s2i boundaries below only. The mechanism state is unchanged and is not discharged mechanism-wide."
+ },
+ "scope": {
+  "aggregation": ".obligations[] | select(.mechanism == \"X509_VERIFY_POLICY\" and .status == \"BLOCKED\") over evidence/closure-ssh-b51-applied.json (48 DISCHARGED / 32 BLOCKED / 0 UNKNOWN; span_source_binding=git-blob at 1ecc284e3)",
+  "raw_blocked_count": 32,
+  "s2i_string_matched_blocked_count": 10,
+  "chosen_family": {
+   "family": "s2i",
+   "count": 9,
+   "why": "Ten BLOCKED obligations have an s2i substring in the item: the seven s2i_-prefixed names plus ia5_s2i, audit_s2i and utf8_s2i. The instrument exposes no family field on obligations, so the family is derived from the receipt taxonomy in forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B51.json scope.not_touched, which records s2i=9 and audit=2; the audit=2 pair is audit_i2s + audit_s2i (both in src/x509/v3_audit_id.rs), so audit_s2i is the audit family and the nine s2i sites are the seven s2i_* names plus ia5_s2i and utf8_s2i. All nine are registered in the X509V3_EXT_METHOD.s2i slot; source registration alone cannot distinguish audit_s2i, which is also an s2i slot."
+  },
+  "excluded": [
+   {
+    "operation": "audit_s2i",
+    "file": "src/x509/v3_audit_id.rs",
+    "line": 37,
+    "reason": "B51/B50 taxonomy counts audit_i2s + audit_s2i as family audit (count 2), not s2i; outside the nine-site s2i scope. Remains BLOCKED, not claimed."
+   }
+  ],
+  "not_touched": [
+   {
+    "family": "audit",
+    "count": 2
+   },
+   {
+    "family": "i2v",
+    "count": 7
+   },
+   {
+    "family": "r2i",
+    "count": 6
+   },
+   {
+    "family": "print",
+    "count": 4
+   },
+   {
+    "family": "bitst",
+    "count": 2
+   },
+   {
+    "family": "non-method",
+    "count": 2
+   }
+  ],
+  "baseline_receipt": "evidence/closure-ssh-b51-applied.json"
+ },
+ "shared_contract": "s2i slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). do_ext_nconf holds RegistryReadGuard across the whole dispatch (src/x509/v3_conf.rs:1035), so the row resolved through X509V3_EXT_get_nid stays live across the lookup, the s2i callback and the encoder; it refuses ext_nid == NID_undef (:1007) and a NULL row (:1014). The s2i arm does not parse or pre-validate the value: it calls cb(method, ctx, value) at :1097 with the caller's NUL-terminated config string, which the callback must consume read-only and must not free or retain. On a non-NULL result the dispatcher encodes through do_ext_i2d (:1126) and releases with ASN1_item_free(ext_struc, it()) or ext_free (:1127-1131). The callback must return a fresh object of exactly the row's `it` type, releasing any partial value itself on failure.",
+ "dispatch_paths": {
+  "entry_points": [
+   "X509V3_EXT_nconf (src/x509/v3_conf.rs:1195) -> X509V3_EXT_nconf_int(:1142) -> do_ext_nconf(:998).",
+   "X509V3_EXT_nconf_nid (src/x509/v3_conf.rs:1212) -> do_ext_nconf(:998); this is the entry the tests drive.",
+   "X509V3_EXT_conf (:1426) and X509V3_EXT_conf_nid (:1455) build a temporary NCONF and call the two above.",
+   "X509V3_EXT_add_nconf_sk (:1245) walks a config section and calls X509V3_EXT_nconf_int(:1291)."
+  ],
+  "lookup": "X509V3_EXT_get_nid (src/x509/v3_lib.rs:748) returns a BORROWED row; do_ext_nconf takes its own RegistryReadGuard at :1035 and holds it across the s2i slot and do_ext_i2d, so a concurrent X509V3_EXT_cleanup cannot release a DYNAMIC row for the whole dispatch.",
+  "values": "The s2i arm has no parsed stack: `value` is the caller's NUL-terminated configuration string, borrowed, not owned by the dispatcher. NULL handling is the callback's (the five ASN1_NULL rows and s2i_NO_ASSERTION ignore it; s2i_ASN1_INTEGER/IA5/UTF8 refuse it).",
+  "guard": "NID_undef (:1007), NULL row (:1014) and the read-hold acquisition (:1035) precede the s2i slot."
+ },
+ "row_liveness": {
+  "question": "Does the registry read hold span the s2i dispatch, as B51 proved for v2i?",
+  "answer": "YES, ENFORCED. B51b's RegistryReadGuard in do_ext_nconf already covers the s2i branch at :1095; B52 adds the branch-specific canary B52-C1 because B51's tests exercised only the v2i arm. A concurrent X509V3_EXT_cleanup cannot release a DYNAMIC row under the callback.",
+  "enforcement": "src/x509/v3_conf.rs do_ext_nconf (:1035), RAII drop on every path. B52 adds no new production hold.",
+  "observation": "A #[cfg(test)] thread-local probe (v3_lib.rs read_hold_probe) is incremented by RegistryReadGuard::acquire and decremented by Drop; the B52 s2i probe callback records it on entry. A neutral control asserts the probe is false before dispatch.",
+  "static_rows": "The nine rows are process-lifetime pub static values reached through STANDARD_EXTS; X509V3_EXT_cleanup cannot release them. The canary uses a caller-owned Box::leak row registered under a fresh NID so the callback is reached through the registry, not called directly."
+ },
+ "defect_class": "uncontracted unsafe fn definitions at nine X509_VERIFY_POLICY s2i sites, plus a missing shared s2i slot contract. Each callback carried a block-level description but no fn-level # Safety. The dispatcher evidence is unchanged; no functional defect was found. The production delta is documentation only. The ia5_s2i and utf8_s2i in-body comments were also corrected: they cited the i2s slot contract for a `*const c_char` argument.",
+ "boundaries": [
+  {
+   "id": "B52-S2I-001",
+   "file": "src/x509/v3_group_ac.rs",
+   "line": 87,
+   "line_current": 101,
+   "line_working_tree": 101,
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_GROUP_AC",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *const c_char) -> *mut c_void",
+   "registration": "row ossl_v3_group_ac, s2i slot at src/x509/v3_group_ac.rs:119 (working tree) / :105 at the candidate",
+   "guard": "do_ext_nconf holds RegistryReadGuard from the lookup through the `s2i` arm (:1035), refuses ext_nid == NID_undef (:1007) and a NULL row (:1014), passes the raw `value` at :1097, and encodes/frees a non-NULL result at :1126-1132. No new production guard was added.",
+   "disposition": "SAFETY_DISCHARGED (scope: s2i_GROUP_AC and its do_ext_nconf s2i dispatch path; src/x509/v3_group_ac.rs:87)",
+   "contract": "The `s2i` slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). Caller do_ext_nconf's `s2i` arm (src/x509/v3_conf.rs:1095) establishes: `method` is a live borrowed row resolved under the registry read hold; `value` is the caller's NUL-terminated configuration string, borrowed for the call; `ctx` is NULL or live. This body reads none of them and returns ASN1_NULL_new(), the authority's `(ASN1_VALUE *)1` sentinel. On success the dispatcher encodes it with the row's ASN1_NULL_it and releases it once at :1127-1131 (ASN1_NULL_it's free is the authority's no-op). ASN1_NULL_new is a constant return and cannot fail. The returned type must match the row's `it`, and any `usr_data` meaning is the registrar's obligation. Row liveness while the callback runs is enforced by the dispatcher's registry read hold (B51-R1), so the caller need not exclude X509V3_EXT_cleanup during the call. X509V3_EXT_add still borrows caller-owned row storage, and a callback must not call a registry writer (B51-R9).",
+   "established": [
+    "do_ext_nconf resolves `method` through X509V3_EXT_get_nid under its own RegistryReadGuard and refuses ext_nid == NID_undef and a NULL row (:1007-1018).",
+    "do_ext_nconf holds the registry read hold from before the lookup, across the `s2i` callback at :1097, and through do_ext_i2d (:1035; B51-R1/B51-H1).",
+    "The `s2i` arm passes the raw, NUL-terminated configuration `value` unparsed and calls cb(method, ctx, value) at :1097, matching crypto/x509/v3_conf.c:113-116; it builds no STACK_OF(CONF_VALUE) on this arm.",
+    "A non-NULL result is encoded by do_ext_i2d at :1126 and released exactly once with the row's own `it` (ASN1_item_free) or `ext_free` at :1127-1131.",
+    "Row liveness while the callback runs is enforced by the dispatcher's read hold; the registrar still keeps caller-owned row storage live and unmodified while registered (X509V3_EXT_add's own Safety block).",
+    "ASN1_NULL_new() returns the constant sentinel `1 as *mut c_int` and reads no argument, so the callback has no failure path."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_conf.c:79-135 calls method->s2i(method, ctx, value) only after v2i/x2i precedence and frees ext_struc with ASN1_item_free/ext_free; the callback is transcribed from crypto/x509/crypto/x509/v3_group_ac.c:35-40."
+   ],
+   "tests": [
+    "x509::v3_conf::tests::s2i_callbacks_build_end_to_end",
+    "x509::v3_conf::tests::the_s2i_dispatch_holds_the_registry_read_lock_across_the_callback"
+   ],
+   "tests_note": "s2i_callbacks_build_end_to_end drives the standard row for this callback through X509V3_EXT_nconf_nid; because the row has no v2i slot, a non-NULL correctly tagged extension can be produced only by the s2i callback. The shared s2i-arm liveness canary is B52-C1; the int reject test exercises the partial-object release path.",
+   "span_sha256": "89f34757e4a13ea0b7f424a56e932be583c42ba8f09405d1623cd19b9927d223",
+   "span_start_line": 101,
+   "span_end_line": 107,
+   "span_source_commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "line_current_history": [
+    {
+     "value": 87,
+     "candidate": "1ecc284e3",
+     "note": "prior B52 draft coordinate; superseded by committed S a8716b4f2"
+    }
+   ]
+  },
+  {
+   "id": "B52-S2I-002",
+   "file": "src/x509/v3_ia5.rs",
+   "line": 197,
+   "line_current": 210,
+   "line_working_tree": 210,
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ia5_s2i",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *const c_char) -> *mut c_void",
+   "registration": "row ossl_v3_ns_ia5_list[0..6], s2i slot at src/x509/v3_ia5.rs:151 (working tree) / :151 at the candidate",
+   "guard": "do_ext_nconf holds RegistryReadGuard from the lookup through the `s2i` arm (:1035), refuses ext_nid == NID_undef (:1007) and a NULL row (:1014), passes the raw `value` at :1097, and encodes/frees a non-NULL result at :1126-1132. No new production guard was added.",
+   "disposition": "SAFETY_DISCHARGED (scope: ia5_s2i and its do_ext_nconf s2i dispatch path; src/x509/v3_ia5.rs:197)",
+   "contract": "The `s2i` slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). Caller do_ext_nconf's `s2i` arm (src/x509/v3_conf.rs:1095) establishes: `method` is a live borrowed row resolved under the registry read hold; `value` is the caller's NUL-terminated configuration string, borrowed for the call; `ctx` is NULL or live. This adapter forwards `value` to s2i_ASN1_IA5STRING, whose contract accepts NULL or a NUL-terminated string and refuses NULL. That function allocates the ASN1_IA5STRING, sets it from the string, and frees the partial ASN1_IA5STRING if ASN1_STRING_set fails. On success it returns a fresh ASN1_IA5STRING exclusively owned by the dispatcher, encoded with the row's ASN1_IA5STRING_it and released once at :1127-1131; on failure it raises and returns NULL with nothing retained. This wrapper neither reads nor retains `method`/`ctx`, and `value` remains borrowed. The returned type must match the row's `it`; that pairing is the registrar's obligation. Row liveness is enforced by the dispatcher's read hold (B51-R1), row storage lifetime remains the registrar's duty, and a callback must not call a registry writer (B51-R9).",
+   "established": [
+    "do_ext_nconf resolves `method` through X509V3_EXT_get_nid under its own RegistryReadGuard and refuses ext_nid == NID_undef and a NULL row (:1007-1018).",
+    "do_ext_nconf holds the registry read hold from before the lookup, across the `s2i` callback at :1097, and through do_ext_i2d (:1035; B51-R1/B51-H1).",
+    "The `s2i` arm passes the raw, NUL-terminated configuration `value` unparsed and calls cb(method, ctx, value) at :1097, matching crypto/x509/v3_conf.c:113-116; it builds no STACK_OF(CONF_VALUE) on this arm.",
+    "A non-NULL result is encoded by do_ext_i2d at :1126 and released exactly once with the row's own `it` (ASN1_item_free) or `ext_free` at :1127-1131.",
+    "Row liveness while the callback runs is enforced by the dispatcher's read hold; the registrar still keeps caller-owned row storage live and unmodified while registered (X509V3_EXT_add's own Safety block).",
+    "s2i_ASN1_IA5STRING refuses a NULL `str_` (raising X509V3_R_INVALID_NULL_ARGUMENT) and frees its fresh string if ASN1_STRING_set fails."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_conf.c:79-135 calls method->s2i(method, ctx, value) only after v2i/x2i precedence and frees ext_struc with ASN1_item_free/ext_free; the callback is transcribed from crypto/x509/crypto/x509/v3_ia5.c:41-61."
+   ],
+   "tests": [
+    "x509::v3_conf::tests::s2i_callbacks_build_end_to_end",
+    "x509::v3_conf::tests::the_s2i_dispatch_holds_the_registry_read_lock_across_the_callback"
+   ],
+   "tests_note": "s2i_callbacks_build_end_to_end drives the standard row for this callback through X509V3_EXT_nconf_nid; because the row has no v2i slot, a non-NULL correctly tagged extension can be produced only by the s2i callback. The shared s2i-arm liveness canary is B52-C1; the int reject test exercises the partial-object release path.",
+   "span_sha256": "00eaeb27a8e602a7edac74ec3a8c37ea6b9119fd0d9213cfda549ffb41052d87",
+   "span_start_line": 210,
+   "span_end_line": 218,
+   "span_source_commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "span_post_edit_note": "The wrapper's in-body SAFETY comment was corrected (it cited the i2s slot contract for a `*const c_char` argument); the candidate-bound hash is the acceptance binding, and the orchestrator must recompute at the applied candidate per AGENTS.md \u00a722.",
+   "line_current_history": [
+    {
+     "value": 197,
+     "candidate": "1ecc284e3",
+     "note": "prior B52 draft coordinate; superseded by committed S a8716b4f2"
+    }
+   ]
+  },
+  {
+   "id": "B52-S2I-003",
+   "file": "src/x509/v3_ind_iss.rs",
+   "line": 87,
+   "line_current": 101,
+   "line_working_tree": 101,
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_INDIRECT_ISSUER",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *const c_char) -> *mut c_void",
+   "registration": "row ossl_v3_indirect_issuer, s2i slot at src/x509/v3_ind_iss.rs:119 (working tree) / :105 at the candidate",
+   "guard": "do_ext_nconf holds RegistryReadGuard from the lookup through the `s2i` arm (:1035), refuses ext_nid == NID_undef (:1007) and a NULL row (:1014), passes the raw `value` at :1097, and encodes/frees a non-NULL result at :1126-1132. No new production guard was added.",
+   "disposition": "SAFETY_DISCHARGED (scope: s2i_INDIRECT_ISSUER and its do_ext_nconf s2i dispatch path; src/x509/v3_ind_iss.rs:87)",
+   "contract": "The `s2i` slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). Caller do_ext_nconf's `s2i` arm (src/x509/v3_conf.rs:1095) establishes: `method` is a live borrowed row resolved under the registry read hold; `value` is the caller's NUL-terminated configuration string, borrowed for the call; `ctx` is NULL or live. This body reads none of them and returns ASN1_NULL_new(), the authority's `(ASN1_VALUE *)1` sentinel. On success the dispatcher encodes it with the row's ASN1_NULL_it and releases it once at :1127-1131 (ASN1_NULL_it's free is the authority's no-op). ASN1_NULL_new is a constant return and cannot fail. The returned type must match the row's `it`, and any `usr_data` meaning is the registrar's obligation. Row liveness while the callback runs is enforced by the dispatcher's registry read hold (B51-R1), so the caller need not exclude X509V3_EXT_cleanup during the call. X509V3_EXT_add still borrows caller-owned row storage, and a callback must not call a registry writer (B51-R9).",
+   "established": [
+    "do_ext_nconf resolves `method` through X509V3_EXT_get_nid under its own RegistryReadGuard and refuses ext_nid == NID_undef and a NULL row (:1007-1018).",
+    "do_ext_nconf holds the registry read hold from before the lookup, across the `s2i` callback at :1097, and through do_ext_i2d (:1035; B51-R1/B51-H1).",
+    "The `s2i` arm passes the raw, NUL-terminated configuration `value` unparsed and calls cb(method, ctx, value) at :1097, matching crypto/x509/v3_conf.c:113-116; it builds no STACK_OF(CONF_VALUE) on this arm.",
+    "A non-NULL result is encoded by do_ext_i2d at :1126 and released exactly once with the row's own `it` (ASN1_item_free) or `ext_free` at :1127-1131.",
+    "Row liveness while the callback runs is enforced by the dispatcher's read hold; the registrar still keeps caller-owned row storage live and unmodified while registered (X509V3_EXT_add's own Safety block).",
+    "ASN1_NULL_new() returns the constant sentinel and reads no argument."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_conf.c:79-135 calls method->s2i(method, ctx, value) only after v2i/x2i precedence and frees ext_struc with ASN1_item_free/ext_free; the callback is transcribed from crypto/x509/crypto/x509/v3_ind_iss.c:35-40."
+   ],
+   "tests": [
+    "x509::v3_conf::tests::s2i_callbacks_build_end_to_end",
+    "x509::v3_conf::tests::the_s2i_dispatch_holds_the_registry_read_lock_across_the_callback"
+   ],
+   "tests_note": "s2i_callbacks_build_end_to_end drives the standard row for this callback through X509V3_EXT_nconf_nid; because the row has no v2i slot, a non-NULL correctly tagged extension can be produced only by the s2i callback. The shared s2i-arm liveness canary is B52-C1; the int reject test exercises the partial-object release path.",
+   "span_sha256": "f8c8170d8e72e759c9fcd4831a84b386b61f4f4fd487e0f7ee7add6de080e7d0",
+   "span_start_line": 101,
+   "span_end_line": 107,
+   "span_source_commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "line_current_history": [
+    {
+     "value": 87,
+     "candidate": "1ecc284e3",
+     "note": "prior B52 draft coordinate; superseded by committed S a8716b4f2"
+    }
+   ]
+  },
+  {
+   "id": "B52-S2I-004",
+   "file": "src/x509/v3_int.rs",
+   "line": 51,
+   "line_current": 65,
+   "line_working_tree": 65,
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_asn1_int",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *const c_char) -> *mut c_void",
+   "registration": "row ossl_v3_inhibit_anyp, s2i slot at src/x509/v3_int.rs:126 (working tree) / :112 at the candidate",
+   "guard": "do_ext_nconf holds RegistryReadGuard from the lookup through the `s2i` arm (:1035), refuses ext_nid == NID_undef (:1007) and a NULL row (:1014), passes the raw `value` at :1097, and encodes/frees a non-NULL result at :1126-1132. No new production guard was added.",
+   "disposition": "SAFETY_DISCHARGED (scope: s2i_asn1_int and its do_ext_nconf s2i dispatch path; src/x509/v3_int.rs:51)",
+   "contract": "The `s2i` slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). Caller do_ext_nconf's `s2i` arm (src/x509/v3_conf.rs:1095) establishes: `method` is a live borrowed row resolved under the registry read hold; `value` is the caller's NUL-terminated configuration string (the forwarded s2i_ASN1_INTEGER also refuses NULL), borrowed for the call; `ctx` is NULL or live and is ignored. The body forwards to s2i_ASN1_INTEGER, which strips an optional sign and 0x/0X prefix, requires complete consumption, and frees its BIGNUM/ASN1_INTEGER on every failure. On success it returns a fresh ASN1_INTEGER exclusively owned by the dispatcher, encoded with the row's ASN1_INTEGER_it and released once at :1127-1131; on failure it returns NULL and retains nothing. The returned type must match the row's `it`; that pairing is the registrar's obligation. Row liveness is enforced by the dispatcher's read hold (B51-R1), row storage lifetime remains the registrar's duty, and a callback must not call a registry writer (B51-R9).",
+   "established": [
+    "do_ext_nconf resolves `method` through X509V3_EXT_get_nid under its own RegistryReadGuard and refuses ext_nid == NID_undef and a NULL row (:1007-1018).",
+    "do_ext_nconf holds the registry read hold from before the lookup, across the `s2i` callback at :1097, and through do_ext_i2d (:1035; B51-R1/B51-H1).",
+    "The `s2i` arm passes the raw, NUL-terminated configuration `value` unparsed and calls cb(method, ctx, value) at :1097, matching crypto/x509/v3_conf.c:113-116; it builds no STACK_OF(CONF_VALUE) on this arm.",
+    "A non-NULL result is encoded by do_ext_i2d at :1126 and released exactly once with the row's own `it` (ASN1_item_free) or `ext_free` at :1127-1131.",
+    "Row liveness while the callback runs is enforced by the dispatcher's read hold; the registrar still keeps caller-owned row storage live and unmodified while registered (X509V3_EXT_add's own Safety block).",
+    "s2i_ASN1_INTEGER refuses a NULL/empty/unconsumed number and frees its BIGNUM and partial ASN1_INTEGER on every failure (:196-249)."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_conf.c:79-135 calls method->s2i(method, ctx, value) only after v2i/x2i precedence and frees ext_struc with ASN1_item_free/ext_free; the callback is transcribed from crypto/x509/crypto/x509/v3_int.c:31-35."
+   ],
+   "tests": [
+    "x509::v3_conf::tests::s2i_callbacks_build_end_to_end",
+    "x509::v3_conf::tests::s2i_asn1_int_callback_rejects_a_bad_value",
+    "x509::v3_conf::tests::the_s2i_dispatch_holds_the_registry_read_lock_across_the_callback"
+   ],
+   "tests_note": "s2i_callbacks_build_end_to_end drives the standard row for this callback through X509V3_EXT_nconf_nid; because the row has no v2i slot, a non-NULL correctly tagged extension can be produced only by the s2i callback. The shared s2i-arm liveness canary is B52-C1; the int reject test exercises the partial-object release path.",
+   "span_sha256": "36cc7c66011c79e0545a3d755de657fd2bc69f5a25f014ff3498c27b18e284ad",
+   "span_start_line": 65,
+   "span_end_line": 73,
+   "span_source_commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "line_current_history": [
+    {
+     "value": 51,
+     "candidate": "1ecc284e3",
+     "note": "prior B52 draft coordinate; superseded by committed S a8716b4f2"
+    }
+   ]
+  },
+  {
+   "id": "B52-S2I-005",
+   "file": "src/x509/v3_no_ass.rs",
+   "line": 96,
+   "line_current": 111,
+   "line_working_tree": 111,
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_NO_ASSERTION",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *const c_char) -> *mut c_void",
+   "registration": "row ossl_v3_no_assertion, s2i slot at src/x509/v3_no_ass.rs:132 (working tree) / :117 at the candidate",
+   "guard": "do_ext_nconf holds RegistryReadGuard from the lookup through the `s2i` arm (:1035), refuses ext_nid == NID_undef (:1007) and a NULL row (:1014), passes the raw `value` at :1097, and encodes/frees a non-NULL result at :1126-1132. No new production guard was added.",
+   "disposition": "SAFETY_DISCHARGED (scope: s2i_NO_ASSERTION and its do_ext_nconf s2i dispatch path; src/x509/v3_no_ass.rs:96)",
+   "contract": "The `s2i` slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). Caller do_ext_nconf's `s2i` arm (src/x509/v3_conf.rs:1095) establishes: `method` is a live borrowed row resolved under the registry read hold; `value` is the caller's NUL-terminated configuration string, borrowed for the call; `ctx` is NULL or live. This body reads none of them and returns ASN1_NULL_new(), the authority's `(ASN1_VALUE *)1` sentinel. On success the dispatcher encodes it with the row's ASN1_NULL_it and releases it once at :1127-1131 (ASN1_NULL_it's free is the authority's no-op). ASN1_NULL_new is a constant return and cannot fail. The returned type must match the row's `it`, and any `usr_data` meaning is the registrar's obligation. Row liveness while the callback runs is enforced by the dispatcher's registry read hold (B51-R1), so the caller need not exclude X509V3_EXT_cleanup during the call. X509V3_EXT_add still borrows caller-owned row storage, and a callback must not call a registry writer (B51-R9).",
+   "established": [
+    "do_ext_nconf resolves `method` through X509V3_EXT_get_nid under its own RegistryReadGuard and refuses ext_nid == NID_undef and a NULL row (:1007-1018).",
+    "do_ext_nconf holds the registry read hold from before the lookup, across the `s2i` callback at :1097, and through do_ext_i2d (:1035; B51-R1/B51-H1).",
+    "The `s2i` arm passes the raw, NUL-terminated configuration `value` unparsed and calls cb(method, ctx, value) at :1097, matching crypto/x509/v3_conf.c:113-116; it builds no STACK_OF(CONF_VALUE) on this arm.",
+    "A non-NULL result is encoded by do_ext_i2d at :1126 and released exactly once with the row's own `it` (ASN1_item_free) or `ext_free` at :1127-1131.",
+    "Row liveness while the callback runs is enforced by the dispatcher's read hold; the registrar still keeps caller-owned row storage live and unmodified while registered (X509V3_EXT_add's own Safety block).",
+    "ASN1_NULL_new() returns the constant sentinel; the body reads no argument, matching the authority's unchecked input."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_conf.c:79-135 calls method->s2i(method, ctx, value) only after v2i/x2i precedence and frees ext_struc with ASN1_item_free/ext_free; the callback is transcribed from crypto/x509/crypto/x509/v3_no_ass.c:35-40."
+   ],
+   "tests": [
+    "x509::v3_conf::tests::s2i_callbacks_build_end_to_end",
+    "x509::v3_conf::tests::the_s2i_dispatch_holds_the_registry_read_lock_across_the_callback"
+   ],
+   "tests_note": "s2i_callbacks_build_end_to_end drives the standard row for this callback through X509V3_EXT_nconf_nid; because the row has no v2i slot, a non-NULL correctly tagged extension can be produced only by the s2i callback. The shared s2i-arm liveness canary is B52-C1; the int reject test exercises the partial-object release path.",
+   "span_sha256": "1c5aa3d2ff82c15cc725c5f4744c33b0715b7deb9696c344c22fca9ef1a083df",
+   "span_start_line": 111,
+   "span_end_line": 117,
+   "span_source_commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "line_current_history": [
+    {
+     "value": 96,
+     "candidate": "1ecc284e3",
+     "note": "prior B52 draft coordinate; superseded by committed S a8716b4f2"
+    }
+   ]
+  },
+  {
+   "id": "B52-S2I-006",
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "line": 87,
+   "line_current": 101,
+   "line_working_tree": 101,
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_NO_REV_AVAIL",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *const c_char) -> *mut c_void",
+   "registration": "row ossl_v3_no_rev_avail, s2i slot at src/x509/v3_no_rev_avail.rs:119 (working tree) / :105 at the candidate",
+   "guard": "do_ext_nconf holds RegistryReadGuard from the lookup through the `s2i` arm (:1035), refuses ext_nid == NID_undef (:1007) and a NULL row (:1014), passes the raw `value` at :1097, and encodes/frees a non-NULL result at :1126-1132. No new production guard was added.",
+   "disposition": "SAFETY_DISCHARGED (scope: s2i_NO_REV_AVAIL and its do_ext_nconf s2i dispatch path; src/x509/v3_no_rev_avail.rs:87)",
+   "contract": "The `s2i` slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). Caller do_ext_nconf's `s2i` arm (src/x509/v3_conf.rs:1095) establishes: `method` is a live borrowed row resolved under the registry read hold; `value` is the caller's NUL-terminated configuration string, borrowed for the call; `ctx` is NULL or live. This body reads none of them and returns ASN1_NULL_new(), the authority's `(ASN1_VALUE *)1` sentinel. On success the dispatcher encodes it with the row's ASN1_NULL_it and releases it once at :1127-1131 (ASN1_NULL_it's free is the authority's no-op). ASN1_NULL_new is a constant return and cannot fail. The returned type must match the row's `it`, and any `usr_data` meaning is the registrar's obligation. Row liveness while the callback runs is enforced by the dispatcher's registry read hold (B51-R1), so the caller need not exclude X509V3_EXT_cleanup during the call. X509V3_EXT_add still borrows caller-owned row storage, and a callback must not call a registry writer (B51-R9).",
+   "established": [
+    "do_ext_nconf resolves `method` through X509V3_EXT_get_nid under its own RegistryReadGuard and refuses ext_nid == NID_undef and a NULL row (:1007-1018).",
+    "do_ext_nconf holds the registry read hold from before the lookup, across the `s2i` callback at :1097, and through do_ext_i2d (:1035; B51-R1/B51-H1).",
+    "The `s2i` arm passes the raw, NUL-terminated configuration `value` unparsed and calls cb(method, ctx, value) at :1097, matching crypto/x509/v3_conf.c:113-116; it builds no STACK_OF(CONF_VALUE) on this arm.",
+    "A non-NULL result is encoded by do_ext_i2d at :1126 and released exactly once with the row's own `it` (ASN1_item_free) or `ext_free` at :1127-1131.",
+    "Row liveness while the callback runs is enforced by the dispatcher's read hold; the registrar still keeps caller-owned row storage live and unmodified while registered (X509V3_EXT_add's own Safety block).",
+    "ASN1_NULL_new() returns the constant sentinel and reads no argument."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_conf.c:79-135 calls method->s2i(method, ctx, value) only after v2i/x2i precedence and frees ext_struc with ASN1_item_free/ext_free; the callback is transcribed from crypto/x509/crypto/x509/v3_no_rev_avail.c:35-40."
+   ],
+   "tests": [
+    "x509::v3_conf::tests::s2i_callbacks_build_end_to_end",
+    "x509::v3_conf::tests::the_s2i_dispatch_holds_the_registry_read_lock_across_the_callback"
+   ],
+   "tests_note": "s2i_callbacks_build_end_to_end drives the standard row for this callback through X509V3_EXT_nconf_nid; because the row has no v2i slot, a non-NULL correctly tagged extension can be produced only by the s2i callback. The shared s2i-arm liveness canary is B52-C1; the int reject test exercises the partial-object release path.",
+   "span_sha256": "734727f4e2a688ed02145a966a56261f0b56c00824f09515c8c59e9813b168ef",
+   "span_start_line": 101,
+   "span_end_line": 107,
+   "span_source_commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "line_current_history": [
+    {
+     "value": 87,
+     "candidate": "1ecc284e3",
+     "note": "prior B52 draft coordinate; superseded by committed S a8716b4f2"
+    }
+   ]
+  },
+  {
+   "id": "B52-S2I-007",
+   "file": "src/x509/v3_single_use.rs",
+   "line": 88,
+   "line_current": 102,
+   "line_working_tree": 102,
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_SINGLE_USE",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *const c_char) -> *mut c_void",
+   "registration": "row ossl_v3_single_use, s2i slot at src/x509/v3_single_use.rs:120 (working tree) / :106 at the candidate",
+   "guard": "do_ext_nconf holds RegistryReadGuard from the lookup through the `s2i` arm (:1035), refuses ext_nid == NID_undef (:1007) and a NULL row (:1014), passes the raw `value` at :1097, and encodes/frees a non-NULL result at :1126-1132. No new production guard was added.",
+   "disposition": "SAFETY_DISCHARGED (scope: s2i_SINGLE_USE and its do_ext_nconf s2i dispatch path; src/x509/v3_single_use.rs:88)",
+   "contract": "The `s2i` slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). Caller do_ext_nconf's `s2i` arm (src/x509/v3_conf.rs:1095) establishes: `method` is a live borrowed row resolved under the registry read hold; `value` is the caller's NUL-terminated configuration string, borrowed for the call; `ctx` is NULL or live. This body reads none of them and returns ASN1_NULL_new(), the authority's `(ASN1_VALUE *)1` sentinel. On success the dispatcher encodes it with the row's ASN1_NULL_it and releases it once at :1127-1131 (ASN1_NULL_it's free is the authority's no-op). ASN1_NULL_new is a constant return and cannot fail. The returned type must match the row's `it`, and any `usr_data` meaning is the registrar's obligation. Row liveness while the callback runs is enforced by the dispatcher's registry read hold (B51-R1), so the caller need not exclude X509V3_EXT_cleanup during the call. X509V3_EXT_add still borrows caller-owned row storage, and a callback must not call a registry writer (B51-R9).",
+   "established": [
+    "do_ext_nconf resolves `method` through X509V3_EXT_get_nid under its own RegistryReadGuard and refuses ext_nid == NID_undef and a NULL row (:1007-1018).",
+    "do_ext_nconf holds the registry read hold from before the lookup, across the `s2i` callback at :1097, and through do_ext_i2d (:1035; B51-R1/B51-H1).",
+    "The `s2i` arm passes the raw, NUL-terminated configuration `value` unparsed and calls cb(method, ctx, value) at :1097, matching crypto/x509/v3_conf.c:113-116; it builds no STACK_OF(CONF_VALUE) on this arm.",
+    "A non-NULL result is encoded by do_ext_i2d at :1126 and released exactly once with the row's own `it` (ASN1_item_free) or `ext_free` at :1127-1131.",
+    "Row liveness while the callback runs is enforced by the dispatcher's read hold; the registrar still keeps caller-owned row storage live and unmodified while registered (X509V3_EXT_add's own Safety block).",
+    "ASN1_NULL_new() returns the constant sentinel and reads no argument."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_conf.c:79-135 calls method->s2i(method, ctx, value) only after v2i/x2i precedence and frees ext_struc with ASN1_item_free/ext_free; the callback is transcribed from crypto/x509/crypto/x509/v3_single_use.c:35-40."
+   ],
+   "tests": [
+    "x509::v3_conf::tests::s2i_callbacks_build_end_to_end",
+    "x509::v3_conf::tests::the_s2i_dispatch_holds_the_registry_read_lock_across_the_callback"
+   ],
+   "tests_note": "s2i_callbacks_build_end_to_end drives the standard row for this callback through X509V3_EXT_nconf_nid; because the row has no v2i slot, a non-NULL correctly tagged extension can be produced only by the s2i callback. The shared s2i-arm liveness canary is B52-C1; the int reject test exercises the partial-object release path.",
+   "span_sha256": "398561c0907e63eb881ab0c917055a2f58b80b47c9b8f186f2f9e370d2051b89",
+   "span_start_line": 102,
+   "span_end_line": 108,
+   "span_source_commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "line_current_history": [
+    {
+     "value": 88,
+     "candidate": "1ecc284e3",
+     "note": "prior B52 draft coordinate; superseded by committed S a8716b4f2"
+    }
+   ]
+  },
+  {
+   "id": "B52-S2I-008",
+   "file": "src/x509/v3_soa_id.rs",
+   "line": 87,
+   "line_current": 101,
+   "line_working_tree": 101,
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_SOA_IDENTIFIER",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *const c_char) -> *mut c_void",
+   "registration": "row ossl_v3_soa_identifier, s2i slot at src/x509/v3_soa_id.rs:119 (working tree) / :105 at the candidate",
+   "guard": "do_ext_nconf holds RegistryReadGuard from the lookup through the `s2i` arm (:1035), refuses ext_nid == NID_undef (:1007) and a NULL row (:1014), passes the raw `value` at :1097, and encodes/frees a non-NULL result at :1126-1132. No new production guard was added.",
+   "disposition": "SAFETY_DISCHARGED (scope: s2i_SOA_IDENTIFIER and its do_ext_nconf s2i dispatch path; src/x509/v3_soa_id.rs:87)",
+   "contract": "The `s2i` slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). Caller do_ext_nconf's `s2i` arm (src/x509/v3_conf.rs:1095) establishes: `method` is a live borrowed row resolved under the registry read hold; `value` is the caller's NUL-terminated configuration string, borrowed for the call; `ctx` is NULL or live. This body reads none of them and returns ASN1_NULL_new(), the authority's `(ASN1_VALUE *)1` sentinel. On success the dispatcher encodes it with the row's ASN1_NULL_it and releases it once at :1127-1131 (ASN1_NULL_it's free is the authority's no-op). ASN1_NULL_new is a constant return and cannot fail. The returned type must match the row's `it`, and any `usr_data` meaning is the registrar's obligation. Row liveness while the callback runs is enforced by the dispatcher's registry read hold (B51-R1), so the caller need not exclude X509V3_EXT_cleanup during the call. X509V3_EXT_add still borrows caller-owned row storage, and a callback must not call a registry writer (B51-R9).",
+   "established": [
+    "do_ext_nconf resolves `method` through X509V3_EXT_get_nid under its own RegistryReadGuard and refuses ext_nid == NID_undef and a NULL row (:1007-1018).",
+    "do_ext_nconf holds the registry read hold from before the lookup, across the `s2i` callback at :1097, and through do_ext_i2d (:1035; B51-R1/B51-H1).",
+    "The `s2i` arm passes the raw, NUL-terminated configuration `value` unparsed and calls cb(method, ctx, value) at :1097, matching crypto/x509/v3_conf.c:113-116; it builds no STACK_OF(CONF_VALUE) on this arm.",
+    "A non-NULL result is encoded by do_ext_i2d at :1126 and released exactly once with the row's own `it` (ASN1_item_free) or `ext_free` at :1127-1131.",
+    "Row liveness while the callback runs is enforced by the dispatcher's read hold; the registrar still keeps caller-owned row storage live and unmodified while registered (X509V3_EXT_add's own Safety block).",
+    "ASN1_NULL_new() returns the constant sentinel and reads no argument."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_conf.c:79-135 calls method->s2i(method, ctx, value) only after v2i/x2i precedence and frees ext_struc with ASN1_item_free/ext_free; the callback is transcribed from crypto/x509/crypto/x509/v3_soa_id.c:35-40."
+   ],
+   "tests": [
+    "x509::v3_conf::tests::s2i_callbacks_build_end_to_end",
+    "x509::v3_conf::tests::the_s2i_dispatch_holds_the_registry_read_lock_across_the_callback"
+   ],
+   "tests_note": "s2i_callbacks_build_end_to_end drives the standard row for this callback through X509V3_EXT_nconf_nid; because the row has no v2i slot, a non-NULL correctly tagged extension can be produced only by the s2i callback. The shared s2i-arm liveness canary is B52-C1; the int reject test exercises the partial-object release path.",
+   "span_sha256": "4f80bbcbb0087134f7b45c65cf8c86042bc180edae283c87bd0273bc6fc5a13e",
+   "span_start_line": 101,
+   "span_end_line": 107,
+   "span_source_commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "line_current_history": [
+    {
+     "value": 87,
+     "candidate": "1ecc284e3",
+     "note": "prior B52 draft coordinate; superseded by committed S a8716b4f2"
+    }
+   ]
+  },
+  {
+   "id": "B52-S2I-009",
+   "file": "src/x509/v3_utf8.rs",
+   "line": 182,
+   "line_current": 195,
+   "line_working_tree": 195,
+   "line_provenance": "V1 census coordinate at evidence/closure-ssh-b51-applied.json; line_current is the resolver's span start at the candidate; line_working_tree includes this batch's preceding contract comments (uncommitted).",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "utf8_s2i",
+   "mechanism": "X509_VERIFY_POLICY",
+   "signature": "unsafe extern \"C\" fn(*const X509V3ExtMethod, *mut c_void, *const c_char) -> *mut c_void",
+   "registration": "row ossl_v3_utf8_list[0], s2i slot at src/x509/v3_utf8.rs:154 (working tree) / :154 at the candidate",
+   "guard": "do_ext_nconf holds RegistryReadGuard from the lookup through the `s2i` arm (:1035), refuses ext_nid == NID_undef (:1007) and a NULL row (:1014), passes the raw `value` at :1097, and encodes/frees a non-NULL result at :1126-1132. No new production guard was added.",
+   "disposition": "SAFETY_DISCHARGED (scope: utf8_s2i and its do_ext_nconf s2i dispatch path; src/x509/v3_utf8.rs:182)",
+   "contract": "The `s2i` slot contract stated on X509V3ExtMethod (src/x509/v3_lib.rs). Caller do_ext_nconf's `s2i` arm (src/x509/v3_conf.rs:1095) establishes: `method` is a live borrowed row resolved under the registry read hold; `value` is the caller's NUL-terminated configuration string, borrowed for the call; `ctx` is NULL or live. This adapter forwards `value` to s2i_ASN1_UTF8STRING, whose contract accepts NULL or a NUL-terminated string and refuses NULL. That function allocates the ASN1_UTF8STRING, sets it from the string, and frees the partial ASN1_UTF8STRING if ASN1_STRING_set fails. On success it returns a fresh ASN1_UTF8STRING exclusively owned by the dispatcher, encoded with the row's ASN1_UTF8STRING_it and released once at :1127-1131; on failure it raises and returns NULL with nothing retained. This wrapper neither reads nor retains `method`/`ctx`, and `value` remains borrowed. The returned type must match the row's `it`; that pairing is the registrar's obligation. Row liveness is enforced by the dispatcher's read hold (B51-R1), row storage lifetime remains the registrar's duty, and a callback must not call a registry writer (B51-R9).",
+   "established": [
+    "do_ext_nconf resolves `method` through X509V3_EXT_get_nid under its own RegistryReadGuard and refuses ext_nid == NID_undef and a NULL row (:1007-1018).",
+    "do_ext_nconf holds the registry read hold from before the lookup, across the `s2i` callback at :1097, and through do_ext_i2d (:1035; B51-R1/B51-H1).",
+    "The `s2i` arm passes the raw, NUL-terminated configuration `value` unparsed and calls cb(method, ctx, value) at :1097, matching crypto/x509/v3_conf.c:113-116; it builds no STACK_OF(CONF_VALUE) on this arm.",
+    "A non-NULL result is encoded by do_ext_i2d at :1126 and released exactly once with the row's own `it` (ASN1_item_free) or `ext_free` at :1127-1131.",
+    "Row liveness while the callback runs is enforced by the dispatcher's read hold; the registrar still keeps caller-owned row storage live and unmodified while registered (X509V3_EXT_add's own Safety block).",
+    "s2i_ASN1_UTF8STRING refuses a NULL `str_` (raising X509V3_R_INVALID_NULL_ARGUMENT) and frees its fresh string if ASN1_STRING_set fails."
+   ],
+   "authority_derived": [
+    "crypto/x509/v3_conf.c:79-135 calls method->s2i(method, ctx, value) only after v2i/x2i precedence and frees ext_struc with ASN1_item_free/ext_free; the callback is transcribed from crypto/x509/crypto/x509/v3_utf8.c:44-64."
+   ],
+   "tests": [
+    "x509::v3_conf::tests::s2i_callbacks_build_end_to_end",
+    "x509::v3_conf::tests::the_s2i_dispatch_holds_the_registry_read_lock_across_the_callback"
+   ],
+   "tests_note": "s2i_callbacks_build_end_to_end drives the standard row for this callback through X509V3_EXT_nconf_nid; because the row has no v2i slot, a non-NULL correctly tagged extension can be produced only by the s2i callback. The shared s2i-arm liveness canary is B52-C1; the int reject test exercises the partial-object release path.",
+   "span_sha256": "c0f1478f65cc0472532676bd17b8cb97d798719423b01896cba796baf4507b21",
+   "span_start_line": 195,
+   "span_end_line": 203,
+   "span_source_commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "span_post_edit_note": "The wrapper's in-body SAFETY comment was corrected (it cited the i2s slot contract for a `*const c_char` argument); the candidate-bound hash is the acceptance binding, and the orchestrator must recompute at the applied candidate per AGENTS.md \u00a722.",
+   "line_current_history": [
+    {
+     "value": 182,
+     "candidate": "1ecc284e3",
+     "note": "prior B52 draft coordinate; superseded by committed S a8716b4f2"
+    }
+   ]
+  }
+ ],
+ "source_delta": {
+  "measured_command": "git diff --stat",
+  "git_diff_stat": [
+   " src/x509/v3_conf.rs         | 155 +++++++++++++++++++++++++++++++++++++++++++-",
+   " src/x509/v3_group_ac.rs     |  14 ++++",
+   " src/x509/v3_ia5.rs          |  16 ++++-",
+   " src/x509/v3_ind_iss.rs      |  14 ++++",
+   " src/x509/v3_int.rs          |  14 ++++",
+   " src/x509/v3_lib.rs          |  15 +++++",
+   " src/x509/v3_no_ass.rs       |  15 +++++",
+   " src/x509/v3_no_rev_avail.rs |  14 ++++",
+   " src/x509/v3_single_use.rs   |  14 ++++",
+   " src/x509/v3_soa_id.rs       |  14 ++++",
+   " src/x509/v3_utf8.rs         |  16 ++++-",
+   " 11 files changed, 296 insertions(+), 5 deletions(-)"
+  ],
+  "summary": "11 files changed, 296 insertions(+), 5 deletions(-)",
+  "production_code_changes": "NONE. Excluding the #[cfg(test)] module, every changed line is a documentation comment; filtering the diff for non-comment +/- lines in the ten non-test files yields 0. The v3_conf.rs delta is entirely inside mod tests.",
+  "functional_fixes": [],
+  "contract_documentation_corrections": [
+   "Added the `## s2i` slot contract to X509V3ExtMethod (src/x509/v3_lib.rs).",
+   "Added fn-level # Safety contracts to the nine s2i callbacks.",
+   "Corrected ia5_s2i/utf8_s2i's in-body SAFETY comment, which cited the i2s slot contract for a *const c_char argument."
+  ],
+  "tests_added": [
+   "x509::v3_conf::tests::s2i_callbacks_build_end_to_end",
+   "x509::v3_conf::tests::s2i_asn1_int_callback_rejects_a_bad_value",
+   "x509::v3_conf::tests::the_s2i_dispatch_holds_the_registry_read_lock_across_the_callback"
+  ],
+  "not_additive_note": "The delta is not additive: it includes the ia5/utf8 contract-comment correction (a deletion/rewording), though no production code line changed."
+ },
+ "hidden_obligations": 0,
+ "hidden_obligations_note": "No hidden obligation was found. Every duty the callbacks do not enforce is stated in each contract and enumerated as a residual: (1) a caller-registered callback must not call a registry writer, because the read hold is non-reentrant (B51-R9); (2) caller-owned row storage must outlive registration (X509V3_EXT_add's own Safety block); (3) the returned object's type must match the row's `it` and any `usr_data` meaning (registrar obligation); (4) `ctx` is NULL-or-live where read (these nine do not read it). Row liveness for a DYNAMIC row is enforced, not an obligation.",
+ "new_unsafe_assumptions": 0,
+ "new_unsafe_assumptions_note": "No production unsafe fn or exported item was added. The only new unsafe definitions are test-only: one #[cfg(test)] s2i probe callback and its unsafe blocks, compiled out of every non-test build.",
+ "unsafe_operations_removed": 0,
+ "unsafe_operations_introduced": 0,
+ "test_only_unsafe_added": 1,
+ "test_only_unsafe_added_note": "One #[cfg(test)] unsafe extern \"C\" s2i probe callback (hold_probe_s2i) in src/x509/v3_conf.rs's test module; absent from non-test builds.",
+ "boundary_size": "9 callback bodies (unchanged), 9 fn-level # Safety contracts, one shared `## s2i` slot-contract section (v3_lib.rs), and 3 tests (a 9-row end-to-end loop, an int reject, and an s2i-arm liveness canary). No production unsafe operation added or removed.",
+ "safe_callers_can_cause_ub": false,
+ "safe_callers_can_cause_ub_note": "Every entry point that can reach an s2i callback is `unsafe extern \"C\"` (X509V3_EXT_nconf, X509V3_EXT_nconf_nid, X509V3_EXT_conf, X509V3_EXT_conf_nid, X509V3_EXT_add_nconf_sk). The callback type is Option<unsafe extern \"C\" fn>, and no safe Rust item accepts or returns X509V3ExtMethod, so a safe Rust caller cannot reach these callbacks without an unsafe block.",
+ "negative_control": [
+  {
+   "id": "B52-C1",
+   "name": "x509::v3_conf::tests::the_s2i_dispatch_holds_the_registry_read_lock_across_the_callback",
+   "kind": "court functional test, lib unittest",
+   "guard": "do_ext_nconf's RegistryReadGuard (src/x509/v3_conf.rs:1035), observed on the s2i arm (:1095) that B51's v2i canary did not exercise",
+   "mutation": "Removed the five lines of the do_ext_nconf `let Some(_registry) = RegistryReadGuard::acquire() else { ... };` block, leaving X509V3_EXT_i2d's guard intact",
+   "fails_if": "observed FAILED: panic at src/x509/v3_conf.rs:1801 'the s2i callback ran without the registry read hold: do_ext_nconf released the row'; test result FAILED. 0 passed; 1 failed",
+   "result": "PASS after restore (1 passed, 0 failed)",
+   "mutation_sensitive": true,
+   "sha256_before": "0f49230754d8a3e2fce4ecf980746ac5dcded7440d03c3595ed79af4884f2c86",
+   "sha256_mutated": "1ea07283c286aadced8fa7987b1c9d3d747d7b2e2a34bdbcf1b298b82ee1be75",
+   "sha256_restored": "0f49230754d8a3e2fce4ecf980746ac5dcded7440d03c3595ed79af4884f2c86",
+   "restore_identical": true
+  }
+ ],
+ "positive_control": [
+  {
+   "id": "B52-P1",
+   "name": "x509::v3_conf::tests::s2i_callbacks_build_end_to_end",
+   "kind": "court functional test, lib unittest",
+   "result": "PASS (included in the 155 x509:: tests at --test-threads=4; 9 x509::v3_conf::tests pass in the focused filter)",
+   "observation": "All nine standard rows build a non-NULL extension through X509V3_EXT_nconf_nid: group_ac, netscape_comment (ia5), indirect_issuer, inhibit_any_policy (int), no_assertion, no_rev_avail, single_use, soa_identifier, subjectSignTool (utf8). Each is tagged with the requested NID and carries non-empty DER; because each row has no v2i slot, the s2i callback is the only construction path.",
+   "mutation_sensitive": true,
+   "mutation": "A dispatcher that skipped the s2i arm would return NULL for every entry; the assertion is non-NULL."
+  },
+  {
+   "id": "B52-P2",
+   "name": "x509::v3_conf::tests::the_s2i_dispatch_holds_the_registry_read_lock_across_the_callback (restored)",
+   "kind": "court functional test, lib unittest",
+   "result": "PASS after restoring the exact pre-mutation bytes (sha256 equal)",
+   "observation": "The s2i probe callback and the encoder's `it` accessor both record the read hold; the neutral control records none outside dispatch."
+  }
+ ],
+ "neutral_control": {
+  "id": "B52-N1",
+  "assertion": "assert!(!registry_read_held_on_this_thread()) before registration and dispatch in the s2i liveness test",
+  "observed": "PASS; the thread holds no read lock before dispatch, so the true readings inside the callback are not vacuous"
+ },
+ "fast_gate_at_candidate": {
+  "candidate": "1ecc284e3 (starting HEAD; working tree modified, uncommitted)",
+  "ran_at_head": "1ecc284e30a8092c66c56010fab80a2898b066ff",
+  "container": "docker/openssl-rs-court.sh exec (never the host)",
+  "toolchain": "pinned by the court image; CARGO_BUILD_JOBS=4; --test-threads=4",
+  "fmt": "cargo fmt --all -- --check: exit 0",
+  "clippy": "cargo clippy --all-targets -- -D warnings: exit 0, Finished dev profile, 0 warnings, 0 errors",
+  "focused_tests": "cargo test --lib -- x509::v3_conf::tests -- --test-threads=4: ok. 9 passed; 0 failed; 2315 filtered out",
+  "x509_tests": "cargo test --lib -- x509:: -- --test-threads=4: ok. 155 passed; 0 failed; 0 ignored; 2169 filtered out",
+  "canary_mutated": "FAILED as required (0 passed; 1 failed; panic at src/x509/v3_conf.rs:1801)",
+  "canary_restored": "ok. 1 passed; 0 failed",
+  "scope_note": "FAST evidence only. Full-library serial/threaded BATCH runs, Miri/ASan/TSan, dudect and authority differentials are NOT_RUN."
+ },
+ "residuals": [
+  {
+   "id": "B52-R1",
+   "severity": "low",
+   "disposition": "OBSERVATION",
+   "description": "The closure string-matches ten s2i-named obligations, but the B51/B50 taxonomy assigns audit_s2i to family audit (audit=2 with audit_i2s). B52 follows the nine-site s2i family and leaves audit_s2i BLOCKED, unclaimed."
+  },
+  {
+   "id": "B52-R2",
+   "severity": "medium",
+   "disposition": "RETAINED-OBLIGATION",
+   "description": "Registrar obligations stay with the caller: caller-owned row storage must outlive registration and remain unmodified; the returned object must match the row's `it`; a callback must not call a registry writer (B51-R9). Row liveness itself is enforced, not retained."
+  },
+  {
+   "id": "B52-R3",
+   "severity": "low",
+   "disposition": "OBSERVATION",
+   "description": "The five ASN1_NULL callbacks and s2i_NO_ASSERTION have no failure path by construction (ASN1_NULL_new returns a constant), so only their success path is tested. The partial-release paths tested are s2i_ASN1_INTEGER's (reject test) and the IA5/UTF8 string path (via the existing round-trip plus the adapter contract)."
+  },
+  {
+   "id": "B52-R4",
+   "severity": "medium",
+   "disposition": "OPEN-FOR-ORCHESTRATOR",
+   "description": "The candidate is the starting HEAD, so span_sha256 is the pre-edit binding. For ia5_s2i and utf8_s2i the in-body SAFETY comment correction changes the span content; span_post_edit_sha256 records the worktree binding. AGENTS.md \u00a722 requires the orchestrator to re-freeze and recompute span hashes at the applied source candidate S'."
+  },
+  {
+   "id": "B52-R5",
+   "severity": "medium",
+   "disposition": "NOT_RUN",
+   "description": "No authority differential, sanitizer, Miri, leak or timing run. The compatibility claim is limited to the unit tests through the real dispatcher."
+  }
+ ],
+ "not_run": [
+  {
+   "gate": "full library suite serial and --test-threads=4",
+   "blocker": "BATCH gate; only the x509:: slice and focused tests were run"
+  },
+  {
+   "gate": "Miri (Stacked/Tree Borrows)",
+   "blocker": "not invoked; no new aliasing model claim"
+  },
+  {
+   "gate": "ASan / LeakSanitizer",
+   "blocker": "not invoked; partial-release ownership is exercised but not measured"
+  },
+  {
+   "gate": "TSan",
+   "blocker": "not invoked; the registry concurrency argument is B49/B51's, not re-measured"
+  },
+  {
+   "gate": "dudect / constant-time",
+   "blocker": "no secret-dependent operation is touched"
+  },
+  {
+   "gate": "authority differential",
+   "blocker": "no differential court run; authority statements are read from the pinned 3.6.4 source"
+  },
+  {
+   "gate": "BOUNDARY/SEAL evidence (independent reviewer, full closure, forensics)",
+   "blocker": "this is an UNAPPLIED draft; independent adjudication is pending"
+  }
+ ],
+ "non_claims": [
+  "B52 scopes the claim to the nine s2i boundary operations and their do_ext_nconf dispatch path; X509_VERIFY_POLICY stays at OWNERSHIP_RECONSTRUCTED and is not discharged mechanism-wide.",
+  "The B52 dispositions are an UNAPPLIED draft: the closure was not regenerated, CAMPAIGN-STATUS.json and evidence/ were not edited, and no commit/application was made.",
+  "No sanitizer, Miri, dudect, leak check or authority differential was run; no cryptographic or constant-time claim is made.",
+  "No functional fix is claimed: the production delta is documentation only; the only executable additions are #[cfg(test)] tests.",
+  "Row liveness across the s2i dispatch is an enforced property (B51-R1) and is observed on the s2i arm by B52-C1; its caller-facing limit is the retained registry-writer restriction B51-R9."
+ ],
+ "review_conditions": [
+  "Independent reviewer must not be the author; the reviewer must read the actual gate output and the mutation run, not this receipt's description.",
+  "The reviewer must confirm the family selection (nine, with ia5_s2i and utf8_s2i, audit_s2i excluded) against B51 scope.not_touched.",
+  "The reviewer must confirm every span_sha256 was produced by consumer_closure.resolve_operation_span at the named candidate, and require recomputation at the applied S'.",
+  "The reviewer must confirm no production code line changed and no unsafe operation was added or removed.",
+  "Application is prohibited until an independent BOUNDARY adjudication is recorded."
+ ],
+ "review": {
+  "reviewer": "pending independent adjudication",
+  "verdict": "UNAPPLIED",
+  "applied": false,
+  "prohibition": "Do not apply this receipt, edit CAMPAIGN-STATUS.json or evidence/, commit, or treat any disposition as adjudicated until an independent reviewer has run the BOUNDARY gates and recorded a verdict."
+ },
+ "schema_note": "Same top-level shape as boundary-sweep-B51.json, with source_delta added. `line` is the V1 census coordinate; `line_current` is the resolver's span start at the candidate; span_sha256 is the acceptance binding. span_post_edit_sha256 is advisory (working-tree source_text binding) and does not replace the candidate-bound hash.",
+ "applied": false
+}
