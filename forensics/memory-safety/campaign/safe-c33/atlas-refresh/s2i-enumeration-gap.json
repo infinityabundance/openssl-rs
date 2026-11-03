@@ -1,0 +1,51 @@
+{
+ "receipt": "s2i-enumeration-gap",
+ "kind": "instrument-finding",
+ "date": "2026-11-02",
+ "subphase": "B52",
+ "state": "OPEN — BLOCKS GRADUATION, does not block the B52 site-scoped discharge",
+ "finding": "The reachable-obligation queue does not enumerate every extension-slot callback in the reachable source. Measured at candidate a8716b4f2: 114 `unsafe extern \"C\" fn` slot callbacks (i2s/i2r/i2v/r2i/s2i/v2i) exist in `src/`, but only 51 appear in the 312-obligation set; 63 are absent entirely. An absent site is not DISCHARGED and not BLOCKED: it is invisible, so it can neither be discharged nor refused. That is incompatible with the graduation condition that no safety-relevant unknown remains.",
+ "strongest_case": {
+  "site": "s2i_skey_id",
+  "file": "src/x509/v3_skid.rs",
+  "line": 206,
+  "why_this_is_not_merely_unreachable": "v3_skid.rs is unambiguously reachable: B50 discharged `skid_i2s` in the same file (B50-I2S-009), and that site appears in the closure. The same extension row also installs `s2i_skey_id` as its s2i callback, yet that callback is absent from the queue. A file being reachable is not the same as every slot in it being enumerated, and here the difference is a specific reachable production callback.",
+  "second_case": {
+   "site": "s2i_poison",
+   "file": "src/ct/ct_x509v3.rs",
+   "line": 70,
+   "registration": "s2i: Some(s2i_poison) at src/ct/ct_x509v3.rs:266"
+  }
+ },
+ "measured_evidence": {
+  "candidate": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+  "closure": "evidence/closure-ssh-b52-baseline.json (312 obligations, 177 DISCHARGED / 135 BLOCKED / 0 UNKNOWN, both families)",
+  "scan": "grep -rnE 'unsafe extern \"C\" fn (s2i|i2s|i2r|i2v|r2i|v2i)_' src/ -> 114 definitions; 51 present in .obligations, 63 absent",
+  "absent_examples": [
+   "src/x509/v3_skid.rs:206 s2i_skey_id",
+   "src/ct/ct_x509v3.rs:70 s2i_poison",
+   "src/x509/v3_asid.rs:817 i2r_ASIdentifiers",
+   "src/x509/v3_crld.rs:1638 i2r_crldp",
+   "src/x509/v3_addr.rs:921 i2r_IPAddrBlocks",
+   "src/ct/ct_x509v3.rs:84 i2r_SCT_LIST"
+  ],
+  "not_claimed": "The 63 are NOT all claimed to be reachable. The claim is narrower and sufficient to block graduation: the queue does not enumerate them, and reachability has not been established per site. Some are plausibly unreachable from ssh/sshd; that must be shown, not assumed."
+ },
+ "why_it_matters_for_graduation": [
+  "`SAFE_COMPATIBLE` requires every applicable mechanism to be SAFETY_DISCHARGED and no safety-relevant unknown or blocked obligation to remain. A site absent from the queue is an unknown that the ledger cannot represent.",
+  "A discharge receipt for a family ('the s2i family', 'the i2r printers') cannot be complete if the family is defined by the queue rather than by the source.",
+  "The B52 review found this by comparing source registrations to the queue; that comparison is reproducible and must become a gate, not a one-off observation."
+ ],
+ "required_resolution": [
+  "Add an enumeration-completeness gate: for every reachable file, every extension-slot callback and every `#[no_mangle] extern \"C\"` definition must appear in the obligation set, or carry a recorded reachability exclusion with evidence (a caller-path argument, not an assertion).",
+  "Classify each of the 63 absent sites as REACHABLE (enrol it in the queue with a stable identity and BLOCKED status) or UNREACHABLE-FROM-THESE-CONSUMERS (record the caller-path evidence and the consumer identity it was established against).",
+  "Re-run both closures after the enrolment; counts will move, and that movement must be reported, not suppressed.",
+  "Independent adversarial review of the gate, including a negative control: remove one callback from the enumeration and confirm the gate fails.",
+  "Do not treat this finding as discharged by B52's approval: B52's nine sites are individually sound, but the family name must not be read as exhaustive."
+ ],
+ "non_claims": [
+  "This is not a defect in the nine B52 sites, all of which were verified at their coordinates with enforced liveness and a reproduced canary.",
+  "It is not a claim that all 63 absent sites are reachable, and it is not a claim that any specific absent site is unsafe.",
+  "It does not by itself change the applied ledger; the B52 row is site-scoped and names only its nine boundaries."
+ ]
+}
