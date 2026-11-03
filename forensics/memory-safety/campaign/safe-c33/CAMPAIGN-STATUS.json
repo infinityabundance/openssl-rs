@@ -1997,20 +1997,21 @@
   }
  },
  "current_applied_state": {
-  "as_of": "2026-11-01",
+  "as_of": "2026-11-02",
   "branch": "stage/p25/element7-s2b",
-  "evidence_head": "a80792455",
-  "candidate_S": "84f624012",
-  "candidate_source_identity": "src/, Cargo.toml, Cargo.lock and build.rs are identical to 84f624012; `git diff 84f624012..a80792455 -- src/ Cargo.toml Cargo.lock build.rs` is empty",
+  "evidence_head": "c95f8b296",
+  "candidate_S": "cb9c4c64c",
+  "candidate_source_identity": "the source and the built install are S-prime = cb9c4c64c; the B51b hold is in 8b9a03e28 and the contract rewording in cb9c4c64c, both in S-prime history. The install and both consumers were rebuilt and relinked at S-prime (libcrypto.so.3 2a55e121, ssh ccba01c3, sshd 9ab4d8ac).",
   "closure": {
-   "ssh": {"DISCHARGED": 167, "BLOCKED": 145, "UNKNOWN": 0, "verdict": "ACCEPTED", "refusals": 0, "safe_compatible": false},
-   "sshd": {"DISCHARGED": 167, "BLOCKED": 145, "UNKNOWN": 0, "verdict": "ACCEPTED", "refusals": 0, "safe_compatible": false},
+   "ssh": {"DISCHARGED": 177, "BLOCKED": 135, "UNKNOWN": 0, "verdict": "ACCEPTED", "refusals": 0, "safe_compatible": false},
+   "sshd": {"DISCHARGED": 177, "BLOCKED": 135, "UNKNOWN": 0, "verdict": "ACCEPTED", "refusals": 0, "safe_compatible": false},
    "obligations_total": 312
   },
-  "closure_receipts": ["evidence/closure-ssh-b50-baseline.json", "evidence/closure-ssh-b50.json", "evidence/inventory-sshd-b50-baseline.json", "evidence/inventory-sshd-b50.json"],
-  "derived_from": "the scoped_boundary_discharges rows applied at base_head 84f624012: openssh-v1i 74, B48 36, B49 22, openssl-v1l 15, B50 11, B45 9 = 167",
+  "closure_receipts": ["evidence/closure-ssh-b51d-baseline.json", "evidence/closure-ssh-b51-applied.json", "evidence/inventory-sshd-b51d-baseline.json", "evidence/inventory-sshd-b51-applied.json"],
+  "derived_from": "the scoped_boundary_discharges rows applied at or before S-prime: openssh-v1i 74, B48 36, B49 22, openssl-v1l 15, B50 11, B45 9, B51 10 = 177",
+  "coverage_instrument": "content-addressed (span_sha256 bound to the git blob at cb9c4c64c); line coordinates are advisory. Baseline b51d 167/145/0 -> applied 177/135/0 with exactly 10 obligations moved, all BLOCKED -> DISCHARGED with receipt boundary-sweep-B51.",
   "staleness_of_blocks_above": ["generated_date", "branch", "source_head", "source_head_subject", "source_head_note", "release_candidate", "closure"],
-  "note": "The top-level generated_date/branch/source_head/release_candidate/closure blocks remain the 0.0.44 release snapshot (90 DISCHARGED / 222 BLOCKED at v1r) and are NOT the current applied closure. They are marked stale for current reading rather than overwritten, because they are a true record of that release. Counts here are read from the B50 applied closures and imply no mechanism-level discharge and no SAFE_COMPATIBLE graduation."
+  "note": "The top-level generated_date/branch/source_head/release_candidate/closure blocks remain the 0.0.44 release snapshot (90 DISCHARGED / 222 BLOCKED at v1r) and are NOT the current applied closure. They are marked stale for current reading rather than overwritten, because they are a true record of that release. Counts here are read from the B51 applied closures and imply no mechanism-level discharge and no SAFE_COMPATIBLE graduation. Element 7 remains FAIL at this candidate (127 reachable unresolved, 67 target-bounded)."
  },
  "closure": {
   "receipt": "evidence/closure-ssh-v1r.json; evidence/inventory-sshd-v1r.json",
