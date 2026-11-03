@@ -156,6 +156,78 @@
    "manifest_sha256": "e34d1e92179959acb215f047f77cc161345fd012c22f666459a770525ce2bdcb"
   },
   "interpretation": "REACHABLE_BOUND is a may-bound, not a proof. The gate accounts for all 114 six-prefix definitions (115 definitions) and 2 additional ext_free callbacks. Of the 63 distinct prefix-named definitions absent from the 312-obligation queue, 30 are slot registrations and 33 are definition-only helpers; all 63 are accounted for, and 2 ext_free callbacks are added, producing 66 file-qualified missing entries (65 distinct names). 69 registered callbacks are already inventoried, including 51 prefix-named definitions and 18 callbacks whose names do not match their slot prefix.",
-  "non_claims": "The gate proves inventory-vs-source agreement for its parsed registrations and for the six-prefix definition census; REACHABLE_BOUND rests on the closure's converged MAY-bound reachable_functions set unless the record carries an edge-witness, and dispatcher-row-binding is a table witness, not execution. Macro/build-script-generated rows are outside the parser."
+  "non_claims": "The gate proves inventory-vs-source agreement for its parsed registrations and for the six-prefix definition census; REACHABLE_BOUND rests on the closure's converged MAY-bound reachable_functions set unless the record carries an edge-witness, and dispatcher-row-binding is a table witness, not execution. Macro/build-script-generated rows are outside the parser.",
+  "layers": {
+   "source": {
+    "instrument": "forensics/tools/callback_enumeration_gate.py",
+    "state": "FAIL",
+    "exit_code": 1,
+    "scope": "authoritative applied closure evidence/closure-ssh-b52-applied.json",
+    "basis": "66 missing registrations remain unenrolled; this is the pre-existing open finding, not a regression",
+    "control_scope_note": "with callback-gate-controls/inventory-post-enrolment.json the source layer exits 0; that control fixture isolates the compiled layer in the negative control"
+   },
+   "compiled": {
+    "instrument": "forensics/tools/callback_artifact_crosscheck.py",
+    "state": "PASS",
+    "exit_code": 0,
+    "scope": "committed artifact vs committed manifest, both at candidate a8716b4f2",
+    "artifact": "artifacts/phase2/install/lib/libcrypto.so.3",
+    "artifact_sha256": "ececbd98bea39f0f6efaab16331d0c2cfdfe7b8bb70acea4ad9dc11a544ba497",
+    "standard_exts_entries": 73,
+    "rows_total": 74,
+    "gated_records": 136,
+    "counts": {
+     "compiled_targets_not_in_manifest": 0,
+     "compiled_registrations_unaccounted": 0,
+     "manifest_not_compiled": 0,
+     "manifest_dead_targets": 0,
+     "refusals": 0
+    }
+   },
+   "combined": {
+    "state": "FAIL",
+    "exit_code": 1,
+    "rule": "nonzero when either layer fails or refuses",
+    "basis": "the authoritative source layer still reports 66 missing registrations, so the combined gate is FAIL even though the compiled layer passes"
+   }
+  },
+  "compiled_crosscheck": {
+   "instrument": "forensics/tools/callback_artifact_crosscheck.py",
+   "instrument_sha256": "ee1c50d142607886fc8bb8c278225d3a8d5dfe7ae1d483614d23d9d7a6b8fb13",
+   "report": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-artifact-crosscheck.json",
+   "report_sha256": "11430e46ebfebeba708450ef38ad1c479181be64ff0589f0e35837392ae786c6",
+   "control_report": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-artifact-crosscheck-control.json",
+   "control_report_sha256": "084e0c5f6c18bbfba95d5677a4deef77a2d61bc8011b513e10f9c2a0eada863f",
+   "artifact": "artifacts/phase2/install/lib/libcrypto.so.3",
+   "artifact_sha256": "ececbd98bea39f0f6efaab16331d0c2cfdfe7b8bb70acea4ad9dc11a544ba497",
+   "manifest": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-registration-manifest.json",
+   "manifest_sha256": "e34d1e92179959acb215f047f77cc161345fd012c22f666459a770525ce2bdcb",
+   "standard_exts_entries": 73,
+   "row_objects": 63,
+   "rows_total": 74,
+   "gated_records": 136,
+   "records_total_all_slots": 213,
+   "resolution_methods": {
+    "null": 601,
+    "relocation:RELATIVE": 141,
+    "relocation:symbol": 72
+   },
+   "aliases_kept": true,
+   "factory_rows_mapped": 16,
+   "control": {
+    "kind": "macro-expanded registration invisible to the syntactic scanner",
+    "source_only_exit_code": 0,
+    "source_only_registrations_for_target": 0,
+    "compiled_exit_code": 1,
+    "combined_exit_code": 1,
+    "named_target": "callback_crosscheck_control",
+    "control_artifact_sha256": "24390f4dda476ededaa7fe805a4dffe25291430451a7e0ea4ba53fdfc91612c0",
+    "restored_artifact_sha256": "ececbd98bea39f0f6efaab16331d0c2cfdfe7b8bb70acea4ad9dc11a544ba497",
+    "restored_combined_exit_code": 0,
+    "source_only_rows_for_target": 0,
+    "source_only_observation": "FAIL-OPEN: the scanner sees neither the aliased row literal nor the callback; zero rows/registrations/callback entries involve the target"
+   },
+   "wiring": ".github/workflows/ci.yml: Callback artifact cross-check step adjacent to the source gate; missing artifact or manifest exits 1 rather than skipping"
+  }
  }
 }

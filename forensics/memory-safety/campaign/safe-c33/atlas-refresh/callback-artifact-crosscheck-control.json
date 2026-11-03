@@ -1,0 +1,79 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/callback-artifact-crosscheck-control/v1",
+ "receipt": "callback-artifact-crosscheck-control",
+ "date": "2026-11-03",
+ "purpose": "Negative control for the compiled-artifact completeness gate. A registration that the syntactic source scanner provably cannot see must still be caught by the artifact cross-check, and the combined gate must fail naming it.",
+ "source_change": {
+  "file": "src/x509/v3_lib.rs",
+  "pre_change_sha256": "4386b195111a77621d5cb9f16c4a55a84f156f4d1169d88821f6ca17d3044300",
+  "restored_sha256": "4386b195111a77621d5cb9f16c4a55a84f156f4d1169d88821f6ca17d3044300",
+  "restore_command": "git checkout -- src/x509/v3_lib.rs",
+  "description": "Added `type ControlRow = X509V3ExtMethod;`, `macro_rules! control_row` whose body spells the row literal `ControlRow { ... }` with `i2s: Some($ptr)`, a safe `extern \"C\" fn callback_crosscheck_control`, `static CONTROL_ROW = control_row!(0x5FFF, callback_crosscheck_control)`, appended `&CONTROL_ROW` to STANDARD_EXTS and raised STANDARD_EXTENSION_COUNT from 73 to 74. The scanner matches the literal text `X509V3ExtMethod {`; it sees neither the aliased literal nor the callback target.",
+  "build": "cargo build --release (CARGO_BUILD_JOBS=4, 20.57 s) followed by the exact libcrypto.so.3 link line from forensics/tools/build_phase2.sh; no source drift beyond the control edit"
+ },
+ "source_only_gate": {
+  "instrument": "forensics/tools/callback_enumeration_gate.py",
+  "invocation": "python3 forensics/tools/callback_enumeration_gate.py --root . --closure evidence/closure-ssh-b52-applied.json --out-dir /tmp/cbgate-control2 --inventory forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/inventory-post-enrolment.json --allow-source-drift",
+  "exit_code": 0,
+  "registrations_involving_target": 0,
+  "callback_entries_involving_target": 0,
+  "rows_involving_target_or_alias": 0,
+  "observation": "FAIL-OPEN. The scanner does not parse `ControlRow { ... }` (its literal regex is `X509V3ExtMethod {`), and the callback appears only as the macro argument. The control run exits 0 and its generated manifest contains zero rows, zero registrations and zero callback entries involving `callback_crosscheck_control` or `control_row`."
+ },
+ "control_build": {
+  "artifact": "artifacts/phase2/install/lib/libcrypto.so.3",
+  "artifact_sha256": "24390f4dda476ededaa7fe805a4dffe25291430451a7e0ea4ba53fdfc91612c0",
+  "artifact_size": 16863184,
+  "standard_exts_entries": 74,
+  "rows_total": 75,
+  "callback_symbol_present": true
+ },
+ "compiled_crosscheck": {
+  "instrument": "forensics/tools/callback_artifact_crosscheck.py",
+  "exit_code": 1,
+  "classification": "FAIL",
+  "counts": {
+   "compiled_records": 137,
+   "compiled_rows": 74,
+   "compiled_targets_not_in_manifest": 1,
+   "compiled_registrations_unaccounted": 1,
+   "manifest_not_compiled": 0,
+   "manifest_dead_targets": 0,
+   "refusals": 0
+  },
+  "unaccounted_target": {
+   "row": "CONTROL_ROW",
+   "slot": "i2s",
+   "target_address": "0x2040c0",
+   "target_identifiers": [
+    "callback_crosscheck_control"
+   ],
+   "reason": "no manifest row accounts for this row"
+  },
+  "observation": "The compiled artifact contains the macro-expanded row and its callback at a populated i2s slot. The committed manifest has no registration for it, so the gate fails and names CONTROL_ROW / i2s / callback_crosscheck_control."
+ },
+ "combined_gate": {
+  "rule": "nonzero when either the source layer or the compiled layer fails or refuses",
+  "source_layer_exit_code": 0,
+  "compiled_layer_exit_code": 1,
+  "exit_code": 1,
+  "classification": "FAIL",
+  "named_target": "callback_crosscheck_control",
+  "observation": "The combined gate fails on the registration the source-only gate provably did not see."
+ },
+ "restore": {
+  "source_sha256_after_restore": "4386b195111a77621d5cb9f16c4a55a84f156f4d1169d88821f6ca17d3044300",
+  "source_diff": "empty",
+  "artifact_rebuilt_sha256": "ececbd98bea39f0f6efaab16331d0c2cfdfe7b8bb70acea4ad9dc11a544ba497",
+  "artifact_matches_original": true,
+  "source_gate_exit_code": 0,
+  "compiled_crosscheck_exit_code": 0,
+  "combined_exit_code": 0,
+  "observation": "After `git checkout`, `cargo build --release` and the same relink, the artifact is byte-identical to the pre-control candidate (ececbd98...). Both layers pass again. The authoritative source-gate invocation (without the post-enrolment control inventory) still exits 1 on the pre-existing 66-missing enrolment finding; that is independent of this control."
+ },
+ "limits": [
+  "The control target is a distinct callback name; a macro-expanded row that reused an already-manifested callback name would not be detected at target level, though the registration-level check would still flag the unmatched (row, slot, target) pair.",
+  "The structural discovery of per-file static row objects uses the ext_nid/ext_flags domain of X509V3ExtMethod. A row outside that domain would be reported as an excluded non-row object rather than refused; table-referenced rows are always examined.",
+  "The control rebuild used the crate build plus the exact libcrypto link line, not the full build_phase2.sh court suite; no court result is claimed from this control."
+ ]
+}
