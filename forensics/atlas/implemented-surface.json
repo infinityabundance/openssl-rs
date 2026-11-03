@@ -7049,7 +7049,7 @@
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "32102ea1445df9bcdcdcfe9c16ac2dd454fced2de090486ec98b6649d7efe40b"
+      "sha256": "f8a0a20e3d7b0a49a1d6b3edae1b856caf358a34e01fff13492b5988410e44ba"
     },
     {
       "name": "authority-exports",
