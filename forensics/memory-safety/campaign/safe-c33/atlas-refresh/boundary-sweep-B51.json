@@ -705,13 +705,13 @@
   "scope_note": "FAST evidence only. Full library suite, Miri/ASan/TSan/dudect, authority differential and the consumer closures are NOT_RUN at this candidate.",
   "correction_gate": {
    "date": "2026-11-02",
-   "candidate": "8b9a03e28 + documentation-only contract rewording (uncommitted; see candidate.working_delta)",
+   "candidate": "S-prime = cb9c4c64c (committed; the documentation-only contract rewording is in it)",
    "container": "docker/openssl-rs-court.sh (never the host)",
    "fmt": "cargo fmt --all -- --check: exit 0 (FMT_EXIT=0)",
    "clippy": "cargo clippy --all-targets -- -D warnings: exit 0 (CLIPPY_EXIT=0); Finished `dev` profile in 17.62s",
    "focused_tests": "cargo test --lib -- x509:: -- --test-threads=4: exit 0; test result: ok. 152 passed; 0 failed; 0 ignored; 0 measured; 2169 filtered out; finished in 0.50s",
    "r3_r4_test": "cargo test --lib -- x509::v3_asid::tests::a_failed_push_returns_the_caller_integers_instead_of_releasing_them -- --test-threads=1: exit 0; test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2320 filtered out; finished in 0.00s",
-   "scope_note": "FAST only. The source delta is documentation-only but S-prime is not committed; BATCH/SEAL gates remain NOT_RUN."
+   "scope_note": "FAST only. The source delta is documentation-only and is committed at S-prime; BATCH/SEAL gates remain NOT_RUN."
   }
  },
  "residuals": [
@@ -834,24 +834,20 @@
  "applied": false,
  "review": {
   "reviewer": "independent adversarial adjudicator (session b5cd6489-f5c3-410d-b557-c4dddbcce39c); transcribed verbatim by the orchestrator",
-  "verdict": "REJECT",
+  "verdict": "APPROVE",
   "applied": false,
   "date": "2026-11-02",
-  "verdict_text": "REJECT -- not for site unsoundness (the structural hold is real and I reproduced it), but because the receipt materially misdescribes its own delta and its own review conditions. It cannot be applied to the ledger as written.",
-  "not_rejected_for": "The ten sites are structurally sound and were verified at their current coordinates; the read hold spans the callback, reader/reader nesting cannot stall, the probe is test-only, no exported item was added, and one liveness canary was independently reproduced (FAILED rc 101 under mutation, PASSED byte-identically after restore).",
-  "reasons": [
-   "R3 is false as written: the delta REMOVED the `as c_int` narrowing (6 deleted cast lines), so the INT_MAX wrap was eliminated; it must be recorded as a functional fix, not an unreachable unfixed residual.",
-   "R4 is false as written: the delta FIXED the asid push-failure path (detach min/max before ASIdOrRange_free, src/x509/v3_asid.rs:1060-1079); no reachable double-free remains, and it must be recorded as a fix.",
-   "hidden_obligations: 0 is not defensible: the read hold is non-reentrant, so a v2i callback that calls a registry WRITER self-deadlocks (the read-holding thread has writer_id None, so write_lock cannot detect re-entry). Static callbacks do not, but caller rows registered through X509V3_EXT_add can. This is a B49-R11 analogue and is unrecorded.",
-   "The ten boundary contracts still state that a concurrent X509V3_EXT_cleanup must not run during the call (B51-R1), which contradicts marking R1 CLOSED-STRUCTURALLY.",
-   "The delta description is false: the measured change is 748 insertions / 18 deletions, including two functional fixes, not \"348 insertions, 0 deletions / additive only / no functional defect fixed\".",
-   "review_conditions C3_no_hold states that no read hold spans the v2i callback and none was added -- the opposite of the implemented mechanism; C1 still names base_head 3d32259e6 and an uncommitted worktree instead of 8b9a03e28 and a clean tree.",
-   "Control id B51-C2 is duplicated between negative_control and hold_canaries."
+  "verdict_text": "APPROVE, conditional on the text-only corrections in the new finding below.",
+  "condition": "correct the correction-gate and schema strings to name S-prime as committed, and record the second REJECT in review_history. Text-only; no source change, no re-freeze, span bindings unchanged.",
+  "condition_satisfied": "All three strings corrected and the second REJECT recorded verbatim in review_history in the commit that carries this block.",
+  "residuals_open": [
+   "ADJ-R6 class: the registry-liveness hold and the non-NUL-terminated result have no sanitizer/test; BOUNDARY gate",
+   "B51-R5 no leak/ASan; B51-R6/R7/R8 retained",
+   "B51-R9 stated ABI duty (read-then-write self-deadlock)"
   ],
-  "authorisation_condition": "A corrected receipt (R3/R4 recorded as fixes, the additive-only claim removed, C1/C3 corrected, the read-to-write re-entrancy residual added, the ten contracts reworded, the duplicate id fixed), frozen as S-prime with the FAST gate re-run. The sites themselves need no re-work.",
-  "would_be_applied_delta": "X509_VERIFY_POLICY stays site-scoped: v2i 10 -> 0 BLOCKED, bitst 2 unchanged, s2i 9 / i2v 7 / r2i 6 / print 4 / audit 2 / non-method 2 unchanged; mechanism 42B/38D -> 32B/48D; closure 145B/167D -> 135B/177D."
+  "would_be_applied_delta": "X509_VERIFY_POLICY site-scoped: v2i 10 B -> 0 B; s2i 9 / i2v 7 / r2i 6 / print 4 / audit 2 / bitst 2 / non-method 2 unchanged; mechanism 42 B / 38 D -> 32 B / 48 D; closure 145 B / 167 D -> 135 B / 177 D."
  },
- "schema_note": "Same shape as boundary-sweep-B50.json, plus scope.excluded, B51-R7 (brief discrepancy), the B51-C2 documented non-canaried negative result, B51-H1..H3 hold-canary ids, candidate.authoring_untracked/working_delta, and the corrections_applied ledger. `line` is the V1 census coordinate; `line_current` is the candidate coordinate.",
+ "schema_note": "Same shape as boundary-sweep-B50.json, plus scope.excluded, B51-R7 (brief discrepancy), the B51-C2 documented non-canaried negative result, the B51-H1..H3 hold-canary ids, and the corrections_applied ledger. `line` is the V1 census coordinate; `line_current` is advisory; span_sha256 is the acceptance binding.",
  "hold_canaries": [
   {
    "id": "B51-H1",
@@ -894,8 +890,43 @@
    "reviewer": "pending independent adjudication",
    "verdict": "UNAPPLIED",
    "applied": false,
-   "prohibition": "This receipt is a DRAFT. It must not be applied, copied into CAMPAIGN-STATUS.json, or used to mark any obligation SAFETY_DISCHARGED until an independent adjudicator has frozen the candidate S', re-run the FAST gate at S', and verified every candidate.files_sha256 against the committed tree. The adjudicator must also rule on B51-R1 (no read hold across the v2i callback) and B51-R7 (the brief's signature/release discrepancy).",
+   "date": "2026-11-01",
+   "prohibition": "Do not apply these dispositions to CAMPAIGN-STATUS.json or run the closure against them in this subphase.",
    "superseded_by": "independent adjudication, REJECT, 2026-11-02; the dispositions are unchanged and remain unapplied"
+  },
+  {
+   "reviewer": "independent adversarial adjudicator (session b5cd6489-f5c3-410d-b557-c4dddbcce39c); transcribed verbatim by the orchestrator",
+   "verdict": "REJECT",
+   "applied": false,
+   "date": "2026-11-02",
+   "verdict_text": "REJECT -- not for site unsoundness (the structural hold is real and I reproduced it), but because the receipt materially misdescribes its own delta and its own review conditions. It cannot be applied to the ledger as written.",
+   "not_rejected_for": "The ten sites are structurally sound and were verified at their current coordinates; the read hold spans the callback, reader/reader nesting cannot stall, the probe is test-only, no exported item was added, and one liveness canary was independently reproduced (FAILED rc 101 under mutation, PASSED byte-identically after restore).",
+   "reasons": [
+    "R3 is false as written: the delta REMOVED the `as c_int` narrowing (6 deleted cast lines), so the INT_MAX wrap was eliminated; it must be recorded as a functional fix, not an unreachable unfixed residual.",
+    "R4 is false as written: the delta FIXED the asid push-failure path (detach min/max before ASIdOrRange_free, src/x509/v3_asid.rs:1060-1079); no reachable double-free remains, and it must be recorded as a fix.",
+    "hidden_obligations: 0 is not defensible: the read hold is non-reentrant, so a v2i callback that calls a registry WRITER self-deadlocks (the read-holding thread has writer_id None, so write_lock cannot detect re-entry). Static callbacks do not, but caller rows registered through X509V3_EXT_add can. This is a B49-R11 analogue and is unrecorded.",
+    "The ten boundary contracts still state that a concurrent X509V3_EXT_cleanup must not run during the call (B51-R1), which contradicts marking R1 CLOSED-STRUCTURALLY.",
+    "The delta description is false: the measured change is 748 insertions / 18 deletions, including two functional fixes, not \"348 insertions, 0 deletions / additive only / no functional defect fixed\".",
+    "review_conditions C3_no_hold states that no read hold spans the v2i callback and none was added -- the opposite of the implemented mechanism; C1 still names base_head 3d32259e6 and an uncommitted worktree instead of 8b9a03e28 and a clean tree.",
+    "Control id B51-C2 is duplicated between negative_control and hold_canaries."
+   ],
+   "authorisation_condition": "A corrected receipt (R3/R4 recorded as fixes, the additive-only claim removed, C1/C3 corrected, the read-to-write re-entrancy residual added, the ten contracts reworded, the duplicate id fixed), frozen as S-prime with the FAST gate re-run. The sites themselves need no re-work.",
+   "would_be_applied_delta": "X509_VERIFY_POLICY stays site-scoped: v2i 10 -> 0 BLOCKED, bitst 2 unchanged, s2i 9 / i2v 7 / r2i 6 / print 4 / audit 2 / non-method 2 unchanged; mechanism 42B/38D -> 32B/48D; closure 145B/167D -> 135B/177D.",
+   "superseded_by": "independent adjudication, REJECT, 2026-11-02 (see next entry)"
+  },
+  {
+   "reviewer": "independent adversarial adjudicator (session b5cd6489-f5c3-410d-b557-c4dddbcce39c); transcribed verbatim by the orchestrator",
+   "verdict": "REJECT",
+   "applied": false,
+   "date": "2026-11-02",
+   "verdict_text": "REJECT -- the ten sites, spans, contracts and controls are sound, but the receipt is still not one coherent evidence set: shared_contract asserts the pre-B51b lookup-only hold, and candidate binds 8b9a03e28 while the discharged contracts/spans are at S'=cb9c4c64c.",
+   "blocking_findings": [
+    "shared_contract says the row is used after the hold is released, contradicting dispatch_paths.lookup, row_liveness, the ten contracts and the source.",
+    "candidate.base_head/files_sha256 bind S=8b9a03e28 while the reworded contracts and all span hashes are S-prime=cb9c4c64c; C1/correction_gate call S-prime uncommitted; one-S rule violated.",
+    "scope.aggregation still reads closure-ssh-b50.json (42) while the presented baseline shows 43 blocked and predates the B49 rebind.",
+    "R9 names v2i/i2d/d2i but the same do_ext_nconf guard also covers the s2i and r2i branches (v3_conf.rs:1095,1101)."
+   ],
+   "superseded_by": "third re-review, APPROVE, 2026-11-02, after the four G fixes and the b51d baseline"
   }
  ],
  "rejection_findings": [
