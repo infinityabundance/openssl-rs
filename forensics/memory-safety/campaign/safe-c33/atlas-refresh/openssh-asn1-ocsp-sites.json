@@ -321,6 +321,39 @@
    "current_kind": "UNSAFE_FN_DEF",
    "source_state": "UNSAFE_OPERATION",
    "unsafe_operation_present": true
+  },
+  {
+   "id": "B52SITE::src/ocsp/v3_ocsp.rs::UNSAFE_FN_DEF::i2r_ocsp_acutoff",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ocsp_acutoff",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 187,
+   "line_current": 187,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "`cutoff` is cast from `*mut c_void` to `ASN1_GENERALIZEDTIME` and printed via `ASN1_GENERALIZEDTIME_print`; pointer validity and the live `out` BIO rest on the ext-method i2r caller."
+  },
+  {
+   "id": "B52SITE::src/ocsp/v3_ocsp.rs::UNSAFE_FN_DEF::ocsp_nonce_free",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ocsp_nonce_free",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 325,
+   "line_current": 325,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "`a` is cast from `*mut c_void` and freed as an `ASN1_OCTET_STRING`; allocator provenance and single ownership come from the ext-method free slot."
+  },
+  {
+   "id": "B52SITE::src/ocsp/v3_ocsp.rs::UNSAFE_FN_DEF::i2r_ocsp_nonce",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ocsp_nonce",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 344,
+   "line_current": 344,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "`nonce` is cast to `ASN1_OCTET_STRING` and read through `i2a_ASN1_STRING`; the string's `length`/`data` invariant and the live `out` BIO rest on the i2r caller."
   }
  ],
  "rebind": {

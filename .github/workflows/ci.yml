@@ -208,9 +208,10 @@ jobs:
       # (378 obligations: 186 discharged / 192 blocked / 0 unknown), because the
       # 66 admissions from this gate are part of the queue. Pointing it at the
       # pre-enrolment closure would fail forever on entries that are now present.
-      # The closure itself is REFUSED (MISSING_BOUNDARY_RECEIPT over 13 files);
-      # that is recorded in CAMPAIGN-STATUS.json and does not make the enumeration
-      # incomplete -- the two gates measure different properties.
+      # The closure is ACCEPTED at this candidate: 378 obligations
+      # (186 discharged / 192 blocked / 0 unknown). The gate above and the
+      # artifact cross-check below guard that state; they measure different
+      # properties, so neither replaces the closure's own verdict.
       - name: Callback enumeration completeness (extension-slot registrations vs inventory)
         if: >-
           github.ref == 'refs/heads/main'
