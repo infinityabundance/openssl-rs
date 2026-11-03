@@ -713,11 +713,35 @@
   "Application is prohibited until an independent BOUNDARY adjudication is recorded."
  ],
  "review": {
-  "reviewer": "pending independent adjudication",
-  "verdict": "UNAPPLIED",
-  "applied": false,
-  "prohibition": "Do not apply this receipt, edit CAMPAIGN-STATUS.json or evidence/, commit, or treat any disposition as adjudicated until an independent reviewer has run the BOUNDARY gates and recorded a verdict."
+  "reviewer": "independent adversarial adjudicator (session 810ca847-fab2-4746-8b35-441542a1c60f); transcribed verbatim by the orchestrator",
+  "verdict": "APPROVE",
+  "applied": true,
+  "date": "2026-11-02",
+  "verdict_text": "APPROVE",
+  "conditions": "correct the stale identity fields to S in the evidence commit, regenerate the closure at S, recompute spans (expected identical), and keep audit_s2i / s2i_skey_id / s2i_poison unclaimed",
+  "conditions_met": "identity strings corrected to S; spans recomputed at S and bit-identical; the three sites are declared in scope.excluded; the baseline was regenerated at S (177/135/0)",
+  "applied_in_ledger": "CAMPAIGN-STATUS.json scoped_boundary_discharges[receipt=boundary-sweep-B52], base_head a8716b4f2",
+  "residuals_open": [
+   "B52-R4: no authority differential, Miri, ASan or TSan",
+   "B52-R2: caller/registrar duties retained and stated"
+  ],
+  "would_be_applied_delta": "X509_VERIFY_POLICY site-scoped: s2i family 48/32 -> 57/23; closure 177/135 -> 186/126"
  },
  "schema_note": "Same top-level shape as boundary-sweep-B51.json, with source_delta added. `line` is the V1 census coordinate; `line_current` is the resolver's span start at the candidate; span_sha256 is the acceptance binding. span_post_edit_sha256 is advisory (working-tree source_text binding) and does not replace the candidate-bound hash.",
- "applied": false
+ "applied": true,
+ "review_history": [
+  {
+   "reviewer": "pending independent adjudication",
+   "verdict": "UNAPPLIED",
+   "applied": false,
+   "prohibition": "Do not apply this receipt, edit CAMPAIGN-STATUS.json or evidence/, commit, or treat any disposition as adjudicated until an independent reviewer has run the BOUNDARY gates and recorded a verdict.",
+   "superseded_by": "independent adjudication, APPROVE, 2026-11-02; the authoring UNAPPLIED state is preserved"
+  }
+ ],
+ "reconciliation": {
+  "date": "2026-11-02",
+  "issue": "the receipt said UNAPPLIED with a prohibition while the ledger already carried an APPROVE row and nine discharged boundaries",
+  "resolution": "the ledger adjudication is transcribed into review; the authoring UNAPPLIED block and its prohibition are preserved verbatim in review_history; applied=true. The applied measurement is evidence/closure-ssh-b52-applied.json (186/126/0, nine moved).",
+  "reviewed_by": "orchestrator transcription; no verdict was created or altered"
+ }
 }
