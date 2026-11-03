@@ -1,19 +1,29 @@
 {
+ "chunk": 0,
+ "chunks": 1,
  "part": "registrations",
  "registrations": [
   {
    "assumption": "",
+   "basis": "unique-name-match",
    "callback": "i2d_SCT_LIST",
    "callback_file": "src/ct/ct_oct.rs",
    "callback_line": 873,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-unique-name-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "unique-name-match",
    "classification_evidence": {
     "file": "src/ct/ct_oct.rs",
+    "may_bound": true,
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x2fc8b0:i2d_SCT_LIST"
     ]
    },
+   "definition_key": [
+    "src/ct/ct_oct.rs",
+    873,
+    "i2d_SCT_LIST"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -49,17 +59,25 @@
   },
   {
    "assumption": "",
+   "basis": "unique-name-match",
    "callback": "i2d_SCT_LIST",
    "callback_file": "src/ct/ct_oct.rs",
    "callback_line": 873,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-unique-name-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "unique-name-match",
    "classification_evidence": {
     "file": "src/ct/ct_oct.rs",
+    "may_bound": true,
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x2fc8b0:i2d_SCT_LIST"
     ]
    },
+   "definition_key": [
+    "src/ct/ct_oct.rs",
+    873,
+    "i2d_SCT_LIST"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -95,18 +113,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "i2d_ocsp_nonce",
    "callback_file": "src/ocsp/v3_ocsp.rs",
    "callback_line": 232,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/ocsp/v3_ocsp.rs",
+    "may_bound": true,
     "module": "v3_ocsp",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x1a1690:_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14i2d_ocsp_nonce.llvm.<hash>"
     ]
    },
+   "definition_key": [
+    "src/ocsp/v3_ocsp.rs",
+    232,
+    "i2d_ocsp_nonce"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [

@@ -1,4 +1,16 @@
 {
+ "basis_counts": {
+  "dispatcher-row-binding": 7,
+  "edge-witness": 38,
+  "module-name-match": 104,
+  "unique-name-match": 0
+ },
+ "callback_basis_counts": {
+  "dispatcher-row-binding": 7,
+  "edge-witness": 37,
+  "module-name-match": 91,
+  "unique-name-match": 0
+ },
  "callback_count": 135,
  "closure": {
   "family": "openssh",
@@ -11,9 +23,35 @@
   "sha256": "40d25c558c48962d9df7b17f344c01aae4c22f6781fec75b9e3653c563f47e94",
   "unsafe_fn_identity_count": 286
  },
+ "inventory_accounting": {
+  "inventory_callbacks_accounted": 69,
+  "slot_prefix_inventory_not_seen": [],
+  "slot_prefix_inventory_without_source_definition": [],
+  "unaccounted": [],
+  "unit": "distinct inventory callbacks accounted for by the source enumeration; entries are file-qualified"
+ },
+ "labels": {
+  "non_reachable_bases": [
+   "closed-world-ce-1",
+   "unresolved"
+  ],
+  "reachable": "REACHABLE_BOUND",
+  "reachable_bases": [
+   "edge-witness",
+   "module-name-match",
+   "unique-name-match",
+   "dispatcher-row-binding"
+  ],
+  "reachable_is_proof": false
+ },
+ "missing_counts": {
+  "distinct_names": 65,
+  "entries": 66,
+  "unit": "entries are per file-qualified callback definition; distinct_names counts callback names"
+ },
  "non_claims": [
   "The gate proves inventory-vs-source agreement for the registrations this parser can see; it does not prove that every registration in the source was parsed (macro-generated rows and build-script-generated source are outside the parser).",
-  "A dispatcher binding is a source-level METHOD-table / call-site witness. It is not a proof that an indirect call actually executes for a given input, and it is not an edge-level proof for callbacks reached only through unresolved indirect sites.",
+  "REACHABLE_BOUND is a bound, not a proof. edge-witness records a concrete source call-graph edge from a caller that is itself reachable-bound; module-name-match and unique-name-match rest only on the closure's converged MAY-bound reachable_functions set (unresolved-site-bound/v1, whose own contract says monotonicity is not completeness); dispatcher-row-binding records a STANDARD_EXTS row plus a reachable dispatcher and states that no callback symbol was found in the reachable set.",
   "PROVEN_EXCLUDED carries the written closed-world assumption CE-1; it is a scoped reachability claim about the pinned consumer family, not a property of the callback in general.",
   "The gate does not adjudicate whether an inventoried callback is safe, and it does not change any obligation status."
  ],
@@ -48,81 +86,88 @@
  },
  "parts": {
   "callbacks.json": {
-   "bytes": 93162,
+   "bytes": 103318,
    "count": 135,
    "path": "callback-registration-manifest/callbacks.json",
-   "sha256": "e6b7b7a7dc7e8ad65bea34d983d3d144ead24e5590ee0b551474f2c1f75fe195"
+   "sha256": "a8641bb0c4394465d85b583598a258a71f50001547c6c91ba3fff487c8ddd4bd"
   },
   "registrations.d2i.json": {
-   "bytes": 4192,
+   "bytes": 4671,
    "count": 3,
    "path": "callback-registration-manifest/registrations.d2i.json",
-   "sha256": "4c50ae4db030a6386f33fabf6d5e87174fe73ca3453af3264ed57c37fff26681"
+   "sha256": "26a8a3269ef47199ae726ee066d8806433b16995ff2ae4a5db3d2854be574840"
   },
   "registrations.ext_free.json": {
-   "bytes": 5550,
+   "bytes": 10651,
    "count": 3,
    "path": "callback-registration-manifest/registrations.ext_free.json",
-   "sha256": "88e7c997a5b7643065bd1168a35f85d95b301eb2feed5291c3abe8f84e343276"
+   "sha256": "1c8690c2548cb5394fb2d54e42d3909a43794c5882dcf51b59b54df4ca9ce46e"
   },
   "registrations.ext_new.json": {
-   "bytes": 1499,
+   "bytes": 1672,
    "count": 1,
    "path": "callback-registration-manifest/registrations.ext_new.json",
-   "sha256": "19f062c5420706a0dba076d02009bc2e8aa35d9cbf7478ca4b10a767f2407287"
+   "sha256": "4865aaeca6ca887d664e736f2b5a65340f2fe178b62a6bd0d06ccac4581b7d7b"
   },
   "registrations.i2d.json": {
-   "bytes": 3990,
+   "bytes": 4435,
    "count": 3,
    "path": "callback-registration-manifest/registrations.i2d.json",
-   "sha256": "984beb266551f47382605e271efdbe4703ef733e6dac71ed9adecd31a28569cb"
+   "sha256": "080a2408f8eb7a4ac023dc463602db5a2b03828be8323f7c9a938bfc8111342c"
   },
   "registrations.i2r.json": {
-   "bytes": 86325,
+   "bytes": 115307,
    "count": 56,
    "path": "callback-registration-manifest/registrations.i2r.json",
-   "sha256": "65fd3b8483bf9c59208ca8db665273e8f57aebd391ca8d7e011767796da73793"
+   "sha256": "d076f0dd87e0a69ceaf7c198923a1c977de96c7ee67d2e5e0f2312b804b9e20d"
   },
   "registrations.i2s.json": {
-   "bytes": 32312,
+   "bytes": 49533,
    "count": 22,
    "path": "callback-registration-manifest/registrations.i2s.json",
-   "sha256": "65ec7528c69a30b669b9dbace7ded5c2630aa1ee5a2de0caabb74208f2f2d149"
+   "sha256": "59f013b5af02d4648629295aa7f2af7caea53e8dbed45a371384c12f2b29efdb"
   },
   "registrations.i2v.json": {
-   "bytes": 26135,
+   "bytes": 35934,
    "count": 17,
    "path": "callback-registration-manifest/registrations.i2v.json",
-   "sha256": "0d38b692a72b82fb679614777732c4fbafc24d16a1f5579bb948b1b3b722c6b6"
+   "sha256": "f1846213a32a324678eaa83c0e7c6593f45d08bf1237fba885f067500de4a173"
   },
-  "registrations.it.json": {
-   "bytes": 133558,
-   "count": 63,
-   "path": "callback-registration-manifest/registrations.it.json",
-   "sha256": "22f866ea260ffcb6eeb196f0a3cb647a7c94acecf8a4ce397faee701c0fe1cdc"
+  "registrations.it.part1.json": {
+   "bytes": 146857,
+   "count": 43,
+   "path": "callback-registration-manifest/registrations.it.part1.json",
+   "sha256": "542ab64fc7b5efbe6a009ab92d0e3fef18f76591bca40c36ba42094ac8874ce4"
+  },
+  "registrations.it.part2.json": {
+   "bytes": 73553,
+   "count": 20,
+   "path": "callback-registration-manifest/registrations.it.part2.json",
+   "sha256": "facc32d91669de21c5f971d4d3b6666b3992ea6335e821c25422f5bfcc2b6afc"
   },
   "registrations.r2i.json": {
-   "bytes": 12413,
+   "bytes": 13629,
    "count": 8,
    "path": "callback-registration-manifest/registrations.r2i.json",
-   "sha256": "d3a141dc44a86f6815c2e98e25a639c67e95cc7cb3dcbc874c3ab8d6d8a012ae"
+   "sha256": "9178aed6a8bd0814d2799b543a1508959855754712fe541918450faf40ae3476"
   },
   "registrations.s2i.json": {
-   "bytes": 26887,
+   "bytes": 38713,
    "count": 18,
    "path": "callback-registration-manifest/registrations.s2i.json",
-   "sha256": "9fcc6af6a654da8a55e2a42deee2ed70eab2441c1c39d7c1c355e31fe695b5f2"
+   "sha256": "9d6ec75cdf805cb7e52654bf0f08cc99804562f7851b33e7ce6cb9fd6e128c84"
   },
   "registrations.v2i.json": {
-   "bytes": 44664,
+   "bytes": 62077,
    "count": 31,
    "path": "callback-registration-manifest/registrations.v2i.json",
-   "sha256": "a516d6e15af809e967f15002b94e8c304bb323909f71df92e06e4806db40f3a4"
+   "sha256": "f3ab445f998362d2d0375d719d35d2b5d2bc39ed0df6b0ed650248a12534170a"
   }
  },
  "reconciliation": {
   "ext_free_callbacks_absent_from_queue": 2,
-  "gate_missing_distinct_callbacks": 66,
+  "gate_missing_distinct_definitions": 66,
+  "gate_missing_distinct_names": 65,
   "gate_missing_entries": 66,
   "note": "name-prefix matching is not the enumeration; these counts reconcile the six-prefix definition census with the slot-driven manifest and explain why the gate's missing set differs from a raw prefix grep",
   "prefix_definitions_absent_and_definition_only": 34,
@@ -5114,8 +5159,12 @@
  ],
  "schema": "openssl-rs/campaign/safe-c33/callback-registration-manifest/v1",
  "source_identity": {
+  "instrument": {
+   "path": "forensics/tools/callback_enumeration_gate.py",
+   "sha256": "648ecd9b00d9941746a73558f96d3ea60fc9b01142a54eda92b0367ed12966a6"
+  },
   "inventory_source_head": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
-  "repository_head": "38a1548be633f3d1be4e55330cbdcb29ef0b8de8",
+  "repository_head": "f2a8110cdc7dc94cc6cf5a3af92bd7c3c234a04f",
   "source_mode": "worktree",
   "src_tree_unchanged_vs_inventory_head": true
  },

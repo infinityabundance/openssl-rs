@@ -1,20 +1,30 @@
 {
+ "chunk": 0,
+ "chunks": 1,
  "part": "registrations",
  "registrations": [
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_IPAddrBlocks",
    "callback_file": "src/x509/v3_addr.rs",
    "callback_line": 2241,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_addr.rs",
+    "may_bound": true,
     "module": "v3_addr",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x24e7a0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_addr16v2i_IPAddrBlocks"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_addr.rs",
+    2241,
+    "v2i_IPAddrBlocks"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -50,18 +60,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "akid_v2i",
    "callback_file": "src/x509/v3_akid.rs",
    "callback_line": 193,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_akid.rs",
+    "may_bound": true,
     "module": "v3_akid",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x290a60:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_akid8akid_v2i"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_akid.rs",
+    193,
+    "akid_v2i"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -105,22 +123,82 @@
   },
   {
    "assumption": "",
+   "basis": "edge-witness",
    "callback": "v2i_AUTHORITY_KEYID",
    "callback_file": "src/x509/v3_akid.rs",
    "callback_line": 359,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "direct-call-closure-from-reachable-callback",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
    "classification_evidence": {
-    "call_closure": true,
     "definition_only": true,
-    "reachable": {}
+    "witness": {
+     "callee": "v2i_AUTHORITY_KEYID",
+     "callee_key": [
+      "src/x509/v3_akid.rs",
+      359,
+      "v2i_AUTHORITY_KEYID"
+     ],
+     "caller": "akid_v2i",
+     "caller_key": [
+      "src/x509/v3_akid.rs",
+      193,
+      "akid_v2i"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_akid.rs",
+     "line": 200,
+     "site": "src/x509/v3_akid.rs:200"
+    },
+    "witnesses": [
+     {
+      "callee": "v2i_AUTHORITY_KEYID",
+      "callee_key": [
+       "src/x509/v3_akid.rs",
+       359,
+       "v2i_AUTHORITY_KEYID"
+      ],
+      "caller": "akid_v2i",
+      "caller_key": [
+       "src/x509/v3_akid.rs",
+       193,
+       "akid_v2i"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_akid.rs",
+      "line": 200,
+      "site": "src/x509/v3_akid.rs:200"
+     }
+    ]
    },
+   "definition_key": [
+    "src/x509/v3_akid.rs",
+    359,
+    "v2i_AUTHORITY_KEYID"
+   ],
    "direct_callers": [
     {
+     "callee": "v2i_AUTHORITY_KEYID",
+     "callee_key": [
+      "src/x509/v3_akid.rs",
+      359,
+      "v2i_AUTHORITY_KEYID"
+     ],
      "caller": "akid_v2i",
+     "caller_key": [
+      "src/x509/v3_akid.rs",
+      193,
+      "akid_v2i"
+     ],
      "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
      "file": "src/x509/v3_akid.rs",
-     "line": 200
+     "line": 200,
+     "site": "src/x509/v3_akid.rs:200"
     }
    ],
    "dispatcher_bindings": [],
@@ -141,18 +219,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_ASIdentifiers",
    "callback_file": "src/x509/v3_asid.rs",
    "callback_line": 1505,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_asid.rs",
+    "may_bound": true,
     "module": "v3_asid",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x2506b0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_asid17v2i_ASIdentifiers"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_asid.rs",
+    1505,
+    "v2i_ASIdentifiers"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -196,18 +282,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_OSSL_BASIC_ATTR_CONSTRAINTS",
    "callback_file": "src/x509/v3_battcons.rs",
    "callback_line": 241,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_battcons.rs",
+    "may_bound": true,
     "module": "v3_battcons",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x3f27d0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_battcons31v2i_OSSL_BASIC_ATTR_CONSTRAINTS"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_battcons.rs",
+    241,
+    "v2i_OSSL_BASIC_ATTR_CONSTRAINTS"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -251,18 +345,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_BASIC_CONSTRAINTS",
    "callback_file": "src/x509/v3_bcons.rs",
    "callback_line": 242,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_bcons.rs",
+    "may_bound": true,
     "module": "v3_bcons",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x4ed470:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bcons21v2i_BASIC_CONSTRAINTS"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_bcons.rs",
+    242,
+    "v2i_BASIC_CONSTRAINTS"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -306,27 +408,82 @@
   },
   {
    "assumption": "",
+   "basis": "edge-witness",
    "callback": "v2i_ASN1_BIT_STRING",
    "callback_file": "src/x509/v3_bitst.rs",
    "callback_line": 288,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-unique-name-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
    "classification_evidence": {
-    "call_closure": true,
     "definition_only": true,
-    "reachable": {
+    "witness": {
+     "callee": "v2i_ASN1_BIT_STRING",
+     "callee_key": [
+      "src/x509/v3_bitst.rs",
+      288,
+      "v2i_ASN1_BIT_STRING"
+     ],
+     "caller": "bitst_v2i",
+     "caller_key": [
+      "src/x509/v3_bitst.rs",
+      360,
+      "bitst_v2i"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
      "file": "src/x509/v3_bitst.rs",
-     "symbols": [
-      "libcrypto.so.3:0x3f9580:v2i_ASN1_BIT_STRING"
-     ]
-    }
+     "line": 366,
+     "site": "src/x509/v3_bitst.rs:366"
+    },
+    "witnesses": [
+     {
+      "callee": "v2i_ASN1_BIT_STRING",
+      "callee_key": [
+       "src/x509/v3_bitst.rs",
+       288,
+       "v2i_ASN1_BIT_STRING"
+      ],
+      "caller": "bitst_v2i",
+      "caller_key": [
+       "src/x509/v3_bitst.rs",
+       360,
+       "bitst_v2i"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_bitst.rs",
+      "line": 366,
+      "site": "src/x509/v3_bitst.rs:366"
+     }
+    ]
    },
+   "definition_key": [
+    "src/x509/v3_bitst.rs",
+    288,
+    "v2i_ASN1_BIT_STRING"
+   ],
    "direct_callers": [
     {
+     "callee": "v2i_ASN1_BIT_STRING",
+     "callee_key": [
+      "src/x509/v3_bitst.rs",
+      288,
+      "v2i_ASN1_BIT_STRING"
+     ],
      "caller": "bitst_v2i",
+     "caller_key": [
+      "src/x509/v3_bitst.rs",
+      360,
+      "bitst_v2i"
+     ],
      "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
      "file": "src/x509/v3_bitst.rs",
-     "line": 366
+     "line": 366,
+     "site": "src/x509/v3_bitst.rs:366"
     }
    ],
    "dispatcher_bindings": [],
@@ -347,18 +504,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "bitst_v2i",
    "callback_file": "src/x509/v3_bitst.rs",
    "callback_line": 360,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_bitst.rs",
+    "may_bound": true,
     "module": "v3_bitst",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x3f2a10:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bitst9bitst_v2i"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_bitst.rs",
+    360,
+    "bitst_v2i"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -402,18 +567,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "bitst_v2i",
    "callback_file": "src/x509/v3_bitst.rs",
    "callback_line": 360,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_bitst.rs",
+    "may_bound": true,
     "module": "v3_bitst",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x3f2a10:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bitst9bitst_v2i"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_bitst.rs",
+    360,
+    "bitst_v2i"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -457,18 +630,24 @@
   },
   {
    "assumption": "",
+   "basis": "unresolved",
    "callback": "hold_probe_v2i",
    "callback_file": "src/x509/v3_conf.rs",
    "callback_line": 1650,
    "classification": "UNRESOLVED",
-   "classification_basis": "not-provable-either-way",
+   "classification_basis": "unresolved",
    "classification_evidence": {
     "direct_calls": [],
     "file_reachable": true,
     "method_table_binding": false,
-    "reachable_functions_basis": "no-source-definition",
+    "reachable_functions_basis": "absent-from-reachable-functions",
     "reachable_row_references": []
    },
+   "definition_key": [
+    "src/x509/v3_conf.rs",
+    1650,
+    "hold_probe_v2i"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "none-found",
    "dispatcher_bindings": [],
@@ -495,18 +674,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_crld",
    "callback_file": "src/x509/v3_crld.rs",
    "callback_line": 1325,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_crld.rs",
+    "may_bound": true,
     "module": "v3_crld",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x1a3940:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld8v2i_crld"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_crld.rs",
+    1325,
+    "v2i_crld"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -542,18 +729,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_crld",
    "callback_file": "src/x509/v3_crld.rs",
    "callback_line": 1325,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_crld.rs",
+    "may_bound": true,
     "module": "v3_crld",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x1a3940:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld8v2i_crld"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_crld.rs",
+    1325,
+    "v2i_crld"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -589,18 +784,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_idp",
    "callback_file": "src/x509/v3_crld.rs",
    "callback_line": 1554,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_crld.rs",
+    "may_bound": true,
     "module": "v3_crld",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x1a3700:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld7v2i_idp"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_crld.rs",
+    1554,
+    "v2i_idp"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -636,18 +839,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_aaidp",
    "callback_file": "src/x509/v3_crld.rs",
    "callback_line": 1913,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_crld.rs",
+    "may_bound": true,
     "module": "v3_crld",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x1a4160:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9v2i_aaidp"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_crld.rs",
+    1913,
+    "v2i_aaidp"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -683,18 +894,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_EXTENDED_KEY_USAGE",
    "callback_file": "src/x509/v3_extku.rs",
    "callback_line": 245,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_extku.rs",
+    "may_bound": true,
     "module": "v3_extku",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x4ed6a0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22v2i_EXTENDED_KEY_USAGE"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_extku.rs",
+    245,
+    "v2i_EXTENDED_KEY_USAGE"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -773,18 +992,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_AUTHORITY_INFO_ACCESS",
    "callback_file": "src/x509/v3_info.rs",
    "callback_line": 449,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_info.rs",
+    "may_bound": true,
     "module": "v3_info",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x4b30f0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_info25v2i_AUTHORITY_INFO_ACCESS"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_info.rs",
+    449,
+    "v2i_AUTHORITY_INFO_ACCESS"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -839,18 +1066,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_issuer_sign_tool",
    "callback_file": "src/x509/v3_ist.rs",
    "callback_line": 280,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_ist.rs",
+    "may_bound": true,
     "module": "v3_ist",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x1a25c0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ist20v2i_issuer_sign_tool"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_ist.rs",
+    280,
+    "v2i_issuer_sign_tool"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -894,18 +1129,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_NAME_CONSTRAINTS",
    "callback_file": "src/x509/v3_ncons.rs",
    "callback_line": 390,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_ncons.rs",
+    "may_bound": true,
     "module": "v3_ncons",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x252a20:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20v2i_NAME_CONSTRAINTS"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_ncons.rs",
+    390,
+    "v2i_NAME_CONSTRAINTS"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -941,18 +1184,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_NAME_CONSTRAINTS",
    "callback_file": "src/x509/v3_ncons.rs",
    "callback_line": 390,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_ncons.rs",
+    "may_bound": true,
     "module": "v3_ncons",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x252a20:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20v2i_NAME_CONSTRAINTS"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_ncons.rs",
+    390,
+    "v2i_NAME_CONSTRAINTS"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -988,18 +1239,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_NAME_CONSTRAINTS",
    "callback_file": "src/x509/v3_ncons.rs",
    "callback_line": 390,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_ncons.rs",
+    "may_bound": true,
     "module": "v3_ncons",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x252a20:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20v2i_NAME_CONSTRAINTS"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_ncons.rs",
+    390,
+    "v2i_NAME_CONSTRAINTS"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -1035,18 +1294,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_POLICY_CONSTRAINTS",
    "callback_file": "src/x509/v3_pcons.rs",
    "callback_line": 212,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_pcons.rs",
+    "may_bound": true,
     "module": "v3_pcons",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x563da0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_pcons22v2i_POLICY_CONSTRAINTS"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_pcons.rs",
+    212,
+    "v2i_POLICY_CONSTRAINTS"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -1090,18 +1357,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_POLICY_MAPPINGS",
    "callback_file": "src/x509/v3_pmaps.rs",
    "callback_line": 263,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_pmaps.rs",
+    "may_bound": true,
     "module": "v3_pmaps",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x38ef20:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_pmaps19v2i_POLICY_MAPPINGS"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_pmaps.rs",
+    263,
+    "v2i_POLICY_MAPPINGS"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -1145,39 +1420,162 @@
   },
   {
    "assumption": "",
+   "basis": "edge-witness",
    "callback": "v2i_GENERAL_NAME_ex",
    "callback_file": "src/x509/v3_san.rs",
    "callback_line": 1058,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-unique-name-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
    "classification_evidence": {
-    "call_closure": true,
     "definition_only": true,
-    "reachable": {
-     "file": "src/x509/v3_san.rs",
-     "symbols": [
-      "libcrypto.so.3:0x2708c0:v2i_GENERAL_NAME_ex"
-     ]
-    }
+    "witness": {
+     "callee": "v2i_GENERAL_NAME_ex",
+     "callee_key": [
+      "src/x509/v3_san.rs",
+      1058,
+      "v2i_GENERAL_NAME_ex"
+     ],
+     "caller": "v2i_AUTHORITY_INFO_ACCESS",
+     "caller_key": [
+      "src/x509/v3_info.rs",
+      449,
+      "v2i_AUTHORITY_INFO_ACCESS"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_info.rs",
+     "line": 493,
+     "site": "src/x509/v3_info.rs:493"
+    },
+    "witnesses": [
+     {
+      "callee": "v2i_GENERAL_NAME_ex",
+      "callee_key": [
+       "src/x509/v3_san.rs",
+       1058,
+       "v2i_GENERAL_NAME_ex"
+      ],
+      "caller": "v2i_AUTHORITY_INFO_ACCESS",
+      "caller_key": [
+       "src/x509/v3_info.rs",
+       449,
+       "v2i_AUTHORITY_INFO_ACCESS"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_info.rs",
+      "line": 493,
+      "site": "src/x509/v3_info.rs:493"
+     },
+     {
+      "callee": "v2i_GENERAL_NAME_ex",
+      "callee_key": [
+       "src/x509/v3_san.rs",
+       1058,
+       "v2i_GENERAL_NAME_ex"
+      ],
+      "caller": "v2i_NAME_CONSTRAINTS",
+      "caller_key": [
+       "src/x509/v3_ncons.rs",
+       390,
+       "v2i_NAME_CONSTRAINTS"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_ncons.rs",
+      "line": 453,
+      "site": "src/x509/v3_ncons.rs:453"
+     },
+     {
+      "callee": "v2i_GENERAL_NAME_ex",
+      "callee_key": [
+       "src/x509/v3_san.rs",
+       1058,
+       "v2i_GENERAL_NAME_ex"
+      ],
+      "caller": "v2i_GENERAL_NAME",
+      "caller_key": [
+       "src/x509/v3_san.rs",
+       1115,
+       "v2i_GENERAL_NAME"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": false,
+      "file": "src/x509/v3_san.rs",
+      "line": 1121,
+      "site": "src/x509/v3_san.rs:1121"
+     }
+    ]
    },
+   "definition_key": [
+    "src/x509/v3_san.rs",
+    1058,
+    "v2i_GENERAL_NAME_ex"
+   ],
    "direct_callers": [
     {
+     "callee": "v2i_GENERAL_NAME_ex",
+     "callee_key": [
+      "src/x509/v3_san.rs",
+      1058,
+      "v2i_GENERAL_NAME_ex"
+     ],
      "caller": "v2i_AUTHORITY_INFO_ACCESS",
+     "caller_key": [
+      "src/x509/v3_info.rs",
+      449,
+      "v2i_AUTHORITY_INFO_ACCESS"
+     ],
      "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
      "file": "src/x509/v3_info.rs",
-     "line": 493
+     "line": 493,
+     "site": "src/x509/v3_info.rs:493"
     },
     {
+     "callee": "v2i_GENERAL_NAME_ex",
+     "callee_key": [
+      "src/x509/v3_san.rs",
+      1058,
+      "v2i_GENERAL_NAME_ex"
+     ],
      "caller": "v2i_NAME_CONSTRAINTS",
+     "caller_key": [
+      "src/x509/v3_ncons.rs",
+      390,
+      "v2i_NAME_CONSTRAINTS"
+     ],
      "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
      "file": "src/x509/v3_ncons.rs",
-     "line": 453
+     "line": 453,
+     "site": "src/x509/v3_ncons.rs:453"
     },
     {
+     "callee": "v2i_GENERAL_NAME_ex",
+     "callee_key": [
+      "src/x509/v3_san.rs",
+      1058,
+      "v2i_GENERAL_NAME_ex"
+     ],
      "caller": "v2i_GENERAL_NAME",
+     "caller_key": [
+      "src/x509/v3_san.rs",
+      1115,
+      "v2i_GENERAL_NAME"
+     ],
      "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
      "file": "src/x509/v3_san.rs",
-     "line": 1121
+     "line": 1121,
+     "site": "src/x509/v3_san.rs:1121"
     }
    ],
    "dispatcher_bindings": [],
@@ -1198,46 +1596,222 @@
   },
   {
    "assumption": "",
+   "basis": "edge-witness",
    "callback": "v2i_GENERAL_NAME",
    "callback_file": "src/x509/v3_san.rs",
    "callback_line": 1115,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "direct-call-closure-from-reachable-callback",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
    "classification_evidence": {
-    "call_closure": true,
     "definition_only": true,
-    "reachable": {}
+    "witness": {
+     "callee": "v2i_GENERAL_NAME",
+     "callee_key": [
+      "src/x509/v3_san.rs",
+      1115,
+      "v2i_GENERAL_NAME"
+     ],
+     "caller": "v2i_crld",
+     "caller_key": [
+      "src/x509/v3_crld.rs",
+      1325,
+      "v2i_crld"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_crld.rs",
+     "line": 1363,
+     "site": "src/x509/v3_crld.rs:1363"
+    },
+    "witnesses": [
+     {
+      "callee": "v2i_GENERAL_NAME",
+      "callee_key": [
+       "src/x509/v3_san.rs",
+       1115,
+       "v2i_GENERAL_NAME"
+      ],
+      "caller": "v2i_crld",
+      "caller_key": [
+       "src/x509/v3_crld.rs",
+       1325,
+       "v2i_crld"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_crld.rs",
+      "line": 1363,
+      "site": "src/x509/v3_crld.rs:1363"
+     },
+     {
+      "callee": "v2i_GENERAL_NAME",
+      "callee_key": [
+       "src/x509/v3_san.rs",
+       1115,
+       "v2i_GENERAL_NAME"
+      ],
+      "caller": "v2i_aaidp",
+      "caller_key": [
+       "src/x509/v3_crld.rs",
+       1913,
+       "v2i_aaidp"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_crld.rs",
+      "line": 1944,
+      "site": "src/x509/v3_crld.rs:1944"
+     },
+     {
+      "callee": "v2i_GENERAL_NAME",
+      "callee_key": [
+       "src/x509/v3_san.rs",
+       1115,
+       "v2i_GENERAL_NAME"
+      ],
+      "caller": "v2i_GENERAL_NAMES",
+      "caller_key": [
+       "src/x509/v3_san.rs",
+       1131,
+       "v2i_GENERAL_NAMES"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_san.rs",
+      "line": 1149,
+      "site": "src/x509/v3_san.rs:1149"
+     },
+     {
+      "callee": "v2i_GENERAL_NAME",
+      "callee_key": [
+       "src/x509/v3_san.rs",
+       1115,
+       "v2i_GENERAL_NAME"
+      ],
+      "caller": "v2i_issuer_alt",
+      "caller_key": [
+       "src/x509/v3_san.rs",
+       1231,
+       "v2i_issuer_alt"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": false,
+      "file": "src/x509/v3_san.rs",
+      "line": 1271,
+      "site": "src/x509/v3_san.rs:1271"
+     }
+    ]
    },
+   "definition_key": [
+    "src/x509/v3_san.rs",
+    1115,
+    "v2i_GENERAL_NAME"
+   ],
    "direct_callers": [
     {
+     "callee": "v2i_GENERAL_NAME",
+     "callee_key": [
+      "src/x509/v3_san.rs",
+      1115,
+      "v2i_GENERAL_NAME"
+     ],
      "caller": "v2i_crld",
+     "caller_key": [
+      "src/x509/v3_crld.rs",
+      1325,
+      "v2i_crld"
+     ],
      "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
      "file": "src/x509/v3_crld.rs",
-     "line": 1363
+     "line": 1363,
+     "site": "src/x509/v3_crld.rs:1363"
     },
     {
+     "callee": "v2i_GENERAL_NAME",
+     "callee_key": [
+      "src/x509/v3_san.rs",
+      1115,
+      "v2i_GENERAL_NAME"
+     ],
      "caller": "v2i_aaidp",
+     "caller_key": [
+      "src/x509/v3_crld.rs",
+      1913,
+      "v2i_aaidp"
+     ],
      "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
      "file": "src/x509/v3_crld.rs",
-     "line": 1944
+     "line": 1944,
+     "site": "src/x509/v3_crld.rs:1944"
     },
     {
+     "callee": "v2i_GENERAL_NAME",
+     "callee_key": [
+      "src/x509/v3_san.rs",
+      1115,
+      "v2i_GENERAL_NAME"
+     ],
      "caller": "v2i_GENERAL_NAMES",
+     "caller_key": [
+      "src/x509/v3_san.rs",
+      1131,
+      "v2i_GENERAL_NAMES"
+     ],
      "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
      "file": "src/x509/v3_san.rs",
-     "line": 1149
+     "line": 1149,
+     "site": "src/x509/v3_san.rs:1149"
     },
     {
+     "callee": "v2i_GENERAL_NAME",
+     "callee_key": [
+      "src/x509/v3_san.rs",
+      1115,
+      "v2i_GENERAL_NAME"
+     ],
      "caller": "v2i_issuer_alt",
+     "caller_key": [
+      "src/x509/v3_san.rs",
+      1231,
+      "v2i_issuer_alt"
+     ],
      "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
      "file": "src/x509/v3_san.rs",
-     "line": 1271
+     "line": 1271,
+     "site": "src/x509/v3_san.rs:1271"
     },
     {
+     "callee": "v2i_GENERAL_NAME",
+     "callee_key": [
+      "src/x509/v3_san.rs",
+      1115,
+      "v2i_GENERAL_NAME"
+     ],
      "caller": "v2i_subject_alt",
+     "caller_key": [
+      "src/x509/v3_san.rs",
+      1355,
+      "v2i_subject_alt"
+     ],
      "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
      "file": "src/x509/v3_san.rs",
-     "line": 1402
+     "line": 1402,
+     "site": "src/x509/v3_san.rs:1402"
     }
    ],
    "dispatcher_bindings": [],
@@ -1258,27 +1832,70 @@
   },
   {
    "assumption": "",
+   "basis": "edge-witness",
    "callback": "v2i_GENERAL_NAMES",
    "callback_file": "src/x509/v3_san.rs",
    "callback_line": 1131,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-unique-name-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
    "classification_evidence": {
-    "call_closure": true,
     "definition_only": true,
-    "reachable": {
-     "file": "src/x509/v3_san.rs",
-     "symbols": [
-      "libcrypto.so.3:0x2707e0:v2i_GENERAL_NAMES"
-     ]
-    }
+    "witness": {
+     "callee": "v2i_GENERAL_NAMES",
+     "callee_key": [
+      "src/x509/v3_san.rs",
+      1131,
+      "v2i_GENERAL_NAMES"
+     ],
+     "caller": "gnames_from_sectname",
+     "caller_key": null,
+     "caller_reachable": true,
+     "caller_reachable_call_bound": false,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_crld.rs",
+     "line": 966,
+     "site": "src/x509/v3_crld.rs:966"
+    },
+    "witnesses": [
+     {
+      "callee": "v2i_GENERAL_NAMES",
+      "callee_key": [
+       "src/x509/v3_san.rs",
+       1131,
+       "v2i_GENERAL_NAMES"
+      ],
+      "caller": "gnames_from_sectname",
+      "caller_key": null,
+      "caller_reachable": true,
+      "caller_reachable_call_bound": false,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_crld.rs",
+      "line": 966,
+      "site": "src/x509/v3_crld.rs:966"
+     }
+    ]
    },
+   "definition_key": [
+    "src/x509/v3_san.rs",
+    1131,
+    "v2i_GENERAL_NAMES"
+   ],
    "direct_callers": [
     {
+     "callee": "v2i_GENERAL_NAMES",
+     "callee_key": [
+      "src/x509/v3_san.rs",
+      1131,
+      "v2i_GENERAL_NAMES"
+     ],
      "caller": "gnames_from_sectname",
+     "caller_key": null,
      "caller_reachable": true,
+     "caller_reachable_call_bound": false,
+     "caller_reachable_closure_name": true,
      "file": "src/x509/v3_crld.rs",
-     "line": 966
+     "line": 966,
+     "site": "src/x509/v3_crld.rs:966"
     }
    ],
    "dispatcher_bindings": [],
@@ -1299,18 +1916,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "san_v2i",
    "callback_file": "src/x509/v3_san.rs",
    "callback_line": 1174,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_san.rs",
+    "may_bound": true,
     "module": "v3_san",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x24d650:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_v2i"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_san.rs",
+    1174,
+    "san_v2i"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -1354,18 +1979,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "san_v2i_issuer",
    "callback_file": "src/x509/v3_san.rs",
    "callback_line": 1184,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_san.rs",
+    "may_bound": true,
     "module": "v3_san",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x24d100:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san14san_v2i_issuer"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_san.rs",
+    1184,
+    "san_v2i_issuer"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -1409,22 +2042,82 @@
   },
   {
    "assumption": "",
+   "basis": "edge-witness",
    "callback": "v2i_issuer_alt",
    "callback_file": "src/x509/v3_san.rs",
    "callback_line": 1231,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "direct-call-closure-from-reachable-callback",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
    "classification_evidence": {
-    "call_closure": true,
     "definition_only": true,
-    "reachable": {}
+    "witness": {
+     "callee": "v2i_issuer_alt",
+     "callee_key": [
+      "src/x509/v3_san.rs",
+      1231,
+      "v2i_issuer_alt"
+     ],
+     "caller": "san_v2i_issuer",
+     "caller_key": [
+      "src/x509/v3_san.rs",
+      1184,
+      "san_v2i_issuer"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_san.rs",
+     "line": 1190,
+     "site": "src/x509/v3_san.rs:1190"
+    },
+    "witnesses": [
+     {
+      "callee": "v2i_issuer_alt",
+      "callee_key": [
+       "src/x509/v3_san.rs",
+       1231,
+       "v2i_issuer_alt"
+      ],
+      "caller": "san_v2i_issuer",
+      "caller_key": [
+       "src/x509/v3_san.rs",
+       1184,
+       "san_v2i_issuer"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_san.rs",
+      "line": 1190,
+      "site": "src/x509/v3_san.rs:1190"
+     }
+    ]
    },
+   "definition_key": [
+    "src/x509/v3_san.rs",
+    1231,
+    "v2i_issuer_alt"
+   ],
    "direct_callers": [
     {
+     "callee": "v2i_issuer_alt",
+     "callee_key": [
+      "src/x509/v3_san.rs",
+      1231,
+      "v2i_issuer_alt"
+     ],
      "caller": "san_v2i_issuer",
+     "caller_key": [
+      "src/x509/v3_san.rs",
+      1184,
+      "san_v2i_issuer"
+     ],
      "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
      "file": "src/x509/v3_san.rs",
-     "line": 1190
+     "line": 1190,
+     "site": "src/x509/v3_san.rs:1190"
     }
    ],
    "dispatcher_bindings": [],
@@ -1445,22 +2138,82 @@
   },
   {
    "assumption": "",
+   "basis": "edge-witness",
    "callback": "v2i_subject_alt",
    "callback_file": "src/x509/v3_san.rs",
    "callback_line": 1355,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "direct-call-closure-from-reachable-callback",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
    "classification_evidence": {
-    "call_closure": true,
     "definition_only": true,
-    "reachable": {}
+    "witness": {
+     "callee": "v2i_subject_alt",
+     "callee_key": [
+      "src/x509/v3_san.rs",
+      1355,
+      "v2i_subject_alt"
+     ],
+     "caller": "san_v2i",
+     "caller_key": [
+      "src/x509/v3_san.rs",
+      1174,
+      "san_v2i"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_san.rs",
+     "line": 1180,
+     "site": "src/x509/v3_san.rs:1180"
+    },
+    "witnesses": [
+     {
+      "callee": "v2i_subject_alt",
+      "callee_key": [
+       "src/x509/v3_san.rs",
+       1355,
+       "v2i_subject_alt"
+      ],
+      "caller": "san_v2i",
+      "caller_key": [
+       "src/x509/v3_san.rs",
+       1174,
+       "san_v2i"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_san.rs",
+      "line": 1180,
+      "site": "src/x509/v3_san.rs:1180"
+     }
+    ]
    },
+   "definition_key": [
+    "src/x509/v3_san.rs",
+    1355,
+    "v2i_subject_alt"
+   ],
    "direct_callers": [
     {
+     "callee": "v2i_subject_alt",
+     "callee_key": [
+      "src/x509/v3_san.rs",
+      1355,
+      "v2i_subject_alt"
+     ],
      "caller": "san_v2i",
+     "caller_key": [
+      "src/x509/v3_san.rs",
+      1174,
+      "san_v2i"
+     ],
      "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
      "file": "src/x509/v3_san.rs",
-     "line": 1180
+     "line": 1180,
+     "site": "src/x509/v3_san.rs:1180"
     }
    ],
    "dispatcher_bindings": [],
@@ -1481,18 +2234,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "sxnet_v2i",
    "callback_file": "src/x509/v3_sxnet.rs",
    "callback_line": 453,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_sxnet.rs",
+    "may_bound": true,
     "module": "v3_sxnet",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x5641d0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_sxnet9sxnet_v2i"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_sxnet.rs",
+    453,
+    "sxnet_v2i"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -1536,18 +2297,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "v2i_TLS_FEATURE",
    "callback_file": "src/x509/v3_tlsf.rs",
    "callback_line": 241,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/x509/v3_tlsf.rs",
+    "may_bound": true,
     "module": "v3_tlsf",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x2f2750:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_tlsf15v2i_TLS_FEATURE"
     ]
    },
+   "definition_key": [
+    "src/x509/v3_tlsf.rs",
+    241,
+    "v2i_TLS_FEATURE"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [

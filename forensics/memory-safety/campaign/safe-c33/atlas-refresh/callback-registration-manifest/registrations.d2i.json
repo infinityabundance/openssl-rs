@@ -1,20 +1,30 @@
 {
+ "chunk": 0,
+ "chunks": 1,
  "part": "registrations",
  "registrations": [
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "x509_ext_d2i_SCT_LIST",
    "callback_file": "src/ct/ct_x509v3.rs",
    "callback_line": 127,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/ct/ct_x509v3.rs",
+    "may_bound": true,
     "module": "ct_x509v3",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x4a5f40:_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v321x509_ext_d2i_SCT_LIST"
     ]
    },
+   "definition_key": [
+    "src/ct/ct_x509v3.rs",
+    127,
+    "x509_ext_d2i_SCT_LIST"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -50,18 +60,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "ocsp_ext_d2i_SCT_LIST",
    "callback_file": "src/ct/ct_x509v3.rs",
    "callback_line": 154,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/ct/ct_x509v3.rs",
+    "may_bound": true,
     "module": "ct_x509v3",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x4a5e60:_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v321ocsp_ext_d2i_SCT_LIST"
     ]
    },
+   "definition_key": [
+    "src/ct/ct_x509v3.rs",
+    154,
+    "ocsp_ext_d2i_SCT_LIST"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
@@ -97,18 +115,26 @@
   },
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "d2i_ocsp_nonce",
    "callback_file": "src/ocsp/v3_ocsp.rs",
    "callback_line": 265,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/ocsp/v3_ocsp.rs",
+    "may_bound": true,
     "module": "v3_ocsp",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x1a1560:_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14d2i_ocsp_nonce"
     ]
    },
+   "definition_key": [
+    "src/ocsp/v3_ocsp.rs",
+    265,
+    "d2i_ocsp_nonce"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [

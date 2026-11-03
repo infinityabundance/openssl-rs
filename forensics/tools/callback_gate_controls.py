@@ -40,8 +40,10 @@ def run(cmd: list[str], cwd: str = ROOT) -> subprocess.CompletedProcess:
 
 def gate(out_dir: str, inventory: str | None = None,
          overrides: str | None = None, allow_drift: bool = True,
-         tag: str = "run", default_names: bool = False) -> dict:
-    os.makedirs(out_dir, exist_ok=True)
+         tag: str = "run", default_names: bool = False,
+         create_dir: bool = True) -> dict:
+    if create_dir:
+        os.makedirs(out_dir, exist_ok=True)
     cmd = [sys.executable, GATE, "--root", ROOT, "--closure", CLOSURE,
            "--out-dir", out_dir]
     if default_names:
@@ -80,7 +82,8 @@ def sha256(path: str) -> str:
     return h.hexdigest()
 
 
-def build_control_inventory(path: str, drop: tuple[str, str] | None = None) -> dict:
+def build_control_inventory(path: str, drop: tuple[str, str] | None = None,
+                            include_enrolment: bool = True) -> dict:
     with open(CLOSURE, "r", encoding="utf-8") as f:
         closure = json.load(f)
     with open(ENROLMENT, "r", encoding="utf-8") as f:
@@ -90,7 +93,7 @@ def build_control_inventory(path: str, drop: tuple[str, str] | None = None) -> d
                    for o in closure["obligations"]]
     seen = {(o.get("file"), o.get("item"), o.get("kind"))
             for o in obligations}
-    for b in enrolment["blockers"]:
+    for b in (enrolment["blockers"] if include_enrolment else []):
         key = (b["file"], b["item"], b["kind"])
         if key in seen:
             continue
@@ -248,11 +251,47 @@ pub static ossl_v3_fixture_probe: X509V3ExtMethod = X509V3ExtMethod {
     c3_flagged = any(c["callback"] == "s2i_skey_id"
                      for c in c3["report"].get("unresolved", []))
 
-    # C5: no false positives.
+    # C5: exact inventory accounting. Every inventoried callback must be
+    # accounted for; losing one must drop the count and fail.
     auth_report = auth2["report"]
     fp = auth_report.get("false_positive_check", {})
     inv_matched = auth_report.get("inventory_matched_callbacks", 0)
     recon = auth_report.get("reconciliation", {})
+    acct = auth_report.get("inventory_accounting", {})
+    expected_inventory = 69
+    c5_ok = (
+        fp.get("inventory_matched_reported_missing") == 0
+        and acct.get("inventory_callbacks_accounted") == expected_inventory
+        and not acct.get("unaccounted")
+        and not acct.get("slot_prefix_inventory_not_seen")
+        and not acct.get("slot_prefix_inventory_without_source_definition")
+    )
+    # Negative: the *authoritative* inventory with one inventoried callback
+    # removed must report 68, proving the exact assertion is sensitive to loss.
+    loss_key = ("src/x509/v3_skid.rs", "skid_i2s")
+    build_control_inventory(
+        os.path.join(CTRL, "inventory-auth-minus-skid_i2s.json"),
+        drop=loss_key, include_enrolment=False)
+    c5_loss = gate(os.path.join(CTRL, "out-c5-loss"),
+                   inventory=os.path.join(
+                       CTRL, "inventory-auth-minus-skid_i2s.json"),
+                   tag="c5-loss")
+    loss_acct = c5_loss["report"].get("inventory_accounting", {})
+    loss_detected = (
+        loss_acct.get("inventory_callbacks_accounted") == expected_inventory - 1
+        and c5_loss["exit_code"] != 0
+    )
+
+    # C6: a fresh --out-dir path must be created, not crash.
+    fresh_dir = os.path.join(CTRL, "out-fresh-dir")
+    shutil.rmtree(fresh_dir, ignore_errors=True)
+    c6 = gate(fresh_dir, inventory=os.path.join(
+        CTRL, "inventory-post-enrolment.json"), tag="c6-fresh",
+        create_dir=False)
+    c6_report = os.path.join(fresh_dir, "report-c6-fresh.json")
+    c6_ok = (os.path.exists(c6_report)
+             and c6["exit_code"] == 0
+             and c6["report"].get("pass") is True)
 
     results = {
         "schema": "openssl-rs/campaign/safe-c33/callback-gate-controls/v1",
@@ -264,6 +303,8 @@ pub static ossl_v3_fixture_probe: X509V3ExtMethod = X509V3ExtMethod {
             "C2_with_assumption": c2_ok["cmd"],
             "C3_unresolved": c3["cmd"],
             "C4_authoritative": auth2["cmd"],
+            "C5_loss_inventory": c5_loss["cmd"],
+            "C6_fresh_outdir": c6["cmd"],
         },
         "authoritative": {
             "pass": auth_report.get("pass"),
@@ -310,13 +351,24 @@ pub static ossl_v3_fixture_probe: X509V3ExtMethod = X509V3ExtMethod {
             },
             "C4": {"identical": det_ok, "pass": det_ok},
             "C5": {
+                "expected_inventory_callbacks": expected_inventory,
                 "inventory_matched_callbacks": inv_matched,
+                "inventory_accounting": acct,
                 "reported_missing": fp.get(
                     "inventory_matched_reported_missing"),
                 "prefix_definitions_in_queue_inventory": recon.get(
                     "prefix_definitions_in_queue_inventory"),
-                "pass": (fp.get("inventory_matched_reported_missing") == 0
-                         and inv_matched >= 51),
+                "loss_control_accounted": loss_acct.get(
+                    "inventory_callbacks_accounted"),
+                "loss_control_exit_code": c5_loss["exit_code"],
+                "loss_detected": loss_detected,
+                "pass": c5_ok and loss_detected,
+            },
+            "C6": {
+                "fresh_dir": fresh_dir,
+                "exit_code": c6["exit_code"],
+                "report_written": os.path.exists(c6_report),
+                "pass": c6_ok,
             },
         },
     }

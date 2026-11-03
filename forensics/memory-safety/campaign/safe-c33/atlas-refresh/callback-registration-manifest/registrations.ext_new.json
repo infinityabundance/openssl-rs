@@ -1,20 +1,30 @@
 {
+ "chunk": 0,
+ "chunks": 1,
  "part": "registrations",
  "registrations": [
   {
    "assumption": "",
+   "basis": "module-name-match",
    "callback": "ocsp_nonce_new",
    "callback_file": "src/ocsp/v3_ocsp.rs",
    "callback_line": 212,
-   "classification": "PROVEN_REACHABLE",
-   "classification_basis": "reachable-functions-module-match",
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
    "classification_evidence": {
     "file": "src/ocsp/v3_ocsp.rs",
+    "may_bound": true,
     "module": "v3_ocsp",
+    "proof": false,
     "symbols": [
      "libcrypto.so.3:0x1a1960:_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14ocsp_nonce_new"
     ]
    },
+   "definition_key": [
+    "src/ocsp/v3_ocsp.rs",
+    212,
+    "ocsp_nonce_new"
+   ],
    "direct_callers": [],
    "dispatcher_binding_status": "bound",
    "dispatcher_bindings": [
