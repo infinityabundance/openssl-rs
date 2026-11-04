@@ -107,7 +107,7 @@
   },
   "obligations": "378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN",
   "verdicts": "ssh and sshd ACCEPTED, 0 refusals",
-  "review": "pending independent adjudication"
+  "review": "APPROVE with five residuals (SLH-R1..R5); the address binding makes the claim DSO-specific"
  },
  "non_claims": [
   "No element-7 progress is claimed.",
@@ -191,9 +191,45 @@
   ]
  },
  "review": {
-  "reviewer": "pending independent adjudication",
-  "verdict": "UNAPPLIED",
+  "reviewer": "independent adversarial adjudicator (session 83613009-5bf4-4e14-bca2-357a0b13879b); transcribed verbatim",
+  "verdict": "APPROVE",
   "applied": false,
-  "prohibition": "No element-7 progress may be claimed from this rule until an independent reviewer confirms the witness cannot absorb an unrelated site and that the per-field target pairs are complete."
- }
+  "date": "2026-11-03",
+  "verdict_text": "APPROVE (no widening found; residuals below)",
+  "confirmed": [
+   "site set is hard-coded to six absolute addresses: maximally narrow, cannot generalise, and fails closed on any miss",
+   "writer set is computed by source regex and must equal exactly {slh_dsa_key_hash_init}; a second match refuses",
+   "both tables enumerated; a field resolving in only one table refuses; targets must be two distinct in-image starts",
+   "collateral exactly six; both closures share libcrypto 1c03ec0a and ssh 926975, so the delta is the tool alone",
+   "mutation restores byte-identically at 2821313c, which equals HEAD tool sha256",
+   "obligations 378/186/192/0, 0 refusals, both ACCEPTED; 60 target-bounded remain and nothing implies near pass"
+  ]
+ },
+ "residuals": [
+  {
+   "id": "SLH-R1",
+   "state": "OPEN",
+   "why": "the six sites are matched by absolute call-site address, so the recognition is binary-bound and rebuild-fragile. A layout-shifting rebuild silently lapses the effect back to 66 sites. Fail-closed, but the claim is valid only for DSO 1c03ec0a."
+  },
+  {
+   "id": "SLH-R2",
+   "state": "OPEN",
+   "why": "condition 4 proves lea cardinality and table closure; that the selector is one of the two named functions is inferred from field offset and source, not proven in-image."
+  },
+  {
+   "id": "SLH-R3",
+   "state": "OPEN",
+   "why": "writer detection is a source regex over assignment form; a struct-literal, ptr::write or transmute writer would not refuse. None exists today."
+  },
+  {
+   "id": "SLH-R4",
+   "state": "OPEN",
+   "why": "the evidence was generated with tracked_tree_dirty true at 904c3dfd rather than a clean candidate commit; a clean re-measurement is required before it is cited beyond the measurement."
+  },
+  {
+   "id": "SLH-R5",
+   "state": "OPEN",
+   "why": "gate outputs (fmt/clippy/tests) are absent from these tool-only runs and must be supplied before citation."
+  }
+ ]
 }
