@@ -3,15 +3,39 @@
  "kind": "element7-target-set-evidence",
  "date": "2026-11-03",
  "subphase": "B54",
- "state": "TARGET SET ESTABLISHED — rule wiring pending, no element-7 progress claimed",
+ "state": "RULE WIRED \u2014 measurements complete, independent review pending",
  "group": "slh_adrs_static_table",
  "sites": [
-  {"call_site": "0x2621ee", "module": "src/slh_dsa/hypertree.rs", "indirection": "call *0x48(%rdx)"},
-  {"call_site": "0x262599", "module": "src/slh_dsa/hypertree.rs", "indirection": "call *0x48(%rdx)"},
-  {"call_site": "0x482467", "module": "src/slh_dsa/fors.rs", "indirection": "call *0x50(%rax)"},
-  {"call_site": "0x48273f", "module": "src/slh_dsa/fors.rs", "indirection": "call *0x50(%rcx)"},
-  {"call_site": "0x4829c1", "module": "src/slh_dsa/fors.rs", "indirection": "call *0x50(%rcx)"},
-  {"call_site": "0x4830ad", "module": "src/slh_dsa/fors.rs", "indirection": "call *0x28(%rax)"}
+  {
+   "call_site": "0x2621ee",
+   "module": "src/slh_dsa/hypertree.rs",
+   "indirection": "call *0x48(%rdx)"
+  },
+  {
+   "call_site": "0x262599",
+   "module": "src/slh_dsa/hypertree.rs",
+   "indirection": "call *0x48(%rdx)"
+  },
+  {
+   "call_site": "0x482467",
+   "module": "src/slh_dsa/fors.rs",
+   "indirection": "call *0x50(%rax)"
+  },
+  {
+   "call_site": "0x48273f",
+   "module": "src/slh_dsa/fors.rs",
+   "indirection": "call *0x50(%rcx)"
+  },
+  {
+   "call_site": "0x4829c1",
+   "module": "src/slh_dsa/fors.rs",
+   "indirection": "call *0x50(%rcx)"
+  },
+  {
+   "call_site": "0x4830ad",
+   "module": "src/slh_dsa/fors.rs",
+   "indirection": "call *0x28(%rax)"
+  }
  ],
  "correction_to_triage": "The triage described all six as selecting `key.adrs_func@0xa8`. They are not one slot: the call sites go through different method-struct offsets (0x48, 0x50, 0x28), i.e. different fields of the SLH-DSA method tables, and at least one site (0x4830ad, offset 0x28) reaches a different table field than the others. The group is 'SLH-DSA method-table dispatch', not a single slot. The target set is still finite, but the enumeration must be per field, not per key field.",
  "writer_set": {
@@ -30,7 +54,19 @@
    "tables": 2,
    "form": "const METHODS: [SlhAdrsFunc; 2]; returns &METHODS[0] when is_compressed == 0 else &METHODS[1]",
    "fields_per_table": 11,
-   "field_names": ["set_layer_address", "set_tree_address", "set_type_and_clear", "set_keypair_address", "copy_keypair_address", "set_chain_address", "set_tree_height", "set_hash_address", "set_tree_index", "zero", "copy"],
+   "field_names": [
+    "set_layer_address",
+    "set_tree_address",
+    "set_type_and_clear",
+    "set_keypair_address",
+    "copy_keypair_address",
+    "set_chain_address",
+    "set_tree_height",
+    "set_hash_address",
+    "set_tree_index",
+    "zero",
+    "copy"
+   ],
    "table0_prefix": "slh_adrs_*",
    "table1_prefix": "slh_adrsc_*"
   },
@@ -59,13 +95,105 @@
   "warning": "the triage's earlier refusals for this group were `ctx-not-proven-parameter`, `writer-set-incomplete` and `no-pointee-layout`; this artifact supplies the writer set and the pointee layout per field, which is precisely what those refusals asked for"
  },
  "status": {
-  "element7_before": {"target_bounded": 66, "contract_bounded": 65, "unresolved": 131},
-  "element7_after": "unchanged; no rule was wired in this commit",
-  "review": "pending — this is target-set evidence, not a classification change"
+  "element7_before": {
+   "target_bounded": 66,
+   "contract_bounded": 65,
+   "unresolved": 131
+  },
+  "element7_after": {
+   "target_bounded": 60,
+   "contract_bounded": 71,
+   "unresolved": 131
+  },
+  "obligations": "378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN",
+  "verdicts": "ssh and sshd ACCEPTED, 0 refusals",
+  "review": "pending independent adjudication"
  },
  "non_claims": [
   "No element-7 progress is claimed.",
   "No obligation status changed; the queue remains 378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN.",
   "The six sites remain target-bounded until the rule is wired and its mutation and negative controls are observed."
- ]
+ ],
+ "rule": {
+  "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+  "witness": "slh_method_table_witness (consumer_closure.py ~L11098)",
+  "dispatch": "apply_evidence_classes ~L11876, after the export-callback witness",
+  "conditions": [
+   "containing function+address is one of the six enumerated sites",
+   "read base is the method struct from (*ctx).key adrs_func@0xa8 / hash_func@0xb0, with the ctx parameter proven",
+   "source-wide writer set for the field is exactly {slh_dsa_key_hash_init}",
+   "selector is ossl_slh_get_adrs_fn / ossl_slh_get_hash_fn, an inlined select over exactly two tables",
+   "the read field resolves to an in-image function start in BOTH tables"
+  ]
+ },
+ "per_site_targets": [
+  {
+   "site": "0x2621ee",
+   "function": "ht_sign",
+   "field": "adrs@0x48",
+   "targets": [
+    "slh_adrs_zero",
+    "slh_adrsc_zero"
+   ]
+  },
+  {
+   "site": "0x262599",
+   "function": "ht_verify",
+   "field": "adrs@0x48",
+   "targets": [
+    "slh_adrs_zero",
+    "slh_adrsc_zero"
+   ]
+  },
+  {
+   "site": "0x482467",
+   "function": "fors_node",
+   "field": "adrs@0x50",
+   "targets": [
+    "slh_adrs_copy",
+    "slh_adrsc_copy"
+   ]
+  },
+  {
+   "site": "0x48273f",
+   "function": "fors_sign",
+   "field": "adrs@0x50",
+   "targets": [
+    "slh_adrs_copy",
+    "slh_adrsc_copy"
+   ]
+  },
+  {
+   "site": "0x4829c1",
+   "function": "fors_sign",
+   "field": "adrs@0x50",
+   "targets": [
+    "slh_adrs_copy",
+    "slh_adrsc_copy"
+   ]
+  },
+  {
+   "site": "0x4830ad",
+   "function": "fors_pk_from_sig",
+   "field": "hash@0x28",
+   "targets": [
+    "slh_t_sha2",
+    "slh_t_shake"
+   ]
+  }
+ ],
+ "controls": {
+  "restoration": "exactly the six move to ABI_CONTRACT_SLH_METHOD_TABLE, no other change (changed=6, added=0, removed=0)",
+  "mutation": "witness disabled returns ssh to target 66 / contract 65; diff versus before = 0; tool restored byte-identically (sha256 2821313c...)",
+  "negative": [
+   "site 0x4830ad with provenance forced to adrs_func@0xa8 while hash_func@0xb0 is required -> method-struct-field-mismatch",
+   "site 0x2621ee with three lea tables -> selector-table-count-not-two (table_count=3)"
+  ]
+ },
+ "review": {
+  "reviewer": "pending independent adjudication",
+  "verdict": "UNAPPLIED",
+  "applied": false,
+  "prohibition": "No element-7 progress may be claimed from this rule until an independent reviewer confirms the witness cannot absorb an unrelated site and that the per-field target pairs are complete."
+ }
 }
