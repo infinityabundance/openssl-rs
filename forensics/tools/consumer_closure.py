@@ -2107,8 +2107,16 @@ ABI_CONTRACT_ALLOCATOR = "ABI_CONTRACT_ALLOCATOR"
 # those are deferred to the reachable-caller-target rule (see
 # export_callback_witness).
 ABI_CONTRACT_EXPORT_CALLBACK = "ABI_CONTRACT_EXPORT_CALLBACK"
+# A callback parameter of `OSSL_PROVIDER_get_capabilities` forwarded unchanged
+# through `OSSL_FUNC_PROVIDER_GET_CAPABILITIES` to the provider implementation.
+# This is one dispatch hop away from the exported seam, so it gets its own
+# class and its own per-call-site witness rather than widening the generic
+# export-callback class.
+ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK = \
+    "ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK"
 ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
-                                  ABI_CONTRACT_EXPORT_CALLBACK})
+                                  ABI_CONTRACT_EXPORT_CALLBACK,
+                                  ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK})
 
 ABI_CONTRACTS = {
     ABI_CONTRACT_PROVIDER: {
@@ -2181,6 +2189,55 @@ ABI_CONTRACTS = {
             "is unbounded",
             "a private wrapper whose callers are all in-image and finite: the "
             "witness defers it to reachable-caller-target instead",
+            "reachability from the two workloads, or that an external caller "
+            "exists at run time",
+        ],
+    },
+    ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "the `cb` parameter of OSSL_PROVIDER_get_capabilities, forwarded "
+            "unchanged through OSSL_FUNC_PROVIDER_GET_CAPABILITIES to the "
+            "provider's get_capabilities implementation"),
+        "citation": [
+            "include/openssl/provider.h:42-45 -- int "
+            "OSSL_PROVIDER_get_capabilities(const OSSL_PROVIDER *prov, const "
+            "char *capability, OSSL_CALLBACK *cb, void *arg);",
+            "include/openssl/core.h:218 -- typedef int(OSSL_CALLBACK)(const "
+            "OSSL_PARAM params[], void *arg);",
+            "include/openssl/core_dispatch.h:251 -- OSSL_FUNC_provider_get_capabilities("
+            "void *provctx, const char *capability, OSSL_CALLBACK *cb, void *arg)",
+            "doc/man3/OSSL_PROVIDER.pod:203-210 -- OSSL_PROVIDER_get_capabilities() "
+            "... will call the callback cb and supply a set of OSSL_PARAMs "
+            "describing the capability. It will also pass back the argument arg.",
+            "doc/man7/provider-base.pod:456-464 -- The provider_get_capabilities() "
+            "function should call the callback cb passing it a set of "
+            "OSSL_PARAMs and the caller supplied argument arg.",
+            "src/provider/digest.rs:2629-2631 -- the default provider publishes "
+            "`ossl_prov_get_capabilities` at FUNC_PROVIDER_GET_CAPABILITIES in "
+            "DEFLT_DISPATCH; src/provider/mod.rs:2660 forwards `cb` to "
+            "`ossl_provider_get_capabilities`, which calls the slot with `cb` "
+            "(src/provider/activate.rs:1369)",
+        ],
+        "provider_obligation": (
+            "the application supplies `cb` as an OSSL_CALLBACK at the exported "
+            "C ABI boundary; the crate forwards that exact value through the "
+            "provider dispatch and invokes it, and never substitutes an "
+            "in-image target"),
+        "covers": (
+            "the public seam OSSL_PROVIDER_get_capabilities -> "
+            "OSSL_FUNC_PROVIDER_GET_CAPABILITIES -> the default provider's "
+            "get_capabilities implementation, including the exact four call "
+            "operands that invoke the callback"),
+        "does_not_cover": [
+            "the behaviour or lifetime of the application's callback, which is "
+            "the application's obligation once supplied",
+            "which callback an external caller supplies; the target set is "
+            "unbounded by the C ABI",
+            "NULL where the authority does not guard it: the authority faults "
+            "and the crate returns 0, a recorded compatibility divergence",
+            "a private in-image caller that passes a non-parameter value; the "
+            "witness requires every site operand to be the entry parameter",
             "reachability from the two workloads, or that an external caller "
             "exists at run time",
         ],
@@ -4692,7 +4749,14 @@ def _header_callback_param(g: "DsoGraph", symbol: str, index: int):
             line = text.count("\n", 0, m.start()) + 1
             fntypes[m.group(1)] = (path.name, line, True)
         for m in re.finditer(
-                r"typedef\s+[^;{}()]*?\b(\w+)\s*\([^;{}]*\)\s*;", text):
+                r"typedef\s+[^;{}()]*?\(\s*(\w+)\s*\)\s*\([^;{}]*\)\s*;",
+                text):
+            # `typedef int(OSSL_CALLBACK)(const OSSL_PARAM params[], void *arg);`
+            line = text.count("\n", 0, m.start()) + 1
+            fntypes.setdefault(m.group(1), (path.name, line, False))
+        for m in re.finditer(
+                r"typedef\s+[^;{}()]*?\b(\w+)\s*\([^;{}]*\)\s*;",
+                text):
             line = text.count("\n", 0, m.start()) + 1
             fntypes.setdefault(m.group(1), (path.name, line, False))
     found = []
@@ -5271,6 +5335,203 @@ def export_callback_witness(g: "DsoGraph", site: dict, name: str):
         "basis": ("the operand is exactly this entry parameter (single linear "
                   "provenance), every in-image call chain forwards it "
                   "unchanged, and the root function is in .dynsym"),
+    }
+    return witness, None
+
+
+# ---- S2b: the provider get_capabilities up-call ------------------------- #
+#
+# `ossl_prov_get_capabilities` is reached only through the default provider's
+# OSSL_FUNC_PROVIDER_GET_CAPABILITIES slot.  Its `cb` parameter is filled by
+# `OSSL_PROVIDER_get_capabilities`, which forwards the application's callback.
+# The four call operands are therefore exactly an exported parameter, one
+# dispatch hop away from the C ABI; this is not a finite in-image target set.
+
+PROVIDER_CAPABILITIES_SUFFIXES = (
+    "provider12capabilities26ossl_prov_get_capabilities",
+    "provider::capabilities::ossl_prov_get_capabilities",
+)
+PROVIDER_CAPABILITIES_EXPORT = "OSSL_PROVIDER_get_capabilities"
+PROVIDER_CAPABILITIES_PARAM = 2
+
+
+def _is_provider_capabilities_fn(name: str) -> bool:
+    """The default provider's get_capabilities implementation, exactly."""
+    base = re.sub(r"\.llvm(?:\.[0-9]+)?$", "", name or "")
+    return any(base.endswith(suffix)
+               for suffix in PROVIDER_CAPABILITIES_SUFFIXES)
+
+
+def _source_line(g: "DsoGraph", relpath: str, needle: str):
+    """One source line containing ``needle``, or None."""
+    root = _repo_root(g)
+    if root is None:
+        return None
+    path = Path(root) / relpath
+    if not path.is_file():
+        return None
+    try:
+        lines = path.read_text(errors="replace").splitlines()
+    except OSError:
+        return None
+    for i, line in enumerate(lines, 1):
+        if needle in line:
+            return {"file": relpath, "line": i,
+                    "text": line.strip()[:200]}
+    return None
+
+
+def _source_adjacent(g: "DsoGraph", relpath: str, first: str, second: str,
+                     span: int = 8):
+    """Two source lines that occur within ``span`` lines of each other."""
+    root = _repo_root(g)
+    if root is None:
+        return None
+    path = Path(root) / relpath
+    if not path.is_file():
+        return None
+    try:
+        lines = path.read_text(errors="replace").splitlines()
+    except OSError:
+        return None
+    for i, line in enumerate(lines):
+        if first not in line:
+            continue
+        for j in range(i, min(i + span, len(lines))):
+            if second in lines[j]:
+                return {"file": relpath, "line": i + 1,
+                        "second_line": j + 1,
+                        "first_text": line.strip()[:200],
+                        "second_text": lines[j].strip()[:200]}
+    return None
+
+
+def provider_capabilities_callback_witness(g: "DsoGraph", site: dict,
+                                           name: str):
+    """Witness for the four `provider_get_capabilities` callback calls.
+
+    The site's operand must be exactly the implementation's `cb` parameter
+    (index 2).  That function must be the default provider's
+    FUNC_PROVIDER_GET_CAPABILITIES entry, the exported
+    OSSL_PROVIDER_get_capabilities must be in .dynsym with its third parameter
+    declared OSSL_CALLBACK, and both in-image forwardings must pass `cb`
+    unchanged.  Any missing link refuses the witness; the site then keeps its
+    resolver class and stays target-bounded.
+    """
+    if site.get("kind") not in ("call", "jmp"):
+        return None, None
+    if not _is_provider_capabilities_fn(name):
+        return None, None
+    if "provider-capabilities-witness" in _MUTED:
+        # Test-only mutation control: remove the witness and the site keeps
+        # its resolver class (target-bounded).
+        return None, {"refusal": (
+            "mutation removed the provider-capabilities witness")}
+    if not _has_insns(g):
+        return None, None
+    fstart = site["func"]
+    idx = None
+    for i, (a, _t) in enumerate(g.precision.insns_by_func.get(fstart, ())):
+        if a == site["addr"]:
+            idx = i
+            break
+    if idx is None:
+        return None, None
+    opnd = _site_operand(site)
+    param = _param_of_operand(g, fstart, idx, opnd)
+    if param is None or param.get("kind") != "param":
+        return None, {"refusal": "the call operand is not a parameter"}
+    if param.get("index") != PROVIDER_CAPABILITIES_PARAM:
+        return None, {"refusal": (
+            f"the call operand is parameter {param.get('index')}, not cb (2)")}
+    if not _image_defines(g, "ossl_prov_get_capabilities"):
+        return None, {"refusal": (
+            "the implementation is not defined in this image")}
+    export_addr = getattr(g, "dynamic_defs", {}).get(
+        PROVIDER_CAPABILITIES_EXPORT)
+    if export_addr is None:
+        return None, {"refusal": (
+            PROVIDER_CAPABILITIES_EXPORT + " is not exported by this image")}
+    cb, why = _header_callback_param(g, PROVIDER_CAPABILITIES_EXPORT,
+                                     PROVIDER_CAPABILITIES_PARAM)
+    if cb is None:
+        return None, {"refusal": why}
+    if (cb.get("type_typedef") or "") != "OSSL_CALLBACK":
+        return None, {"refusal": (
+            "the exported parameter is not declared OSSL_CALLBACK")}
+    dispatch = _source_adjacent(
+        g, "src/provider/digest.rs",
+        "function_id: FUNC_PROVIDER_GET_CAPABILITIES",
+        "function: ossl_prov_get_capabilities as *mut c_void")
+    if dispatch is None:
+        return None, {"refusal": (
+            "src/provider/digest.rs does not bind ossl_prov_get_capabilities "
+            "at FUNC_PROVIDER_GET_CAPABILITIES")}
+    export_forward = _source_line(
+        g, "src/provider/mod.rs",
+        "ossl_provider_get_capabilities(prov, capability, cb, arg)")
+    if export_forward is None:
+        return None, {"refusal": (
+            "src/provider/mod.rs does not forward cb to "
+            "ossl_provider_get_capabilities")}
+    slot_forward = _source_line(
+        g, "src/provider/activate.rs",
+        "f((*prov).provctx, capability, cb, arg)")
+    if slot_forward is None:
+        return None, {"refusal": (
+            "src/provider/activate.rs does not forward cb to the provider "
+            "slot")}
+    witness = {
+        "schema": WITNESS_SCHEMA,
+        "class": ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK,
+        "contract_bounded": True,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "operand": {"kind": "reg" if opnd.startswith("%") else "memory",
+                    "text": opnd},
+        "parameter": {
+            "name": cb["name"],
+            "index": PROVIDER_CAPABILITIES_PARAM,
+            "declaration": cb["declaration"],
+            "type_typedef": cb["type_typedef"],
+            "typedef_declaration": cb["typedef"],
+            "parameter_text": cb["parameter_text"],
+        },
+        "site_parameter": param.get("index"),
+        "export": {"symbol": PROVIDER_CAPABILITIES_EXPORT,
+                   "in_dynsym": True,
+                   "address": hex(export_addr)},
+        "dispatch": {
+            "entry": "FUNC_PROVIDER_GET_CAPABILITIES",
+            "field": "OsslProvider.get_capabilities (offset 0x88)",
+            "source": dispatch,
+        },
+        "forwarding": [export_forward, slot_forward],
+        "provenance": param.get("provenance") or [],
+        "caller_boundary": ("external application; the target set is "
+                            "unbounded by the C ABI"),
+        "does_not_cover": [
+            "the behaviour or lifetime of the application's callback",
+            "which callback an external caller supplies",
+            "NULL where the authority faults; the crate returns 0",
+        ],
+        "slot": (f"{PROVIDER_CAPABILITIES_EXPORT} parameter 2 (cb) -> "
+                 "OSSL_FUNC_PROVIDER_GET_CAPABILITIES -> "
+                 "ossl_prov_get_capabilities parameter 2 (cb)"),
+        "writer": (
+            "the application supplies cb at the exported C ABI boundary; the "
+            "default provider's dispatch entry forwards it from that parameter "
+            "and no in-image writer stores a different value into it"),
+        "interface": (
+            f"{cb['declaration']} declares {cb['name']} as "
+            f"{cb['type_typedef']} ({cb['typedef']}); "
+            "include/openssl/core_dispatch.h:251 declares the provider entry "
+            "with the same OSSL_CALLBACK *cb"),
+        "basis": (
+            "the call operand is exactly parameter 2 (single linear "
+            "provenance); the function is the default provider's "
+            "FUNC_PROVIDER_GET_CAPABILITIES entry; the exported symbol is in "
+            ".dynsym and both in-image forwardings pass cb unchanged"),
     }
     return witness, None
 
@@ -11191,6 +11452,23 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
             site["witness"] = fetch
             stats["S3_fetch_slot_contract_bounded"] += 1
             continue
+        # S2b: the default provider's `get_capabilities` up-call.  The
+        # callback is exactly parameter 2 of the exported
+        # OSSL_PROVIDER_get_capabilities, forwarded across the provider
+        # dispatch; the witness refuses unless every link is present and the
+        # site's own operand is that parameter.
+        cap_cb, cap_refusal = provider_capabilities_callback_witness(
+            g, site, name)
+        if cap_cb is not None:
+            site["class"] = ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK
+            site["unresolved"] = True
+            site["reason"] = ("provider capabilities callback ABI contract: "
+                              + cap_cb["slot"])
+            site["witness"] = cap_cb
+            stats["S2b_provider_capabilities_contract_bounded"] += 1
+            continue
+        if cap_refusal:
+            site["provider_capabilities_refusal"] = cap_refusal
         # S2: a callback that is exactly an exported function's parameter.
         # The mandatory deferral is enforced inside the witness: a private
         # chain with finite in-image callers is refused and left to the
@@ -19729,11 +20007,11 @@ def self_test() -> int:
         (p / "kdf.rs").write_text(text)
         return root
 
-    def _winstall(td, header):
+    def _winstall(td, header, name="modes.h"):
         root = Path(td)
         p = root / "include" / "openssl"
         p.mkdir(parents=True, exist_ok=True)
-        (p / "modes.h").write_text(header)
+        (p / name).write_text(header)
         return root
 
     # S3: a fetched EvpKdf slot.  The base is the inner_evp_generic_fetch
@@ -19830,6 +20108,96 @@ def self_test() -> int:
     w2, why2 = _export_witness(exported=False)
     check("S2 finite in-image private chain is deferred",
           (w2, (why2 or {}).get("defer")), (None, True))
+
+    # S2b: the provider get_capabilities up-call.  The callback is exactly the
+    # exported OSSL_PROVIDER_get_capabilities parameter, forwarded across the
+    # provider dispatch.  Each control removes one link in the chain.
+    def _provider_cap_fixture(param=True, wrong_fn=False, exported=True,
+                              header_cb=True, dispatch=True, forward=True):
+        td = tempfile.mkdtemp()
+        root = Path(td)
+        (root / "src" / "provider").mkdir(parents=True, exist_ok=True)
+        digest = ("    function_id: FUNC_PROVIDER_GET_CAPABILITIES,\n"
+                  "    function: ossl_prov_get_capabilities as *mut c_void,\n"
+                  if dispatch else
+                  "    function_id: FUNC_PROVIDER_GETTABLE_PARAMS,\n"
+                  "    function: deflt_gettable_params as *mut c_void,\n")
+        (root / "src" / "provider" / "digest.rs").write_text(
+            "static DEFLT_DISPATCH: [OsslDispatch; 2] = [\n"
+            "OsslDispatch {\n" + digest + "},\n];\n")
+        (root / "src" / "provider" / "mod.rs").write_text(
+            ("crate::provider::activate::ossl_provider_get_capabilities("
+             "prov, capability, cb, arg)\n" if forward else
+             "crate::provider::activate::ossl_provider_get_capabilities("
+             "prov, capability, NULL, arg)\n"))
+        (root / "src" / "provider" / "activate.rs").write_text(
+            ("unsafe { f((*prov).provctx, capability, cb, arg) }\n" if forward
+             else "unsafe { f((*prov).provctx, capability, NULL, arg) }\n"))
+        header = (
+            "typedef int(OSSL_CALLBACK)(const OSSL_PARAM params[], void *arg);\n"
+            "int OSSL_PROVIDER_get_capabilities(const OSSL_PROVIDER *prov,\n"
+            "    const char *capability,\n"
+            "    " + ("OSSL_CALLBACK *cb" if header_cb else "void *cb") + ",\n"
+            "    void *arg);\n")
+        install = _winstall(td, header, name="provider.h")
+        insns = {0x500: [
+            (0x500, "push   %rbx"),
+            (0x501, "mov    %rdx,%rbx" if param else "mov    $0x123,%rbx"),
+            (0x504, "call   *%rbx"),
+            (0x506, "ret"),
+        ]}
+        prefix = ("_RNvNtNtCs9k3SxhrAWiO_10openssl_rs8provider12capabilities")
+        fname = (prefix + "26something_else" if wrong_fn else
+                 prefix + "26ossl_prov_get_capabilities")
+        funcs = {0x500: fname, 0x600: "OSSL_PROVIDER_get_capabilities",
+                 0x700: "unused"}
+        dyn = {"OSSL_PROVIDER_get_capabilities"} if exported else set()
+        g = _WG(insns, funcs, dyn=dyn, source_root=root, install=install)
+        site = {"kind": "call", "func": 0x500, "addr": 0x504,
+                "text": "call   *%rbx", "arg_deps": set()}
+        return g, site
+
+    def _provider_cap_witness(**kwargs):
+        g, site = _provider_cap_fixture(**kwargs)
+        return provider_capabilities_callback_witness(g, site, g.funcs[0x500])
+
+    w, _why = _provider_cap_witness()
+    check("S2b provider-capabilities witness applies", w is not None, True)
+    check("S2b witness records the exported declaration",
+          (w or {}).get("parameter", {}).get("declaration"), "provider.h:2")
+    check("S2b witness records OSSL_CALLBACK",
+          (w or {}).get("parameter", {}).get("type_typedef"), "OSSL_CALLBACK")
+    check("S2b witness records the dispatch entry",
+          (w or {}).get("dispatch", {}).get("entry"),
+          "FUNC_PROVIDER_GET_CAPABILITIES")
+    check("S2b non-parameter operand is refused",
+          _provider_cap_witness(param=False)[0], None)
+    check("S2b unrelated indirect call is refused",
+          _provider_cap_witness(wrong_fn=True)[0], None)
+    check("S2b unexported seam is refused",
+          _provider_cap_witness(exported=False)[0], None)
+    check("S2b non-callback header is refused",
+          _provider_cap_witness(header_cb=False)[0], None)
+    check("S2b missing dispatch binding is refused",
+          _provider_cap_witness(dispatch=False)[0], None)
+    check("S2b broken source forwarding is refused",
+          _provider_cap_witness(forward=False)[0], None)
+
+    # Mutation control: removing the witness leaves the site target-bounded,
+    # so element 7 cannot be claimed from the class encoding alone.
+    g, site = _provider_cap_fixture()
+    _MUTED.add("provider-capabilities-witness")
+    try:
+        mut, _why = provider_capabilities_callback_witness(
+            g, site, g.funcs[0x500])
+    finally:
+        _MUTED.discard("provider-capabilities-witness")
+    check("S2b mutation removes the witness", mut, None)
+    mut_site = {"class": "materialised", "unresolved": True, "targets": set()}
+    e7 = evaluate_predicate_element_7([("control.so", 0x504, mut_site)], [])
+    check("S2b mutation leaves the site target-bounded",
+          e7["target_bounded_unresolved_sites"], 1)
+    check("S2b mutation keeps element 7 failing", e7["established"], False)
 
     # S4: a local closure built from a finite assignment set.
     def _local_fixture(partial=False, extra=False):
