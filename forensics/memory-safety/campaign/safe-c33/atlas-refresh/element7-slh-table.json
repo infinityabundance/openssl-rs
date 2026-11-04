@@ -1,0 +1,71 @@
+{
+ "receipt": "element7-slh-table",
+ "kind": "element7-target-set-evidence",
+ "date": "2026-11-03",
+ "subphase": "B54",
+ "state": "TARGET SET ESTABLISHED — rule wiring pending, no element-7 progress claimed",
+ "group": "slh_adrs_static_table",
+ "sites": [
+  {"call_site": "0x2621ee", "module": "src/slh_dsa/hypertree.rs", "indirection": "call *0x48(%rdx)"},
+  {"call_site": "0x262599", "module": "src/slh_dsa/hypertree.rs", "indirection": "call *0x48(%rdx)"},
+  {"call_site": "0x482467", "module": "src/slh_dsa/fors.rs", "indirection": "call *0x50(%rax)"},
+  {"call_site": "0x48273f", "module": "src/slh_dsa/fors.rs", "indirection": "call *0x50(%rcx)"},
+  {"call_site": "0x4829c1", "module": "src/slh_dsa/fors.rs", "indirection": "call *0x50(%rcx)"},
+  {"call_site": "0x4830ad", "module": "src/slh_dsa/fors.rs", "indirection": "call *0x28(%rax)"}
+ ],
+ "correction_to_triage": "The triage described all six as selecting `key.adrs_func@0xa8`. They are not one slot: the call sites go through different method-struct offsets (0x48, 0x50, 0x28), i.e. different fields of the SLH-DSA method tables, and at least one site (0x4830ad, offset 0x28) reaches a different table field than the others. The group is 'SLH-DSA method-table dispatch', not a single slot. The target set is still finite, but the enumeration must be per field, not per key field.",
+ "writer_set": {
+  "count": 1,
+  "writer_function": "src/slh_dsa/hash_ctx.rs slh_dsa_key_hash_init",
+  "assignments": [
+   "src/slh_dsa/hash_ctx.rs:252  (*key).adrs_func = ossl_slh_get_adrs_fn(c_int::from(is_shake == 0));",
+   "src/slh_dsa/hash_ctx.rs:253  (*key).hash_func = ossl_slh_get_hash_fn(is_shake);"
+  ],
+  "evidence": "src-wide grep for `\\.adrs_func\\s*=` and `\\.hash_func\\s*=` finds only these two lines (the unrelated hits in src/runtime/obj.rs and src/rsa/mod.rs are different types).",
+  "falsifier": "any third store site, any store reachable from outside slh_dsa_key_hash_init, or a runtime-selected table (a value not produced by the two selectors)."
+ },
+ "selectors": [
+  {
+   "function": "src/slh_dsa/adrs.rs:269 ossl_slh_get_adrs_fn(is_compressed: c_int)",
+   "tables": 2,
+   "form": "const METHODS: [SlhAdrsFunc; 2]; returns &METHODS[0] when is_compressed == 0 else &METHODS[1]",
+   "fields_per_table": 11,
+   "field_names": ["set_layer_address", "set_tree_address", "set_type_and_clear", "set_keypair_address", "copy_keypair_address", "set_chain_address", "set_tree_height", "set_hash_address", "set_tree_index", "zero", "copy"],
+   "table0_prefix": "slh_adrs_*",
+   "table1_prefix": "slh_adrsc_*"
+  },
+  {
+   "function": "src/slh_dsa/hash.rs:649 ossl_slh_get_hash_fn(is_shake: c_int)",
+   "tables": 2,
+   "form": "const METHODS: [SlhHashFunc; 2]; returns &METHODS[0] when is_shake != 0 else &METHODS[1]",
+   "fields_per_table": 6
+  }
+ ],
+ "complete_target_set": {
+  "per_site": "for a site whose indirection reads field F of a method struct, the complete target set is { METHODS[0][F], METHODS[1][F] } of the selector that produced the struct pointer",
+  "bound": 2,
+  "why_complete": "one writer, two closed selectors, two const tables each, no other store and no runtime table construction",
+  "not_claimed": "this evidence does not by itself change the element-7 classification; the verifier must be given the per-field pair and must refuse if any of the five conditions fails"
+ },
+ "rule_input_required": {
+  "conditions": [
+   "the containing function is one of the six enumerated sites",
+   "the loaded base is the method-struct pointer produced by the single writer",
+   "the writer set for that key field is exactly one function",
+   "the selector is one of the two enumerated selectors and the table count is exactly two",
+   "both table entries for the read field resolve to in-image symbols"
+  ],
+  "refusal": "any mismatch -> existing `None` + reason; the site stays target-bounded",
+  "warning": "the triage's earlier refusals for this group were `ctx-not-proven-parameter`, `writer-set-incomplete` and `no-pointee-layout`; this artifact supplies the writer set and the pointee layout per field, which is precisely what those refusals asked for"
+ },
+ "status": {
+  "element7_before": {"target_bounded": 66, "contract_bounded": 65, "unresolved": 131},
+  "element7_after": "unchanged; no rule was wired in this commit",
+  "review": "pending — this is target-set evidence, not a classification change"
+ },
+ "non_claims": [
+  "No element-7 progress is claimed.",
+  "No obligation status changed; the queue remains 378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN.",
+  "The six sites remain target-bounded until the rule is wired and its mutation and negative controls are observed."
+ ]
+}
