@@ -226,10 +226,21 @@
   "The mutation control is a tool-level negative control, not a library soundness result."
  ],
  "review": {
-  "reviewer": "pending independent adjudication",
-  "verdict": "UNAPPLIED",
+  "reviewer": "independent adversarial adjudicator (session 79e93005-a098-496f-82d8-4cfaee83215b); transcribed verbatim",
+  "verdict": "APPROVE",
   "applied": false,
-  "prohibition": "No element-7 PASS or precision-progress claim may be derived from this rule until an independent reviewer confirms the contract is genuinely applicable and the witness cannot absorb an unrelated indirect call."
+  "date": "2026-11-03",
+  "verdict_text": "APPROVE",
+  "why_different_from_b46_b47": "B46/B47 failed because cross-thread exclusivity was advisory prose with no external witness or enforcement. Here the callback type is declared in the exported ABI (include/openssl/provider.h:42-45, byte-identical to the pinned authority) and the forwarding is a checkable dataflow (operand = parameter 2, mov %rdx,%rbx, four call *%rbx).",
+  "confirmed": [
+   "provenance from the binary",
+   "contract is category (i), not documented duty",
+   "witness requires all eight conditions and no unrelated indirect call can satisfy them",
+   "six single-link refusals are load-bearing",
+   "mutation reverts exactly the four",
+   "closures 66/65/131 with 378/186/192/0",
+   "element 7 remains FAIL with 66 target-bounded"
+  ]
  },
  "element7_state": {
   "target_bounded_before": 70,
@@ -238,6 +249,34 @@
   "contract_bounded_after": 65,
   "reachable_unresolved": 131,
   "passes": false,
-  "note": "These four sites were never the whole gap. 66 reachable target-bounded sites remain, so element 7 still FAILS and this change alone cannot move it to PASS."
- }
+  "note": "These four sites were never the whole gap. 66 reachable target-bounded sites remain, so element 7 still FAILS and this change alone cannot move it to PASS.",
+  "reviewed": true
+ },
+ "residuals": [
+  {
+   "id": "E7CAP-R1",
+   "state": "OPEN",
+   "why": "the export->activate->slot forwarding is checked from source text, not from the binary call graph; the 0x3e2880 tail-jump is reported prose, not witness-enforced."
+  },
+  {
+   "id": "E7CAP-R2",
+   "state": "OPEN",
+   "why": "the witness does not prove the default-provider dispatch slot holds ossl_prov_get_capabilities at run time; that binding is a source-line check (src/provider/digest.rs:2630-2631)."
+  },
+  {
+   "id": "E7CAP-R3",
+   "state": "OPEN",
+   "why": "the shared _header_callback_param typedef-pattern edit can affect other ABI classes. Class totals 47/14 are empirically unchanged here, but this needs its own BOUNDARY note and a regression control."
+  },
+  {
+   "id": "E7CAP-R4",
+   "state": "CLOSED",
+   "why": "the report counted 85 contract-bounded including 20 unreachable sites; the reachable figure is 65 and is used here."
+  },
+  {
+   "id": "E7CAP-R5",
+   "state": "OPEN",
+   "why": "element-7 completion still needs a plan for the remaining 66 target-bounded sites, not more contract classes."
+  }
+ ]
 }
