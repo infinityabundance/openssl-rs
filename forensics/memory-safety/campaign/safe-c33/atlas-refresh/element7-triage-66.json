@@ -1260,5 +1260,22 @@
   "No verifier or rule was changed. No element-7 progress is claimed.",
   "Target sets are not recorded for these sites (target_set=[] in the sidecar); admitted_target_count is the over-approximated admission set size, not a proven bound.",
   "The core_bio_object_table site needs an exact-slot re-derivation before any closure attempt."
- ]
+ ],
+ "revisions": [
+  {
+   "date": "2026-11-03",
+   "subphase": "B55",
+   "what": "fetched_provider_method (2 sites) is not closeable by extending the slot table: all four offsets and their OSSL_FUNC_KEM_* ids are already present since 7aec281b4, and the real blocker is that these are compiler-merged call sites with two reaching definitions each, which _reg_origin refuses (len(defs) != 1).",
+   "effect": "closeable 54 -> 52; hard_core 12 -> 14 unless the proposed merged-site mechanism is approved.",
+   "artifact": "element7-fetched-provider-merged-sites.json",
+   "note": "the original grouping and per-group evidence requirements are unchanged and preserved"
+  }
+ ],
+ "counts_revised": {
+  "closeable": 52,
+  "hard_core_or_new_mechanism": 14,
+  "total": 66,
+  "closed_so_far": 6,
+  "remaining_target_bounded": 60
+ }
 }
