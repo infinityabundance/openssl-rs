@@ -2114,9 +2114,16 @@ ABI_CONTRACT_EXPORT_CALLBACK = "ABI_CONTRACT_EXPORT_CALLBACK"
 # export-callback class.
 ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK = \
     "ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK"
+# The SLH-DSA method-table dispatch: the hash-context initialiser stores
+# `adrs_func`/`hash_func` into SlhDsaKey, each pointing at one of two `const`
+# tables returned by a closed selector.  The class is site-enumerated: a
+# matching shape elsewhere is refused, never absorbed.
+ABI_CONTRACT_SLH_METHOD_TABLE = "ABI_CONTRACT_SLH_METHOD_TABLE"
+
 ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
                                   ABI_CONTRACT_EXPORT_CALLBACK,
-                                  ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK})
+                                  ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK,
+                                  ABI_CONTRACT_SLH_METHOD_TABLE})
 
 ABI_CONTRACTS = {
     ABI_CONTRACT_PROVIDER: {
@@ -2271,6 +2278,31 @@ ABI_CONTRACTS = {
             "not a link-time bound",
             "direct calls to a replacement function outside the CRYPTO_* seam, or "
             "application allocations that never enter libcrypto",
+        ],
+    },
+    ABI_CONTRACT_SLH_METHOD_TABLE: {
+        "resolution_kind": "target-bounded by a closed selector (two in-image const tables)",
+        "contract": (
+            "the SLH-DSA hash/adrs selector pair "
+            "(ossl_slh_get_adrs_fn / ossl_slh_get_hash_fn)"),
+        "citation": [
+            "src/slh_dsa/hash_ctx.rs:252-253 -- the only stores of "
+            "SlhDsaKey.adrs_func and SlhDsaKey.hash_func, from the two selectors",
+            "src/slh_dsa/adrs.rs:269 -- ossl_slh_get_adrs_fn returns "
+            "&METHODS[0] or &METHODS[1] of const SlhAdrsFunc[2] (11 fields)",
+            "src/slh_dsa/hash.rs:649 -- ossl_slh_get_hash_fn returns "
+            "&METHODS[0] or &METHODS[1] of const SlhHashFunc[2] (6 fields)",
+        ],
+        "covers": (
+            "the complete pair of target functions for the read field: "
+            "{METHODS[0][field], METHODS[1][field]}"),
+        "does_not_cover": [
+            "any site whose containing function is not one of the six enumerated "
+            "call sites",
+            "a key field with a second writer, or a selector/table that is not "
+            "closed to exactly two in-image const tables",
+            "the reachability of the two targets from the consumer workload; that "
+            "remains the closure's job",
         ],
     },
 }
@@ -10948,6 +10980,357 @@ def nested_static_instance_witness(g: "DsoGraph", site: dict, name: str,
     }
 
 
+# --------------------------------------------------------------------------- #
+# S4: SLH-DSA method-table dispatch.  Six enumerated call sites read a
+# function pointer out of the struct that SlhDsaKey.adrs_func/hash_func points
+# at.  The only writer of those two key fields is slh_dsa_key_hash_init, and
+# its stored value is a select over exactly two in-image const tables.  The
+# rule is deliberately site-enumerated: a matching shape elsewhere is refused.
+# --------------------------------------------------------------------------- #
+
+SLH_METHOD_TABLE_WITNESS_RULE = "slh-method-table"
+SLH_METHOD_WRITER = "slh_dsa_key_hash_init"
+SLH_METHOD_OWNER = "SlhDsaKey"
+SLH_HASH_CTX = "SlhDsaHashCtx"
+SLH_HASH_CTX_KEY_OFF = 0x00
+
+# call site -> (containing function, key field offset, read member offset)
+SLH_METHOD_TABLE_SITES = {
+    0x2621EE: ("ossl_slh_ht_sign", 0xA8, 0x48),
+    0x262599: ("ossl_slh_ht_verify", 0xA8, 0x48),
+    0x482467: ("slh_fors_node", 0xA8, 0x50),
+    0x48273F: ("ossl_slh_fors_sign", 0xA8, 0x50),
+    0x4829C1: ("ossl_slh_fors_sign", 0xA8, 0x50),
+    0x4830AD: ("ossl_slh_fors_pk_from_sig", 0xB0, 0x28),
+}
+
+SLH_METHOD_KEY_FIELDS = {
+    0xA8: {"field": "adrs_func", "selector": "ossl_slh_get_adrs_fn",
+           "source": "src/slh_dsa/adrs.rs:269", "tables": 2, "fields": 11,
+           "declaration": ("src/slh_dsa/mod.rs SlhDsaKey.adrs_func; "
+                           "writer src/slh_dsa/hash_ctx.rs:252")},
+    0xB0: {"field": "hash_func", "selector": "ossl_slh_get_hash_fn",
+           "source": "src/slh_dsa/hash.rs:649", "tables": 2, "fields": 6,
+           "declaration": ("src/slh_dsa/mod.rs SlhDsaKey.hash_func; "
+                           "writer src/slh_dsa/hash_ctx.rs:253")},
+}
+
+
+def _slh_method_refusal(reason: str, **extra) -> dict:
+    rec = {"schema": WITNESS_SCHEMA,
+           "rule": SLH_METHOD_TABLE_WITNESS_RULE,
+           "class": ABI_CONTRACT_SLH_METHOD_TABLE,
+           "contract_bounded": False, "resolved": False,
+           "refusal": reason}
+    rec.update(extra)
+    return rec
+
+
+def _slh_source_writers(g: "DsoGraph", field: str) -> set:
+    """Source functions that assign the named field, over the admitted tree.
+
+    This is the writer-set check the atlas established: a source-wide scan for
+    `.<field> =` and the enclosing function.  The DSO displacement index is
+    broader (it cannot prove the owner type of every store), so the writer set
+    is taken from source and the store's *value* is then proved in the image.
+    """
+    docs = _s1_docs(g)
+    pat = re.compile(r"\.\s*" + re.escape(field) + r"\s*=")
+    out = set()
+    for text in docs.values():
+        for m in pat.finditer(text):
+            prefix = text[:m.start()]
+            fns = list(re.finditer(r"\bfn\s+([A-Za-z_]\w*)", prefix))
+            out.add(fns[-1].group(1) if fns else "?")
+    return out
+
+
+def _slh_key_from_ctx(g: "DsoGraph", fstart: int, key_obj: dict,
+                      want: int):
+    """Prove the method-struct pointer's key object is `(*ctx).key`.
+
+    The key is the context's first field.  It may be loaded directly from the
+    context parameter, or spilled to a frame slot and reloaded; every reaching
+    store to that slot must itself be a load of the key field from a proven
+    context parameter.
+    """
+    if key_obj.get("kind") != "load":
+        return None
+    base = _canon(key_obj.get("base_reg"))
+    if base not in ("%rsp", "%rbp"):
+        if key_obj.get("offset") != SLH_HASH_CTX_KEY_OFF:
+            return None
+        return _s1_ctx_param(g, fstart, key_obj["at"], base, want)
+    off = key_obj.get("offset")
+    if not isinstance(off, int):
+        return None
+    opnd = (hex(off) if off else "") + "(" + base + ")"
+    abs_off = _stack_slot_abs(g, fstart, key_obj["at"], opnd)
+    if abs_off is None:
+        return None
+    if _slot_alias_in_block(g, fstart, key_obj["at"], abs_off, set()):
+        return None
+    writes = _reaching_stores(g, fstart, key_obj["at"], abs_off)
+    if not writes or _NO_STORE in writes:
+        return None
+    insns = g.precision.insns_by_func.get(fstart, ())
+    proofs = []
+    for i in sorted(writes):
+        _mn, _rest, ops = _insn_parts(_insn(g, fstart, i))
+        src = (ops[0] if ops else "").strip()
+        if src not in _REGS and src not in _SUBREG:
+            return None
+        o = _reg_origin(g, fstart, i, _canon(src))
+        if (o.get("kind") != "load"
+                or o.get("offset") != SLH_HASH_CTX_KEY_OFF):
+            return None
+        p = _s1_ctx_param(g, fstart, o["at"], _canon(o["base_reg"]), want)
+        if p is None:
+            return None
+        proofs.append({"store_site": hex(insns[i][0]) if i < len(insns)
+                       else None, "source": src,
+                       "load_at": hex(o["addr"]),
+                       "via": p.get("via")})
+    return {"kind": "param", "index": want, "via": "stack-spill",
+            "stores": proofs}
+
+
+def slh_method_table_witness(g: "DsoGraph", site: dict, name: str):
+    """Prove (or refuse) an enumerated SLH-DSA method-table dispatch.
+
+    Returns None when the site is not one of the six enumerated call sites, so
+    registration can only add recognitions.  An enumerated site whose facts in
+    this exact image differ is refused by name and keeps its previous class.
+
+    Every condition is checked against the image: the containing function and
+    call site, the method-struct base load, the key field's writer set, the
+    writer's select over const tables, and the read member in every table
+    element.
+    """
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    spec = SLH_METHOD_TABLE_SITES.get(site.get("addr"))
+    if spec is None:
+        return None
+    want_fn, key_off, member_off = spec
+    fstart = site.get("func")
+    fname = g.funcs.get(fstart) or ""
+    if want_fn not in (name or "") or want_fn not in fname:
+        return _slh_method_refusal(
+            "site-function-not-enumerated", call_site=hex(site["addr"]),
+            expected_function=want_fn, actual_function=fname or name)
+    insns = g.precision.insns_by_func.get(fstart, ())
+    idx = next((i for i, (a, _t) in enumerate(insns)
+                if a == site.get("addr")), None)
+    if idx is None:
+        return _slh_method_refusal("site-not-in-function",
+                                   call_site=hex(site["addr"]))
+    text = site.get("text") or ""
+    m = re.search(r"call\w*\s+\*(.+)$", text.split("#", 1)[0].strip())
+    if not m:
+        return _slh_method_refusal("operand-not-indirect-call",
+                                   call_site=hex(site["addr"]))
+    operand = m.group(1).strip()
+    mo = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", operand)
+    if not mo:
+        return _slh_method_refusal("operand-not-method-field",
+                                   call_site=hex(site["addr"]),
+                                   operand=operand)
+    read_off = int(mo.group(1), 16) if mo.group(1) else 0
+    base_reg = mo.group(2)
+    if read_off != member_off:
+        return _slh_method_refusal(
+            "read-field-not-enumerated", call_site=hex(site["addr"]),
+            expected_offset=hex(member_off), actual_offset=hex(read_off))
+    # Condition 2: the base is the method-struct pointer.  It is the load of
+    # one of the two key fields, and that load's object is the key parameter.
+    origin = _reg_origin(g, fstart, idx, _canon(base_reg))
+    if origin.get("kind") != "load":
+        return _slh_method_refusal(
+            "base-not-method-struct-load", call_site=hex(site["addr"]),
+            base_reg=base_reg, origin=origin.get("kind"))
+    actual_key_off = origin.get("offset")
+    if actual_key_off != key_off:
+        return _slh_method_refusal(
+            "method-struct-field-mismatch", call_site=hex(site["addr"]),
+            expected_key_offset=hex(key_off),
+            actual_key_offset=(hex(actual_key_off)
+                               if isinstance(actual_key_off, int) else None))
+    key = SLH_METHOD_KEY_FIELDS[key_off]
+    # The site functions take `ctx: *mut SlhDsaHashCtx`; the key is
+    # `(*ctx).key` (the context's first field), and the method-struct pointer
+    # is the load of the key's field.  Prove both hops so the base cannot be
+    # an unrelated pointer that merely has the same displacement.
+    ctx_info = _s1_site_context(g, fstart)
+    if ctx_info is None:
+        return _slh_method_refusal("no-context-type",
+                                   call_site=hex(site["addr"]))
+    if ctx_info.get("type") != SLH_HASH_CTX:
+        return _slh_method_refusal(
+            "context-type-not-slh-dsa-hash-ctx",
+            call_site=hex(site["addr"]), context_type=ctx_info.get("type"))
+    key_obj = _reg_origin(g, fstart, origin["at"],
+                          _canon(origin["base_reg"]))
+    ctx = _slh_key_from_ctx(g, fstart, key_obj,
+                            ctx_info.get("param_index"))
+    if ctx is None:
+        return _slh_method_refusal(
+            "method-struct-base-not-parameter",
+            call_site=hex(site["addr"]), key_field=key["field"],
+            key_origin=key_obj.get("kind"),
+            key_offset=(hex(key_obj["offset"])
+                        if isinstance(key_obj.get("offset"), int) else None),
+            context={"type": ctx_info["type"],
+                     "param": ctx_info.get("param")})
+    # Condition 3: the key field's writer set is exactly the one source
+    # writer.  The source-wide assignment scan is the established evidence;
+    # the DSO displacement index cannot prove the owner type of every store.
+    source_writers = _slh_source_writers(g, key["field"])
+    if source_writers != {SLH_METHOD_WRITER}:
+        return _slh_method_refusal(
+            "key-field-writer-set-not-single", call_site=hex(site["addr"]),
+            key_field=key["field"],
+            source_writers=sorted(source_writers))
+    writer_addr = next((a for a, n in g.funcs.items()
+                        if SLH_METHOD_WRITER in (n or "")), None)
+    if writer_addr is None:
+        return _slh_method_refusal(
+            "key-field-writer-not-in-image", call_site=hex(site["addr"]),
+            key_field=key["field"], writer=SLH_METHOD_WRITER)
+    # Condition 4: the writer's store selects over exactly two const tables.
+    # The selector is inlined into the writer by this compiler, so the
+    # observable fact is the finite lea/select set at the store.
+    writer_insns = g.precision.insns_by_func.get(writer_addr, ())
+    stores = []
+    for i, (a, t) in enumerate(writer_insns):
+        mn, _rest, ops = _insn_parts(t.split("#", 1)[0].strip())
+        if mn not in ("mov", "movq") or len(ops) < 2:
+            continue
+        mo2 = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                           ops[-1].strip())
+        if not mo2:
+            continue
+        off2 = int(mo2.group(1), 16) if mo2.group(1) else 0
+        if off2 == key_off:
+            stores.append({"index": i, "addr": a, "src": ops[0].strip()})
+    if not stores:
+        return _slh_method_refusal(
+            "key-field-writer-store-not-found",
+            call_site=hex(site["addr"]), key_field=key["field"],
+            writer=SLH_METHOD_WRITER)
+    stride = key["fields"] * 8
+    tables, table_addrs = [], set()
+    for store in stores:
+        addrs = _nested_lea_addrs(g, writer_addr, store["index"],
+                                  _canon(store["src"]))
+        if not addrs:
+            return _slh_method_refusal(
+                "selector-tables-not-finite-lea",
+                call_site=hex(site["addr"]), key_field=key["field"],
+                store_site=hex(store["addr"] or 0))
+        table_addrs |= set(addrs)
+    if len(table_addrs) != key["tables"]:
+        return _slh_method_refusal(
+            "selector-table-count-not-two", call_site=hex(site["addr"]),
+            key_field=key["field"], selector=key["selector"],
+            table_count=len(table_addrs),
+            tables=[hex(a) for a in sorted(table_addrs)])
+    # Condition 5: both table entries for the read field resolve to in-image
+    # symbols.  _nested_const_table_at checks every element's member slot.
+    for addr in sorted(table_addrs):
+        t = _nested_const_table_at(g, addr, stride, member_off)
+        if not t.get("ok"):
+            return _slh_method_refusal(
+                "selector-table-shape-not-closed",
+                call_site=hex(site["addr"]), key_field=key["field"],
+                table=hex(addr), reason=t.get("reason"))
+        if t["count"] != key["tables"]:
+            return _slh_method_refusal(
+                "selector-table-instance-count",
+                call_site=hex(site["addr"]), table=hex(addr),
+                count=t["count"])
+        tables.append(t)
+    bases = {t["base"] for t in tables}
+    elements = {e for t in tables for e in t["elements"]}
+    if len(bases) != 1 or elements != table_addrs:
+        return _slh_method_refusal(
+            "selector-table-set-not-closed", call_site=hex(site["addr"]),
+            bases=[hex(b) for b in sorted(bases)],
+            elements=[hex(e) for e in sorted(elements)])
+    targets = set()
+    for elem in sorted(elements):
+        vals = g.static_slot(elem + member_off)
+        ints = {v for v in (vals or ()) if isinstance(v, int)}
+        if len(ints) != 1:
+            return _slh_method_refusal(
+                "read-field-not-single-symbol", call_site=hex(site["addr"]),
+                element=hex(elem), member_offset=hex(member_off))
+        value = next(iter(ints))
+        if value not in g.start_set:
+            return _slh_method_refusal(
+                "read-field-not-in-image-symbol",
+                call_site=hex(site["addr"]), element=hex(elem),
+                member_offset=hex(member_off), value=hex(value))
+        targets.add(value)
+    if len(targets) != key["tables"]:
+        return _slh_method_refusal(
+            "read-field-target-count", call_site=hex(site["addr"]),
+            targets=[hex(t) for t in sorted(targets)])
+    return {
+        "schema": WITNESS_SCHEMA,
+        "rule": SLH_METHOD_TABLE_WITNESS_RULE,
+        "class": ABI_CONTRACT_SLH_METHOD_TABLE,
+        "contract_bounded": True,
+        "resolved": True,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "operand": {"base_reg": base_reg, "member_offset": hex(member_off)},
+        "key_field": {
+            "object": SLH_METHOD_OWNER,
+            "field": key["field"],
+            "offset": hex(key_off),
+            "declaration": key["declaration"],
+            "writer": SLH_METHOD_WRITER,
+            "writer_count": 1,
+            "witness": ("field-sensitive writer index; load base proven to "
+                        "the context's key parameter"),
+        },
+        "selector": {
+            "function": key["selector"],
+            "source": key["source"],
+            "form": ("inlined select over two const tables at the single "
+                     "writer"),
+            "tables": key["tables"],
+        },
+        "tables": [
+            {"symbol": t["symbol"], "base": hex(t["base"]),
+             "size": hex(t["size"]), "stride": hex(t["stride"]),
+             "count": t["count"],
+             "elements": [hex(e) for e in t["elements"]]}
+            for t in tables],
+        "targets": [hex(t) for t in sorted(targets)],
+        "slot": (f"{SLH_METHOD_OWNER}.{key['field']}@{hex(key_off)} -> "
+                 f"{key['selector']} METHODS[0..1][{hex(member_off)}]"),
+        "writer": ("src/slh_dsa/hash_ctx.rs:252-253 slh_dsa_key_hash_init is "
+                   "the only writer of this key field"),
+        "interface": ("the two const SLH_*_FUNC tables returned by the "
+                      f"closed selector {key['selector']}"),
+        "basis": ("an enumerated SLH-DSA method-table call site; the read "
+                  "base is the key's method-struct pointer, its key field has "
+                  "exactly one writer, and that writer selects over exactly "
+                  "two in-image const tables whose read member is an in-image "
+                  "function start in every element"),
+        "conditions": [
+            "containing-function-is-an-enumerated-site",
+            "read-base-is-the-method-struct-pointer",
+            "key-field-writer-set-is-exactly-one",
+            "selector-is-the-named-closed-selector",
+            "selector-tables-are-exactly-two",
+            "read-field-resolves-in-both-tables-to-in-image-symbols",
+        ],
+    }
+
+
 # ---- S6: triage records (not a class) ---------------------------------- #
 
 S6_FUNCTIONS = {
@@ -11485,6 +11868,25 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
         if cb_refusal:
             site["export_callback_refusal"] = cb_refusal
             stats["S2_export_callback_unresolved"] += 1
+        # S4: the SLH-DSA method-table dispatch.  Six enumerated call sites
+        # read a function pointer out of the struct that SlhDsaKey.adrs_func/
+        # hash_func points at; the single writer selects over exactly two
+        # in-image const tables.  A non-enumerated site returns None; a refusal
+        # records a named reason and leaves the previous class untouched.
+        slh = slh_method_table_witness(g, site, name)
+        if slh is not None:
+            if slh.get("resolved"):
+                targets = {int(t, 16) for t in slh["targets"]}
+                site["targets"] |= residual | targets
+                site["class"] = ABI_CONTRACT_SLH_METHOD_TABLE
+                site["unresolved"] = True
+                site["reason"] = ("SLH-DSA method-table closed-selector "
+                                  "contract: " + slh["slot"])
+                site["witness"] = slh
+                stats["S4_slh_method_table_contract_bounded"] += 1
+                continue
+            site["slh_method_table_refusal"] = slh
+            stats["S4_slh_method_table_refused"] += 1
         if _match(name, A1_FUNCTIONS):
             witness = contract_witness(ABI_CONTRACT_PROVIDER, g, site, name)
             if witness is not None:
