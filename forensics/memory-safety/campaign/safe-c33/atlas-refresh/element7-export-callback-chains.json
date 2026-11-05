@@ -1,0 +1,42 @@
+{
+ "receipt": "element7-export-callback-chains",
+ "kind": "element7-rule-extension",
+ "date": "2026-11-03",
+ "subphase": "B55",
+ "state": "IMPLEMENTED — 13 of 16 closed, 3 refused; independent review pending",
+ "group": "exported_callback_param",
+ "what_was_extended": "The approved ABI_CONTRACT_EXPORT_CALLBACK witness could only see a callback operand that was a linear entry parameter. It now follows the operand back through register-to-register copies, frame spill/reload pairs, and loop phis whose every incoming value satisfies the same rule. Call results, immediates, arithmetic, rip-relative loads and overwritten spill slots break the chain and refuse.",
+ "closed": {
+  "count": 13,
+  "sites": ["CRYPTO_cbc128_decrypt 0x16c33d", "CRYPTO_ofb128_encrypt 0x16ec28", "OPENSSL_sk_deep_copy 0x2134b8", "OPENSSL_sk_deep_copy 0x2136a4", "OPENSSL_sk_pop_free 0x214542", "PEM_ASN1_read_bio 0x217b60", "OBJ_bsearch_ex_ 0x32096c", "OBJ_bsearch_ex_ 0x3209d6", "OPENSSL_LH_doall 0x323a64", "ASN1_i2d_bio 0x4ce80f", "ASN1_i2d_bio 0x4ce849", "CRYPTO_ccm128_decrypt_ccm64 0x4574cd", "CRYPTO_ccm128_encrypt_ccm64 0x457dca"]
+ },
+ "refused": [
+  {"site": "pem_pk8::do_pk8pkey 0x4fa4c6", "why": "the callback parameter is forwarded to the private worker with push, and _arg_origin_at_call does not model push, so it reports a false parameter index; the header check catches the false index and the site refuses. The in-image PEM_def_callback fallback WAS correctly enumerated (named in .dynsym) but the parameter arm is not reachable to the witness."},
+  {"site": "p12_mutl::pkcs12_gen_mac 0x5314aa", "why": "the value reaching the call is push $0x0 (a NULL constant) through a stack argument, not an exported entry parameter."},
+  {"site": "p12_mutl::pkcs12_gen_mac 0x531586", "why": "the value is lea of an in-image keygen function through a stack argument, not an exported entry parameter."}
+ ],
+ "why_three_were_not_forced": "Reaching 16 would have required accepting a push-forwarded argument with no matching exported parameter (a false positive) or accepting a computed constant as if it were a parameter. Both are widenings; the worker refused instead.",
+ "controls": {
+  "collateral": "13 out-of-group sites also moved materialised -> ABI_CONTRACT_EXPORT_CALLBACK (cts128 x3, nistcts x3, ASN1_d2i_bio, ASN1_d2i_fp, LH_doall_arg_thunk, ASN1_dup x3, ASN1_sign). All are unreachable and therefore outside the element-7 population; they are recorded here rather than presented as precision.",
+  "mutation": "removing the chain fallback drops accepted sites 13 -> 8; the five reverted are exactly cbc, ofb, LH_doall and the two ccm sites (pk8/p12 were already refused). Tool restored byte-identically at 5b3705a4...",
+  "negatives": ["call result then indirect: refused", "spill overwritten before reload: refused", "global load then indirect: refused", "positive spill fixture: accepted"],
+  "self_test": "ok"
+ },
+ "discovered_obligation": {
+  "id": "E7CB-R1",
+  "open": true,
+  "why": "_arg_origin_at_call does not model push, so a stack-argument forwarding can be reported as a parameter index that does not exist. Here the header check caught it; the model should still be fixed, and until it is, any site that forwards an argument with push must be treated as unattributable."
+ },
+ "measurement": {
+  "element7_before": {"target_bounded": 60, "contract_bounded": 71, "unresolved": 131},
+  "element7_after": {"target_bounded": 47, "contract_bounded": 82, "unresolved": 129},
+  "obligations": "378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN",
+  "verdicts": "ssh and sshd ACCEPTED, 0 refusals",
+  "passes": false
+ },
+ "non_claims": [
+  "Element 7 is still FAIL; 47 target-bounded sites remain and the 3 refused sites are not counted as progress.",
+  "The 13 out-of-group moves are unreachable sites and are not claimed as element-7 precision.",
+  "No obligation status changed."
+ ]
+}
