@@ -4634,241 +4634,6 @@ def _stack_param(g: "DsoGraph", fstart: int, idx: int, opnd, base_reg):
             "spill_site": str(provenance[0]["addr"]), "provenance": provenance}
 
 
-# ---- exported-callback provenance --------------------------------------- #
-#
-# A callback parameter is often materialised by the compiler before it is
-# called: spilled to a frame slot and reloaded on each path, or carried in a
-# copy around a loop.  Those are still *the same* entry parameter.  The walker
-# below follows exactly three shapes and refuses every other step:
-#
-#   * a register-to-register copy of the parameter,
-#   * a frame spill and its reload, and
-#   * a loop-carried copy: a merge whose every incoming value resolves to the
-#     same entry parameter (a re-entrant arm is the loop back edge).
-#
-# The entry-parameter requirement itself is unchanged.  An arm that is a call
-# result, an immediate, an arithmetic value, a load from anywhere but the
-# frame, or a truncating move refuses the whole site.  Nothing here widens the
-# target set or introduces a "copied pointer" class.
-
-_EXPORT_COPY_MN = ("mov", "movq")
-# The documented defaults: OpenSSL substitutes these when the application
-# passes NULL for the parameter.  Admitted only for the special case above.
-_DOCUMENTED_EXPORT_FALLBACK_SYMBOLS = ("PEM_def_callback",)
-
-
-def _step_addr(g: "DsoGraph", fstart: int, idx: int) -> str:
-    return hex(g.precision.insns_by_func[fstart][idx][0])
-
-
-def _copy_source(g: "DsoGraph", fstart: int, idx: int, reg: str):
-    """The 64-bit register copied into ``reg`` here, or None.
-
-    A 32-bit move truncates the value and a ``lea`` computes an address;
-    neither is a copy of a callback pointer, so neither is accepted.
-    """
-    mn, _rest, ops = _insn_parts(_insn(g, fstart, idx))
-    if mn not in _EXPORT_COPY_MN or len(ops) < 2:
-        return None
-    dst, src = ops[-1], ops[0]
-    if dst not in _REGS or _canon(dst) != reg:
-        return None
-    return src if src in _REGS else None
-
-
-def _slot_source(g: "DsoGraph", fstart: int, idx: int, reg: str):
-    """Entry-relative frame slot loaded into ``reg`` here, or None."""
-    mn, _rest, ops = _insn_parts(_insn(g, fstart, idx))
-    if mn not in _EXPORT_COPY_MN or len(ops) < 2:
-        return None
-    dst, src = ops[-1], ops[0]
-    if dst not in _REGS or _canon(dst) != reg:
-        return None
-    if not re.fullmatch(r"(-?0x[0-9a-f]+)?\((%rsp|%rbp)\)", src):
-        return None
-    return _stack_slot_abs(g, fstart, idx, src)
-
-
-def _in_image_fallback(g: "DsoGraph", fstart: int, idx: int):
-    """A named in-image function loaded from a relocated slot, or None.
-
-    This is the documented OpenSSL default (``PEM_def_callback`` and friends).
-    It is only accepted for the enumerated special cases below, together with
-    the NULL test that selects it; on its own it is not an entry parameter.
-    """
-    text = _insn(g, fstart, idx)
-    m = re.search(r"#\s*([0-9a-f]+)\s*<", text)
-    if not m:
-        return None
-    slot = int(m.group(1), 16)
-    names = g.slot_syms.get(slot) or set()
-    for name in sorted(names):
-        base = name.split("@")[0]
-        addr = (getattr(g, "dynamic_defs", {}) or {}).get(base)
-        if addr is not None and addr in (getattr(g, "start_set", ()) or ()):
-            return {"symbol": base, "address": hex(addr), "slot": hex(slot)}
-    return None
-
-
-def _null_test_guards(g: "DsoGraph", fstart: int, idx: int, reg: str) -> bool:
-    """True when a NULL test on ``reg`` guards instruction ``idx``."""
-    cfg = _function_cfg(g, fstart)
-    bi = cfg["block_of"].get(idx)
-    if bi is None:
-        return False
-    lo, _hi = cfg["blocks"][bi]
-    tested = False
-    for k in range(lo, idx):
-        mn, _rest, ops = _insn_parts(_insn(g, fstart, k))
-        if (mn == "test" and len(ops) == 2 and ops[0] == ops[1]
-                and _canon(ops[0]) == reg):
-            tested = True
-        elif mn == "cmp" and len(ops) == 2 and "$0x0" in ops \
-                and _canon(ops[1] if ops[0] == "$0x0" else ops[0]) == reg:
-            tested = True
-        elif tested and mn.startswith("j"):
-            return True
-    return False
-
-
-def _chain_slot(g: "DsoGraph", fstart: int, idx: int, slot: int,
-                depth: int, active: frozenset, allow_fallback: bool):
-    """Provenance of one entry-relative frame slot at instruction ``idx``.
-
-    Returns ``(indices, steps, fallbacks)`` or None.
-    """
-    if _slot_alias_in_block(g, fstart, idx, slot, set()):
-        return None
-    writes = _reaching_stores(g, fstart, idx, slot)
-    if writes is None:
-        return None
-    if writes == {_NO_STORE}:
-        # No store on any analysed path: an incoming stack argument (argument 6
-        # is entry rsp+8).  That is the entry parameter itself, not a spill.
-        if slot >= 8 and (slot - 8) % 8 == 0:
-            return ({6 + (slot - 8) // 8},
-                    [{"step": "stack-argument", "offset": hex(slot)}], [])
-        return None
-    if not writes or _NO_STORE in writes:
-        return None
-    indices, steps, falls = set(), [], []
-    for w in sorted(writes):
-        mn, _rest, ops = _insn_parts(_insn(g, fstart, w))
-        if mn not in _EXPORT_COPY_MN or not ops or ops[0] not in _REGS:
-            return None
-        sub = _chain_reg(g, fstart, w, ops[0], depth + 1, active,
-                         allow_fallback)
-        if sub is None:
-            return None
-        indices |= sub[0]
-        steps.append({"step": "entry-spill", "addr": _step_addr(g, fstart, w),
-                      "text": _insn(g, fstart, w).strip()})
-        steps += sub[1]
-        falls += sub[2]
-    return indices, steps, falls
-
-
-def _chain_reg(g: "DsoGraph", fstart: int, idx: int, reg: str, depth: int = 0,
-               active: frozenset = frozenset(), allow_fallback: bool = False):
-    """Provenance of ``reg`` at ``idx`` as ``(indices, steps, fallbacks)``."""
-    if depth > 16:
-        return None
-    defs = _reaching_defs(g, fstart, idx, reg)
-    if defs is None or not defs:
-        return None
-    indices, steps, falls = set(), [], []
-    for d in sorted(defs):
-        if d == _ENTRY_DEF:
-            if reg not in _ENTRY_ARG_REGS:
-                return None
-            indices.add(_ENTRY_ARG_REGS[reg])
-            steps.append({"step": "entry-register", "reg": reg})
-            continue
-        key = (d, reg)
-        if key in active:
-            # The loop back edge: this arm is the value being resolved.
-            steps.append({"step": "loop-carried", "addr": _step_addr(g, fstart, d),
-                          "text": _insn(g, fstart, d).strip()})
-            continue
-        src = _copy_source(g, fstart, d, reg)
-        if src is not None:
-            sub = _chain_reg(g, fstart, d, _canon(src), depth + 1,
-                             active | {key}, allow_fallback)
-            if sub is None:
-                return None
-            indices |= sub[0]
-            steps.append({"step": "reg-copy", "addr": _step_addr(g, fstart, d),
-                          "from": _canon(src), "to": reg,
-                          "text": _insn(g, fstart, d).strip()})
-            steps += sub[1]
-            falls += sub[2]
-            continue
-        slot = _slot_source(g, fstart, d, reg)
-        if slot is not None:
-            sub = _chain_slot(g, fstart, d, slot, depth + 1, active | {key},
-                              allow_fallback)
-            if sub is None:
-                return None
-            indices |= sub[0]
-            steps.append({"step": "frame-reload", "addr": _step_addr(g, fstart, d),
-                          "slot": hex(slot),
-                          "text": _insn(g, fstart, d).strip()})
-            steps += sub[1]
-            falls += sub[2]
-            continue
-        if allow_fallback:
-            mn, _rest, ops = _insn_parts(_insn(g, fstart, d))
-            if (mn in ("xor", "sub") and len(ops) == 2
-                    and ops[0] == ops[1] and _canon(ops[0]) == reg):
-                # The caller passed NULL; the null-tested default takes over.
-                steps.append({"step": "null", "addr": _step_addr(g, fstart, d),
-                              "text": _insn(g, fstart, d).strip()})
-                continue
-            if mn in _EXPORT_COPY_MN:
-                fall = _in_image_fallback(g, fstart, d)
-                if fall is not None and (
-                        _null_test_guards(g, fstart, d, reg)
-                        or fall["symbol"] in _DOCUMENTED_EXPORT_FALLBACK_SYMBOLS):
-                    falls.append(fall)
-                    steps.append({"step": "in-image-fallback",
-                                  "addr": _step_addr(g, fstart, d),
-                                  "symbol": fall["symbol"],
-                                  "text": _insn(g, fstart, d).strip()})
-                    continue
-        return None
-    return indices, steps, falls
-
-
-def _param_chain(g: "DsoGraph", fstart: int, idx: int, opnd: str,
-                 allow_fallback: bool = False):
-    """Follow the callback operand back to one entry parameter.
-
-    Returns ``{"kind": "param", "index": n, "provenance": [...],
-    "fallback": [...]}`` or None.  Every incoming value must resolve to the
-    same parameter; a site whose arms disagree is refused.
-    """
-    opnd = opnd.strip()
-    if opnd in _REGS or opnd in _SUBREG:
-        if opnd not in _REGS:
-            return None
-        res = _chain_reg(g, fstart, idx, _canon(opnd), 0, frozenset(),
-                         allow_fallback)
-    else:
-        if not re.fullmatch(r"(-?0x[0-9a-f]+)?\((%rsp|%rbp)\)", opnd):
-            return None
-        slot = _stack_slot_abs(g, fstart, idx, opnd)
-        if slot is None:
-            return None
-        res = _chain_slot(g, fstart, idx, slot, 0, frozenset(), allow_fallback)
-    if res is None or len(res[0]) != 1:
-        return None
-    out = {"kind": "param", "index": next(iter(res[0])),
-           "provenance": res[1], "extended": True}
-    if res[2]:
-        out["fallback"] = res[2]
-    return out
-
-
 def _callers_of(g: "DsoGraph", callee: int) -> list:
     """Direct in-image call sites of one function, scanned on demand.
 
@@ -5002,32 +4767,11 @@ def _split_params(decl: str) -> list:
     return [p for p in out if p and p != "void"]
 
 
-def _strip_preprocessor(text: str) -> str:
-    """Blank preprocessor directives, preserving line numbers.
-
-    A macro invocation is not a declaration.  OpenSSL's headers wrap many
-    exported functions in ``#define sk_FOO_pop_free(...) OPENSSL_sk_pop_free(``,
-    so scanning the raw text reads the macro body as a competing prototype and
-    refuses a parameter it should accept.  Only the directives are removed; the
-    declaration scan below then sees exactly the declared prototypes.
-    """
-    out = []
-    in_directive = False
-    for line in text.split("\n"):
-        if in_directive or line.lstrip().startswith("#"):
-            in_directive = line.rstrip().endswith("\\")
-            out.append("")
-        else:
-            out.append(line)
-    return "\n".join(out)
-
-
 def _header_callback_param(g: "DsoGraph", symbol: str, index: int):
     """The declared callback parameter, or a refusal string."""
     texts = _header_texts(g)
     if not texts:
         return None, "no admitted install headers"
-    texts = [(path, _strip_preprocessor(text)) for path, text in texts]
     # Function typedefs: name -> (file, line, is_pointer).
     fntypes = {}
     for path, text in texts:
@@ -5491,19 +5235,6 @@ def fetch_slot_witness(g: "DsoGraph", site: dict, name: str):
 # ---- S2: an exported function's callback parameter ---------------------- #
 
 
-def _documented_export_fallback(g: "DsoGraph", fstart: int) -> bool:
-    """True for the one documented parameter-or-default special case.
-
-    ``pem_pk8::do_pk8pkey`` calls either the application's password callback or,
-    when the caller passed NULL, the in-image ``PEM_def_callback``.  The
-    fallback arm is admitted only here, only when a NULL test guards the load,
-    and only when the loaded symbol is a named in-image function; the parameter
-    arm is still required.
-    """
-    name = (getattr(g, "funcs", {}) or {}).get(fstart) or ""
-    return "pem_pk8" in name and "do_pk8pkey" in name
-
-
 def export_callback_witness(g: "DsoGraph", site: dict, name: str):
     """Witness for a callback that is exactly an exported parameter.
 
@@ -5526,12 +5257,6 @@ def export_callback_witness(g: "DsoGraph", site: dict, name: str):
         return None, None
     opnd = _site_operand(site)
     param = _param_of_operand(g, fstart, idx, opnd)
-    if param is None or param.get("kind") != "param":
-        # Provenance extension: follow the parameter through register copies,
-        # frame spill/reload and loop-carried copies.  The entry-parameter
-        # requirement is unchanged; only the materialising shape is followed.
-        param = _param_chain(g, fstart, idx, opnd,
-                             allow_fallback=_documented_export_fallback(g, fstart))
     if param is None or param.get("kind") != "param":
         if "export-not-param" in _MUTED:
             param = {"kind": "param", "index": 3, "provenance": []}
@@ -5599,14 +5324,10 @@ def export_callback_witness(g: "DsoGraph", site: dict, name: str):
                       "typedef": "forced:0", "type_typedef": "forced",
                       "callback": True}
             else:
-                return None, {"refusal": f"{symbol}: {why}",
-                              "site_parameter": index,
-                              "in_image_fallback": param.get("fallback") or []}
+                return None, {"refusal": f"{symbol}: {why}"}
         parsed.append((symbol, cb))
     if len({(c["type_typedef"], c["parameter_text"]) for _s, c in parsed}) != 1:
-        return None, {"refusal": "exported declarations disagree on the callback",
-                      "site_parameter": index,
-                      "in_image_fallback": param.get("fallback") or []}
+        return None, {"refusal": "exported declarations disagree on the callback"}
     symbol, cb = parsed[0]
     witness = {
         "schema": WITNESS_SCHEMA,
@@ -5643,17 +5364,10 @@ def export_callback_witness(g: "DsoGraph", site: dict, name: str):
             "no in-image writer stores a different value into the parameter"),
         "interface": (f"{cb['declaration']} declares {cb['name']} as "
                       f"{cb['type_typedef']} ({cb['typedef']})"),
-        "basis": ("the operand resolves to this entry parameter through "
-                  "register copies, frame spills/reloads and loop-carried "
-                  "copies only; every incoming arm agrees, every in-image "
-                  "call chain forwards it unchanged, and the root function "
-                  "is in .dynsym" if param.get("extended") else
-                  "the operand is exactly this entry parameter (single linear "
+        "basis": ("the operand is exactly this entry parameter (single linear "
                   "provenance), every in-image call chain forwards it "
                   "unchanged, and the root function is in .dynsym"),
     }
-    if param.get("fallback"):
-        witness["in_image_fallback"] = param["fallback"]
     return witness, None
 
 
@@ -12142,14 +11856,7 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
         # The mandatory deferral is enforced inside the witness: a private
         # chain with finite in-image callers is refused and left to the
         # reachable-caller-target rule.
-        #
-        # A legacy method-table function keeps its proved in-image target set:
-        # a target proof outranks an ABI-contract claim, and the A2 rule below
-        # establishes the stronger disposition for these names.
-        if _match(name, A2_FUNCTIONS):
-            export_cb, cb_refusal = None, None
-        else:
-            export_cb, cb_refusal = export_callback_witness(g, site, name)
+        export_cb, cb_refusal = export_callback_witness(g, site, name)
         if export_cb is not None:
             site["class"] = ABI_CONTRACT_EXPORT_CALLBACK
             site["unresolved"] = True
@@ -20803,74 +20510,6 @@ def self_test() -> int:
     w2, why2 = _export_witness(exported=False)
     check("S2 finite in-image private chain is deferred",
           (w2, (why2 or {}).get("defer")), (None, True))
-
-    # Provenance extension: the same parameter, materialised as a frame spill or
-    # as a merge of copies.  Each negative fixture breaks one chain step.
-    def _export_chain(body, site_addr, reg="%rcx"):
-        td = tempfile.mkdtemp()
-        header = ("typedef void (*block128_f)(const unsigned char in[16],\n"
-                  "    unsigned char out[16], const void *key);\n"
-                  "void CRYPTO_cfb128_encrypt(const unsigned char *in,\n"
-                  "    unsigned char *out, size_t len, block128_f block);\n")
-        install = _winstall(td, header)
-        g = _WG({0x500: body}, {0x500: "CRYPTO_cfb128_encrypt",
-                                0x600: "unused_call"},
-                dyn={"CRYPTO_cfb128_encrypt"}, install=install)
-        site = {"kind": "call", "func": 0x500, "addr": site_addr,
-                "text": f"call   *{reg}", "arg_deps": set()}
-        return export_callback_witness(g, site, "CRYPTO_cfb128_encrypt")
-
-    w3, _ = _export_chain([
-        (0x500, "push   %rbp"),
-        (0x501, "mov    %rcx,0x10(%rsp)"),
-        (0x506, "mov    0x10(%rsp),%r11"),
-        (0x50b, "call   *%r11"),
-        (0x50d, "ret"),
-    ], 0x50B, "%r11")
-    check("S2c frame spill/reload keeps the entry parameter",
-          ((w3 or {}).get("site_parameter"),
-           any(s.get("step") in ("frame-reload", "entry-spill")
-               for s in (w3 or {}).get("provenance") or ())), (3, True))
-    w4, _ = _export_chain([
-        (0x500, "push   %rbp"),
-        (0x501, "test   %rdi,%rdi"),
-        (0x504, "je     510 <CRYPTO_cfb128_encrypt+0x10>"),
-        (0x506, "mov    %rcx,%r11"),
-        (0x509, "jmp    520 <CRYPTO_cfb128_encrypt+0x20>"),
-        (0x510, "mov    %rcx,%r11"),
-        (0x513, "jmp    520 <CRYPTO_cfb128_encrypt+0x20>"),
-        (0x520, "call   *%r11"),
-        (0x522, "ret"),
-    ], 0x520, "%r11")
-    check("S2c a merge of copies keeps the entry parameter",
-          ((w4 or {}).get("site_parameter"),
-           len((w4 or {}).get("provenance") or ()) > 1), (3, True))
-    check("S2c a call result is refused",
-          _export_chain([
-              (0x500, "push   %rbp"),
-              (0x501, "mov    %rdi,%rcx"),
-              (0x504, "call   600 <unused_call>"),
-              (0x509, "mov    %rax,%rcx"),
-              (0x50c, "call   *%rcx"),
-              (0x50e, "ret"),
-          ], 0x50C)[0], None)
-    check("S2c an overwritten spill is refused",
-          _export_chain([
-              (0x500, "push   %rbp"),
-              (0x501, "mov    %rcx,0x10(%rsp)"),
-              (0x506, "call   600 <unused_call>"),
-              (0x50b, "mov    %rax,0x10(%rsp)"),
-              (0x510, "mov    0x10(%rsp),%r11"),
-              (0x515, "call   *%r11"),
-              (0x517, "ret"),
-          ], 0x515, "%r11")[0], None)
-    check("S2c a global, not a parameter, is refused",
-          _export_chain([
-              (0x500, "push   %rbp"),
-              (0x501, "mov    0x5df8(%rip),%rcx  # 6000 <handler>"),
-              (0x508, "call   *%rcx"),
-              (0x50a, "ret"),
-          ], 0x508)[0], None)
 
     # S2b: the provider get_capabilities up-call.  The callback is exactly the
     # exported OSSL_PROVIDER_get_capabilities parameter, forwarded across the
