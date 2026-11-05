@@ -1,0 +1,3362 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/element7-target-set-evidence/v1",
+ "receipt": "element7-provider-hw-table",
+ "kind": "element7-target-set-evidence",
+ "date": "2026-11-05",
+ "subphase": "element7-s2b",
+ "group": "provider_hw_table",
+ "state": "WITNESS IMPLEMENTED \u2014 all 25 sites target-bounded; measurement complete; independent review pending",
+ "review": "pending",
+ "sites_count": 25,
+ "source_identity": {
+  "repo_head": "a414236981c5bd2ce6637913f9f18b517382d857",
+  "branch": "stage/p25/element7-s2b",
+  "instrument": {
+   "path": "forensics/tools/consumer_closure.py",
+   "sha256": "aeb497ac284c9ae759530a2ed227a107f84c48894efe620472ae8bbed72f25ea",
+   "version": 5
+  },
+  "candidate_image": {
+   "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+   "sha256": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3"
+  },
+  "downstream": {
+   "ssh": {
+    "path": "court/tmp/openssh-closure/client-b53/openssh-9.9p1/ssh",
+    "sha256": "926975c81fe8d56297196a703a8a7b0f5eb0fae1644bbfa4643d4cd517f22ba0"
+   },
+   "sshd": {
+    "path": "court/tmp/openssh-closure/server-b53/openssh-9.9p1/sshd",
+    "sha256": "0d3f5e924ff361cba290fb150b89e85806adf69c3a9de9440c4b8a6c09803ce2"
+   }
+  },
+  "inventory": {
+   "path": "court/freeze-b53/census-b53.json",
+   "sha256": "bb191bac59a17b53ad5c67547a412394d82ffdf64613208139f064e2f7eab62e"
+  },
+  "enrolment": {
+   "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json",
+   "sha256": "1d06c1f048dc016d3f5dc6f2a5c375f9485d46a20d956b07e22a5ade5603f9be"
+  }
+ },
+ "fact": {
+  "statement": "The twenty-five element-7 sites all read one member of a provider cipher hardware method table through the `hw` sub-struct of their context. Every such table is a file-scope `static` literal whose members are compile-time function pointers; the context's `hw` pointer is stored only by a closed set of constructors from that closed table set. Therefore each site's target set is finite and fully enumerable.",
+  "writer_closure": {
+   "method_fields": "no member of any hw table is assigned at run time: a source scan of src/provider/cipher.rs and src/provider/cipher_gcm.rs finds zero `(*...).<member> =` stores; every member value comes from a `static` initialiser",
+   "test_only_stores": [
+    "src/provider/cipher.rs:22423 `hw: ptr::addr_of!(AES_ECB_HW)` (#[cfg(test)] mod tests, line 22326)",
+    "src/provider/cipher.rs:22946 `hw: core::ptr::null()` (#[cfg(test)])",
+    "src/provider/cipher.rs:23337 `src.hw = &AES_SIV_HW` (#[cfg(test)])",
+    "src/provider/cipher_tdes_wrap.rs:730-731 `plain.hw = &MOCK_HW` (test body)"
+   ],
+   "context_pointer": "the `hw` pointer itself has one production writer per context type (table below); each writer's value is a named static table, or a selector that returns one",
+   "whole_struct_copies": "the row `*_dupctx` bodies copy the whole context block (CRYPTO_memdup / copy_nonoverlapping). A copy preserves the `hw` pointer value and introduces no new target; it is listed per context type rather than treated as a writer of a new value"
+  },
+  "caveat": "This class is NOT a public external ABI contract. It is an internal, closed static-table dispatch whose target set is finite and enumerated. It is admitted into ABI_CONTRACT_CLASSES exactly as ABI_CONTRACT_SLH_METHOD_TABLE is, and its resolution_kind records 'target-bounded by a closed file-scope static set', not 'contract-bounded (target set unbounded)'. Element 7 remains FAIL at this candidate (31 reachable target-bounded sites), so no element-7 PASS is claimed from this classification."
+ },
+ "types": [
+  {
+   "name": "ProvCipherHw",
+   "source": "src/provider/cipher.rs:353",
+   "repr": "C",
+   "size": 24,
+   "fields": [
+    [
+     "init",
+     "0x0"
+    ],
+    [
+     "cipher",
+     "0x8"
+    ],
+    [
+     "copyctx",
+     "0x10"
+    ]
+   ],
+   "in_group": true,
+   "note": "`copyctx` is `Option`, because the ChaCha20 and ChaCha20-Poly1305 rows leave it NULL"
+  },
+  {
+   "name": "ProvGcmHw",
+   "source": "src/provider/cipher_gcm.rs:561",
+   "repr": "C",
+   "size": 48,
+   "fields": [
+    [
+     "setkey",
+     "0x0"
+    ],
+    [
+     "setiv",
+     "0x8"
+    ],
+    [
+     "aadupdate",
+     "0x10"
+    ],
+    [
+     "cipherupdate",
+     "0x18"
+    ],
+    [
+     "cipherfinal",
+     "0x20"
+    ],
+    [
+     "oneshot",
+     "0x28"
+    ]
+   ],
+   "in_group": true,
+   "note": "three static instances (AES, ARIA, SM4)"
+  },
+  {
+   "name": "ProvSivHw",
+   "source": "src/provider/cipher.rs:9987",
+   "repr": "C",
+   "size": 48,
+   "fields": [
+    [
+     "initkey",
+     "0x0"
+    ],
+    [
+     "cipher",
+     "0x8"
+    ],
+    [
+     "setspeed",
+     "0x10"
+    ],
+    [
+     "settag",
+     "0x18"
+    ],
+    [
+     "cleanup",
+     "0x20"
+    ],
+    [
+     "dupctx",
+     "0x28"
+    ]
+   ],
+   "in_group": true,
+   "note": "one static instance (AES_SIV_HW)"
+  },
+  {
+   "name": "ProvCcmHw",
+   "source": "src/provider/cipher.rs:8465",
+   "repr": "C",
+   "size": 48,
+   "fields": [
+    [
+     "setkey",
+     "0x0"
+    ],
+    [
+     "setiv",
+     "0x8"
+    ],
+    [
+     "setaad",
+     "0x10"
+    ],
+    [
+     "auth_encrypt",
+     "0x18"
+    ],
+    [
+     "auth_decrypt",
+     "0x20"
+    ],
+    [
+     "gettag",
+     "0x28"
+    ]
+   ],
+   "in_group": false,
+   "note": "no element-7 site in this group reads it; its three statics are reported here so the survey is complete"
+  },
+  {
+   "name": "ProvCipherHwAesHmacSha",
+   "source": "src/provider/cipher.rs:11182",
+   "repr": "C",
+   "size": 64,
+   "fields": [
+    [
+     "base",
+     "0x0"
+    ],
+    [
+     "init_mac_key",
+     "0x18"
+    ],
+    [
+     "set_tls1_aad",
+     "0x20"
+    ],
+    [
+     "tls1_multiblock_max_bufsize",
+     "0x28"
+    ],
+    [
+     "tls1_multiblock_aad",
+     "0x30"
+    ],
+    [
+     "tls1_multiblock_encrypt",
+     "0x38"
+    ]
+   ],
+   "in_group": false,
+   "note": "`base` is a `ProvCipherHw` at offset 0; size asserted 64 at src/provider/cipher.rs:11227. No group site reads it"
+  },
+  {
+   "name": "ProvCipherHwAesGcmSiv",
+   "source": "src/provider/cipher.rs:13352",
+   "repr": "C",
+   "size": 32,
+   "fields": [
+    [
+     "initkey",
+     "0x0"
+    ],
+    [
+     "cipher",
+     "0x8"
+    ],
+    [
+     "dup_ctx",
+     "0x10"
+    ],
+    [
+     "clean_ctx",
+     "0x18"
+    ]
+   ],
+   "in_group": true,
+   "note": "one static instance (AES_GCM_SIV_HW); size asserted 32"
+  },
+  {
+   "name": "ProvCipherHwChacha20",
+   "source": "src/provider/cipher.rs:15400",
+   "repr": "C",
+   "size": 32,
+   "fields": [
+    [
+     "base",
+     "0x0"
+    ],
+    [
+     "initiv",
+     "0x18"
+    ]
+   ],
+   "in_group": true,
+   "note": "one static instance (CHACHA20_HW); `base` is a `ProvCipherHw` at offset 0"
+  },
+  {
+   "name": "ProvCipherHwChacha20Poly1305",
+   "source": "src/provider/cipher.rs:16036",
+   "repr": "C",
+   "size": 56,
+   "fields": [
+    [
+     "base",
+     "0x0"
+    ],
+    [
+     "aead_cipher",
+     "0x18"
+    ],
+    [
+     "initiv",
+     "0x20"
+    ],
+    [
+     "tls_init",
+     "0x28"
+    ],
+    [
+     "tls_iv_set_fixed",
+     "0x30"
+    ]
+   ],
+   "in_group": true,
+   "note": "one static instance (CHACHA20_POLY1305_HW); `base` is a `Chacha20Poly1305HwBase` at offset 0, whose `cipher` and `copyctx` are NULL"
+  },
+  {
+   "name": "ProvCipherHwRc4HmacMd5",
+   "source": "src/provider/cipher.rs:21770",
+   "repr": "C",
+   "size": 40,
+   "fields": [
+    [
+     "base",
+     "0x0"
+    ],
+    [
+     "tls_init",
+     "0x18"
+    ],
+    [
+     "init_mackey",
+     "0x20"
+    ]
+   ],
+   "in_group": true,
+   "note": "one static instance (RC4_HMAC_MD5_HW); `base` at offset 0"
+  }
+ ],
+ "context_pointer_writers": [
+  {
+   "context_type": "ProvCipherCtx",
+   "field": "hw",
+   "hw_pointer_offset": "0xa8",
+   "writers": [
+    {
+     "function": "ossl_cipher_generic_initkey",
+     "file": "src/provider/cipher.rs",
+     "line": 1717,
+     "value_source": "its `hw` parameter, passed by the row constructors; each call site names one enumerated static table"
+    }
+   ],
+   "value_preserving_copies": [
+    "aes_dupctx",
+    "camellia_dupctx",
+    "tdes_dupctx",
+    "aes_ocb_dupctx",
+    "sm4_xts_dupctx",
+    "siv_dupctx",
+    "aes_siv_dupctx",
+    "chacha20_dupctx",
+    "chacha20_poly1305_dupctx",
+    "des_dupctx",
+    "aes_gcm_dupctx",
+    "aria_gcm_dupctx",
+    "sm4_gcm_dupctx",
+    "rc4_hmac_md5_dupctx",
+    "ossl_aes_gcm_siv_dupctx"
+   ],
+   "closed": true
+  },
+  {
+   "context_type": "ProvGcmCtx",
+   "field": "hw",
+   "hw_pointer_offset": "0xf0",
+   "writers": [
+    {
+     "function": "ossl_gcm_initctx",
+     "file": "src/provider/cipher_gcm.rs",
+     "line": 719,
+     "value_source": "its `hw` parameter; the three callers (aes_gcm_newctx, aria_gcm_newctx, sm4_gcm_newctx) pass the selectors' answers"
+    }
+   ],
+   "value_preserving_copies": [
+    "aes_gcm_dupctx",
+    "aria_gcm_dupctx",
+    "sm4_gcm_dupctx"
+   ],
+   "closed": true
+  },
+  {
+   "context_type": "ProvSivCtx",
+   "field": "hw",
+   "hw_pointer_offset": "0x68",
+   "writers": [
+    {
+     "function": "aes_siv_newctx",
+     "file": "src/provider/cipher.rs",
+     "line": 10023,
+     "value_source": "store at 10044: ossl_prov_cipher_hw_aes_siv() -> AES_SIV_HW"
+    }
+   ],
+   "value_preserving_copies": [
+    "siv_dupctx",
+    "aes_siv_dupctx"
+   ],
+   "closed": true
+  },
+  {
+   "context_type": "ProvAesGcmSivCtx",
+   "field": "hw",
+   "hw_pointer_offset": "0x8",
+   "writers": [
+    {
+     "function": "ossl_aes_gcm_siv_newctx",
+     "file": "src/provider/cipher.rs",
+     "line": 14019,
+     "value_source": "ossl_prov_cipher_hw_aes_gcm_siv(keybits) -> AES_GCM_SIV_HW"
+    }
+   ],
+   "value_preserving_copies": [
+    "aes_gcm_siv_dup_ctx",
+    "ossl_aes_gcm_siv_dupctx"
+   ],
+   "closed": true
+  },
+  {
+   "context_type": "ProvChacha20Ctx",
+   "field": "base.hw",
+   "hw_pointer_offset": "0xa8 (from the ProvChacha20Ctx pointer); 0x168 from the row context pointer (ProvChacha20Poly1305Ctx.chacha at 0xc0)",
+   "writers": [
+    {
+     "function": "ossl_chacha20_initctx",
+     "file": "src/provider/cipher.rs",
+     "line": 15429,
+     "value_source": "ossl_cipher_generic_initkey(..., ossl_prov_cipher_hw_chacha20(..)) -> CHACHA20_HW"
+    }
+   ],
+   "value_preserving_copies": [
+    "chacha20_dupctx",
+    "chacha20_poly1305_dupctx"
+   ],
+   "closed": true
+  },
+  {
+   "context_type": "ProvChacha20Poly1305Ctx",
+   "field": "base.hw",
+   "hw_pointer_offset": "0xa8",
+   "writers": [
+    {
+     "function": "chacha20_poly1305_newctx",
+     "file": "src/provider/cipher.rs",
+     "line": 16763,
+     "value_source": "ossl_cipher_generic_initkey(..., ossl_prov_cipher_hw_chacha20_poly1305(..)) -> CHACHA20_POLY1305_HW.base"
+    }
+   ],
+   "value_preserving_copies": [
+    "chacha20_poly1305_dupctx"
+   ],
+   "closed": true
+  },
+  {
+   "context_type": "ProvRc4HmacMd5Ctx",
+   "field": "base.hw",
+   "hw_pointer_offset": "0xa8",
+   "writers": [
+    {
+     "function": "rc4_hmac_md5_newctx",
+     "file": "src/provider/cipher.rs",
+     "line": 22218,
+     "value_source": "legacy_newctx! with RC4_HMAC_MD5_HW -> base at offset 0"
+    }
+   ],
+   "value_preserving_copies": [
+    "rc4_hmac_md5_dupctx"
+   ],
+   "closed": true
+  },
+  {
+   "context_type": "ProvAesOcbCtx",
+   "field": "base.hw",
+   "hw_pointer_offset": "0xa8",
+   "writers": [
+    {
+     "function": "aes_ocb_newctx",
+     "file": "src/provider/cipher.rs",
+     "line": 7030,
+     "value_source": "ocb_row!/cipher_row! with AES_OCB_HW"
+    }
+   ],
+   "value_preserving_copies": [
+    "aes_ocb_dupctx"
+   ],
+   "closed": true
+  },
+  {
+   "context_type": "ProvSm4XtsCtx",
+   "field": "base.hw",
+   "hw_pointer_offset": "0xa8",
+   "writers": [
+    {
+     "function": "sm4_xts_newctx",
+     "file": "src/provider/cipher.rs",
+     "line": 6070,
+     "value_source": "xts_row! with SM4_XTS_HW"
+    }
+   ],
+   "value_preserving_copies": [
+    "sm4_xts_dupctx"
+   ],
+   "closed": true
+  },
+  {
+   "context_type": "ProvDesCtx",
+   "field": "base.hw",
+   "hw_pointer_offset": "0xa8",
+   "writers": [
+    {
+     "function": "des_*_newctx (six rows)",
+     "file": "src/provider/cipher.rs",
+     "line": 21436,
+     "value_source": "legacy_newctx! with DES_ECB_HW, DES_CBC_HW, DES_OFB_HW, DES_CFB_HW, DES_CFB1_HW, DES_CFB8_HW"
+    }
+   ],
+   "value_preserving_copies": [
+    "des_dupctx"
+   ],
+   "closed": true
+  },
+  {
+   "context_type": "generic block rows",
+   "field": "base.hw",
+   "hw_pointer_offset": "0xa8",
+   "writers": [
+    {
+     "function": "each row's *_newctx",
+     "file": "src/provider/cipher.rs",
+     "line": "one macro invocation per row: cipher_row! and legacy_newctx!/legacy_table! (the 25 table symbols are enumerated), plus the hand-written tdes_desx_cbc_newctx at 21694",
+     "value_source": "the 25 tables enumerated in the site table; each newctx passes addr_of!($hw) to ossl_cipher_generic_initkey"
+    }
+   ],
+   "value_preserving_copies": [
+    "the row dupctx bodies"
+   ],
+   "closed": true
+  }
+ ],
+ "fields": {
+  "ProvCipherHw.init": {
+   "hw_type": "ProvCipherHw",
+   "field": "init",
+   "writer_count": 72,
+   "writers": [
+    {
+     "writer": "AES_CBC_HW",
+     "function": "cipher_hw_aes_initkey"
+    },
+    {
+     "writer": "AES_CFB1_HW",
+     "function": "cipher_hw_aes_initkey"
+    },
+    {
+     "writer": "AES_CFB8_HW",
+     "function": "cipher_hw_aes_initkey"
+    },
+    {
+     "writer": "AES_CFB_HW",
+     "function": "cipher_hw_aes_initkey"
+    },
+    {
+     "writer": "AES_CTR_HW",
+     "function": "cipher_hw_aes_initkey"
+    },
+    {
+     "writer": "AES_ECB_HW",
+     "function": "cipher_hw_aes_initkey"
+    },
+    {
+     "writer": "AES_OCB_HW",
+     "function": "cipher_hw_aes_ocb_generic_initkey"
+    },
+    {
+     "writer": "AES_OFB_HW",
+     "function": "cipher_hw_aes_initkey"
+    },
+    {
+     "writer": "AES_XTS_HW",
+     "function": "cipher_hw_aes_xts_generic_initkey"
+    },
+    {
+     "writer": "ARIA_CBC_HW",
+     "function": "cipher_hw_aria_initkey"
+    },
+    {
+     "writer": "ARIA_CFB128_HW",
+     "function": "cipher_hw_aria_initkey"
+    },
+    {
+     "writer": "ARIA_CFB1_HW",
+     "function": "cipher_hw_aria_initkey"
+    },
+    {
+     "writer": "ARIA_CFB8_HW",
+     "function": "cipher_hw_aria_initkey"
+    },
+    {
+     "writer": "ARIA_CTR_HW",
+     "function": "cipher_hw_aria_initkey"
+    },
+    {
+     "writer": "ARIA_ECB_HW",
+     "function": "cipher_hw_aria_initkey"
+    },
+    {
+     "writer": "ARIA_OFB128_HW",
+     "function": "cipher_hw_aria_initkey"
+    },
+    {
+     "writer": "BF_CBC_HW",
+     "function": "cipher_hw_blowfish_initkey"
+    },
+    {
+     "writer": "BF_CFB_HW",
+     "function": "cipher_hw_blowfish_initkey"
+    },
+    {
+     "writer": "BF_ECB_HW",
+     "function": "cipher_hw_blowfish_initkey"
+    },
+    {
+     "writer": "BF_OFB_HW",
+     "function": "cipher_hw_blowfish_initkey"
+    },
+    {
+     "writer": "CAMELLIA_CBC_HW",
+     "function": "cipher_hw_camellia_initkey"
+    },
+    {
+     "writer": "CAMELLIA_CFB1_HW",
+     "function": "cipher_hw_camellia_initkey"
+    },
+    {
+     "writer": "CAMELLIA_CFB8_HW",
+     "function": "cipher_hw_camellia_initkey"
+    },
+    {
+     "writer": "CAMELLIA_CFB_HW",
+     "function": "cipher_hw_camellia_initkey"
+    },
+    {
+     "writer": "CAMELLIA_CTR_HW",
+     "function": "cipher_hw_camellia_initkey"
+    },
+    {
+     "writer": "CAMELLIA_ECB_HW",
+     "function": "cipher_hw_camellia_initkey"
+    },
+    {
+     "writer": "CAMELLIA_OFB_HW",
+     "function": "cipher_hw_camellia_initkey"
+    },
+    {
+     "writer": "CAST5_CBC_HW",
+     "function": "cipher_hw_cast5_initkey"
+    },
+    {
+     "writer": "CAST5_CFB_HW",
+     "function": "cipher_hw_cast5_initkey"
+    },
+    {
+     "writer": "CAST5_ECB_HW",
+     "function": "cipher_hw_cast5_initkey"
+    },
+    {
+     "writer": "CAST5_OFB_HW",
+     "function": "cipher_hw_cast5_initkey"
+    },
+    {
+     "writer": "CHACHA20_HW.base",
+     "function": "chacha20_initkey"
+    },
+    {
+     "writer": "CHACHA20_POLY1305_HW.base",
+     "function": "chacha20_poly1305_initkey"
+    },
+    {
+     "writer": "CIPHER_HW_AES_HMAC_SHA1.base",
+     "function": "aesni_cbc_hmac_sha1_init_key"
+    },
+    {
+     "writer": "CIPHER_HW_AES_HMAC_SHA256.base",
+     "function": "aesni_cbc_hmac_sha256_init_key"
+    },
+    {
+     "writer": "DES_CBC_HW",
+     "function": "cipher_hw_des_initkey"
+    },
+    {
+     "writer": "DES_CFB1_HW",
+     "function": "cipher_hw_des_initkey"
+    },
+    {
+     "writer": "DES_CFB8_HW",
+     "function": "cipher_hw_des_initkey"
+    },
+    {
+     "writer": "DES_CFB_HW",
+     "function": "cipher_hw_des_initkey"
+    },
+    {
+     "writer": "DES_ECB_HW",
+     "function": "cipher_hw_des_initkey"
+    },
+    {
+     "writer": "DES_OFB_HW",
+     "function": "cipher_hw_des_initkey"
+    },
+    {
+     "writer": "IDEA_CBC_HW",
+     "function": "cipher_hw_idea_initkey"
+    },
+    {
+     "writer": "IDEA_CFB_HW",
+     "function": "cipher_hw_idea_initkey"
+    },
+    {
+     "writer": "IDEA_ECB_HW",
+     "function": "cipher_hw_idea_initkey"
+    },
+    {
+     "writer": "IDEA_OFB_HW",
+     "function": "cipher_hw_idea_initkey"
+    },
+    {
+     "writer": "RC2_CBC_HW",
+     "function": "cipher_hw_rc2_initkey"
+    },
+    {
+     "writer": "RC2_CFB_HW",
+     "function": "cipher_hw_rc2_initkey"
+    },
+    {
+     "writer": "RC2_ECB_HW",
+     "function": "cipher_hw_rc2_initkey"
+    },
+    {
+     "writer": "RC2_OFB_HW",
+     "function": "cipher_hw_rc2_initkey"
+    },
+    {
+     "writer": "RC4_HMAC_MD5_HW.base",
+     "function": "cipher_hw_rc4_hmac_md5_initkey"
+    },
+    {
+     "writer": "RC4_HW",
+     "function": "cipher_hw_rc4_initkey"
+    },
+    {
+     "writer": "SEED_CBC_HW",
+     "function": "cipher_hw_seed_initkey"
+    },
+    {
+     "writer": "SEED_CFB_HW",
+     "function": "cipher_hw_seed_initkey"
+    },
+    {
+     "writer": "SEED_ECB_HW",
+     "function": "cipher_hw_seed_initkey"
+    },
+    {
+     "writer": "SEED_OFB_HW",
+     "function": "cipher_hw_seed_initkey"
+    },
+    {
+     "writer": "SM4_CBC_HW",
+     "function": "cipher_hw_sm4_initkey"
+    },
+    {
+     "writer": "SM4_CFB128_HW",
+     "function": "cipher_hw_sm4_initkey"
+    },
+    {
+     "writer": "SM4_CTR_HW",
+     "function": "cipher_hw_sm4_initkey"
+    },
+    {
+     "writer": "SM4_ECB_HW",
+     "function": "cipher_hw_sm4_initkey"
+    },
+    {
+     "writer": "SM4_OFB128_HW",
+     "function": "cipher_hw_sm4_initkey"
+    },
+    {
+     "writer": "SM4_XTS_HW",
+     "function": "cipher_hw_sm4_xts_generic_initkey"
+    },
+    {
+     "writer": "TDES_DESX_CBC_HW",
+     "function": "cipher_hw_desx_cbc_initkey"
+    },
+    {
+     "writer": "TDES_EDE2_CBC_HW",
+     "function": "cipher_hw_tdes_ede2_initkey"
+    },
+    {
+     "writer": "TDES_EDE2_CFB_HW",
+     "function": "cipher_hw_tdes_ede2_initkey"
+    },
+    {
+     "writer": "TDES_EDE2_ECB_HW",
+     "function": "cipher_hw_tdes_ede2_initkey"
+    },
+    {
+     "writer": "TDES_EDE2_OFB_HW",
+     "function": "cipher_hw_tdes_ede2_initkey"
+    },
+    {
+     "writer": "TDES_EDE3_CBC_HW",
+     "function": "cipher_hw_tdes_ede3_initkey"
+    },
+    {
+     "writer": "TDES_EDE3_CFB1_HW",
+     "function": "cipher_hw_tdes_ede3_initkey"
+    },
+    {
+     "writer": "TDES_EDE3_CFB8_HW",
+     "function": "cipher_hw_tdes_ede3_initkey"
+    },
+    {
+     "writer": "TDES_EDE3_CFB_HW",
+     "function": "cipher_hw_tdes_ede3_initkey"
+    },
+    {
+     "writer": "TDES_EDE3_ECB_HW",
+     "function": "cipher_hw_tdes_ede3_initkey"
+    },
+    {
+     "writer": "TDES_EDE3_OFB_HW",
+     "function": "cipher_hw_tdes_ede3_initkey"
+    }
+   ],
+   "closed": true,
+   "closure_basis": "every writer is a `static` initialiser (or the `base` literal of a row table whose first member is the type); a source scan of src/provider/cipher.rs and src/provider/cipher_gcm.rs finds no run-time assignment to any hw member"
+  },
+  "ProvCipherHw.cipher": {
+   "hw_type": "ProvCipherHw",
+   "field": "cipher",
+   "writer_count": 72,
+   "writers": [
+    {
+     "writer": "AES_CBC_HW",
+     "function": "ossl_cipher_hw_generic_cbc"
+    },
+    {
+     "writer": "AES_CFB1_HW",
+     "function": "ossl_cipher_hw_generic_cfb1"
+    },
+    {
+     "writer": "AES_CFB8_HW",
+     "function": "ossl_cipher_hw_generic_cfb8"
+    },
+    {
+     "writer": "AES_CFB_HW",
+     "function": "ossl_cipher_hw_generic_cfb128"
+    },
+    {
+     "writer": "AES_CTR_HW",
+     "function": "ossl_cipher_hw_generic_ctr"
+    },
+    {
+     "writer": "AES_ECB_HW",
+     "function": "ossl_cipher_hw_generic_ecb"
+    },
+    {
+     "writer": "AES_OCB_HW",
+     "function": "cipher_hw_aes_ocb_cipher_unused"
+    },
+    {
+     "writer": "AES_OFB_HW",
+     "function": "ossl_cipher_hw_generic_ofb128"
+    },
+    {
+     "writer": "AES_XTS_HW",
+     "function": "cipher_hw_aes_xts_cipher_unused"
+    },
+    {
+     "writer": "ARIA_CBC_HW",
+     "function": "ossl_cipher_hw_chunked_cbc"
+    },
+    {
+     "writer": "ARIA_CFB128_HW",
+     "function": "ossl_cipher_hw_chunked_cfb128"
+    },
+    {
+     "writer": "ARIA_CFB1_HW",
+     "function": "ossl_cipher_hw_generic_cfb1"
+    },
+    {
+     "writer": "ARIA_CFB8_HW",
+     "function": "ossl_cipher_hw_chunked_cfb8"
+    },
+    {
+     "writer": "ARIA_CTR_HW",
+     "function": "ossl_cipher_hw_generic_ctr"
+    },
+    {
+     "writer": "ARIA_ECB_HW",
+     "function": "ossl_cipher_hw_generic_ecb"
+    },
+    {
+     "writer": "ARIA_OFB128_HW",
+     "function": "ossl_cipher_hw_chunked_ofb128"
+    },
+    {
+     "writer": "BF_CBC_HW",
+     "function": "cipher_hw_blowfish_cbc_cipher"
+    },
+    {
+     "writer": "BF_CFB_HW",
+     "function": "cipher_hw_blowfish_cfb64_cipher"
+    },
+    {
+     "writer": "BF_ECB_HW",
+     "function": "cipher_hw_blowfish_ecb_cipher"
+    },
+    {
+     "writer": "BF_OFB_HW",
+     "function": "cipher_hw_blowfish_ofb64_cipher"
+    },
+    {
+     "writer": "CAMELLIA_CBC_HW",
+     "function": "ossl_cipher_hw_generic_cbc"
+    },
+    {
+     "writer": "CAMELLIA_CFB1_HW",
+     "function": "ossl_cipher_hw_generic_cfb1"
+    },
+    {
+     "writer": "CAMELLIA_CFB8_HW",
+     "function": "ossl_cipher_hw_generic_cfb8"
+    },
+    {
+     "writer": "CAMELLIA_CFB_HW",
+     "function": "ossl_cipher_hw_generic_cfb128"
+    },
+    {
+     "writer": "CAMELLIA_CTR_HW",
+     "function": "ossl_cipher_hw_generic_ctr"
+    },
+    {
+     "writer": "CAMELLIA_ECB_HW",
+     "function": "ossl_cipher_hw_generic_ecb"
+    },
+    {
+     "writer": "CAMELLIA_OFB_HW",
+     "function": "ossl_cipher_hw_generic_ofb128"
+    },
+    {
+     "writer": "CAST5_CBC_HW",
+     "function": "cipher_hw_cast5_cbc_cipher"
+    },
+    {
+     "writer": "CAST5_CFB_HW",
+     "function": "cipher_hw_cast5_cfb64_cipher"
+    },
+    {
+     "writer": "CAST5_ECB_HW",
+     "function": "cipher_hw_cast5_ecb_cipher"
+    },
+    {
+     "writer": "CAST5_OFB_HW",
+     "function": "cipher_hw_cast5_ofb64_cipher"
+    },
+    {
+     "writer": "CHACHA20_HW.base",
+     "function": "chacha20_cipher"
+    },
+    {
+     "writer": "CHACHA20_POLY1305_HW.base",
+     "function": null
+    },
+    {
+     "writer": "CIPHER_HW_AES_HMAC_SHA1.base",
+     "function": "aesni_cbc_hmac_sha1_cipher"
+    },
+    {
+     "writer": "CIPHER_HW_AES_HMAC_SHA256.base",
+     "function": "aesni_cbc_hmac_sha256_cipher"
+    },
+    {
+     "writer": "DES_CBC_HW",
+     "function": "cipher_hw_des_cbc_cipher"
+    },
+    {
+     "writer": "DES_CFB1_HW",
+     "function": "cipher_hw_des_cfb1_cipher"
+    },
+    {
+     "writer": "DES_CFB8_HW",
+     "function": "cipher_hw_des_cfb8_cipher"
+    },
+    {
+     "writer": "DES_CFB_HW",
+     "function": "cipher_hw_des_cfb64_cipher"
+    },
+    {
+     "writer": "DES_ECB_HW",
+     "function": "cipher_hw_des_ecb_cipher"
+    },
+    {
+     "writer": "DES_OFB_HW",
+     "function": "cipher_hw_des_ofb64_cipher"
+    },
+    {
+     "writer": "IDEA_CBC_HW",
+     "function": "cipher_hw_idea_cbc_cipher"
+    },
+    {
+     "writer": "IDEA_CFB_HW",
+     "function": "cipher_hw_idea_cfb64_cipher"
+    },
+    {
+     "writer": "IDEA_ECB_HW",
+     "function": "cipher_hw_idea_ecb_cipher"
+    },
+    {
+     "writer": "IDEA_OFB_HW",
+     "function": "cipher_hw_idea_ofb64_cipher"
+    },
+    {
+     "writer": "RC2_CBC_HW",
+     "function": "cipher_hw_rc2_cbc_cipher"
+    },
+    {
+     "writer": "RC2_CFB_HW",
+     "function": "cipher_hw_rc2_cfb64_cipher"
+    },
+    {
+     "writer": "RC2_ECB_HW",
+     "function": "cipher_hw_rc2_ecb_cipher"
+    },
+    {
+     "writer": "RC2_OFB_HW",
+     "function": "cipher_hw_rc2_ofb64_cipher"
+    },
+    {
+     "writer": "RC4_HMAC_MD5_HW.base",
+     "function": "cipher_hw_rc4_hmac_md5_cipher"
+    },
+    {
+     "writer": "RC4_HW",
+     "function": "cipher_hw_rc4_cipher"
+    },
+    {
+     "writer": "SEED_CBC_HW",
+     "function": "cipher_hw_seed_cbc_cipher"
+    },
+    {
+     "writer": "SEED_CFB_HW",
+     "function": "cipher_hw_seed_cfb128_cipher"
+    },
+    {
+     "writer": "SEED_ECB_HW",
+     "function": "cipher_hw_seed_ecb_cipher"
+    },
+    {
+     "writer": "SEED_OFB_HW",
+     "function": "cipher_hw_seed_ofb128_cipher"
+    },
+    {
+     "writer": "SM4_CBC_HW",
+     "function": "ossl_cipher_hw_generic_cbc"
+    },
+    {
+     "writer": "SM4_CFB128_HW",
+     "function": "ossl_cipher_hw_generic_cfb128"
+    },
+    {
+     "writer": "SM4_CTR_HW",
+     "function": "ossl_cipher_hw_generic_ctr"
+    },
+    {
+     "writer": "SM4_ECB_HW",
+     "function": "ossl_cipher_hw_generic_ecb"
+    },
+    {
+     "writer": "SM4_OFB128_HW",
+     "function": "ossl_cipher_hw_generic_ofb128"
+    },
+    {
+     "writer": "SM4_XTS_HW",
+     "function": "cipher_hw_aes_xts_cipher_unused"
+    },
+    {
+     "writer": "TDES_DESX_CBC_HW",
+     "function": "cipher_hw_desx_cbc"
+    },
+    {
+     "writer": "TDES_EDE2_CBC_HW",
+     "function": "ossl_cipher_hw_tdes_cbc"
+    },
+    {
+     "writer": "TDES_EDE2_CFB_HW",
+     "function": "ossl_cipher_hw_tdes_cfb"
+    },
+    {
+     "writer": "TDES_EDE2_ECB_HW",
+     "function": "ossl_cipher_hw_tdes_ecb"
+    },
+    {
+     "writer": "TDES_EDE2_OFB_HW",
+     "function": "ossl_cipher_hw_tdes_ofb"
+    },
+    {
+     "writer": "TDES_EDE3_CBC_HW",
+     "function": "ossl_cipher_hw_tdes_cbc"
+    },
+    {
+     "writer": "TDES_EDE3_CFB1_HW",
+     "function": "ossl_cipher_hw_tdes_cfb1"
+    },
+    {
+     "writer": "TDES_EDE3_CFB8_HW",
+     "function": "ossl_cipher_hw_tdes_cfb8"
+    },
+    {
+     "writer": "TDES_EDE3_CFB_HW",
+     "function": "ossl_cipher_hw_tdes_cfb"
+    },
+    {
+     "writer": "TDES_EDE3_ECB_HW",
+     "function": "ossl_cipher_hw_tdes_ecb"
+    },
+    {
+     "writer": "TDES_EDE3_OFB_HW",
+     "function": "ossl_cipher_hw_tdes_ofb"
+    }
+   ],
+   "closed": true,
+   "closure_basis": "every writer is a `static` initialiser (or the `base` literal of a row table whose first member is the type); a source scan of src/provider/cipher.rs and src/provider/cipher_gcm.rs finds no run-time assignment to any hw member"
+  },
+  "ProvGcmHw.aadupdate": {
+   "hw_type": "ProvGcmHw",
+   "field": "aadupdate",
+   "writer_count": 3,
+   "writers": [
+    {
+     "writer": "AES_GCM_HW",
+     "function": "ossl_gcm_aad_update"
+    },
+    {
+     "writer": "ARIA_GCM_HW",
+     "function": "ossl_gcm_aad_update"
+    },
+    {
+     "writer": "SM4_GCM_HW",
+     "function": "ossl_gcm_aad_update"
+    }
+   ],
+   "closed": true,
+   "closure_basis": "every writer is a `static` initialiser (or the `base` literal of a row table whose first member is the type); a source scan of src/provider/cipher.rs and src/provider/cipher_gcm.rs finds no run-time assignment to any hw member"
+  },
+  "ProvGcmHw.cipherupdate": {
+   "hw_type": "ProvGcmHw",
+   "field": "cipherupdate",
+   "writer_count": 3,
+   "writers": [
+    {
+     "writer": "AES_GCM_HW",
+     "function": "generic_aes_gcm_cipher_update"
+    },
+    {
+     "writer": "ARIA_GCM_HW",
+     "function": "ossl_gcm_cipher_update"
+    },
+    {
+     "writer": "SM4_GCM_HW",
+     "function": "sm4_gcm_cipher_update"
+    }
+   ],
+   "closed": true,
+   "closure_basis": "every writer is a `static` initialiser (or the `base` literal of a row table whose first member is the type); a source scan of src/provider/cipher.rs and src/provider/cipher_gcm.rs finds no run-time assignment to any hw member"
+  },
+  "ProvGcmHw.cipherfinal": {
+   "hw_type": "ProvGcmHw",
+   "field": "cipherfinal",
+   "writer_count": 3,
+   "writers": [
+    {
+     "writer": "AES_GCM_HW",
+     "function": "ossl_gcm_cipher_final"
+    },
+    {
+     "writer": "ARIA_GCM_HW",
+     "function": "ossl_gcm_cipher_final"
+    },
+    {
+     "writer": "SM4_GCM_HW",
+     "function": "ossl_gcm_cipher_final"
+    }
+   ],
+   "closed": true,
+   "closure_basis": "every writer is a `static` initialiser (or the `base` literal of a row table whose first member is the type); a source scan of src/provider/cipher.rs and src/provider/cipher_gcm.rs finds no run-time assignment to any hw member"
+  },
+  "ProvSivHw.cleanup": {
+   "hw_type": "ProvSivHw",
+   "field": "cleanup",
+   "writer_count": 1,
+   "writers": [
+    {
+     "writer": "AES_SIV_HW",
+     "function": "aes_siv_cleanup"
+    }
+   ],
+   "closed": true,
+   "closure_basis": "every writer is a `static` initialiser (or the `base` literal of a row table whose first member is the type); a source scan of src/provider/cipher.rs and src/provider/cipher_gcm.rs finds no run-time assignment to any hw member"
+  },
+  "ProvCipherHwAesGcmSiv.clean_ctx": {
+   "hw_type": "ProvCipherHwAesGcmSiv",
+   "field": "clean_ctx",
+   "writer_count": 1,
+   "writers": [
+    {
+     "writer": "AES_GCM_SIV_HW",
+     "function": "aes_gcm_siv_clean_ctx"
+    }
+   ],
+   "closed": true,
+   "closure_basis": "every writer is a `static` initialiser (or the `base` literal of a row table whose first member is the type); a source scan of src/provider/cipher.rs and src/provider/cipher_gcm.rs finds no run-time assignment to any hw member"
+  },
+  "ProvCipherHwChacha20.base.init": {
+   "hw_type": "ProvCipherHwChacha20",
+   "field": "base.init",
+   "writer_count": 1,
+   "writers": [
+    {
+     "writer": "CHACHA20_HW",
+     "function": "chacha20_initkey"
+    }
+   ],
+   "closed": true,
+   "closure_basis": "every writer is a `static` initialiser (or the `base` literal of a row table whose first member is the type); a source scan of src/provider/cipher.rs and src/provider/cipher_gcm.rs finds no run-time assignment to any hw member"
+  },
+  "ProvCipherHwChacha20.base.cipher": {
+   "hw_type": "ProvCipherHwChacha20",
+   "field": "base.cipher",
+   "writer_count": 1,
+   "writers": [
+    {
+     "writer": "CHACHA20_HW",
+     "function": "chacha20_cipher"
+    }
+   ],
+   "closed": true,
+   "closure_basis": "every writer is a `static` initialiser (or the `base` literal of a row table whose first member is the type); a source scan of src/provider/cipher.rs and src/provider/cipher_gcm.rs finds no run-time assignment to any hw member"
+  },
+  "ProvCipherHwChacha20.initiv": {
+   "hw_type": "ProvCipherHwChacha20",
+   "field": "initiv",
+   "writer_count": 1,
+   "writers": [
+    {
+     "writer": "CHACHA20_HW",
+     "function": "chacha20_initiv"
+    }
+   ],
+   "closed": true,
+   "closure_basis": "every writer is a `static` initialiser (or the `base` literal of a row table whose first member is the type); a source scan of src/provider/cipher.rs and src/provider/cipher_gcm.rs finds no run-time assignment to any hw member"
+  },
+  "ProvCipherHwChacha20Poly1305.aead_cipher": {
+   "hw_type": "ProvCipherHwChacha20Poly1305",
+   "field": "aead_cipher",
+   "writer_count": 1,
+   "writers": [
+    {
+     "writer": "CHACHA20_POLY1305_HW",
+     "function": "chacha20_poly1305_aead_cipher"
+    }
+   ],
+   "closed": true,
+   "closure_basis": "every writer is a `static` initialiser (or the `base` literal of a row table whose first member is the type); a source scan of src/provider/cipher.rs and src/provider/cipher_gcm.rs finds no run-time assignment to any hw member"
+  },
+  "ProvCipherHwChacha20Poly1305.tls_init": {
+   "hw_type": "ProvCipherHwChacha20Poly1305",
+   "field": "tls_init",
+   "writer_count": 1,
+   "writers": [
+    {
+     "writer": "CHACHA20_POLY1305_HW",
+     "function": "chacha_poly1305_tls_init"
+    }
+   ],
+   "closed": true,
+   "closure_basis": "every writer is a `static` initialiser (or the `base` literal of a row table whose first member is the type); a source scan of src/provider/cipher.rs and src/provider/cipher_gcm.rs finds no run-time assignment to any hw member"
+  },
+  "ProvCipherHwChacha20Poly1305.tls_iv_set_fixed": {
+   "hw_type": "ProvCipherHwChacha20Poly1305",
+   "field": "tls_iv_set_fixed",
+   "writer_count": 1,
+   "writers": [
+    {
+     "writer": "CHACHA20_POLY1305_HW",
+     "function": "chacha_poly1305_tls_iv_set_fixed"
+    }
+   ],
+   "closed": true,
+   "closure_basis": "every writer is a `static` initialiser (or the `base` literal of a row table whose first member is the type); a source scan of src/provider/cipher.rs and src/provider/cipher_gcm.rs finds no run-time assignment to any hw member"
+  },
+  "ProvCipherHwRc4HmacMd5.tls_init": {
+   "hw_type": "ProvCipherHwRc4HmacMd5",
+   "field": "tls_init",
+   "writer_count": 1,
+   "writers": [
+    {
+     "writer": "RC4_HMAC_MD5_HW",
+     "function": "cipher_hw_rc4_hmac_md5_tls_init"
+    }
+   ],
+   "closed": true,
+   "closure_basis": "every writer is a `static` initialiser (or the `base` literal of a row table whose first member is the type); a source scan of src/provider/cipher.rs and src/provider/cipher_gcm.rs finds no run-time assignment to any hw member"
+  },
+  "ProvCipherHwRc4HmacMd5.init_mackey": {
+   "hw_type": "ProvCipherHwRc4HmacMd5",
+   "field": "init_mackey",
+   "writer_count": 1,
+   "writers": [
+    {
+     "writer": "RC4_HMAC_MD5_HW",
+     "function": "cipher_hw_rc4_hmac_md5_init_mackey"
+    }
+   ],
+   "closed": true,
+   "closure_basis": "every writer is a `static` initialiser (or the `base` literal of a row table whose first member is the type); a source scan of src/provider/cipher.rs and src/provider/cipher_gcm.rs finds no run-time assignment to any hw member"
+  }
+ },
+ "sites": [
+  {
+   "call_site": "0x42f14e",
+   "function": "ossl_gcm_one_shot",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider10cipher_gcm17ossl_gcm_one_shot",
+   "context_type": "ProvGcmCtx",
+   "hw_pointer_offset": "0xf0",
+   "hw_table_type": "ProvGcmHw",
+   "field": "aadupdate",
+   "read_offset": "0x10",
+   "tables": [
+    {
+     "symbol": "AES_GCM_HW",
+     "source_function": "ossl_gcm_aad_update",
+     "target": "0x42f620"
+    },
+    {
+     "symbol": "ARIA_GCM_HW",
+     "source_function": "ossl_gcm_aad_update",
+     "target": "0x42f620"
+    },
+    {
+     "symbol": "SM4_GCM_HW",
+     "source_function": "ossl_gcm_aad_update",
+     "target": "0x42f620"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x42f620",
+     "names": [
+      "ossl_gcm_aad_update"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 3,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvGcmCtx",
+    "via": "s1-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x42f164",
+   "function": "ossl_gcm_one_shot",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider10cipher_gcm17ossl_gcm_one_shot",
+   "context_type": "ProvGcmCtx",
+   "hw_pointer_offset": "0xf0",
+   "hw_table_type": "ProvGcmHw",
+   "field": "cipherupdate",
+   "read_offset": "0x18",
+   "tables": [
+    {
+     "symbol": "AES_GCM_HW",
+     "source_function": "generic_aes_gcm_cipher_update",
+     "target": "0x42f750"
+    },
+    {
+     "symbol": "ARIA_GCM_HW",
+     "source_function": "ossl_gcm_cipher_update",
+     "target": "0x42f7f0"
+    },
+    {
+     "symbol": "SM4_GCM_HW",
+     "source_function": "sm4_gcm_cipher_update",
+     "target": "0x42f750"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x42f750",
+     "names": [
+      "sm4_gcm_cipher_update"
+     ]
+    },
+    {
+     "addr": "0x42f7f0",
+     "names": [
+      "ossl_gcm_cipher_update"
+     ]
+    }
+   ],
+   "target_count": 2,
+   "field_writer_count": 3,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvGcmCtx",
+    "via": "s1-context"
+   },
+   "folded": [
+    {
+     "table": "AES_GCM_HW",
+     "source_function": "generic_aes_gcm_cipher_update",
+     "target": "0x42f750"
+    }
+   ]
+  },
+  {
+   "call_site": "0x42f17c",
+   "function": "ossl_gcm_one_shot",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider10cipher_gcm17ossl_gcm_one_shot",
+   "context_type": "ProvGcmCtx",
+   "hw_pointer_offset": "0xf0",
+   "hw_table_type": "ProvGcmHw",
+   "field": "cipherfinal",
+   "read_offset": "0x20",
+   "tables": [
+    {
+     "symbol": "AES_GCM_HW",
+     "source_function": "ossl_gcm_cipher_final",
+     "target": "0x42f6a0"
+    },
+    {
+     "symbol": "ARIA_GCM_HW",
+     "source_function": "ossl_gcm_cipher_final",
+     "target": "0x42f6a0"
+    },
+    {
+     "symbol": "SM4_GCM_HW",
+     "source_function": "ossl_gcm_cipher_final",
+     "target": "0x42f6a0"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x42f6a0",
+     "names": [
+      "ossl_gcm_cipher_final"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 3,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvGcmCtx",
+    "via": "s1-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x43229b",
+   "function": "aes_ocb_dinit",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher13aes_ocb_dinit",
+   "context_type": "ProvAesOcbCtx",
+   "hw_pointer_offset": "0xa8",
+   "hw_table_type": "ProvCipherHw",
+   "field": "init",
+   "read_offset": "0x0",
+   "tables": [
+    {
+     "symbol": "AES_OCB_HW",
+     "source_function": "cipher_hw_aes_ocb_generic_initkey",
+     "target": "0x443510"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x443510",
+     "names": [
+      "cipher_hw_aes_ocb_generic_initkey"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 72,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvAesOcbCtx",
+    "via": "s1-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x43239e",
+   "function": "aes_ocb_einit",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher13aes_ocb_einit",
+   "context_type": "ProvAesOcbCtx",
+   "hw_pointer_offset": "0xa8",
+   "hw_table_type": "ProvCipherHw",
+   "field": "init",
+   "read_offset": "0x0",
+   "tables": [
+    {
+     "symbol": "AES_OCB_HW",
+     "source_function": "cipher_hw_aes_ocb_generic_initkey",
+     "target": "0x443510"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x443510",
+     "names": [
+      "cipher_hw_aes_ocb_generic_initkey"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 72,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvAesOcbCtx",
+    "via": "s1-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x4327ef",
+   "function": "sm4_xts_dinit",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher13sm4_xts_dinit",
+   "context_type": "ProvSm4XtsCtx",
+   "hw_pointer_offset": "0xa8",
+   "hw_table_type": "ProvCipherHw",
+   "field": "init",
+   "read_offset": "0x0",
+   "tables": [
+    {
+     "symbol": "SM4_XTS_HW",
+     "source_function": "cipher_hw_sm4_xts_generic_initkey",
+     "target": "0x443b80"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x443b80",
+     "names": [
+      "cipher_hw_sm4_xts_generic_initkey"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 72,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvSm4XtsCtx",
+    "via": "s1-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x4328c2",
+   "function": "sm4_xts_einit",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher13sm4_xts_einit",
+   "context_type": "ProvSm4XtsCtx",
+   "hw_pointer_offset": "0xa8",
+   "hw_table_type": "ProvCipherHw",
+   "field": "init",
+   "read_offset": "0x0",
+   "tables": [
+    {
+     "symbol": "SM4_XTS_HW",
+     "source_function": "cipher_hw_sm4_xts_generic_initkey",
+     "target": "0x443b80"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x443b80",
+     "names": [
+      "cipher_hw_sm4_xts_generic_initkey"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 72,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvSm4XtsCtx",
+    "via": "s1-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x433852",
+   "function": "aes_siv_freectx",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher15aes_siv_freectx",
+   "context_type": "ProvAesSivCtx",
+   "hw_pointer_offset": "0x68",
+   "hw_table_type": "ProvSivHw",
+   "field": "cleanup",
+   "read_offset": "0x20",
+   "tables": [
+    {
+     "symbol": "AES_SIV_HW",
+     "source_function": "aes_siv_cleanup",
+     "target": "0x433680"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x433680",
+     "names": [
+      "aes_siv_cleanup"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 1,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvAesSivCtx",
+    "via": "impl-fn-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x436fdd",
+   "function": "cts128_cs2_decrypt",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher18cts128_cs2_decrypt",
+   "context_type": "ProvCipherCtx",
+   "hw_pointer_offset": "0xa8",
+   "hw_table_type": "ProvCipherHw",
+   "field": "cipher",
+   "read_offset": "0x8",
+   "tables": [
+    {
+     "symbol": "AES_CBC_HW",
+     "source_function": "ossl_cipher_hw_generic_cbc",
+     "target": "0x43e3d0"
+    },
+    {
+     "symbol": "CAMELLIA_CBC_HW",
+     "source_function": "ossl_cipher_hw_generic_cbc",
+     "target": "0x43e3d0"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x43e3d0",
+     "names": [
+      "ossl_cipher_hw_generic_cbc"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 72,
+   "declared_null_writers": [
+    "CHACHA20_POLY1305_HW.base"
+   ],
+   "context_provenance": {
+    "type": "ProvCipherCtx",
+    "via": "s1-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x43ca00",
+   "function": "chacha20_poly1305_initiv",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher24chacha20_poly1305_initiv",
+   "context_type": "ProvChacha20Poly1305Ctx",
+   "hw_pointer_offset": "0x168",
+   "hw_table_type": "ProvCipherHwChacha20",
+   "field": "initiv",
+   "read_offset": "0x18",
+   "tables": [
+    {
+     "symbol": "CHACHA20_HW",
+     "source_function": "chacha20_initiv",
+     "target": "0x4345a0"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x4345a0",
+     "names": [
+      "chacha20_initiv"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 1,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvChacha20Poly1305Ctx",
+    "via": "cast-first-member-base"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x43cb26",
+   "function": "chacha20_poly1305_update",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher24chacha20_poly1305_update",
+   "context_type": "ProvChacha20Poly1305Ctx",
+   "hw_pointer_offset": "0xa8",
+   "hw_table_type": "ProvCipherHwChacha20Poly1305",
+   "field": "aead_cipher",
+   "read_offset": "0x18",
+   "tables": [
+    {
+     "symbol": "CHACHA20_POLY1305_HW",
+     "source_function": "chacha20_poly1305_aead_cipher",
+     "target": "0x43f840"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x43f840",
+     "names": [
+      "chacha20_poly1305_aead_cipher"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 1,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvChacha20Poly1305Ctx",
+    "via": "inlined-callee-cast"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x43cc98",
+   "function": "ossl_aes_gcm_siv_freectx",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher24ossl_aes_gcm_siv_freectx",
+   "context_type": "ProvAesGcmSivCtx",
+   "hw_pointer_offset": "0x8",
+   "hw_table_type": "ProvCipherHwAesGcmSiv",
+   "field": "clean_ctx",
+   "read_offset": "0x18",
+   "tables": [
+    {
+     "symbol": "AES_GCM_SIV_HW",
+     "source_function": "aes_gcm_siv_clean_ctx",
+     "target": "0x439b00"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x439b00",
+     "names": [
+      "aes_gcm_siv_clean_ctx"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 1,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvAesGcmSivCtx",
+    "via": "impl-fn-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x43d5f9",
+   "function": "chacha20_poly1305_initkey",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher25chacha20_poly1305_initkey",
+   "context_type": "ProvChacha20Poly1305Ctx",
+   "hw_pointer_offset": "0x168",
+   "hw_table_type": "ProvCipherHwChacha20",
+   "field": "base.init",
+   "read_offset": "0x0",
+   "tables": [
+    {
+     "symbol": "CHACHA20_HW",
+     "source_function": "chacha20_initkey",
+     "target": "0x4356f0"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x4356f0",
+     "names": [
+      "chacha20_initkey"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 1,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvChacha20Poly1305Ctx",
+    "via": "cast-first-member-base"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x43ff9f",
+   "function": "chacha20_poly1305_aead_cipher",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher29chacha20_poly1305_aead_cipher",
+   "context_type": "ProvChacha20Poly1305Ctx",
+   "hw_pointer_offset": "0x168",
+   "hw_table_type": "ProvCipherHwChacha20",
+   "field": "base.cipher",
+   "read_offset": "0x8",
+   "tables": [
+    {
+     "symbol": "CHACHA20_HW",
+     "source_function": "chacha20_cipher",
+     "target": "0x4340f0"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x4340f0",
+     "names": [
+      "chacha20_cipher"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 1,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvChacha20Poly1305Ctx",
+    "via": "cast-first-member-base"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x440151",
+   "function": "chacha20_poly1305_aead_cipher",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher29chacha20_poly1305_aead_cipher",
+   "context_type": "ProvChacha20Poly1305Ctx",
+   "hw_pointer_offset": "0x168",
+   "hw_table_type": "ProvCipherHwChacha20",
+   "field": "base.cipher",
+   "read_offset": "0x8",
+   "tables": [
+    {
+     "symbol": "CHACHA20_HW",
+     "source_function": "chacha20_cipher",
+     "target": "0x4340f0"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x4340f0",
+     "names": [
+      "chacha20_cipher"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 1,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvChacha20Poly1305Ctx",
+    "via": "cast-first-member-base"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x44249f",
+   "function": "ossl_cipher_generic_block_final",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher31ossl_cipher_generic_block_final",
+   "context_type": "ProvCipherCtx",
+   "hw_pointer_offset": "0xa8",
+   "hw_table_type": "ProvCipherHw",
+   "field": "cipher",
+   "read_offset": "0x8",
+   "tables": [
+    {
+     "symbol": "AES_CBC_HW",
+     "source_function": "ossl_cipher_hw_generic_cbc",
+     "target": "0x43e3d0"
+    },
+    {
+     "symbol": "AES_ECB_HW",
+     "source_function": "ossl_cipher_hw_generic_ecb",
+     "target": "0x43e4e0"
+    },
+    {
+     "symbol": "ARIA_CBC_HW",
+     "source_function": "ossl_cipher_hw_chunked_cbc",
+     "target": "0x43e260"
+    },
+    {
+     "symbol": "ARIA_ECB_HW",
+     "source_function": "ossl_cipher_hw_generic_ecb",
+     "target": "0x43e4e0"
+    },
+    {
+     "symbol": "BF_CBC_HW",
+     "source_function": "cipher_hw_blowfish_cbc_cipher",
+     "target": "0x44eec0"
+    },
+    {
+     "symbol": "BF_ECB_HW",
+     "source_function": "cipher_hw_blowfish_ecb_cipher",
+     "target": "0x44ef70"
+    },
+    {
+     "symbol": "CAMELLIA_CBC_HW",
+     "source_function": "ossl_cipher_hw_generic_cbc",
+     "target": "0x43e3d0"
+    },
+    {
+     "symbol": "CAMELLIA_ECB_HW",
+     "source_function": "ossl_cipher_hw_generic_ecb",
+     "target": "0x43e4e0"
+    },
+    {
+     "symbol": "CAST5_CBC_HW",
+     "source_function": "cipher_hw_cast5_cbc_cipher",
+     "target": "0x44e370"
+    },
+    {
+     "symbol": "CAST5_ECB_HW",
+     "source_function": "cipher_hw_cast5_ecb_cipher",
+     "target": "0x44e420"
+    },
+    {
+     "symbol": "DES_CBC_HW",
+     "source_function": "cipher_hw_des_cbc_cipher",
+     "target": "0x44dae0"
+    },
+    {
+     "symbol": "DES_ECB_HW",
+     "source_function": "cipher_hw_des_ecb_cipher",
+     "target": "0x44dbe0"
+    },
+    {
+     "symbol": "IDEA_CBC_HW",
+     "source_function": "cipher_hw_idea_cbc_cipher",
+     "target": "0x44dfe0"
+    },
+    {
+     "symbol": "IDEA_ECB_HW",
+     "source_function": "cipher_hw_idea_ecb_cipher",
+     "target": "0x44e090"
+    },
+    {
+     "symbol": "RC2_CBC_HW",
+     "source_function": "cipher_hw_rc2_cbc_cipher",
+     "target": "0x44dc70"
+    },
+    {
+     "symbol": "RC2_ECB_HW",
+     "source_function": "cipher_hw_rc2_ecb_cipher",
+     "target": "0x44dd20"
+    },
+    {
+     "symbol": "SEED_CBC_HW",
+     "source_function": "cipher_hw_seed_cbc_cipher",
+     "target": "0x44e140"
+    },
+    {
+     "symbol": "SEED_ECB_HW",
+     "source_function": "cipher_hw_seed_ecb_cipher",
+     "target": "0x44e230"
+    },
+    {
+     "symbol": "SM4_CBC_HW",
+     "source_function": "ossl_cipher_hw_generic_cbc",
+     "target": "0x43e3d0"
+    },
+    {
+     "symbol": "SM4_ECB_HW",
+     "source_function": "ossl_cipher_hw_generic_ecb",
+     "target": "0x43e4e0"
+    },
+    {
+     "symbol": "TDES_EDE2_CBC_HW",
+     "source_function": "ossl_cipher_hw_tdes_cbc",
+     "target": "0x43c340"
+    },
+    {
+     "symbol": "TDES_EDE2_ECB_HW",
+     "source_function": "ossl_cipher_hw_tdes_ecb",
+     "target": "0x43c510"
+    },
+    {
+     "symbol": "TDES_EDE3_CBC_HW",
+     "source_function": "ossl_cipher_hw_tdes_cbc",
+     "target": "0x43c340"
+    },
+    {
+     "symbol": "TDES_EDE3_ECB_HW",
+     "source_function": "ossl_cipher_hw_tdes_ecb",
+     "target": "0x43c510"
+    },
+    {
+     "symbol": "TDES_DESX_CBC_HW",
+     "source_function": "cipher_hw_desx_cbc",
+     "target": "0x44ca00"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x43c340",
+     "names": [
+      "ossl_cipher_hw_tdes_cbc"
+     ]
+    },
+    {
+     "addr": "0x43c510",
+     "names": [
+      "ossl_cipher_hw_tdes_ecb"
+     ]
+    },
+    {
+     "addr": "0x43e260",
+     "names": [
+      "ossl_cipher_hw_chunked_cbc"
+     ]
+    },
+    {
+     "addr": "0x43e3d0",
+     "names": [
+      "ossl_cipher_hw_generic_cbc"
+     ]
+    },
+    {
+     "addr": "0x43e4e0",
+     "names": [
+      "ossl_cipher_hw_generic_ecb"
+     ]
+    },
+    {
+     "addr": "0x44ca00",
+     "names": [
+      "cipher_hw_desx_cbc"
+     ]
+    },
+    {
+     "addr": "0x44dae0",
+     "names": [
+      "cipher_hw_des_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44dbe0",
+     "names": [
+      "cipher_hw_des_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44dc70",
+     "names": [
+      "cipher_hw_rc2_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44dd20",
+     "names": [
+      "cipher_hw_rc2_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44dfe0",
+     "names": [
+      "cipher_hw_idea_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e090",
+     "names": [
+      "cipher_hw_idea_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e140",
+     "names": [
+      "cipher_hw_seed_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e230",
+     "names": [
+      "cipher_hw_seed_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e370",
+     "names": [
+      "cipher_hw_cast5_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e420",
+     "names": [
+      "cipher_hw_cast5_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44eec0",
+     "names": [
+      "cipher_hw_blowfish_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44ef70",
+     "names": [
+      "cipher_hw_blowfish_ecb_cipher"
+     ]
+    }
+   ],
+   "target_count": 18,
+   "field_writer_count": 72,
+   "declared_null_writers": [
+    "CHACHA20_POLY1305_HW.base"
+   ],
+   "context_provenance": {
+    "type": "ProvCipherCtx",
+    "via": "s1-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x442574",
+   "function": "ossl_cipher_generic_block_final",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher31ossl_cipher_generic_block_final",
+   "context_type": "ProvCipherCtx",
+   "hw_pointer_offset": "0xa8",
+   "hw_table_type": "ProvCipherHw",
+   "field": "cipher",
+   "read_offset": "0x8",
+   "tables": [
+    {
+     "symbol": "AES_CBC_HW",
+     "source_function": "ossl_cipher_hw_generic_cbc",
+     "target": "0x43e3d0"
+    },
+    {
+     "symbol": "AES_ECB_HW",
+     "source_function": "ossl_cipher_hw_generic_ecb",
+     "target": "0x43e4e0"
+    },
+    {
+     "symbol": "ARIA_CBC_HW",
+     "source_function": "ossl_cipher_hw_chunked_cbc",
+     "target": "0x43e260"
+    },
+    {
+     "symbol": "ARIA_ECB_HW",
+     "source_function": "ossl_cipher_hw_generic_ecb",
+     "target": "0x43e4e0"
+    },
+    {
+     "symbol": "BF_CBC_HW",
+     "source_function": "cipher_hw_blowfish_cbc_cipher",
+     "target": "0x44eec0"
+    },
+    {
+     "symbol": "BF_ECB_HW",
+     "source_function": "cipher_hw_blowfish_ecb_cipher",
+     "target": "0x44ef70"
+    },
+    {
+     "symbol": "CAMELLIA_CBC_HW",
+     "source_function": "ossl_cipher_hw_generic_cbc",
+     "target": "0x43e3d0"
+    },
+    {
+     "symbol": "CAMELLIA_ECB_HW",
+     "source_function": "ossl_cipher_hw_generic_ecb",
+     "target": "0x43e4e0"
+    },
+    {
+     "symbol": "CAST5_CBC_HW",
+     "source_function": "cipher_hw_cast5_cbc_cipher",
+     "target": "0x44e370"
+    },
+    {
+     "symbol": "CAST5_ECB_HW",
+     "source_function": "cipher_hw_cast5_ecb_cipher",
+     "target": "0x44e420"
+    },
+    {
+     "symbol": "DES_CBC_HW",
+     "source_function": "cipher_hw_des_cbc_cipher",
+     "target": "0x44dae0"
+    },
+    {
+     "symbol": "DES_ECB_HW",
+     "source_function": "cipher_hw_des_ecb_cipher",
+     "target": "0x44dbe0"
+    },
+    {
+     "symbol": "IDEA_CBC_HW",
+     "source_function": "cipher_hw_idea_cbc_cipher",
+     "target": "0x44dfe0"
+    },
+    {
+     "symbol": "IDEA_ECB_HW",
+     "source_function": "cipher_hw_idea_ecb_cipher",
+     "target": "0x44e090"
+    },
+    {
+     "symbol": "RC2_CBC_HW",
+     "source_function": "cipher_hw_rc2_cbc_cipher",
+     "target": "0x44dc70"
+    },
+    {
+     "symbol": "RC2_ECB_HW",
+     "source_function": "cipher_hw_rc2_ecb_cipher",
+     "target": "0x44dd20"
+    },
+    {
+     "symbol": "SEED_CBC_HW",
+     "source_function": "cipher_hw_seed_cbc_cipher",
+     "target": "0x44e140"
+    },
+    {
+     "symbol": "SEED_ECB_HW",
+     "source_function": "cipher_hw_seed_ecb_cipher",
+     "target": "0x44e230"
+    },
+    {
+     "symbol": "SM4_CBC_HW",
+     "source_function": "ossl_cipher_hw_generic_cbc",
+     "target": "0x43e3d0"
+    },
+    {
+     "symbol": "SM4_ECB_HW",
+     "source_function": "ossl_cipher_hw_generic_ecb",
+     "target": "0x43e4e0"
+    },
+    {
+     "symbol": "TDES_EDE2_CBC_HW",
+     "source_function": "ossl_cipher_hw_tdes_cbc",
+     "target": "0x43c340"
+    },
+    {
+     "symbol": "TDES_EDE2_ECB_HW",
+     "source_function": "ossl_cipher_hw_tdes_ecb",
+     "target": "0x43c510"
+    },
+    {
+     "symbol": "TDES_EDE3_CBC_HW",
+     "source_function": "ossl_cipher_hw_tdes_cbc",
+     "target": "0x43c340"
+    },
+    {
+     "symbol": "TDES_EDE3_ECB_HW",
+     "source_function": "ossl_cipher_hw_tdes_ecb",
+     "target": "0x43c510"
+    },
+    {
+     "symbol": "TDES_DESX_CBC_HW",
+     "source_function": "cipher_hw_desx_cbc",
+     "target": "0x44ca00"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x43c340",
+     "names": [
+      "ossl_cipher_hw_tdes_cbc"
+     ]
+    },
+    {
+     "addr": "0x43c510",
+     "names": [
+      "ossl_cipher_hw_tdes_ecb"
+     ]
+    },
+    {
+     "addr": "0x43e260",
+     "names": [
+      "ossl_cipher_hw_chunked_cbc"
+     ]
+    },
+    {
+     "addr": "0x43e3d0",
+     "names": [
+      "ossl_cipher_hw_generic_cbc"
+     ]
+    },
+    {
+     "addr": "0x43e4e0",
+     "names": [
+      "ossl_cipher_hw_generic_ecb"
+     ]
+    },
+    {
+     "addr": "0x44ca00",
+     "names": [
+      "cipher_hw_desx_cbc"
+     ]
+    },
+    {
+     "addr": "0x44dae0",
+     "names": [
+      "cipher_hw_des_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44dbe0",
+     "names": [
+      "cipher_hw_des_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44dc70",
+     "names": [
+      "cipher_hw_rc2_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44dd20",
+     "names": [
+      "cipher_hw_rc2_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44dfe0",
+     "names": [
+      "cipher_hw_idea_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e090",
+     "names": [
+      "cipher_hw_idea_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e140",
+     "names": [
+      "cipher_hw_seed_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e230",
+     "names": [
+      "cipher_hw_seed_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e370",
+     "names": [
+      "cipher_hw_cast5_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e420",
+     "names": [
+      "cipher_hw_cast5_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44eec0",
+     "names": [
+      "cipher_hw_blowfish_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44ef70",
+     "names": [
+      "cipher_hw_blowfish_ecb_cipher"
+     ]
+    }
+   ],
+   "target_count": 18,
+   "field_writer_count": 72,
+   "declared_null_writers": [
+    "CHACHA20_POLY1305_HW.base"
+   ],
+   "context_provenance": {
+    "type": "ProvCipherCtx",
+    "via": "s1-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x442d17",
+   "function": "chacha20_poly1305_set_ctx_params",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher32chacha20_poly1305_set_ctx_params",
+   "context_type": "ProvChacha20Poly1305Ctx",
+   "hw_pointer_offset": "0xa8",
+   "hw_table_type": "ProvCipherHwChacha20Poly1305",
+   "field": "tls_init",
+   "read_offset": "0x28",
+   "tables": [
+    {
+     "symbol": "CHACHA20_POLY1305_HW",
+     "source_function": "chacha_poly1305_tls_init",
+     "target": "0x43cb40"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x43cb40",
+     "names": [
+      "chacha_poly1305_tls_init"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 1,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvChacha20Poly1305Ctx",
+    "via": "s1-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x442d58",
+   "function": "chacha20_poly1305_set_ctx_params",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher32chacha20_poly1305_set_ctx_params",
+   "context_type": "ProvChacha20Poly1305Ctx",
+   "hw_pointer_offset": "0xa8",
+   "hw_table_type": "ProvCipherHwChacha20Poly1305",
+   "field": "tls_iv_set_fixed",
+   "read_offset": "0x30",
+   "tables": [
+    {
+     "symbol": "CHACHA20_POLY1305_HW",
+     "source_function": "chacha_poly1305_tls_iv_set_fixed",
+     "target": "0x442db0"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x442db0",
+     "names": [
+      "chacha_poly1305_tls_iv_set_fixed"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 1,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvChacha20Poly1305Ctx",
+    "via": "s1-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x44304c",
+   "function": "ossl_cipher_generic_block_update",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher32ossl_cipher_generic_block_update",
+   "context_type": "ProvCipherCtx",
+   "hw_pointer_offset": "0xa8",
+   "hw_table_type": "ProvCipherHw",
+   "field": "cipher",
+   "read_offset": "0x8",
+   "tables": [
+    {
+     "symbol": "AES_CBC_HW",
+     "source_function": "ossl_cipher_hw_generic_cbc",
+     "target": "0x43e3d0"
+    },
+    {
+     "symbol": "AES_ECB_HW",
+     "source_function": "ossl_cipher_hw_generic_ecb",
+     "target": "0x43e4e0"
+    },
+    {
+     "symbol": "ARIA_CBC_HW",
+     "source_function": "ossl_cipher_hw_chunked_cbc",
+     "target": "0x43e260"
+    },
+    {
+     "symbol": "ARIA_ECB_HW",
+     "source_function": "ossl_cipher_hw_generic_ecb",
+     "target": "0x43e4e0"
+    },
+    {
+     "symbol": "BF_CBC_HW",
+     "source_function": "cipher_hw_blowfish_cbc_cipher",
+     "target": "0x44eec0"
+    },
+    {
+     "symbol": "BF_ECB_HW",
+     "source_function": "cipher_hw_blowfish_ecb_cipher",
+     "target": "0x44ef70"
+    },
+    {
+     "symbol": "CAMELLIA_CBC_HW",
+     "source_function": "ossl_cipher_hw_generic_cbc",
+     "target": "0x43e3d0"
+    },
+    {
+     "symbol": "CAMELLIA_ECB_HW",
+     "source_function": "ossl_cipher_hw_generic_ecb",
+     "target": "0x43e4e0"
+    },
+    {
+     "symbol": "CAST5_CBC_HW",
+     "source_function": "cipher_hw_cast5_cbc_cipher",
+     "target": "0x44e370"
+    },
+    {
+     "symbol": "CAST5_ECB_HW",
+     "source_function": "cipher_hw_cast5_ecb_cipher",
+     "target": "0x44e420"
+    },
+    {
+     "symbol": "DES_CBC_HW",
+     "source_function": "cipher_hw_des_cbc_cipher",
+     "target": "0x44dae0"
+    },
+    {
+     "symbol": "DES_ECB_HW",
+     "source_function": "cipher_hw_des_ecb_cipher",
+     "target": "0x44dbe0"
+    },
+    {
+     "symbol": "IDEA_CBC_HW",
+     "source_function": "cipher_hw_idea_cbc_cipher",
+     "target": "0x44dfe0"
+    },
+    {
+     "symbol": "IDEA_ECB_HW",
+     "source_function": "cipher_hw_idea_ecb_cipher",
+     "target": "0x44e090"
+    },
+    {
+     "symbol": "RC2_CBC_HW",
+     "source_function": "cipher_hw_rc2_cbc_cipher",
+     "target": "0x44dc70"
+    },
+    {
+     "symbol": "RC2_ECB_HW",
+     "source_function": "cipher_hw_rc2_ecb_cipher",
+     "target": "0x44dd20"
+    },
+    {
+     "symbol": "SEED_CBC_HW",
+     "source_function": "cipher_hw_seed_cbc_cipher",
+     "target": "0x44e140"
+    },
+    {
+     "symbol": "SEED_ECB_HW",
+     "source_function": "cipher_hw_seed_ecb_cipher",
+     "target": "0x44e230"
+    },
+    {
+     "symbol": "SM4_CBC_HW",
+     "source_function": "ossl_cipher_hw_generic_cbc",
+     "target": "0x43e3d0"
+    },
+    {
+     "symbol": "SM4_ECB_HW",
+     "source_function": "ossl_cipher_hw_generic_ecb",
+     "target": "0x43e4e0"
+    },
+    {
+     "symbol": "TDES_EDE2_CBC_HW",
+     "source_function": "ossl_cipher_hw_tdes_cbc",
+     "target": "0x43c340"
+    },
+    {
+     "symbol": "TDES_EDE2_ECB_HW",
+     "source_function": "ossl_cipher_hw_tdes_ecb",
+     "target": "0x43c510"
+    },
+    {
+     "symbol": "TDES_EDE3_CBC_HW",
+     "source_function": "ossl_cipher_hw_tdes_cbc",
+     "target": "0x43c340"
+    },
+    {
+     "symbol": "TDES_EDE3_ECB_HW",
+     "source_function": "ossl_cipher_hw_tdes_ecb",
+     "target": "0x43c510"
+    },
+    {
+     "symbol": "TDES_DESX_CBC_HW",
+     "source_function": "cipher_hw_desx_cbc",
+     "target": "0x44ca00"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x43c340",
+     "names": [
+      "ossl_cipher_hw_tdes_cbc"
+     ]
+    },
+    {
+     "addr": "0x43c510",
+     "names": [
+      "ossl_cipher_hw_tdes_ecb"
+     ]
+    },
+    {
+     "addr": "0x43e260",
+     "names": [
+      "ossl_cipher_hw_chunked_cbc"
+     ]
+    },
+    {
+     "addr": "0x43e3d0",
+     "names": [
+      "ossl_cipher_hw_generic_cbc"
+     ]
+    },
+    {
+     "addr": "0x43e4e0",
+     "names": [
+      "ossl_cipher_hw_generic_ecb"
+     ]
+    },
+    {
+     "addr": "0x44ca00",
+     "names": [
+      "cipher_hw_desx_cbc"
+     ]
+    },
+    {
+     "addr": "0x44dae0",
+     "names": [
+      "cipher_hw_des_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44dbe0",
+     "names": [
+      "cipher_hw_des_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44dc70",
+     "names": [
+      "cipher_hw_rc2_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44dd20",
+     "names": [
+      "cipher_hw_rc2_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44dfe0",
+     "names": [
+      "cipher_hw_idea_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e090",
+     "names": [
+      "cipher_hw_idea_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e140",
+     "names": [
+      "cipher_hw_seed_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e230",
+     "names": [
+      "cipher_hw_seed_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e370",
+     "names": [
+      "cipher_hw_cast5_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e420",
+     "names": [
+      "cipher_hw_cast5_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44eec0",
+     "names": [
+      "cipher_hw_blowfish_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44ef70",
+     "names": [
+      "cipher_hw_blowfish_ecb_cipher"
+     ]
+    }
+   ],
+   "target_count": 18,
+   "field_writer_count": 72,
+   "declared_null_writers": [
+    "CHACHA20_POLY1305_HW.base"
+   ],
+   "context_provenance": {
+    "type": "ProvCipherCtx",
+    "via": "s1-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x44309c",
+   "function": "ossl_cipher_generic_block_update",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher32ossl_cipher_generic_block_update",
+   "context_type": "ProvCipherCtx",
+   "hw_pointer_offset": "0xa8",
+   "hw_table_type": "ProvCipherHw",
+   "field": "cipher",
+   "read_offset": "0x8",
+   "tables": [
+    {
+     "symbol": "AES_CBC_HW",
+     "source_function": "ossl_cipher_hw_generic_cbc",
+     "target": "0x43e3d0"
+    },
+    {
+     "symbol": "AES_ECB_HW",
+     "source_function": "ossl_cipher_hw_generic_ecb",
+     "target": "0x43e4e0"
+    },
+    {
+     "symbol": "ARIA_CBC_HW",
+     "source_function": "ossl_cipher_hw_chunked_cbc",
+     "target": "0x43e260"
+    },
+    {
+     "symbol": "ARIA_ECB_HW",
+     "source_function": "ossl_cipher_hw_generic_ecb",
+     "target": "0x43e4e0"
+    },
+    {
+     "symbol": "BF_CBC_HW",
+     "source_function": "cipher_hw_blowfish_cbc_cipher",
+     "target": "0x44eec0"
+    },
+    {
+     "symbol": "BF_ECB_HW",
+     "source_function": "cipher_hw_blowfish_ecb_cipher",
+     "target": "0x44ef70"
+    },
+    {
+     "symbol": "CAMELLIA_CBC_HW",
+     "source_function": "ossl_cipher_hw_generic_cbc",
+     "target": "0x43e3d0"
+    },
+    {
+     "symbol": "CAMELLIA_ECB_HW",
+     "source_function": "ossl_cipher_hw_generic_ecb",
+     "target": "0x43e4e0"
+    },
+    {
+     "symbol": "CAST5_CBC_HW",
+     "source_function": "cipher_hw_cast5_cbc_cipher",
+     "target": "0x44e370"
+    },
+    {
+     "symbol": "CAST5_ECB_HW",
+     "source_function": "cipher_hw_cast5_ecb_cipher",
+     "target": "0x44e420"
+    },
+    {
+     "symbol": "DES_CBC_HW",
+     "source_function": "cipher_hw_des_cbc_cipher",
+     "target": "0x44dae0"
+    },
+    {
+     "symbol": "DES_ECB_HW",
+     "source_function": "cipher_hw_des_ecb_cipher",
+     "target": "0x44dbe0"
+    },
+    {
+     "symbol": "IDEA_CBC_HW",
+     "source_function": "cipher_hw_idea_cbc_cipher",
+     "target": "0x44dfe0"
+    },
+    {
+     "symbol": "IDEA_ECB_HW",
+     "source_function": "cipher_hw_idea_ecb_cipher",
+     "target": "0x44e090"
+    },
+    {
+     "symbol": "RC2_CBC_HW",
+     "source_function": "cipher_hw_rc2_cbc_cipher",
+     "target": "0x44dc70"
+    },
+    {
+     "symbol": "RC2_ECB_HW",
+     "source_function": "cipher_hw_rc2_ecb_cipher",
+     "target": "0x44dd20"
+    },
+    {
+     "symbol": "SEED_CBC_HW",
+     "source_function": "cipher_hw_seed_cbc_cipher",
+     "target": "0x44e140"
+    },
+    {
+     "symbol": "SEED_ECB_HW",
+     "source_function": "cipher_hw_seed_ecb_cipher",
+     "target": "0x44e230"
+    },
+    {
+     "symbol": "SM4_CBC_HW",
+     "source_function": "ossl_cipher_hw_generic_cbc",
+     "target": "0x43e3d0"
+    },
+    {
+     "symbol": "SM4_ECB_HW",
+     "source_function": "ossl_cipher_hw_generic_ecb",
+     "target": "0x43e4e0"
+    },
+    {
+     "symbol": "TDES_EDE2_CBC_HW",
+     "source_function": "ossl_cipher_hw_tdes_cbc",
+     "target": "0x43c340"
+    },
+    {
+     "symbol": "TDES_EDE2_ECB_HW",
+     "source_function": "ossl_cipher_hw_tdes_ecb",
+     "target": "0x43c510"
+    },
+    {
+     "symbol": "TDES_EDE3_CBC_HW",
+     "source_function": "ossl_cipher_hw_tdes_cbc",
+     "target": "0x43c340"
+    },
+    {
+     "symbol": "TDES_EDE3_ECB_HW",
+     "source_function": "ossl_cipher_hw_tdes_ecb",
+     "target": "0x43c510"
+    },
+    {
+     "symbol": "TDES_DESX_CBC_HW",
+     "source_function": "cipher_hw_desx_cbc",
+     "target": "0x44ca00"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x43c340",
+     "names": [
+      "ossl_cipher_hw_tdes_cbc"
+     ]
+    },
+    {
+     "addr": "0x43c510",
+     "names": [
+      "ossl_cipher_hw_tdes_ecb"
+     ]
+    },
+    {
+     "addr": "0x43e260",
+     "names": [
+      "ossl_cipher_hw_chunked_cbc"
+     ]
+    },
+    {
+     "addr": "0x43e3d0",
+     "names": [
+      "ossl_cipher_hw_generic_cbc"
+     ]
+    },
+    {
+     "addr": "0x43e4e0",
+     "names": [
+      "ossl_cipher_hw_generic_ecb"
+     ]
+    },
+    {
+     "addr": "0x44ca00",
+     "names": [
+      "cipher_hw_desx_cbc"
+     ]
+    },
+    {
+     "addr": "0x44dae0",
+     "names": [
+      "cipher_hw_des_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44dbe0",
+     "names": [
+      "cipher_hw_des_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44dc70",
+     "names": [
+      "cipher_hw_rc2_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44dd20",
+     "names": [
+      "cipher_hw_rc2_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44dfe0",
+     "names": [
+      "cipher_hw_idea_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e090",
+     "names": [
+      "cipher_hw_idea_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e140",
+     "names": [
+      "cipher_hw_seed_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e230",
+     "names": [
+      "cipher_hw_seed_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e370",
+     "names": [
+      "cipher_hw_cast5_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44e420",
+     "names": [
+      "cipher_hw_cast5_ecb_cipher"
+     ]
+    },
+    {
+     "addr": "0x44eec0",
+     "names": [
+      "cipher_hw_blowfish_cbc_cipher"
+     ]
+    },
+    {
+     "addr": "0x44ef70",
+     "names": [
+      "cipher_hw_blowfish_ecb_cipher"
+     ]
+    }
+   ],
+   "target_count": 18,
+   "field_writer_count": 72,
+   "declared_null_writers": [
+    "CHACHA20_POLY1305_HW.base"
+   ],
+   "context_provenance": {
+    "type": "ProvCipherCtx",
+    "via": "s1-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x44eb10",
+   "function": "rc4_hmac_md5_set_ctx_params",
+   "symbol": "_RNvNtNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher6legacy27rc4_hmac_md5_set_ctx_params",
+   "context_type": "ProvRc4HmacMd5Ctx",
+   "hw_pointer_offset": "0xa8",
+   "hw_table_type": "ProvCipherHwRc4HmacMd5",
+   "field": "tls_init",
+   "read_offset": "0x18",
+   "tables": [
+    {
+     "symbol": "RC4_HMAC_MD5_HW",
+     "source_function": "cipher_hw_rc4_hmac_md5_tls_init",
+     "target": "0x44fda0"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x44fda0",
+     "names": [
+      "cipher_hw_rc4_hmac_md5_tls_init"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 1,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvRc4HmacMd5Ctx",
+    "via": "s1-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x44eb57",
+   "function": "rc4_hmac_md5_set_ctx_params",
+   "symbol": "_RNvNtNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher6legacy27rc4_hmac_md5_set_ctx_params",
+   "context_type": "ProvRc4HmacMd5Ctx",
+   "hw_pointer_offset": "0xa8",
+   "hw_table_type": "ProvCipherHwRc4HmacMd5",
+   "field": "init_mackey",
+   "read_offset": "0x20",
+   "tables": [
+    {
+     "symbol": "RC4_HMAC_MD5_HW",
+     "source_function": "cipher_hw_rc4_hmac_md5_init_mackey",
+     "target": "0x44fe80"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x44fe80",
+     "names": [
+      "cipher_hw_rc4_hmac_md5_init_mackey"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 1,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvRc4HmacMd5Ctx",
+    "via": "s1-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x450292",
+   "function": "des_dinit",
+   "symbol": "_RNvNtNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher6legacy9des_dinit",
+   "context_type": "ProvCipherCtx",
+   "hw_pointer_offset": "0xa8",
+   "hw_table_type": "ProvCipherHw",
+   "field": "init",
+   "read_offset": "0x0",
+   "tables": [
+    {
+     "symbol": "DES_ECB_HW",
+     "source_function": "cipher_hw_des_initkey",
+     "target": "0x44d4e0"
+    },
+    {
+     "symbol": "DES_CBC_HW",
+     "source_function": "cipher_hw_des_initkey",
+     "target": "0x44d4e0"
+    },
+    {
+     "symbol": "DES_OFB_HW",
+     "source_function": "cipher_hw_des_initkey",
+     "target": "0x44d4e0"
+    },
+    {
+     "symbol": "DES_CFB_HW",
+     "source_function": "cipher_hw_des_initkey",
+     "target": "0x44d4e0"
+    },
+    {
+     "symbol": "DES_CFB1_HW",
+     "source_function": "cipher_hw_des_initkey",
+     "target": "0x44d4e0"
+    },
+    {
+     "symbol": "DES_CFB8_HW",
+     "source_function": "cipher_hw_des_initkey",
+     "target": "0x44d4e0"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x44d4e0",
+     "names": [
+      "cipher_hw_des_initkey"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 72,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvCipherCtx",
+    "via": "s1-context"
+   },
+   "folded": []
+  },
+  {
+   "call_site": "0x450381",
+   "function": "des_einit",
+   "symbol": "_RNvNtNtNtCscx02WjRFd5b_10openssl_rs8provider6cipher6legacy9des_einit",
+   "context_type": "ProvCipherCtx",
+   "hw_pointer_offset": "0xa8",
+   "hw_table_type": "ProvCipherHw",
+   "field": "init",
+   "read_offset": "0x0",
+   "tables": [
+    {
+     "symbol": "DES_ECB_HW",
+     "source_function": "cipher_hw_des_initkey",
+     "target": "0x44d4e0"
+    },
+    {
+     "symbol": "DES_CBC_HW",
+     "source_function": "cipher_hw_des_initkey",
+     "target": "0x44d4e0"
+    },
+    {
+     "symbol": "DES_OFB_HW",
+     "source_function": "cipher_hw_des_initkey",
+     "target": "0x44d4e0"
+    },
+    {
+     "symbol": "DES_CFB_HW",
+     "source_function": "cipher_hw_des_initkey",
+     "target": "0x44d4e0"
+    },
+    {
+     "symbol": "DES_CFB1_HW",
+     "source_function": "cipher_hw_des_initkey",
+     "target": "0x44d4e0"
+    },
+    {
+     "symbol": "DES_CFB8_HW",
+     "source_function": "cipher_hw_des_initkey",
+     "target": "0x44d4e0"
+    }
+   ],
+   "targets": [
+    {
+     "addr": "0x44d4e0",
+     "names": [
+      "cipher_hw_des_initkey"
+     ]
+    }
+   ],
+   "target_count": 1,
+   "field_writer_count": 72,
+   "declared_null_writers": [],
+   "context_provenance": {
+    "type": "ProvCipherCtx",
+    "via": "s1-context"
+   },
+   "folded": []
+  }
+ ],
+ "witness": {
+  "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+  "rule": "provider-hw-table",
+  "resolution_kind": "target-bounded by a closed file-scope static set",
+  "precedence": "evaluated before the generic field-sensitive rule S1, so an enumerated hw site cannot be absorbed by S1's refusal; every non-enumerated site returns None and is unaffected (the before/after diff shows exactly the 25 sites changed, 0 added, 0 removed)",
+  "conditions": [
+   "containing-function-is-an-enumerated-site",
+   "operand-is-the-enumerated-method-field (read offset equality)",
+   "read-base-is-the-context-hw-substruct-reached-from-the-context-parameter (direct, via a proven callee-saved copy, via a proven frame spill, or via a proven inlined-callee cast)",
+   "field-writer-set-is-exactly-the-enumerated-closed-set (source parse vs the enumerated symbols; an extra or missing writer refuses)",
+   "every-field-writer-resolves-in-the-image-to-its-source-named function (a declared NULL member is recorded, not enumerated)",
+   "site-table-set-is-the-enumerated-closed-set (each table must be a writer of the read field)",
+   "every-table-slot-is-a-single-in-image-function-start",
+   "target-set-is-exactly-the-enumerated-finite-set"
+  ],
+  "refusals": [
+   "site-function-not-enumerated",
+   "site-not-in-function",
+   "operand-not-indirect-call",
+   "operand-not-method-field",
+   "read-field-not-enumerated",
+   "context-type-not-proven",
+   "base-not-method-struct-load",
+   "hw-base-not-context-parameter",
+   "hw-pointer-spill-slot-unknown",
+   "hw-pointer-spill-not-written",
+   "hw-pointer-spill-not-register",
+   "hw-pointer-spill-not-hw-load",
+   "hw-pointer-spill-not-context-parameter",
+   "hw-offset-not-enumerated",
+   "field-not-in-enumerated-table",
+   "field-writer-set-not-enumerated",
+   "field-writer-not-in-image",
+   "field-writer-slot-not-single",
+   "field-writer-slot-not-function",
+   "field-writer-null-not-null",
+   "field-writer-folded-target-unresolved",
+   "table-not-a-field-writer",
+   "table-not-in-image",
+   "table-slot-not-single",
+   "table-slot-not-function",
+   "table-slot-not-source-function",
+   "table-slot-folded-target-unresolved",
+   "enumerated-target-not-in-image",
+   "target-set-not-enumerated"
+  ],
+  "folded_alias": "AES_GCM_HW.cipherupdate names generic_aes_gcm_cipher_update; this build folds that function into sm4_gcm_cipher_update, so the AES and SM4 slots hold one address. The witness accepts a folded source name only when the slot equals another enumerated writer's resolved address, and records it in `folded`."
+ },
+ "controls": {
+  "note": "every control was observed; in-memory mutations use the same graph and the same witness function, closure mutations patch the instrument and re-run the ssh closure",
+  "mutation_writer_set": {
+   "fixture": "remove AES_CBC_HW from the enumerated ProvCipherHw.cipher writer set",
+   "probe_reverts": 5,
+   "revert_sites": [
+    "0x436fdd",
+    "0x44249f",
+    "0x442574",
+    "0x44304c",
+    "0x44309c"
+   ],
+   "refusal": "field-writer-set-not-enumerated",
+   "closure_fixture": "remove AES_GCM_HW from the enumerated ProvGcmHw.cipherfinal writer set",
+   "closure_before": {
+    "target_bounded": 31,
+    "contract_bounded": 100,
+    "hw_table_sites": 25
+   },
+   "closure_after": {
+    "target_bounded": 32,
+    "contract_bounded": 99,
+    "hw_table_sites": 24
+   },
+   "closure_exact_reverts": 1
+  },
+  "mutation_table_membership": [
+   {
+    "fixture": "drop ARIA_GCM_HW from site 0x42f164's table set",
+    "probe_reverts": 1,
+    "revert_sites": [
+     "0x42f164"
+    ],
+    "refusal": "target-set-not-enumerated"
+   },
+   {
+    "fixture": "add the non-writer AES_XTS_HW to the three GCM sites' table sets",
+    "probe_reverts": 3,
+    "revert_sites": [
+     "0x42f14e",
+     "0x42f164",
+     "0x42f17c"
+    ],
+    "refusal": "table-not-a-field-writer",
+    "closure_before": {
+     "target_bounded": 31,
+     "contract_bounded": 100,
+     "hw_table_sites": 25
+    },
+    "closure_after": {
+     "target_bounded": 34,
+     "contract_bounded": 97,
+     "hw_table_sites": 22
+    },
+    "closure_exact_reverts": 3
+   }
+  ],
+  "negatives": [
+   {
+    "fixture": "0x42f14e's field set to `setkey`, a real table member that is not in the enumerated field table",
+    "observed": "REFUSE field-not-in-enumerated-table"
+   },
+   {
+    "fixture": "0x433852's context type set to ProvGcmCtx",
+    "observed": "REFUSE context-type-not-proven"
+   },
+   {
+    "fixture": "ProvGcmHw.cipherfinal's enumerated writer set reduced to two, leaving AES_GCM_HW unlisted although the source has three writers",
+    "observed": "REFUSE field-writer-set-not-enumerated"
+   }
+  ],
+  "restoration": {
+   "instrument_sha256_before": "aeb497ac284c9ae759530a2ed227a107f84c48894efe620472ae8bbed72f25ea",
+   "instrument_sha256_after": "aeb497ac284c9ae759530a2ed227a107f84c48894efe620472ae8bbed72f25ea",
+   "identical": true,
+   "probe_base_equals_restored": true,
+   "probe_resolved_sites_before_and_after": 25
+  },
+  "self_test": "python3 forensics/tools/consumer_closure.py --self-test -> self-test ok (observed)"
+ },
+ "measurement": {
+  "commands": {
+   "ssh": "python3 forensics/tools/consumer_closure.py --family openssh --artifact court/tmp/openssh-closure/client-b53/openssh-9.9p1/ssh --install artifacts/phase2/install --inventory court/freeze-b53/census-b53.json --carry-forward-closure court/inventory/closure-ssh-b51-baseline.json --enrolment-blockers forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json --workdir court/tmp/closure-b53-e7hw/work-ssh --output evidence/closure-ssh-b53-e7hw.json",
+   "sshd": "python3 forensics/tools/consumer_closure.py --family openssh --artifact court/tmp/openssh-closure/server-b53/openssh-9.9p1/sshd --install artifacts/phase2/install --inventory court/freeze-b53/census-b53.json --carry-forward-closure court/inventory/closure-sshd-b51-baseline.json --enrolment-blockers forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json --workdir court/tmp/closure-b53-e7hw/work-sshd --output evidence/inventory-sshd-b53-e7hw.json"
+  },
+  "before": {
+   "receipts": {
+    "ssh": {
+     "path": "evidence/closure-ssh-b53-e7chain-r2.json",
+     "sha256": "8d9b823aed6fa678cae19a9b72e1c378126cb250c2e85b5eb8822c4787cdf0c9"
+    },
+    "sshd": {
+     "path": "evidence/inventory-sshd-b53-e7chain-r2.json",
+     "sha256": "7fe60a5f34160c3a6ccec40866d9220c55074a3c11dda5e6d33cc03051f1096b"
+    }
+   },
+   "element7": {
+    "reachable_unresolved_sites": 131,
+    "target_bounded_unresolved_sites": 56,
+    "contract_bounded_sites": 75,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_EXPORT_CALLBACK": 51,
+     "ABI_CONTRACT_PROVIDER": 14,
+     "ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK": 4,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6
+    },
+    "unclassified_reachable_sites": 0,
+    "status": "FAIL"
+   }
+  },
+  "after": {
+   "receipts": {
+    "ssh": {
+     "path": "evidence/closure-ssh-b53-e7hw.json",
+     "sha256": "715a2d87069590b0a03840e8e3645b6093b0f801182773cbd559ddd4f204fdbb",
+     "reachable_files": 629,
+     "indirect_sites": 51918,
+     "unresolved_sites": 177,
+     "verdict": "ACCEPTED",
+     "refusals": 0
+    },
+    "sshd": {
+     "path": "evidence/inventory-sshd-b53-e7hw.json",
+     "sha256": "7f921c5e6ac8e752642e5da69f45a2c2d8c9b889cb64d403c2abd2db31651422",
+     "reachable_files": 628,
+     "indirect_sites": 51918,
+     "unresolved_sites": 177,
+     "verdict": "ACCEPTED",
+     "refusals": 0
+    }
+   },
+   "element7": {
+    "reachable_unresolved_sites": 131,
+    "target_bounded_unresolved_sites": 31,
+    "contract_bounded_sites": 100,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_EXPORT_CALLBACK": 51,
+     "ABI_CONTRACT_PROVIDER": 14,
+     "ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK": 4,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6
+    },
+    "unclassified_reachable_sites": 0,
+    "status": "FAIL"
+   }
+  },
+  "element7_delta": {
+   "target_bounded": "56 -> 31 (-25)",
+   "contract_bounded": "75 -> 100 (+25)",
+   "reachable_unresolved": "131 -> 131 (unchanged)"
+  },
+  "obligations": {
+   "total": 378,
+   "DISCHARGED": 186,
+   "BLOCKED": 192,
+   "UNKNOWN": 0,
+   "unchanged_by_this_subphase": true
+  },
+  "full_element7_diff": {
+   "before_sites": 131,
+   "after_sites": 131,
+   "changed": 25,
+   "added": 0,
+   "removed": 0,
+   "only_group": true,
+   "identities": "the 25 `call_site` values in `sites`"
+  },
+  "gates": {
+   "consumer_closure_self_test": "PASS (observed)",
+   "cargo_fmt_all_check": "PASS (observed)",
+   "cargo_clippy_all_targets": "NOT_RUN \u2014 the diff touches no Rust source; the clean-tree result is unchanged",
+   "cargo_test_lib": "NOT_RUN \u2014 the diff touches no Rust source; the clean-tree floor is unchanged"
+  }
+ },
+ "non_claims": [
+  "No obligation status changed: the queue is 378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN before and after.",
+  "Element 7 is still FAIL: 31 reachable target-bounded sites remain.",
+  "The class is an internal closed static-table dispatch, not an external ABI contract; its admission rests on the finite enumerated target set, not on a documented application obligation.",
+  "The target set is what the enumerated field can hold; it does not assert that any particular member executes, nor the correctness of the selected function's body.",
+  "Reachability of these targets from the two workloads is the closure's own result; this artifact does not re-measure it.",
+  "No compatibility or cryptographic assurance claim is made here."
+ ]
+}
