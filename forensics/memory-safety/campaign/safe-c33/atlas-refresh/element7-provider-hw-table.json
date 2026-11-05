@@ -5,8 +5,28 @@
  "date": "2026-11-05",
  "subphase": "element7-s2b",
  "group": "provider_hw_table",
- "state": "WITNESS IMPLEMENTED \u2014 all 25 sites target-bounded; measurement complete; independent review pending",
- "review": "pending",
+ "state": "REJECTED \u2014 instrument reverted; 0 of 25 counted",
+ "review": {
+  "reviewer": "independent adversarial adjudicator (session 2859aac9-3584-4991-a0dc-5b49e4d489c3); transcribed verbatim",
+  "verdict": "REJECT",
+  "applied": false,
+  "date": "2026-11-03",
+  "verdict_text": "REJECT",
+  "blocking_findings": [
+   "TDES_WRAP_CBC_HW (src/provider/cipher_tdes_wrap.rs:490-494) is a production static initialiser of ProvCipherHw.init/.cipher and is absent from the writer enumeration and from this artifact. The equality check only ranges over the owner files, so the writer-closure condition is NOT established for the 11 ProvCipherHw sites.",
+   "the context-pointer writer closure is artifact-only; the witness never checks it, and the claim that each call site names one enumerated static table is false for tdes_wrap_newctx (cipher_tdes_wrap.rs:526-533).",
+   "three hw table types lack #[repr(C)] (ProvGcmHw, ProvSivHw, ProvCcmHw) while the artifact asserts repr C; the measured offsets are therefore compiler-dependent.",
+   "the artifact says seven conditions and cites stale source lines; the code and the artifact both enumerate eight."
+  ],
+  "confirmed_good": [
+   "the runtime-store scan is clean apart from the missing file",
+   "three fields were independently re-enumerated with no missing or extra entry",
+   "the witness is tight: exact-address key, ctx proof, writer equality, table-slot and target equality, and no unrelated site satisfies all eight",
+   "the precedence change converts S1 refusals into S5 acceptances for exactly these 25 and nothing else",
+   "controls and negatives are load-bearing",
+   "counts and verdicts are as claimed and element 7 is still FAIL"
+  ]
+ },
  "sites_count": 25,
  "source_identity": {
   "repo_head": "a414236981c5bd2ce6637913f9f18b517382d857",
@@ -3358,5 +3378,38 @@
   "The target set is what the enumerated field can hold; it does not assert that any particular member executes, nor the correctness of the selected function's body.",
   "Reachability of these targets from the two workloads is the closure's own result; this artifact does not re-measure it.",
   "No compatibility or cryptographic assurance claim is made here."
+ ],
+ "outcome": {
+  "action": "the tool was reverted to the last approved content (sha 2821313c... is the SLH-era tool; the chain-era approved tool is b2622360...)",
+  "tool_after_revert": "b2622360eec4bdcfd213a5afdd14699b368421efdfe3a10b0782e437e4e34b7a",
+  "element7_restored": {
+   "target_bounded": 56,
+   "contract_bounded": 75,
+   "unresolved": 131
+  },
+  "counted": "0 of 25",
+  "evidence_files": "closure-ssh-b53-e7hw.json and inventory-sshd-b53-e7hw.json were produced by the rejected tool and are retained only as negative evidence"
+ },
+ "residuals": [
+  {
+   "id": "E7HW-R1",
+   "state": "OPEN",
+   "why": "add cipher_tdes_wrap.rs / TDES_WRAP_CBC_HW to the writer enumeration and regenerate. Its values duplicate TDES_EDE3_CBC_HW (cipher.rs:3552-3560) so the target sets should not change, but the enumeration must be complete before any count stands."
+  },
+  {
+   "id": "E7HW-R2",
+   "state": "OPEN",
+   "why": "the context-pointer writer closure must be checked by the witness rather than asserted in the artifact; tdes_wrap_newctx contradicts the artifact claim."
+  },
+  {
+   "id": "E7HW-R3",
+   "state": "OPEN",
+   "why": "three hw table types lack repr(C), so measured offsets are compiler-dependent. Image-checked offsets are conservative, but the repr claim must be corrected and the dependency recorded."
+  },
+  {
+   "id": "E7HW-R4",
+   "state": "OPEN",
+   "why": "the artifact miscounts the conditions (eight, not seven) and cites stale source lines."
+  }
  ]
 }
