@@ -4634,6 +4634,179 @@ def _stack_param(g: "DsoGraph", fstart: int, idx: int, opnd, base_reg):
             "spill_site": str(provenance[0]["addr"]), "provenance": provenance}
 
 
+# ---- exported-callback provenance --------------------------------------- #
+#
+# A callback parameter is often materialised by the compiler before it is
+# called: copied to another register, spilled to a frame slot and reloaded on
+# each path, or carried around a loop.  Those are still *the same* entry
+# parameter.  The walker below follows exactly these shapes and refuses every
+# other step:
+#
+#   * the entry parameter itself,
+#   * a register-to-register copy of it,
+#   * a frame spill and its reload, and
+#   * a phi: a merge whose EVERY incoming value satisfies this same rule (a
+#     re-entrant copy cycle is the loop back edge).
+#
+# The entry-parameter requirement itself is unchanged; only the shape that
+# materialises it is followed.  An arm that is a call result, an immediate, an
+# arithmetic value, a load from anywhere but the frame, or a ``lea`` refuses the
+# whole site, and a merge is accepted only when every arm resolves to the same
+# parameter index.  Nothing here widens the target set.
+
+_EXPORT_COPY_MN = ("mov", "movq")
+
+
+def _step_addr(g: "DsoGraph", fstart: int, idx: int) -> str:
+    return hex(g.precision.insns_by_func[fstart][idx][0])
+
+
+def _copy_source(g: "DsoGraph", fstart: int, idx: int, reg: str):
+    """The 64-bit register copied into ``reg`` here, or None.
+
+    A 32-bit move truncates the value and a ``lea`` computes an address;
+    neither is a copy of a callback pointer, so neither is accepted.
+    """
+    if "e7-chain-copy" in _MUTED:
+        return None
+    mn, _rest, ops = _insn_parts(_insn(g, fstart, idx))
+    if mn not in _EXPORT_COPY_MN or len(ops) < 2:
+        return None
+    dst, src = ops[-1], ops[0]
+    if dst not in _REGS or _canon(dst) != reg:
+        return None
+    return src if src in _REGS else None
+
+
+def _slot_source(g: "DsoGraph", fstart: int, idx: int, reg: str):
+    """Entry-relative frame slot loaded into ``reg`` here, or None."""
+    if "e7-chain-spill" in _MUTED:
+        return None
+    mn, _rest, ops = _insn_parts(_insn(g, fstart, idx))
+    if mn not in _EXPORT_COPY_MN or len(ops) < 2:
+        return None
+    dst, src = ops[-1], ops[0]
+    if dst not in _REGS or _canon(dst) != reg:
+        return None
+    if not re.fullmatch(r"(-?0x[0-9a-f]+)?\((%rsp|%rbp)\)", src):
+        return None
+    return _stack_slot_abs(g, fstart, idx, src)
+
+
+def _chain_slot(g: "DsoGraph", fstart: int, idx: int, slot: int,
+                depth: int, active: frozenset):
+    """Provenance of one entry-relative frame slot at instruction ``idx``.
+
+    Returns ``(indices, steps)`` or None.  Every store that reaches the slot
+    must itself be a store of the parameter; a slot with no store on any
+    analysed path is an incoming stack argument (argument 6 is entry rsp+8),
+    which is the entry parameter rather than a spill.
+    """
+    if _slot_alias_in_block(g, fstart, idx, slot, set()):
+        return None
+    writes = _reaching_stores(g, fstart, idx, slot)
+    if writes is None:
+        return None
+    if writes == {_NO_STORE}:
+        if slot >= 8 and (slot - 8) % 8 == 0:
+            return ({6 + (slot - 8) // 8},
+                    [{"step": "stack-argument", "offset": hex(slot)}])
+        return None
+    if not writes or _NO_STORE in writes:
+        return None
+    if "e7-chain-spill" in _MUTED:
+        return None
+    indices, steps = set(), []
+    for w in sorted(writes):
+        mn, _rest, ops = _insn_parts(_insn(g, fstart, w))
+        if mn not in _EXPORT_COPY_MN or not ops or ops[0] not in _REGS:
+            return None
+        sub = _chain_reg(g, fstart, w, ops[0], depth + 1, active)
+        if sub is None:
+            return None
+        indices |= sub[0]
+        steps.append({"step": "entry-spill", "addr": _step_addr(g, fstart, w),
+                      "text": _insn(g, fstart, w).strip()})
+        steps += sub[1]
+    return indices, steps
+
+
+def _chain_reg(g: "DsoGraph", fstart: int, idx: int, reg: str,
+               depth: int = 0, active: frozenset = frozenset()):
+    """Provenance of ``reg`` at ``idx`` as ``(indices, steps)``."""
+    if depth > 16:
+        return None
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None or not defs:
+        return None
+    if "e7-chain-phi" in _MUTED and len(defs) > 1:
+        # Control: without phi support a merge is not a single provenance.
+        return None
+    indices, steps = set(), []
+    for d in sorted(defs):
+        if d == _ENTRY_DEF:
+            if reg not in _ENTRY_ARG_REGS:
+                return None
+            indices.add(_ENTRY_ARG_REGS[reg])
+            steps.append({"step": "entry-register", "reg": reg})
+            continue
+        key = (d, reg)
+        if key in active:
+            # The loop back edge: this arm is the copy cycle currently being
+            # resolved, so it carries the same value (a phi self-reference).
+            steps.append({"step": "loop-carried", "addr": _step_addr(g, fstart, d),
+                          "text": _insn(g, fstart, d).strip()})
+            continue
+        src = _copy_source(g, fstart, d, reg)
+        if src is not None:
+            sub = _chain_reg(g, fstart, d, _canon(src), depth + 1,
+                             active | {key})
+            if sub is None:
+                return None
+            indices |= sub[0]
+            steps.append({"step": "reg-copy", "addr": _step_addr(g, fstart, d),
+                          "from": _canon(src), "to": reg,
+                          "text": _insn(g, fstart, d).strip()})
+            steps += sub[1]
+            continue
+        slot = _slot_source(g, fstart, d, reg)
+        if slot is not None:
+            sub = _chain_slot(g, fstart, d, slot, depth + 1, active | {key})
+            if sub is None:
+                return None
+            indices |= sub[0]
+            steps.append({"step": "frame-reload", "addr": _step_addr(g, fstart, d),
+                          "slot": hex(slot),
+                          "text": _insn(g, fstart, d).strip()})
+            steps += sub[1]
+            continue
+        return None
+    return indices, steps
+
+
+def _param_chain(g: "DsoGraph", fstart: int, idx: int, opnd: str):
+    """Follow the callback operand back to one entry parameter.
+
+    Returns ``{"kind": "param", "index": n, "provenance": [...]}`` or None.
+    Every incoming value must resolve to the same parameter; a site whose arms
+    disagree, or whose arm is not an entry parameter, is refused.
+    """
+    opnd = opnd.strip()
+    if opnd in _REGS:
+        res = _chain_reg(g, fstart, idx, _canon(opnd))
+    elif re.fullmatch(r"(-?0x[0-9a-f]+)?\((%rsp|%rbp)\)", opnd):
+        slot = _stack_slot_abs(g, fstart, idx, opnd)
+        if slot is None:
+            return None
+        res = _chain_slot(g, fstart, idx, slot, 0, frozenset())
+    else:
+        return None
+    if res is None or len(res[0]) != 1:
+        return None
+    return {"kind": "param", "index": next(iter(res[0])),
+            "provenance": res[1], "extended": True}
+
+
 def _callers_of(g: "DsoGraph", callee: int) -> list:
     """Direct in-image call sites of one function, scanned on demand.
 
@@ -5258,6 +5431,12 @@ def export_callback_witness(g: "DsoGraph", site: dict, name: str):
     opnd = _site_operand(site)
     param = _param_of_operand(g, fstart, idx, opnd)
     if param is None or param.get("kind") != "param":
+        # Provenance extension: follow the parameter through register copies,
+        # frame spill/reload and phis whose every arm is the same parameter.
+        # The entry-parameter requirement itself is unchanged; only the
+        # materialising shape is followed.
+        param = _param_chain(g, fstart, idx, opnd)
+    if param is None or param.get("kind") != "param":
         if "export-not-param" in _MUTED:
             param = {"kind": "param", "index": 3, "provenance": []}
         else:
@@ -5364,7 +5543,12 @@ def export_callback_witness(g: "DsoGraph", site: dict, name: str):
             "no in-image writer stores a different value into the parameter"),
         "interface": (f"{cb['declaration']} declares {cb['name']} as "
                       f"{cb['type_typedef']} ({cb['typedef']})"),
-        "basis": ("the operand is exactly this entry parameter (single linear "
+        "basis": ("the operand resolves to this entry parameter through "
+                  "register copies, frame spills/reloads and phis only; every "
+                  "incoming arm agrees, every in-image call chain forwards it "
+                  "unchanged, and the root function is in .dynsym"
+                  if param.get("extended") else
+                  "the operand is exactly this entry parameter (single linear "
                   "provenance), every in-image call chain forwards it "
                   "unchanged, and the root function is in .dynsym"),
     }
@@ -20510,6 +20694,183 @@ def self_test() -> int:
     w2, why2 = _export_witness(exported=False)
     check("S2 finite in-image private chain is deferred",
           (w2, (why2 or {}).get("defer")), (None, True))
+
+    # S2c: the same entry parameter, materialised by a register copy, a frame
+    # spill/reload, or a phi.  A phi is admitted only when EVERY incoming arm
+    # resolves to the same entry parameter; the mixed-arm control below is the
+    # mandatory negative fixture.  Each negative breaks exactly one chain step.
+    def _export_chain(body, site_addr, reg="%r11"):
+        td = tempfile.mkdtemp()
+        header = ("typedef void (*block128_f)(const unsigned char in[16],\n"
+                  "    unsigned char out[16], const void *key);\n"
+                  "void CRYPTO_cfb128_encrypt(const unsigned char *in,\n"
+                  "    unsigned char *out, size_t len, block128_f block);\n")
+        install = _winstall(td, header)
+        g = _WG({0x500: body}, {0x500: "CRYPTO_cfb128_encrypt",
+                                0x600: "unused_call"},
+                dyn={"CRYPTO_cfb128_encrypt"}, install=install)
+        site = {"kind": "call", "func": 0x500, "addr": site_addr,
+                "text": f"call   *{reg}", "arg_deps": set()}
+        return export_callback_witness(g, site, "CRYPTO_cfb128_encrypt")
+
+    def _chain_mutate(name, fn):
+        _MUTED.add(name)
+        try:
+            return fn()
+        finally:
+            _MUTED.discard(name)
+
+    _spill_body = [
+        (0x500, "mov    %rcx,0x10(%rsp)"),
+        (0x506, "mov    0x10(%rsp),%r11"),
+        (0x50b, "call   *%r11"),
+        (0x50d, "ret"),
+    ]
+    _spill_args = [
+        (0x500, "mov    %rcx,0x10(%rsp)"),
+        (0x506, "test   %rdi,%rdi"),
+        (0x509, "je     514 <CRYPTO_cfb128_encrypt+0x14>"),
+        (0x50b, "mov    0x10(%rsp),%r11"),
+        (0x510, "jmp    520 <CRYPTO_cfb128_encrypt+0x20>"),
+        (0x514, "mov    0x10(%rsp),%r11"),
+        (0x519, "jmp    520 <CRYPTO_cfb128_encrypt+0x20>"),
+        (0x520, "call   *%r11"),
+        (0x522, "ret"),
+    ]
+    _copy_phi = [
+        (0x500, "push   %rbp"),
+        (0x501, "test   %rdi,%rdi"),
+        (0x504, "je     510 <CRYPTO_cfb128_encrypt+0x10>"),
+        (0x506, "mov    %rcx,%r11"),
+        (0x509, "jmp    520 <CRYPTO_cfb128_encrypt+0x20>"),
+        (0x510, "mov    %rcx,%r11"),
+        (0x513, "jmp    520 <CRYPTO_cfb128_encrypt+0x20>"),
+        (0x520, "call   *%r11"),
+        (0x522, "ret"),
+    ]
+    _loop_phi = [
+        (0x500, "mov    %rcx,%r11"),
+        (0x503, "test   %rdi,%rdi"),
+        (0x506, "je     520 <CRYPTO_cfb128_encrypt+0x20>"),
+        (0x508, "mov    %r11,%r11"),
+        (0x50b, "jmp    503 <CRYPTO_cfb128_encrypt+0x3>"),
+        (0x520, "call   *%r11"),
+        (0x522, "ret"),
+    ]
+    # The mandatory mixed-arm control: one arm is the entry parameter, the other
+    # is a call result.  Every arm must be checked, so this MUST refuse.
+    _mixed_phi = [
+        (0x500, "call   600 <unused_call>"),
+        (0x505, "test   %rdi,%rdi"),
+        (0x508, "je     514 <CRYPTO_cfb128_encrypt+0x14>"),
+        (0x50a, "mov    %rcx,%r11"),
+        (0x50d, "jmp    520 <CRYPTO_cfb128_encrypt+0x20>"),
+        (0x514, "mov    %rax,%r11"),
+        (0x517, "jmp    520 <CRYPTO_cfb128_encrypt+0x20>"),
+        (0x520, "call   *%r11"),
+        (0x522, "ret"),
+    ]
+    _two_param_phi = [
+        (0x500, "test   %rdi,%rdi"),
+        (0x503, "je     510 <CRYPTO_cfb128_encrypt+0x10>"),
+        (0x505, "mov    %rcx,%r11"),
+        (0x508, "jmp    520 <CRYPTO_cfb128_encrypt+0x20>"),
+        (0x510, "mov    %rdx,%r11"),
+        (0x513, "jmp    520 <CRYPTO_cfb128_encrypt+0x20>"),
+        (0x520, "call   *%r11"),
+        (0x522, "ret"),
+    ]
+    _lea_phi = [
+        (0x500, "test   %rdi,%rdi"),
+        (0x503, "je     510 <CRYPTO_cfb128_encrypt+0x10>"),
+        (0x505, "mov    %rcx,%r11"),
+        (0x508, "jmp    520 <CRYPTO_cfb128_encrypt+0x20>"),
+        (0x510, "lea    0x0(%rcx),%r11"),
+        (0x513, "jmp    520 <CRYPTO_cfb128_encrypt+0x20>"),
+        (0x520, "call   *%r11"),
+        (0x522, "ret"),
+    ]
+    _global_body = [
+        (0x500, "mov    0x5df8(%rip),%r11  # 6000 <handler>"),
+        (0x508, "call   *%r11"),
+        (0x50a, "ret"),
+    ]
+    _imm_body = [
+        (0x500, "mov    $0x0,%r11"),
+        (0x505, "call   *%r11"),
+        (0x507, "ret"),
+    ]
+    _arith_body = [
+        (0x500, "mov    %rcx,%r11"),
+        (0x503, "add    %rdx,%r11"),
+        (0x506, "call   *%r11"),
+        (0x508, "ret"),
+    ]
+    _call_body = [
+        (0x500, "push   %rbp"),
+        (0x501, "mov    %rdi,%rcx"),
+        (0x504, "call   600 <unused_call>"),
+        (0x509, "mov    %rax,%r11"),
+        (0x50c, "call   *%r11"),
+        (0x50e, "ret"),
+    ]
+    _overwrite_body = [
+        (0x500, "mov    %rcx,0x10(%rsp)"),
+        (0x505, "call   600 <unused_call>"),
+        (0x50a, "mov    %rax,0x10(%rsp)"),
+        (0x50f, "mov    0x10(%rsp),%r11"),
+        (0x514, "call   *%r11"),
+        (0x516, "ret"),
+    ]
+
+    w3, _ = _export_chain(_spill_body, 0x50B)
+    check("S2c frame spill/reload keeps the entry parameter",
+          ((w3 or {}).get("site_parameter"),
+           any(s.get("step") in ("frame-reload", "entry-spill")
+               for s in (w3 or {}).get("provenance") or ())), (3, True))
+    w4, _ = _export_chain(_copy_phi, 0x520)
+    check("S2c a phi whose every arm is the parameter is accepted",
+          ((w4 or {}).get("site_parameter"),
+           any(s.get("step") == "reg-copy"
+               for s in (w4 or {}).get("provenance") or ())), (3, True))
+    w5, _ = _export_chain(_loop_phi, 0x520)
+    check("S2c a loop-carried phi is accepted",
+          ((w5 or {}).get("site_parameter"),
+           any(s.get("step") == "loop-carried"
+               for s in (w5 or {}).get("provenance") or ())), (3, True))
+    w6, _ = _export_chain(_spill_args, 0x520)
+    check("S2c a phi of spill reloads is accepted",
+          (w6 or {}).get("site_parameter"), 3)
+    check("S2c MIXED-ARM PHI (parameter arm + call-result arm) is refused",
+          _export_chain(_mixed_phi, 0x520)[0], None)
+    check("S2c a phi of two different parameters is refused",
+          _export_chain(_two_param_phi, 0x520)[0], None)
+    check("S2c a lea arm is refused",
+          _export_chain(_lea_phi, 0x520)[0], None)
+    check("S2c a rip-relative load is refused",
+          _export_chain(_global_body, 0x508)[0], None)
+    check("S2c an immediate is refused",
+          _export_chain(_imm_body, 0x505)[0], None)
+    check("S2c an arithmetic writer is refused",
+          _export_chain(_arith_body, 0x506)[0], None)
+    check("S2c a call result is refused",
+          _export_chain(_call_body, 0x50C)[0], None)
+    check("S2c a spill overwritten before reload is refused",
+          _export_chain(_overwrite_body, 0x514)[0], None)
+    # One mutation per chain step: removing a step must refuse the fixture that
+    # depends on it.  (The phi control is the mandatory one above.)
+    check("S2c mutation: without copy support the copy phi refuses",
+          _chain_mutate("e7-chain-copy",
+                        lambda: _export_chain(_copy_phi, 0x520)[0]), None)
+    check("S2c mutation: without spill support the spill phi refuses",
+          _chain_mutate("e7-chain-spill",
+                        lambda: _export_chain(_spill_args, 0x520)[0]), None)
+    check("S2c mutation: without phi support the merge refuses",
+          _chain_mutate("e7-chain-phi",
+                        lambda: _export_chain(_copy_phi, 0x520)[0]), None)
+    check("S2c mutation: without phi support the loop phi refuses",
+          _chain_mutate("e7-chain-phi",
+                        lambda: _export_chain(_loop_phi, 0x520)[0]), None)
 
     # S2b: the provider get_capabilities up-call.  The callback is exactly the
     # exported OSSL_PROVIDER_get_capabilities parameter, forwarded across the
