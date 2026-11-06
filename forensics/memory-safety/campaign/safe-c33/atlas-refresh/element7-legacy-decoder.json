@@ -1,0 +1,1594 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/element7-target-set-evidence/v1",
+ "receipt": "element7-legacy-decoder",
+ "kind": "element7-target-set-evidence",
+ "date": "2026-11-06",
+ "subphase": "element7-s2b",
+ "revision": 1,
+ "group": "legacy_evp_cipher_data + decoder_method_object",
+ "state": "CLOSED (5 sites) \u2014 writer sets computed from src with a completeness gate; target sets resolved from image stores and the closed algorithm tables; five of five counted",
+ "review": {
+  "verdict": "PENDING",
+  "reviewer": null,
+  "independent": false,
+  "note": "The author generated the evidence; AGENTS.md section 15 requires that the agent that writes a safety claim is not its sole adjudicator.  No discharge is claimed here."
+ },
+ "source_identity": {
+  "repo_head": "a7c43e6d93a80d6ac24ec50aa01f7352dc5cf290",
+  "branch": "stage/p25/element7-s2b",
+  "instrument": {
+   "path": "forensics/tools/consumer_closure.py",
+   "sha256": "c29991559c44a4ccf05048c163b90d51dd90595647a714a0685ee1d5be862fbe",
+   "version": 5
+  },
+  "candidate_image": {
+   "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+   "sha256": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3"
+  },
+  "inventory": {
+   "path": "court/freeze-b53/census-b53.json",
+   "sha256": "bb191bac59a17b53ad5c67547a412394d82ffdf64613208139f064e2f7eab62e"
+  },
+  "enrolment": {
+   "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json",
+   "sha256": "1d06c1f048dc016d3f5dc6f2a5c375f9485d46a20d956b07e22a5ade5603f9be"
+  }
+ },
+ "site_label_correction": {
+  "finding": "The task named `0x2c37f2` as reading `EvpSm4Key.stream_ecb`. The image reads displacement 0x0 of the cipher-data block (`call *(%r12)` with `%r12 = ctx->cipher_data`), which is `block`; `stream_ecb` is at 0x88 and its `if let Some` dispatch is the adjacent unresolved site 0x2c37af.",
+  "evidence": "sm4_ecb_cipher disassembly: 0x2c378a/0x2c37c7 `mov 0x78(%rdi),%r12`; 0x2c37ed `lea 0x8(%r12),%rdx`; 0x2c37f2 `call *(%r12)`.  The store at 0x2c34ea also targets displacement 0 and holds sm4_encrypt_block/sm4_decrypt_block.",
+  "consequence": "The site is closed against the field it actually reads; 0x2c37af (stream_ecb) remains target-bounded and is not counted in this batch."
+ },
+ "writer_scan": {
+  "method": "One parse of the admitted tree; every function body is scanned for `(*p).field = expr`, `p.field = expr`, `addr_of_mut!((*p).field)`, `(*p).base.field.store(..)`, `Type { .. }` literals and `ptr::copy/write/read::<Type>`. A receiver's type is resolved from parameters, explicit `let` annotations, `cast::<T>()`, `OwnedCtx::<T>`/`RawCtx::<T>` and same-file function return types.  A store whose owner cannot be resolved is only a candidate when the function names a tracked type; otherwise it cannot be a write to it.",
+  "patterns": [
+   "(*p).field = expr",
+   "p.field = expr",
+   "addr_of_mut!((*p).field)",
+   "(*p).base.field.store(..)",
+   "Type { field: .. }",
+   "ptr::*::<Type>"
+  ],
+  "computed_files": {
+   "EvpAesKey": [
+    "src/evp/e_aes.rs"
+   ],
+   "EvpSm4Key": [
+    "src/evp/e_sm4.rs"
+   ],
+   "OsslDecoder": [
+    "src/decoder_meth.rs"
+   ]
+  },
+  "computed_writer_pairs": {
+   "EvpAesKey": [
+    [
+     "aes_init_key",
+     "block"
+    ],
+    [
+     "aes_init_key",
+     "ks"
+    ],
+    [
+     "aes_init_key",
+     "stream_cbc"
+    ],
+    [
+     "aes_init_key",
+     "stream_ctr"
+    ]
+   ],
+   "EvpSm4Key": [
+    [
+     "sm4_init_key",
+     "block"
+    ],
+    [
+     "sm4_init_key",
+     "ks"
+    ],
+    [
+     "sm4_init_key",
+     "stream_cbc"
+    ],
+    [
+     "sm4_init_key",
+     "stream_ctr"
+    ],
+    [
+     "sm4_init_key",
+     "stream_ecb"
+    ]
+   ],
+   "OsslDecoder": [
+    [
+     "ossl_decoder_from_algorithm",
+     "base.algodef"
+    ],
+    [
+     "ossl_decoder_from_algorithm",
+     "base.id"
+    ],
+    [
+     "ossl_decoder_from_algorithm",
+     "base.name"
+    ],
+    [
+     "ossl_decoder_from_algorithm",
+     "base.parsed_propdef"
+    ],
+    [
+     "ossl_decoder_from_algorithm",
+     "base.prov"
+    ],
+    [
+     "ossl_decoder_from_algorithm",
+     "decode"
+    ],
+    [
+     "ossl_decoder_from_algorithm",
+     "does_selection"
+    ],
+    [
+     "ossl_decoder_from_algorithm",
+     "export_object"
+    ],
+    [
+     "ossl_decoder_from_algorithm",
+     "freectx"
+    ],
+    [
+     "ossl_decoder_from_algorithm",
+     "get_params"
+    ],
+    [
+     "ossl_decoder_from_algorithm",
+     "gettable_params"
+    ],
+    [
+     "ossl_decoder_from_algorithm",
+     "newctx"
+    ],
+    [
+     "ossl_decoder_from_algorithm",
+     "set_ctx_params"
+    ],
+    [
+     "ossl_decoder_from_algorithm",
+     "settable_ctx_params"
+    ],
+    [
+     "ossl_decoder_new",
+     "base.refcnt"
+    ]
+   ]
+  },
+  "unresolved_owner_stores": {
+   "EvpAesKey": 0,
+   "EvpSm4Key": 0,
+   "OsslDecoder": 0
+  },
+  "test_only": {
+   "EvpAesKey": [],
+   "EvpSm4Key": [],
+   "OsslDecoder": [
+    {
+     "type": "OsslDecoder",
+     "kind": "macro-store",
+     "file": "src/evp/pkey_ctx.rs",
+     "function": "macro:observe_dup_failure",
+     "field": "freectx",
+     "expr": "",
+     "line": 12322
+    }
+   ]
+  },
+  "test_only_excluded_because": "declared inside `#[cfg(test)]`; the release image the closure analyses does not contain it, and it is not a production writer"
+ },
+ "completeness_gate": {
+  "status": "PASS",
+  "reason": null,
+  "types": {
+   "EvpAesKey": {
+    "status": "PASS",
+    "enumerated_file": "src/evp/e_aes.rs",
+    "computed_files": [
+     "src/evp/e_aes.rs"
+    ],
+    "missing_files": [],
+    "computed_writer_pairs": [
+     [
+      "aes_init_key",
+      "block"
+     ],
+     [
+      "aes_init_key",
+      "ks"
+     ],
+     [
+      "aes_init_key",
+      "stream_cbc"
+     ],
+     [
+      "aes_init_key",
+      "stream_ctr"
+     ]
+    ],
+    "enumerated_writer_pairs": [
+     [
+      "aes_init_key",
+      "block"
+     ],
+     [
+      "aes_init_key",
+      "ks"
+     ],
+     [
+      "aes_init_key",
+      "stream_cbc"
+     ],
+     [
+      "aes_init_key",
+      "stream_ctr"
+     ]
+    ],
+    "missing_pairs": [],
+    "extra_pairs": [],
+    "unresolved_owner_stores": [],
+    "unresolved_owner_count": 0,
+    "initialisers": [],
+    "test_only": [],
+    "test_only_excluded_because": "declared inside `#[cfg(test)]`; the release image the closure analyses does not contain it, and it is not a production writer",
+    "scan_patterns": [
+     "(*p).field = expr",
+     "p.field = expr",
+     "addr_of_mut!((*p).field) (helper destination)",
+     "(*p).base.refcnt.store(..)",
+     "Type { .. } struct literal",
+     "ptr::copy/ptr::write/ptr::read::<Type>"
+    ]
+   },
+   "EvpSm4Key": {
+    "status": "PASS",
+    "enumerated_file": "src/evp/e_sm4.rs",
+    "computed_files": [
+     "src/evp/e_sm4.rs"
+    ],
+    "missing_files": [],
+    "computed_writer_pairs": [
+     [
+      "sm4_init_key",
+      "block"
+     ],
+     [
+      "sm4_init_key",
+      "ks"
+     ],
+     [
+      "sm4_init_key",
+      "stream_cbc"
+     ],
+     [
+      "sm4_init_key",
+      "stream_ctr"
+     ],
+     [
+      "sm4_init_key",
+      "stream_ecb"
+     ]
+    ],
+    "enumerated_writer_pairs": [
+     [
+      "sm4_init_key",
+      "block"
+     ],
+     [
+      "sm4_init_key",
+      "ks"
+     ],
+     [
+      "sm4_init_key",
+      "stream_cbc"
+     ],
+     [
+      "sm4_init_key",
+      "stream_ctr"
+     ],
+     [
+      "sm4_init_key",
+      "stream_ecb"
+     ]
+    ],
+    "missing_pairs": [],
+    "extra_pairs": [],
+    "unresolved_owner_stores": [],
+    "unresolved_owner_count": 0,
+    "initialisers": [],
+    "test_only": [],
+    "test_only_excluded_because": "declared inside `#[cfg(test)]`; the release image the closure analyses does not contain it, and it is not a production writer",
+    "scan_patterns": [
+     "(*p).field = expr",
+     "p.field = expr",
+     "addr_of_mut!((*p).field) (helper destination)",
+     "(*p).base.refcnt.store(..)",
+     "Type { .. } struct literal",
+     "ptr::copy/ptr::write/ptr::read::<Type>"
+    ]
+   },
+   "OsslDecoder": {
+    "status": "PASS",
+    "enumerated_file": "src/decoder_meth.rs",
+    "computed_files": [
+     "src/decoder_meth.rs"
+    ],
+    "missing_files": [],
+    "computed_writer_pairs": [
+     [
+      "ossl_decoder_from_algorithm",
+      "base.algodef"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "base.id"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "base.name"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "base.parsed_propdef"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "base.prov"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "decode"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "does_selection"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "export_object"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "freectx"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "get_params"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "gettable_params"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "newctx"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "set_ctx_params"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "settable_ctx_params"
+     ],
+     [
+      "ossl_decoder_new",
+      "base.refcnt"
+     ]
+    ],
+    "enumerated_writer_pairs": [
+     [
+      "ossl_decoder_from_algorithm",
+      "base.algodef"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "base.id"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "base.name"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "base.parsed_propdef"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "base.prov"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "decode"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "does_selection"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "export_object"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "freectx"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "get_params"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "gettable_params"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "newctx"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "set_ctx_params"
+     ],
+     [
+      "ossl_decoder_from_algorithm",
+      "settable_ctx_params"
+     ],
+     [
+      "ossl_decoder_new",
+      "base.refcnt"
+     ]
+    ],
+    "missing_pairs": [],
+    "extra_pairs": [],
+    "unresolved_owner_stores": [],
+    "unresolved_owner_count": 0,
+    "initialisers": [],
+    "test_only": [
+     {
+      "type": "OsslDecoder",
+      "kind": "macro-store",
+      "file": "src/evp/pkey_ctx.rs",
+      "function": "macro:observe_dup_failure",
+      "field": "freectx",
+      "expr": "",
+      "line": 12322
+     }
+    ],
+    "test_only_excluded_because": "declared inside `#[cfg(test)]`; the release image the closure analyses does not contain it, and it is not a production writer",
+    "scan_patterns": [
+     "(*p).field = expr",
+     "p.field = expr",
+     "addr_of_mut!((*p).field) (helper destination)",
+     "(*p).base.refcnt.store(..)",
+     "Type { .. } struct literal",
+     "ptr::copy/ptr::write/ptr::read::<Type>"
+    ]
+   }
+  },
+  "per_type_admission": "each witness admits only its own type's gate status, so an unclassified writer of one type cannot be hidden by another type's PASS"
+ },
+ "field_tables": {
+  "legacy_evp_cipher_data": [
+   {
+    "owner_type": "EvpAesKey",
+    "field": "block",
+    "image_offset": "0x0",
+    "repr_c": false,
+    "writer_function": "aes_init_key",
+    "source_writer_set": [
+     "aes_decrypt_block",
+     "aes_encrypt_block"
+    ],
+    "source_stores": [
+     {
+      "file": "src/evp/e_aes.rs",
+      "line": 362,
+      "expr": "aes_decrypt_block"
+     },
+     {
+      "file": "src/evp/e_aes.rs",
+      "line": 374,
+      "expr": "aes_encrypt_block"
+     }
+    ],
+    "image_stores": [
+     {
+      "insn": "0x524039",
+      "values": [
+       {
+        "address": "0x527310",
+        "symbol": "aes_decrypt_block"
+       }
+      ]
+     },
+     {
+      "insn": "0x524071",
+      "values": [
+       {
+        "address": "0x527320",
+        "symbol": "aes_encrypt_block"
+       }
+      ]
+     },
+     {
+      "insn": "0x52417d",
+      "values": [
+       {
+        "address": "0x527320",
+        "symbol": "aes_encrypt_block"
+       }
+      ]
+     }
+    ],
+    "targets": [
+     {
+      "address": "0x527310",
+      "symbol": "aes_decrypt_block"
+     },
+     {
+      "address": "0x527320",
+      "symbol": "aes_encrypt_block"
+     }
+    ]
+   },
+   {
+    "owner_type": "EvpSm4Key",
+    "field": "block",
+    "image_offset": "0x0",
+    "repr_c": false,
+    "writer_function": "sm4_init_key",
+    "source_writer_set": [
+     "sm4_decrypt_block",
+     "sm4_encrypt_block"
+    ],
+    "source_stores": [
+     {
+      "file": "src/evp/e_sm4.rs",
+      "line": 138,
+      "expr": "sm4_decrypt_block"
+     },
+     {
+      "file": "src/evp/e_sm4.rs",
+      "line": 144,
+      "expr": "sm4_encrypt_block"
+     }
+    ],
+    "image_stores": [
+     {
+      "insn": "0x2c34ea",
+      "values": [
+       {
+        "address": "0x2c3810",
+        "symbol": "sm4_decrypt_block"
+       },
+       {
+        "address": "0x2c3820",
+        "symbol": "sm4_encrypt_block"
+       }
+      ]
+     }
+    ],
+    "targets": [
+     {
+      "address": "0x2c3810",
+      "symbol": "sm4_decrypt_block"
+     },
+     {
+      "address": "0x2c3820",
+      "symbol": "sm4_encrypt_block"
+     }
+    ]
+   }
+  ],
+  "decoder_method_object": [
+   {
+    "owner_type": "OsslDecoder",
+    "field": "newctx",
+    "image_offset": "0x30",
+    "repr_c": true,
+    "dispatch_id": 1,
+    "writer_function": "ossl_decoder_from_algorithm",
+    "targets": [
+     {
+      "address": "0x204bd0",
+      "symbol": "any2obj_newctx"
+     }
+    ],
+    "tables": [
+     "DER_TO_OBJ_DECODER_FUNCTIONS@0x7c7618",
+     "MSBLOB_TO_OBJ_DECODER_FUNCTIONS@0x7c7708",
+     "PVK_TO_OBJ_DECODER_FUNCTIONS@0x7c7678"
+    ]
+   },
+   {
+    "owner_type": "OsslDecoder",
+    "field": "freectx",
+    "image_offset": "0x38",
+    "repr_c": true,
+    "dispatch_id": 2,
+    "writer_function": "ossl_decoder_from_algorithm",
+    "targets": [
+     {
+      "address": "0x205090",
+      "symbol": "any2obj_freectx"
+     }
+    ],
+    "tables": [
+     "DER_TO_OBJ_DECODER_FUNCTIONS@0x7c7618",
+     "MSBLOB_TO_OBJ_DECODER_FUNCTIONS@0x7c7708",
+     "PVK_TO_OBJ_DECODER_FUNCTIONS@0x7c7678"
+    ]
+   },
+   {
+    "owner_type": "OsslDecoder",
+    "field": "set_ctx_params",
+    "image_offset": "0x50",
+    "repr_c": true,
+    "dispatch_id": 5,
+    "writer_function": "ossl_decoder_from_algorithm",
+    "targets": [
+     {
+      "address": "0x2055c0",
+      "symbol": "any2obj_set_ctx_params"
+     }
+    ],
+    "tables": [
+     "DER_TO_OBJ_DECODER_FUNCTIONS@0x7c7618",
+     "MSBLOB_TO_OBJ_DECODER_FUNCTIONS@0x7c7708",
+     "PVK_TO_OBJ_DECODER_FUNCTIONS@0x7c7678"
+    ]
+   }
+  ]
+ },
+ "sites": [
+  {
+   "call_site": "0x2c37f2",
+   "function": "sm4_ecb_cipher",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs3evp5e_sm414sm4_ecb_cipher",
+   "resolver_reason": "base-slot-partial",
+   "resolver_class": "field",
+   "verdict": "CLOSED",
+   "refusal": null,
+   "witness": {
+    "schema": "openssl-rs/consumer-closure/per-call-site-witness/v1",
+    "rule": "legacy-evp-cipher-data",
+    "class": "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA",
+    "contract_bounded": true,
+    "resolved": true,
+    "function": "_RNvNtNtCscx02WjRFd5b_10openssl_rs3evp5e_sm414sm4_ecb_cipher",
+    "call_site": "0x2c37f2",
+    "operand": {
+     "base_reg": "%r12",
+     "member_offset": "0x0"
+    },
+    "context": {
+     "type": "EvpCipherCtx",
+     "data_type": "EvpSm4Key",
+     "data_offset": "0x78",
+     "base_loads": [
+      {
+       "offset": 120,
+       "base_reg": "%rdi",
+       "at": 18,
+       "addr": 2897802
+      },
+      {
+       "offset": 120,
+       "base_reg": "%rdi",
+       "at": 39,
+       "addr": 2897863
+      }
+     ],
+     "provenance": "cipher_data pointer from the context parameter"
+    },
+    "field": {
+     "type": "EvpSm4Key",
+     "repr_c": false,
+     "repr_note": "no #[repr(C)]: the read offset is image-measured and compiler-dependent; it is confirmed here by the function set stored at that displacement",
+     "name": "block",
+     "read_offset": "0x0",
+     "writer_set": [
+      "sm4_decrypt_block",
+      "sm4_encrypt_block"
+     ],
+     "zero_initialiser": {
+      "file": "src/evp/cipher_ctx.rs",
+      "line": 2269,
+      "why": "the same `cipher_data` allocation; `sm4_init_key` runs before `sm4_ecb_cipher`"
+     }
+    },
+    "initialiser": {
+     "function": "sm4_init_key",
+     "address": "0x2c3480",
+     "stores": [
+      {
+       "insn": "0x2c34ea",
+       "values": [
+        2897936,
+        2897952
+       ],
+       "base_reg": "%rsi"
+      }
+     ]
+    },
+    "tables": [],
+    "targets": [
+     "0x2c3810",
+     "0x2c3820"
+    ],
+    "target_names": [
+     "sm4_decrypt_block",
+     "sm4_encrypt_block"
+    ],
+    "writer_gate": {
+     "EvpAesKey": "PASS",
+     "EvpSm4Key": "PASS",
+     "OsslDecoder": "PASS"
+    },
+    "slot": "EvpSm4Key.block@0x0 stored by sm4_init_key over 1 image store(s)",
+    "basis": "an enumerated legacy EVP ECB callback; the read base is the context's cipher_data pointer, the field's production writer set is the complete computed set and every stored value is an in-image function of the enumerated module",
+    "conditions": [
+     "containing-function-is-an-enumerated-site",
+     "operand-is-the-enumerated-field-displacement",
+     "read-base-is-the-context-cipher-data-pointer",
+     "data-type-is-the-enumerated-owning-type",
+     "writer-set-and-owner-files-are-the-computed-exhaustive-set",
+     "stored-value-set-is-exactly-the-enumerated-function-set",
+     "every-stored-value-is-an-in-image-function-of-the-owning-module"
+    ]
+   }
+  },
+  {
+   "call_site": "0x3cd8dd",
+   "function": "file_load",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider10file_store9file_load",
+   "resolver_reason": "reg-top",
+   "resolver_class": "materialised",
+   "verdict": "CLOSED",
+   "refusal": null,
+   "witness": {
+    "schema": "openssl-rs/consumer-closure/per-call-site-witness/v1",
+    "rule": "decoder-method-object",
+    "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+    "contract_bounded": true,
+    "resolved": true,
+    "function": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider10file_store9file_load",
+    "call_site": "0x3cd8dd",
+    "operand": {
+     "base_reg": "%rax",
+     "member_offset": "0x30"
+    },
+    "object": {
+     "type": "OsslDecoder",
+     "constructor": "ossl_decoder_from_algorithm",
+     "constructor_address": "0x3f0d90",
+     "construction_call_site": "0x3cd8bb",
+     "argument_table": "ossl_any_to_obj_algorithm",
+     "argument_table_address": "0x897980",
+     "null_guarded": true
+    },
+    "field": {
+     "type": "OsslDecoder",
+     "repr_c": true,
+     "name": "newctx",
+     "read_offset": "0x30",
+     "writer": "ossl_decoder_from_algorithm",
+     "zero_initialiser": {
+      "file": "src/decoder_meth.rs",
+      "line": 227,
+      "why": "`ossl_decoder_new` is a `CRYPTO_zalloc` object; every slot is `None` until `ossl_decoder_from_algorithm` writes it, and each site tests its slot for NULL before the call"
+     }
+    },
+    "tables": [
+     {
+      "table": "DER_TO_OBJ_DECODER_FUNCTIONS",
+      "address": "0x7c7618",
+      "dispatch_id": 1,
+      "value": "0x204bd0",
+      "target": "any2obj_newctx"
+     },
+     {
+      "table": "MSBLOB_TO_OBJ_DECODER_FUNCTIONS",
+      "address": "0x7c7708",
+      "dispatch_id": 1,
+      "value": "0x204bd0",
+      "target": "any2obj_newctx"
+     },
+     {
+      "table": "PVK_TO_OBJ_DECODER_FUNCTIONS",
+      "address": "0x7c7678",
+      "dispatch_id": 1,
+      "value": "0x204bd0",
+      "target": "any2obj_newctx"
+     }
+    ],
+    "targets": [
+     "0x204bd0"
+    ],
+    "target_names": [
+     "any2obj_newctx"
+    ],
+    "writer_gate": {
+     "EvpAesKey": "PASS",
+     "EvpSm4Key": "PASS",
+     "OsslDecoder": "PASS"
+    },
+    "slot": "OsslDecoder.newctx@0x30 over 3 closed algorithm table(s)",
+    "basis": "an enumerated decoder method-slot call site; the object is the direct result of `ossl_decoder_from_algorithm` called on the closed `ossl_any_to_obj_algorithm` row set, the read is NULL-guarded, and every table's dispatch entry for this slot is an in-image function start",
+    "conditions": [
+     "containing-function-is-an-enumerated-site",
+     "slot-is-the-enumerated-field-offset",
+     "slot-read-is-null-guarded",
+     "object-is-the-direct-result-of-the-enumerated-constructor",
+     "constructor-argument-is-the-closed-algorithm-table",
+     "writer-set-and-owner-files-are-the-computed-exhaustive-set",
+     "every-row-table-is-an-enumerated-dispatch-table",
+     "every-dispatch-entry-is-a-single-in-image-function-start",
+     "target-set-is-exactly-the-enumerated-finite-set"
+    ]
+   }
+  },
+  {
+   "call_site": "0x3cd936",
+   "function": "file_load",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider10file_store9file_load",
+   "resolver_reason": "reg-top",
+   "resolver_class": "materialised",
+   "verdict": "CLOSED",
+   "refusal": null,
+   "witness": {
+    "schema": "openssl-rs/consumer-closure/per-call-site-witness/v1",
+    "rule": "decoder-method-object",
+    "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+    "contract_bounded": true,
+    "resolved": true,
+    "function": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider10file_store9file_load",
+    "call_site": "0x3cd936",
+    "operand": {
+     "base_reg": "%r12",
+     "member_offset": "0x50"
+    },
+    "object": {
+     "type": "OsslDecoder",
+     "constructor": "ossl_decoder_from_algorithm",
+     "constructor_address": "0x3f0d90",
+     "construction_call_site": "0x3cd8bb",
+     "argument_table": "ossl_any_to_obj_algorithm",
+     "argument_table_address": "0x897980",
+     "null_guarded": true
+    },
+    "field": {
+     "type": "OsslDecoder",
+     "repr_c": true,
+     "name": "set_ctx_params",
+     "read_offset": "0x50",
+     "writer": "ossl_decoder_from_algorithm",
+     "zero_initialiser": {
+      "file": "src/decoder_meth.rs",
+      "line": 227,
+      "why": "`ossl_decoder_new` is a `CRYPTO_zalloc` object; every slot is `None` until `ossl_decoder_from_algorithm` writes it, and each site tests its slot for NULL before the call"
+     }
+    },
+    "tables": [
+     {
+      "table": "DER_TO_OBJ_DECODER_FUNCTIONS",
+      "address": "0x7c7618",
+      "dispatch_id": 5,
+      "value": "0x2055c0",
+      "target": "any2obj_set_ctx_params"
+     },
+     {
+      "table": "MSBLOB_TO_OBJ_DECODER_FUNCTIONS",
+      "address": "0x7c7708",
+      "dispatch_id": 5,
+      "value": "0x2055c0",
+      "target": "any2obj_set_ctx_params"
+     },
+     {
+      "table": "PVK_TO_OBJ_DECODER_FUNCTIONS",
+      "address": "0x7c7678",
+      "dispatch_id": 5,
+      "value": "0x2055c0",
+      "target": "any2obj_set_ctx_params"
+     }
+    ],
+    "targets": [
+     "0x2055c0"
+    ],
+    "target_names": [
+     "any2obj_set_ctx_params"
+    ],
+    "writer_gate": {
+     "EvpAesKey": "PASS",
+     "EvpSm4Key": "PASS",
+     "OsslDecoder": "PASS"
+    },
+    "slot": "OsslDecoder.set_ctx_params@0x50 over 3 closed algorithm table(s)",
+    "basis": "an enumerated decoder method-slot call site; the object is the direct result of `ossl_decoder_from_algorithm` called on the closed `ossl_any_to_obj_algorithm` row set, the read is NULL-guarded, and every table's dispatch entry for this slot is an in-image function start",
+    "conditions": [
+     "containing-function-is-an-enumerated-site",
+     "slot-is-the-enumerated-field-offset",
+     "slot-read-is-null-guarded",
+     "object-is-the-direct-result-of-the-enumerated-constructor",
+     "constructor-argument-is-the-closed-algorithm-table",
+     "writer-set-and-owner-files-are-the-computed-exhaustive-set",
+     "every-row-table-is-an-enumerated-dispatch-table",
+     "every-dispatch-entry-is-a-single-in-image-function-start",
+     "target-set-is-exactly-the-enumerated-finite-set"
+    ]
+   }
+  },
+  {
+   "call_site": "0x3cd980",
+   "function": "file_load",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider10file_store9file_load",
+   "resolver_reason": "reg-top",
+   "resolver_class": "materialised",
+   "verdict": "CLOSED",
+   "refusal": null,
+   "witness": {
+    "schema": "openssl-rs/consumer-closure/per-call-site-witness/v1",
+    "rule": "decoder-method-object",
+    "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+    "contract_bounded": true,
+    "resolved": true,
+    "function": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider10file_store9file_load",
+    "call_site": "0x3cd980",
+    "operand": {
+     "base_reg": "%rax",
+     "member_offset": "0x38"
+    },
+    "object": {
+     "type": "OsslDecoder",
+     "constructor": "ossl_decoder_from_algorithm",
+     "constructor_address": "0x3f0d90",
+     "construction_call_site": "0x3cd8bb",
+     "argument_table": "ossl_any_to_obj_algorithm",
+     "argument_table_address": "0x897980",
+     "null_guarded": true
+    },
+    "field": {
+     "type": "OsslDecoder",
+     "repr_c": true,
+     "name": "freectx",
+     "read_offset": "0x38",
+     "writer": "ossl_decoder_from_algorithm",
+     "zero_initialiser": {
+      "file": "src/decoder_meth.rs",
+      "line": 227,
+      "why": "`ossl_decoder_new` is a `CRYPTO_zalloc` object; every slot is `None` until `ossl_decoder_from_algorithm` writes it, and each site tests its slot for NULL before the call"
+     }
+    },
+    "tables": [
+     {
+      "table": "DER_TO_OBJ_DECODER_FUNCTIONS",
+      "address": "0x7c7618",
+      "dispatch_id": 2,
+      "value": "0x205090",
+      "target": "any2obj_freectx"
+     },
+     {
+      "table": "MSBLOB_TO_OBJ_DECODER_FUNCTIONS",
+      "address": "0x7c7708",
+      "dispatch_id": 2,
+      "value": "0x205090",
+      "target": "any2obj_freectx"
+     },
+     {
+      "table": "PVK_TO_OBJ_DECODER_FUNCTIONS",
+      "address": "0x7c7678",
+      "dispatch_id": 2,
+      "value": "0x205090",
+      "target": "any2obj_freectx"
+     }
+    ],
+    "targets": [
+     "0x205090"
+    ],
+    "target_names": [
+     "any2obj_freectx"
+    ],
+    "writer_gate": {
+     "EvpAesKey": "PASS",
+     "EvpSm4Key": "PASS",
+     "OsslDecoder": "PASS"
+    },
+    "slot": "OsslDecoder.freectx@0x38 over 3 closed algorithm table(s)",
+    "basis": "an enumerated decoder method-slot call site; the object is the direct result of `ossl_decoder_from_algorithm` called on the closed `ossl_any_to_obj_algorithm` row set, the read is NULL-guarded, and every table's dispatch entry for this slot is an in-image function start",
+    "conditions": [
+     "containing-function-is-an-enumerated-site",
+     "slot-is-the-enumerated-field-offset",
+     "slot-read-is-null-guarded",
+     "object-is-the-direct-result-of-the-enumerated-constructor",
+     "constructor-argument-is-the-closed-algorithm-table",
+     "writer-set-and-owner-files-are-the-computed-exhaustive-set",
+     "every-row-table-is-an-enumerated-dispatch-table",
+     "every-dispatch-entry-is-a-single-in-image-function-start",
+     "target-set-is-exactly-the-enumerated-finite-set"
+    ]
+   }
+  },
+  {
+   "call_site": "0x5250c1",
+   "function": "aes_ecb_cipher",
+   "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs3evp5e_aes14aes_ecb_cipher",
+   "resolver_reason": "base-slot-partial",
+   "resolver_class": "field",
+   "verdict": "CLOSED",
+   "refusal": null,
+   "witness": {
+    "schema": "openssl-rs/consumer-closure/per-call-site-witness/v1",
+    "rule": "legacy-evp-cipher-data",
+    "class": "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA",
+    "contract_bounded": true,
+    "resolved": true,
+    "function": "_RNvNtNtCscx02WjRFd5b_10openssl_rs3evp5e_aes14aes_ecb_cipher",
+    "call_site": "0x5250c1",
+    "operand": {
+     "base_reg": "%rbp",
+     "member_offset": "0x0"
+    },
+    "context": {
+     "type": "EvpCipherCtx",
+     "data_type": "EvpAesKey",
+     "data_offset": "0x78",
+     "base_loads": [
+      {
+       "offset": 120,
+       "base_reg": "%rdi",
+       "at": 28,
+       "addr": 5394593
+      }
+     ],
+     "provenance": "cipher_data pointer from the context parameter"
+    },
+    "field": {
+     "type": "EvpAesKey",
+     "repr_c": false,
+     "repr_note": "no #[repr(C)]: the read offset is image-measured and compiler-dependent; it is confirmed here by the function set stored at that displacement",
+     "name": "block",
+     "read_offset": "0x0",
+     "writer_set": [
+      "aes_decrypt_block",
+      "aes_encrypt_block"
+     ],
+     "zero_initialiser": {
+      "file": "src/evp/cipher_ctx.rs",
+      "line": 2269,
+      "why": "`CRYPTO_zalloc(ctx_size, FILE_ENC, 786)` builds the method's `cipher_data` block (e_aes.c's `ctx_size` is `sizeof(EVP_AES_KEY)`); the legacy `init` callback is documented to run before `do_cipher`"
+     }
+    },
+    "initialiser": {
+     "function": "aes_init_key",
+     "address": "0x523f50",
+     "stores": [
+      {
+       "insn": "0x524039",
+       "values": [
+        5403408
+       ],
+       "base_reg": "%r12"
+      },
+      {
+       "insn": "0x524071",
+       "values": [
+        5403424
+       ],
+       "base_reg": "%r12"
+      },
+      {
+       "insn": "0x52417d",
+       "values": [
+        5403424
+       ],
+       "base_reg": "%r12"
+      }
+     ]
+    },
+    "tables": [],
+    "targets": [
+     "0x527310",
+     "0x527320"
+    ],
+    "target_names": [
+     "aes_decrypt_block",
+     "aes_encrypt_block"
+    ],
+    "writer_gate": {
+     "EvpAesKey": "PASS",
+     "EvpSm4Key": "PASS",
+     "OsslDecoder": "PASS"
+    },
+    "slot": "EvpAesKey.block@0x0 stored by aes_init_key over 3 image store(s)",
+    "basis": "an enumerated legacy EVP ECB callback; the read base is the context's cipher_data pointer, the field's production writer set is the complete computed set and every stored value is an in-image function of the enumerated module",
+    "conditions": [
+     "containing-function-is-an-enumerated-site",
+     "operand-is-the-enumerated-field-displacement",
+     "read-base-is-the-context-cipher-data-pointer",
+     "data-type-is-the-enumerated-owning-type",
+     "writer-set-and-owner-files-are-the-computed-exhaustive-set",
+     "stored-value-set-is-exactly-the-enumerated-function-set",
+     "every-stored-value-is-an-in-image-function-of-the-owning-module"
+    ]
+   }
+  }
+ ],
+ "sites_count": 5,
+ "closed_count": 5,
+ "refused_count": 0,
+ "conditions": [
+  {
+   "id": 1,
+   "text": "containing-function-is-an-enumerated-site",
+   "citation": "src/evp/e_aes.rs:448, src/evp/e_sm4.rs:239, src/provider/file_store.rs:1213 -- the five call sites are enumerated by address and containing function"
+  },
+  {
+   "id": 2,
+   "text": "operand-is-the-enumerated-field-displacement",
+   "citation": "legacy: `call *disp(%reg)` with disp == the image-measured field offset (0x0); decoder: the loaded slot offset is +0x30/+0x38/+0x50, which is exactly `newctx`/`freectx`/`set_ctx_params` of the `#[repr(C)]` base (0x30) plus the declaration order"
+  },
+  {
+   "id": 3,
+   "text": "read-base-is-derived-from-the-context-or-object",
+   "citation": "legacy: `%r12/%rbp = (*ctx).cipher_data` at 0x78 (src/evp/cipher_ctx.rs:294), proven from entry parameter 0; decoder: the base is the direct result of `ossl_decoder_from_algorithm` at 0x3cd8bb (src/provider/file_store.rs:883)"
+  },
+  {
+   "id": 4,
+   "text": "data-type-is-the-enumerated-owning-type",
+   "citation": "src/evp/e_aes.rs:458 `.cast::<EvpAesKey>()`; src/evp/e_sm4.rs:73-76 `data(ctx) -> *mut EvpSm4Key`; decoder: `OsslDecoder` is `#[repr(C)]` (src/decoder_meth.rs:192)"
+  },
+  {
+   "id": 5,
+   "text": "writer-set-and-owner-files-are-the-computed-exhaustive-set",
+   "citation": "the computed scan above; the gate refuses an unclassified production write or an owner file outside the enumeration"
+  },
+  {
+   "id": 6,
+   "text": "stored-value-set-is-exactly-the-enumerated-function-set",
+   "citation": "legacy image stores 0x524039/0x524071/0x52417d and 0x2c34ea; decoder table entries DER/MSBLOB/PVK (src/provider/file_store_any2obj.rs:693-773) for ids 1/2/5"
+  },
+  {
+   "id": 7,
+   "text": "every-target-is-an-in-image-function-start-of-the-owning-module",
+   "citation": "symbol-at-address and module-token equality; the two `aes_encrypt_block` symbols are disambiguated by module path, not by name"
+  },
+  {
+   "id": 8,
+   "text": "slot-read-is-null-guarded (decoder)",
+   "citation": "0x3cd8d0/0x3cd8f6/0x3cd971 `test reg,reg` + `je` before the indirect call; the zero-initialised object is recorded as the pre-writer state"
+  },
+  {
+   "id": 9,
+   "text": "constructor-argument-is-the-closed-algorithm-table (decoder)",
+   "citation": "0x3cd8b6 `mov %r13,%rsi`, rooted at 0x897980 `ossl_any_to_obj_algorithm`; the three row tables are read from the image"
+  },
+  {
+   "id": 10,
+   "text": "writer-completeness-gate-is-computed-not-listed",
+   "citation": "`_led_source_gate`; the controls below observe both the failure and the `#[cfg(test)]` pass"
+  }
+ ],
+ "controls": {
+  "A_writer_drop": {
+   "fixture": "LED_FIELD_VALUES[('EvpAesKey', 'block')] loses aes_encrypt_block",
+   "observed": {
+    "RESOLVED": 4,
+    "field-writer-set-not-enumerated": 1
+   },
+   "reverted": {
+    "0x5250c1": "field-writer-set-not-enumerated"
+   }
+  },
+  "B_target_drop": {
+   "fixture": "PVK table loses its FREECTX entry",
+   "observed": {
+    "RESOLVED": 4,
+    "dispatch-entry-absent": 1
+   },
+   "reverted": {
+    "0x3cd980": "dispatch-entry-absent"
+   }
+  },
+  "C_non_writer_add": {
+   "fixture": "LED_FIELD_VALUES[('EvpAesKey', 'block')] gains aes_cbc_stream",
+   "observed": {
+    "RESOLVED": 4,
+    "field-writer-set-not-enumerated": 1
+   },
+   "reverted": {
+    "0x5250c1": "field-writer-set-not-enumerated"
+   }
+  },
+  "E_completeness_gate_controls": {
+   "EvpAesKey": {
+    "production_in_unlisted_file": {
+     "fixture": "src/evp/e_aes_scan.rs production initialiser (synthetic, re-scanned)",
+     "gate_type_status": "FAIL",
+     "missing_files": [
+      "src/evp/e_aes_scan.rs"
+     ],
+     "reverted": {
+      "0x5250c1": "legacy-decoder-writer-set-not-exhaustive"
+     }
+    },
+    "test_only_initialiser_in_unlisted_file": {
+     "fixture": "src/evp/e_aes_scan.rs `#[cfg(test)]` initialiser (synthetic, re-scanned)",
+     "gate_type_status": "PASS",
+     "test_only_recorded": [
+      "EvpAesKey"
+     ],
+     "reverted": {}
+    }
+   },
+   "EvpSm4Key": {
+    "production_in_unlisted_file": {
+     "fixture": "src/evp/e_sm4_scan.rs production initialiser (synthetic, re-scanned)",
+     "gate_type_status": "FAIL",
+     "missing_files": [
+      "src/evp/e_sm4_scan.rs"
+     ],
+     "reverted": {
+      "0x2c37f2": "legacy-decoder-writer-set-not-exhaustive"
+     }
+    },
+    "test_only_initialiser_in_unlisted_file": {
+     "fixture": "src/evp/e_sm4_scan.rs `#[cfg(test)]` initialiser (synthetic, re-scanned)",
+     "gate_type_status": "PASS",
+     "test_only_recorded": [
+      "EvpSm4Key"
+     ],
+     "reverted": {}
+    }
+   },
+   "OsslDecoder": {
+    "production_in_unlisted_file": {
+     "fixture": "src/decoder_meth_scan.rs production initialiser (synthetic, re-scanned)",
+     "gate_type_status": "FAIL",
+     "missing_files": [
+      "src/decoder_meth_scan.rs"
+     ],
+     "reverted": {
+      "0x3cd8dd": "legacy-decoder-writer-set-not-exhaustive",
+      "0x3cd936": "legacy-decoder-writer-set-not-exhaustive",
+      "0x3cd980": "legacy-decoder-writer-set-not-exhaustive"
+     }
+    },
+    "test_only_initialiser_in_unlisted_file": {
+     "fixture": "src/decoder_meth_scan.rs `#[cfg(test)]` initialiser (synthetic, re-scanned)",
+     "gate_type_status": "PASS",
+     "test_only_recorded": [
+      "OsslDecoder",
+      "OsslDecoder"
+     ],
+     "reverted": {}
+    }
+   }
+  },
+  "negatives": [
+   {
+    "fixture": "0x5250c1 read offset changed to 0x8",
+    "observed": "read-field-not-enumerated",
+    "expected": "read-field-not-enumerated"
+   },
+   {
+    "fixture": "0x5250c1 field changed to the valid but unenumerated `stream_ecb`",
+    "observed": "field-not-in-enumerated-table",
+    "expected": "field-not-in-enumerated-table"
+   },
+   {
+    "fixture": "0x5250c1 owning type changed to EvpSm4Key",
+    "observed": "data-type-not-proven",
+    "expected": "data-type-not-proven"
+   },
+   {
+    "fixture": "decoder dispatch entry replaced by a non-image address",
+    "observed": "dispatch-value-not-function",
+    "expected": "dispatch-value-not-function"
+   }
+  ],
+  "restored": {
+   "equals_baseline": true,
+   "tool_sha_before": "c29991559c44a4ccf05048c163b90d51dd90595647a714a0685ee1d5be862fbe",
+   "tool_sha_after": "c29991559c44a4ccf05048c163b90d51dd90595647a714a0685ee1d5be862fbe",
+   "tool_unchanged": true
+  },
+  "A_closure_level": {
+   "fixture": "LED_FIELD_VALUES[('EvpAesKey','block')] loses aes_encrypt_block; whole ssh closure re-run (court/tmp/e7ld-ctrl-closure.py)",
+   "observed_element7": {
+    "target_bounded_unresolved_sites": 27,
+    "contract_bounded_sites": 104,
+    "by_class_LEGACY_EVP_CIPHER_DATA": 1,
+    "verdict": "ACCEPTED",
+    "refusals": 0
+   },
+   "expected": "1 site reverts (26->27, 105->104, LEGACY 2->1)",
+   "reverted": [
+    [
+     "0x5250c1",
+     "field",
+     "base-slot-partial"
+    ]
+   ]
+  }
+ },
+ "measurement": {
+  "commands": {
+   "ssh": "python3 forensics/tools/consumer_closure.py --family openssh --artifact court/tmp/openssh-closure/client-b53/openssh-9.9p1/ssh --install artifacts/phase2/install --inventory court/freeze-b53/census-b53.json --carry-forward-closure court/inventory/closure-ssh-b51-baseline.json --enrolment-blockers forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json --workdir court/tmp/closure-b53-e7ld/work-ssh --output evidence/closure-ssh-b53-e7ld.json",
+   "sshd": "the same command with the server-b53 sshd binary, court/inventory/closure-sshd-b51-baseline.json, work-sshd and --output evidence/inventory-sshd-b53-e7ld.json"
+  },
+  "results": {
+   "ssh": {
+    "before": {
+     "path": "evidence/closure-ssh-b53-e7hw-r2.json",
+     "sha256": "eaba1fda75f5b1045b78b08f3daa4adae25d7424d39db2b32794e2c38da2172d",
+     "verdict": "ACCEPTED",
+     "refusals": 0,
+     "element7": {
+      "status": "FAIL",
+      "reachable_unresolved_sites": 131,
+      "target_bounded_unresolved_sites": 31,
+      "contract_bounded_sites": 100,
+      "unclassified_reachable_sites": 0
+     },
+     "by_class": {
+      "ABI_CONTRACT_EXPORT_CALLBACK": 51,
+      "ABI_CONTRACT_PROVIDER": 14,
+      "ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK": 4,
+      "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+      "ABI_CONTRACT_SLH_METHOD_TABLE": 6
+     }
+    },
+    "after": {
+     "path": "evidence/closure-ssh-b53-e7ld.json",
+     "sha256": "a5af36258d57de01724abef3950058f203f1f2973391d428e4b1c0f03e4b4aa9",
+     "verdict": "ACCEPTED",
+     "refusals": 0,
+     "element7": {
+      "status": "FAIL",
+      "reachable_unresolved_sites": 131,
+      "target_bounded_unresolved_sites": 26,
+      "contract_bounded_sites": 105,
+      "unclassified_reachable_sites": 0
+     },
+     "by_class": {
+      "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+      "ABI_CONTRACT_EXPORT_CALLBACK": 51,
+      "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+      "ABI_CONTRACT_PROVIDER": 14,
+      "ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK": 4,
+      "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+      "ABI_CONTRACT_SLH_METHOD_TABLE": 6
+     },
+     "obligations": {
+      "total": 378,
+      "DISCHARGED": 186,
+      "BLOCKED": 192,
+      "UNKNOWN": 0
+     }
+    },
+    "changed_count": 5,
+    "changed": [
+     {
+      "dso": "libcrypto.so.3",
+      "function": "0x2c3760",
+      "call_site": "0x2c37f2",
+      "before_class": "field",
+      "after_class": "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA",
+      "before_reason": "base-slot-partial",
+      "after_reason": "legacy EVP cipher-data closed writer set: EvpSm4Key.block@0x0 stored by sm4_init_key over 1 image store(s)"
+     },
+     {
+      "dso": "libcrypto.so.3",
+      "function": "0x3cd1e0",
+      "call_site": "0x3cd8dd",
+      "before_class": "materialised",
+      "after_class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+      "before_reason": "reg-top",
+      "after_reason": "decoder method-object closed table closure: OsslDecoder.newctx@0x30 over 3 closed algorithm table(s)"
+     },
+     {
+      "dso": "libcrypto.so.3",
+      "function": "0x3cd1e0",
+      "call_site": "0x3cd936",
+      "before_class": "materialised",
+      "after_class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+      "before_reason": "reg-top",
+      "after_reason": "decoder method-object closed table closure: OsslDecoder.set_ctx_params@0x50 over 3 closed algorithm table(s)"
+     },
+     {
+      "dso": "libcrypto.so.3",
+      "function": "0x3cd1e0",
+      "call_site": "0x3cd980",
+      "before_class": "materialised",
+      "after_class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+      "before_reason": "reg-top",
+      "after_reason": "decoder method-object closed table closure: OsslDecoder.freectx@0x38 over 3 closed algorithm table(s)"
+     },
+     {
+      "dso": "libcrypto.so.3",
+      "function": "0x525060",
+      "call_site": "0x5250c1",
+      "before_class": "field",
+      "after_class": "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA",
+      "before_reason": "base-slot-partial",
+      "after_reason": "legacy EVP cipher-data closed writer set: EvpAesKey.block@0x0 stored by aes_init_key over 3 image store(s)"
+     }
+    ]
+   },
+   "sshd": {
+    "before": {
+     "path": "evidence/inventory-sshd-b53-e7hw-r2.json",
+     "sha256": "658eaefbfeb5a4766ff21d9d99cd2bda02680e7539e53ed349991aa0f4e20d6e",
+     "verdict": "ACCEPTED",
+     "refusals": 0,
+     "element7": {
+      "status": "FAIL",
+      "reachable_unresolved_sites": 131,
+      "target_bounded_unresolved_sites": 31,
+      "contract_bounded_sites": 100,
+      "unclassified_reachable_sites": 0
+     },
+     "by_class": {
+      "ABI_CONTRACT_EXPORT_CALLBACK": 51,
+      "ABI_CONTRACT_PROVIDER": 14,
+      "ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK": 4,
+      "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+      "ABI_CONTRACT_SLH_METHOD_TABLE": 6
+     }
+    },
+    "after": {
+     "path": "evidence/inventory-sshd-b53-e7ld.json",
+     "sha256": "771b6419d846fa11c6208360e6ba8186a3bed2aebeff989f5f507e0501750f7e",
+     "verdict": "ACCEPTED",
+     "refusals": 0,
+     "element7": {
+      "status": "FAIL",
+      "reachable_unresolved_sites": 131,
+      "target_bounded_unresolved_sites": 26,
+      "contract_bounded_sites": 105,
+      "unclassified_reachable_sites": 0
+     },
+     "by_class": {
+      "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+      "ABI_CONTRACT_EXPORT_CALLBACK": 51,
+      "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+      "ABI_CONTRACT_PROVIDER": 14,
+      "ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK": 4,
+      "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+      "ABI_CONTRACT_SLH_METHOD_TABLE": 6
+     },
+     "obligations": {
+      "total": 378,
+      "DISCHARGED": 186,
+      "BLOCKED": 192,
+      "UNKNOWN": 0
+     }
+    },
+    "changed_count": 5,
+    "changed": [
+     {
+      "dso": "libcrypto.so.3",
+      "function": "0x2c3760",
+      "call_site": "0x2c37f2",
+      "before_class": "field",
+      "after_class": "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA",
+      "before_reason": "base-slot-partial",
+      "after_reason": "legacy EVP cipher-data closed writer set: EvpSm4Key.block@0x0 stored by sm4_init_key over 1 image store(s)"
+     },
+     {
+      "dso": "libcrypto.so.3",
+      "function": "0x3cd1e0",
+      "call_site": "0x3cd8dd",
+      "before_class": "materialised",
+      "after_class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+      "before_reason": "reg-top",
+      "after_reason": "decoder method-object closed table closure: OsslDecoder.newctx@0x30 over 3 closed algorithm table(s)"
+     },
+     {
+      "dso": "libcrypto.so.3",
+      "function": "0x3cd1e0",
+      "call_site": "0x3cd936",
+      "before_class": "materialised",
+      "after_class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+      "before_reason": "reg-top",
+      "after_reason": "decoder method-object closed table closure: OsslDecoder.set_ctx_params@0x50 over 3 closed algorithm table(s)"
+     },
+     {
+      "dso": "libcrypto.so.3",
+      "function": "0x3cd1e0",
+      "call_site": "0x3cd980",
+      "before_class": "materialised",
+      "after_class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+      "before_reason": "reg-top",
+      "after_reason": "decoder method-object closed table closure: OsslDecoder.freectx@0x38 over 3 closed algorithm table(s)"
+     },
+     {
+      "dso": "libcrypto.so.3",
+      "function": "0x525060",
+      "call_site": "0x5250c1",
+      "before_class": "field",
+      "after_class": "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA",
+      "before_reason": "base-slot-partial",
+      "after_reason": "legacy EVP cipher-data closed writer set: EvpAesKey.block@0x0 stored by aes_init_key over 3 image store(s)"
+     }
+    ]
+   }
+  },
+  "element7_before_after": {
+   "ssh": {
+    "before": 31,
+    "after": 26
+   },
+   "sshd": {
+    "before": 31,
+    "after": 26
+   }
+  },
+  "obligations": {
+   "total": 378,
+   "DISCHARGED": 186,
+   "BLOCKED": 192,
+   "UNKNOWN": 0
+  },
+  "verdicts": {
+   "ssh": "ACCEPTED",
+   "sshd": "ACCEPTED",
+   "refusals": 0
+  },
+  "gates": {
+   "tool_syntax": "PASS (python3 -m py_compile)",
+   "closure_ssh": "PASS (ACCEPTED, 0 refusals)",
+   "closure_sshd": "PASS (ACCEPTED, 0 refusals)",
+   "rust_fmt_clippy_tests": "NOT_RUN \u2014 no Rust source changed; the batch edits only the analysis tool"
+  }
+ },
+ "non_claims": [
+  "Element 7 is still FAIL: 26 reachable target-bounded sites remain.",
+  "The two classes are internal closed dispatches, not external ABI application callbacks; their admission rests on the finite, enumerated target set, not on a documented application obligation.",
+  "The target set is what the field/table can hold; it does not assert that any particular target executes, nor the correctness of its body.",
+  "The legacy structs are not `#[repr(C)]`; the field offsets are image-measured and compiler-dependent, and are confirmed here by the function set stored at that displacement.",
+  "Reachability of these targets from the two workloads is the closure's own result; this artifact does not re-measure it.",
+  "No obligation status changed: 378 = 186/192/0 before and after.",
+  "No compatibility or cryptographic assurance claim is made here."
+ ],
+ "residuals": [
+  {
+   "id": "E7LD-R1",
+   "state": "OPEN",
+   "why": "0x2c37af (`sm4_ecb_cipher`'s `stream_ecb` dispatch) remains target-bounded; that field is written only `None` in this profile, but the site is the `%rax` path and is not part of this batch."
+  },
+  {
+   "id": "E7LD-R2",
+   "state": "OPEN",
+   "why": "`OsslDecoder` objects can also be built through the method store (`construct_decoder`); the witness bounds only the direct `ossl_decoder_from_algorithm` provenance at the three enumerated sites."
+  },
+  {
+   "id": "E7LD-R3",
+   "state": "OPEN",
+   "why": "The zeroed `cipher_data`/`OsslDecoder` storage is recorded as the pre-writer state; the ordering argument is the documented init-before-do_cipher / constructor-before-use contract, not an image data-flow proof."
+  },
+  {
+   "id": "E7LD-R4",
+   "state": "OPEN",
+   "why": "Independent review is pending (this artifact is author-generated)."
+  }
+ ],
+ "outcome": {
+  "action": "tool extended with two site-enumerated witness rules and a computed writer-set completeness gate; the five sites are counted again",
+  "counted": "5 of 5",
+  "evidence_files": [
+   "evidence/closure-ssh-b53-e7ld.json",
+   "evidence/inventory-sshd-b53-e7ld.json"
+  ],
+  "generator": "court/tmp/e7ld-artifact.py (scratch; not tracked)"
+ }
+}

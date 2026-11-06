@@ -2126,12 +2126,23 @@ ABI_CONTRACT_SLH_METHOD_TABLE = "ABI_CONTRACT_SLH_METHOD_TABLE"
 # target-bounded: every site's read field, its context closure and its complete
 # target set are named, and the image must resolve to exactly those functions.
 ABI_CONTRACT_PROVIDER_HW_TABLE = "ABI_CONTRACT_PROVIDER_HW_TABLE"
+# The legacy `EVP_CIPHER` cipher-data dispatch: the ECB callbacks read a bare
+# `block128_f` from the method-allocated cipher-data block, and the field's
+# production writer set is the closed, computed set of `*_init_key` stores.
+# Site-enumerated and target-bounded, like the provider hw tables.
+ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA = "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA"
+# The `OsslDecoder` method-object dispatch: `file_load` builds the object from
+# the closed `ossl_any_to_obj_algorithm` row set and calls its `newctx`,
+# `set_ctx_params` and `freectx` slots.  One writer, a finite table closure.
+ABI_CONTRACT_DECODER_METHOD_OBJECT = "ABI_CONTRACT_DECODER_METHOD_OBJECT"
 
 ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
                                   ABI_CONTRACT_EXPORT_CALLBACK,
                                   ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK,
                                   ABI_CONTRACT_SLH_METHOD_TABLE,
-                                  ABI_CONTRACT_PROVIDER_HW_TABLE})
+                                  ABI_CONTRACT_PROVIDER_HW_TABLE,
+                                  ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA,
+                                  ABI_CONTRACT_DECODER_METHOD_OBJECT})
 
 ABI_CONTRACTS = {
     ABI_CONTRACT_PROVIDER: {
@@ -2358,6 +2369,75 @@ ABI_CONTRACTS = {
             "the reachability of these targets from the consumer workload; that "
             "remains the closure's job",
             "any claim about the correctness of the selected function's body",
+        ],
+    },
+    ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA: {
+        "resolution_kind": (
+            "target-bounded by a closed, source-computed field writer set"
+        ),
+        "contract": (
+            "the legacy `EVP_CIPHER` cipher-data block (`EVP_AES_KEY`, "
+            "`EVP_SM4_KEY`) and its `block128_f` field"
+        ),
+        "citation": [
+            "src/evp/e_aes.rs:259-264 -- `EvpAesKey { ks, block, "
+            "stream_cbc, stream_ctr }`, not `#[repr(C)]`",
+            "src/evp/e_aes.rs:367,379 -- the only two production stores to "
+            "`(*dat).block`, both in `aes_init_key`",
+            "src/evp/e_sm4.rs:102-113 -- `EvpSm4Key { ks, block, stream_ecb, "
+            "stream_cbc, stream_ctr }`, not `#[repr(C)]`",
+            "src/evp/e_sm4.rs:143,149 -- the only two production stores to "
+            "`(*dat).block`, both in `sm4_init_key`",
+            "src/evp/cipher_ctx.rs:2269 -- the `cipher_data` block is a "
+            "`CRYPTO_zalloc` allocation; the legacy `init` runs before "
+            "`do_cipher`",
+            "the writer set and owner files are COMPUTED by scanning `src/`; "
+            "`#[cfg(test)]` writes are recorded and excluded",
+        ],
+        "covers": (
+            "the exact in-image function set stored at the image-measured "
+            "`block` displacement by the enumerated init callback"),
+        "does_not_cover": [
+            "an indirect site outside the two enumerated call sites",
+            "any field whose production writer the scan cannot attribute",
+            "any stored value that is not an in-image function start of the "
+            "owning module",
+            "the reachability of these targets from the consumer workload",
+        ],
+    },
+    ABI_CONTRACT_DECODER_METHOD_OBJECT: {
+        "resolution_kind": (
+            "target-bounded by a closed algorithm-table dispatch closure"
+        ),
+        "contract": (
+            "the `OsslDecoder` method object (`newctx`, `set_ctx_params`, "
+            "`freectx` slots) built from `ossl_any_to_obj_algorithm`"
+        ),
+        "citation": [
+            "src/decoder_meth.rs:192-217 -- `OsslDecoder` is `#[repr(C)]`; the "
+            "base is `OsslEndecodeBase` (0x30), so `newctx` is +0x30, "
+            "`freectx` is +0x38 and `set_ctx_params` is +0x50",
+            "src/decoder_meth.rs:308-398 -- `ossl_decoder_from_algorithm` is "
+            "the only production writer of the nine method slots",
+            "src/provider/file_store.rs:871-886 -- `file_load` walks "
+            "`ossl_any_to_obj_algorithm` and passes each row to "
+            "`ossl_decoder_from_algorithm(0, to_algo, NULL)`",
+            "src/provider/file_store_any2obj.rs:693-773 -- the three closed "
+            "dispatch tables (`DER_TO_OBJ`, `MSBLOB_TO_OBJ`, `PVK_TO_OBJ`)",
+            "src/provider/file_store_any2obj.rs:782-807 -- the three-row "
+            "algorithm table that names those tables",
+            "the object's writer set and owner files are COMPUTED by scanning "
+            "`src/`; `#[cfg(test)]` writes are recorded and excluded",
+        ],
+        "covers": (
+            "the exact function each enumerated slot resolves to across the "
+            "three closed dispatch tables of `ossl_any_to_obj_algorithm`"),
+        "does_not_cover": [
+            "an indirect site outside the three enumerated call sites",
+            "a decoder object obtained through the method store instead of the "
+            "direct `ossl_decoder_from_algorithm` call",
+            "any dispatch entry that is NULL or not an in-image function start",
+            "the reachability of these targets from the consumer workload",
         ],
     },
 }
@@ -13265,6 +13345,1090 @@ def provider_hw_table_witness(g: "DsoGraph", site: dict, name: str):
     }
 
 
+# ---- S7: legacy EVP cipher-data and decoder method objects -------------- #
+#
+# Two internal closed-set dispatches whose read field is written by a small,
+# source-enumerated set of stores.  Neither is an external application
+# callback; both are admitted on a finite, source-derived target set, exactly
+# as S5 admits the provider hw tables.  The completeness gate is COMPUTED by
+# scanning `src/` for every production write/initialiser of the owning types;
+# a write the scan cannot attribute refuses every site of that family.
+#
+#  * `legacy_evp_cipher_data` -- the legacy `EVP_CIPHER` ECB callbacks call
+#    `EvpAesKey.block` / `EvpSm4Key.block`, a bare `block128_f` filled only by
+#    the matching `*_init_key`.  Neither struct is `#[repr(C)]`, so the read
+#    offset is image-measured and bound to the enumerated field by the store
+#    values resolved at that exact displacement.
+#  * `decoder_method_object` -- `file_load` builds an `OsslDecoder` by calling
+#    `ossl_decoder_from_algorithm` on each row of the closed
+#    `ossl_any_to_obj_algorithm` table and calls `newctx`, `set_ctx_params` and
+#    `freectx`.  The object's field writer is one function; the stored values
+#    are the dispatch entries of the three closed algorithm tables.
+
+LEGACY_EVP_DATA_WITNESS_RULE = "legacy-evp-cipher-data"
+DECODER_METHOD_WITNESS_RULE = "decoder-method-object"
+
+# The owning types the scan must classify.  `fields` is the complete declared
+# field list (including `base.*` projections) so that an unexpected store can
+# never be silently attributed to another type by field name alone.
+LED_SOURCE_TYPES = {
+    "EvpAesKey": {
+        "file": "src/evp/e_aes.rs",
+        "repr_c": False,
+        "fields": ("ks", "block", "stream_cbc", "stream_ctr"),
+    },
+    "EvpSm4Key": {
+        "file": "src/evp/e_sm4.rs",
+        "repr_c": False,
+        "fields": ("ks", "block", "stream_ecb", "stream_cbc",
+                   "stream_ctr"),
+    },
+    "OsslDecoder": {
+        "file": "src/decoder_meth.rs",
+        "repr_c": True,
+        "fields": ("newctx", "freectx", "get_params", "gettable_params",
+                   "set_ctx_params", "settable_ctx_params",
+                   "does_selection", "decode", "export_object",
+                   "base.id", "base.name", "base.algodef",
+                   "base.parsed_propdef", "base.prov", "base.refcnt"),
+    },
+}
+
+# The complete production writer set of each type, computed from `src/` and
+# frozen here.  The gate compares the scan against it; an extra or missing
+# (function, field) pair refuses every site of that family.
+LED_ENUMERATED_WRITES = {
+    "EvpAesKey": frozenset({
+        ("aes_init_key", "block"),
+        ("aes_init_key", "stream_cbc"),
+        ("aes_init_key", "stream_ctr"),
+        ("aes_init_key", "ks"),
+    }),
+    "EvpSm4Key": frozenset({
+        ("sm4_init_key", "block"),
+        ("sm4_init_key", "stream_ecb"),
+        ("sm4_init_key", "stream_cbc"),
+        ("sm4_init_key", "stream_ctr"),
+        ("sm4_init_key", "ks"),
+    }),
+    "OsslDecoder": frozenset({
+        ("ossl_decoder_new", "base.refcnt"),
+        ("ossl_decoder_from_algorithm", "base.id"),
+        ("ossl_decoder_from_algorithm", "base.name"),
+        ("ossl_decoder_from_algorithm", "base.algodef"),
+        ("ossl_decoder_from_algorithm", "base.parsed_propdef"),
+        ("ossl_decoder_from_algorithm", "base.prov"),
+        ("ossl_decoder_from_algorithm", "newctx"),
+        ("ossl_decoder_from_algorithm", "freectx"),
+        ("ossl_decoder_from_algorithm", "get_params"),
+        ("ossl_decoder_from_algorithm", "gettable_params"),
+        ("ossl_decoder_from_algorithm", "set_ctx_params"),
+        ("ossl_decoder_from_algorithm", "settable_ctx_params"),
+        ("ossl_decoder_from_algorithm", "does_selection"),
+        ("ossl_decoder_from_algorithm", "decode"),
+        ("ossl_decoder_from_algorithm", "export_object"),
+    }),
+}
+
+# The function values each read field may hold, from source.  Every value is a
+# named function of the owning module; a NULL or unresolved expression is
+# recorded separately and refuses the site.
+LED_FIELD_VALUES = {
+    ("EvpAesKey", "block"): frozenset(("aes_decrypt_block",
+                                       "aes_encrypt_block")),
+    ("EvpSm4Key", "block"): frozenset(("sm4_decrypt_block",
+                                       "sm4_encrypt_block")),
+}
+
+# Zeroed storage that precedes the enumerated writers.  It is not a source
+# store of a function value: `EVP_CIPHER_CTX`'s `cipher_data` block and
+# `ossl_decoder_new`'s object are `CRYPTO_zalloc` blocks, and the legacy
+# `do_cipher` / decoder dispatch order (init before do_cipher, constructor
+# before the returned object is used) is the documented ABI ordering.
+LED_ZERO_INITIALISERS = {
+    "EvpAesKey": {
+        "file": "src/evp/cipher_ctx.rs",
+        "line": 2269,
+        "why": ("`CRYPTO_zalloc(ctx_size, FILE_ENC, 786)` builds the method's "
+                "`cipher_data` block (e_aes.c's `ctx_size` is "
+                "`sizeof(EVP_AES_KEY)`); the legacy `init` callback is "
+                "documented to run before `do_cipher`"),
+    },
+    "EvpSm4Key": {
+        "file": "src/evp/cipher_ctx.rs",
+        "line": 2269,
+        "why": ("the same `cipher_data` allocation; `sm4_init_key` runs before "
+                "`sm4_ecb_cipher`"),
+    },
+    "OsslDecoder": {
+        "file": "src/decoder_meth.rs",
+        "line": 227,
+        "why": ("`ossl_decoder_new` is a `CRYPTO_zalloc` object; every slot is "
+                "`None` until `ossl_decoder_from_algorithm` writes it, and "
+                "each site tests its slot for NULL before the call"),
+    },
+}
+
+# The enumerated call sites.  `read` is the displacement on the call operand;
+# for the legacy sites it is the image-measured field offset (neither struct
+# is `repr(C)`) and the image stores at that displacement bind it to the named
+# field.  `dat_off` is `EVP_CIPHER_CTX::cipher_data`.
+LEGACY_EVP_DATA_SITES = {
+    0x5250C1: {
+        "function": "aes_ecb_cipher", "ctx": "EvpCipherCtx",
+        "dat_off": 0x78, "type": "EvpAesKey", "field": "block",
+        "read": 0x0, "init": "aes_init_key",
+        "targets": ("aes_decrypt_block", "aes_encrypt_block"),
+        "source": "src/evp/e_aes.rs",
+    },
+    0x2C37F2: {
+        "function": "sm4_ecb_cipher", "ctx": "EvpCipherCtx",
+        "dat_off": 0x78, "type": "EvpSm4Key", "field": "block",
+        "read": 0x0, "init": "sm4_init_key",
+        "targets": ("sm4_decrypt_block", "sm4_encrypt_block"),
+        "source": "src/evp/e_sm4.rs",
+    },
+}
+
+# The one source constructor of the decoder objects this site uses, and the
+# closed algorithm table its rows are walked from.
+DECODER_METHOD_CONSTRUCTOR = "ossl_decoder_from_algorithm"
+DECODER_METHOD_TABLE = "ossl_any_to_obj_algorithm"
+DECODER_METHOD_TABLES = frozenset((
+    "DER_TO_OBJ_DECODER_FUNCTIONS",
+    "MSBLOB_TO_OBJ_DECODER_FUNCTIONS",
+    "PVK_TO_OBJ_DECODER_FUNCTIONS",
+))
+
+DECODER_METHOD_SITES = {
+    0x3CD8DD: {
+        "function": "file_load", "slot": "newctx", "read": 0x30,
+        "dispatch_id": 1, "targets": ("any2obj_newctx",),
+    },
+    0x3CD936: {
+        "function": "file_load", "slot": "set_ctx_params", "read": 0x50,
+        "dispatch_id": 5, "targets": ("any2obj_set_ctx_params",),
+    },
+    0x3CD980: {
+        "function": "file_load", "slot": "freectx", "read": 0x38,
+        "dispatch_id": 2, "targets": ("any2obj_freectx",),
+    },
+}
+
+
+def _led_refusal(rule: str, klass: str, reason: str, **extra) -> dict:
+    rec = {"schema": WITNESS_SCHEMA, "rule": rule, "class": klass,
+           "contract_bounded": False, "resolved": False,
+           "refusal": reason}
+    rec.update(extra)
+    return rec
+
+
+def _led_ptr_base(type_text: str):
+    """The pointee/owned type name of a pointer or owner type, else the text."""
+    t = " ".join((type_text or "").split())
+    m = re.match(r"Option\s*<\s*(.+?)\s*>$", t)
+    if m:
+        t = m.group(1).strip()
+    m = re.match(r"(?://)?\s*(?:OwnedCtx|RawCtx)\s*<\s*([A-Za-z_]\w*)\s*>", t)
+    if m:
+        return m.group(1)
+    m = re.match(r"\*\s*(?:const|mut)\s+([A-Za-z_]\w*)", t)
+    if m:
+        return m.group(1)
+    m = re.match(r"&\s*(?:'[\w]+\s*)?(?:mut\s+)?([A-Za-z_]\w*)", t)
+    if m:
+        return m.group(1)
+    return t or None
+
+
+def _led_module_ok(sym: str, relpath: str) -> bool:
+    """The mangled symbol names every module component of `relpath`."""
+    if not sym.startswith("_R"):
+        return True
+    parts = relpath[len("src/"):-len(".rs")].split("/")
+    pos = 0
+    for part in parts:
+        needle = str(len(part)) + part
+        at = sym.find(needle, pos)
+        if at < 0:
+            return False
+        pos = at + len(needle)
+    return True
+
+
+def _led_fn_return(g: "DsoGraph", f: dict):
+    text = _phw_source(g)["docs"].get(f["file"], "")
+    head = text[f["pos"]:f["start"]]
+    m = re.search(r"->\s*([^{]+?)\s*$", head, re.S)
+    return " ".join(m.group(1).split()) if m else None
+
+
+def _led_returns(g: "DsoGraph"):
+    cache = getattr(g, "_led_returns_cache", None)
+    if cache is not None:
+        return cache
+    out = {}
+    for f in _phw_source(g)["funcs"]:
+        rt = _led_fn_return(g, f)
+        if rt:
+            out.setdefault(f["name"], {}).setdefault(f["file"], set()).add(rt)
+    g._led_returns_cache = out
+    return out
+
+
+def _led_var_type(g: "DsoGraph", f: dict, var: str, depth: int = 0):
+    """The declared or inferred type of `var` inside `f`, or None."""
+    cache = getattr(g, "_led_vartype_cache", None)
+    if cache is None:
+        cache = {}
+        g._led_vartype_cache = cache
+    key = (f["file"], f["start"], var)
+    if key in cache:
+        return cache[key]
+    params = _phw_param_types(f["params"])
+    out = params.get(var)
+    if out is None and depth < 4:
+        exprs = []
+        for m in re.finditer(r"\blet\s+(?:mut\s+)?" + re.escape(var)
+                             + r"\s*(?::\s*([^=;]+))?=\s*([^;]+);",
+                             f["body"]):
+            if m.group(1):
+                found = " ".join(m.group(1).split())
+            else:
+                found = _led_type_of_expr(g, f, m.group(2), depth + 1)
+            exprs.append(found)
+        for m in re.finditer(r"\blet\s+(?:mut\s+)?Some\(\s*"
+                             + re.escape(var) + r"\s*\)\s*=\s*([^{]+?)"
+                             r"\s*(?:else\s*\{)?", f["body"]):
+            exprs.append(_led_type_of_expr(g, f, m.group(1), depth + 1))
+        if exprs and all(x is not None for x in exprs):
+            if len({_led_ptr_base(x) for x in exprs}) == 1:
+                out = exprs[0]
+    cache[key] = out
+    return out
+
+
+def _led_type_of_expr(g: "DsoGraph", f: dict, expr: str, depth: int = 0):
+    """The pointer/owner type an initialiser expression produces, or None."""
+    if depth > 6:
+        return None
+    e = " ".join((expr or "").split())
+    m = re.search(r"cast::<\s*([A-Za-z_]\w*)\s*>", e)
+    if m:
+        return "*mut " + m.group(1)
+    m = re.search(r"(?:OwnedCtx|RawCtx)\s*<\s*([A-Za-z_]\w*)\s*>", e)
+    if m:
+        return "*mut " + m.group(1)
+    m = re.search(r"\b([A-Za-z_]\w*)\s*\.\s*as_ptr\s*\(\s*\)", e)
+    if m:
+        return _led_var_type(g, f, m.group(1), depth + 1)
+    m = re.search(r"\b([A-Za-z_]\w*)\s*\(", e)
+    if m:
+        per_file = (_led_returns(g).get(m.group(1)) or {})
+        rts = per_file.get(f["file"])
+        if rts is None and len(per_file) == 1:
+            rts = next(iter(per_file.values()))
+        if rts and len(rts) == 1:
+            return next(iter(rts))
+    return None
+
+
+def _led_scan(g: "DsoGraph"):
+    """Every production/`cfg(test)` write of an `LED_SOURCE_TYPES` field."""
+    cache = getattr(g, "_led_scan_cache", None)
+    if cache is not None:
+        return cache
+    src = _phw_source(g)
+    spans = src["spans"]
+    types = set(LED_SOURCE_TYPES)
+    fields = {f for t in types for f in LED_SOURCE_TYPES[t]["fields"]}
+    prod, test, unqualified = [], [], []
+    pats = (
+        (r"\(\s*\*\s*([A-Za-z_]\w*)\s*\)\."
+         r"([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*"
+         r"(?<![=!<>+\-*/%&|^])=(?!=)\s*([^;]+);", "store"),
+        (r"(?<![*.\w])([A-Za-z_]\w*)\.([A-Za-z_]\w*)\s*"
+         r"(?<![=!<>+\-*/%&|^])=(?!=)\s*([^;]+);", "store"),
+        (r"addr_of_mut!\(\s*\(\s*\*\s*([A-Za-z_]\w*)\s*\)\."
+         r"([A-Za-z_]\w*)\s*\)", "field-address"),
+        (r"\(\s*\*\s*([A-Za-z_]\w*)\s*\)\.(base\.refcnt)\s*\.store\s*\(",
+         "store-method"),
+    )
+    for f in src["funcs"]:
+        for pat, kind in pats:
+            for m in re.finditer(pat, f["body"]):
+                var, field = m.group(1), m.group(2)
+                expr = (" ".join(m.group(3).split())
+                        if m.lastindex and m.lastindex >= 3 and m.group(3)
+                        else "")
+                vt = _led_var_type(g, f, var)
+                base = _led_ptr_base(vt) if vt else None
+                rec = {"var": var, "var_type": vt, "type": base,
+                       "field": field, "expr": expr, "kind": kind,
+                       "function": f["name"], "file": f["file"],
+                       "line": f["line"] + f["body"].count("\n", 0,
+                                                          m.start())}
+                pos = f["start"] + 1 + m.start()
+                if base in types:
+                    (test if _phw_in_spans(spans[f["file"]], pos) else
+                     prod).append(rec)
+                elif base is not None:
+                    continue
+                elif field in fields or field.split(".")[0] in fields:
+                    # Only a candidate when the function names a tracked
+                    # type somewhere, or is generic (a `T`-typed pointer can
+                    # be instantiated with a tracked type).  A field-name
+                    # match alone cannot be a write to that type.
+                    hay = f["params"] + "\n" + f["body"]
+                    head = _phw_source(g)["docs"].get(f["file"], "")[
+                        f["pos"]:f["start"]]
+                    if not any(re.search(r"\b" + t + r"\b", hay)
+                               for t in types) \
+                            and not re.search(r"\bfn\s+\w+\s*<", head):
+                        continue
+                    rec["why"] = "owner type not resolved"
+                    unqualified.append(rec)
+    # Module-level struct literals (a production initialiser that is not a
+    # field store) and whole-struct copies of a tracked type.
+    literals, copies = [], []
+    for path, text in src["docs"].items():
+        for typ in types:
+            for m in re.finditer(r"\b" + typ + r"\s*\{", text):
+                if re.search(r"\bstruct\s+$", text[max(0, m.start() - 20):m.start()]):
+                    continue
+                tail = text[m.end():m.end() + 80]
+                if not re.match(r"\s*(?:[A-Za-z_]\w*\s*:|,\s*\.\.|\.\.)", tail):
+                    continue
+                rec = {"type": typ, "kind": "literal", "file": path,
+                       "function": "(module)", "field": "*", "expr": "",
+                       "line": text.count("\n", 0, m.start()) + 1}
+                (test if _phw_in_spans(spans[path], m.start())
+                 else literals).append(rec)
+        for typ in types:
+            for m in re.finditer(
+                    r"(?:ptr::copy(?:_nonoverlapping)?|ptr::write|ptr::read)"
+                    r"::<\s*" + typ + r"\s*>", text):
+                rec = {"type": typ, "kind": "copy", "file": path,
+                       "function": "(module)", "field": "*", "expr": "",
+                       "line": text.count("\n", 0, m.start()) + 1}
+                (test if _phw_in_spans(spans[path], m.start())
+                 else copies).append(rec)
+        # Macro bodies can expand to a store the function-body scan cannot
+        # see.  A production macro that names a tracked field in an
+        # assignment is recorded as an unenumerated writer.
+        for name, start, end in src["macros"].get(path, ()):
+            body = text[start:end]
+            for typ in types:
+                for fld in LED_SOURCE_TYPES[typ]["fields"]:
+                    head = fld.split(".")[0]
+                    if not re.search(r"\." + re.escape(head)
+                                     + r"\s*(?<![=!<>+\-*/%&|^])=(?!=)",
+                                     body):
+                        continue
+                    rec = {"type": typ, "kind": "macro-store",
+                           "file": path, "function": "macro:" + name,
+                           "field": fld, "expr": "",
+                           "line": text.count("\n", 0, start) + 1}
+                    (test if _phw_in_spans(spans[path], start)
+                     else copies).append(rec)
+    cache = {"prod": prod + literals + copies, "test": test,
+             "unqualified": unqualified, "literals": literals,
+             "copies": copies}
+    g._led_scan_cache = cache
+    return cache
+
+
+def _led_source_gate(g: "DsoGraph") -> dict:
+    """The computed writer set per type, checked against the enumeration.
+
+    A production write/initialiser of a tracked type whose (function, field)
+    is not enumerated, an unresolved owner that names a tracked field, or an
+    owner file outside the enumerated one fails the gate with a distinct
+    reason.  `#[cfg(test)]` writes are recorded, never admitted: the release
+    image the closure analyses contains none of them.
+    """
+    scan = _led_scan(g)
+    per_type, ok = {}, True
+    for typ, spec in LED_SOURCE_TYPES.items():
+        mine = [r for r in scan["prod"] if r["type"] == typ]
+        files = sorted({r["file"] for r in mine})
+        pairs = sorted({(r["function"], r["field"]) for r in mine
+                        if r["kind"] != "literal" and r["kind"] != "copy"})
+        expected = sorted(LED_ENUMERATED_WRITES[typ])
+        files_ok = files == [spec["file"]]
+        pairs_ok = pairs == expected
+        unq = [r for r in scan["unqualified"]
+               if r["field"] in spec["fields"]]
+        type_ok = files_ok and pairs_ok and not unq
+        if not type_ok:
+            ok = False
+        per_type[typ] = {
+            "status": "PASS" if type_ok else "FAIL",
+            "enumerated_file": spec["file"],
+            "computed_files": files,
+            "missing_files": sorted(set(files) - {spec["file"]}),
+            "computed_writer_pairs": [list(p) for p in pairs],
+            "enumerated_writer_pairs": [list(p) for p in expected],
+            "missing_pairs": [list(p) for p in
+                              sorted(set(map(tuple, expected)) - set(pairs))],
+            "extra_pairs": [list(p) for p in
+                            sorted(set(pairs) - set(map(tuple, expected)))],
+            "unresolved_owner_stores": unq[:10],
+            "unresolved_owner_count": len(unq),
+            "initialisers": [r for r in mine if r["kind"] in
+                             ("literal", "copy")],
+            "test_only": [r for r in scan["test"] if r["type"] == typ],
+            "test_only_excluded_because": (
+                "declared inside `#[cfg(test)]`; the release image the closure "
+                "analyses does not contain it, and it is not a production "
+                "writer"),
+            "scan_patterns": [
+                "(*p).field = expr", "p.field = expr",
+                "addr_of_mut!((*p).field) (helper destination)",
+                "(*p).base.refcnt.store(..)",
+                "Type { .. } struct literal",
+                "ptr::copy/ptr::write/ptr::read::<Type>",
+            ],
+        }
+    return {"status": "PASS" if ok else "FAIL",
+            "reason": None if ok else
+            "legacy-decoder-writer-set-not-exhaustive",
+            "types": per_type}
+
+
+def _led_reg_loads(g: "DsoGraph", fstart: int, idx: int, reg: str):
+    """Every reaching definition of `reg` must be the same pointer load.
+
+    The legacy ECB callbacks have two identical copies of the `cipher_data`
+    load (one per arm); a definition is admitted only when the whole reaching
+    set is a single (displacement, base register) load.
+    """
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if not defs:
+        return None
+    insns = g.precision.insns_by_func.get(fstart, ())
+    out = []
+    for d in sorted(defs):
+        if d < 0 or d >= len(insns):
+            return None
+        mn, _rest, ops = _insn_parts(insns[d][1].split("#", 1)[0].strip())
+        if mn not in ("mov", "movq", "movl", "movzbl") or len(ops) < 2:
+            return None
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                         ops[0].strip())
+        if not m:
+            return None
+        out.append({"offset": int(m.group(1), 16) if m.group(1) else 0,
+                    "base_reg": m.group(2), "at": d,
+                    "addr": insns[d][0]})
+    if len({(r["offset"], r["base_reg"]) for r in out}) != 1:
+        return None
+    return out
+
+
+def _led_reg_values(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                    depth: int = 0):
+    """The finite address set a register can hold at `idx`, or None.
+
+    Only `lea` of a link-time address, an immediate, and whole-register copies
+    are admitted.  Anything else (a load, a call result, an arithmetic mix) is
+    unresolved and refuses the site; the set is never widened by guessing.
+    """
+    if depth > 6:
+        return None
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if not defs:
+        return None
+    insns = g.precision.insns_by_func.get(fstart, ())
+    vals = set()
+    for d in sorted(defs):
+        if d < 0 or d >= len(insns):
+            return None
+        if d == idx:
+            # A self-reaching definition is a loop-carried value; a finite
+            # stored-value set cannot be established from it here.
+            return None
+        text = insns[d][1]
+        mn, _rest, ops = _insn_parts(text.split("#", 1)[0].strip())
+        if mn == "lea":
+            addr = _insn_comment_addr(text)
+            if addr is None:
+                return None
+            vals.add(addr)
+            continue
+        if mn in ("mov", "movq", "movabs") and len(ops) == 2:
+            src = ops[0].strip()
+            if src.startswith("$"):
+                try:
+                    vals.add(int(src[1:], 16))
+                except ValueError:
+                    return None
+                continue
+            if _canon(src) in _REGS:
+                sub = _led_reg_values(g, fstart, d, _canon(src), depth + 1)
+                if sub is None:
+                    return None
+                vals |= sub
+                continue
+        return None
+    return vals
+
+
+def _led_field_stores(g: "DsoGraph", fstart: int, read_off: int,
+                      dat_off: int, param_index: int):
+    """Stores to `read_off` through the context's `cipher_data` pointer."""
+    insns = g.precision.insns_by_func.get(fstart, ())
+    out = []
+    for i, (addr, text) in enumerate(insns):
+        mn, _rest, ops = _insn_parts(text.split("#", 1)[0].strip())
+        if mn not in ("mov", "movq", "movabs") or len(ops) != 2:
+            continue
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                         ops[1].strip())
+        if not m:
+            continue
+        off = int(m.group(1), 16) if m.group(1) else 0
+        if off != read_off:
+            continue
+        base = _canon(m.group(2))
+        loads = _led_reg_loads(g, fstart, i, base)
+        if not loads or any(l["offset"] != dat_off for l in loads):
+            continue
+        if not all(_s1_ctx_param(g, fstart, l["at"], l["base_reg"],
+                                 param_index) for l in loads):
+            continue
+        src = ops[0].strip()
+        if src.startswith("$"):
+            try:
+                vals = {int(src[1:], 16)}
+            except ValueError:
+                return None
+        else:
+            vals = _led_reg_values(g, fstart, i, _canon(src))
+        if vals is None:
+            return None
+        out.append({"insn": hex(addr), "values": sorted(vals),
+                    "base_reg": base})
+    return out
+
+
+def _led_symbol_name(g: "DsoGraph", addr: int):
+    sym = g.symbol_at(addr)
+    if not sym:
+        return None
+    return _s1_rust_last_segment(sym) or sym.split("::")[-1]
+
+
+def legacy_evp_cipher_data_witness(g: "DsoGraph", site: dict, name: str):
+    """Prove (or refuse) an enumerated legacy `EVP_CIPHER` data dispatch."""
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    spec = LEGACY_EVP_DATA_SITES.get(site.get("addr"))
+    if spec is None:
+        return None
+    rule, klass = LEGACY_EVP_DATA_WITNESS_RULE, \
+        ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA
+    fstart = site.get("func")
+    fname = g.funcs.get(fstart) or ""
+    if spec["function"] not in fname:
+        return _led_refusal(rule, klass, "site-function-not-enumerated",
+                            call_site=hex(site["addr"]),
+                            expected_function=spec["function"],
+                            actual_function=fname)
+    insns = g.precision.insns_by_func.get(fstart, ())
+    idx = next((i for i, (a, _t) in enumerate(insns)
+                if a == site.get("addr")), None)
+    if idx is None:
+        return _led_refusal(rule, klass, "site-not-in-function",
+                            call_site=hex(site["addr"]))
+    text = (site.get("text") or "").split("#", 1)[0].strip()
+    m = re.search(r"call\w*\s+\*(.+)$", text)
+    if not m:
+        return _led_refusal(rule, klass, "operand-not-indirect-call",
+                            call_site=hex(site["addr"]))
+    mo = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                      m.group(1).strip())
+    if not mo:
+        return _led_refusal(rule, klass, "operand-not-method-field",
+                            call_site=hex(site["addr"]),
+                            operand=m.group(1).strip())
+    read_off = int(mo.group(1), 16) if mo.group(1) else 0
+    if read_off != spec["read"]:
+        return _led_refusal(rule, klass, "read-field-not-enumerated",
+                            call_site=hex(site["addr"]),
+                            expected_offset=hex(spec["read"]),
+                            actual_offset=hex(read_off))
+    breg = _canon(mo.group(2))
+    loads = _led_reg_loads(g, fstart, idx, breg)
+    if not loads:
+        return _led_refusal(rule, klass, "base-not-single-context-load",
+                            call_site=hex(site["addr"]), base_reg=breg)
+    if any(l["offset"] != spec["dat_off"] for l in loads):
+        return _led_refusal(rule, klass, "base-not-context-cipher-data",
+                            call_site=hex(site["addr"]),
+                            expected_offset=hex(spec["dat_off"]),
+                            actual=[hex(l["offset"]) for l in loads])
+    ctx = _s1_site_context(g, fstart)
+    if ctx is None or ctx.get("type") != spec["ctx"]:
+        return _led_refusal(rule, klass, "context-type-not-proven",
+                            call_site=hex(site["addr"]),
+                            expected_context=spec["ctx"])
+    want = ctx.get("param_index")
+    if want is None or not all(
+            _s1_ctx_param(g, fstart, l["at"], l["base_reg"], want)
+            for l in loads):
+        return _led_refusal(rule, klass,
+                            "base-pointer-not-from-context-parameter",
+                            call_site=hex(site["addr"]))
+    # The data type is the enumerated type: the source callback casts the
+    # cipher-data pointer to it (directly or through its one accessor).
+    span = _s1_src_fn(g, spec["source"], spec["function"])
+    body = (span or {}).get("body") or ""
+    cast_ok = ("cast::<" + spec["type"] + ">()") in body
+    if not cast_ok:
+        returns = _led_returns(g)
+        for m2 in re.finditer(r"\b([A-Za-z_]\w*)\s*\(\s*ctx\s*\)", body):
+            per_file = returns.get(m2.group(1)) or {}
+            rt = per_file.get(spec["source"]) or set()
+            if any(_led_ptr_base(t) == spec["type"] for t in rt):
+                cast_ok = True
+                break
+    if not cast_ok:
+        return _led_refusal(rule, klass, "data-type-not-proven",
+                            call_site=hex(site["addr"]),
+                            expected_type=spec["type"])
+
+    owners = _led_source_gate(g)
+    if owners["types"][spec["type"]]["status"] != "PASS":
+        return _led_refusal(rule, klass,
+                            "legacy-decoder-writer-set-not-exhaustive",
+                            call_site=hex(site["addr"]),
+                            writer_gate=owners["types"][spec["type"]])
+
+    # Condition: the field's source writer set is exactly the enumeration.
+    if (spec["type"], spec["field"]) not in LED_FIELD_VALUES:
+        return _led_refusal(rule, klass, "field-not-in-enumerated-table",
+                            call_site=hex(site["addr"]),
+                            owner_type=spec["type"], field=spec["field"])
+    writers = sorted({r["expr"] for r in _led_scan(g)["prod"]
+                      if r["type"] == spec["type"]
+                      and r["field"] == spec["field"]
+                      and r["kind"] == "store"})
+    names = set()
+    for expr in writers:
+        mn = re.search(r"\b([A-Za-z_]\w*)\s*$", expr)
+        if mn is None:
+            return _led_refusal(rule, klass, "field-writer-not-a-function",
+                                call_site=hex(site["addr"]), expr=expr)
+        names.add(mn.group(1))
+    expected = LED_FIELD_VALUES[(spec["type"], spec["field"])]
+    if frozenset(names) != expected:
+        return _led_refusal(rule, klass, "field-writer-set-not-enumerated",
+                            call_site=hex(site["addr"]),
+                            hw_type=spec["type"], field=spec["field"],
+                            writers=sorted(names), enumerated=sorted(expected))
+
+    # Condition: the enumerable init function's image stores to this exact
+    # displacement hold exactly the enumerated function set.
+    init_addrs = _phw_function_addresses(g, spec["init"])
+    if len(init_addrs) != 1:
+        return _led_refusal(rule, klass, "init-function-not-in-image",
+                            call_site=hex(site["addr"]),
+                            function=spec["init"],
+                            matches=[hex(a) for a in sorted(init_addrs)])
+    init = next(iter(init_addrs))
+    stores = _led_field_stores(g, init, spec["read"], spec["dat_off"], 0)
+    if stores is None:
+        return _led_refusal(rule, klass, "field-store-value-unresolved",
+                            call_site=hex(site["addr"]),
+                            initialiser=spec["init"])
+    stored, targets, proofs = set(), set(), []
+    for st in stores:
+        for val in st["values"]:
+            if val not in g.start_set:
+                return _led_refusal(rule, klass,
+                                    "field-store-value-not-a-function-start",
+                                    call_site=hex(site["addr"]),
+                                    value=hex(val), insn=st["insn"])
+            sym = _led_symbol_name(g, val)
+            if sym is None or not _led_module_ok(g.symbol_at(val),
+                                                 spec["source"]):
+                return _led_refusal(rule, klass,
+                                    "field-store-value-symbol-not-proven",
+                                    call_site=hex(site["addr"]),
+                                    value=hex(val), symbol=sym)
+            stored.add(sym)
+            targets.add(val)
+        proofs.append(st)
+    if not stores:
+        return _led_refusal(rule, klass, "field-store-not-found",
+                            call_site=hex(site["addr"]),
+                            initialiser=spec["init"],
+                            offset=hex(spec["read"]))
+    if stored != set(spec["targets"]):
+        return _led_refusal(rule, klass, "target-set-not-enumerated",
+                            call_site=hex(site["addr"]),
+                            computed=sorted(stored),
+                            enumerated=sorted(spec["targets"]))
+    return {
+        "schema": WITNESS_SCHEMA,
+        "rule": rule,
+        "class": klass,
+        "contract_bounded": True,
+        "resolved": True,
+        "function": fname,
+        "call_site": hex(site["addr"]),
+        "operand": {"base_reg": breg, "member_offset": hex(read_off)},
+        "context": {
+            "type": spec["ctx"],
+            "data_type": spec["type"],
+            "data_offset": hex(spec["dat_off"]),
+            "base_loads": loads,
+            "provenance": "cipher_data pointer from the context parameter",
+        },
+        "field": {
+            "type": spec["type"],
+            "repr_c": LED_SOURCE_TYPES[spec["type"]]["repr_c"],
+            "repr_note": ("#[repr(C)]; the field offset is guaranteed by the "
+                          "language" if LED_SOURCE_TYPES[spec["type"]]["repr_c"]
+                          else ("no #[repr(C)]: the read offset is "
+                                "image-measured and compiler-dependent; it is "
+                                "confirmed here by the function set stored at "
+                                "that displacement")),
+            "name": spec["field"],
+            "read_offset": hex(read_off),
+            "writer_set": sorted(names),
+            "zero_initialiser": LED_ZERO_INITIALISERS[spec["type"]],
+        },
+        "initialiser": {"function": spec["init"], "address": hex(init),
+                        "stores": proofs},
+        "tables": [],
+        "targets": [hex(t) for t in sorted(targets)],
+        "target_names": sorted(stored),
+        "writer_gate": {k: owners["types"][k]["status"] for k in
+                        owners["types"]},
+        "slot": (f"{spec['type']}.{spec['field']}@{hex(read_off)} stored by "
+                 f"{spec['init']} over {len(stores)} image store(s)"),
+        "basis": ("an enumerated legacy EVP ECB callback; the read base is the "
+                  "context's cipher_data pointer, the field's production "
+                  "writer set is the complete computed set and every stored "
+                  "value is an in-image function of the enumerated module"),
+        "conditions": [
+            "containing-function-is-an-enumerated-site",
+            "operand-is-the-enumerated-field-displacement",
+            "read-base-is-the-context-cipher-data-pointer",
+            "data-type-is-the-enumerated-owning-type",
+            "writer-set-and-owner-files-are-the-computed-exhaustive-set",
+            "stored-value-set-is-exactly-the-enumerated-function-set",
+            "every-stored-value-is-an-in-image-function-of-the-owning-module",
+        ],
+    }
+
+
+def _led_reg_roots(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                   depth: int = 0):
+    """Link-time root addresses a register derives from, or None."""
+    if depth > 8:
+        return None
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if not defs:
+        return None
+    insns = g.precision.insns_by_func.get(fstart, ())
+    roots = set()
+    for d in sorted(defs):
+        if d < 0 or d >= len(insns):
+            return None
+        text = insns[d][1]
+        mn, _rest, ops = _insn_parts(text.split("#", 1)[0].strip())
+        if mn == "lea" and len(ops) == 2:
+            if d == idx:
+                # A loop back-edge (`lea K(%r),%r`) keeps the same root; it
+                # is not a second source.  Any other self-definition refuses.
+                m = re.fullmatch(r"-?0x[0-9a-f]+\((%r[a-z0-9]+)\)",
+                                 ops[0].strip())
+                if (not m or _canon(m.group(1)) != reg
+                        or _canon(ops[1].strip()) != reg):
+                    return None
+                continue
+            m = re.fullmatch(r"-?0x[0-9a-f]+\((%r[a-z0-9]+)\)",
+                             ops[0].strip())
+            if m and m.group(1) != "%rip":
+                sub = _led_reg_roots(g, fstart, d, _canon(m.group(1)),
+                                     depth + 1)
+                if sub is None:
+                    return None
+                roots |= sub
+                continue
+            root = _insn_comment_addr(text)
+            if root is None:
+                return None
+            roots.add(root)
+            continue
+        if mn in ("mov", "movq") and len(ops) == 2:
+            src = ops[0].strip()
+            if _canon(src) in _REGS:
+                sub = _led_reg_roots(g, fstart, d, _canon(src), depth + 1)
+                if sub is None:
+                    return None
+                roots |= sub
+                continue
+        return None
+    return roots
+
+
+def _led_null_guarded(g: "DsoGraph", fstart: int, load_at: int,
+                      call_at: int, reg: str) -> bool:
+    """A NULL test of `reg` between the field load and the indirect call."""
+    insns = g.precision.insns_by_func.get(fstart, ())
+    for j in range(load_at + 1, call_at):
+        mn, _rest, ops = _insn_parts(insns[j][1].split("#", 1)[0].strip())
+        is_test = (mn == "test" and len(ops) == 2
+                   and _canon(ops[0]) == reg and _canon(ops[1]) == reg)
+        is_cmp = (mn == "cmp" and len(ops) == 2
+                  and ops[0].strip() in ("$0x0", "$0")
+                  and _canon(ops[1]) == reg)
+        if not (is_test or is_cmp) or j + 1 >= call_at:
+            continue
+        for k in range(j + 1, min(j + 4, call_at)):
+            mnk, _rk, opk = _insn_parts(
+                insns[k][1].split("#", 1)[0].strip())
+            if mnk in ("mov", "movl", "movq", "lea") and opk \
+                    and _canon(opk[-1]) == reg:
+                return False
+            if mnk not in ("je", "jz"):
+                continue
+            mj = re.match(r"j\w+\s+([0-9a-f]+)",
+                         insns[k][1].strip())
+            if not mj:
+                return False
+            target = int(mj.group(1), 16)
+            # The NULL path must leave the window [test, call]; a target
+            # between the branch and the call still reaches the call with
+            # the unchanged NULL value.
+            if insns[k][0] < target <= insns[call_at][0]:
+                return False
+            for k2 in range(k + 1, call_at):
+                mn2, _r2, op2 = _insn_parts(
+                    insns[k2][1].split("#", 1)[0].strip())
+                if mn2 in ("mov", "movl", "movq", "lea") and op2 \
+                        and _canon(op2[-1]) == reg:
+                    return False
+            return True
+    return False
+
+
+def _led_algorithm_tables(g: "DsoGraph", base: int, limit: int = 16):
+    """The closed dispatch-table addresses installed by an algorithm row."""
+    out = []
+    for k in range(limit):
+        row = base + k * 0x20
+        names = g.static_slot(row)
+        if names is None:
+            return None
+        if not any(isinstance(x, int) and x != 0 for x in names):
+            break
+        impl = g.static_slot(row + 0x10)
+        ints = sorted(x for x in (impl or ()) if isinstance(x, int) and x)
+        if len(ints) != 1:
+            return None
+        out.append(ints[0])
+    return out or None
+
+
+def _led_dispatch_entry(g: "DsoGraph", table: int, function_id: int,
+                        limit: int = 32):
+    """The single `function` a terminated dispatch table pairs with an id."""
+    found, end = [], False
+    for k in range(limit):
+        at = table + k * 0x10
+        fid = g.static_slot(at)
+        ints = sorted(x for x in (fid or ()) if isinstance(x, int))
+        if len(ints) != 1:
+            return None, "dispatch-id-not-single"
+        if ints[0] == 0:
+            end = True
+            break
+        if ints[0] != function_id:
+            continue
+        fn = g.static_slot(at + 0x8)
+        vals = sorted(x for x in (fn or ()) if isinstance(x, int))
+        if len(vals) != 1 or vals[0] == 0:
+            return None, "dispatch-entry-null"
+        found.append(vals[0])
+    if not end:
+        return None, "dispatch-table-not-terminated"
+    if len(found) != 1:
+        return None, ("dispatch-entry-duplicate" if found
+                      else "dispatch-entry-absent")
+    return found[0], None
+
+
+def decoder_method_object_witness(g: "DsoGraph", site: dict, name: str):
+    """Prove (or refuse) an enumerated `OsslDecoder` method-slot dispatch."""
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    spec = DECODER_METHOD_SITES.get(site.get("addr"))
+    if spec is None:
+        return None
+    rule, klass = DECODER_METHOD_WITNESS_RULE, \
+        ABI_CONTRACT_DECODER_METHOD_OBJECT
+    fstart = site.get("func")
+    fname = g.funcs.get(fstart) or ""
+    if spec["function"] not in fname:
+        return _led_refusal(rule, klass, "site-function-not-enumerated",
+                            call_site=hex(site["addr"]),
+                            expected_function=spec["function"],
+                            actual_function=fname)
+    insns = g.precision.insns_by_func.get(fstart, ())
+    idx = next((i for i, (a, _t) in enumerate(insns)
+                if a == site.get("addr")), None)
+    if idx is None:
+        return _led_refusal(rule, klass, "site-not-in-function",
+                            call_site=hex(site["addr"]))
+    text = (site.get("text") or "").split("#", 1)[0].strip()
+    m = re.search(r"call\w*\s+\*(%r[a-z0-9]+)$", text)
+    if not m:
+        return _led_refusal(rule, klass, "operand-not-register-value",
+                            call_site=hex(site["addr"]))
+    reg = _canon(m.group(1))
+    origin = _reg_origin(g, fstart, idx, reg)
+    if origin.get("kind") != "load":
+        return _led_refusal(rule, klass, "slot-not-loaded-from-object",
+                            call_site=hex(site["addr"]), base_reg=reg,
+                            origin=origin.get("kind"))
+    if origin.get("offset") != spec["read"]:
+        return _led_refusal(rule, klass, "read-field-not-enumerated",
+                            call_site=hex(site["addr"]),
+                            expected_offset=hex(spec["read"]),
+                            actual_offset=hex(origin.get("offset") or 0))
+    load_at = origin["at"]
+    if not _led_null_guarded(g, fstart, load_at, idx, reg):
+        return _led_refusal(rule, klass, "slot-read-not-null-guarded",
+                            call_site=hex(site["addr"]), base_reg=reg)
+    obj = _reg_origin(g, fstart, load_at, _canon(origin["base_reg"]))
+    if obj.get("kind") != "call":
+        return _led_refusal(rule, klass, "object-not-from-constructor-call",
+                            call_site=hex(site["addr"]),
+                            base_reg=origin["base_reg"],
+                            origin=obj.get("kind"))
+    ctor = _phw_function_addresses(g, DECODER_METHOD_CONSTRUCTOR)
+    if len(ctor) != 1 or obj.get("callee_addr") not in ctor:
+        return _led_refusal(rule, klass, "constructor-not-enumerated",
+                            call_site=hex(site["addr"]),
+                            callee=hex(obj.get("callee_addr") or 0))
+    call_at = obj["call_site"]
+    roots = _led_reg_roots(g, fstart, call_at, "%rsi")
+    table_addr = _phw_symbol_addr(g, DECODER_METHOD_TABLE)
+    if table_addr is None:
+        return _led_refusal(rule, klass, "algorithm-table-not-in-image",
+                            call_site=hex(site["addr"]),
+                            table=DECODER_METHOD_TABLE)
+    if not roots or roots != {table_addr}:
+        return _led_refusal(rule, klass, "constructor-argument-not-closed-table",
+                            call_site=hex(site["addr"]),
+                            expected=hex(table_addr),
+                            roots=sorted(hex(r) for r in (roots or ())))
+
+    owners = _led_source_gate(g)
+    if owners["types"]["OsslDecoder"]["status"] != "PASS":
+        return _led_refusal(rule, klass,
+                            "legacy-decoder-writer-set-not-exhaustive",
+                            call_site=hex(site["addr"]),
+                            writer_gate=owners["types"]["OsslDecoder"])
+
+    tables = _led_algorithm_tables(g, table_addr)
+    if not tables:
+        return _led_refusal(rule, klass, "algorithm-table-not-readable",
+                            call_site=hex(site["addr"]),
+                            table=DECODER_METHOD_TABLE)
+    table_proofs, target_addrs, target_names = [], set(), set()
+    for tab in tables:
+        sym = g.symbol_at(tab)
+        short = _s1_rust_last_segment(sym) if sym else None
+        if not sym or short not in DECODER_METHOD_TABLES \
+                or not _led_module_ok(sym, "src/provider/file_store_any2obj.rs"):
+            return _led_refusal(rule, klass, "table-not-enumerated",
+                                call_site=hex(site["addr"]),
+                                table=hex(tab), symbol=sym)
+        val, why = _led_dispatch_entry(g, tab, spec["dispatch_id"])
+        if why is not None:
+            return _led_refusal(rule, klass, why,
+                                call_site=hex(site["addr"]),
+                                table=hex(tab))
+        if val not in g.start_set:
+            return _led_refusal(rule, klass, "dispatch-value-not-function",
+                                call_site=hex(site["addr"]),
+                                table=hex(tab), value=hex(val))
+        vsym = g.symbol_at(val)
+        vshort = _s1_rust_last_segment(vsym) if vsym else None
+        if not vsym or vshort not in spec["targets"] \
+                or not _led_module_ok(vsym, "src/provider/file_store_any2obj.rs"):
+            return _led_refusal(rule, klass, "dispatch-value-not-enumerated",
+                                call_site=hex(site["addr"]),
+                                value=hex(val), symbol=vsym)
+        target_addrs.add(val)
+        target_names.add(vshort)
+        table_proofs.append({"table": short, "address": hex(tab),
+                             "dispatch_id": spec["dispatch_id"],
+                             "value": hex(val), "target": vshort})
+    if target_names != set(spec["targets"]):
+        return _led_refusal(rule, klass, "target-set-not-enumerated",
+                            call_site=hex(site["addr"]),
+                            computed=sorted(target_names),
+                            enumerated=sorted(spec["targets"]))
+    return {
+        "schema": WITNESS_SCHEMA,
+        "rule": rule,
+        "class": klass,
+        "contract_bounded": True,
+        "resolved": True,
+        "function": fname,
+        "call_site": hex(site["addr"]),
+        "operand": {"base_reg": reg, "member_offset": hex(spec["read"])},
+        "object": {
+            "type": "OsslDecoder",
+            "constructor": DECODER_METHOD_CONSTRUCTOR,
+            "constructor_address": hex(next(iter(ctor))),
+            "construction_call_site": hex(insns[call_at][0]),
+            "argument_table": DECODER_METHOD_TABLE,
+            "argument_table_address": hex(table_addr),
+            "null_guarded": True,
+        },
+        "field": {
+            "type": "OsslDecoder",
+            "repr_c": True,
+            "name": spec["slot"],
+            "read_offset": hex(spec["read"]),
+            "writer": "ossl_decoder_from_algorithm",
+            "zero_initialiser": LED_ZERO_INITIALISERS["OsslDecoder"],
+        },
+        "tables": table_proofs,
+        "targets": [hex(t) for t in sorted(target_addrs)],
+        "target_names": sorted(target_names),
+        "writer_gate": {k: owners["types"][k]["status"] for k in
+                        owners["types"]},
+        "slot": (f"OsslDecoder.{spec['slot']}@{hex(spec['read'])} over "
+                 f"{len(tables)} closed algorithm table(s)"),
+        "basis": ("an enumerated decoder method-slot call site; the object is "
+                  "the direct result of `ossl_decoder_from_algorithm` called "
+                  "on the closed `ossl_any_to_obj_algorithm` row set, the read "
+                  "is NULL-guarded, and every table's dispatch entry for this "
+                  "slot is an in-image function start"),
+        "conditions": [
+            "containing-function-is-an-enumerated-site",
+            "slot-is-the-enumerated-field-offset",
+            "slot-read-is-null-guarded",
+            "object-is-the-direct-result-of-the-enumerated-constructor",
+            "constructor-argument-is-the-closed-algorithm-table",
+            "writer-set-and-owner-files-are-the-computed-exhaustive-set",
+            "every-row-table-is-an-enumerated-dispatch-table",
+            "every-dispatch-entry-is-a-single-in-image-function-start",
+            "target-set-is-exactly-the-enumerated-finite-set",
+        ],
+    }
+
+
 # ---- S6: triage records (not a class) ---------------------------------- #
 
 S6_FUNCTIONS = {
@@ -13661,6 +14825,39 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                 continue
             site["provider_hw_table_refusal"] = hw
             stats["S5_provider_hw_table_refused"] += 1
+        # S7a: the legacy `EVP_CIPHER` cipher-data dispatch.  The field's
+        # production writer set is computed from source and the stored values
+        # are resolved at the image-measured displacement; a non-enumerated
+        # site returns None, a refusal is recorded by name.
+        leg = legacy_evp_cipher_data_witness(g, site, name)
+        if leg is not None:
+            if leg.get("resolved"):
+                targets = {int(t, 16) for t in leg["targets"]}
+                site["targets"] |= residual | targets
+                site["class"] = ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA
+                site["unresolved"] = True
+                site["reason"] = ("legacy EVP cipher-data closed writer set: "
+                                  + leg["slot"])
+                site["witness"] = leg
+                stats["S7_legacy_evp_data_contract_bounded"] += 1
+                continue
+            site["legacy_evp_data_refusal"] = leg
+            stats["S7_legacy_evp_data_refused"] += 1
+        # S7b: the `OsslDecoder` method-object dispatch.
+        dec = decoder_method_object_witness(g, site, name)
+        if dec is not None:
+            if dec.get("resolved"):
+                targets = {int(t, 16) for t in dec["targets"]}
+                site["targets"] |= residual | targets
+                site["class"] = ABI_CONTRACT_DECODER_METHOD_OBJECT
+                site["unresolved"] = True
+                site["reason"] = ("decoder method-object closed table "
+                                  "closure: " + dec["slot"])
+                site["witness"] = dec
+                stats["S7_decoder_method_object_contract_bounded"] += 1
+                continue
+            site["decoder_method_refusal"] = dec
+            stats["S7_decoder_method_object_refused"] += 1
         # S1: a field-sensitive static-table instance dispatch.  The witness
         # keys on (object type, pointer-slot offset, member offset), restricts
         # the writer set by the static dispatch table that pairs the consumer
