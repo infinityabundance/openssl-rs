@@ -2119,11 +2119,19 @@ ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK = \
 # tables returned by a closed selector.  The class is site-enumerated: a
 # matching shape elsewhere is refused, never absorbed.
 ABI_CONTRACT_SLH_METHOD_TABLE = "ABI_CONTRACT_SLH_METHOD_TABLE"
+# The provider cipher hardware method tables (`PROV_CIPHER_HW` and the rows'
+# own `PROV_*_HW`): a context's `hw` pointer is installed by a source-derived
+# closed set of constructors from file-scope `static` tables, and every table
+# member is a compile-time function pointer.  The class is site-enumerated and
+# target-bounded: every site's read field, its context closure and its complete
+# target set are named, and the image must resolve to exactly those functions.
+ABI_CONTRACT_PROVIDER_HW_TABLE = "ABI_CONTRACT_PROVIDER_HW_TABLE"
 
 ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
                                   ABI_CONTRACT_EXPORT_CALLBACK,
                                   ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK,
-                                  ABI_CONTRACT_SLH_METHOD_TABLE})
+                                  ABI_CONTRACT_SLH_METHOD_TABLE,
+                                  ABI_CONTRACT_PROVIDER_HW_TABLE})
 
 ABI_CONTRACTS = {
     ABI_CONTRACT_PROVIDER: {
@@ -2303,6 +2311,53 @@ ABI_CONTRACTS = {
             "closed to exactly two in-image const tables",
             "the reachability of the two targets from the consumer workload; that "
             "remains the closure's job",
+        ],
+    },
+    ABI_CONTRACT_PROVIDER_HW_TABLE: {
+        "resolution_kind": (
+            "target-bounded by a closed, source-derived context-constructor set"
+        ),
+        "contract": (
+            "the provider cipher implementation's hardware method tables "
+            "(`PROV_CIPHER_HW`, `PROV_GCM_HW`, `PROV_CIPHER_HW_AES_SIV`, "
+            "`PROV_CIPHER_HW_AES_GCM_SIV`, `PROV_CIPHER_HW_CHACHA20`, "
+            "`PROV_CIPHER_HW_CHACHA20_POLY1305`, "
+            "`PROV_CIPHER_HW_RC4_HMAC_MD5`)"
+        ),
+        "citation": [
+            "src/provider/cipher.rs:353-378 -- `ProvCipherHw` is `#[repr(C)]` "
+            "with `{ init, cipher, copyctx }`",
+            "src/provider/cipher.rs:1717 -- `ossl_cipher_generic_initkey` is the "
+            "only store to a `ProvCipherCtx::hw`; the table it stores is resolved "
+            "from each caller's argument",
+            "src/provider/cipher_gcm.rs:719 -- `ossl_gcm_initctx` is the only "
+            "store to `ProvGcmCtx::hw`; its three callers pass `AES_GCM_HW`, "
+            "`ARIA_GCM_HW` or `SM4_GCM_HW`",
+            "src/provider/cipher_tdes_wrap.rs:490-494 -- `TDES_WRAP_CBC_HW` is a "
+            "production initialiser of the same fields, found by the owner scan",
+            "src/provider/cipher.rs:10044,14019 -- the SIV/GCM-SIV rows install "
+            "their one static table at `newctx`",
+            "src/provider/cipher.rs:15403,15429 and 16728,16763 -- the ChaCha20 "
+            "and ChaCha20-Poly1305 tables are installed by the two row "
+            "constructors",
+            "the owner set is COMPUTED by scanning `src/` for production "
+            "initialisers of the nine hw types; test-only (`#[cfg(test)]`) "
+            "initialisers are recorded and excluded",
+        ],
+        "covers": (
+            "the exact function set reachable through the enumerated `hw` field "
+            "of each enumerated call site, given the computed owner set, the "
+            "closed source writer set of that field and the source-derived "
+            "context closure (type constructors, or dispatch-entry pairing)")
+        ,
+        "does_not_cover": [
+            "an indirect site outside the 25 enumerated call sites, even with "
+            "the same `hw->field` shape",
+            "a context whose hw field has a source writer the scan cannot "
+            "classify, or a table member that is not an in-image function start",
+            "the reachability of these targets from the consumer workload; that "
+            "remains the closure's job",
+            "any claim about the correctness of the selected function's body",
         ],
     },
 }
@@ -11515,6 +11570,1701 @@ def slh_method_table_witness(g: "DsoGraph", site: dict, name: str):
     }
 
 
+# --------------------------------------------------------------------------- #
+# S5: the provider cipher hardware method tables.  Twenty-five enumerated
+# indirect call sites read one method out of the `hw` sub-struct of their
+# cipher context.  Every `hw` pointer is installed by a *closed, source-derived*
+# set of constructors, and every constructor argument names a file-scope
+# `static` table (or a finite type-level set of them), so each site's target
+# set is finite, computable from source and verifiable in the image.
+#
+# Two of the four rejection findings are answered by construction rather than by
+# assertion:
+#   * the owner-file set is COMPUTED by scanning `src/` for every production
+#     initialiser of these types; a file that contains one and is not enumerated
+#     fails a completeness gate, and `#[cfg(test)]` initialisers are recorded
+#     separately and excluded with a stated reason;
+#   * the context-pointer closure is CHECKED by the witness: each site's table
+#     set comes from the source constructors that write that context's `hw`
+#     field (type closure), or, when the site function is itself a dispatch
+#     entry, from the rows that publish it and the table their NEWCTX installs
+#     (entry pairing).  An unresolved constructor, a NULL member or a table
+#     outside the enumerated writer set refuses the site.
+# --------------------------------------------------------------------------- #
+
+PROVIDER_HW_WITNESS_RULE = "provider-hw-table"
+
+# The owner set is computed at run time (`_phw_owner_gate`); this tuple is the
+# enumeration the computation must reproduce.  A production initialiser in any
+# other file fails the gate with `provider-hw-owner-set-not-exhaustive`.
+PROVIDER_HW_ENUMERATED_OWNER_FILES = (
+    "src/provider/cipher.rs",
+    "src/provider/cipher_gcm.rs",
+    "src/provider/cipher_tdes_wrap.rs",
+)
+
+PROVIDER_HW_TABLE_TYPES = frozenset({
+    "ProvCipherHw", "ProvGcmHw", "ProvSivHw", "ProvCcmHw",
+    "ProvCipherHwAesHmacSha", "ProvCipherHwAesGcmSiv",
+    "ProvCipherHwChacha20", "ProvCipherHwChacha20Poly1305",
+    "ProvCipherHwRc4HmacMd5",
+})
+
+# `#[repr(C)]` reality, read from the source.  The three `False` types are
+# homogeneous function-pointer structs: their *offset set* is order independent,
+# but their source field ORDER is not guaranteed, so every offset this witness
+# uses is confirmed against the image at the site (the table slot must hold the
+# source-named function) and is recorded as compiler-dependent.
+PROVIDER_HW_REPR_C = {
+    "ProvCipherHw": True,
+    "ProvGcmHw": False,
+    "ProvSivHw": False,
+    "ProvCcmHw": False,
+    "ProvCipherHwAesHmacSha": True,
+    "ProvCipherHwAesGcmSiv": True,
+    "ProvCipherHwChacha20": True,
+    "ProvCipherHwChacha20Poly1305": True,
+    "ProvCipherHwRc4HmacMd5": True,
+}
+
+# The `hw`-installing helpers: (context argument, table argument, ctx type the
+# helper writes).  `ossl_chacha20_initctx` is a wrapper, handled generically.
+PROVIDER_HW_INIT_HELPERS = {
+    "ossl_cipher_generic_initkey": {"ctx_arg": 0, "table_arg": 6,
+                                    "hw_ctx": "ProvCipherCtx"},
+    "ossl_gcm_initctx": {"ctx_arg": 1, "table_arg": 3, "hw_ctx": "ProvGcmCtx"},
+    "ossl_ccm_initctx": {"ctx_arg": 0, "table_arg": 2, "hw_ctx": "ProvCcmCtx"},
+}
+
+# The complete source writer set of each read field, computed once from the
+# enumerated owner files and frozen here.  `condition 4` compares the source
+# scan against it; an extra or missing writer refuses.  73 entries: the 72 the
+# rejected witness listed, plus `TDES_WRAP_CBC_HW` (cipher_tdes_wrap.rs:490).
+PROVIDER_HW_FIELD_WRITERS = {
+    ("ProvCipherHw", "init"): frozenset((
+        "AES_CBC_HW", "AES_CFB1_HW", "AES_CFB8_HW", "AES_CFB_HW", "AES_CTR_HW",
+        "AES_ECB_HW", "AES_OCB_HW", "AES_OFB_HW", "AES_XTS_HW", "ARIA_CBC_HW",
+        "ARIA_CFB128_HW", "ARIA_CFB1_HW", "ARIA_CFB8_HW", "ARIA_CTR_HW",
+        "ARIA_ECB_HW", "ARIA_OFB128_HW", "BF_CBC_HW", "BF_CFB_HW", "BF_ECB_HW",
+        "BF_OFB_HW", "CAMELLIA_CBC_HW", "CAMELLIA_CFB1_HW", "CAMELLIA_CFB8_HW",
+        "CAMELLIA_CFB_HW", "CAMELLIA_CTR_HW", "CAMELLIA_ECB_HW",
+        "CAMELLIA_OFB_HW", "CAST5_CBC_HW", "CAST5_CFB_HW", "CAST5_ECB_HW",
+        "CAST5_OFB_HW", "CHACHA20_HW", "CHACHA20_POLY1305_HW",
+        "CIPHER_HW_AES_HMAC_SHA1", "CIPHER_HW_AES_HMAC_SHA256", "DES_CBC_HW",
+        "DES_CFB1_HW", "DES_CFB8_HW", "DES_CFB_HW", "DES_ECB_HW", "DES_OFB_HW",
+        "IDEA_CBC_HW", "IDEA_CFB_HW", "IDEA_ECB_HW", "IDEA_OFB_HW", "RC2_CBC_HW",
+        "RC2_CFB_HW", "RC2_ECB_HW", "RC2_OFB_HW", "RC4_HMAC_MD5_HW", "RC4_HW",
+        "SEED_CBC_HW", "SEED_CFB_HW", "SEED_ECB_HW", "SEED_OFB_HW", "SM4_CBC_HW",
+        "SM4_CFB128_HW", "SM4_CTR_HW", "SM4_ECB_HW", "SM4_OFB128_HW",
+        "SM4_XTS_HW", "TDES_DESX_CBC_HW", "TDES_EDE2_CBC_HW",
+        "TDES_EDE2_CFB_HW", "TDES_EDE2_ECB_HW", "TDES_EDE2_OFB_HW",
+        "TDES_EDE3_CBC_HW", "TDES_EDE3_CFB1_HW", "TDES_EDE3_CFB8_HW",
+        "TDES_EDE3_CFB_HW", "TDES_EDE3_ECB_HW", "TDES_EDE3_OFB_HW",
+        "TDES_WRAP_CBC_HW",
+    )),
+    ("ProvCipherHw", "cipher"): frozenset((
+        "AES_CBC_HW", "AES_CFB1_HW", "AES_CFB8_HW", "AES_CFB_HW", "AES_CTR_HW",
+        "AES_ECB_HW", "AES_OCB_HW", "AES_OFB_HW", "AES_XTS_HW", "ARIA_CBC_HW",
+        "ARIA_CFB128_HW", "ARIA_CFB1_HW", "ARIA_CFB8_HW", "ARIA_CTR_HW",
+        "ARIA_ECB_HW", "ARIA_OFB128_HW", "BF_CBC_HW", "BF_CFB_HW", "BF_ECB_HW",
+        "BF_OFB_HW", "CAMELLIA_CBC_HW", "CAMELLIA_CFB1_HW", "CAMELLIA_CFB8_HW",
+        "CAMELLIA_CFB_HW", "CAMELLIA_CTR_HW", "CAMELLIA_ECB_HW",
+        "CAMELLIA_OFB_HW", "CAST5_CBC_HW", "CAST5_CFB_HW", "CAST5_ECB_HW",
+        "CAST5_OFB_HW", "CHACHA20_HW", "CHACHA20_POLY1305_HW",
+        "CIPHER_HW_AES_HMAC_SHA1", "CIPHER_HW_AES_HMAC_SHA256", "DES_CBC_HW",
+        "DES_CFB1_HW", "DES_CFB8_HW", "DES_CFB_HW", "DES_ECB_HW", "DES_OFB_HW",
+        "IDEA_CBC_HW", "IDEA_CFB_HW", "IDEA_ECB_HW", "IDEA_OFB_HW", "RC2_CBC_HW",
+        "RC2_CFB_HW", "RC2_ECB_HW", "RC2_OFB_HW", "RC4_HMAC_MD5_HW", "RC4_HW",
+        "SEED_CBC_HW", "SEED_CFB_HW", "SEED_ECB_HW", "SEED_OFB_HW", "SM4_CBC_HW",
+        "SM4_CFB128_HW", "SM4_CTR_HW", "SM4_ECB_HW", "SM4_OFB128_HW",
+        "SM4_XTS_HW", "TDES_DESX_CBC_HW", "TDES_EDE2_CBC_HW",
+        "TDES_EDE2_CFB_HW", "TDES_EDE2_ECB_HW", "TDES_EDE2_OFB_HW",
+        "TDES_EDE3_CBC_HW", "TDES_EDE3_CFB1_HW", "TDES_EDE3_CFB8_HW",
+        "TDES_EDE3_CFB_HW", "TDES_EDE3_ECB_HW", "TDES_EDE3_OFB_HW",
+        "TDES_WRAP_CBC_HW",
+    )),
+    ("ProvGcmHw", "aadupdate"): frozenset((
+        "AES_GCM_HW", "ARIA_GCM_HW", "SM4_GCM_HW")),
+    ("ProvGcmHw", "cipherupdate"): frozenset((
+        "AES_GCM_HW", "ARIA_GCM_HW", "SM4_GCM_HW")),
+    ("ProvGcmHw", "cipherfinal"): frozenset((
+        "AES_GCM_HW", "ARIA_GCM_HW", "SM4_GCM_HW")),
+    ("ProvSivHw", "cleanup"): frozenset(("AES_SIV_HW",)),
+    ("ProvCipherHwAesGcmSiv", "clean_ctx"): frozenset(("AES_GCM_SIV_HW",)),
+    ("ProvCipherHwChacha20", "base.init"): frozenset(("CHACHA20_HW",)),
+    ("ProvCipherHwChacha20", "base.cipher"): frozenset(("CHACHA20_HW",)),
+    ("ProvCipherHwChacha20", "initiv"): frozenset(("CHACHA20_HW",)),
+    ("ProvCipherHwChacha20Poly1305", "aead_cipher"): frozenset(
+        ("CHACHA20_POLY1305_HW",)),
+    ("ProvCipherHwChacha20Poly1305", "tls_init"): frozenset(
+        ("CHACHA20_POLY1305_HW",)),
+    ("ProvCipherHwChacha20Poly1305", "tls_iv_set_fixed"): frozenset(
+        ("CHACHA20_POLY1305_HW",)),
+    ("ProvCipherHwRc4HmacMd5", "tls_init"): frozenset(("RC4_HMAC_MD5_HW",)),
+    ("ProvCipherHwRc4HmacMd5", "init_mackey"): frozenset(("RC4_HMAC_MD5_HW",)),
+}
+
+# Per-call-site enumeration.  `ctx`/`hw_off` are the context type proven from
+# source and the image-measured offset of its `hw` pointer; `read`/`field` are
+# the table member; `targets` is the complete function set the context closure
+# resolves that member to.
+PROVIDER_HW_SITES = {
+    0x42F14E: {
+        "function": "ossl_gcm_one_shot", "ctx": "ProvGcmCtx", "hw_off": 0xF0,
+        "read": 0x10, "type": "ProvGcmHw", "field": "aadupdate",
+        "targets": ("ossl_gcm_aad_update",),
+    },
+    0x42F164: {
+        "function": "ossl_gcm_one_shot", "ctx": "ProvGcmCtx", "hw_off": 0xF0,
+        "read": 0x18, "type": "ProvGcmHw", "field": "cipherupdate",
+        "targets": ("ossl_gcm_cipher_update", "sm4_gcm_cipher_update"),
+        "folding_note": ("AES_GCM_HW.cipherupdate names "
+                         "generic_aes_gcm_cipher_update, which this build "
+                         "folds into sm4_gcm_cipher_update; the two table "
+                         "slots hold the same address"),
+    },
+    0x42F17C: {
+        "function": "ossl_gcm_one_shot", "ctx": "ProvGcmCtx", "hw_off": 0xF0,
+        "read": 0x20, "type": "ProvGcmHw", "field": "cipherfinal",
+        "targets": ("ossl_gcm_cipher_final",),
+    },
+    0x43229B: {
+        "function": "aes_ocb_", "ctx": "ProvAesOcbCtx", "hw_off": 0xA8,
+        "read": 0x0, "type": "ProvCipherHw", "field": "init",
+        "targets": ("cipher_hw_aes_ocb_generic_initkey",),
+    },
+    0x43239E: {
+        "function": "aes_ocb_", "ctx": "ProvAesOcbCtx", "hw_off": 0xA8,
+        "read": 0x0, "type": "ProvCipherHw", "field": "init",
+        "targets": ("cipher_hw_aes_ocb_generic_initkey",),
+    },
+    0x4327EF: {
+        "function": "sm4_xts_", "ctx": "ProvSm4XtsCtx", "hw_off": 0xA8,
+        "read": 0x0, "type": "ProvCipherHw", "field": "init",
+        "targets": ("cipher_hw_sm4_xts_generic_initkey",),
+    },
+    0x4328C2: {
+        "function": "sm4_xts_", "ctx": "ProvSm4XtsCtx", "hw_off": 0xA8,
+        "read": 0x0, "type": "ProvCipherHw", "field": "init",
+        "targets": ("cipher_hw_sm4_xts_generic_initkey",),
+    },
+    0x433852: {
+        "function": "aes_siv_freectx", "ctx": "ProvAesSivCtx",
+        "hw_off": 0x68, "read": 0x20, "type": "ProvSivHw",
+        "field": "cleanup", "targets": ("aes_siv_cleanup",),
+        "impl_fn": "destroy_body",
+    },
+    0x436FDD: {
+        "function": "cts128_cs2_decrypt", "ctx": "ProvCipherCtx",
+        "hw_off": 0xA8, "read": 0x8, "type": "ProvCipherHw",
+        "field": "cipher", "targets": ("ossl_cipher_hw_generic_cbc",),
+    },
+    0x43CA00: {
+        "function": "chacha20_poly1305_initiv",
+        "ctx": "ProvChacha20Poly1305Ctx", "base_first": True,
+        "hw_off": 0x168, "read": 0x18, "type": "ProvCipherHwChacha20",
+        "field": "initiv", "targets": ("chacha20_initiv",),
+    },
+    0x43CB26: {
+        "function": "chacha20_poly1305_update",
+        "ctx": "ProvChacha20Poly1305Ctx",
+        "inline_from": ("chacha20_poly1305_cipher", "vctx",
+                        "ProvCipherCtx"),
+        "hw_off": 0xA8, "read": 0x18,
+        "type": "ProvCipherHwChacha20Poly1305", "field": "aead_cipher",
+        "targets": ("chacha20_poly1305_aead_cipher",),
+    },
+    0x43CC98: {
+        "function": "ossl_aes_gcm_siv_freectx", "ctx": "ProvAesGcmSivCtx",
+        "hw_off": 0x8, "read": 0x18, "type": "ProvCipherHwAesGcmSiv",
+        "field": "clean_ctx", "targets": ("aes_gcm_siv_clean_ctx",),
+        "impl_fn": "destroy_body",
+    },
+    0x43D5F9: {
+        "function": "chacha20_poly1305_initkey",
+        "ctx": "ProvChacha20Poly1305Ctx", "base_first": True,
+        "hw_off": 0x168, "read": 0x0, "type": "ProvCipherHwChacha20",
+        "field": "base.init", "targets": ("chacha20_initkey",),
+    },
+    0x43FF9F: {
+        "function": "chacha20_poly1305_aead_cipher",
+        "ctx": "ProvChacha20Poly1305Ctx", "base_first": True,
+        "hw_off": 0x168, "read": 0x8, "type": "ProvCipherHwChacha20",
+        "field": "base.cipher", "targets": ("chacha20_cipher",),
+    },
+    0x440151: {
+        "function": "chacha20_poly1305_aead_cipher",
+        "ctx": "ProvChacha20Poly1305Ctx", "base_first": True,
+        "hw_off": 0x168, "read": 0x8, "type": "ProvCipherHwChacha20",
+        "field": "base.cipher", "targets": ("chacha20_cipher",),
+    },
+    0x44249F: {
+        "function": "ossl_cipher_generic_block_final",
+        "ctx": "ProvCipherCtx", "hw_off": 0xA8, "read": 0x8,
+        "type": "ProvCipherHw", "field": "cipher",
+        "targets": ("ossl_cipher_hw_tdes_cbc", "ossl_cipher_hw_tdes_ecb",
+                    "ossl_cipher_hw_chunked_cbc", "ossl_cipher_hw_generic_cbc",
+                    "ossl_cipher_hw_generic_ecb", "cipher_hw_desx_cbc",
+                    "cipher_hw_des_cbc_cipher", "cipher_hw_des_ecb_cipher",
+                    "cipher_hw_rc2_cbc_cipher", "cipher_hw_rc2_ecb_cipher",
+                    "cipher_hw_idea_cbc_cipher", "cipher_hw_idea_ecb_cipher",
+                    "cipher_hw_seed_cbc_cipher", "cipher_hw_seed_ecb_cipher",
+                    "cipher_hw_cast5_cbc_cipher", "cipher_hw_cast5_ecb_cipher",
+                    "cipher_hw_blowfish_cbc_cipher",
+                    "cipher_hw_blowfish_ecb_cipher"),
+    },
+    0x442574: {
+        "function": "ossl_cipher_generic_block_final",
+        "ctx": "ProvCipherCtx", "hw_off": 0xA8, "read": 0x8,
+        "type": "ProvCipherHw", "field": "cipher",
+        "targets": ("ossl_cipher_hw_tdes_cbc", "ossl_cipher_hw_tdes_ecb",
+                    "ossl_cipher_hw_chunked_cbc", "ossl_cipher_hw_generic_cbc",
+                    "ossl_cipher_hw_generic_ecb", "cipher_hw_desx_cbc",
+                    "cipher_hw_des_cbc_cipher", "cipher_hw_des_ecb_cipher",
+                    "cipher_hw_rc2_cbc_cipher", "cipher_hw_rc2_ecb_cipher",
+                    "cipher_hw_idea_cbc_cipher", "cipher_hw_idea_ecb_cipher",
+                    "cipher_hw_seed_cbc_cipher", "cipher_hw_seed_ecb_cipher",
+                    "cipher_hw_cast5_cbc_cipher", "cipher_hw_cast5_ecb_cipher",
+                    "cipher_hw_blowfish_cbc_cipher",
+                    "cipher_hw_blowfish_ecb_cipher"),
+    },
+    0x442D17: {
+        "function": "chacha20_poly1305_set_ctx_params",
+        "ctx": "ProvChacha20Poly1305Ctx", "hw_off": 0xA8, "read": 0x28,
+        "type": "ProvCipherHwChacha20Poly1305", "field": "tls_init",
+        "targets": ("chacha_poly1305_tls_init",),
+    },
+    0x442D58: {
+        "function": "chacha20_poly1305_set_ctx_params",
+        "ctx": "ProvChacha20Poly1305Ctx", "hw_off": 0xA8, "read": 0x30,
+        "type": "ProvCipherHwChacha20Poly1305", "field": "tls_iv_set_fixed",
+        "targets": ("chacha_poly1305_tls_iv_set_fixed",),
+    },
+    0x44304C: {
+        "function": "ossl_cipher_generic_block_update",
+        "ctx": "ProvCipherCtx", "hw_off": 0xA8, "read": 0x8,
+        "type": "ProvCipherHw", "field": "cipher",
+        "targets": ("ossl_cipher_hw_tdes_cbc", "ossl_cipher_hw_tdes_ecb",
+                    "ossl_cipher_hw_chunked_cbc", "ossl_cipher_hw_generic_cbc",
+                    "ossl_cipher_hw_generic_ecb", "cipher_hw_desx_cbc",
+                    "cipher_hw_des_cbc_cipher", "cipher_hw_des_ecb_cipher",
+                    "cipher_hw_rc2_cbc_cipher", "cipher_hw_rc2_ecb_cipher",
+                    "cipher_hw_idea_cbc_cipher", "cipher_hw_idea_ecb_cipher",
+                    "cipher_hw_seed_cbc_cipher", "cipher_hw_seed_ecb_cipher",
+                    "cipher_hw_cast5_cbc_cipher", "cipher_hw_cast5_ecb_cipher",
+                    "cipher_hw_blowfish_cbc_cipher",
+                    "cipher_hw_blowfish_ecb_cipher"),
+    },
+    0x44309C: {
+        "function": "ossl_cipher_generic_block_update",
+        "ctx": "ProvCipherCtx", "hw_off": 0xA8, "read": 0x8,
+        "type": "ProvCipherHw", "field": "cipher",
+        "targets": ("ossl_cipher_hw_tdes_cbc", "ossl_cipher_hw_tdes_ecb",
+                    "ossl_cipher_hw_chunked_cbc", "ossl_cipher_hw_generic_cbc",
+                    "ossl_cipher_hw_generic_ecb", "cipher_hw_desx_cbc",
+                    "cipher_hw_des_cbc_cipher", "cipher_hw_des_ecb_cipher",
+                    "cipher_hw_rc2_cbc_cipher", "cipher_hw_rc2_ecb_cipher",
+                    "cipher_hw_idea_cbc_cipher", "cipher_hw_idea_ecb_cipher",
+                    "cipher_hw_seed_cbc_cipher", "cipher_hw_seed_ecb_cipher",
+                    "cipher_hw_cast5_cbc_cipher", "cipher_hw_cast5_ecb_cipher",
+                    "cipher_hw_blowfish_cbc_cipher",
+                    "cipher_hw_blowfish_ecb_cipher"),
+    },
+    0x44EB10: {
+        "function": "rc4_hmac_md5_set_ctx_params", "ctx": "ProvRc4HmacMd5Ctx",
+        "hw_off": 0xA8, "read": 0x18, "type": "ProvCipherHwRc4HmacMd5",
+        "field": "tls_init", "targets": ("cipher_hw_rc4_hmac_md5_tls_init",),
+    },
+    0x44EB57: {
+        "function": "rc4_hmac_md5_set_ctx_params", "ctx": "ProvRc4HmacMd5Ctx",
+        "hw_off": 0xA8, "read": 0x20, "type": "ProvCipherHwRc4HmacMd5",
+        "field": "init_mackey",
+        "targets": ("cipher_hw_rc4_hmac_md5_init_mackey",),
+    },
+    0x450292: {
+        "function": "des_", "ctx": "ProvCipherCtx", "hw_off": 0xA8,
+        "read": 0x0, "type": "ProvCipherHw", "field": "init",
+        "targets": ("cipher_hw_des_initkey",),
+    },
+    0x450381: {
+        "function": "des_", "ctx": "ProvCipherCtx", "hw_off": 0xA8,
+        "read": 0x0, "type": "ProvCipherHw", "field": "init",
+        "targets": ("cipher_hw_des_initkey",),
+    },
+}
+
+
+def _phw_refusal(reason: str, **extra) -> dict:
+    rec = {"schema": WITNESS_SCHEMA,
+           "rule": PROVIDER_HW_WITNESS_RULE,
+           "class": ABI_CONTRACT_PROVIDER_HW_TABLE,
+           "contract_bounded": False, "resolved": False,
+           "refusal": reason}
+    rec.update(extra)
+    return rec
+
+
+def _phw_split(text: str):
+    """Top-level comma split (angle brackets count as nesting)."""
+    out, cur, depth = [], [], 0
+    for ch in text:
+        if ch in "([{<":
+            depth += 1
+        elif ch in ")]}>":
+            depth -= 1
+        if ch == "," and depth == 0:
+            out.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+    if cur:
+        out.append("".join(cur).strip())
+    return [x for x in out if x]
+
+
+def _phw_cfg_test_spans(text: str):
+    """`#[cfg(test)]` item spans: test-only source is recorded, never admitted."""
+    spans = []
+    for m in re.finditer(r"#\[cfg\(\s*test\s*\)\]", text):
+        brace = text.find("{", m.end())
+        if brace < 0:
+            continue
+        end = _s1_brace_span(text, brace)
+        if end is not None:
+            spans.append((m.start(), end))
+    return spans
+
+
+def _phw_in_spans(spans, off: int) -> bool:
+    return any(a <= off < b for a, b in spans)
+
+
+def _phw_in_comment(src: dict, path: str, off: int) -> bool:
+    return _phw_in_spans(src["comments"].get(path, ()), off)
+
+
+def _phw_enclosing_macro(src: dict, path: str, off: int):
+    for name, start, end in src["macros"].get(path, ()):
+        if start <= off < end:
+            return name
+    return None
+
+
+def _phw_static_fields(body: str):
+    """`field -> expression`, recursing through `base: Type { ... }`."""
+    out = {}
+    for part in _phw_split(body):
+        part = re.sub(r"(?m)^\s*//.*$", "", part)
+        part = re.sub(r"/\*.*?\*/", "", part, flags=re.S).strip()
+        m = re.match(r"([A-Za-z_]\w*)\s*:\s*(.+)$", part, re.S)
+        if not m:
+            continue
+        name, val = m.group(1), " ".join(m.group(2).split())
+        if "{" in val and val.rstrip().endswith("}"):
+            inner = val[val.find("{") + 1:val.rfind("}")]
+            for k, v in _phw_static_fields(inner).items():
+                out[name + "." + k] = v
+        else:
+            out[name] = val
+    return out
+
+
+def _phw_source(g: "DsoGraph"):
+    """One parse of the admitted tree: owner files, statics, functions."""
+    cache = getattr(g, "_phw_source_cache", None)
+    if cache is not None:
+        return cache
+    docs = _s1_docs(g)
+    statics, test_statics = {}, []
+    spans = {path: _phw_cfg_test_spans(text) for path, text in docs.items()}
+    comments = {}
+    macros = {}
+    for path, text in docs.items():
+        comments[path] = [m.span() for m in
+                          re.finditer(r"//[^\n]*|/\*.*?\*/", text, re.S)]
+        macros[path] = []
+        for m in re.finditer(r"macro_rules!\s+(\w+)\s*\{", text):
+            end = _s1_brace_span(text, m.end() - 1)
+            if end is not None:
+                macros[path].append((m.group(1), m.start(), end))
+    for path, text in docs.items():
+        for m in re.finditer(
+                r"\bstatic\s+([A-Z][A-Z0-9_]*)\s*:\s*(\w+)\s*=\s*\w+\s*\{", text):
+            if m.group(2) not in PROVIDER_HW_TABLE_TYPES:
+                continue
+            b = text.find("{", m.start())
+            e = _s1_brace_span(text, b)
+            if b < 0 or e is None:
+                continue
+            rec = {"type": m.group(2), "file": path,
+                   "line": text.count("\n", 0, m.start()) + 1,
+                   "fields": _phw_static_fields(text[b + 1:e - 1])}
+            if _phw_in_spans(spans[path], m.start()):
+                test_statics.append(dict(rec, symbol=m.group(1)))
+            else:
+                statics[m.group(1)] = rec
+        for m in re.finditer(
+                r"hw_static!\(\s*([A-Z0-9_]+)\s*,\s*([\w:]+)\s*,\s*([\w:]+)\s*,"
+                r"\s*([\w:]+)\s*,?\s*\)", text):
+            rec = {"type": "ProvCipherHw", "file": path,
+                   "line": text.count("\n", 0, m.start()) + 1,
+                   "fields": {"init": m.group(2), "cipher": m.group(3),
+                              "copyctx": "Some(" + m.group(4) + ")"}}
+            if _phw_in_spans(spans[path], m.start()):
+                test_statics.append(dict(rec, symbol=m.group(1)))
+            else:
+                statics[m.group(1)] = rec
+    funcs = []
+    for path, text in docs.items():
+        for m in re.finditer(
+                r"\bfn\s+([A-Za-z_]\w*)\s*(?:<[^>{};]*>)?\s*\(", text):
+            i = m.end() - 1
+            depth = 0
+            while i < len(text):
+                if text[i] == "(":
+                    depth += 1
+                elif text[i] == ")":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                i += 1
+            j = i
+            while j < len(text) and text[j] not in "{;":
+                j += 1
+            if j >= len(text) or text[j] != "{":
+                continue
+            e = _s1_brace_span(text, j)
+            if e is None:
+                continue
+            funcs.append({"name": m.group(1), "file": path, "start": j,
+                          "end": e, "pos": m.start(),
+                          "line": text.count("\n", 0, m.start()) + 1,
+                          "params": text[m.end():i],
+                          "body": text[j + 1:e - 1]})
+    cache = {"docs": docs, "spans": spans, "statics": statics,
+             "test_statics": test_statics, "funcs": funcs,
+             "comments": comments, "macros": macros, "by_name": {}}
+    for f in funcs:
+        cache["by_name"].setdefault(f["name"], []).append(f)
+    g._phw_source_cache = cache
+    return cache
+
+
+def _phw_owner_gate(g: "DsoGraph") -> dict:
+    """The owner set, computed from the scan; a distinct refusal when it is not
+    exactly the enumerated set.  Test-only initialisers are recorded, not
+    admitted: they are inside `#[cfg(test)]` and cannot reach the release image."""
+    src = _phw_source(g)
+    prod = {}
+    for sym, rec in src["statics"].items():
+        prod.setdefault(rec["file"], []).append(sym)
+    test = {}
+    for rec in src["test_statics"]:
+        test.setdefault(rec["file"], []).append(rec["symbol"])
+    computed = tuple(sorted(prod))
+    enumerated = tuple(sorted(PROVIDER_HW_ENUMERATED_OWNER_FILES))
+    ok = computed == enumerated
+    return {
+        "status": "PASS" if ok else "FAIL",
+        "reason": None if ok else "provider-hw-owner-set-not-exhaustive",
+        "enumerated": list(enumerated),
+        "computed": list(computed),
+        "missing": sorted(set(computed) - set(enumerated)),
+        "extra": sorted(set(enumerated) - set(computed)),
+        "initialisers": {k: sorted(v) for k, v in sorted(prod.items())},
+        "test_only": {k: sorted(v) for k, v in sorted(test.items())},
+        "test_only_excluded_because": (
+            "declared inside `#[cfg(test)]`; the release image the closure "
+            "analyses does not contain it, and it is not a production writer"),
+    }
+
+
+def _phw_consts(g: "DsoGraph"):
+    cache = getattr(g, "_phw_const_cache", None)
+    if cache is not None:
+        return cache
+    out = {}
+    for _path, text in _phw_source(g)["docs"].items():
+        for m in re.finditer(
+                r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?const\s+([A-Za-z_]\w*)"
+                r"\s*:\s*[^=]+=\s*([^;]+);", text):
+            out.setdefault(m.group(1), []).append(m.group(2).strip())
+    g._phw_const_cache = out
+    return out
+
+
+def _phw_eval(g: "DsoGraph", expr: str, depth: int = 0):
+    """Integer constant expression, including `crate::module::CONST` paths."""
+    if depth > 6:
+        return None
+    s = expr.strip()
+    try:
+        return int(s.replace("_", ""), 0)
+    except ValueError:
+        pass
+    v = _s1_eval_int(g, s)
+    if v is not None:
+        return v
+    consts = _phw_consts(g)
+    m = re.fullmatch(r"(?:crate::)?(?:[\w:]+::)?([A-Z][A-Z0-9_]*)", s)
+    if m and m.group(1) in consts:
+        vals = {_phw_eval(g, x, depth + 1) for x in consts[m.group(1)]}
+        vals.discard(None)
+        return vals.pop() if len(vals) == 1 else None
+    had = False
+    for name in set(re.findall(r"[A-Za-z_]\w*", s)):
+        if name in consts:
+            val = _phw_eval(g, name, depth + 1)
+            if val is None:
+                return None
+            s = re.sub(r"\b" + re.escape(name) + r"\b", str(val), s)
+            had = True
+    return _phw_eval(g, s, depth + 1) if had else None
+
+
+_PHW_PRIM = {
+    "usize": 8, "isize": 8, "size_t": 8, "ssize_t": 8, "u64": 8, "i64": 8,
+    "uint64_t": 8, "int64_t": 8, "c_ulong": 8, "c_long": 8, "u128": 16,
+    "c_uint": 4, "c_int": 4, "u32": 4, "i32": 4, "uint32_t": 4, "int32_t": 4,
+    "c_ushort": 2, "u16": 2, "c_short": 2, "i16": 2, "c_uchar": 1, "u8": 1,
+    "i8": 1, "c_char": 1, "bool": 1, "double": 8, "f64": 8, "f32": 4,
+}
+
+
+def _phw_defs(g: "DsoGraph", kind: str, name: str):
+    cache = getattr(g, "_phw_def_cache", None)
+    if cache is None:
+        cache = {}
+        g._phw_def_cache = cache
+    key = (kind, name)
+    if key in cache:
+        return cache[key]
+    pat = re.compile(r"(?m)^[ \t]*(?:pub(?:\s*\([^)]*\))?\s+)?" + kind + r"\s+"
+                     + re.escape(name) + r"\b")
+    out = []
+    for path, text in _phw_source(g)["docs"].items():
+        for m in pat.finditer(text):
+            brace = text.find("{", m.end())
+            if brace < 0:
+                continue
+            if text.find(";", m.end(), brace) >= 0:
+                continue
+            end = _s1_brace_span(text, brace)
+            if end is None:
+                continue
+            prefix = text[max(0, m.start() - 600):m.start()]
+            out.append({"file": path, "line": text.count("\n", 0, m.start()) + 1,
+                        "body": text[brace + 1:end - 1],
+                        "repr_c": bool(re.search(r"#\[repr\s*\(\s*C\b",
+                                                 prefix))})
+    cache[key] = out
+    return out
+
+
+def _phw_size(g: "DsoGraph", type_text: str, seen=()):
+    t = " ".join((type_text or "").split())
+    if not t:
+        return None
+    if t.startswith("Option<") and t.endswith(">"):
+        return (8, 8)
+    if "fn" in t or t.startswith("*const") or t.startswith("*mut") \
+            or t.startswith("&"):
+        return (8, 8)
+    if t in _PHW_PRIM:
+        return (_PHW_PRIM[t], min(_PHW_PRIM[t], 8))
+    m = re.fullmatch(r"\[(.+);\s*([^\]]+)\]", t)
+    if m:
+        inner = _phw_size(g, m.group(1), seen)
+        cnt = _phw_eval(g, m.group(2))
+        if inner is None or cnt is None:
+            return None
+        return (inner[0] * cnt, inner[1])
+    alias = _s1_type_alias(g, t)
+    if alias is not None and alias != t:
+        return _phw_size(g, alias, seen + (t,))
+    short = t.rsplit("::", 1)[-1]
+    if short != t:
+        if short in seen:
+            return None
+        return _phw_size(g, short, seen + (t,))
+    if t in seen or len(seen) > 12:
+        return None
+    d = _phw_defs(g, "struct", t)
+    if len(d) == 1 and d[0]["repr_c"]:
+        lay = _phw_layout(g, t, seen)
+        return (lay["size"], lay["align"]) if lay else None
+    u = _phw_defs(g, "union", t)
+    if len(u) == 1 and u[0]["repr_c"]:
+        rows = []
+        for _nm, ftype in _s1_split_fields(u[0]["body"]):
+            s = _phw_size(g, ftype, seen + (t,))
+            if s is None:
+                return None
+            rows.append(s)
+        return (max(r[0] for r in rows), max(r[1] for r in rows)) if rows else None
+    return None
+
+
+def _phw_layout(g: "DsoGraph", name: str, seen=()):
+    if name in seen or len(seen) > 12:
+        return None
+    cache = getattr(g, "_phw_layout_cache", None)
+    if cache is None:
+        cache = {}
+        g._phw_layout_cache = cache
+    if name in cache:
+        return cache[name]
+    d = _phw_defs(g, "struct", name)
+    if len(d) != 1 or not d[0]["repr_c"]:
+        cache[name] = None
+        return None
+    off, align, rows = 0, 1, []
+    for fname, ftype in _s1_split_fields(d[0]["body"]):
+        s = _phw_size(g, ftype, seen + (name,))
+        if s is None:
+            cache[name] = None
+            return None
+        sz, al = s
+        if al <= 0 or al & (al - 1):
+            cache[name] = None
+            return None
+        off = (off + al - 1) // al * al
+        rows.append({"offset": off, "name": fname, "type": ftype})
+        off += sz
+        align = max(align, al)
+    out = {"size": (off + align - 1) // align * align, "align": align,
+           "fields": rows, "repr_c": True, "file": d[0]["file"],
+           "line": d[0]["line"]}
+    cache[name] = out
+    return out
+
+
+def _phw_hw_fields(g: "DsoGraph", name: str, base: int = 0, depth: int = 0):
+    """Every `hw` pointer reachable inside `name` at object offset `base`."""
+    lay = _phw_layout(g, name)
+    if lay is None:
+        return None
+    out = []
+    for r in lay["fields"]:
+        if r["name"] == "hw":
+            m = re.match(r"\*\s*const\s+(\w+)", r["type"])
+            out.append({"path": "hw", "offset": base + r["offset"],
+                        "pointee": m.group(1) if m else "?"})
+        elif r["type"] in PROVIDER_HW_TABLE_TYPES or r["type"].endswith("Ctx"):
+            sub = _phw_hw_fields(g, r["type"], base + r["offset"], depth + 1)
+            if sub is None:
+                return None
+            out.extend([dict(x, path=r["name"] + "." + x["path"]) for x in sub])
+    return out
+
+
+def _phw_param_types(params: str):
+    out = {}
+    for p in _phw_split(params):
+        m = re.match(r"(?:mut\s+)?([A-Za-z_]\w*)\s*:\s*(.+)$", p, re.S)
+        if m:
+            out[m.group(1)] = " ".join(m.group(2).split())
+    return out
+
+
+def _phw_ctx_param_type(params: str):
+    for _name, ptype in _phw_param_types(params).items():
+        m = re.match(r"\*\s*mut\s+(\w+)", ptype)
+        if m and (m.group(1) in PROVIDER_HW_TABLE_TYPES
+                  or m.group(1).endswith("Ctx")):
+            return m.group(1)
+    return None
+
+
+def _phw_fn_returns(g: "DsoGraph", name: str, depth: int = 0):
+    """The static tables a helper returns (`&T`, `addr_of!(T[.base])`)."""
+    if depth > 3:
+        return None
+    src = _phw_source(g)
+    statics = src["statics"]
+    out = set()
+    for f in src["by_name"].get(name, []):
+        for m in re.finditer(
+                r"addr_of(?:_mut)?!\(\s*([A-Z][A-Z0-9_]*)(?:\.\w+)?\s*\)",
+                f["body"]):
+            out.add(m.group(1))
+        for m in re.finditer(
+                r"(?<![\w.])&\s*([A-Z][A-Z0-9_]*)(?:\.\w+)?\b", f["body"]):
+            out.add(m.group(1))
+    return {s for s in out if s in statics} or None
+
+
+def _phw_resolve_table(g: "DsoGraph", expr: str, params: dict, depth: int = 0):
+    """The finite set of static tables an install expression can name."""
+    if depth > 3:
+        return None
+    statics = _phw_source(g)["statics"]
+    e = " ".join((expr or "").split())
+    e = re.sub(r"^Some\((.*)\)$", r"\1", e)
+    m = re.fullmatch(r"&?\s*([A-Z][A-Z0-9_]*)", e)
+    if m:
+        return {m.group(1)} if m.group(1) in statics else None
+    m = re.fullmatch(
+        r"(?:core::ptr::|ptr::)?addr_of!\s*\(\s*([A-Z][A-Z0-9_]*)"
+        r"(?:\.\w+)?\s*\)(?:\s*\.cast::<[^>]+>\(\))?", e)
+    if m:
+        return {m.group(1)} if m.group(1) in statics else None
+    m = re.search(r"addr_of(?:_mut)?!\(\s*\(\*([A-Za-z_]\w*)\)\.(\w+)\s*\)", e)
+    if m:
+        var, field = m.group(1), m.group(2)
+        ptype = params.get(var)
+        if ptype:
+            mm = re.match(r"\*\s*const\s+(\w+)", ptype)
+            if mm:
+                outer = mm.group(1)
+                return {s for s, r in statics.items()
+                        if r["type"] == outer and field == "base"}
+        return None
+    if re.search(r"addr_of(?:_mut)?!\(\s*\(\*[A-Za-z_]\w*\)\.\w+\.\w+", e):
+        return None
+    m = re.fullmatch(r"([A-Za-z_]\w*)\s*\(.*\)", e)
+    if m:
+        return _phw_fn_returns(g, m.group(1), depth + 1)
+    if re.fullmatch(r"[a-z_]\w*", e) and e in params:
+        mm = re.match(r"\*\s*const\s+(\w+)", params[e])
+        if mm and mm.group(1) in PROVIDER_HW_TABLE_TYPES:
+            return {s for s, r in statics.items()
+                    if r["type"] == mm.group(1)}
+    return None
+
+
+def _phw_constructions(g: "DsoGraph"):
+    """Every production write of a `hw` pointer, with the tables it can install.
+
+    A construction is `(outer context type, write offset, table set)`.  It is
+    derived from source only: macro row invocations, `OwnedCtx::<T>` allocation
+    followed by an hw-installing helper call, a direct `(*ctx).hw = ...`, and
+    one-hop propagation through helpers that take a sub-object pointer.
+    """
+    cache = getattr(g, "_phw_cons_cache", None)
+    if cache is not None:
+        return cache
+    src = _phw_source(g)
+    docs, spans, funcs = src["docs"], src["spans"], src["funcs"]
+    cons = []
+    consumed = {}          # (file, offset) -> classification
+    macro_rows = []
+
+    def add(rec):
+        rec.setdefault("via", "construction")
+        cons.append(rec)
+
+    for path, text in docs.items():
+        for m in re.finditer(
+                r"cipher_row!\(\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*,"
+                r"\s*([\w:]+)\s*,\s*([\w:]+)", text):
+            if _phw_in_spans(spans[path], m.start()):
+                continue
+            add({"outer": m.group(4), "offset": 0xA8,
+                 "tables": ({m.group(5)} if m.group(5) in src["statics"]
+                            else None),
+                 "fn": m.group(1), "file": path,
+                 "line": text.count("\n", 0, m.start()) + 1,
+                 "expr": "cipher_row! " + m.group(5), "via": "macro-row"})
+            macro_rows.append(m.group(1))
+        for m in re.finditer(
+                r"cts_row!\(\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*,"
+                r"\s*([\w:]+)\s*,\s*([\w:]+)", text):
+            if _phw_in_spans(spans[path], m.start()):
+                continue
+            add({"outer": m.group(4), "offset": 0xA8,
+                 "tables": ({m.group(5)} if m.group(5) in src["statics"]
+                            else None),
+                 "fn": m.group(1), "file": path,
+                 "line": text.count("\n", 0, m.start()) + 1,
+                 "expr": "cts_row! " + m.group(5), "via": "macro-row"})
+            macro_rows.append(m.group(1))
+        for m in re.finditer(
+                r"legacy_newctx_rc2!\(\s*(\w+)\s*,\s*(\w+)\s*,"
+                r"\s*([\w:]+)", text):
+            if _phw_in_spans(spans[path], m.start()):
+                continue
+            add({"outer": "ProvRc2Ctx", "offset": 0xA8,
+                 "tables": ({m.group(3)} if m.group(3) in src["statics"]
+                            else None),
+                 "fn": m.group(1), "file": path,
+                 "line": text.count("\n", 0, m.start()) + 1,
+                 "expr": "legacy_newctx_rc2! " + m.group(3),
+                 "via": "macro-row"})
+            macro_rows.append(m.group(1))
+        for m in re.finditer(
+                r"legacy_newctx!\(\s*(\w+)\s*,\s*(\w+)\s*,\s*([\w:]+)\s*,"
+                r"\s*([\w:]+)", text):
+            if _phw_in_spans(spans[path], m.start()):
+                continue
+            add({"outer": m.group(3), "offset": 0xA8,
+                 "tables": ({m.group(4)} if m.group(4) in src["statics"]
+                            else None),
+                 "fn": m.group(1), "file": path,
+                 "line": text.count("\n", 0, m.start()) + 1,
+                 "expr": "legacy_newctx! " + m.group(4), "via": "macro-row"})
+            macro_rows.append(m.group(1))
+
+    for f in funcs:
+        body = f["body"]
+        params = _phw_param_types(f["params"])
+        own = re.search(r"OwnedCtx::<\s*(\w+)\s*>", body)
+        at = own.group(1) if own else _phw_ctx_param_type(f["params"])
+        for helper, spec in PROVIDER_HW_INIT_HELPERS.items():
+            if f["name"] == helper:
+                continue
+            for m in re.finditer(r"\b" + re.escape(helper) + r"\s*\(", body):
+                pos = f["start"] + 1 + m.start()
+                if not _phw_relative_ok(src, f["file"], pos):
+                    continue
+                if _phw_in_comment(src, f["file"], pos):
+                    continue
+                i = m.end() - 1
+                depth = 0
+                while i < len(body):
+                    if body[i] == "(":
+                        depth += 1
+                    elif body[i] == ")":
+                        depth -= 1
+                        if depth == 0:
+                            break
+                    i += 1
+                args = _phw_split(body[m.end():i])
+                ci, ti = spec["ctx_arg"], spec["table_arg"]
+                if len(args) <= ti:
+                    continue
+                ctxarg, texpr = args[ci], args[ti]
+                base_off = 0
+                mo = re.search(
+                    r"addr_of_mut!\(\s*\(\*([A-Za-z_]\w*)\)\.(\w+)\s*\)",
+                    ctxarg)
+                if mo and at:
+                    lay = _phw_layout(g, at)
+                    if lay is None:
+                        add({"outer": at, "offset": None, "tables": None,
+                             "fn": f["name"], "file": f["file"],
+                             "line": f["line"], "expr": texpr,
+                             "via": "layout-unresolved"})
+                        consumed[(f["file"], pos)] = "construction"
+                        continue
+                    try:
+                        base_off = next(r["offset"] for r in lay["fields"]
+                                        if r["name"] == mo.group(2))
+                    except StopIteration:
+                        base_off = 0
+                hwf = _phw_hw_fields(g, spec["hw_ctx"])
+                if not hwf:
+                    continue
+                add({"outer": at, "offset": base_off + hwf[0]["offset"],
+                     "tables": _phw_resolve_table(g, texpr, params),
+                     "fn": f["name"], "file": f["file"], "line": f["line"],
+                     "expr": texpr, "via": helper})
+                consumed[(f["file"], pos)] = "construction"
+
+        if f["name"] in PROVIDER_HW_INIT_HELPERS:
+            for m in re.finditer(r"\(\*[A-Za-z_]\w*\)\.hw\s*=", body):
+                consumed[(f["file"], f["start"] + 1 + m.start())] = \
+                    "writer-parameter-store"
+            continue
+
+        for m in re.finditer(r"\(\*([A-Za-z_]\w*)\)\.hw\s*=\s*([^;]+);", body):
+            pos = f["start"] + 1 + m.start()
+            if not _phw_relative_ok(src, f["file"], pos):
+                continue
+            if _phw_in_comment(src, f["file"], pos):
+                continue
+            rhs = " ".join(m.group(2).split())
+            if ".hw" in rhs:
+                consumed[(f["file"], pos)] = "value-preserving-copy"
+                continue
+            lay = _phw_layout(g, at) if at else None
+            hwv = [r["offset"] for r in lay["fields"]
+                   if r["name"] == "hw"] if lay else []
+            add({"outer": at, "offset": hwv[0] if hwv else None,
+                 "tables": _phw_resolve_table(g, rhs, params),
+                 "fn": f["name"], "file": f["file"],
+                 "line": f["line"] + body.count("\n", 0, m.start()),
+                 "expr": rhs, "via": "direct-store"})
+            consumed[(f["file"], pos)] = "construction"
+
+    # One-hop propagation: a call to a helper that itself installs, where the
+    # argument is an object pointer (whole context or a named sub-object).
+    by_fn = {}
+    for c in cons:
+        by_fn.setdefault(c["fn"], []).append(c)
+    wrappers = {k: v for k, v in by_fn.items()
+                if len(v) == 1 and v[0]["offset"] is not None
+                and v[0]["tables"]}
+    for f in funcs:
+        if f["name"] in PROVIDER_HW_INIT_HELPERS:
+            continue
+        body = f["body"]
+        own = re.search(r"OwnedCtx::<\s*(\w+)\s*>", body)
+        at = own.group(1) if own else _phw_ctx_param_type(f["params"])
+        for wname, recs in wrappers.items():
+            if wname == f["name"]:
+                continue
+            rec = recs[0]
+            for m in re.finditer(r"\b" + re.escape(wname) + r"\s*\(", body):
+                pos = f["start"] + 1 + m.start()
+                if not _phw_relative_ok(src, f["file"], pos):
+                    continue
+                if _phw_in_comment(src, f["file"], pos):
+                    continue
+                i = m.end() - 1
+                depth = 0
+                while i < len(body):
+                    if body[i] == "(":
+                        depth += 1
+                    elif body[i] == ")":
+                        depth -= 1
+                        if depth == 0:
+                            break
+                    i += 1
+                args = _phw_split(body[m.end():i])
+                found = None
+                for a in args:
+                    mo = re.search(
+                        r"addr_of_mut!\(\s*\(\*([A-Za-z_]\w*)\)\.(\w+)\s*\)",
+                        a)
+                    if mo and at:
+                        lay = _phw_layout(g, at)
+                        if lay is None:
+                            continue
+                        try:
+                            base = next(r["offset"] for r in lay["fields"]
+                                        if r["name"] == mo.group(2))
+                        except StopIteration:
+                            continue
+                        found = base + rec["offset"]
+                        break
+                    if re.fullmatch(
+                            r"\(?[A-Za-z_]\w*\s*(?:\.as_ptr\(\)|"
+                            r"\.cast(?:::<[^>]+>)?\(\))*\)?", a.strip()):
+                        found = rec["offset"]
+                        break
+                if found is not None and at:
+                    add({"outer": at, "offset": found,
+                         "tables": set(rec["tables"]), "fn": f["name"],
+                         "file": f["file"],
+                         "line": f["line"] + body.count("\n", 0, m.start()),
+                         "expr": "wrapper " + wname, "via": "wrapper"})
+                    consumed[(f["file"], pos)] = "wrapper"
+
+    cache = {"cons": cons, "consumed": consumed, "wrappers": wrappers}
+    g._phw_cons_cache = cache
+    return cache
+
+
+def _phw_relative_ok(src: dict, path: str, pos: int) -> bool:
+    return not _phw_in_spans(src["spans"][path], pos)
+
+
+def _phw_ctx_gate(g: "DsoGraph") -> dict:
+    """Every production context-`hw` write must be classified.
+
+    The gate enumerates each pointer store and each hw-installing helper call in
+    the owner tree and requires the construction scan to have classified it as a
+    construction, a value-preserving copy, a writer-parameter store, or a
+    propagated wrapper call.  An unclassified write means the context closure is
+    incomplete, so no site may be closed.
+    """
+    src = _phw_source(g)
+    cons = _phw_constructions(g)
+    consumed = cons["consumed"]
+    missing = []
+    scan_macros = {"cipher_row", "cts_row", "legacy_newctx",
+                   "legacy_newctx_rc2"}
+    for path, text in src["docs"].items():
+        for m in re.finditer(r"\(\*[A-Za-z_]\w*\)\.hw\s*=", text):
+            off = m.start()
+            if _phw_in_spans(src["spans"][path], off):
+                continue
+            if _phw_in_comment(src, path, off):
+                continue
+            if _phw_enclosing_macro(src, path, off) in scan_macros:
+                continue
+            if (path, off) not in consumed:
+                missing.append({"file": path,
+                                "line": text.count("\n", 0, off) + 1,
+                                "what": "hw store"})
+        for helper in PROVIDER_HW_INIT_HELPERS:
+            for m in re.finditer(r"\b" + re.escape(helper) + r"\s*\(", text):
+                off = m.start()
+                if _phw_in_spans(src["spans"][path], off):
+                    continue
+                if _phw_in_comment(src, path, off):
+                    continue
+                if re.search(r"\bfn\s+$", text[max(0, off - 8):off]):
+                    continue
+                if _phw_enclosing_macro(src, path, off) in scan_macros:
+                    continue
+                if (path, off) not in consumed:
+                    missing.append({"file": path,
+                                    "line": text.count("\n", 0, off) + 1,
+                                    "what": helper + " call"})
+    unresolved = [c for c in cons["cons"]
+                  if c["offset"] is None or c["tables"] is None]
+    return {"status": "PASS" if not missing else "FAIL",
+            "reason": None if not missing else
+            "provider-hw-context-writer-unclassified",
+            "unclassified": missing[:20],
+            "unclassified_count": len(missing),
+            "construction_count": len(cons["cons"]),
+            "unresolved_constructions": len(unresolved),
+            "test_only_excluded": True}
+
+
+def _phw_field_expr(g: "DsoGraph", sym: str, typ: str, field: str):
+    """The source expression a table assigns to `field` (base projection aware)."""
+    rec = _phw_source(g)["statics"].get(sym)
+    if rec is None:
+        return None
+    fields = rec["fields"]
+    if rec["type"] == typ and field in fields:
+        return fields[field]
+    if typ == "ProvCipherHw" and ("base." + field) in fields:
+        return fields["base." + field]
+    return None
+
+
+def _phw_writers(g: "DsoGraph", typ: str, field: str):
+    out = {}
+    for sym in _phw_source(g)["statics"]:
+        val = _phw_field_expr(g, sym, typ, field)
+        if val is not None:
+            out[sym] = val
+    return out
+
+
+def _phw_expr_function(expr: str):
+    e = (expr or "").strip()
+    m = re.fullmatch(r"Some\((.+)\)", e)
+    if m:
+        e = m.group(1).strip()
+    if e in ("None", "ptr::null()", "core::ptr::null()"):
+        return None
+    return e
+
+
+def _phw_symbol_addr(g: "DsoGraph", sym: str):
+    idx = g.symbol_addresses_by_name()
+    cand = [n for n in idx
+            if n.endswith(sym) and (n[:-len(sym)] == ""
+                                    or n[:-len(sym)][-1].isdigit())]
+    if len(cand) != 1:
+        return None
+    addrs = idx[cand[0]]
+    return addrs[0] if len(addrs) == 1 else None
+
+
+def _phw_function_addresses(g: "DsoGraph", fn: str):
+    out = set()
+    for n, addrs in g.symbol_addresses_by_name().items():
+        last = _s1_rust_last_segment(n) or n.split("::")[-1]
+        if last == fn:
+            out |= set(addrs)
+    return out
+
+
+def _phw_dispatch_rows(g: "DsoGraph"):
+    """The cipher dispatch rows, read from the authoring macros.
+
+    `cipher_row!` and `legacy_table!` name, in one invocation, the row's NEWCTX
+    and every entry function it publishes; the legacy rows' context type and hw
+    table come from the paired `legacy_newctx!` invocation.  This is the source
+    witness for the NEWCTX/entry pairing an entry site relies on.
+    """
+    cache = getattr(g, "_phw_rows_cache", None)
+    if cache is not None:
+        return cache
+    src = _phw_source(g)
+    rows = []
+
+    def last(x):
+        return _s1_rust_last_segment(x) or x.split("::")[-1]
+
+    def call_args(text, m):
+        i = m.end() - 1
+        depth = 0
+        while i < len(text):
+            if text[i] == "(":
+                depth += 1
+            elif text[i] == ")":
+                depth -= 1
+                if depth == 0:
+                    break
+            i += 1
+        return _phw_split(text[m.end():i])
+
+    for path, text in src["docs"].items():
+        for m in re.finditer(r"cipher_row!\s*\(", text):
+            if _phw_in_spans(src["spans"][path], m.start()):
+                continue
+            a = call_args(text, m)
+            if len(a) < 14:
+                continue
+            rows.append({"newctx": last(a[0]), "table": last(a[2]),
+                         "entries": {last(x) for x in
+                                     (a[0], a[10], a[11], a[12], a[13])}})
+        for m in re.finditer(r"legacy_table!\s*\(", text):
+            if _phw_in_spans(src["spans"][path], m.start()):
+                continue
+            a = call_args(text, m)
+            if len(a) < 9:
+                continue
+            rows.append({"newctx": last(a[0]), "table": last(a[2]),
+                         "entries": {last(x) for x in a[0:9]}})
+        for m in re.finditer(r"cts_row!\s*\(", text):
+            if _phw_in_spans(src["spans"][path], m.start()):
+                continue
+            a = call_args(text, m)
+            if len(a) < 9:
+                continue
+            # The CTS macro publishes the shared CTS entry points and the
+            # authority's `ossl_cipher_cbc_cts_block_update` (its UPDATE slot).
+            rows.append({"newctx": last(a[0]), "table": last(a[2]),
+                         "entries": {last(a[0]), "cts_einit", "cts_dinit",
+                                     "ossl_cipher_cbc_cts_block_update"}})
+    g._phw_rows_cache = rows
+    return rows
+
+
+def _phw_direct_callers(g: "DsoGraph", fn: str):
+    """(caller function, first-argument text) for every source call to `fn`."""
+    src = _phw_source(g)
+    out = []
+    for f in src["funcs"]:
+        body = f["body"]
+        for m in re.finditer(r"\b" + re.escape(fn) + r"\s*\(", body):
+            pos = f["start"] + 1 + m.start()
+            if _phw_in_comment(src, f["file"], pos):
+                continue
+            i = m.end() - 1
+            depth = 0
+            while i < len(body):
+                if body[i] == "(":
+                    depth += 1
+                elif body[i] == ")":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                i += 1
+            args = _phw_split(body[m.end():i])
+            out.append((f, args[0].strip() if args else ""))
+    return out
+
+
+def _phw_ctx_derived(f, expr: str) -> bool:
+    """The callee's ctx argument is the caller's own context parameter."""
+    ident = expr.strip()
+    if not re.fullmatch(r"[A-Za-z_]\w*", ident):
+        return False
+    params = _phw_param_types(f["params"])
+    if ident in params:
+        return True
+    for m in re.finditer(r"\blet\s+" + re.escape(ident)
+                         + r"\s*=\s*([^;]+);", f["body"]):
+        rhs = m.group(1)
+        if ".cast" in rhs or ".as_ptr" in rhs or "addr_of" in rhs:
+            for p in params:
+                if re.search(r"\b" + re.escape(p) + r"\b", rhs):
+                    return True
+    return False
+
+
+def _phw_ctx_closure(g: "DsoGraph", spec: dict, fstart: int):
+    """The context-pointer closure for one site, checked (never asserted).
+
+    Mode A (`type-closure`): the tables that the source constructors of the
+    site's context type can install into the `hw` field at this offset.  Every
+    construction must resolve, and no installed member may be NULL.
+    Mode B (`entry-pairing`): when the site function is itself a dispatch entry,
+    the rows that publish it and the table each row's NEWCTX installs, under the
+    documented `OSSL_FUNC_CIPHER_NEWCTX`/entry pairing.
+    Returns (closure, None) or (None, refusal-record-fields).
+    """
+    cons = _phw_constructions(g)["cons"]
+
+    # Mode A: the context type's constructor closure.
+    tables, unresolved = set(), []
+    for c in cons:
+        outer = c["outer"]
+        if not outer:
+            continue
+        same = (outer == spec["ctx"])
+        carrier = None
+        if not same:
+            carrier = _s1_prefix_chain(g, outer, spec["ctx"])
+        if not (same or carrier):
+            continue
+        if c["offset"] is None or c["tables"] is None:
+            unresolved.append(c)
+            continue
+        if c["offset"] == spec["hw_off"]:
+            tables |= set(c["tables"])
+    if tables and not unresolved:
+        return ({"mode": "type-closure", "tables": tables,
+                 "rows": [], "constructions": len(
+                     [c for c in cons if c["outer"] == spec["ctx"]
+                      or _s1_prefix_chain(g, c["outer"] or "", spec["ctx"])])},
+                None)
+
+    # Mode B: the site function is a dispatch entry of one or more rows.  Under
+    # the documented provider pairing, an entry of a dispatch table receives the
+    # context its own NEWCTX produced; the row's NEWCTX and its hw table are
+    # both named by the authoring macro invocation.
+    fname = g.funcs.get(fstart) or ""
+    site_fn = _s1_rust_last_segment(fname) or fname.split("::")[-1]
+    by_fn = {}
+    for c in cons:
+        by_fn.setdefault(c["fn"], []).append(c)
+    rows = [r for r in _phw_dispatch_rows(g) if site_fn in r["entries"]]
+    hop_problems = []
+    if not rows:
+        # One hop: the site function is an internal helper called only from
+        # dispatch entries, each passing its own context.  Every caller must be
+        # an entry and every call must forward the caller's context; anything
+        # else refuses.
+        callers = _phw_direct_callers(g, site_fn)
+        seen_callers = set()
+        for caller, arg0 in callers:
+            if caller["name"] == site_fn:
+                continue
+            seen_callers.add(caller["name"])
+            if not _phw_ctx_derived(caller, arg0):
+                hop_problems.append({"caller": caller["name"],
+                                     "why": "call does not forward the "
+                                            "caller's context",
+                                     "argument": arg0})
+                continue
+            crows = [r for r in _phw_dispatch_rows(g)
+                     if caller["name"] in r["entries"]]
+            if not crows:
+                hop_problems.append({"caller": caller["name"],
+                                     "why": "caller is not a dispatch entry"})
+                continue
+            rows.extend(crows)
+        if hop_problems or not seen_callers:
+            return None, {"reason": "context-entry-caller-unproven",
+                          "caller_problems": hop_problems[:8],
+                          "callers": sorted(seen_callers)}
+    if rows:
+        row_tables, proofs, problems = set(), [], []
+        for r in rows:
+            recs = by_fn.get(r["newctx"], [])
+            if len(recs) != 1 or not recs[0]["tables"] \
+                    or recs[0]["offset"] is None:
+                problems.append({"table": r["table"], "newctx": r["newctx"],
+                                 "why": "newctx construction unresolved"})
+                continue
+            rec = recs[0]
+            if not (rec["outer"] == spec["ctx"]
+                    or _s1_prefix_chain(g, rec["outer"], spec["ctx"])):
+                problems.append({"table": r["table"], "newctx": r["newctx"],
+                                 "why": "newctx context type incompatible",
+                                 "row_ctx": rec["outer"],
+                                 "site_ctx": spec["ctx"]})
+                continue
+            if rec["offset"] != spec["hw_off"]:
+                problems.append({"table": r["table"], "newctx": r["newctx"],
+                                 "why": "newctx writes a different hw offset",
+                                 "row_offset": hex(rec["offset"])})
+                continue
+            row_tables |= set(rec["tables"])
+            proofs.append({"table": r["table"], "newctx": r["newctx"],
+                           "row_ctx": rec["outer"],
+                           "installed": sorted(rec["tables"])})
+        if problems:
+            return None, {"reason": "context-entry-newctx-unresolved",
+                          "entry_problems": problems[:8]}
+        if row_tables:
+            return ({"mode": "entry-table-pairing",
+                     "tables": row_tables, "rows": proofs,
+                     "constructions": 0}, None)
+
+    if unresolved:
+        return None, {"reason": "context-closure-unresolved",
+                      "unresolved": [
+                          {"fn": c["fn"], "file": c["file"],
+                           "line": c["line"], "outer": c["outer"],
+                           "via": c["via"]} for c in unresolved[:8]]}
+    return None, {"reason": "context-closure-empty",
+                  "site_context": spec["ctx"],
+                  "hw_offset": hex(spec["hw_off"])}
+
+
+def _phw_entry_arg_prefix(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                          want: int):
+    """Prove ``reg`` is entry argument ``want`` on a straight-line prefix."""
+    if _ENTRY_ARG_REGS.get(_canon(reg)) != want:
+        return None
+    insns = g.precision.insns_by_func.get(fstart, ())
+    starts = sorted(g.precision.insns_by_func)
+    end = next((s for s in starts if s > fstart), None)
+    for i in range(idx):
+        mn, _rest, ops = _insn_parts(insns[i][1].split("#", 1)[0].strip())
+        if mn.startswith("call"):
+            return None
+        dst = ops[-1] if ops else ""
+        if _canon(dst) == reg and mn in ("mov", "movq", "movl", "lea",
+                                         "xor", "add", "sub", "pop", "and"):
+            return None
+        if mn == "jmp" or mn.startswith("j"):
+            m = re.search(r"\b([0-9a-f]+)\s+<", insns[i][1])
+            if not m:
+                return None
+            target = int(m.group(1), 16)
+            if end is not None and fstart <= target < end:
+                return None
+    return {"step": "entry-register-unwritten-prefix", "reg": reg}
+
+
+def _phw_context(g: "DsoGraph", fstart: int, spec: dict, fname: str):
+    """Prove the site's context type from source, or return None."""
+    ctx = _s1_site_context(g, fstart)
+    if ctx is not None and ctx.get("type") == spec["ctx"]:
+        return {"type": ctx["type"], "via": "s1-context"}
+    if (ctx is not None and spec.get("base_first")
+            and ctx.get("type") == "ProvCipherCtx"):
+        span = _s1_src_fn(g, ctx["file"], ctx["function"])
+        body = (span or {}).get("body") or ""
+        if "cast::<" + spec["ctx"] + ">()" in body:
+            fields = _s1_struct_fields(g, spec["ctx"])
+            flist = fields[0] if fields else []
+            if (flist and flist[0][0] == "base"
+                    and flist[0][1].split()[-1] == "ProvCipherCtx"):
+                return {"type": spec["ctx"], "via": "cast-first-member-base"}
+    if ctx is None and spec.get("inline_from"):
+        callee, var, cast = spec["inline_from"]
+        span = _s1_src_fn(g, "src/provider/cipher.rs", fname)
+        inline = _s1_src_fn(g, "src/provider/cipher.rs", callee)
+        if span and inline:
+            header = re.search(r"\(\s*(\w+)\s*:\s*\*\s*mut\s+(\w+)",
+                               inline["header"])
+            if (header
+                    and ("cast::<" + cast + ">()") in (inline["body"] or "")
+                    and re.search(r"\b" + re.escape(callee) + r"\s*\(\s*"
+                                  + re.escape(var) + r"\s*,",
+                                  span["body"] or "")):
+                return {"type": spec["ctx"], "via": "inlined-callee-cast"}
+    if ctx is None and spec.get("impl_fn"):
+        text = _s1_docs(g).get("src/provider/cipher.rs", "")
+        m = re.search(r"unsafe\s+impl\s+CipherDestroy\s+for\s+" + re.escape(
+            spec["ctx"]) + r"\s*\{", text)
+        if m is not None:
+            b = text.find("{", m.start())
+            e = _s1_brace_span(text, b)
+            if b >= 0 and e is not None:
+                body = text[b:e]
+                f = re.search(r"fn\s+" + re.escape(spec["impl_fn"])
+                              + r"\s*\(([^)]*)\)\s*\{", body)
+                if f is not None:
+                    fm = re.search(r"\(\s*\w+\s*:\s*\*\s*mut\s+(\w+)",
+                                   "(" + f.group(1) + ")")
+                    if fm is not None and fm.group(1) == spec["ctx"]:
+                        return {"type": spec["ctx"], "via": "impl-fn-context"}
+    return None
+
+
+def provider_hw_table_witness(g: "DsoGraph", site: dict, name: str):
+    """Prove (or refuse) an enumerated provider hw-table dispatch.
+
+    Returns None when the site is not one of the enumerated call sites, so
+    registration can only add recognitions.  An enumerated site whose facts in
+    this exact image differ is refused by name and keeps its previous class.
+    """
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    spec = PROVIDER_HW_SITES.get(site.get("addr"))
+    if spec is None:
+        return None
+    fstart = site.get("func")
+    fname = g.funcs.get(fstart) or ""
+    if spec["function"] not in (name or "") or spec["function"] not in fname:
+        return _phw_refusal("site-function-not-enumerated",
+                            call_site=hex(site["addr"]),
+                            expected_function=spec["function"],
+                            actual_function=fname or name)
+    insns = g.precision.insns_by_func.get(fstart, ())
+    idx = next((i for i, (a, _t) in enumerate(insns)
+                if a == site.get("addr")), None)
+    if idx is None:
+        return _phw_refusal("site-not-in-function",
+                            call_site=hex(site["addr"]))
+    text = (site.get("text") or "").split("#", 1)[0].strip()
+    m = re.search(r"call\w*\s+\*(.+)$", text)
+    if not m:
+        return _phw_refusal("operand-not-indirect-call",
+                            call_site=hex(site["addr"]))
+    mo = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                      m.group(1).strip())
+    if not mo:
+        return _phw_refusal("operand-not-method-field",
+                            call_site=hex(site["addr"]),
+                            operand=m.group(1).strip())
+    read_off = int(mo.group(1), 16) if mo.group(1) else 0
+    if read_off != spec["read"]:
+        return _phw_refusal("read-field-not-enumerated",
+                            call_site=hex(site["addr"]),
+                            expected_offset=hex(spec["read"]),
+                            actual_offset=hex(read_off))
+    last = _s1_rust_last_segment(fname) or fname.split("::")[-1]
+    context = _phw_context(g, fstart, spec, last)
+    if context is None:
+        return _phw_refusal("context-type-not-proven",
+                            call_site=hex(site["addr"]),
+                            expected_context=spec["ctx"])
+    breg = _canon(mo.group(2))
+    origin = _reg_origin(g, fstart, idx, breg)
+    if origin.get("kind") != "load":
+        return _phw_refusal("base-not-method-struct-load",
+                            call_site=hex(site["addr"]),
+                            base_reg=breg, origin=origin.get("kind"))
+    if origin.get("offset") == spec["hw_off"]:
+        proof = _s1_ctx_param(g, fstart, origin["at"],
+                              origin["base_reg"], 0)
+        if proof is None:
+            proof = _phw_entry_arg_prefix(g, fstart, origin["at"],
+                                          origin["base_reg"], 0)
+        if proof is None:
+            return _phw_refusal("hw-base-not-context-parameter",
+                                call_site=hex(site["addr"]),
+                                hw_offset=hex(spec["hw_off"]),
+                                base_reg=origin["base_reg"])
+    elif origin.get("base_reg") in ("%rsp", "%rbp"):
+        off = origin.get("offset")
+        opnd = (hex(off) if off else "") + "(" + origin["base_reg"] + ")"
+        abs_off = _stack_slot_abs(g, fstart, origin["at"], opnd)
+        if abs_off is None:
+            return _phw_refusal("hw-pointer-spill-slot-unknown",
+                                call_site=hex(site["addr"]), slot=opnd)
+        writes = _reaching_stores(g, fstart, origin["at"], abs_off)
+        if not writes or _NO_STORE in writes:
+            return _phw_refusal("hw-pointer-spill-not-written",
+                                call_site=hex(site["addr"]), slot=opnd)
+        for wi in sorted(writes):
+            _mn, _rest, ops = _insn_parts(_insn(g, fstart, wi))
+            src = (ops[0] if ops else "").strip()
+            if src not in _REGS and src not in _SUBREG:
+                return _phw_refusal("hw-pointer-spill-not-register",
+                                    call_site=hex(site["addr"]),
+                                    store=hex(insns[wi][0]))
+            o = _reg_origin(g, fstart, wi, _canon(src))
+            if o.get("kind") != "load" or o.get("offset") != spec["hw_off"]:
+                return _phw_refusal("hw-pointer-spill-not-hw-load",
+                                    call_site=hex(site["addr"]),
+                                    store=hex(insns[wi][0]))
+            p = _s1_ctx_param(g, fstart, o["at"], o["base_reg"], 0)
+            if p is None:
+                p = _phw_entry_arg_prefix(g, fstart, o["at"],
+                                          o["base_reg"], 0)
+            if p is None:
+                return _phw_refusal("hw-pointer-spill-not-context-parameter",
+                                    call_site=hex(site["addr"]),
+                                    store=hex(insns[wi][0]))
+    else:
+        return _phw_refusal("hw-offset-not-enumerated",
+                            call_site=hex(site["addr"]),
+                            expected_offset=hex(spec["hw_off"]),
+                            actual_offset=hex(origin.get("offset") or 0))
+
+    # Gate: the owner set is computed, not listed.  A production initialiser in
+    # a file outside the enumeration refuses every site.
+    owners = _phw_owner_gate(g)
+    if owners["status"] != "PASS":
+        return _phw_refusal("provider-hw-owner-set-not-exhaustive",
+                            call_site=hex(site["addr"]),
+                            owner_gate=owners)
+    ctx_gate = _phw_ctx_gate(g)
+    if ctx_gate["status"] != "PASS":
+        return _phw_refusal("provider-hw-context-writer-unclassified",
+                            call_site=hex(site["addr"]),
+                            context_gate=ctx_gate)
+
+    # Condition 4: the field's source writer set is exactly the enumerated set.
+    if (spec["type"], spec["field"]) not in PROVIDER_HW_FIELD_WRITERS:
+        return _phw_refusal("field-not-in-enumerated-table",
+                            call_site=hex(site["addr"]),
+                            hw_type=spec["type"], field=spec["field"])
+    expected = PROVIDER_HW_FIELD_WRITERS[(spec["type"], spec["field"])]
+    writers = _phw_writers(g, spec["type"], spec["field"])
+    if frozenset(writers) != expected:
+        return _phw_refusal("field-writer-set-not-enumerated",
+                            call_site=hex(site["addr"]),
+                            hw_type=spec["type"], field=spec["field"],
+                            writers=sorted(writers),
+                            enumerated=sorted(expected))
+
+    # Condition 6: the context closure, computed from source for this site.
+    closure, why = _phw_ctx_closure(g, spec, fstart)
+    if closure is None:
+        return _phw_refusal(why["reason"], call_site=hex(site["addr"]),
+                            context=spec["ctx"], detail=why)
+    if not closure["tables"]:
+        return _phw_refusal("context-closure-empty",
+                            call_site=hex(site["addr"]),
+                            context=spec["ctx"])
+    outside = sorted(set(closure["tables"]) - expected)
+    if outside:
+        return _phw_refusal("context-table-not-enumerated-writer",
+                            call_site=hex(site["addr"]),
+                            tables=outside)
+
+    # Condition 5: every writer of the field resolves in the image.
+    resolved = set()
+    writer_proofs = []
+    null_writers = []
+    for key in sorted(writers):
+        addr = _phw_symbol_addr(g, key)
+        if addr is None:
+            return _phw_refusal("field-writer-not-in-image",
+                                call_site=hex(site["addr"]), writer=key)
+        slot = g.static_slot(addr + spec["read"])
+        ints = sorted(x for x in (slot or ()) if isinstance(x, int))
+        fn = _phw_expr_function(writers[key])
+        if fn is None:
+            if len(ints) != 1 or ints[0] != 0:
+                return _phw_refusal("field-writer-null-not-null",
+                                    call_site=hex(site["addr"]), writer=key,
+                                    value=(hex(ints[0]) if ints else None))
+            null_writers.append(key)
+            continue
+        if len(ints) != 1 or ints[0] == 0:
+            return _phw_refusal("field-writer-slot-not-single",
+                                call_site=hex(site["addr"]), writer=key)
+        if ints[0] not in g.start_set:
+            return _phw_refusal("field-writer-slot-not-function",
+                                call_site=hex(site["addr"]), writer=key,
+                                value=hex(ints[0]))
+        addrs = _phw_function_addresses(g, fn)
+        resolved |= addrs
+        writer_proofs.append({"writer": key, "source_function": fn,
+                              "target": hex(ints[0]),
+                              "source_emitted": bool(addrs)})
+    folded = []
+    for key, proof in zip(sorted(writers), writer_proofs):
+        if proof["source_emitted"]:
+            continue
+        if int(proof["target"], 16) not in resolved:
+            return _phw_refusal("field-writer-folded-target-unresolved",
+                                call_site=hex(site["addr"]), writer=key,
+                                source_function=proof["source_function"])
+        folded.append({"table": key,
+                       "source_function": proof["source_function"],
+                       "target": proof["target"]})
+
+    # Conditions 7/8: every closed-context table slot is a single in-image
+    # function start, and the computed target set is the enumerated one.
+    targets = set()
+    table_proofs = []
+    for table in sorted(closure["tables"]):
+        addr = _phw_symbol_addr(g, table)
+        if addr is None:
+            return _phw_refusal("table-not-in-image",
+                                call_site=hex(site["addr"]), table=table)
+        slot = g.static_slot(addr + spec["read"])
+        ints = sorted(x for x in (slot or ()) if isinstance(x, int))
+        if len(ints) != 1 or ints[0] == 0:
+            return _phw_refusal("context-table-value-null",
+                                call_site=hex(site["addr"]), table=table,
+                                value=(hex(ints[0]) if ints else None))
+        if ints[0] not in g.start_set:
+            return _phw_refusal("table-slot-not-function",
+                                call_site=hex(site["addr"]), table=table,
+                                value=hex(ints[0]))
+        fn = _phw_expr_function(writers[table])
+        addrs = _phw_function_addresses(g, fn) if fn else set()
+        if addrs:
+            if ints[0] not in addrs:
+                return _phw_refusal("table-slot-not-source-function",
+                                    call_site=hex(site["addr"]), table=table,
+                                    source_function=fn,
+                                    value=hex(ints[0]))
+        elif ints[0] not in resolved:
+            return _phw_refusal("table-slot-folded-target-unresolved",
+                                call_site=hex(site["addr"]), table=table,
+                                source_function=fn)
+        targets.add(ints[0])
+        table_proofs.append({"table": table, "source_function": fn,
+                             "target": hex(ints[0])})
+    wanted = set()
+    for fn in spec["targets"]:
+        addrs = _phw_function_addresses(g, fn)
+        if not addrs:
+            return _phw_refusal("enumerated-target-not-in-image",
+                                call_site=hex(site["addr"]), function=fn)
+        wanted |= addrs
+    if targets != wanted:
+        return _phw_refusal("target-set-not-enumerated",
+                            call_site=hex(site["addr"]),
+                            computed=[hex(t) for t in sorted(targets)],
+                            enumerated=[hex(t) for t in sorted(wanted)])
+
+    repr_note = ("#[repr(C)]; the field offsets are guaranteed by the language"
+                 if PROVIDER_HW_REPR_C.get(spec["type"])
+                 else ("no #[repr(C)]: the read offset is image-measured and "
+                       "compiler-dependent; it is confirmed here by the "
+                       "table-slot/source-function equality"))
+    return {
+        "schema": WITNESS_SCHEMA,
+        "rule": PROVIDER_HW_WITNESS_RULE,
+        "class": ABI_CONTRACT_PROVIDER_HW_TABLE,
+        "contract_bounded": True,
+        "resolved": True,
+        "function": fname,
+        "call_site": hex(site["addr"]),
+        "operand": {"base_reg": breg, "member_offset": hex(read_off)},
+        "context": {
+            "type": spec["ctx"],
+            "hw_offset": hex(spec["hw_off"]),
+            "provenance": context,
+            "closure": {"mode": closure["mode"],
+                        "constructions": closure["constructions"],
+                        "rows": closure["rows"][:40],
+                        "row_count": len(closure["rows"])},
+        },
+        "hw_field": {
+            "type": spec["type"],
+            "repr_c": PROVIDER_HW_REPR_C.get(spec["type"]),
+            "repr_note": repr_note,
+            "field": spec["field"],
+            "writer_set": sorted(expected),
+            "writer_count": len(expected),
+            "verified_in_image": len(writer_proofs),
+            "declared_null_writers": null_writers,
+        },
+        "tables": table_proofs,
+        "targets": [hex(t) for t in sorted(targets)],
+        "folded": folded,
+        "owner_gate": owners,
+        "context_gate": {k: ctx_gate[k] for k in
+                         ("status", "construction_count",
+                          "unresolved_constructions")},
+        "slot": (f"{spec['type']}.{spec['field']}@{hex(read_off)} over "
+                 f"{len(closure['tables'])} closed-context table(s), "
+                 f"closure {closure['mode']}"),
+        "basis": ("an enumerated provider hw-table call site; the context's "
+                  "hw pointer is installed by a source-derived closed set of "
+                  "constructors (or by the entry-pairing of the dispatch table "
+                  "that publishes this function), the field's writer set is "
+                  "the complete enumerated set, and every table resolves the "
+                  "read member to an in-image function start"),
+        "conditions": [
+            "containing-function-is-an-enumerated-site",
+            "operand-is-the-enumerated-method-field",
+            "read-base-is-the-context-hw-substruct-from-the-context-parameter",
+            "field-writer-set-is-the-complete-enumerated-source-set",
+            "every-field-writer-resolves-in-the-image-to-its-source-function",
+            "context-closure-is-derived-and-checked (source constructors, or "
+            "dispatch entry pairing; unresolved or NULL refuses)",
+            "every-table-slot-is-a-single-in-image-function-start",
+            "target-set-is-exactly-the-enumerated-finite-set",
+            "owner-set-and-context-writer-gates-pass (computed, not listed)",
+        ],
+    }
+
+
 # ---- S6: triage records (not a class) ---------------------------------- #
 
 S6_FUNCTIONS = {
@@ -11890,6 +13640,27 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                 site["reason"] = "static-table-incomplete:" + table
                 stats["R3_unresolved"] += 1
             continue
+        # S5: the provider cipher hw-table dispatch.  Twenty-five enumerated
+        # call sites read one method out of the context's `hw` sub-struct.  The
+        # owner set, the field's writer set and the site's context closure are
+        # computed from source and checked in the image, so the target set is
+        # finite and every unproven step refuses.  A non-enumerated site
+        # returns None; a refusal records a named reason and leaves the
+        # previous class.
+        hw = provider_hw_table_witness(g, site, name)
+        if hw is not None:
+            if hw.get("resolved"):
+                targets = {int(t, 16) for t in hw["targets"]}
+                site["targets"] |= residual | targets
+                site["class"] = ABI_CONTRACT_PROVIDER_HW_TABLE
+                site["unresolved"] = True
+                site["reason"] = ("provider hw-table closed context-set "
+                                  "contract: " + hw["slot"])
+                site["witness"] = hw
+                stats["S5_provider_hw_table_contract_bounded"] += 1
+                continue
+            site["provider_hw_table_refusal"] = hw
+            stats["S5_provider_hw_table_refused"] += 1
         # S1: a field-sensitive static-table instance dispatch.  The witness
         # keys on (object type, pointer-slot offset, member offset), restricts
         # the writer set by the static dispatch table that pairs the consumer
