@@ -1,0 +1,202 @@
+{
+  "receipt": "element7-header-preprocessor",
+  "kind": "header-gate-correction",
+  "date": "2026-11-06",
+  "branch": "stage/p25/element7-s2b",
+  "head": "e3545173052d13fbe70d8a38edc0d4bca8a98d6d",
+  "candidate_inventory_source_head": "b8bba955503014c8fd86303314c6deebaea093b0",
+  "install_libcrypto_sha256": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3",
+  "state": "IMPLEMENTED AND MEASURED; not committed, not pushed, ledger untouched",
+  "review": "pending",
+
+  "defect": {
+    "summary": "consumer_closure._header_callback_param admits preprocessor directives and their backslash-continued macro bodies as declarations. Macro argument expressions are then classified as parameter types, so the non-callback arm refuses the real callback declaration (eight sites), and differing macro call texts break the consistency arm (PEM_ASN1_read_bio).",
+    "diagnosis_receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/element7-header-question-diagnosis.json",
+    "sites": [
+      {"call_site": "0x2134b8", "symbol": "OPENSSL_sk_deep_copy", "index": 1},
+      {"call_site": "0x2136a4", "symbol": "OPENSSL_sk_deep_copy", "index": 2},
+      {"call_site": "0x214542", "symbol": "OPENSSL_sk_pop_free", "index": 1},
+      {"call_site": "0x217b60", "symbol": "PEM_ASN1_read_bio", "index": 0},
+      {"call_site": "0x32096c", "symbol": "OBJ_bsearch_ex_", "index": 4},
+      {"call_site": "0x3209d6", "symbol": "OBJ_bsearch_ex_", "index": 4},
+      {"call_site": "0x323a64", "symbol": "OPENSSL_LH_doall", "index": 1},
+      {"call_site": "0x4ce80f", "symbol": "ASN1_i2d_bio", "index": 0},
+      {"call_site": "0x4ce849", "symbol": "ASN1_i2d_bio", "index": 0}
+    ]
+  },
+
+  "change": {
+    "file": "forensics/tools/consumer_closure.py",
+    "tool_sha256_before": "c29991559c44a4ccf05048c163b90d51dd90595647a714a0685ee1d5be862fbe",
+    "tool_sha256_after": "69e0e10b2867701f3e6e8888a8b1acac2c8254344cf4b3b8f6d7bbd666554df4",
+    "insertions": 55,
+    "deletions": 0,
+    "hunks": [
+      "@@ -5077,0 +5078,20 @@ def _split_params(decl: str) -> list:  (new helper _without_preprocessor)",
+      "@@ -5082,0 +5103,4 @@ def _header_callback_param(...):  (apply masking to texts)",
+      "@@ -23665,0 +23690,31 @@ def self_test() -> int:  (four fixtures)"
+    ],
+    "mechanism": "_without_preprocessor blanks every line whose first non-space character is '#' and every physical line continued by a trailing backslash, replacing non-newline characters with spaces so offsets and line numbers are preserved. It is applied to the header texts inside _header_callback_param only, before the typedef and declaration scans.",
+    "proof_nothing_else_changed": {
+      "git_status": "git status --porcelain --untracked-files=no -> ' M forensics/tools/consumer_closure.py' only",
+      "hunk_grep": "git diff -U0 -- forensics/tools/consumer_closure.py | grep -E '^@@' -> exactly the three hunks above",
+      "untouched": [
+        "family binding",
+        "export_callback_witness",
+        "provenance / _param_of_operand / _param_chain",
+        "precedence and A2_FUNCTIONS",
+        "obligation path"
+      ]
+    }
+  },
+
+  "fixtures": {
+    "how_observed": "the four checks are embedded in --self-test (which exits 0 on tool sha 69e0e10b...); a direct harness (court/tmp/e7hdr/run_fixtures.py) re-ran each case and printed the outcome below",
+    "self_test": "PASS: '[consumer-closure] self-test ok'",
+    "1_positive": {
+      "header": "typedef void (*OPENSSL_sk_freefunc)(void *); void f(OPENSSL_sk_freefunc cb); #define WRAP(x) f(check(x))",
+      "observed": {"accepted": true, "callback": true, "parameter": "OPENSSL_sk_freefunc cb", "declaration": "fixture.h:2"},
+      "means": "the real declaration is recognised as a callback despite the macro body"
+    },
+    "2_negative": {
+      "header": "#define WRAP(x) f(check(x)) (no real declaration)",
+      "observed": {"accepted": false, "refusal": "the symbol is not declared in the admitted headers"},
+      "means": "a macro body alone is not a declaration; the gate still refuses"
+    },
+    "3_continuation": {
+      "header": "real declaration plus '#define WRAP(x) \\\\' newline '    int f(check(x))'",
+      "observed": {"accepted": true, "callback": true, "parameter": "OPENSSL_sk_freefunc cb", "declaration": "fixture.h:2"},
+      "means": "the backslash continuation is ignored; without masking its non-empty 'int' prefix would be parsed and poison the non-callback arm"
+    },
+    "4_consistency": {
+      "header": "typedef void *d2i_of_void(...); void *PEM_ASN1_read_bio(d2i_of_void *d2i, const char *name); plus a backslash-continued macro invoking PEM_ASN1_read_bio((d2i_of_void *)d2i_##asn1, name)",
+      "observed": {"accepted": true, "callback": true, "parameter": "d2i_of_void *d2i", "declaration": "fixture.h:2"},
+      "means": "differing macro call texts no longer break the (type_typedef, parameter_text) consistency arm"
+    }
+  },
+
+  "mutation": {
+    "mutation_applied": "inserted 'return text' at the top of _without_preprocessor (identity), disabling only the preprocessor skipping",
+    "mutant_tool_sha256": "bbaf2569192d3b5d31bda761bf59bafcf76a7bf6a59440ad8ee614b57647db9c",
+    "header_probe": {
+      "command": "python3 court/tmp/e7hdr/probe_header_gate.py (mutant)",
+      "observed": "accepted 0 of 9; refusals exactly 'a declaration does not declare the parameter as a callback' and 'inconsistent callback declarations'",
+      "matches_baseline": true,
+      "output": "court/tmp/e7hdr/probe-mutant.json",
+      "output_sha256": "561b03ce6aebfcf9be08a65f59801becf73ac9f02b8caad7fd304041a6f6c9f2"
+    },
+    "closure_control": {
+      "command": "consumer_closure.py --family openssh --artifact .../client-b53/openssh-9.9p1/ssh ... --output court/tmp/e7hdr/closure-ssh-b53-e7hdr-mutant.json",
+      "verdict": "ACCEPTED",
+      "precision": {"resolved_sites": 51741, "unresolved_sites": 177, "reachable_unresolved_sites": 131, "target_bounded_unresolved_sites": 26, "contract_bounded_sites": 105, "ABI_CONTRACT_EXPORT_CALLBACK": 51},
+      "observed": "all nine revert to target-bounded; identical to the authoritative before receipt",
+      "output": "court/tmp/e7hdr/closure-ssh-b53-e7hdr-mutant.json",
+      "output_sha256": "b6934e7634738bf18fd7aa4d5ad1eb58c5e2e163b3f25c8dc8386b9d4468f4f5"
+    },
+    "restore": {
+      "method": "copied court/tmp/e7hdr/consumer_closure.fixed.py back over the tool",
+      "restored_sha256": "69e0e10b2867701f3e6e8888a8b1acac2c8254344cf4b3b8f6d7bbd666554df4",
+      "byte_identical": true
+    }
+  },
+
+  "collateral": {
+    "baseline": "evidence/closure-ssh-b53-e7ld-r2.json (authoritative at tool sha c2999155...)",
+    "changed_call_sites": 16,
+    "changed_count_note": "the expected nine are the reachable target-bounded -> contract-bounded changes; seven further sites changed for the same underlying defect and are enumerated below",
+    "the_nine": [
+      {"call_site": "0x2134b8", "old": "materialised/reg-value-partial[int]", "new": "ABI_CONTRACT_EXPORT_CALLBACK: OPENSSL_sk_deep_copy parameter 1 (c)"},
+      {"call_site": "0x2136a4", "old": "materialised/reg-value-partial[int]", "new": "ABI_CONTRACT_EXPORT_CALLBACK: OPENSSL_sk_deep_copy parameter 2 (f)"},
+      {"call_site": "0x214542", "old": "materialised/reg-value-partial[int]", "new": "ABI_CONTRACT_EXPORT_CALLBACK: OPENSSL_sk_pop_free parameter 1 (func)"},
+      {"call_site": "0x217b60", "old": "materialised/reg-value-partial[int]", "new": "ABI_CONTRACT_EXPORT_CALLBACK: PEM_ASN1_read_bio parameter 0 (d2i)"},
+      {"call_site": "0x32096c", "old": "materialised/reg-value-partial[int]", "new": "ABI_CONTRACT_EXPORT_CALLBACK: OBJ_bsearch_ex_ parameter 4 (cmp)"},
+      {"call_site": "0x3209d6", "old": "materialised/reg-value-partial[int]", "new": "ABI_CONTRACT_EXPORT_CALLBACK: OBJ_bsearch_ex_ parameter 4 (cmp)"},
+      {"call_site": "0x323a64", "old": "materialised/reg-value-partial[int]", "new": "ABI_CONTRACT_EXPORT_CALLBACK: OPENSSL_LH_doall parameter 1 (func)"},
+      {"call_site": "0x4ce80f", "old": "materialised/reg-value-partial[int]", "new": "ABI_CONTRACT_EXPORT_CALLBACK: ASN1_i2d_bio parameter 0 (i2d)"},
+      {"call_site": "0x4ce849", "old": "materialised/reg-value-partial[int]", "new": "ABI_CONTRACT_EXPORT_CALLBACK: ASN1_i2d_bio parameter 0 (i2d)"}
+    ],
+    "the_seven_additional": [
+      {"call_site": "0x2c697a", "symbol": "PEM_ASN1_write", "index": 0, "reachable": true, "old": "resolved by the A2 legacy-method-abi rule after the export witness refused", "new": "ABI_CONTRACT_EXPORT_CALLBACK: PEM_ASN1_write parameter 0 (i2d)", "mechanism": "export witness now succeeds before A2; old edge record disposition PROVED_TARGET_SET with candidate_source legacy-method-abi, new disposition CONTRACT_BOUNDED with empty target_set"},
+      {"call_site": "0x2c69c3", "symbol": "PEM_ASN1_write", "index": 0, "reachable": true, "old": "resolved by A2 legacy-method-abi", "new": "ABI_CONTRACT_EXPORT_CALLBACK: PEM_ASN1_write parameter 0 (i2d)"},
+      {"call_site": "0x2a163e", "symbol": "ASN1_d2i_bio", "index": 1, "reachable": false, "old": "target-bounded unresolved (unreachable, not listed in residual_sites)", "new": "ABI_CONTRACT_EXPORT_CALLBACK: ASN1_d2i_bio parameter 1 (d2i)"},
+      {"call_site": "0x2a16d6", "symbol": "ASN1_d2i_fp", "index": 1, "reachable": false, "old": "target-bounded unresolved", "new": "ABI_CONTRACT_EXPORT_CALLBACK: ASN1_d2i_fp parameter 1 (d2i)"},
+      {"call_site": "0x3db767", "symbol": "ASN1_dup", "index": 0, "reachable": false, "old": "target-bounded unresolved", "new": "ABI_CONTRACT_EXPORT_CALLBACK: ASN1_dup parameter 0 (i2d)"},
+      {"call_site": "0x3db7b2", "symbol": "ASN1_dup", "index": 0, "reachable": false, "old": "target-bounded unresolved", "new": "ABI_CONTRACT_EXPORT_CALLBACK: ASN1_dup parameter 0 (i2d)"},
+      {"call_site": "0x3db7c4", "symbol": "ASN1_dup", "index": 1, "reachable": false, "old": "target-bounded unresolved", "new": "ABI_CONTRACT_EXPORT_CALLBACK: ASN1_dup parameter 1 (d2i)"}
+    ],
+    "why_the_seven_are_the_same_defect": "their real declarations are also shadowed by the same kind of macro body (ASN1_d2i_bio_of, ASN1_d2i_fp_of, ASN1_dup_of, IMPLEMENT_PEM_write_bio). The fix is a general preprocessor rule; no symbol allowlist was added and no refusal arm was weakened.",
+    "class_accounting": {
+      "reachable_target_bounded": {"before": 26, "after": 17, "delta": -9},
+      "reachable_contract_bounded": {"before": 105, "after": 116, "delta": 11},
+      "reachable_unresolved": {"before": 131, "after": 133, "delta": 2},
+      "unresolved_total": {"before": 177, "after": 179, "delta": 2},
+      "resolved_total": {"before": 51741, "after": 51739, "delta": -2},
+      "export_callback_reachable": {"before": 51, "after": 62, "delta": 11},
+      "export_callback_witness_backed_all": {"before": 133, "after": 149, "delta": 16},
+      "unclassified_reachable": {"before": 0, "after": 0}
+    },
+    "obligations": {
+      "ssh": {"before": "378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN", "after": "378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN"},
+      "sshd": {"before": "378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN", "after": "378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN"},
+      "identity_delta": {"removed": [], "added": []},
+      "status_delta": {"removed": [], "added": []}
+    },
+    "sshd": "the same 16 call sites change; the same counters and the same empty obligation delta (court/tmp/e7hdr/diff-sshd.json)",
+    "deviation_from_expected": "expected exactly nine; the element-7 target-bounded count did move by exactly nine (26 -> 17), but the full closure diff is 16 sites because two reachable PEM_ASN1_write sites and five unreachable sites also stop being refused for the same mechanical reason. No further widening was applied; this deviation is reported for review."
+  },
+
+  "measurement": {
+    "commands": {
+      "ssh": "python3 forensics/tools/consumer_closure.py --family openssh --artifact court/tmp/openssh-closure/client-b53/openssh-9.9p1/ssh --install artifacts/phase2/install --inventory court/freeze-b53/census-b53.json --carry-forward-closure court/inventory/closure-ssh-b51-baseline.json --enrolment-blockers forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json --workdir court/tmp/closure-b53-e7hdr/work-ssh --output evidence/closure-ssh-b53-e7hdr.json --summary",
+      "sshd": "the same command with the server-b53 sshd binary, court/inventory/closure-sshd-b51-baseline.json, work-sshd and --output evidence/inventory-sshd-b53-e7hdr.json"
+    },
+    "ssh": {
+      "before_receipt": "evidence/closure-ssh-b53-e7ld-r2.json",
+      "verdict": "ACCEPTED",
+      "refusals": 0,
+      "reachable_files": 629,
+      "element7": {"status_before": "FAIL", "status_after": "FAIL", "target_bounded_before": 26, "target_bounded_after": 17, "reachable_unresolved_before": 131, "reachable_unresolved_after": 133, "contract_bounded_before": 105, "contract_bounded_after": 116, "unclassified": 0},
+      "closure_sha256": "3090964ede93227cba1f0a05cca8164847ae585efc13ac0375138c82b6cd69ac",
+      "analysis_identity": "66d85d081d10438c77be601a79d27463209994e1417541c0dc4d5f69452341b3"
+    },
+    "sshd": {
+      "before_receipt": "evidence/inventory-sshd-b53-e7ld-r2.json",
+      "verdict": "ACCEPTED",
+      "refusals": 0,
+      "reachable_files": 628,
+      "element7": {"status_before": "FAIL", "status_after": "FAIL", "target_bounded_before": 26, "target_bounded_after": 17, "reachable_unresolved_before": 131, "reachable_unresolved_after": 133, "contract_bounded_before": 105, "contract_bounded_after": 116, "unclassified": 0},
+      "closure_sha256": "b7ff9210c8cefdb1ec1acf7d9c84452a4fe740052fa108da3eb290282234e62a",
+      "analysis_identity": "66d85d081d10438c77be601a79d27463209994e1417541c0dc4d5f69452341b3"
+    },
+    "tool_sha256": "69e0e10b2867701f3e6e8888a8b1acac2c8254344cf4b3b8f6d7bbd666554df4",
+    "tracked_tree_dirty": true,
+    "tracked_tree_dirty_meaning": "the measured edit itself is the only tracked modification; the source candidate and inventory are unchanged at b8bba9555"
+  },
+
+  "gates": {
+    "tool_self_test": "PASS (exit 0) on tool sha 69e0e10b...; the four new fixtures are part of it",
+    "header_probe": "PASS: 9/9 accepted on the exact install tree and candidate DSO; declarations stack.h:42, stack.h:41, pem.h:394, objects.h:78, lhash.h:106, asn1.h:959",
+    "mutation_control": "PASS: 0/9 and target_bounded 26 restored under the identity mutant; fixed tool restored byte-identically",
+    "closure_verdicts": "ssh ACCEPTED, sshd ACCEPTED, 0 refusals each",
+    "element7": "unchanged verdict FAIL; 17 target-bounded sites remain (was 26); this batch does not claim element-7 graduation",
+    "obligations": "378 = 186/192/0 in both families, no identity or status change",
+    "rust_fast_batch_gates": "NOT_RUN: no Rust source or build input changed; the change is confined to forensics/tools/consumer_closure.py"
+  },
+
+  "outputs": {
+    "deliverable": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/element7-header-preprocessor.json",
+    "evidence": [
+      {"path": "evidence/closure-ssh-b53-e7hdr.json", "bytes": 11812362, "sha256": "e99c30e230660d66a4abb56214e735a7ac228395f687e02a6bf18d49d4aec19d"},
+      {"path": "evidence/inventory-sshd-b53-e7hdr.json", "bytes": 11660527, "sha256": "12788a84ad275d49c1822f7ab63d465b7b0d1772bea047985333883633ab1163"}
+    ],
+    "controls": [
+      {"path": "court/tmp/e7hdr/closure-ssh-b53-e7hdr-mutant.json", "sha256": "b6934e7634738bf18fd7aa4d5ad1eb58c5e2e163b3f25c8dc8386b9d4468f4f5"},
+      {"path": "court/tmp/e7hdr/probe-mutant.json", "sha256": "561b03ce6aebfcf9be08a65f59801becf73ac9f02b8caad7fd304041a6f6c9f2"}
+    ],
+    "tool": {"path": "forensics/tools/consumer_closure.py", "sha256": "69e0e10b2867701f3e6e8888a8b1acac2c8254344cf4b3b8f6d7bbd666554df4"}
+  },
+
+  "refused": "none of the nine refuses at the header gate; all resolve to the real declaration with the declared callback parameter",
+  "failures": "none",
+  "not_done": ["no commit", "no push", "no vault/freeze", "CAMPAIGN-STATUS.json not edited"]
+}

@@ -5075,11 +5075,35 @@ def _split_params(decl: str) -> list:
     return [p for p in out if p and p != "void"]
 
 
+def _without_preprocessor(text: str) -> str:
+    """``text`` with directives and their backslash continuations blanked.
+
+    A preprocessor line is one whose first non-space character is ``#``.  It is
+    macro text, not a declaration, and so is every physical line it continues
+    with a trailing backslash.  Masking with spaces (instead of deleting)
+    keeps every offset and line number intact, so the ``file:line`` recorded
+    for a real declaration is unchanged.
+    """
+    out = []
+    continued = False
+    for line in text.splitlines(keepends=True):
+        if continued or line.lstrip().startswith("#"):
+            out.append(re.sub(r"[^\r\n]", " ", line))
+            continued = line.rstrip("\r\n").endswith("\\")
+        else:
+            out.append(line)
+    return "".join(out)
+
+
 def _header_callback_param(g: "DsoGraph", symbol: str, index: int):
     """The declared callback parameter, or a refusal string."""
     texts = _header_texts(g)
     if not texts:
         return None, "no admitted install headers"
+    # Only declarations are evidence: a macro body that invokes ``symbol`` is
+    # not a declaration of it, and its argument expressions are not parameter
+    # types.
+    texts = [(path, _without_preprocessor(text)) for path, text in texts]
     # Function typedefs: name -> (file, line, is_pointer).
     fntypes = {}
     for path, text in texts:
@@ -23662,6 +23686,37 @@ def self_test() -> int:
     w2, why2 = _export_witness(exported=False)
     check("S2 finite in-image private chain is deferred",
           (w2, (why2 or {}).get("defer")), (None, True))
+
+    # Header gate: preprocessor directives and their backslash continuations
+    # are macro text, not declarations.  A macro body that invokes a symbol
+    # must not be admitted as a declaration of it, and its argument
+    # expressions must not be classified as parameter types.
+    def _header_fixture(header, symbol="f", index=0):
+        install = _winstall(tempfile.mkdtemp(), header)
+        g = _WG({}, {}, install=install)
+        return _header_callback_param(g, symbol, index)
+
+    _freefunc = ("typedef void (*OPENSSL_sk_freefunc)(void *);\n"
+                 "void f(OPENSSL_sk_freefunc cb);\n")
+    cb, _why = _header_fixture(
+        _freefunc + "#define WRAP(x) f(check(x))\n")
+    check("header gate accepts a real callback declaration beside a macro",
+          (cb or {}).get("callback"), True)
+    check("a macro body alone is not a declaration",
+          _header_fixture("#define WRAP(x) f(check(x))\n"),
+          (None, "the symbol is not declared in the admitted headers"))
+    cb, _why = _header_fixture(
+        _freefunc + "#define WRAP(x) \\\n    int f(check(x))\n")
+    check("a #define continuation is not parsed as a declaration",
+          (cb or {}).get("callback"), True)
+    cb, _why = _header_fixture(
+        "typedef void *d2i_of_void(void **, const unsigned char **, long);\n"
+        "void *PEM_ASN1_read_bio(d2i_of_void *d2i, const char *name);\n"
+        "#define IMPLEMENT(name, asn1) \\\n"
+        "    void *PEM_ASN1_read_bio((d2i_of_void *)d2i_##asn1, name)\n",
+        "PEM_ASN1_read_bio", 0)
+    check("differing macro call texts no longer break consistency",
+          (cb or {}).get("callback"), True)
 
     # S2c: the same entry parameter, materialised by a register copy, a frame
     # spill/reload, or a phi.  A phi is admitted only when EVERY incoming arm
