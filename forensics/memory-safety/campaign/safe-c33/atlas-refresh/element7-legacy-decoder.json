@@ -8,10 +8,18 @@
  "group": "legacy_evp_cipher_data + decoder_method_object",
  "state": "CLOSED (5 sites) \u2014 writer sets computed from src with a completeness gate; target sets resolved from image stores and the closed algorithm tables; five of five counted",
  "review": {
-  "verdict": "PENDING",
-  "reviewer": null,
-  "independent": false,
-  "note": "The author generated the evidence; AGENTS.md section 15 requires that the agent that writes a safety claim is not its sole adjudicator.  No discharge is claimed here."
+  "reviewer": "independent adversarial adjudicator (session fdd59b19-e8e7-49a0-a4d1-569bc79f6236); transcribed verbatim",
+  "verdict": "APPROVE",
+  "applied": false,
+  "date": "2026-11-03",
+  "verdict_text": "APPROVE -- the five closures are factually correct; residual defects below, none of which invalidate a counted site.",
+  "confirmed": [
+   "writer scan independent and complete for all three types; the only extra hit is test-only",
+   "gate is per type: unlisted file fails, extra field store fails, test-only excluded",
+   "targets verified against source and image: AES 0x527310/0x527320, SM4 0x2c3810/0x2c3820, decoder 0x204bd0/0x205090/0x2055c0",
+   "label correction confirmed: 0x2c37f2 reads displacement 0 (block); 0x2c37af is the distinct 0x88 stream_ecb dispatch",
+   "collateral exactly five in both families; obligations 378/186/192/0; both ACCEPTED"
+  ]
  },
  "source_identity": {
   "repo_head": "a7c43e6d93a80d6ac24ec50aa01f7352dc5cf290",
@@ -37,7 +45,8 @@
  "site_label_correction": {
   "finding": "The task named `0x2c37f2` as reading `EvpSm4Key.stream_ecb`. The image reads displacement 0x0 of the cipher-data block (`call *(%r12)` with `%r12 = ctx->cipher_data`), which is `block`; `stream_ecb` is at 0x88 and its `if let Some` dispatch is the adjacent unresolved site 0x2c37af.",
   "evidence": "sm4_ecb_cipher disassembly: 0x2c378a/0x2c37c7 `mov 0x78(%rdi),%r12`; 0x2c37ed `lea 0x8(%r12),%rdx`; 0x2c37f2 `call *(%r12)`.  The store at 0x2c34ea also targets displacement 0 and holds sm4_encrypt_block/sm4_decrypt_block.",
-  "consequence": "The site is closed against the field it actually reads; 0x2c37af (stream_ecb) remains target-bounded and is not counted in this batch."
+  "consequence": "The site is closed against the field it actually reads; 0x2c37af (stream_ecb) remains target-bounded and is not counted in this batch.",
+  "adjacent_site": "withdrawn: 0x2c37af appears in neither closure and stream_ecb is only ever stored None; the field correction is unaffected"
  },
  "writer_scan": {
   "method": "One parse of the admitted tree; every function body is scanned for `(*p).field = expr`, `p.field = expr`, `addr_of_mut!((*p).field)`, `(*p).base.field.store(..)`, `Type { .. }` literals and `ptr::copy/write/read::<Type>`. A receiver's type is resolved from parameters, explicit `let` annotations, `cast::<T>()`, `OwnedCtx::<T>`/`RawCtx::<T>` and same-file function return types.  A store whose owner cannot be resolved is only a candidate when the function names a tracked type; otherwise it cannot be a write to it.",
@@ -1580,6 +1589,31 @@
    "id": "E7LD-R4",
    "state": "OPEN",
    "why": "Independent review is pending (this artifact is author-generated)."
+  },
+  {
+   "id": "E7LD-R1",
+   "state": "OPEN",
+   "why": "the completeness gate admits same-file struct-literal and ptr::copy/write/read::<T> initialisers: they are collected but excluded from the required-empty pair set. No such writer exists today, but the gate must close this before the completeness claim is relied on."
+  },
+  {
+   "id": "E7LD-R2",
+   "state": "OPEN",
+   "why": "a generic helper fn f<T>(p: *mut T) { (*p).block = .. } is skipped by the scanner. No current instance."
+  },
+  {
+   "id": "E7LD-R3",
+   "state": "CLOSED",
+   "why": "source_stores line numbers were stale (362/374 and 138/144; actual 367/379 and 143/149) because the scanner counted from the fn line rather than the body brace. Corrected."
+  },
+  {
+   "id": "E7LD-R4",
+   "state": "CLOSED",
+   "why": "the claim that 0x2c37af is an adjacent unresolved site was unsupported (it appears in neither closure and stream_ecb is only ever stored None). The unsupported disposition claim is withdrawn; the field correction stands."
+  },
+  {
+   "id": "E7LD-R5",
+   "state": "OPEN",
+   "why": "identity split: the closure records repo_head a7c43e6d9 while the instrument sha is the tool committed at 3cb24dcfe; src is identical but one S must include the tool. A clean re-measurement is required."
   }
  ],
  "outcome": {
