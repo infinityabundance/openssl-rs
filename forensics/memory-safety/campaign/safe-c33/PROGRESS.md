@@ -29,6 +29,31 @@ Regenerated at HEAD `e48a1b519` (`measurement_revision: 2`) by
 comment/literal-stripped source and exits 0. See `atlas-refresh/REPORT.md`; the
 generator is measurement-only and claims no discharge.
 
+### Current element-7 and obligation truth (2026-11-07)
+
+Measured at source `b95b7814c` with tool `consumer_closure.py` sha256
+`86fc09b1…`, against artifacts built at `b8bba9555` (libcrypto `1c03ec0a`,
+ssh `926975c8`, sshd `0d3f5e92`). Receipts:
+`evidence/closure-ssh-b62-element7.json` and
+`evidence/inventory-sshd-b62-element7.json`; compact record:
+`atlas-refresh/element7-current-truth-b62.json`.
+
+- Obligations: **378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN**, identical
+  for ssh and sshd; verdict `ACCEPTED` with 0 refusals; `safe_compatible`
+  false for both.
+- **Element 7: FAIL — 14 target-bounded unresolved sites** (contract-bounded
+  119, reachable-unresolved 133, unclassified 0). This supersedes the
+  previously documented 15 at `363a3168d`: the registration-ABI atexit witness
+  moved one site (commit `091c6e78`).
+- Identity residual: the b62 receipts record `build_provenance: null` and
+  `artifact_matches_this_build: false`; the B53 freeze and census supply the
+  tie to `b8bba9555`. This is a recorded provenance gap, not a passing
+  identity claim.
+- `CAMPAIGN-STATUS.json` previously named the superseded B52 triple
+  (`ececbd98` / `560652df` / `51f00033` at `a8716b4f2`). It now carries the
+  receipt-bound identity above; the B52 line is preserved as an explicit
+  correction rather than silently overwritten.
+
 - Safe-33 closure: **628** files; **314** have a recognised ownership seam
   (**50.0%**); **0** files have fully discharged obligations; **0/33**
   consumers are `SAFE_COMPATIBLE`.
@@ -165,6 +190,28 @@ Independent verification: fmt clean, clippy `-D warnings` clean, **1218 passed /
 analogous underflow (it special-cases `n == 1`). The reference-count boundaries
 are now eligible for discharge work, subject to the §7 independent-check
 package.
+
+## Downstream security regression courts (not graduation evidence)
+
+These courts answer consumer-security questions that memory-safety graduation
+cannot answer, and must never be counted toward it.
+
+- **CVE-2026-123158 ("SSHole")** —
+  `courts/phase17/downstream/openssh/cve-2026-123158/`. An OpenSSH
+  authentication bypass (an account whose stored field is `*`, versus a musl
+  `crypt()` that returns `*` for an oversized password), fixed upstream in
+  **OpenSSH 10.6p2** by the `MIN_PASSWORD_HASH_LEN` (4) guard in
+  `auth-passwd.c`. It is **not** a libcrypto mechanism: `openssl-rs` is not
+  vulnerable, but an **unpatched `sshd` linked against it is**. The court runs
+  an isolated decision model with a firing positive control, a static patch
+  check (comments/literals stripped) and four checker fixtures of which two
+  are adversarial mutations. Observed in the court: **17 pass / 0 fail,
+  verdict PASS, real `crypt(3)` RUN**; `end_to_end_musl` and real-tree
+  inspection are recorded `NOT_RUN`, never as passes. Result:
+  `courts/phase17/downstream/openssh/cve-2026-123158/result.json`.
+  The campaign's OpenSSH L7 evidence was measured on **10.5p1**, which
+  predates this fix, and says nothing about the authentication code's
+  security.
 
 ## Landed batches
 
