@@ -1,0 +1,55 @@
+{
+ "receipt": "element7-registration-abi-atexit",
+ "kind": "element7-rule-extension",
+ "date": "2026-11-03",
+ "subphase": "B57",
+ "state": "IMPLEMENTED for one site — review pending; the other registration families are not yet covered",
+ "scope": "one site: the atexit handler dispatch in OPENSSL_cleanup",
+ "fact": {
+  "site": {"dso": "libcrypto.so.3", "function": "OPENSSL_cleanup", "function_address": "0x3dc8b0", "call_site": "0x3dc914", "operand": "call *(%rbx)"},
+  "slot": "OpenSslInitStop.handler @ offset 0",
+  "writer_set": {
+   "accepted": ["OPENSSL_atexit (src/runtime/init.rs:979)"],
+   "evidence": "the handler field is written through OwnedInitStop::new (init.rs:894, literal at :910) only from OPENSSL_atexit; the only other writes to the list are run_atexit_handlers' NULL swap/store (:1028, :1045), which publish no handler",
+   "falsifier": "any constructor, helper or test that stores a handler, or a second publication path"
+  },
+  "header": "artifacts/phase2/install/include/openssl/crypto.h:541 — `int OPENSSL_atexit(void (*handler)(void));`",
+  "export": ".dynsym OPENSSL_atexit@@OPENSSL_3.0.0 at 0x3dc840, GLOBAL DEFAULT FUNC"
+ },
+ "mechanism": {
+  "class": "ABI_CONTRACT_REGISTRATION_ATEXIT",
+  "conditions": [
+   "the site is enumerated (OPENSSL_cleanup 0x3dc914)",
+   "the handler list's writer set is exactly {OPENSSL_atexit}",
+   "the stored value is OPENSSL_atexit's declared handler parameter",
+   "the entry point is exported and the header declares the parameter",
+   "the dispatch reads the same slot (OpenSslInitStop.handler @ 0) that the registration writes",
+   "no other writer of the handler list exists anywhere in src/"
+  ],
+  "refusal": "distinct reason per condition; no generic struct-field acceptance"
+ },
+ "controls": {
+  "closure": "the site moves from field/base-slot-partial to ABI_CONTRACT_REGISTRATION_ATEXIT; exactly one site changed; element-7 residual identity sets 133/133 equal; obligation rows deep-equal; edge defects 0",
+  "mutation": "removing OPENSSL_atexit from the accepted publication writer set reverts the site (target-bounded 14 -> 15, new class absent); tool restored byte-identically (52e43a0b...)",
+  "negative_a": "a handler stored from a constructor (STOP_HANDLERS.store(...)) refuses with other-handler-list-writer",
+  "negative_b": "OPENSSL_atexit storing a computed value instead of its parameter refuses with stored-value-is-not-the-handler-parameter"
+ },
+ "measurement": {
+  "element7_before": {"target_bounded": 15, "contract_bounded": 118},
+  "element7_after": {"target_bounded": 14, "contract_bounded": 119},
+  "obligations": "378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN",
+  "verdicts": "ssh and sshd ACCEPTED, 0 refusals",
+  "passes": false
+ },
+ "not_yet_covered": [
+  {"family": "PBE", "sites": 3, "entry_point": "EVP_PBE_alg_add_type", "note": "dispatch may read builtin_pbe[] (static) or PBE_ALGS (caller-filled); both paths must be attributed"},
+  {"family": "OSSL_STORE", "sites": 4, "entry_point": "OSSL_STORE_register_loader", "note": "takes a whole OSSL_STORE_LOADER object; the callbacks are fields whose types must be declared in a public header"},
+  {"family": "CONF modules", "sites": 2, "entry_point": "CONF_module_add"},
+  {"family": "RCU", "sites": 1, "entry_point": "ossl_rcu_call", "note": "pub(crate); its callers must be enumerated to decide whether it is internally closed or an application callback"}
+ ],
+ "non_claims": [
+  "Element 7 remains FAIL with 14 target-bounded sites.",
+  "This covers one site only; the other ten registration-family sites are unchanged and are not covered by this class.",
+  "No obligation status changed and no Rust source changed."
+ ]
+}

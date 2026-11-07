@@ -2135,6 +2135,15 @@ ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA = "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA"
 # the closed `ossl_any_to_obj_algorithm` row set and calls its `newctx`,
 # `set_ctx_params` and `freectx` slots.  One writer, a finite table closure.
 ABI_CONTRACT_DECODER_METHOD_OBJECT = "ABI_CONTRACT_DECODER_METHOD_OBJECT"
+# The `OPENSSL_atexit` registration -> `OPENSSL_cleanup` drain dispatch.  One
+# intrusive list of `OpenSslInitStop` nodes carries the caller's handlers.  The
+# only non-NULL publication into the list is `OPENSSL_atexit`, the only writer
+# of the node's `handler` field is that function (through `OwnedInitStop::new`),
+# and the stored value is its `handler` parameter unchanged.  The drain reads
+# that first field at offset 0, the same slot the registration writes.  The
+# class is site-enumerated: a matching shape elsewhere is refused, never
+# absorbed.
+ABI_CONTRACT_REGISTRATION_ATEXIT = "ABI_CONTRACT_REGISTRATION_ATEXIT"
 
 ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
                                   ABI_CONTRACT_EXPORT_CALLBACK,
@@ -2142,7 +2151,8 @@ ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
                                   ABI_CONTRACT_SLH_METHOD_TABLE,
                                   ABI_CONTRACT_PROVIDER_HW_TABLE,
                                   ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA,
-                                  ABI_CONTRACT_DECODER_METHOD_OBJECT})
+                                  ABI_CONTRACT_DECODER_METHOD_OBJECT,
+                                  ABI_CONTRACT_REGISTRATION_ATEXIT})
 
 ABI_CONTRACTS = {
     ABI_CONTRACT_PROVIDER: {
@@ -2438,6 +2448,53 @@ ABI_CONTRACTS = {
             "direct `ossl_decoder_from_algorithm` call",
             "any dispatch entry that is NULL or not an in-image function start",
             "the reachability of these targets from the consumer workload",
+        ],
+    },
+    ABI_CONTRACT_REGISTRATION_ATEXIT: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "int OPENSSL_atexit(void (*handler)(void)) and the "
+            "`OPENSSL_cleanup` drain of the handler list"
+        ),
+        "citation": [
+            "include/openssl/crypto.h:541 -- int "
+            "OPENSSL_atexit(void (*handler)(void));",
+            "src/runtime/init.rs:867-873 -- `#[repr(C)] struct "
+            "OpenSslInitStop { handler: extern \"C\" fn(), next: *mut "
+            "OpenSslInitStop }`; `handler` is the first field, so its slot is "
+            "offset 0",
+            "src/runtime/init.rs:979 -- `pub unsafe extern \"C\" fn "
+            "OPENSSL_atexit(handler: Option<extern \"C\" fn()>) -> c_int`",
+            "src/runtime/init.rs:993 -- `OwnedInitStop::new(handler, "
+            "core::ptr::null_mut())` forwards the parameter unchanged",
+            "src/runtime/init.rs:910 -- the only store to the node's `handler` "
+            "field: `dst.write(OpenSslInitStop { handler, next })`",
+            "src/runtime/init.rs:1002 -- the only publication: "
+            "`STOP_HANDLERS.compare_exchange_weak`; 1028 `swap` and 1045 "
+            "`store` write NULL (drain start / clear)",
+            "src/runtime/init.rs:1033-1034 -- the dispatch reads "
+            "`(*curr).handler` and calls it; the enumerated image site is "
+            "OPENSSL_cleanup 0x3dc914 `call *(%rbx)` (the inlined drain)",
+            "the writer set is COMPUTED by scanning `src/` for node "
+            "literals, `.handler =` stores and `STOP_HANDLERS` writes; any "
+            "additional writer refuses",
+        ],
+        "covers": (
+            "the public `OPENSSL_atexit` registration seam, the single "
+            "`OpenSslInitStop.handler` field it writes at offset 0, and the "
+            "`OPENSSL_cleanup` dispatch that reads that field"
+        ),
+        "does_not_cover": [
+            "the application's handler body, which is the caller's obligation "
+            "(the header admits any `void (*)(void)`)",
+            "a NULL handler: `OPENSSL_atexit` refuses it (a recorded "
+            "divergence)",
+            "a node not produced by `OPENSSL_atexit`; the writer set must be "
+            "exactly that function",
+            "the reachability of the target from the consumer workload; that "
+            "remains the closure's job",
+            "concurrency of the drain; the authority's single-threaded cleanup "
+            "assumption is unchanged",
         ],
     },
 }
@@ -14753,6 +14810,378 @@ def contract_witness(cls: str, g: "DsoGraph", site: dict, name: str) -> dict | N
     return fn(g, site, name) if fn else None
 
 
+# ---- E7/s2b: the OPENSSL_atexit registration seam ----------------------- #
+#
+# `OPENSSL_cleanup` calls the handlers stored in an intrusive `OpenSslInitStop`
+# list.  The site is `call *(%rbx)` through the node's first field; the value is
+# the `handler` parameter of the exported `OPENSSL_atexit`.  The witness is
+# site-enumerated and source-checked: any additional writer of the node field or
+# of the list head refuses.
+
+REGISTRATION_ATEXIT_SOURCE = "src/runtime/init.rs"
+REGISTRATION_ATEXIT_SYMBOL = "OPENSSL_atexit"
+REGISTRATION_ATEXIT_SITE = "OPENSSL_cleanup"
+REGISTRATION_ATEXIT_NODE = "OpenSslInitStop"
+REGISTRATION_ATEXIT_FIELD = "handler"
+REGISTRATION_ATEXIT_LIST = "STOP_HANDLERS"
+REGISTRATION_ATEXIT_DRAIN = "run_atexit_handlers"
+
+
+def _registration_atexit_refusal(name: str, site: dict, reason: str,
+                                 **extra) -> dict:
+    rec = {"class": ABI_CONTRACT_REGISTRATION_ATEXIT,
+           "function": name,
+           "call_site": hex(site["addr"]),
+           "reason": reason}
+    rec.update(extra)
+    return rec
+
+
+def _registration_atexit_lines(g: "DsoGraph"):
+    root = _repo_root(g)
+    if root is None:
+        return None, "repository root unavailable"
+    path = Path(root) / REGISTRATION_ATEXIT_SOURCE
+    if not path.is_file():
+        return None, f"source file {REGISTRATION_ATEXIT_SOURCE} is absent"
+    try:
+        return path.read_text(errors="replace").splitlines(), None
+    except OSError as e:
+        return None, f"cannot read {REGISTRATION_ATEXIT_SOURCE}: {e}"
+
+
+def _registration_atexit_fn(lines, idx):
+    """The nearest preceding `fn` name and line, for source attribution."""
+    for j in range(idx, -1, -1):
+        m = re.search(r"\bfn\s+([A-Za-z_]\w*)", lines[j])
+        if m:
+            return m.group(1), j + 1
+    return None, None
+
+
+def _registration_atexit_first_line(lines, needle, start=0):
+    for i in range(start, len(lines)):
+        if needle in lines[i]:
+            return i
+    return None
+
+
+def _registration_atexit_site_shape(site: dict) -> str:
+    """The operand when the site is the enumerated memory-indirect call."""
+    if site.get("kind") not in ("call", "jmp"):
+        return ""
+    opnd = _site_operand(site)
+    if re.match(r"^(?:0x0|0)?\(\s*%[A-Za-z0-9]+\s*\)$", opnd):
+        return opnd
+    return ""
+
+
+def _registration_atexit_scan(root: Path):
+    """Every node/handler writer and list-head write under ``src/``.
+
+    Returns ``(node_writers, list_writes, errors)``.  A node writer is a
+    `OpenSslInitStop { ... }` literal or a `.handler =` store in a file that
+    mentions the node type.  A list write is a `STOP_HANDLERS` mutating call
+    (not `load`) or assignment, with its enclosing function.
+    """
+    node_lit = re.compile(r"\b" + REGISTRATION_ATEXIT_NODE + r"\s*\{")
+    field_store = re.compile(r"\.\s*" + REGISTRATION_ATEXIT_FIELD +
+                             r"\s*=\s*(?!=)")
+    list_write = re.compile(
+        r"\b" + REGISTRATION_ATEXIT_LIST +
+        r"\s*(?:\.\s*(compare_exchange_weak|compare_exchange|swap|store|"
+        r"fetch_update|fetch_add|fetch_sub|fetch_min|fetch_max|"
+        r"fetch_and|fetch_or|fetch_xor)\s*\(|=(?!=))")
+    node_writers, list_writes, errors = [], [], []
+    src = root / "src"
+    if not src.is_dir():
+        return None, None, [f"source directory {src} is absent"]
+    for path in sorted(src.rglob("*.rs")):
+        rel = path.relative_to(root).as_posix()
+        try:
+            lines = path.read_text(errors="replace").splitlines()
+        except OSError as e:
+            errors.append(f"cannot read {rel}: {e}")
+            continue
+        mentions_node = any(REGISTRATION_ATEXIT_NODE in line for line in lines)
+        # A node literal may span lines, so scan the whole file.  Exclude the
+        # struct definition and a function's return type (`-> *mut T {`),
+        # neither of which is a store.
+        text = "\n".join(lines)
+        for m in node_lit.finditer(text):
+            ln = text.count("\n", 0, m.start()) + 1
+            raw = lines[ln - 1]
+            stripped_line = raw.strip()
+            if (stripped_line.startswith("//")
+                    or re.match(r"(?:pub\s+)?struct\s+" +
+                                REGISTRATION_ATEXIT_NODE + r"\b",
+                                stripped_line)):
+                continue
+            if re.search(r"\bfn\b", raw) and "->" in raw:
+                continue
+            fn, fnline = _registration_atexit_fn(lines, ln - 1)
+            node_writers.append({"file": rel, "line": ln,
+                                 "function": fn, "function_line": fnline,
+                                 "kind": "node-literal",
+                                 "text": stripped_line[:200]})
+        for i, line in enumerate(lines):
+            stripped = line.lstrip()
+            if stripped.startswith("//"):
+                continue
+            if mentions_node and field_store.search(line):
+                fn, fnline = _registration_atexit_fn(lines, i)
+                node_writers.append({"file": rel, "line": i + 1,
+                                     "function": fn, "function_line": fnline,
+                                     "kind": "field-store",
+                                     "text": stripped[:200]})
+            if REGISTRATION_ATEXIT_LIST not in line:
+                continue
+            if re.search(r"\bstatic\s+" + REGISTRATION_ATEXIT_LIST + r"\b",
+                         line):
+                list_writes.append({"file": rel, "line": i + 1,
+                                    "function": None, "method": "declaration",
+                                    "text": stripped[:200]})
+                continue
+            m = list_write.search(line)
+            if m:
+                fn, fnline = _registration_atexit_fn(lines, i)
+                list_writes.append({"file": rel, "line": i + 1,
+                                    "function": fn, "function_line": fnline,
+                                    "method": m.group(1) or "assign",
+                                    "text": stripped[:200]})
+    return node_writers, list_writes, errors
+
+
+def registration_atexit_witness(g: "DsoGraph", site: dict, name: str):
+    """Witness for the `OPENSSL_atexit` -> `OPENSSL_cleanup` handler dispatch.
+
+    Returns ``(witness, refusal)`` or ``(None, None)`` when this is not the
+    enumerated site.  Six independent conditions must hold; each failure has
+    its own reason.
+    """
+    base = re.sub(r"\.llvm(?:\.[0-9]+)?$", "", name or "")
+    if base != REGISTRATION_ATEXIT_SITE:
+        return None, None
+    opnd = _registration_atexit_site_shape(site)
+    if not opnd:
+        return None, None
+    lines, err = _registration_atexit_lines(g)
+    if lines is None:
+        return None, _registration_atexit_refusal(
+            name, site, "source-unavailable", detail=err)
+    root = _repo_root(g)
+    node_writers, list_writes, scan_errors = _registration_atexit_scan(root)
+    if node_writers is None:
+        return None, _registration_atexit_refusal(
+            name, site, "source-unavailable", detail="; ".join(scan_errors))
+    if scan_errors:
+        return None, _registration_atexit_refusal(
+            name, site, "source-scan-incomplete", errors=scan_errors)
+
+    # Condition 5: the node is `#[repr(C)]`, `handler` is its first field, and
+    # the source drain reads exactly that field before calling it.
+    node_idx = _registration_atexit_first_line(
+        lines, f"struct {REGISTRATION_ATEXIT_NODE} {{")
+    if node_idx is None:
+        return None, _registration_atexit_refusal(
+            name, site, "node-struct-absent")
+    repr_c = any("repr(C)" in lines[j]
+                 for j in range(max(0, node_idx - 3), node_idx + 1))
+    fields = []
+    for j in range(node_idx + 1, len(lines)):
+        stripped = lines[j].strip()
+        if stripped.startswith("}"):
+            break
+        if not stripped or stripped.startswith("//") or stripped.startswith("#"):
+            continue
+        m = re.match(r"([A-Za-z_]\w*)\s*:\s*(.+)", stripped)
+        if m:
+            fields.append((m.group(1), j + 1))
+    if not repr_c or not fields or fields[0][0] != REGISTRATION_ATEXIT_FIELD:
+        return None, _registration_atexit_refusal(
+            name, site, "registration-slot-is-not-the-first-repr-c-field",
+            repr_c=repr_c, fields=[f for f, _l in fields])
+    dispatch_idx = _registration_atexit_first_line(lines, "(*curr).handler")
+    dispatch_fn, _dl = (_registration_atexit_fn(lines, dispatch_idx)
+                        if dispatch_idx is not None else (None, None))
+    if (dispatch_idx is None or dispatch_fn != REGISTRATION_ATEXIT_DRAIN
+            or not any("handler()" in line for line in lines)):
+        return None, _registration_atexit_refusal(
+            name, site, "dispatch-does-not-read-the-registration-slot",
+            dispatch_function=dispatch_fn)
+
+    # Condition 2/6: exactly one handler-field writer, it is OPENSSL_atexit,
+    # and the only non-NULL list publication is the same function.
+    if len(node_writers) != 1:
+        return None, _registration_atexit_refusal(
+            name, site, "handler-field-writer-set-is-not-exactly-atexit",
+            writers=node_writers)
+    node_writer = node_writers[0]
+    if (node_writer["file"] != REGISTRATION_ATEXIT_SOURCE
+            or node_writer["function"] != "new"):
+        return None, _registration_atexit_refusal(
+            name, site, "other-handler-field-writer", writer=node_writer)
+    publications = [w for w in list_writes
+                    if w["method"] in ("compare_exchange_weak",
+                                       "compare_exchange", "fetch_update",
+                                       "fetch_add", "fetch_sub", "fetch_min",
+                                       "fetch_max", "fetch_and", "fetch_or",
+                                       "fetch_xor", "assign")]
+    if (len(publications) != 1
+            or publications[0]["function"] != REGISTRATION_ATEXIT_SYMBOL
+            or publications[0]["method"] == "fetch_update"):
+        return None, _registration_atexit_refusal(
+            name, site, "handler-list-writer-is-not-exactly-atexit",
+            publications=publications)
+    for w in list_writes:
+        if w["method"] in ("swap", "store"):
+            if (w["function"] != REGISTRATION_ATEXIT_DRAIN
+                    or "null_mut" not in w["text"]):
+                return None, _registration_atexit_refusal(
+                    name, site, "other-handler-list-writer", writer=w)
+
+    # Condition 3: the stored value is the declared `handler` parameter.
+    sig_idx = _registration_atexit_first_line(
+        lines, f"fn {REGISTRATION_ATEXIT_SYMBOL}(")
+    if sig_idx is None:
+        return None, _registration_atexit_refusal(
+            name, site, "registration-function-absent")
+    m = re.search(r"fn\s+" + REGISTRATION_ATEXIT_SYMBOL +
+                  r"\s*\(\s*([A-Za-z_]\w*)\s*:\s*Option\s*<", lines[sig_idx])
+    if not m:
+        return None, _registration_atexit_refusal(
+            name, site, "registration-parameter-is-not-the-declared-callback",
+            signature=lines[sig_idx].strip()[:200])
+    param = m.group(1)
+    call_idx = _registration_atexit_first_line(lines, "OwnedInitStop::new(")
+    if call_idx is None:
+        return None, _registration_atexit_refusal(
+            name, site, "registration-constructor-call-absent")
+    call_fn, _cl = _registration_atexit_fn(lines, call_idx)
+    m = re.search(r"OwnedInitStop::new\(\s*([^,]+?)\s*,", lines[call_idx])
+    stored_arg = m.group(1).strip() if m else None
+    if call_fn != REGISTRATION_ATEXIT_SYMBOL or stored_arg != param:
+        return None, _registration_atexit_refusal(
+            name, site, "stored-value-is-not-the-handler-parameter",
+            parameter=param, stored_argument=stored_arg,
+            calling_function=call_fn)
+    new_idx = _registration_atexit_first_line(
+        lines, f"fn new({REGISTRATION_ATEXIT_FIELD}:")
+    m = re.search(r"fn\s+new\s*\(\s*([A-Za-z_]\w*)\s*:",
+                  lines[new_idx]) if new_idx is not None else None
+    if not m or m.group(1) != param:
+        return None, _registration_atexit_refusal(
+            name, site, "constructor-parameter-is-not-the-registration-parameter",
+            parameter=param)
+    lit = [w for w in node_writers if w["kind"] == "node-literal"][0]
+    lit_text = lines[lit["line"] - 1]
+    m = re.search(REGISTRATION_ATEXIT_NODE + r"\s*\{([^}]*)\}", lit_text)
+    if not m:
+        return None, _registration_atexit_refusal(
+            name, site, "node-literal-not-readable", writer=lit)
+    parts = [p.strip() for p in m.group(1).split(",") if p.strip()]
+    handler_part = next((p for p in parts
+                         if p.split(":", 1)[0].strip()
+                         == REGISTRATION_ATEXIT_FIELD), None)
+    value = (handler_part.split(":", 1)[1].strip()
+             if handler_part and ":" in handler_part else handler_part)
+    if value != param:
+        return None, _registration_atexit_refusal(
+            name, site, "node-field-is-not-the-handler-parameter",
+            parameter=param, stored_value=value)
+
+    # Condition 4: the entry point is exported and the admitted header declares
+    # it with the callback parameter.
+    cb, why = _header_callback_param(g, REGISTRATION_ATEXIT_SYMBOL, 0)
+    if cb is None:
+        return None, _registration_atexit_refusal(
+            name, site, "header-does-not-declare-atexit", detail=why)
+    if cb.get("name") != REGISTRATION_ATEXIT_FIELD:
+        return None, _registration_atexit_refusal(
+            name, site, "header-parameter-is-not-the-handler",
+            declaration=cb)
+    export = (getattr(g, "dynamic_defs", {}) or {}).get(
+        REGISTRATION_ATEXIT_SYMBOL)
+    if export is None:
+        return None, _registration_atexit_refusal(
+            name, site, "atexit-entry-point-not-exported")
+    names = set((getattr(g, "names_at", {}) or {}).get(export, ()))
+    names.add((getattr(g, "funcs", {}) or {}).get(export, ""))
+    if not any((n or "").split("@")[0] == REGISTRATION_ATEXIT_SYMBOL
+               for n in names):
+        return None, _registration_atexit_refusal(
+            name, site, "exported-address-is-not-the-atexit-function",
+            export=hex(export), names=sorted(n for n in names if n))
+
+    witness = _witness(
+        ABI_CONTRACT_REGISTRATION_ATEXIT, name, site,
+        slot=(f"{REGISTRATION_ATEXIT_NODE}.{REGISTRATION_ATEXIT_FIELD} "
+              "(offset 0) -- the node field `OPENSSL_atexit` writes and the "
+              "`OPENSSL_cleanup` dispatch reads"),
+        writer=(f"{REGISTRATION_ATEXIT_SYMBOL} "
+                f"({REGISTRATION_ATEXIT_SOURCE}:{sig_idx + 1}) stores its "
+                f"`{param}` parameter through OwnedInitStop::new "
+                f"({REGISTRATION_ATEXIT_SOURCE}:{new_idx + 1}); the only "
+                "other list writes are the drain's NULL swap/store"),
+        interface=(f"int {REGISTRATION_ATEXIT_SYMBOL}(void (*handler)(void)); "
+                   f"-- {cb['declaration']}"),
+        basis=("the enumerated `OPENSSL_cleanup` site reads the node's first "
+               "field at offset 0; a scan of `src/` finds exactly one "
+               "handler-field writer (OPENSSL_atexit, forwarding its parameter "
+               "unchanged), exactly one non-NULL list publication "
+               "(OPENSSL_atexit), and no other writer; the entry point is in "
+               ".dynsym and the admitted header declares it"))
+    witness.update({
+        "source": {"file": REGISTRATION_ATEXIT_SOURCE,
+                   "registration_line": sig_idx + 1,
+                   "constructor_line": new_idx + 1,
+                   "node_writer_line": lit["line"],
+                   "dispatch_line": dispatch_idx + 1},
+        "node": {"type": REGISTRATION_ATEXIT_NODE, "repr_c": repr_c,
+                 "field": REGISTRATION_ATEXIT_FIELD, "offset": 0,
+                 "fields": [f for f, _l in fields]},
+        "writer_set": {"handler_field": [REGISTRATION_ATEXIT_SYMBOL],
+                       "list_publication": [REGISTRATION_ATEXIT_SYMBOL],
+                       "list_clears": [REGISTRATION_ATEXIT_DRAIN],
+                       "node_writers": node_writers,
+                       "list_writes": list_writes},
+        "stored_value": {"parameter": param,
+                         "call": f"OwnedInitStop::new({param}, ...)",
+                         "node_literal": lit_text.strip()[:200]},
+        "export": {"symbol": REGISTRATION_ATEXIT_SYMBOL,
+                   "in_dynsym": True, "address": hex(export)},
+        "header": cb,
+        "dispatch": {"operand": opnd, "offset": 0,
+                     "instruction": (site.get("text") or "").strip()[:120]},
+        "conditions": {
+            "site_enumerated": (f"{name} {hex(site['addr'])} "
+                                f"`{(site.get('text') or '').strip()}`"),
+            "writer_set_exactly_atexit": (
+                "handler field: OPENSSL_atexit; non-NULL list publication: "
+                "OPENSSL_atexit; list clears: run_atexit_handlers (NULL)"),
+            "stored_value_is_the_handler_parameter": (
+                f"OwnedInitStop::new({param}, ...) -> "
+                f"OpenSslInitStop {{ {param}, next }}"),
+            "entry_point_exported_and_declared": (
+                f"{REGISTRATION_ATEXIT_SYMBOL} in .dynsym at "
+                f"{hex(export)}; {cb['declaration']}"),
+            "dispatch_reads_the_registration_slot": (
+                f"offset 0 ({opnd}) is "
+                f"{REGISTRATION_ATEXIT_NODE}.{REGISTRATION_ATEXIT_FIELD}"),
+            "no_other_writer_in_src": (
+                "no other node literal, `.handler =` store or non-NULL "
+                "list publication exists under `src/`"),
+        },
+        "does_not_cover": [
+            "the application's handler body, which is the caller's obligation",
+            "a NULL handler: OPENSSL_atexit refuses it (a recorded divergence)",
+            "a node not produced by OPENSSL_atexit",
+            "the reachability of the target from the consumer workload",
+        ],
+    })
+    return witness, None
+
+
 def evaluate_predicate_element_7(reachable_residual_sites, unclassified_sites) -> dict:
     """Element 7 under AGENTS.md section 7 criterion 2.
 
@@ -15291,6 +15720,21 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                 continue
             site["slh_method_table_refusal"] = slh
             stats["S4_slh_method_table_refused"] += 1
+        # E7/s2b: the `OPENSSL_atexit` registration -> `OPENSSL_cleanup`
+        # dispatch.  The witness is site-enumerated and source-checked; a
+        # refusal records its own reason and leaves the site target-bounded.
+        atexit, atexit_refusal = registration_atexit_witness(g, site, name)
+        if atexit is not None:
+            site["class"] = ABI_CONTRACT_REGISTRATION_ATEXIT
+            site["unresolved"] = True
+            site["reason"] = ("OPENSSL_atexit registration ABI contract: "
+                              + atexit["slot"])
+            site["witness"] = atexit
+            stats["E7_registration_atexit_contract_bounded"] += 1
+            continue
+        if atexit_refusal:
+            site["registration_atexit_refusal"] = atexit_refusal
+            stats["E7_registration_atexit_refused"] += 1
         if _match(name, A1_FUNCTIONS):
             witness = contract_witness(ABI_CONTRACT_PROVIDER, g, site, name)
             if witness is not None:
