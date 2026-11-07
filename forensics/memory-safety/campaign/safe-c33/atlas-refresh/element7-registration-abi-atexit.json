@@ -3,7 +3,8 @@
  "kind": "element7-rule-extension",
  "date": "2026-11-03",
  "subphase": "B57",
- "state": "APPROVED for one site \u2014 with recorded weaknesses; not a model for the other families until tightened",
+ "state": "APPROVED for one site \u2014 R1 (address binding) and R5 (replayable fixtures) closed; R2/R3/R4/R6 recorded",
+ "updated": "2026-11-07",
  "scope": "one site: the atexit handler dispatch in OPENSSL_cleanup",
  "fact": {
   "site": {
@@ -85,6 +86,48 @@
   "This covers one site only; the other ten registration-family sites are unchanged and are not covered by this class.",
   "No obligation status changed and no Rust source changed."
  ],
+ "fixtures": {
+  "mechanism": "python3 forensics/tools/consumer_closure.py --self-test",
+  "positive": "the candidate shape: OPENSSL_atexit stores its declared handler parameter through OwnedInitStop::new and the enumerated 0x3dc914 dispatch is accepted",
+  "negative_a": "a STOP_HANDLERS.store(...) from OwnedInitStop::new refuses with other-handler-list-writer",
+  "negative_b": "OPENSSL_atexit storing a computed value instead of its parameter refuses with stored-value-is-not-the-handler-parameter",
+  "r1_control": "a second call *(%rbx) at 0x3dc9a0 inside the same OPENSSL_cleanup shape returns (None, None): only 0x3dc914 is this class",
+  "mutation_switches": [
+   "e7-atexit-site-address",
+   "e7-atexit-list-writer",
+   "e7-atexit-stored-value"
+  ],
+  "result": "all four fixtures pass under --self-test; each mutation switch flips its fixture to accepted, so every refusal is load-bearing"
+ },
+ "re_measurement": {
+  "date": "2026-11-07",
+  "candidate": "220cf54c2 + the R1/R5 tightening in the worktree (not committed)",
+  "commands": {
+   "ssh": "python3 forensics/tools/consumer_closure.py --family openssh --artifact court/tmp/openssh-closure/client-b53/openssh-9.9p1/ssh --install artifacts/phase2/install --inventory court/freeze-b53/census-b53.json --carry-forward-closure court/inventory/closure-ssh-b51-baseline.json --enrolment-blockers forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json --workdir court/tmp/closure-b53-e7atexit-r2/work-ssh --output evidence/closure-ssh-b53-e7atexit-r2.json --summary",
+   "sshd": "the same command with court/tmp/openssh-closure/server-b53/openssh-9.9p1/sshd, court/inventory/closure-sshd-b51-baseline.json, work-sshd and --output evidence/inventory-sshd-b53-e7atexit-r2.json"
+  },
+  "outputs": {
+   "ssh": {
+    "path": "evidence/closure-ssh-b53-e7atexit-r2.json",
+    "sha256": "e15fa0b185a8032b4ab10ab1e009fb6a8d498df83d4c57efd65e1940a4396d76"
+   },
+   "sshd": {
+    "path": "evidence/inventory-sshd-b53-e7atexit-r2.json",
+    "sha256": "529a0f47001944c3270458520519666d3dcf486b7d3565d2c5ab8cf6adfb3851"
+   }
+  },
+  "element7": {
+   "target_bounded": 14,
+   "contract_bounded": 119,
+   "reachable_unresolved": 133,
+   "unclassified": 0,
+   "status": "FAIL"
+  },
+  "obligations": "378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN",
+  "verdicts": "ssh and sshd ACCEPTED, 0 refusals",
+  "accepted_site": "exactly one: libcrypto.so.3 OPENSSL_cleanup 0x3dc8b0, call at 0x3dc914 (`call *(%rbx)`); identical in both closures",
+  "matches_prior": true
+ },
  "review": {
   "reviewer": "independent adversarial adjudicator (session 7ef4adbd-2daa-4a0d-84ed-72bed13b7230); transcribed verbatim",
   "verdict": "APPROVE",
@@ -102,8 +145,9 @@
  "residuals": [
   {
    "id": "ATEXIT-R1",
-   "state": "OPEN",
-   "why": "the site is bound by the containing function name and a call *(%reg) shape, not by the call address 0x3dc914. A second such call inside OPENSSL_cleanup would satisfy all six conditions. This is looser than the SLH and hw witnesses, which key on the exact address, and must be tightened before this class is reused."
+   "state": "CLOSED",
+   "why": "the site was bound by the containing function name and a call *(%reg) shape, not by the call address 0x3dc914. A second such call inside OPENSSL_cleanup would satisfy all six conditions.",
+   "resolution": "The witness is now site-enumerated by address: `site.addr` must equal REGISTRATION_ATEXIT_CALL_SITE (0x3dc914), in the same style as SLH_METHOD_TABLE_SITES and PROVIDER_HW_SITES. A second `call *(%reg)` in `OPENSSL_cleanup` is a different site and returns (None, None), so this class cannot absorb it. Self-test control: `_atexit_fixture(call_addr=0x3DC9A0)`; mutation `e7-atexit-site-address` removes the binding and the control flips to accepted."
   },
   {
    "id": "ATEXIT-R2",
@@ -122,8 +166,9 @@
   },
   {
    "id": "ATEXIT-R5",
-   "state": "OPEN",
-   "why": "negatives A and B are recorded in this artifact but are not committed as replayable fixtures or self-tests; the reviewer could not verify them."
+   "state": "CLOSED",
+   "why": "negatives A and B were recorded in this artifact but were not committed as replayable fixtures or self-tests; the reviewer could not verify them.",
+   "resolution": "Committed under `consumer_closure.py --self-test`: the positive candidate shape, negative A (constructor list store -> other-handler-list-writer), negative B (computed stored value -> stored-value-is-not-the-handler-parameter), and the R1 second-call-site control. Each failure has a load-bearing mutation switch (`e7-atexit-list-writer`, `e7-atexit-stored-value`, `e7-atexit-site-address`); all fixtures pass."
   },
   {
    "id": "ATEXIT-R6",
