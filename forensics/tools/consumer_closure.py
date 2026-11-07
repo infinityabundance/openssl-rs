@@ -5564,6 +5564,214 @@ def fetch_slot_witness(g: "DsoGraph", site: dict, name: str):
     }
 
 
+def _merged_refusal(name: str, site: dict, reason: str, **extra) -> dict:
+    rec = {
+        "schema": WITNESS_SCHEMA,
+        "class": ABI_CONTRACT_PROVIDER,
+        "contract_bounded": False,
+        "resolved": False,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "refusal": reason,
+    }
+    rec.update(extra)
+    return rec
+
+
+def fetch_merged_slot_witness(g: "DsoGraph", site: dict, name: str):
+    """Witness for a compiler-merged provider-dispatch call site.
+
+    A single indirect call can serve two or more distinct slots when the
+    compiler merges branch-converged ``call *reg`` instructions.  The operand
+    then has more than one reaching definition, which ``fetch_slot_witness``
+    deliberately refuses because ``_reg_origin`` never unions reaching
+    definitions.  This is the separate witness for that shape; it does **not**
+    relax the single-definition rule used by any other rule.
+
+    Accepts only when ALL hold:
+
+    * the call site is enumerated and the operand is a register;
+    * every reaching definition is a single-offset load from the SAME base
+      value;
+    * that base is the already-accepted family fetch result (exactly one
+      family writer);
+    * every offset is declared in the existing slot table for that family;
+    * every slot id resolves to a single in-image writer; and
+    * at least two distinct slot ids are justified, each individually.
+
+    The evidence records the per-definition slot ids and their individual
+    justifications; it is not a unioned target set.  Returns ``None`` when the
+    shape is not a merged site (fewer than two reaching definitions), and a
+    refusal record (``resolved`` false) naming the failed condition otherwise.
+    """
+    if site.get("kind") not in ("call", "jmp"):
+        return None
+    if not _has_insns(g):
+        return None
+    fstart = site["func"]
+    idx = None
+    for i, (a, _t) in enumerate(g.precision.insns_by_func.get(fstart, ())):
+        if a == site["addr"]:
+            idx = i
+            break
+    if idx is None:
+        return None
+    opnd = _site_operand(site)
+    if opnd not in _REGS and opnd not in _SUBREG:
+        return None
+    reg = _canon(opnd)
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None:
+        return _merged_refusal(name, site, "open or non-convergent CFG")
+    if not defs:
+        return None
+    if _ENTRY_DEF in defs or any(k < 0 for k in defs):
+        return _merged_refusal(
+            name, site, "the operand register has an entry value")
+    if len(defs) < 2:
+        # Not a merged site: the single-definition witness owns this shape.
+        return None
+
+    insns = g.precision.insns_by_func[fstart]
+    per_def = []
+    base_regs = set()
+    bindings = set()
+    spec = None
+    fetch_ev = None
+    for k in sorted(defs):
+        text = _insn(g, fstart, k)
+        mn, _rest, ops = _insn_parts(text)
+        if mn not in ("mov", "movq") or len(ops) < 2:
+            return _merged_refusal(
+                name, site,
+                "a reaching definition is not a single-offset load",
+                reaching_definition=hex(insns[k][0]), text=text)
+        if _canon(ops[-1]) != reg:
+            return _merged_refusal(
+                name, site,
+                "a reaching definition does not write the called register",
+                reaching_definition=hex(insns[k][0]), text=text)
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[0])
+        if not m:
+            return _merged_refusal(
+                name, site,
+                "a reaching definition is not a single-offset load",
+                reaching_definition=hex(insns[k][0]), text=text)
+        member_offset = int(m.group(1), 16) if m.group(1) else 0
+        base_reg = _canon(m.group(2))
+        base_regs.add(base_reg)
+        base_result, why = _base_fetch(g, fstart, k, base_reg)
+        if base_result is None:
+            return _merged_refusal(
+                name, site,
+                "the base value is not the family fetch result: " + why,
+                reaching_definition=hex(insns[k][0]), base_reg=base_reg)
+        def_spec, fetch_idx, def_ev = base_result
+        if spec is None:
+            spec, fetch_ev = def_spec, def_ev
+        elif def_spec["family"] != spec["family"]:
+            return _merged_refusal(
+                name, site,
+                "the reaching definitions read different fetch families",
+                reaching_definition=hex(insns[k][0]))
+        bindings.add((def_spec["family"], fetch_idx))
+        slot_fields = spec["fields"].get(member_offset)
+        if slot_fields is None:
+            return _merged_refusal(
+                name, site,
+                f"member offset {member_offset:#x} is not declared in the "
+                f"{spec['family']} slot table",
+                reaching_definition=hex(insns[k][0]))
+        field, fnid = slot_fields
+        hits, src_why = _source_field_assignments(
+            g, spec["source_file"], field)
+        bad_writer = (hits is None or len(hits) != 1
+                      or not any(w in ((hits[0]["function"] or "")
+                                       if hits else "")
+                                 for w in spec["writer"]))
+        if bad_writer:
+            detail = src_why or ("multiple assignments" if hits else
+                                 "no assignment")
+            return _merged_refusal(
+                name, site,
+                f"slot {fnid} does not resolve to exactly one in-image "
+                f"writer: {detail}",
+                reaching_definition=hex(insns[k][0]), slot=fnid)
+        per_def.append({
+            "reaching_definition": hex(insns[k][0]),
+            "load": text,
+            "member_offset": hex(member_offset),
+            "base_reg": base_reg,
+            "object": spec["object"],
+            "field": field,
+            "function_id": fnid,
+            "source": f"{spec['source_file']}:{hits[0]['line']}",
+            "writer": (f"{spec['source_file']}:{hits[0]['line']} in "
+                       f"{hits[0]['function'] or ''}: {hits[0]['text']}"),
+            "writer_site": {"file": spec["source_file"],
+                            "line": hits[0]["line"],
+                            "function": hits[0]["function"] or "",
+                            "text": hits[0]["text"]},
+            "fetch_call_site": hex(insns[fetch_idx][0]),
+        })
+
+    if "e7-merged-drop-def" in _MUTED:
+        # Test-only mutation control: remove one reaching-definition
+        # justification and the site must revert to its previous class.
+        per_def = per_def[:-1]
+
+    if len(base_regs) != 1:
+        return _merged_refusal(
+            name, site,
+            "the reaching definitions read different base values",
+            base_regs=sorted(base_regs))
+    if len(bindings) != 1:
+        return _merged_refusal(
+            name, site,
+            "the reaching definitions resolve to different fetch bindings",
+            bindings=[list(map(str, b)) for b in sorted(bindings)])
+    if len({d["function_id"] for d in per_def}) < 2:
+        return _merged_refusal(
+            name, site,
+            "the merged site does not justify two distinct slot ids")
+
+    base_reg = next(iter(base_regs))
+    slot_ids = [d["function_id"] for d in per_def]
+    slots = [f"{d['object']}.{d['field']} (offset {d['member_offset']}, "
+             f"{d['function_id']})" for d in per_def]
+    return {
+        "schema": WITNESS_SCHEMA,
+        "class": ABI_CONTRACT_PROVIDER,
+        "contract_bounded": True,
+        "resolved": True,
+        "merged_site": True,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "operand": {"kind": "reg", "reg": reg,
+                    "reaching_definitions": len(per_def)},
+        "base": {
+            "reg": base_reg,
+            "family": spec["family"],
+            "object": spec["object"],
+            "fetch_call_site": per_def[0]["fetch_call_site"],
+            "construct": (fetch_ev or {}).get("construct"),
+            "null_paths": (fetch_ev or {}).get("null_paths", 0),
+        },
+        "reaching_definitions": per_def,
+        "slot_ids": slot_ids,
+        "slots": slots,
+        "slot": " + ".join(slots) + " (merged call site)",
+        "interface": spec["interface"],
+        "basis": (
+            "every reaching definition at this merged call site is an "
+            "independent single-offset load from the same fetch-produced "
+            "object; each offset is the documented field its OSSL_FUNC_* id "
+            "fills and each field is assigned exactly once in the family "
+            "writer. The evidence is the per-definition slot list, each "
+            "justified individually -- not a unioned target set"),
+    }
+
+
 # ---- S2: an exported function's callback parameter ---------------------- #
 
 
@@ -14512,6 +14720,9 @@ def provider_contract_witness(g: "DsoGraph", site: dict, name: str) -> dict | No
     fetch = fetch_slot_witness(g, site, name)
     if fetch is not None:
         return fetch
+    merged = fetch_merged_slot_witness(g, site, name)
+    if merged is not None and merged.get("resolved"):
+        return merged
     offsets = site.get("field_offsets") or set()
     for spec in PROVIDER_SLOTS:
         if spec["function"] not in (name or ""):
@@ -15011,6 +15222,23 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
             site["witness"] = fetch
             stats["S3_fetch_slot_contract_bounded"] += 1
             continue
+        # S3m: a compiler-merged fetch-slot call site.  The operand has more
+        # than one reaching definition because the compiler merged
+        # branch-converged call instructions; every reaching definition is
+        # justified individually, and the single-definition rule is untouched.
+        merged = fetch_merged_slot_witness(g, site, name)
+        if merged is not None and merged.get("resolved"):
+            site["targets"] |= residual
+            site["class"] = ABI_CONTRACT_PROVIDER
+            site["unresolved"] = True
+            site["reason"] = ("provider merged-slot witness: "
+                              + merged["slot"])
+            site["witness"] = merged
+            stats["S3m_fetch_merged_slot_contract_bounded"] += 1
+            continue
+        if merged is not None:
+            site["merged_slot_refusal"] = merged
+            stats["S3m_fetch_merged_slot_refused"] += 1
         # S2b: the default provider's `get_capabilities` up-call.  The
         # callback is exactly parameter 2 of the exported
         # OSSL_PROVIDER_get_capabilities, forwarded across the provider
@@ -23645,6 +23873,106 @@ def self_test() -> int:
           _fetch_witness(off=0x100), None)
     check("S3 two source assignments are refused",
           _fetch_witness(two_assign=True), None)
+
+    # S3m: a compiler-merged fetched-slot call site.  Two reaching loads from
+    # the same EvpKdf fetch result converge on one `call *%rax`; each load is a
+    # distinct, table-declared slot.  Each negative breaks exactly one
+    # condition; the mutation removes one per-definition justification.
+    def _merged_fixture(base2="%rbx", off2=0x60, base_call=True):
+        td = tempfile.mkdtemp()
+        src = ("fn evp_kdf_from_algorithm() {\n"
+               "    (*kdf).gettable_ctx_params = entry_function(fns);\n"
+               "    (*kdf).settable_ctx_params = entry_function(fns);\n"
+               "}\n")
+        repo = _wrepo(td, src)
+        insns = [
+            (0x100, "lea    0x300(%rip),%r9        # 300 <evp_kdf_from_algorithm>"),
+            (0x105, "mov    %r9,0x30(%rsp)"),
+            (0x10a, "mov    %rsp,%rdi"),
+        ]
+        if base_call:
+            insns += [(0x10f, "call   200 <inner_evp_generic_fetch>"),
+                      (0x114, "mov    %rax,%rbx")]
+        else:
+            insns += [(0x10f, "mov    %rdi,%rbx")]
+        insns += [
+            (0x119, "test   %rbx,%rbx"),
+            (0x11c, "je     1b0 <target+0x90>"),
+            (0x120, "mov    0x58(%rbx),%rax"),
+            (0x125, "test   %rax,%rax"),
+            (0x128, "je     140 <target+0x40>"),
+            (0x12a, "jmp    180 <target+0x80>"),
+        ]
+        if base2 == "%rbx":
+            insns += [(0x140, f"mov    {hex(off2)}(%rbx),%rax")]
+        else:
+            insns += [
+                (0x140, "lea    0x300(%rip),%r9        # 300 <evp_kdf_from_algorithm>"),
+                (0x145, "mov    %r9,0x30(%rsp)"),
+                (0x14a, "mov    %rsp,%rdi"),
+                (0x14f, "call   200 <inner_evp_generic_fetch>"),
+                (0x154, "mov    %rax,%rcx"),
+                (0x159, f"mov    {hex(off2)}(%rcx),%rax"),
+            ]
+        insns += [
+            (0x15e, "test   %rax,%rax"),
+            (0x161, "je     1b0 <target+0x90>"),
+            (0x163, "jmp    180 <target+0x80>"),
+            (0x180, "call   *%rax"),
+            (0x185, "ret"),
+            (0x1b0, "ret"),
+        ]
+        funcs = {0x100: "target", 0x200: "...inner_evp_generic_fetch",
+                 0x300: "...evp_kdf_from_algorithm"}
+        g = _WG({0x100: insns}, funcs, source_root=repo)
+        site = {"kind": "call", "func": 0x100, "addr": 0x180,
+                "text": "call   *%rax", "arg_deps": set()}
+        return g, site
+
+    def _merged_witness(**kw):
+        g, site = _merged_fixture(**kw)
+        return fetch_merged_slot_witness(g, site, "target")
+
+    mw = _merged_witness()
+    check("S3m merged-slot witness applies", (mw or {}).get("resolved"), True)
+    check("S3m records the per-definition slot union",
+          (mw or {}).get("slot_ids"),
+          ["OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS",
+           "OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS"])
+    check("S3m justifies every reaching definition individually",
+          [(d.get("reaching_definition"), d.get("function_id"))
+           for d in (mw or {}).get("reaching_definitions", [])],
+          [("0x120", "OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS"),
+           ("0x140", "OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS")])
+    check("S3m records the shared base binding",
+          ((mw or {}).get("base") or {}).get("reg"), "%rbx")
+    _fg, _fs = _fetch_fixture()
+    check("S3m does not take the single-definition shape",
+          fetch_merged_slot_witness(_fg, _fs, "target"), None)
+    # Negative B: two reaching definitions from DIFFERENT base values.
+    nb = _merged_witness(base2="%rcx")
+    check("S3m refuses reaching defs from different base values",
+          (nb or {}).get("refusal"),
+          "the reaching definitions read different base values")
+    # Negative C: one reaching definition from an undeclared offset.
+    nc = _merged_witness(off2=0x100)
+    check("S3m refuses an offset outside the family slot table",
+          (nc or {}).get("refusal"),
+          "member offset 0x100 is not declared in the EVP_KDF slot table")
+    # Negative D: the shared base is not the fetch result.
+    nd = _merged_witness(base_call=False)
+    check("S3m refuses a base that is not the fetch result",
+          ((nd or {}).get("refusal") or "").startswith(
+              "the base value is not the family fetch result:"), True)
+    # Mutation A: remove one reaching-definition justification.
+    _MUTED.add("e7-merged-drop-def")
+    try:
+        ma = _merged_witness()
+    finally:
+        _MUTED.discard("e7-merged-drop-def")
+    check("S3m mutation drops one justification and refuses",
+          (ma or {}).get("refusal"),
+          "the merged site does not justify two distinct slot ids")
 
     # S2: an exported function's callback parameter.
     def _export_fixture(param=True, noncb=False, exported=True):

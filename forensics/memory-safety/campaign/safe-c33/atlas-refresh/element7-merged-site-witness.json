@@ -1,0 +1,301 @@
+{
+  "receipt": "element7-merged-site-witness",
+  "kind": "element7-mechanism-witness",
+  "date": "2026-11-07",
+  "branch": "stage/p25/element7-s2b",
+  "head": "cd5f21150ae9985708cfe1452aa8aaed86d0b1eb",
+  "state": "IMPLEMENTED — two KEM sites moved; controls observed; independent review not yet performed",
+  "review": "pending",
+  "mechanism": {
+    "name": "merged-site element-7 witness",
+    "where_registered": {
+      "witness": "forensics/tools/consumer_closure.py:fetch_merged_slot_witness (new, after fetch_slot_witness)",
+      "resolver": "forensics/tools/consumer_closure.py:apply_evidence_classes S3m block, immediately after the S3 fetch-slot block",
+      "provider_entry": "forensics/tools/consumer_closure.py:provider_contract_witness (used by the A1 provider branch)",
+      "class": "ABI_CONTRACT_PROVIDER"
+    },
+    "why_separate": "fetch_slot_witness is single-definition by construction: _reg_origin refuses more than one reaching definition and never unions. The merged site has two reaching loads from the same base, so it needs a separate witness. The single-definition rule is unchanged everywhere else.",
+    "accepts_only_when": [
+      "the call site is enumerated (kind call/jmp, address found in the containing function);",
+      "the operand is a register whose reaching-definition set has at least two members;",
+      "EVERY reaching definition is a single-offset movq load that writes that register;",
+      "every load reads the SAME canonical base register, and every load's base resolves through the already-accepted fetch binding (_base_fetch) to the same family fetch binding;",
+      "the base's producer is the family fetch with exactly one family writer (EVP_KEM / evp_kem_from_algorithm);",
+      "every member offset is declared in FETCH_FAMILIES[family].fields;",
+      "every slot id's field is assigned exactly once in the family source writer;",
+      "the justified slot ids are distinct, and the evidence is the per-definition slot list, each justified individually."
+    ],
+    "refuses_on": {
+      "operand_not_register_or_short": "returns None (not this mechanism; fetch_slot_witness owns the single-definition shape)",
+      "open_or_non_convergent_cfg": "refusal: open or non-convergent CFG",
+      "entry_value": "refusal: the operand register has an entry value",
+      "not_a_load": "refusal: a reaching definition is not a single-offset load",
+      "wrong_destination": "refusal: a reaching definition does not write the called register",
+      "different_base_values": "refusal: the reaching definitions read different base values",
+      "base_not_fetch": "refusal: the base value is not the family fetch result: <why>",
+      "different_families": "refusal: the reaching definitions read different fetch families",
+      "different_bindings": "refusal: the reaching definitions resolve to different fetch bindings",
+      "offset_outside_table": "refusal: member offset <off> is not declared in the <FAMILY> slot table",
+      "writer_not_unique": "refusal: slot <OSSL_FUNC_*> does not resolve to exactly one in-image writer: <why>",
+      "fewer_than_two_slots": "refusal: the merged site does not justify two distinct slot ids"
+    },
+    "not_a_relaxation": "It replaces 'exactly one reaching definition' with 'every reaching definition independently justified'; it never unions target sets and never weakens another witness's single-definition rule."
+  },
+  "sites": [
+    {
+      "call_site": "0x2c2e6a",
+      "function": "openssl_rs::evp::kem::evp_kem_init",
+      "function_start": "0x2c2710",
+      "operand": "call *%r8",
+      "base_reg": "%r13",
+      "reaching_definitions": [
+        {
+          "reaching_definition": "0x2c2e31",
+          "load": "mov 0x80(%r13),%r8",
+          "member_offset": "0x80",
+          "object": "EvpKem",
+          "field": "auth_encapsulate_init",
+          "function_id": "OSSL_FUNC_KEM_AUTH_ENCAPSULATE_INIT",
+          "source": "src/evp/kem.rs:319",
+          "writer": "evp_kem_from_algorithm"
+        },
+        {
+          "reaching_definition": "0x2c2e4c",
+          "load": "mov 0x88(%r13),%r8",
+          "member_offset": "0x88",
+          "object": "EvpKem",
+          "field": "auth_decapsulate_init",
+          "function_id": "OSSL_FUNC_KEM_AUTH_DECAPSULATE_INIT",
+          "source": "src/evp/kem.rs:332",
+          "writer": "evp_kem_from_algorithm"
+        }
+      ],
+      "union_recorded": [
+        "OSSL_FUNC_KEM_AUTH_ENCAPSULATE_INIT",
+        "OSSL_FUNC_KEM_AUTH_DECAPSULATE_INIT"
+      ]
+    },
+    {
+      "call_site": "0x2c2ea7",
+      "function": "openssl_rs::evp::kem::evp_kem_init",
+      "function_start": "0x2c2710",
+      "operand": "call *%rcx",
+      "base_reg": "%r13",
+      "reaching_definitions": [
+        {
+          "reaching_definition": "0x2c2e7b",
+          "load": "mov 0x30(%r13),%rcx",
+          "member_offset": "0x30",
+          "object": "EvpKem",
+          "field": "encapsulate_init",
+          "function_id": "OSSL_FUNC_KEM_ENCAPSULATE_INIT",
+          "source": "src/evp/kem.rs:315",
+          "writer": "evp_kem_from_algorithm"
+        },
+        {
+          "reaching_definition": "0x2c2e98",
+          "load": "mov 0x40(%r13),%rcx",
+          "member_offset": "0x40",
+          "object": "EvpKem",
+          "field": "decapsulate_init",
+          "function_id": "OSSL_FUNC_KEM_DECAPSULATE_INIT",
+          "source": "src/evp/kem.rs:328",
+          "writer": "evp_kem_from_algorithm"
+        }
+      ],
+      "union_recorded": [
+        "OSSL_FUNC_KEM_ENCAPSULATE_INIT",
+        "OSSL_FUNC_KEM_DECAPSULATE_INIT"
+      ]
+    }
+  ],
+  "shared_base_binding": {
+    "base_reg": "%r13",
+    "base_reaching_definitions": [
+      "0x2c28cf mov %rax,%r13 (return of inner_evp_generic_fetch at 0x2c28c6)",
+      "0x2c2aab mov %rax,%r13 (return of inner_evp_generic_fetch at 0x2c2aa2)",
+      "0x2c2bc3 xor %r13d,%r13d (NULL path)"
+    ],
+    "accepted_fetch": {
+      "callee": "inner_evp_generic_fetch",
+      "construct": "evp_kem_from_algorithm",
+      "family": "EVP_KEM",
+      "null_paths": 1
+    },
+    "observation": "both loads of both sites read the same %r13 value; _base_fetch resolves the same EVP_KEM binding at every load and admits the NULL path as a non-target path."
+  },
+  "controls": {
+    "positive": {
+      "observed": "exactly two provider sites added and exactly two residual site records changed class/reason; no residual site added or removed; no other class count changed.",
+      "provider_sites": "14 -> 16 (ABI_CONTRACT_PROVIDER)",
+      "residual_sites": "133 before and after (membership unchanged)",
+      "target_bounded": "17 -> 15",
+      "contract_bounded": "116 -> 118",
+      "unresolved": "133 -> 133",
+      "dispositions": {"CONTRACT_BOUNDED": "149 -> 151", "UNRESOLVED": "582 -> 580", "PROVED_TARGET_SET": "51187 unchanged"},
+      "sites_moved": ["0x2c2e6a", "0x2c2ea7"]
+    },
+    "mutation_A": {
+      "method": "temporary copy of consumer_closure.py with the module-level _MUTED seeded to {\"e7-merged-drop-def\"}; the witness then drops one per-definition justification before the distinct-slot check. The repository tool was not modified.",
+      "observed_ssh": {
+        "target_bounded": "15 -> 17",
+        "contract_bounded": "118 -> 116",
+        "ABI_CONTRACT_PROVIDER": "16 -> 14",
+        "S3m_fetch_merged_slot_contract_bounded": 0,
+        "S3m_fetch_merged_slot_refused": 17,
+        "diff_vs_before": "empty: no provider site added, no residual site added/removed/changed"
+      },
+      "observed_self_test": "refusal: the merged site does not justify two distinct slot ids",
+      "temporary_copy_sha256": "9f383a58919fbe9a6fbfcd2b1330e704e2ece96a9b09e4d2dcd6464d968344cf",
+      "temporary_copy_output_sha256": "73f01c8bdd5d3e219fab4fcde2a4727666492d80621359b710e5ae55bb984c74"
+    },
+    "negative_B": {
+      "fixture": "two reaching loads whose bases are different fetch-produced values",
+      "observed_refusal": "the reaching definitions read different base values"
+    },
+    "negative_C": {
+      "fixture": "one reaching load at an offset absent from the family slot table",
+      "observed_refusal": "member offset 0x100 is not declared in the EVP_KDF slot table"
+    },
+    "negative_D": {
+      "fixture": "merged site whose shared base is an entry parameter, not the fetch result",
+      "observed_refusal": "the base value is not the family fetch result: the base value is not defined in this function"
+    },
+    "negative_fixtures_source": "forensics/tools/consumer_closure.py:self_test S3m block; --self-test observes the exact refusal strings and the positive per-definition slot list",
+    "restoration": {
+      "repository_tool_sha256_before_controls": "c1873690b3c978e703cc4e109fa53623f4e5fcac4d2c0cd481cd21225d327f5a",
+      "repository_tool_sha256_after_controls": "c1873690b3c978e703cc4e109fa53623f4e5fcac4d2c0cd481cd21225d327f5a",
+      "byte_identical": true,
+      "note": "every control ran on a copy under court/tmp; the tracked tool was never rewritten by a control."
+    }
+  },
+  "collateral": {
+    "non_moving_merged_shapes": "15 other merged-shaped sites were refused by the new witness during the accepted run (S3m_fetch_merged_slot_refused=15) and retain their prior classification; they are not absorbed or reclassified.",
+    "source_change": "none (src/, Cargo.toml, Cargo.lock and build.rs unchanged)",
+    "ledger_or_campaign_status": "not edited"
+  },
+  "measurement": {
+    "commands": {
+      "ssh": "python3 forensics/tools/consumer_closure.py --family openssh --artifact court/tmp/openssh-closure/client-b53/openssh-9.9p1/ssh --install artifacts/phase2/install --repo /work --inventory court/freeze-b53/census-b53.json --carry-forward-closure court/inventory/closure-ssh-b51-baseline.json --enrolment-blockers forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json --workdir court/tmp/closure-b53-e7kem/after-work-ssh --output evidence/closure-ssh-b53-e7kem.json --summary",
+      "sshd": "the same command with court/tmp/openssh-closure/server-b53/openssh-9.9p1/sshd, court/inventory/closure-sshd-b51-baseline.json, after-work-sshd and --output evidence/inventory-sshd-b53-e7kem.json",
+      "before": "the same two commands with the unmodified tool extracted from HEAD (sha256 69e0e10b2867701f3e6e8888a8b1acac2c8254344cf4b3b8f6d7bbd666554df4), writing court/tmp/e7kem-before/*"
+    },
+    "source_identity": {
+      "repository_head": "cd5f21150ae9985708cfe1452aa8aaed86d0b1eb",
+      "branch": "stage/p25/element7-s2b",
+      "tracked_tree_dirty": true,
+      "dirty_note": "the only tracked change is forensics/tools/consumer_closure.py (the witness); src/, Cargo.toml, Cargo.lock and build.rs are unchanged",
+      "install_libcrypto_sha256": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3",
+      "census": "court/freeze-b53/census-b53.json (sha256 bb191bac59a17b53ad5c67547a412394d82ffdf64613208139f064e2f7eab62e)",
+      "consumers": {
+        "ssh": {"path": "court/tmp/openssh-closure/client-b53/openssh-9.9p1/ssh", "sha256": "926975c81fe8d56297196a703a8a7b0f5eb0fae1644bbfa4643d4cd517f22ba0"},
+        "sshd": {"path": "court/tmp/openssh-closure/server-b53/openssh-9.9p1/sshd", "sha256": "0d3f5e924ff361cba290fb150b89e85806adf69c3a9de9440c4b8a6c09803ce2"}
+      },
+      "tool_before_sha256": "69e0e10b2867701f3e6e8888a8b1acac2c8254344cf4b3b8f6d7bbd666554df4",
+      "tool_after_sha256": "c1873690b3c978e703cc4e109fa53623f4e5fcac4d2c0cd481cd21225d327f5a"
+    },
+    "families": {
+      "ssh": {
+        "verdict": "ACCEPTED",
+        "refusals": 0,
+        "reachable_files": 629,
+        "obligations": "378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN",
+        "carried_forward": 105,
+        "indirect_sites": 51918,
+        "resolved_sites": 51739,
+        "unresolved_sites": 179,
+        "reachable_unresolved_sites": 133,
+        "target_bounded_unresolved_before": 17,
+        "target_bounded_unresolved_after": 15,
+        "contract_bounded_before": 116,
+        "contract_bounded_after": 118,
+        "unclassified_reachable_sites": 0,
+        "contract_bounded_by_class_after": {
+          "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+          "ABI_CONTRACT_EXPORT_CALLBACK": 62,
+          "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+          "ABI_CONTRACT_PROVIDER": 16,
+          "ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK": 4,
+          "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+          "ABI_CONTRACT_SLH_METHOD_TABLE": 6
+        },
+        "element_7": "FAIL",
+        "edge_records": 51918,
+        "edge_defects": 0,
+        "edge_defects_complete": true,
+        "closure_rounds": 2,
+        "closure_converged": true,
+        "reachable_functions": 8735,
+        "reachable_functions_sha256": "3090964ede93227cba1f0a05cca8164847ae585efc13ac0375138c82b6cd69ac",
+        "analysis_identity": "66d85d081d10438c77be601a79d27463209994e1417541c0dc4d5f69452341b3"
+      },
+      "sshd": {
+        "verdict": "ACCEPTED",
+        "refusals": 0,
+        "reachable_files": 628,
+        "obligations": "378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN",
+        "carried_forward": 105,
+        "indirect_sites": 51918,
+        "resolved_sites": 51739,
+        "unresolved_sites": 179,
+        "reachable_unresolved_sites": 133,
+        "target_bounded_unresolved_before": 17,
+        "target_bounded_unresolved_after": 15,
+        "contract_bounded_before": 116,
+        "contract_bounded_after": 118,
+        "unclassified_reachable_sites": 0,
+        "contract_bounded_by_class_after": {
+          "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+          "ABI_CONTRACT_EXPORT_CALLBACK": 62,
+          "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+          "ABI_CONTRACT_PROVIDER": 16,
+          "ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK": 4,
+          "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+          "ABI_CONTRACT_SLH_METHOD_TABLE": 6
+        },
+        "element_7": "FAIL",
+        "edge_records": 51918,
+        "edge_defects": 0,
+        "edge_defects_complete": true,
+        "closure_rounds": 2,
+        "closure_converged": true,
+        "reachable_functions": 8701,
+        "reachable_functions_sha256": "b7ff9210c8cefdb1ec1acf7d9c84452a4fe740052fa108da3eb290282234e62a",
+        "analysis_identity": "66d85d081d10438c77be601a79d27463209994e1417541c0dc4d5f69452341b3"
+      }
+    },
+    "gates": {
+      "self_test": "PASS (python3 forensics/tools/consumer_closure.py --self-test -> self-test ok, including the S3m positive and the A/B/C/D controls)",
+      "cargo_fmt_check": "PASS (cargo fmt --all -- --check)",
+      "rust_source_changed": false,
+      "closures": "both ACCEPTED with 0 refusals",
+      "obligation_status": "unchanged at 378 = 186/192/0 in both families",
+      "edge_validator": "0 defects, complete"
+    },
+    "outputs": [
+      {"path": "evidence/closure-ssh-b53-e7kem.json", "sha256": "e93fd2dac9fb94fd3d7457815394b218b54c89fdd7c7c82fdbaa6988f675ef10"},
+      {"path": "evidence/inventory-sshd-b53-e7kem.json", "sha256": "e3e9f54fe92da93356561b000798ec82c0421a08f3b640d6646052834a253a88"}
+    ],
+    "before_receipts": [
+      {"path": "court/tmp/e7kem-before/closure-ssh-before.json", "sha256": "8467f438bdcf07bd54f7d36bbbe17d34f69b2891b4d30e9e30060205a811bda4"},
+      {"path": "court/tmp/e7kem-before/inventory-sshd-before.json", "sha256": "30a1fd8e47d235bf9c9d03ab0d85573dfbb615138107dbdb626052fd0893214e"}
+    ]
+  },
+  "tool_change": {
+    "file": "forensics/tools/consumer_closure.py",
+    "insertions": 328,
+    "deletions": 0,
+    "hunks": [
+      "@@ -5566,0 +5567,208 @@ def fetch_slot_witness (new fetch_merged_slot_witness and _merged_refusal)",
+      "@@ -14514,0 +14723,3 @@ def provider_contract_witness (merged witness on the A1 entry)",
+      "@@ -15013,0 +15225,17 @@ def apply_evidence_classes (S3m resolver block)",
+      "@@ -23648,0 +23877,100 @@ def self_test (S3m positive and A/B/C/D controls)"
+    ]
+  },
+  "non_claims": [
+    "Element 7 remains FAIL: 15 reachable target-bounded unresolved sites remain.",
+    "No claim that the two KEM sites are unsafe before the change; this is an evidence-route change only.",
+    "No independent review has been performed; review is pending.",
+    "No source, Cargo manifest, ledger, CAMPAIGN-STATUS.json or freeze was edited, committed or pushed."
+  ]
+}
