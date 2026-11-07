@@ -1,0 +1,492 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/element7-residual-triage/v1",
+ "kind": "element7-target-bounded-residual-triage",
+ "generated_utc": "2026-11-07T20:15:10Z",
+ "source_head": "b95b7814c",
+ "source_head_full": "b95b7814cb6e845728aeca9a6fd5975b823df85c",
+ "receipt": {
+  "path": "evidence/closure-ssh-b62-element7.json",
+  "sha256": "e7aa8ae4e43165d84ac123ee75e947a96327c8c5d5435cac47c548ad27fce18a",
+  "generated_utc": "2026-11-07T19:13:01Z",
+  "family": "openssh"
+ },
+ "element7": {
+  "status": "FAIL",
+  "established": false,
+  "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+  "why": "14 reachable unresolved site(s) are not contract-bounded, and/or an unclassified site is reachable",
+  "reachable_unresolved_sites": 133,
+  "target_bounded_unresolved_sites": 14,
+  "contract_bounded_sites": 119,
+  "contract_bounded_by_class": {
+   "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+   "ABI_CONTRACT_EXPORT_CALLBACK": 62,
+   "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+   "ABI_CONTRACT_PROVIDER": 16,
+   "ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK": 4,
+   "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+   "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+   "ABI_CONTRACT_SLH_METHOD_TABLE": 6
+  },
+  "unclassified_reachable_sites": 0,
+  "target_sets_remain_unbounded": true,
+  "totals": {
+   "indirect_sites": 51918,
+   "resolved_sites": 51739,
+   "unresolved_sites": 179,
+   "reachable_unresolved_sites": 133,
+   "reachable_target_bounded_unresolved_sites": 14,
+   "reachable_contract_bounded_sites": 119,
+   "unclassified_reachable_sites": 0,
+   "resolved_by_reachable_caller": 1
+  }
+ },
+ "authoritative_path_in_receipt": "$.precision.residual_sites (filtered: class not starting with ABI_CONTRACT)",
+ "authoritative_filter": {
+  "receipt_list_length": 133,
+  "predicate_declared_target_bounded": 14,
+  "filtered_count": 14,
+  "receipt_record_fields": [
+   "dso",
+   "function",
+   "call_site",
+   "reason",
+   "class",
+   "text"
+  ]
+ },
+ "enrichment_source": {
+  "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/element7-triage-66.json",
+  "sha256": "3d2b66f879c50bf305b06510e996d909c33a449812e91c3208b6818d4cbf6914",
+  "note": "symbol/module/call_operand/group/site_detail/admitted_target_count/target_set_recorded copied per call_site; all 14 call_sites matched exactly"
+ },
+ "sites": [
+  {
+   "index": 1,
+   "dso": "libcrypto.so.3",
+   "function_address": "0x179870",
+   "call_site": "0x179a0d",
+   "class": "materialised",
+   "reason": "reg-top",
+   "operand": "call   *%rax",
+   "enriched_from_element7_triage_66": {
+    "symbol": "EVP_PBE_CipherInit_ex",
+    "defining_function": "EVP_PBE_CipherInit_ex",
+    "module": "src/evp/evp_pbe.rs",
+    "call_operand": "call   *%rax",
+    "group": "pbe_registry_row",
+    "site_detail": "PBE keygen/keygen_ex copied from a PBE_ALGS or builtin row",
+    "target_set_recorded": false,
+    "admitted_target_count": 0
+   },
+   "callers": []
+  },
+  {
+   "index": 2,
+   "dso": "libcrypto.so.3",
+   "function_address": "0x179870",
+   "call_site": "0x179c85",
+   "class": "materialised",
+   "reason": "reg-top",
+   "operand": "call   *%rax",
+   "enriched_from_element7_triage_66": {
+    "symbol": "EVP_PBE_CipherInit_ex",
+    "defining_function": "EVP_PBE_CipherInit_ex",
+    "module": "src/evp/evp_pbe.rs",
+    "call_operand": "call   *%rax",
+    "group": "pbe_registry_row",
+    "site_detail": "PBE keygen_ex copied from a PBE_ALGS or builtin row (second path)",
+    "target_set_recorded": false,
+    "admitted_target_count": 0
+   },
+   "callers": []
+  },
+  {
+   "index": 3,
+   "dso": "libcrypto.so.3",
+   "function_address": "0x17c200",
+   "call_site": "0x17c408",
+   "class": "materialised",
+   "reason": "reg-top",
+   "operand": "call   *%rax",
+   "enriched_from_element7_triage_66": {
+    "symbol": "PKCS5_v2_PBE_keyivgen_ex",
+    "defining_function": "PKCS5_v2_PBE_keyivgen_ex",
+    "module": "src/evp/p5_crpt2.rs",
+    "call_operand": "call   *%rax",
+    "group": "pbe_registry_row",
+    "site_detail": "PBE keygen_ex copied from a PBE_ALGS or builtin row",
+    "target_set_recorded": false,
+    "admitted_target_count": 0
+   },
+   "callers": []
+  },
+  {
+   "index": 4,
+   "dso": "libcrypto.so.3",
+   "function_address": "0x1c1d20",
+   "call_site": "0x1c21a8",
+   "class": "materialised",
+   "reason": "reg-top",
+   "operand": "call   *%rax",
+   "enriched_from_element7_triage_66": {
+    "symbol": "OSSL_STORE_open_ex",
+    "defining_function": "OSSL_STORE_open_ex",
+    "module": "src/store/store_lib.rs",
+    "call_operand": "call   *%rax",
+    "group": "store_loader_object_table",
+    "site_detail": "OSSL_STORE_LOADER field at +0x58",
+    "target_set_recorded": false,
+    "admitted_target_count": 0
+   },
+   "callers": []
+  },
+  {
+   "index": 5,
+   "dso": "libcrypto.so.3",
+   "function_address": "0x1c1d20",
+   "call_site": "0x1c229d",
+   "class": "materialised",
+   "reason": "reg-top",
+   "operand": "call   *%rax",
+   "enriched_from_element7_triage_66": {
+    "symbol": "OSSL_STORE_open_ex",
+    "defining_function": "OSSL_STORE_open_ex",
+    "module": "src/store/store_lib.rs",
+    "call_operand": "call   *%rax",
+    "group": "store_loader_object_table",
+    "site_detail": "OSSL_STORE_LOADER field at +0x10",
+    "target_set_recorded": false,
+    "admitted_target_count": 0
+   },
+   "callers": []
+  },
+  {
+   "index": 6,
+   "dso": "libcrypto.so.3",
+   "function_address": "0x1c1d20",
+   "call_site": "0x1c2528",
+   "class": "materialised",
+   "reason": "reg-top",
+   "operand": "call   *%rax",
+   "enriched_from_element7_triage_66": {
+    "symbol": "OSSL_STORE_open_ex",
+    "defining_function": "OSSL_STORE_open_ex",
+    "module": "src/store/store_lib.rs",
+    "call_operand": "call   *%rax",
+    "group": "store_loader_object_table",
+    "site_detail": "OSSL_STORE_LOADER field at +0xb8",
+    "target_set_recorded": false,
+    "admitted_target_count": 0
+   },
+   "callers": []
+  },
+  {
+   "index": 7,
+   "dso": "libcrypto.so.3",
+   "function_address": "0x1c1d20",
+   "call_site": "0x1c2768",
+   "class": "materialised",
+   "reason": "reg-top",
+   "operand": "call   *%rax",
+   "enriched_from_element7_triage_66": {
+    "symbol": "OSSL_STORE_open_ex",
+    "defining_function": "OSSL_STORE_open_ex",
+    "module": "src/store/store_lib.rs",
+    "call_operand": "call   *%rax",
+    "group": "store_loader_object_table",
+    "site_detail": "OSSL_STORE_LOADER field at +0x50",
+    "target_set_recorded": false,
+    "admitted_target_count": 0
+   },
+   "callers": []
+  },
+  {
+   "index": 8,
+   "dso": "libcrypto.so.3",
+   "function_address": "0x204540",
+   "call_site": "0x204890",
+   "class": "field",
+   "reason": "base-slot-partial",
+   "operand": "call   *0x18(%rax)",
+   "enriched_from_element7_triage_66": {
+    "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider17decode_msblob2key17msblob2key_decode.llvm.3430267202600538469",
+    "defining_function": "openssl_rs::provider::decode_msblob2key::msblob2key_decode",
+    "module": "src/provider/decode_msblob2key.rs",
+    "call_operand": "call   *0x18(%rax)",
+    "group": "core_bio_object_table",
+    "site_detail": "BIO/core-BIO dereference at +0x18; exact method slot to be re-derived",
+    "target_set_recorded": false,
+    "admitted_target_count": 47
+   },
+   "callers": []
+  },
+  {
+   "index": 9,
+   "dso": "libcrypto.so.3",
+   "function_address": "0x22dc90",
+   "call_site": "0x22df88",
+   "class": "field",
+   "reason": "base-slot-partial",
+   "operand": "call   *(%rbx)",
+   "enriched_from_element7_triage_66": {
+    "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs7runtime3rcu20ossl_synchronize_rcu",
+    "defining_function": "openssl_rs::runtime::rcu::ossl_synchronize_rcu",
+    "module": "src/runtime/rcu.rs",
+    "call_operand": "call   *(%rbx)",
+    "group": "registered_callback_list",
+    "site_detail": "RCU callback node func at node +0x0, written by ossl_rcu_call",
+    "target_set_recorded": false,
+    "admitted_target_count": 1
+   },
+   "callers": []
+  },
+  {
+   "index": 10,
+   "dso": "libcrypto.so.3",
+   "function_address": "0x2e0c10",
+   "call_site": "0x2e111a",
+   "class": "materialised",
+   "reason": "reg-top",
+   "operand": "call   *%r15",
+   "enriched_from_element7_triage_66": {
+    "symbol": "CONF_modules_load",
+    "defining_function": "CONF_modules_load",
+    "module": "src/runtime/confmod/mod.rs",
+    "call_operand": "call   *%r15",
+    "group": "conf_module_registry_row",
+    "site_detail": "CONF_MODULE.init at row +0x10",
+    "target_set_recorded": false,
+    "admitted_target_count": 0
+   },
+   "callers": []
+  },
+  {
+   "index": 11,
+   "dso": "libcrypto.so.3",
+   "function_address": "0x2e0c10",
+   "call_site": "0x2e1532",
+   "class": "materialised",
+   "reason": "reg-top",
+   "operand": "call   *%rax",
+   "enriched_from_element7_triage_66": {
+    "symbol": "CONF_modules_load",
+    "defining_function": "CONF_modules_load",
+    "module": "src/runtime/confmod/mod.rs",
+    "call_operand": "call   *%rax",
+    "group": "conf_module_registry_row",
+    "site_detail": "CONF_MODULE.finish at row +0x18",
+    "target_set_recorded": false,
+    "admitted_target_count": 0
+   },
+   "callers": []
+  },
+  {
+   "index": 12,
+   "dso": "libcrypto.so.3",
+   "function_address": "0x4fa240",
+   "call_site": "0x4fa4c6",
+   "class": "materialised",
+   "reason": "reg-top",
+   "operand": "call   *%r14",
+   "enriched_from_element7_triage_66": {
+    "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs3pem7pem_pk810do_pk8pkey.llvm.11692496962080633764",
+    "defining_function": "openssl_rs::pem::pem_pk8::do_pk8pkey",
+    "module": "src/pem/pem_pk8.rs",
+    "call_operand": "call   *%r14",
+    "group": "exported_callback_param",
+    "site_detail": "do_pk8pkey cb parameter or in-image PEM_def_callback fallback",
+    "target_set_recorded": false,
+    "admitted_target_count": 0
+   },
+   "callers": []
+  },
+  {
+   "index": 13,
+   "dso": "libcrypto.so.3",
+   "function_address": "0x530e40",
+   "call_site": "0x5314aa",
+   "class": "materialised",
+   "reason": "reg-top",
+   "operand": "call   *%r15",
+   "enriched_from_element7_triage_66": {
+    "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs6pkcs128p12_mutl14pkcs12_gen_mac.llvm.13605953120909891832",
+    "defining_function": "openssl_rs::pkcs12::p12_mutl::pkcs12_gen_mac",
+    "module": "src/pkcs12/p12_mutl.rs",
+    "call_operand": "call   *%r15",
+    "group": "exported_callback_param",
+    "site_detail": "pkcs12_gen_mac pkcs12_key_gen parameter (KDF path A)",
+    "target_set_recorded": false,
+    "admitted_target_count": 0
+   },
+   "callers": []
+  },
+  {
+   "index": 14,
+   "dso": "libcrypto.so.3",
+   "function_address": "0x530e40",
+   "call_site": "0x531586",
+   "class": "materialised",
+   "reason": "reg-top",
+   "operand": "call   *%r15",
+   "enriched_from_element7_triage_66": {
+    "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs6pkcs128p12_mutl14pkcs12_gen_mac.llvm.13605953120909891832",
+    "defining_function": "openssl_rs::pkcs12::p12_mutl::pkcs12_gen_mac",
+    "module": "src/pkcs12/p12_mutl.rs",
+    "call_operand": "call   *%r15",
+    "group": "exported_callback_param",
+    "site_detail": "pkcs12_gen_mac pkcs12_key_gen parameter (KDF path B)",
+    "target_set_recorded": false,
+    "admitted_target_count": 0
+   },
+   "callers": []
+  }
+ ],
+ "groups": {
+  "by_group": [
+   {
+    "group": "pbe_registry_row",
+    "count": 3,
+    "site_indices": [
+     1,
+     2,
+     3
+    ],
+    "classes": [
+     "materialised"
+    ],
+    "reasons": [
+     "reg-top"
+    ],
+    "modules": [
+     "src/evp/evp_pbe.rs",
+     "src/evp/p5_crpt2.rs"
+    ]
+   },
+   {
+    "group": "store_loader_object_table",
+    "count": 4,
+    "site_indices": [
+     4,
+     5,
+     6,
+     7
+    ],
+    "classes": [
+     "materialised"
+    ],
+    "reasons": [
+     "reg-top"
+    ],
+    "modules": [
+     "src/store/store_lib.rs"
+    ]
+   },
+   {
+    "group": "core_bio_object_table",
+    "count": 1,
+    "site_indices": [
+     8
+    ],
+    "classes": [
+     "field"
+    ],
+    "reasons": [
+     "base-slot-partial"
+    ],
+    "modules": [
+     "src/provider/decode_msblob2key.rs"
+    ]
+   },
+   {
+    "group": "registered_callback_list",
+    "count": 1,
+    "site_indices": [
+     9
+    ],
+    "classes": [
+     "field"
+    ],
+    "reasons": [
+     "base-slot-partial"
+    ],
+    "modules": [
+     "src/runtime/rcu.rs"
+    ]
+   },
+   {
+    "group": "conf_module_registry_row",
+    "count": 2,
+    "site_indices": [
+     10,
+     11
+    ],
+    "classes": [
+     "materialised"
+    ],
+    "reasons": [
+     "reg-top"
+    ],
+    "modules": [
+     "src/runtime/confmod/mod.rs"
+    ]
+   },
+   {
+    "group": "exported_callback_param",
+    "count": 3,
+    "site_indices": [
+     12,
+     13,
+     14
+    ],
+    "classes": [
+     "materialised"
+    ],
+    "reasons": [
+     "reg-top"
+    ],
+    "modules": [
+     "src/pem/pem_pk8.rs",
+     "src/pkcs12/p12_mutl.rs"
+    ]
+   }
+  ],
+  "by_class": {
+   "materialised": 12,
+   "field": 2
+  },
+  "by_reason": {
+   "reg-top": 12,
+   "base-slot-partial": 2
+  },
+  "priority_shape_labels_present": {
+   "reg-top": 12,
+   "base-slot-partial": 2,
+   "field(class)": 2
+  },
+  "priority_shape_labels_absent": [
+   "register-value-partial",
+   "field/offset (literal label)"
+  ],
+  "by_module": {
+   "src/evp/evp_pbe.rs": 2,
+   "src/evp/p5_crpt2.rs": 1,
+   "src/store/store_lib.rs": 4,
+   "src/provider/decode_msblob2key.rs": 1,
+   "src/runtime/rcu.rs": 1,
+   "src/runtime/confmod/mod.rs": 2,
+   "src/pem/pem_pk8.rs": 1,
+   "src/pkcs12/p12_mutl.rs": 2
+  }
+ },
+ "non_claims": [
+  "This file is triage only: it is not a proof, not a discharge, and not a SAFETY_DISCHARGED or SAFE_COMPATIBLE claim.",
+  "It does not change element 7's status: element 7 remains FAIL, target_sets_remain_unbounded=true.",
+  "The authoritative per-site fields are those the receipt carries: dso, function, call_site, class, reason, text. No caller attribution is carried for these 14 sites; 'callers' is deliberately empty rather than inferred.",
+  "Enrichment fields (symbol, defining_function, module, call_operand, group, site_detail, admitted_target_count, target_set_recorded) come from element7-triage-66.json, a 66-site triage generated from an earlier candidate; they are matched per call_site but are not re-derived from the b95b7814c candidate.",
+  "admitted_target_count values (0, 1, 47) were not recomputed; they describe the earlier triage's recorded target set, if any (target_set_recorded=false everywhere here).",
+  "No build, test, symbol-fingerprint, binary-hash, or runtime verification was performed for this file.",
+  "Absence of the strings 'register-value-partial' and 'field/offset' is a statement about labels present in the receipt, not proof that such a mechanism shape is absent.",
+  "source_head is recorded as b95b7814c per request; source_head_full is the receipt's exact repository_head."
+ ]
+}
