@@ -1,0 +1,245 @@
+{
+  "receipt": "element7-header-question-diagnosis",
+  "kind": "element7-residue-diagnosis",
+  "date": "2026-11-06",
+  "branch": "stage/p25/element7-s2b",
+  "candidate_head": "e35451730",
+  "state": "DIAGNOSIS ONLY - no rule changed, no verifier edit, no ledger edit, no commit, no element-7 progress claimed",
+  "scope": "the nine target-bounded sites in bucket 'header/parameter question'",
+  "method": {
+    "disassembly": "objdump -d on the exact candidate DSO artifacts/phase2/libcrypto.so.3; function starts and call operands cross-checked against element7-triage-66.json",
+    "header_gate": "the unmodified checker functions consumer_closure._header_callback_param and consumer_closure.export_callback_witness were executed against artifacts/phase2/install on the exact candidate DSO",
+    "provenance": "the unmodified consumer_closure._param_of_operand / _param_chain were executed per site on the same DSO; the argument index reported here is the index the checker itself resolves, not a hand assertion",
+    "artifact_sha256": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3",
+    "checker_sha256": "c29991559c44a4ccf05048c163b90d51dd90595647a714a0685ee1d5be862fbe",
+    "install_tree": "artifacts/phase2/install/include/openssl"
+  },
+  "classification_counts": {
+    "CHECK-WRONG": 9,
+    "NOT-A-PARAM": 0,
+    "GENUINELY-DIFFERENT": 0
+  },
+  "result": "All nine operands are exactly the callback parameter declared by the admitted header. Every site's provenance resolves under the approved chain-only rule and the witness reaches the header gate; every site is refused there for a mechanical preprocessor-parsing reason. None is NOT-A-PARAM and none is GENUINELY-DIFFERENT.",
+  "per_site": [
+    {
+      "site": "0x2134b8",
+      "function": "OPENSSL_sk_deep_copy",
+      "function_start": "0x2133e0",
+      "call_operand": "call *%r15",
+      "arg_index": 1,
+      "provenance": "0x213404 mov %rsi,%r15 (register copy of entry argument 1)",
+      "header_declaration": "artifacts/phase2/install/include/openssl/stack.h:42",
+      "header_text": "OPENSSL_STACK *OPENSSL_sk_deep_copy(const OPENSSL_STACK *, OPENSSL_sk_copyfunc c, OPENSSL_sk_freefunc f);",
+      "parameter_text": "OPENSSL_sk_copyfunc c",
+      "header_type_class": "pointer-to-function typedef (OPENSSL_sk_copyfunc)",
+      "typedef_resolved": true,
+      "existing_refusal": "OPENSSL_sk_deep_copy: a declaration does not declare the parameter as a callback",
+      "classification": "CHECK-WRONG",
+      "mechanical_cause": "macro-shadow: 87 #define bodies that invoke OPENSSL_sk_deep_copy are admitted as declarations and classified non-callback; the real stack.h:42 declaration IS classified as a callback, but the checker refuses when any non-callback declaration exists"
+    },
+    {
+      "site": "0x2136a4",
+      "function": "OPENSSL_sk_deep_copy",
+      "function_start": "0x2133e0",
+      "call_operand": "call *%r12",
+      "arg_index": 2,
+      "provenance": "0x213410 mov %rdx,0x30(%rsp) (entry spill of argument 2); 0x21367a mov 0x30(%rsp),%r12 (frame reload)",
+      "header_declaration": "artifacts/phase2/install/include/openssl/stack.h:43",
+      "header_text": "OPENSSL_STACK *OPENSSL_sk_deep_copy(const OPENSSL_STACK *, OPENSSL_sk_copyfunc c, OPENSSL_sk_freefunc f);",
+      "parameter_text": "OPENSSL_sk_freefunc f",
+      "header_type_class": "pointer-to-function typedef (OPENSSL_sk_freefunc)",
+      "typedef_resolved": true,
+      "existing_refusal": "OPENSSL_sk_deep_copy: a declaration does not declare the parameter as a callback",
+      "classification": "CHECK-WRONG",
+      "mechanical_cause": "macro-shadow: same 87 macro-body matches as index 1 poison the non-callback arm",
+      "note": "element7-triage-66 labels this site 'copyfunc parameter (second path)'. The disassembly contradicts that label: the register is the entry spill of %rdx, i.e. argument 2, free_func. The label is wrong; the classification is unaffected because both parameters are declared callback typedefs."
+    },
+    {
+      "site": "0x214542",
+      "function": "OPENSSL_sk_pop_free",
+      "function_start": "0x2144b0",
+      "call_operand": "call *%r14",
+      "arg_index": 1,
+      "provenance": "0x2144cc mov %rsi,%r14 (register copy of entry argument 1)",
+      "header_declaration": "artifacts/phase2/install/include/openssl/stack.h:41",
+      "header_text": "void OPENSSL_sk_pop_free(OPENSSL_STACK *st, OPENSSL_sk_freefunc func);",
+      "parameter_text": "OPENSSL_sk_freefunc func",
+      "header_type_class": "pointer-to-function typedef (OPENSSL_sk_freefunc)",
+      "typedef_resolved": true,
+      "existing_refusal": "OPENSSL_sk_pop_free: a declaration does not declare the parameter as a callback",
+      "classification": "CHECK-WRONG",
+      "mechanical_cause": "macro-shadow: 87 #define bodies declaring sk_*_pop_free are admitted as declarations and classified non-callback; stack.h:41 itself is correctly classified"
+    },
+    {
+      "site": "0x217b60",
+      "function": "PEM_ASN1_read_bio",
+      "function_start": "0x217b00",
+      "call_operand": "call *%rbx",
+      "arg_index": 0,
+      "provenance": "0x217b18 mov %rdi,%rbx (register copy of entry argument 0)",
+      "header_declaration": "artifacts/phase2/install/include/openssl/pem.h:394",
+      "header_text": "void *PEM_ASN1_read_bio(d2i_of_void *d2i, const char *name, BIO *bp, void **x, pem_password_cb *cb, void *u);",
+      "parameter_text": "d2i_of_void *d2i",
+      "header_type_class": "function-type typedef used behind '*' (d2i_of_void declared as 'typedef void *d2i_of_void(void **, const unsigned char **, long);' at asn1.h:379)",
+      "typedef_resolved": true,
+      "existing_refusal": "PEM_ASN1_read_bio: inconsistent callback declarations",
+      "classification": "CHECK-WRONG",
+      "mechanical_cause": "macro-shadow (consistency arm): all four match sites are callbacks, but three are macro invocations whose parameter text differs from the real declaration - ocsp.h:247 '(d2i_of_void *)d2i_OCSP_REQUEST', ocsp.h:251 '(d2i_of_void *)d2i_OCSP_RESPONSE', pem.h:152 '(d2i_of_void *)d2i_##asn1' - so the literal (type_typedef, parameter_text) consistency check sees four values and refuses"
+    },
+    {
+      "site": "0x32096c",
+      "function": "OBJ_bsearch_ex_",
+      "function_start": "0x3208d0",
+      "call_operand": "call *%r14",
+      "arg_index": 4,
+      "provenance": "0x320908 mov %r8,%r14 (register copy of entry argument 4)",
+      "header_declaration": "artifacts/phase2/install/include/openssl/objects.h:78",
+      "header_text": "const void *OBJ_bsearch_ex_(const void *key, const void *base, int num, int size, int (*cmp)(const void *, const void *), int flags);",
+      "parameter_text": "int (*cmp)(const void *, const void *)",
+      "header_type_class": "direct function-pointer parameter (no typedef)",
+      "typedef_resolved": true,
+      "existing_refusal": "OBJ_bsearch_ex_: a declaration does not declare the parameter as a callback",
+      "classification": "CHECK-WRONG",
+      "mechanical_cause": "macro-shadow: the objects.h:156 OBJ_bsearch_ macro body is parsed as a second declaration; its index-4 text '((void)CHECKED_PTR_OF(type1, cmp##_type_1), (void)type_2 = CHECKED_PTR_OF(type2, cmp##_type_2), cmp##_BS...' is classified non-callback"
+    },
+    {
+      "site": "0x3209d6",
+      "function": "OBJ_bsearch_ex_",
+      "function_start": "0x3208d0",
+      "call_operand": "call *%r14",
+      "arg_index": 4,
+      "provenance": "same definition as 0x32096c: 0x320908 mov %r8,%r14",
+      "header_declaration": "artifacts/phase2/install/include/openssl/objects.h:78",
+      "header_text": "const void *OBJ_bsearch_ex_(const void *key, const void *base, int num, int size, int (*cmp)(const void *, const void *), int flags);",
+      "parameter_text": "int (*cmp)(const void *, const void *)",
+      "header_type_class": "direct function-pointer parameter (no typedef)",
+      "typedef_resolved": true,
+      "existing_refusal": "OBJ_bsearch_ex_: a declaration does not declare the parameter as a callback",
+      "classification": "CHECK-WRONG",
+      "mechanical_cause": "identical to 0x32096c; the two call sites share the same %r14 definition"
+    },
+    {
+      "site": "0x323a64",
+      "function": "OPENSSL_LH_doall",
+      "function_start": "0x3238b0",
+      "call_operand": "call *%r13",
+      "arg_index": 1,
+      "provenance": "0x323975 mov %rsi,0x20(%rsp) (entry spill of argument 1); 0x323a2e and 0x323a54 mov 0x20(%rsp),%r13 (frame reloads); checker reports extended=true, i.e. it required the approved chain step",
+      "header_declaration": "artifacts/phase2/install/include/openssl/lhash.h:106",
+      "header_text": "void OPENSSL_LH_doall(OPENSSL_LHASH *lh, OPENSSL_LH_DOALL_FUNC func);",
+      "parameter_text": "OPENSSL_LH_DOALL_FUNC func",
+      "header_type_class": "pointer-to-function typedef (OPENSSL_LH_DOALL_FUNC, declared 'typedef void (*OPENSSL_LH_DOALL_FUNC)(void *);' at lhash.h:42)",
+      "typedef_resolved": true,
+      "existing_refusal": "OPENSSL_LH_doall: a declaration does not declare the parameter as a callback",
+      "classification": "CHECK-WRONG",
+      "mechanical_cause": "macro-shadow: four lh_*_doall macro bodies are admitted (conf.h:87, err.h:390, lhash.h:394, lhash.h:409) and classified non-callback; lhash.h:106 itself is correctly classified"
+    },
+    {
+      "site": "0x4ce80f",
+      "function": "ASN1_i2d_bio",
+      "function_start": "0x4ce7f0",
+      "call_operand": "call *%r12",
+      "arg_index": 0,
+      "provenance": "0x4ce804 mov %rdi,%r12 (register copy of entry argument 0)",
+      "header_declaration": "artifacts/phase2/install/include/openssl/asn1.h:959",
+      "header_text": "int ASN1_i2d_bio(i2d_of_void *i2d, BIO *out, const void *x);",
+      "parameter_text": "i2d_of_void *i2d",
+      "header_type_class": "function-type typedef used behind '*' (i2d_of_void declared as 'typedef int i2d_of_void(const void *, unsigned char **);' at asn1.h:380)",
+      "typedef_resolved": true,
+      "existing_refusal": "ASN1_i2d_bio: a declaration does not declare the parameter as a callback",
+      "classification": "CHECK-WRONG",
+      "mechanical_cause": "macro-shadow: the asn1.h:962 ASN1_i2d_bio_of macro body is parsed as a second declaration; its index-0 text 'CHECKED_I2D_OF(type, i2d)' is classified non-callback",
+      "note": "size pass"
+    },
+    {
+      "site": "0x4ce849",
+      "function": "ASN1_i2d_bio",
+      "function_start": "0x4ce7f0",
+      "call_operand": "call *%r12",
+      "arg_index": 0,
+      "provenance": "same definition as 0x4ce80f: 0x4ce804 mov %rdi,%r12",
+      "header_declaration": "artifacts/phase2/install/include/openssl/asn1.h:959",
+      "header_text": "int ASN1_i2d_bio(i2d_of_void *i2d, BIO *out, const void *x);",
+      "parameter_text": "i2d_of_void *i2d",
+      "header_type_class": "function-type typedef used behind '*' (i2d_of_void)",
+      "typedef_resolved": true,
+      "existing_refusal": "ASN1_i2d_bio: a declaration does not declare the parameter as a callback",
+      "classification": "CHECK-WRONG",
+      "mechanical_cause": "identical to 0x4ce80f; the two call sites share the same %r12 definition",
+      "note": "fill pass"
+    }
+  ],
+  "paired_sites": {
+    "ASN1_i2d_bio": "BOTH SITES SHARE THE SAME ANSWER. Size pass 0x4ce80f and fill pass 0x4ce849 both call argument 0 through the same %r12 definition and receive the identical refusal.",
+    "OBJ_bsearch_ex_": "BOTH SITES SHARE THE SAME ANSWER. 0x32096c and 0x3209d6 both call argument 4 through the same %r14 definition and receive the identical refusal.",
+    "OPENSSL_sk_deep_copy": "SAME CLASSIFICATION AND REFUSAL, DIFFERENT PARAMETER: 0x2134b8 is argument 1 (copy_func) and 0x2136a4 is argument 2 (free_func). Both are declared callback typedefs, so both are CHECK-WRONG for the same mechanical reason."
+  },
+  "typedef_visibility": {
+    "OPENSSL_sk_copyfunc": {"file": "stack.h", "declaration": "typedef void *(*OPENSSL_sk_copyfunc)(const void *);", "checker_shape": "pointer typedef", "resolved": true},
+    "OPENSSL_sk_freefunc": {"file": "stack.h", "declaration": "typedef void (*OPENSSL_sk_freefunc)(void *);", "checker_shape": "pointer typedef", "resolved": true},
+    "OPENSSL_LH_DOALL_FUNC": {"file": "lhash.h", "declaration": "typedef void (*OPENSSL_LH_DOALL_FUNC)(void *);", "checker_shape": "pointer typedef", "resolved": true},
+    "d2i_of_void": {"file": "asn1.h", "declaration": "typedef void *d2i_of_void(void **, const unsigned char **, long);", "checker_shape": "function-type typedef; use site supplies '*' so the checker accepts it", "resolved": true},
+    "i2d_of_void": {"file": "asn1.h", "declaration": "typedef int i2d_of_void(const void *, unsigned char **);", "checker_shape": "function-type typedef; use site supplies '*' so the checker accepts it", "resolved": true},
+    "int (*cmp)(const void *, const void *)": {"file": "objects.h", "declaration": "direct function-pointer parameter, no typedef", "checker_shape": "direct declarator", "resolved": true},
+    "conclusion": "All five typedefs are visible to the checker and none differs in shape from classes the checker already handles. Typedef resolution is NOT the failure. The failure is that raw preprocessor text is scanned as declaration text."
+  },
+  "mechanical_cause": {
+    "common": "consumer_closure._header_callback_param scans the raw text of every admitted header for '<symbol>(' and treats any match whose same-line prefix is not empty and does not end in '=', '.', '->' or ',' as a function declaration. It does not skip preprocessor directives or backslash-continued macro bodies.",
+    "arm_non_callback": "Eight sites are refused by 'a declaration does not declare the parameter as a callback'. In each case the real declaration is found and classified correctly, but at least one '#define' macro invocation of the same symbol is also admitted as a declaration; that macro's parameter is an argument expression such as ossl_check_*_type(freefunc) or CHECKED_I2D_OF(type, i2d), which is not a callback, and the 'if non:' arm refuses the whole symbol.",
+    "arm_inconsistent": "One site (PEM_ASN1_read_bio) is refused by 'inconsistent callback declarations'. All four admitted matches are callbacks, but three are macro invocations whose literal parameter text differs from the real declaration, so the set of (type_typedef, parameter_text) pairs has size four instead of one.",
+    "evidence_per_symbol": {
+      "OPENSSL_sk_deep_copy@1": "89 matches: 2 callback (stack.h:42, safestack.h:191), 87 non-callback macro bodies (asn1.h:159, asn1.h:262, ... x509v3.h:1441)",
+      "OPENSSL_sk_deep_copy@2": "89 matches: 2 callback (stack.h:42, safestack.h:191), 87 non-callback macro bodies",
+      "OPENSSL_sk_pop_free@1": "88 matches: 1 callback (stack.h:41), 87 non-callback macro bodies",
+      "PEM_ASN1_read_bio@0": "4 matches: 4 callback, 4 distinct parameter texts (ocsp.h:247, ocsp.h:251, pem.h:152, pem.h:394)",
+      "OBJ_bsearch_ex_@4": "2 matches: 1 callback (objects.h:78), 1 non-callback (macro body at objects.h:156)",
+      "OPENSSL_LH_doall@1": "5 matches: 1 callback (lhash.h:106), 4 non-callback macro bodies (conf.h:87, err.h:390, lhash.h:394, lhash.h:409)",
+      "ASN1_i2d_bio@0": "2 matches: 1 callback (asn1.h:959), 1 non-callback (macro body at asn1.h:962)"
+    },
+    "relation_to_rejected_batch": "This is the same defect the rejected B55 chain batch masked with an undisclosed _strip_preprocessor rewrite. The diagnosis here is that the defect is real and independent of chain provenance: the approved chain rule already resolves every one of these nine operands to the correct entry parameter; only the header gate remains wrong."
+  },
+  "minimal_mechanical_fix_not_implemented": {
+    "scope": "consumer_closure._header_callback_param only, in a standalone disclosed subphase",
+    "change": "When collecting candidate declarations, ignore preprocessor directives and the full extent of their backslash-continued bodies: a match is a declaration candidate only when its physical line does not begin with optional whitespace followed by '#'. This is the concept the rejected _strip_preprocessor implemented; it must be disclosed as a header-gate correction, fixture-backed, and reviewed on its own, not bundled into a provenance or chain change.",
+    "must_not_do": [
+      "do not drop the 'if non:' arm or accept a non-callback declaration",
+      "do not accept differing parameter texts for the real declaration (that would be a widening, not a fix)",
+      "do not resurrect the rejected in-image fallback or the silently joined null-test arm",
+      "do not implement this inside the chain-provenance batch"
+    ]
+  },
+  "fixtures_that_would_prove_the_fix": {
+    "positive_macro_shadow": "header A: 'void f(OPENSSL_sk_freefunc cb);' plus header B: '#define WRAP(x) f(ossl_check_freefunc_type(x))'. Expected after fix: the callback declaration is accepted and the macro body ignored. Observed today: 'a declaration does not declare the parameter as a callback'.",
+    "positive_pem_consistency": "real declaration 'void *g(d2i_of_void *d2i, ...);' plus '#define G(a) g((d2i_of_void *)a)' and '#define H(a) g((d2i_of_void *)a_##x)'. Expected after fix: accepted. Observed today: 'inconsistent callback declarations'.",
+    "negative_no_callback": "header declares 'void f(int x, void *p);' with no macro. Expected: still refused ('the header declares the parameter as a non-callback' / non-callback arm). Proves no false positive.",
+    "negative_macro_only": "only '#define WRAP(x) f(x)' is present and the real declaration is absent. Expected: still refused ('the symbol is not declared in the admitted headers' or the non-callback arm). Proves the filter does not manufacture a declaration.",
+    "mutation_control": "remove the preprocessor filter from the fixed checker: all nine sites must revert to their recorded refusals (8 non-callback-arm, 1 consistency-arm). This is the accounting the rejected batch lacked.",
+    "regression_control": "the four chain-only closures (CRYPTO_cbc128_decrypt, CRYPTO_ofb128_encrypt, CRYPTO_ccm128_decrypt_ccm64, CRYPTO_ccm128_encrypt_ccm64) and the unreachable class moves must be unchanged by a header-only fix."
+  },
+  "permanent_refusals": {
+    "count": 0,
+    "note": "No site in this nine is NOT-A-PARAM or GENUINELY-DIFFERENT, so none should stay refused for a semantic reason. The three genuinely permanent sites named in element7-residue-26 (pem_pk8::do_pk8pkey 0x4fa4c6, p12_mutl::pkcs12_gen_mac 0x5314aa and 0x531586) are outside this nine and are unaffected by this diagnosis."
+  },
+  "recommendation": {
+    "safe_to_fix_mechanically": "All nine, as one disclosed header-gate subphase with the fixtures above, a mutation control and independent adversarial review. The approved chain rule already resolves all nine; no provenance widening is needed.",
+    "must_not_be_touched": [
+      "do not bundle the header-gate correction with chain/provenance, obligation-status, or class-count claims",
+      "do not implement the fix under this diagnosis receipt; it is diagnosis only",
+      "do not touch the three permanent outside sites (do_pk8pkey, pkcs12_gen_mac x2)"
+    ],
+    "measurement_before_claim": "After an accepted fix, re-run the closure and report the actual target_bounded / contract_bounded / unresolved counts and the mutation reverting the filter. This receipt makes no element-7 progress claim; the count remains 26."
+  },
+  "header_digests": {
+    "stack.h": "68e5e154c9af4d0c70f1101a4c5d94a45c42f371acac2538a1fec925a1a21d8a",
+    "pem.h": "9098124ff7a21c8f1db5ddead59b1cf092f88c9f44bf88dacd3c8de9c67ade76",
+    "objects.h": "b6227db488aa39ed20a29e67d48fe8fefb2f649a1afcc3149cba22ac26510057",
+    "lhash.h": "ba50a0dc4caa9662e138f913566c44454a68f6e59c405c761c1f387f58855af4",
+    "asn1.h": "e56a5be21ee9199eea4f43bda71ada02d7e8a283ed17915b39c0263cbf88250d"
+  },
+  "non_claims": [
+    "No element-7 progress: the residue remains 26 target-bounded sites.",
+    "No rule, verifier, ledger, fixture or source file was changed; this receipt is the only written artefact.",
+    "No unsafe/safe claim is made about any of these sites.",
+    "The header gate was executed read-only against the exact candidate DSO and header tree; no closure was regenerated."
+  ]
+}
