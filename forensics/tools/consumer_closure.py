@@ -14825,6 +14825,9 @@ REGISTRATION_ATEXIT_NODE = "OpenSslInitStop"
 REGISTRATION_ATEXIT_FIELD = "handler"
 REGISTRATION_ATEXIT_LIST = "STOP_HANDLERS"
 REGISTRATION_ATEXIT_DRAIN = "run_atexit_handlers"
+# The class is site-enumerated by address, exactly like the SLH and provider hw
+# witnesses.  A second `call *(%reg)` in the same function is a different site.
+REGISTRATION_ATEXIT_CALL_SITE = 0x3DC914
 
 
 def _registration_atexit_refusal(name: str, site: dict, reason: str,
@@ -14959,6 +14962,9 @@ def registration_atexit_witness(g: "DsoGraph", site: dict, name: str):
     enumerated site.  Six independent conditions must hold; each failure has
     its own reason.
     """
+    if (site.get("addr") != REGISTRATION_ATEXIT_CALL_SITE
+            and "e7-atexit-site-address" not in _MUTED):
+        return None, None
     base = re.sub(r"\.llvm(?:\.[0-9]+)?$", "", name or "")
     if base != REGISTRATION_ATEXIT_SITE:
         return None, None
@@ -15037,6 +15043,8 @@ def registration_atexit_witness(g: "DsoGraph", site: dict, name: str):
         if w["method"] in ("swap", "store"):
             if (w["function"] != REGISTRATION_ATEXIT_DRAIN
                     or "null_mut" not in w["text"]):
+                if "e7-atexit-list-writer" in _MUTED:
+                    continue
                 return None, _registration_atexit_refusal(
                     name, site, "other-handler-list-writer", writer=w)
 
@@ -15060,11 +15068,12 @@ def registration_atexit_witness(g: "DsoGraph", site: dict, name: str):
     call_fn, _cl = _registration_atexit_fn(lines, call_idx)
     m = re.search(r"OwnedInitStop::new\(\s*([^,]+?)\s*,", lines[call_idx])
     stored_arg = m.group(1).strip() if m else None
-    if call_fn != REGISTRATION_ATEXIT_SYMBOL or stored_arg != param:
-        return None, _registration_atexit_refusal(
-            name, site, "stored-value-is-not-the-handler-parameter",
-            parameter=param, stored_argument=stored_arg,
-            calling_function=call_fn)
+    if (call_fn != REGISTRATION_ATEXIT_SYMBOL or stored_arg != param):
+        if "e7-atexit-stored-value" not in _MUTED:
+            return None, _registration_atexit_refusal(
+                name, site, "stored-value-is-not-the-handler-parameter",
+                parameter=param, stored_argument=stored_arg,
+                calling_function=call_fn)
     new_idx = _registration_atexit_first_line(
         lines, f"fn new({REGISTRATION_ATEXIT_FIELD}:")
     m = re.search(r"fn\s+new\s*\(\s*([A-Za-z_]\w*)\s*:",
@@ -26809,6 +26818,124 @@ def self_test() -> int:
     check("a domain-hash difference is STALE_HASH",
           sorted(r["code"] for r in r4), ["HASH_RULE_MISMATCH", "STALE_HASH"])
 
+    # ---- E7/s2b: the OPENSSL_atexit registration seam (R1/R5) ------------ #
+    # Replayable fixtures on the real witness.  Negative A stores a handler
+    # from the constructor, negative B stores a computed value instead of the
+    # parameter, the control puts a second `call *(%reg)` in the same
+    # OPENSSL_cleanup shape at a different address, and the positive is the
+    # shape the candidate actually has.  Each mutation switch below removes
+    # exactly one refusal and must flip its fixture to accepted.
+    def _atexit_fixture(*, extra_list_store=False, stored_value="handler",
+                        call_addr=REGISTRATION_ATEXIT_CALL_SITE):
+        td = tempfile.mkdtemp()
+        store = ("        STOP_HANDLERS.store(node.0.as_ptr(), "
+                 "Ordering::Release);\n" if extra_list_store else "")
+        src = (
+            '#[repr(C)]\n'
+            'struct OpenSslInitStop {\n'
+            '    handler: extern "C" fn(),\n'
+            '    next: *mut OpenSslInitStop,\n'
+            '}\n\n'
+            'static STOP_HANDLERS: AtomicPtr<OpenSslInitStop> = '
+            'AtomicPtr::new(core::ptr::null_mut());\n\n'
+            'impl OwnedInitStop {\n'
+            '    fn new(handler: extern "C" fn(), next: *mut OpenSslInitStop) '
+            '-> Option<OwnedInitStop> {\n'
+            '        let ptr = core::ptr::NonNull::new(raw)?;\n'
+            '        let dst = ptr.as_ptr();\n'
+            + store +
+            '        unsafe { dst.write(OpenSslInitStop { handler, next }) };\n'
+            '        Some(OwnedInitStop(ptr))\n'
+            '    }\n'
+            '}\n\n'
+            'pub unsafe extern "C" fn OPENSSL_atexit('
+            'handler: Option<extern "C" fn()>) -> c_int {\n'
+            '    let node = match OwnedInitStop::new(' + stored_value +
+            ', core::ptr::null_mut()) {\n'
+            '        Some(node) => node,\n'
+            '        None => return 0,\n'
+            '    };\n'
+            '    let head = STOP_HANDLERS.load(Ordering::Acquire);\n'
+            '    match STOP_HANDLERS.compare_exchange_weak(\n'
+            '        head, node.0.as_ptr(), Ordering::Release, '
+            'Ordering::Acquire) {\n'
+            '        Ok(_) => { let _ = node.into_raw(); return 1; }\n'
+            '        Err(_) => return 0,\n'
+            '    }\n'
+            '}\n\n'
+            'fn run_atexit_handlers() {\n'
+            '    let mut curr = STOP_HANDLERS.swap('
+            'core::ptr::null_mut(), Ordering::AcqRel);\n'
+            '    while !curr.is_null() {\n'
+            '        let (handler, next) = unsafe { ((*curr).handler, '
+            '(*curr).next) };\n'
+            '        handler();\n'
+            '        curr = next;\n'
+            '    }\n'
+            '    STOP_HANDLERS.store(core::ptr::null_mut(), '
+            'Ordering::Release);\n'
+            '}\n'
+        )
+        root = Path(td)
+        runtime = root / "src" / "runtime"
+        runtime.mkdir(parents=True, exist_ok=True)
+        (runtime / "init.rs").write_text(src)
+        install = _winstall(td, "int OPENSSL_atexit(void (*handler)(void));\n")
+        g = _WG({0x3DC8B0: []},
+                {0x3DC8B0: "OPENSSL_cleanup", 0x3DA000: "OPENSSL_atexit"},
+                dyn={"OPENSSL_atexit"}, source_root=root, install=install)
+        site = {"kind": "call", "func": 0x3DC8B0, "addr": call_addr,
+                "text": "call   *(%rbx)", "arg_deps": set()}
+        return g, site
+
+    _g_pos, _s_pos = _atexit_fixture()
+    _w_pos, _r_pos = registration_atexit_witness(
+        _g_pos, _s_pos, "OPENSSL_cleanup")
+    check("E7 atexit positive fixture is accepted",
+          (bool(_w_pos), _r_pos), (True, None))
+    check("E7 atexit positive binds the enumerated call address",
+          ((_w_pos or {}).get("dispatch") or {}).get("operand"), "(%rbx)")
+
+    _g_ctl, _s_ctl = _atexit_fixture(call_addr=0x3DC9A0)
+    check("E7 atexit R1 control: a second call site in OPENSSL_cleanup "
+          "is not this class",
+          registration_atexit_witness(
+              _g_ctl, _s_ctl, "OPENSSL_cleanup"),
+          (None, None))
+
+    _g_a, _s_a = _atexit_fixture(extra_list_store=True)
+    _w_a, _r_a = registration_atexit_witness(
+        _g_a, _s_a, "OPENSSL_cleanup")
+    check("E7 atexit negative A refuses a constructor list store",
+          (_w_a, (_r_a or {}).get("reason")),
+          (None, "other-handler-list-writer"))
+
+    _g_b, _s_b = _atexit_fixture(stored_value="wrapped")
+    _w_b, _r_b = registration_atexit_witness(
+        _g_b, _s_b, "OPENSSL_cleanup")
+    check("E7 atexit negative B refuses a computed stored value",
+          (_w_b, (_r_b or {}).get("reason")),
+          (None, "stored-value-is-not-the-handler-parameter"))
+
+    def _atexit_accepted_with(name, **kw):
+        _MUTED.add(name)
+        try:
+            _g, _s = _atexit_fixture(**kw)
+            return registration_atexit_witness(
+                _g, _s, "OPENSSL_cleanup")[0]
+        finally:
+            _MUTED.discard(name)
+
+    check("E7 atexit mutation: the address binding is load-bearing",
+          _atexit_accepted_with("e7-atexit-site-address",
+                                call_addr=0x3DC9A0) is not None, True)
+    check("E7 atexit mutation: the list-writer refusal is load-bearing",
+          _atexit_accepted_with("e7-atexit-list-writer",
+                                extra_list_store=True) is not None, True)
+    check("E7 atexit mutation: the stored-value refusal is load-bearing",
+          _atexit_accepted_with("e7-atexit-stored-value",
+                                stored_value="wrapped") is not None, True)
+
     if failures:
         print("[consumer-closure] SELF-TEST FAILED")
         for f in failures:
@@ -26847,7 +26974,10 @@ def self_test() -> int:
           f"admission, unresolved-symbol refusal removed), and the source-backed "
           f"S2/S3/S4 witness controls (exported-callback parameter, fetched "
           f"provider slot, local function-pointer assignment; every refusal "
-          f"condition is mutation-tested)")
+          f"condition is mutation-tested), and the site-address-bound "
+          f"OPENSSL_atexit registration witness (positive shape, second-call "
+          f"R1 control, constructor-store and computed-value refusals, each "
+          f"with its load-bearing mutation switch)")
     return 0
 
 
