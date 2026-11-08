@@ -2144,6 +2144,29 @@ ABI_CONTRACT_DECODER_METHOD_OBJECT = "ABI_CONTRACT_DECODER_METHOD_OBJECT"
 # class is site-enumerated: a matching shape elsewhere is refused, never
 # absorbed.
 ABI_CONTRACT_REGISTRATION_ATEXIT = "ABI_CONTRACT_REGISTRATION_ATEXIT"
+# The `EVP_PBE_find_ex` -> `EVP_PBE_CipherInit_ex` keygen dispatch.  The
+# returned row is either a link-time `BUILTIN_PBE` entry or a row the exported
+# `EVP_PBE_alg_add_type`/`EVP_PBE_alg_add` appended to the application registry.
+# The registry seam is public, so the target set is unbounded; the class is
+# per-call-site and never a finite target set.
+ABI_CONTRACT_PBE_REGISTRY = "ABI_CONTRACT_PBE_REGISTRY"
+# The legacy `OSSL_STORE_LOADER` `open`/`open_ex`/`closefn` callbacks.  The
+# loader comes from `ossl_store_get0_loader_int`; the only writers of those
+# fields are the exported `OSSL_STORE_LOADER_set_open_ex`/`set_open`/`set_close`
+# through `OSSL_STORE_register_loader`, and no in-image code registers a loader.
+ABI_CONTRACT_STORE_LOADER = "ABI_CONTRACT_STORE_LOADER"
+# The `CONF_MODULE` `init`/`finish` callbacks.  The module is built by
+# `module_add`, whose two callers are the exported `CONF_module_add` and the
+# DSO path binding `OPENSSL_init`/`OPENSSL_finish`.  Both seams are public, so
+# the target set is unbounded; every in-image writer is the documented path.
+ABI_CONTRACT_CONF_MODULE = "ABI_CONTRACT_CONF_MODULE"
+# An exported PEM PKCS#8 writer's `pem_password_cb *cb` parameter, together
+# with the documented NULL-selected in-image default `PEM_def_callback`.  The
+# existing `ABI_CONTRACT_EXPORT_CALLBACK` text says a NULL callback is a
+# C-invalid input; here NULL is admitted and selects a default, so the site
+# gets its own class and records the default target explicitly.
+ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT = \
+    "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT"
 
 ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
                                   ABI_CONTRACT_EXPORT_CALLBACK,
@@ -2152,7 +2175,11 @@ ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
                                   ABI_CONTRACT_PROVIDER_HW_TABLE,
                                   ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA,
                                   ABI_CONTRACT_DECODER_METHOD_OBJECT,
-                                  ABI_CONTRACT_REGISTRATION_ATEXIT})
+                                  ABI_CONTRACT_REGISTRATION_ATEXIT,
+                                  ABI_CONTRACT_PBE_REGISTRY,
+                                  ABI_CONTRACT_STORE_LOADER,
+                                  ABI_CONTRACT_CONF_MODULE,
+                                  ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT})
 
 ABI_CONTRACTS = {
     ABI_CONTRACT_PROVIDER: {
@@ -2182,8 +2209,11 @@ ABI_CONTRACTS = {
             "through the returned table"),
         "covers": (
             "the interface by which an out-of-image provider is entered, the shape of "
-            "the dispatch table it returns, and the provider's own allocation "
-            "correctness"),
+            "the dispatch table it returns, the provider's own allocation "
+            "correctness, and the store-loader `OsslStoreLoader.p_close` slot "
+            "(`OSSL_FUNC_STORE_CLOSE`) at the enumerated `OSSL_STORE_open_ex` "
+            "site"
+        ),
         "does_not_cover": [
             "which module (if any) the effective configuration names; the target set "
             "is unbounded",
@@ -2194,6 +2224,21 @@ ABI_CONTRACTS = {
             "application code not loaded as a provider; it is not a node in this "
             "closure",
             "in-image target completeness for the built-in provider path",
+            "the legacy store-loader `closefn`/`open`/`open_ex` fields, which "
+            "are `ABI_CONTRACT_STORE_LOADER`",
+            "a call at the enumerated address whose function leaf differs; it "
+            "falls through to target-bounded with no named refusal (the address "
+            "is not the identity)",
+            "the store-loader `p_close` writer set when a `macro_rules!` body in "
+            "an owner-naming file stores a slot; that site refuses on the "
+            "conservative `macro-expanded-slot-store-unattributed` pattern, and "
+            "the scan is file-scoped (a macro defined in a file that never "
+            "names the owner is outside it)",
+            "for the store-loader `p_close` use, a `macro_rules!` body whose "
+            "field name is itself a metavariable (`(*$p).$f = $v;`): the "
+            "literal-field conservative pattern does not see it and it is not "
+            "refused; no such macro exists in the candidate's "
+            "`OsslStoreLoader`-naming files",
         ],
     },
     ABI_CONTRACT_EXPORT_CALLBACK: {
@@ -2495,6 +2540,252 @@ ABI_CONTRACTS = {
             "remains the closure's job",
             "concurrency of the drain; the authority's single-threaded cleanup "
             "assumption is unchanged",
+        ],
+    },
+    ABI_CONTRACT_PBE_REGISTRY: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "the `EVP_PBE_CTL.keygen` field returned by `EVP_PBE_find_ex` and "
+            "filled by `EVP_PBE_alg_add_type`/`EVP_PBE_alg_add`"
+        ),
+        "citation": [
+            "include/openssl/evp.h:499-503 -- typedef int(EVP_PBE_KEYGEN)(...); "
+            "evp.h:1592-1595 -- EVP_PBE_alg_add_type(..., EVP_PBE_KEYGEN "
+            "*keygen) and EVP_PBE_alg_add(..., EVP_PBE_KEYGEN *keygen); "
+            "evp.h:1598-1599 -- EVP_PBE_find_ex(..., EVP_PBE_KEYGEN **pkeygen, "
+            "EVP_PBE_KEYGEN_EX **pkeygen_ex)",
+            "src/evp/evp_pbe.rs:133-147 -- `#[repr(C)] EvpPbeCtl` with "
+            "`pbe_type`, `pbe_nid`, `cipher_nid`, `md_nid`, `keygen`, "
+            "`keygen_ex`, so `keygen` is at offset 0x10 and `keygen_ex` at 0x18",
+            "src/evp/evp_pbe.rs:154-433 -- `static BUILTIN_PBE: [EvpPbeCtl; "
+            "34]`, the link-time rows (six carry both keygens, eighteen carry "
+            "neither)",
+            "src/evp/evp_pbe.rs:793-847 -- `EVP_PBE_alg_add_type` allocates a "
+            "zeroed row and stores `(*row).keygen = keygen` (the parameter) and "
+            "`(*row).keygen_ex = None`",
+            "src/evp/evp_pbe.rs:893-968 -- `EVP_PBE_find_ex` searches the "
+            "application registry first, then the builtin table, and copies "
+            "`row.keygen` through `*pkeygen`",
+            "src/evp/evp_pbe.rs:735-741 -- `EVP_PBE_CipherInit_ex` calls the "
+            "plain `keygen` only when `keygen_ex` is absent (the authority's "
+            "unconditional call is D-PBE-PKCS12-KEYGEN-1)",
+        ],
+        "provider_obligation": (
+            "the application supplies an `EVP_PBE_KEYGEN` of the declared "
+            "signature that outlives the registry; `EVP_PBE_alg_add_type` copies "
+            "the pointer unchanged and the consumer calls it with the documented "
+            "arguments"
+        ),
+        "covers": (
+            "the public `EVP_PBE_alg_add_type`/`EVP_PBE_alg_add` seam, the "
+            "`EvpPbeCtl.keygen` field at offset 0x10, the `EVP_PBE_find_ex` "
+            "return slot, and the in-image `BUILTIN_PBE` rows"
+        ),
+        "does_not_cover": [
+            "which keygen an application registers; the exported registry seam "
+            "makes the target set unbounded",
+            "the behaviour or lifetime of the application keygen, which is the "
+            "application's obligation once registered",
+            "the finite builtin rows as a target bound: they are recorded, never "
+            "used to turn the site into a finite target set",
+            "a second or aliasing writer of `EvpPbeCtl.keygen`; the witness "
+            "refuses one",
+            "a store through an opaque alias in code that never names "
+            "`EvpPbeCtl`; the source scan cannot attribute it (no such store "
+            "was found in this candidate)",
+            "NULL where the authority calls only a non-NULL keygen; the crate's "
+            "`both slots empty -> 0` divergence is D-PBE-PKCS12-KEYGEN-1",
+            "a slot store inside a `macro_rules!` body in a file that names "
+            "`EvpPbeCtl` or its accessors; the scan refuses the conservative "
+            "pattern (`macro-expanded-slot-store-unattributed`), and the scan is "
+            "file-scoped, so a macro defined in a file that never names the "
+            "owner or an accessor is outside it",
+            "a `macro_rules!` body whose field name is itself a metavariable "
+            "(`(*$p).$f = $v;`): the literal-field conservative pattern does "
+            "not see it and it is not refused; no such macro exists in the "
+            "candidate's `EvpPbeCtl`-naming files",
+            "a call at the enumerated address whose function leaf differs; it "
+            "falls through to target-bounded with no named refusal (the address "
+            "is not the identity)",
+        ],
+    },
+    ABI_CONTRACT_STORE_LOADER: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "the legacy `OSSL_STORE_LOADER` `open`, `open_ex` and `closefn` "
+            "callbacks and the exported setters/registration that fill them"
+        ),
+        "citation": [
+            "include/openssl/store.h:297-299 -- typedef OSSL_STORE_open_fn, "
+            "OSSL_STORE_open_ex_fn; store.h:312 -- OSSL_STORE_close_fn; "
+            "store.h:319-323 -- OSSL_STORE_LOADER_set_open/set_open_ex; "
+            "store.h:346 -- OSSL_STORE_LOADER_set_close; store.h:353 -- "
+            "OSSL_STORE_register_loader",
+            "src/store/mod.rs:250-307 -- `#[repr(C)] OsslStoreLoader`; `open` "
+            "is at 0x10, `closefn` at 0x50, `open_ex` at 0x58, `p_close` at "
+            "0xb8",
+            "src/store/store_register.rs:304-332,441-454 -- the three setters "
+            "store their function parameter into exactly those fields",
+            "src/store/store_register.rs:470-574 -- `ossl_store_register_loader_int` "
+            "(the only stack push) is called only by the exported "
+            "`OSSL_STORE_register_loader`",
+            "src/store/store_register.rs:175-185 -- `ossl_store_register_init` "
+            "creates an empty stack; no in-image code registers a loader",
+            "src/store/store_register.rs:583-620 -- `ossl_store_get0_loader_int` "
+            "returns the registry's own loader",
+            "src/store/store_lib.rs:800-816 -- `OSSL_STORE_open_ex` calls "
+            "`loader.open_ex` / `loader.open`; store_lib.rs:666-668 -- the "
+            "inlined `ossl_store_close_it` calls `loader.closefn` when "
+            "`fetched_loader` is NULL",
+        ],
+        "provider_obligation": (
+            "the application registers an `OSSL_STORE_LOADER` whose non-optional "
+            "callbacks are valid for the loader's lifetime; the setters copy the "
+            "pointers unchanged and `OSSL_STORE_open_ex` calls them with the "
+            "documented arguments"
+        ),
+        "covers": (
+            "the public `OSSL_STORE_LOADER_set_open_ex`/`set_open`/`set_close` "
+            "and `OSSL_STORE_register_loader` seam, the `OsslStoreLoader` "
+            "fields at 0x10/0x50/0x58, and the "
+            "`ossl_store_get0_loader_int` base"
+        ),
+        "does_not_cover": [
+            "which loader an application registers; the exported seam makes the "
+            "target set unbounded",
+            "the behaviour or lifetime of the registered callbacks",
+            "a second or aliasing writer of the fields; the witness refuses one",
+            "a store through an opaque alias in code that never names "
+            "`OsslStoreLoader`; the source scan cannot attribute it (no such "
+            "store was found in this candidate)",
+            "an in-image registration caller; the source scan proves none exists",
+            "the `closefn` base on the fetched_loader == NULL path is "
+            "established by the source guards (`loader_ctx != NULL`); the "
+            "machine definition set also carries the provider and failed-fetch "
+            "definitions, both excluded by those guards",
+            "provider store loaders, which are `ABI_CONTRACT_PROVIDER`",
+            "a slot store inside a `macro_rules!` body in a file that names "
+            "`OsslStoreLoader` or its accessors; the scan refuses the "
+            "conservative pattern (`macro-expanded-slot-store-unattributed`), "
+            "and the scan is file-scoped, so a macro defined in a file that "
+            "never names the owner or an accessor is outside it",
+            "a `macro_rules!` body whose field name is itself a metavariable "
+            "(`(*$p).$f = $v;`): the literal-field conservative pattern does "
+            "not see it and it is not refused; no such macro exists in the "
+            "candidate's `OsslStoreLoader`-naming files",
+            "a call at the enumerated address whose function leaf differs; it "
+            "falls through to target-bounded with no named refusal (the address "
+            "is not the identity)",
+        ],
+    },
+    ABI_CONTRACT_CONF_MODULE: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "the `CONF_MODULE` `init` and `finish` callbacks registered by "
+            "`CONF_module_add` or bound from a loaded DSO's `OPENSSL_init`/"
+            "`OPENSSL_finish`"
+        ),
+        "citation": [
+            "include/openssl/conf.h:107-108 -- typedef conf_init_func and "
+            "conf_finish_func; conf.h:195 -- CONF_module_add(const char *, "
+            "conf_init_func *, conf_finish_func *)",
+            "src/runtime/confmod/mod.rs:214-232 -- `#[repr(C)] ConfModule`; "
+            "`init` is at 0x10 and `finish` at 0x18",
+            "src/runtime/confmod/mod.rs:854-950 -- `module_add` is the only "
+            "writer of `(*tmod).init` and `(*tmod).finish` (from its `ifunc` "
+            "and `ffunc` parameters)",
+            "src/runtime/confmod/mod.rs:775-842 -- `module_load_dso` binds "
+            "`OPENSSL_init` and `OPENSSL_finish` with `DSO_bind_func` and "
+            "forwards them to `module_add`",
+            "src/runtime/confmod/mod.rs:1392-1414 -- `CONF_module_add` is the "
+            "exported static-module seam",
+            "src/runtime/confmod/mod.rs:1115,1122 -- `CONF_modules_load` "
+            "calls `(*pmod).init` and `(*pmod).finish`",
+        ],
+        "provider_obligation": (
+            "the application supplies a `conf_init_func` and optional "
+            "`conf_finish_func` (directly through `CONF_module_add` or by a DSO "
+            "exporting `OPENSSL_init`/`OPENSSL_finish`) that are valid for the "
+            "module's lifetime; the registry copies the pointers unchanged"
+        ),
+        "covers": (
+            "the public `CONF_module_add` seam, the DSO "
+            "`OPENSSL_init`/`OPENSSL_finish` seam, the `ConfModule.init`/"
+            "`finish` fields at 0x10/0x18, and every in-image caller of "
+            "`CONF_module_add` as a documented interface user"
+        ),
+        "does_not_cover": [
+            "which module an application registers or loads; both seams are "
+            "public and the target set is unbounded",
+            "the behaviour or lifetime of the module callbacks",
+            "the loaded DSO's own ABI compliance",
+            "a direct or aliasing writer of the fields outside `module_add`; "
+            "the witness refuses one",
+            "a store through an opaque alias in code that never names "
+            "`ConfModule` or its accessors; the source scan cannot attribute "
+            "it (no such store was found in this candidate)",
+            "the in-image built-in module callers as a finite bound: they are "
+            "enumerated, not used to narrow the set",
+            "a slot store inside a `macro_rules!` body in a file that names "
+            "`ConfModule` or its accessors; the scan refuses the conservative "
+            "pattern (`macro-expanded-slot-store-unattributed`), and the scan is "
+            "file-scoped, so a macro defined in a file that never names the "
+            "owner or an accessor is outside it",
+            "a `macro_rules!` body whose field name is itself a metavariable "
+            "(`(*$p).$f = $v;`): the literal-field conservative pattern does "
+            "not see it and it is not refused; no such macro exists in the "
+            "candidate's `ConfModule`-naming files",
+            "a call at the enumerated address whose function leaf differs; it "
+            "falls through to target-bounded with no named refusal (the address "
+            "is not the identity)",
+        ],
+    },
+    ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "an exported PEM PKCS#8 writer's `pem_password_cb *cb` parameter, "
+            "with the documented NULL-selected in-image default "
+            "`PEM_def_callback`"
+        ),
+        "citation": [
+            "include/openssl/types.h:237 -- typedef int pem_password_cb(char "
+            "*buf, int size, int rwflag, void *userdata); include/openssl/"
+            "pem.h:439-440 -- the default `PEM_def_callback`; pem.h:492-503, "
+            "514-521 -- the exported PKCS#8 writer family's `cb` parameter",
+            "src/pem/pem_pk8.rs:87-129 -- `do_pk8pkey` stores the caller's "
+            "`cb` and installs `PEM_def_callback` when both `kstr` and `cb` "
+            "are NULL",
+            "src/pem/pem_pk8.rs:175-179 -- the only call through `cb` "
+            "(`cb.unwrap_or(PEM_def_callback)(...)`)",
+            "src/pem/pem_pk8.rs:337-417 -- the four BIO wrappers forward their "
+            "own `cb` parameter; pem_pk8.rs:485-507 -- `do_pk8pkey_fp` "
+            "forwards its `cb` to `do_pk8pkey`; the FILE wrappers call it",
+            "src/pem/pem_lib.rs:282 -- `PEM_def_callback` implements the "
+            "`pem_password_cb` signature",
+        ],
+        "provider_obligation": (
+            "the application supplies a `pem_password_cb` of the declared "
+            "signature that is valid for the call; a NULL callback with no key "
+            "string selects the in-image `PEM_def_callback`"
+        ),
+        "covers": (
+            "the exported PEM PKCS#8 writer family's `cb` parameter, the "
+            "BIO and FILE wrapper forwarding chains, and the NULL-selected "
+            "`PEM_def_callback` default target"
+        ),
+        "does_not_cover": [
+            "which callback an application supplies; the target set is "
+            "unbounded",
+            "the behaviour or lifetime of the application's callback",
+            "a caller that installs a non-parameter in-image callback; the "
+            "witness refuses one",
+            "any other `pem_password_cb`-bearing site outside the four BIO "
+            "writers and the FILE wrapper chain",
+            "a NULL default that is absent or not `PEM_def_callback`; the "
+            "witness refuses it",
+            "a call at the enumerated address whose function leaf differs; it "
+            "falls through to target-bounded with no named refusal (the address "
+            "is not the identity)",
         ],
     },
 }
@@ -5160,7 +5451,11 @@ def _header_callback_param(g: "DsoGraph", symbol: str, index: int):
     # Only declarations are evidence: a macro body that invokes ``symbol`` is
     # not a declaration of it, and its argument expressions are not parameter
     # types.
-    texts = [(path, _without_preprocessor(text)) for path, text in texts]
+    preproc = getattr(g, "_header_preprocessed_cache", None)
+    if preproc is None:
+        preproc = [(path, _without_preprocessor(text)) for path, text in texts]
+        g._header_preprocessed_cache = preproc
+    texts = preproc
     # Function typedefs: name -> (file, line, is_pointer).
     fntypes = {}
     for path, text in texts:
@@ -15193,6 +15488,2207 @@ def registration_atexit_witness(g: "DsoGraph", site: dict, name: str):
     return witness, None
 
 
+# ---- E7-ABI: external application/provider/DSO-registerable callbacks ---- #
+#
+# Eight element-7 sites read a callback that is genuinely supplied by an
+# application, a provider, or a DSO registration.  None of them has a finite
+# in-image target set: the public seam that fills the slot admits any callback
+# of the declared type.  Each witness is enumerated by (function leaf, call
+# address) and proves the operand, the base object, the field offset, the
+# source writer set and the documented interface for that exact site.  A site
+# that does not match is refused and stays target-bounded; a same-shaped call
+# elsewhere is never absorbed.
+
+PBE_OWNER = "EvpPbeCtl"
+PBE_SOURCE = "src/evp/evp_pbe.rs"
+PBE_FUNCTION = "EVP_PBE_CipherInit_ex"
+PBE_SITE = 0x179A0D
+PBE_FIELD = "keygen"
+PBE_FIELD_OFFSET = 0x10
+PBE_REGISTRY = "EVP_PBE_alg_add_type"
+PBE_FIND = "EVP_PBE_find_ex"
+PBE_OUT_INDEX = 4
+
+STORE_LOADER_OWNER = "OsslStoreLoader"
+STORE_LOADER_SOURCE = "src/store/mod.rs"
+STORE_LOADER_REGISTER_SOURCE = "src/store/store_register.rs"
+STORE_LOADER_METH_SOURCE = "src/store/store_meth.rs"
+STORE_LOADER_LIB_SOURCE = "src/store/store_lib.rs"
+STORE_LOADER_FUNCTION = "OSSL_STORE_open_ex"
+STORE_LOADER_GET0 = "ossl_store_get0_loader_int"
+STORE_LOADER_REGISTER = "OSSL_STORE_register_loader"
+STORE_LOADER_REGISTER_INT = "ossl_store_register_loader_int"
+STORE_LOADER_FETCH = "inner_loader_fetch"
+STORE_LOADER_LEGACY_SITES = {
+    0x1C21A8: {
+        "field": "open_ex",
+        "offset": 0x58,
+        "setter": "OSSL_STORE_LOADER_set_open_ex",
+        "parameter": "open_ex_function",
+        "typedef": "OSSL_STORE_open_ex_fn",
+        "rust_typedef": "OsslStoreOpenExFn",
+        "base": "legacy-single",
+    },
+    0x1C229D: {
+        "field": "open",
+        "offset": 0x10,
+        "setter": "OSSL_STORE_LOADER_set_open",
+        "parameter": "open_function",
+        "typedef": "OSSL_STORE_open_fn",
+        "rust_typedef": "OsslStoreOpenFn",
+        "base": "legacy-single",
+    },
+    0x1C2768: {
+        "field": "closefn",
+        "offset": 0x50,
+        "setter": "OSSL_STORE_LOADER_set_close",
+        "parameter": "close_function",
+        "typedef": "OSSL_STORE_close_fn",
+        "rust_typedef": "OsslStoreCloseFn",
+        "base": "legacy-guarded",
+    },
+}
+STORE_LOADER_PROVIDER_SITE = 0x1C2528
+STORE_LOADER_PROVIDER_FIELD = "p_close"
+STORE_LOADER_PROVIDER_OFFSET = 0xB8
+STORE_LOADER_PROVIDER_WRITER = "loader_from_algorithm"
+STORE_LOADER_PROVIDER_TYPEDEF = "OSSL_FUNC_store_close_fn"
+STORE_LOADER_PROVIDER_RUST_TYPEDEF = "StorePCloseFn"
+
+CONF_OWNER = "ConfModule"
+CONF_SOURCE = "src/runtime/confmod/mod.rs"
+CONF_FUNCTION = "CONF_modules_load"
+CONF_SITES = {
+    0x2E111A: {"field": "init", "offset": 0x10,
+                "typedef": "conf_init_func", "rust_typedef": "ConfInitFn",
+                "parameter": "ifunc"},
+    0x2E1532: {"field": "finish", "offset": 0x18,
+                "typedef": "conf_finish_func",
+                "rust_typedef": "ConfFinishFn", "parameter": "ffunc"},
+}
+CONF_MODULE_ADD = "module_add"
+CONF_MODULE_SETTER = "CONF_module_add"
+CONF_DSO_INIT = "OPENSSL_init"
+CONF_DSO_FINISH = "OPENSSL_finish"
+
+PEM_FUNCTION = "do_pk8pkey"
+PEM_SOURCE = "src/pem/pem_pk8.rs"
+PEM_SOURCE_FILES = ("src/pem/pem_pk8.rs", "src/pem/pem_pkey.rs")
+PEM_SITE = 0x4FA4C6
+PEM_DEFAULT = "PEM_def_callback"
+PEM_CB_STACK_INDEX = 7
+PEM_CB_STACK_SLOT = "0x4b8(%rsp)"
+
+# The guards that select the two provider/legacy close paths.  These are image
+# addresses, not inferred block numbers; a change to either refuses.
+STORE_LOADER_CLOSE_GUARDS = {
+    "legacy_je": (0x1C2510, 0x1C2513, "%r12", 0x1C275C),
+    "provider_jne": (0x1C2753, 0x1C2756, "%r12", 0x1C2519),
+}
+
+_EXTERNAL_PRIM_SIZES = {
+    "usize": (8, 8), "isize": (8, 8), "size_t": (8, 8),
+    "ssize_t": (8, 8), "u64": (8, 8), "i64": (8, 8),
+    "c_ulong": (8, 8), "c_long": (8, 8), "c_uint": (4, 4),
+    "c_int": (4, 4), "u32": (4, 4), "i32": (4, 4),
+    "c_ushort": (2, 2), "u16": (2, 2), "c_uchar": (1, 1),
+    "u8": (1, 1), "i8": (1, 1), "c_char": (1, 1),
+    "AtomicI32": (4, 4),
+}
+
+
+def _external_function_leaf(name: str) -> str:
+    """The source-level leaf of a symbol (Rust mangled or C)."""
+    base = re.sub(r"\.llvm(?:\.[0-9]+)?$", "", name or "")
+    leaf = _s1_rust_last_segment(base)
+    if leaf:
+        return leaf
+    return base.split("@")[0]
+
+
+def _external_site_matches(site: dict, name: str, function: str,
+                           addr: int) -> bool:
+    return (site.get("addr") == addr
+            and _external_function_leaf(name) == function)
+
+
+def _external_refusal(cls: str, name: str, site: dict, reason: str,
+                      **extra) -> dict:
+    rec = {"class": cls, "function": name,
+           "call_site": hex(site.get("addr") or 0), "reason": reason}
+    rec.update(extra)
+    return rec
+
+
+def _external_insn_index(g: "DsoGraph", site: dict):
+    insns = g.precision.insns_by_func.get(site.get("func"), ())
+    for i, (a, _t) in enumerate(insns):
+        if a == site.get("addr"):
+            return i
+    return None
+
+
+def _external_reg_defs(g: "DsoGraph", fstart: int, idx: int, reg: str):
+    """Positive reaching-definition indices, or None for TOP/entry."""
+    if not _has_insns(g):
+        return None
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None or _ENTRY_DEF in defs:
+        return None
+    return {d for d in defs if d >= 0}
+
+
+def _external_operand_load(g: "DsoGraph", site: dict, reg: str):
+    """The exact `mov <disp>(<base>),<reg>` that reaches this call operand."""
+    idx = _external_insn_index(g, site)
+    if idx is None:
+        return None, "call instruction not found in the image"
+    opnd = _site_operand(site)
+    if not opnd or _canon(opnd) != reg:
+        return None, f"operand is {opnd!r}, not {reg}"
+    defs = _external_reg_defs(g, site["func"], idx, reg)
+    if defs is None:
+        return None, f"{reg} has an open or entry definition"
+    if len(defs) != 1:
+        return None, (f"{reg} has {len(defs)} reaching definitions; the witness "
+                      "requires exactly one load")
+    k = next(iter(defs))
+    insns = g.precision.insns_by_func[site["func"]]
+    mn, _rest, ops = _insn_parts(insns[k][1])
+    if mn not in ("mov", "movq", "movl") or len(ops) < 2:
+        return None, f"the {reg} writer is {mn}, not a load"
+    m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[0])
+    if not m:
+        return None, f"the {reg} writer is not a memory load: {insns[k][1]}"
+    off = int(m.group(1), 16) if m.group(1) else 0
+    return {"def": k, "addr": insns[k][0], "text": insns[k][1],
+            "offset": off, "base_reg": m.group(2),
+            "slot_text": ops[0]}, None
+
+
+def _external_call_symbol(g: "DsoGraph", fstart: int, idx: int):
+    mn, _rest, _ops = _insn_parts(_insn(g, fstart, idx))
+    if not mn.startswith("call"):
+        return None
+    return _s1_call_symbol(g, fstart, idx)
+
+
+def _external_branch(g: "DsoGraph", fstart: int, addr: int):
+    """(mnemonic, target address or None) for a branch at ``addr``."""
+    insns = g.precision.insns_by_func.get(fstart, ())
+    for a, text in insns:
+        if a != addr:
+            continue
+        mn, rest, _ops = _insn_parts(text)
+        m = re.match(r"^([0-9a-f]+)", rest)
+        return mn, (int(m.group(1), 16) if m else None), text
+    return None, None, None
+
+
+def _external_source(g: "DsoGraph", relpath: str):
+    root = _repo_root(g)
+    if root is None:
+        return None, None, "repository root unavailable"
+    path = Path(root) / relpath
+    if not path.is_file():
+        return None, None, f"source file {relpath} is absent"
+    try:
+        text = path.read_text(errors="replace")
+    except OSError as e:
+        return None, None, f"cannot read {relpath}: {e}"
+    return text, text.splitlines(), None
+
+
+def _external_enclosing(lines, idx: int):
+    """Nearest preceding fn/static declaration, for source attribution."""
+    fn_pat = re.compile(
+        r"^\s*(?:pub(?:\s*\([^)]*\))?\s+)?(?:unsafe\s+)?"
+        r"(?:extern\s+\"C\"\s+)?fn\s+([A-Za-z_]\w*)")
+    static_pat = re.compile(
+        r"^\s*(?:pub(?:\s*\([^)]*\))?\s+)?static\s+"
+        r"(?:mut\s+)?([A-Za-z_]\w*)\s*[:=]")
+    for j in range(idx, -1, -1):
+        line = lines[j]
+        m = fn_pat.search(line)
+        if m:
+            return m.group(1), j + 1
+        m = static_pat.search(line)
+        if m:
+            return m.group(1), j + 1
+    return None, None
+
+
+def _external_alias_in_file(g: "DsoGraph", relpath: str, name: str):
+    """A type alias resolved inside one source file, or None."""
+    if not relpath:
+        return None
+    text, _lines, err = _external_source(g, relpath)
+    if text is None:
+        return None
+    hits = {" ".join(m.group(1).split()) for m in
+            re.finditer(r"\btype\s+" + re.escape(name) + r"\s*=\s*([^;]+);",
+                        text)}
+    return hits.pop() if len(hits) == 1 else None
+
+
+def _external_type_size(g: "DsoGraph", type_text: str, source_file=None):
+    """(size, alignment) for the small repr(C) types this witness reads."""
+    t = " ".join((type_text or "").split())
+    if not t:
+        return None
+    if t.startswith("Option<") and t.endswith(">"):
+        inner = t[len("Option<"):-1].strip()
+        if "fn" in inner or inner.startswith(("*const", "*mut", "&")):
+            return (8, 8)
+        alias = (_external_alias_in_file(g, source_file, inner)
+                 if source_file else None)
+        if alias is None:
+            alias = _s1_type_alias(g, inner)
+        if alias and "fn" in alias:
+            return (8, 8)
+        return None
+    if "fn" in t or t.startswith(("*const", "*mut", "&")):
+        return (8, 8)
+    if t in _EXTERNAL_PRIM_SIZES:
+        return _EXTERNAL_PRIM_SIZES[t]
+    alias = (_external_alias_in_file(g, source_file, t)
+             if source_file else None)
+    if alias is None:
+        alias = _s1_type_alias(g, t)
+    if alias and alias != t:
+        return _external_type_size(g, alias, source_file)
+    return None
+
+
+def _external_struct_layout(g: "DsoGraph", type_name: str):
+    """(layout, error) for a unique `#[repr(C)]` source struct."""
+    defs = _s1_struct_defs(g, type_name)
+    repr_defs = [d for d in defs if d["repr_c"]]
+    if len(repr_defs) != 1:
+        return None, (f"{type_name}: {len(repr_defs)} `#[repr(C)]` definitions")
+    fields = _s1_split_fields(repr_defs[0]["body"])
+    if not fields:
+        return None, f"{type_name}: no fields"
+    off, align, rows = 0, 1, []
+    for fname, ftype in fields:
+        info = _external_type_size(g, ftype, repr_defs[0]["file"])
+        if info is None:
+            return None, f"{type_name}.{fname}: undecidable type {ftype!r}"
+        size, falign = info
+        off = (off + falign - 1) // falign * falign
+        rows.append({"name": fname, "type": ftype, "offset": off})
+        off += size
+        align = max(align, falign)
+    return {"name": type_name, "repr_c": True,
+            "file": repr_defs[0]["file"], "line": repr_defs[0]["line"],
+            "size": (off + align - 1) // align * align,
+            "fields": rows}, None
+
+
+def _external_fn_span(lines, text: str, idx: int):
+    """The enclosing function's source span, for base-type attribution."""
+    fn, fnline = _external_enclosing(lines, idx)
+    if not fn or fnline is None:
+        return None
+    start = sum(len(lines[k]) + 1 for k in range(fnline - 1))
+    brace = text.find("{", start)
+    if brace < 0:
+        return None
+    end = _s1_brace_span(text, brace)
+    if end is None:
+        return None
+    return {"name": fn, "line": fnline, "text": text[start:end]}
+
+
+def _external_resolve_type_alias(g: "DsoGraph", file_rel: str,
+                                 file_text: str, name: str, owner: str,
+                                 seen=()):
+    """Resolve a type alias (same file first, then the unique global alias)."""
+    name = " ".join((name or "").split())
+    if not name:
+        return name
+    m = re.fullmatch(r"Option<\s*(.*?)\s*>", name)
+    if m:
+        name = m.group(1).strip()
+    name = re.sub(r"^\*?\s*(?:mut|const)\s*", "", name).strip()
+    name = re.sub(r"^&\s*(?:mut\s+)?", "", name).strip()
+    if name == owner:
+        return owner
+    if "e7abi-type-alias" in _MUTED:
+        # Negative control: without alias resolution an alias of the owner is
+        # classified as a different concrete type.
+        return name
+    if name in seen or len(seen) > 6:
+        return name
+    # Same-file aliases are preferred: `_s1_type_alias` refuses an ambiguous
+    # name, and the owner's own module is the one that defines the field.
+    hits = re.findall(r"\btype\s+" + re.escape(name) + r"\s*=\s*([^;]+);",
+                      file_text)
+    if len(hits) == 1:
+        return _external_resolve_type_alias(
+            g, file_rel, file_text, hits[0], owner, seen + (name,))
+    alias = _s1_type_alias(g, name)
+    if alias and alias != name:
+        return _external_resolve_type_alias(
+            g, file_rel, file_text, alias, owner, seen + (name,))
+    return name
+
+
+def _external_base_attribution(g: "DsoGraph", span, base: str, owner: str,
+                               file_text: str, file_rel: str):
+    """(attribution, base type) for a `.field =` store's base.
+
+    ``owner`` -- the store writes this owner type's field, including through a
+    resolved type alias of the owner;
+    ``other`` -- the base has a different concrete declared type;
+    ``undecidable`` -- the base type is absent, `c_void`, or an alias the
+    witness cannot resolve.  An undecidable store refuses: an unqualified or
+    aliasing store must never be silently attributed to another type.
+    """
+    if not span or not base:
+        return "undecidable", None
+    body = span["text"]
+    sig_end = body.find("{")
+    sig = body[:sig_end] if sig_end >= 0 else body
+    type_text = None
+    m = re.search(r"\b" + re.escape(base) + r"\s*:\s*([^,)\n]+)", sig)
+    if m:
+        type_text = m.group(1).strip()
+    if type_text is None:
+        m = re.search(r"\blet\s+(?:mut\s+)?" + re.escape(base) +
+                      r"\s*:\s*([^=;]+?)\s*(?:=|;)", body)
+        if m:
+            type_text = m.group(1).strip()
+    if type_text is None:
+        m = re.search(r"\blet\s+(?:mut\s+)?" + re.escape(base) +
+                      r"\s*=\s*([^;]+);", body)
+        if m:
+            init = m.group(1).strip()
+            cm = re.search(r"\.cast::<\s*([A-Za-z_][\w:]*)\s*>", init)
+            if cm:
+                type_text = "*mut " + cm.group(1)
+            else:
+                am = re.search(r"([A-Za-z_]\w*)\s*\.as_ptr\(\)", init)
+                if am:
+                    recv = am.group(1)
+                    rm = re.search(r"\b" + re.escape(recv) +
+                                   r"\s*=\s*([A-Za-z_]\w*)::", body)
+                    wrapper = rm.group(1) if rm else None
+                    if wrapper and re.search(
+                            r"struct\s+" + re.escape(wrapper) +
+                            r"\b[^}]*\*mut\s+" + re.escape(owner) + r"\b",
+                            file_text, re.S):
+                        return "owner", f"{wrapper} (as_ptr -> *mut {owner})"
+                fm = re.search(r"([A-Za-z_]\w*)\s*\(", init)
+                if fm:
+                    callee = fm.group(1)
+                    ret = re.search(
+                        r"\bfn\s+" + re.escape(callee) +
+                        r"\s*\([^)]*\)\s*->\s*([^{;]+)", file_text)
+                    if ret:
+                        type_text = ret.group(1).strip()
+    if type_text is None:
+        return "undecidable", None
+    if ("c_void" in type_text or re.search(r"\bu8\b", type_text)
+            or "Opaque" in type_text):
+        return "undecidable", type_text
+    base_name = re.sub(r"^\*?\s*(?:mut|const)\s*", "",
+                       type_text.strip()).strip()
+    resolved = _external_resolve_type_alias(
+        g, file_rel, file_text, base_name, owner)
+    if resolved == owner:
+        return "owner", (type_text if resolved == base_name
+                          else f"{type_text} -> {owner}")
+    if resolved and resolved != base_name:
+        return "other", f"{type_text} -> {resolved}"
+    if re.search(r"\b" + re.escape(owner) + r"\b", type_text):
+        return "owner", type_text
+    wm = re.fullmatch(r"\*?\s*(?:mut|const)?\s*([A-Za-z_]\w*)",
+                      type_text.strip())
+    if wm and re.search(
+            r"struct\s+" + re.escape(wm.group(1)) +
+            r"\b[^}]*\*mut\s+" + re.escape(owner) + r"\b",
+            file_text, re.S):
+        return "owner", type_text
+    if re.fullmatch(r"\*?\s*(?:mut|const)?\s*[A-Za-z_]\w*", type_text.strip()):
+        return "other", type_text
+    return "undecidable", type_text
+
+
+def _external_logical_lines(lines):
+    """Join continuation lines so a writer split across lines is visible.
+
+    The join is deliberately cheap: only a following line that starts with a
+    member/argument punctuation, or a current line that ends with an opening
+    punctuation or assignment, is joined.  This catches
+    ``(*row)\n    .keygen = k;`` without scanning the rest of the file for an
+    unbalanced delimiter.
+    """
+    out, i = [], 0
+    while i < len(lines):
+        start, text = i, lines[i]
+        while i + 1 < len(lines):
+            nxt = lines[i + 1].strip()
+            cur = text.rstrip()
+            if (nxt.startswith((".", ",", ")"))
+                    or cur.endswith(("(", ",", "="))):
+                text = text + " " + nxt
+                i += 1
+            else:
+                break
+        out.append((start, text))
+        i += 1
+    return out
+
+
+def _external_macro_rules_bodies(text: str):
+    """The body span of every `macro_rules!` definition in one file.
+
+    A store inside a macro body is expanded at a call site the scan cannot see,
+    so its base type is unattributable.  The body is returned as a half-open
+    (start, end) character range for the conservative slot-store check.
+    """
+    out = []
+    for m in re.finditer(r"\bmacro_rules\s*!", text):
+        brace = text.find("{", m.end())
+        if brace < 0:
+            continue
+        end = _s1_brace_span(text, brace)
+        if end is None:
+            continue
+        out.append((brace + 1, end - 1))
+    return out
+
+
+def _external_field_writers(g: "DsoGraph", owner: str, fields,
+                            owner_tokens=()):
+    """Every production `.field =` store and owner-literal writer under src/."""
+    root = _repo_root(g)
+    if root is None:
+        return None, "repository root unavailable"
+    src = root / "src"
+    if not src.is_dir():
+        return None, f"source directory {src} is absent"
+    cache = getattr(g, "_e7abi_field_writers_cache", None)
+    if cache is None:
+        cache = {}
+        g._e7abi_field_writers_cache = cache
+    ckey = (str(getattr(g, "source_root", None)), owner,
+            tuple(sorted(set(fields))), tuple(sorted(owner_tokens)),
+            tuple(sorted(_MUTED)))
+    if ckey in cache:
+        return cache[ckey]
+    field_set = set(fields)
+    out = []
+    for path in sorted(src.rglob("*.rs")):
+        rel = path.relative_to(root).as_posix()
+        try:
+            text = path.read_text(errors="replace")
+        except OSError as e:
+            return None, f"cannot read {rel}: {e}"
+        lines = text.splitlines()
+        if owner not in text and not any(tok in text for tok in owner_tokens):
+            # A file that never names the owner type or an owner accessor
+            # cannot contain a store this witness attributes to the owner.
+            continue
+        logical = ([(i, l) for i, l in enumerate(lines)]
+                   if "e7abi-continuation" in _MUTED
+                   else _external_logical_lines(lines))
+        for i, line in logical:
+            stripped = line.lstrip()
+            if stripped.startswith(("//", "///", "//!", "*", "/*")):
+                continue
+            for field in field_set:
+                m = re.search(
+                    r"(?:\(\s*\*\s*([A-Za-z_]\w*)\s*\)|"
+                    r"([A-Za-z_]\w*))\s*\.\s*" + re.escape(field) +
+                    r"\s*=\s*(?!=)(.*)", line)
+                if not m:
+                    continue
+                base = m.group(1) or m.group(2)
+                span = _external_fn_span(lines, text, i)
+                attribution, base_type = _external_base_attribution(
+                    g, span, base, owner, text, rel)
+                span_text = (span or {}).get("text") or ""
+                mentions = (owner in span_text
+                            or any(tok in span_text for tok in owner_tokens))
+                if attribution == "undecidable" and not mentions:
+                    # The field name is shared by many types.  A store in code
+                    # that never names the owner (or its accessor) is a
+                    # different type; it is recorded, not absorbed.
+                    attribution = "other"
+                fn, fnline = _external_enclosing(lines, i)
+                value = m.group(3).split(";", 1)[0].split("}", 1)[0].strip()
+                out.append({"kind": "store", "file": rel, "line": i + 1,
+                            "field": field, "function": fn,
+                            "function_line": fnline, "base": base,
+                            "base_type": base_type,
+                            "attribution": attribution,
+                            "value": value})
+        if "e7abi-macro-slot" not in _MUTED:
+            # A `macro_rules!` body can store the slot through a metavariable
+            # base (`(*$p).keygen = $v`); the expansion happens at a call site
+            # the scan cannot attribute, so the store is conservative-refused.
+            macro_pat = {field: re.compile(r"\.\s*" + re.escape(field) +
+                                           r"\s*=(?!=)")
+                         for field in field_set}
+            for start, end in _external_macro_rules_bodies(text):
+                body = text[start:end]
+                ln = text.count("\n", 0, start) + 1
+                fn, fnline = _external_enclosing(lines, ln - 1)
+                for field, mpat in macro_pat.items():
+                    for sm in mpat.finditer(body):
+                        snippet = body[max(0, sm.start() - 24):sm.end() + 24]
+                        out.append({"kind": "macro-slot", "file": rel,
+                                    "line": ln, "field": field,
+                                    "function": fn,
+                                    "function_line": fnline,
+                                    "text": " ".join(snippet.split())})
+        pat = re.compile(r"\b" + re.escape(owner) + r"\s*\{")
+        for m in pat.finditer(text):
+            end = _s1_brace_span(text, m.end() - 1)
+            if end is None:
+                continue
+            body = text[m.end():end - 1]
+            found = {n: t for n, t in _s1_split_fields(body)}
+            if not (set(found) & field_set):
+                continue
+            ln = text.count("\n", 0, m.start()) + 1
+            if re.search(r"\bstruct\s+" + re.escape(owner) + r"\b",
+                         lines[ln - 1]):
+                continue
+            fn, fnline = _external_enclosing(lines, ln - 1)
+            out.append({"kind": "literal", "file": rel, "line": ln,
+                        "field": ",".join(sorted(set(found) & field_set)),
+                        "function": fn, "function_line": fnline,
+                        "fields": found})
+    cache[ckey] = (out, None)
+    return out, None
+
+
+def _external_calls(g: "DsoGraph", symbol: str):
+    """Every non-definition reference to `symbol(` under src/."""
+    root = _repo_root(g)
+    if root is None:
+        return None, "repository root unavailable"
+    src = root / "src"
+    if not src.is_dir():
+        return None, f"source directory {src} is absent"
+    call = re.compile(r"\b" + re.escape(symbol) + r"\s*\(")
+    definition = re.compile(r"\bfn\s+" + re.escape(symbol) + r"\s*\(")
+    out = []
+    for path in sorted(src.rglob("*.rs")):
+        rel = path.relative_to(root).as_posix()
+        try:
+            lines = path.read_text(errors="replace").splitlines()
+        except OSError as e:
+            return None, f"cannot read {rel}: {e}"
+        for i, line in enumerate(lines):
+            stripped = line.lstrip()
+            if stripped.startswith(("//", "///", "//!", "*", "/*")):
+                continue
+            if not call.search(line) or definition.search(line):
+                continue
+            fn, fnline = _external_enclosing(lines, i)
+            out.append({"file": rel, "line": i + 1, "function": fn,
+                        "function_line": fnline, "text": stripped[:160]})
+    return out, None
+
+
+def _external_strip_strings(line: str) -> str:
+    """Blank string and char literals so a name in a message is not a call."""
+    return re.sub(r'(?:c)?("(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\')',
+                  '""', line)
+
+
+def _external_statement_lines(lines):
+    """Join continuation lines for split `use`/`let` statements and refs."""
+    out, i = [], 0
+    while i < len(lines):
+        start, text = i, lines[i]
+        while i + 1 < len(lines):
+            nxt = lines[i + 1].strip()
+            cur = text.rstrip()
+            split_use = (re.match(r"\s*(?:pub(?:\s*\([^)]*\))?\s+)?use\b",
+                                  text) is not None
+                         and not cur.endswith(";") and ";" not in cur)
+            split_let = (re.match(r"\s*let\b", text) is not None
+                         and not cur.endswith(";") and ";" not in cur)
+            if (nxt.startswith((".", ",", ")"))
+                    or cur.endswith(("(", ",", "="))
+                    or split_use or split_let):
+                text = text + " " + nxt
+                i += 1
+            else:
+                break
+        out.append((start, text))
+        i += 1
+    return out
+
+
+def _external_registration_references(g: "DsoGraph", symbols):
+    """Every non-definition reference to a registration symbol or its alias.
+
+    A registration symbol can escape the call syntax (`let f = SYM; f(...)`) or
+    through a `use ... as` alias.  Any such reference is a possible in-image
+    caller and refuses; `use`/`pub use` lines are not references by themselves.
+    """
+    root = _repo_root(g)
+    if root is None:
+        return None, "repository root unavailable"
+    src = root / "src"
+    if not src.is_dir():
+        return None, f"source directory {src} is absent"
+    symbols = set(symbols)
+    cache = getattr(g, "_e7abi_registration_cache", None)
+    if cache is None:
+        cache = {}
+        g._e7abi_registration_cache = cache
+    ckey = (str(getattr(g, "source_root", None)), tuple(sorted(symbols)),
+            tuple(sorted(_MUTED)))
+    if ckey in cache:
+        return cache[ckey]
+    alias_to_symbol = {}
+    files = []
+    for path in sorted(src.rglob("*.rs")):
+        rel = path.relative_to(root).as_posix()
+        try:
+            lines = path.read_text(errors="replace").splitlines()
+        except OSError as e:
+            return None, f"cannot read {rel}: {e}"
+        files.append((rel, lines))
+    # Aliases: `use ... SYM as A` and `let A = SYM;` (and one transitive hop).
+    for _rel, lines in files:
+        for i, raw in _external_statement_lines(lines):
+            line = _external_strip_strings(raw)
+            stripped = line.lstrip()
+            if stripped.startswith(("//", "///", "//!", "*", "/*")):
+                continue
+            for sym in symbols:
+                for m in re.finditer(r"\b" + re.escape(sym) +
+                                     r"\s+as\s+([A-Za-z_]\w*)", line):
+                    alias_to_symbol[m.group(1)] = sym
+                for m in re.finditer(
+                        r"\blet\s+(?:mut\s+)?([A-Za-z_]\w*)\s*"
+                        r"(?::[^=]+)?=\s*[^;]*\b" + re.escape(sym) + r"\b",
+                        line):
+                    alias_to_symbol[m.group(1)] = sym
+    changed = True
+    while changed:
+        changed = False
+        for _rel, lines in files:
+            for _i, raw in _external_statement_lines(lines):
+                line = _external_strip_strings(raw)
+                m = re.search(
+                    r"\blet\s+(?:mut\s+)?([A-Za-z_]\w*)\s*"
+                    r"(?::[^=]+)?=\s*([A-Za-z_]\w*)\s*;", line)
+                if (m and m.group(2) in alias_to_symbol
+                        and m.group(1) not in alias_to_symbol):
+                    alias_to_symbol[m.group(1)] = alias_to_symbol[m.group(2)]
+                    changed = True
+    by_symbol = {sym: {sym} for sym in symbols}
+    for alias, sym in alias_to_symbol.items():
+        by_symbol[sym].add(alias)
+    out = []
+    for rel, lines in files:
+        for i, raw in _external_statement_lines(lines):
+            line = _external_strip_strings(raw)
+            stripped = line.lstrip()
+            if stripped.startswith(("//", "///", "//!", "*", "/*",
+                                    "use ", "pub use ",
+                                    "pub(crate) use ")):
+                continue
+            for sym in symbols:
+                for name in by_symbol[sym]:
+                    if not re.search(r"\b" + re.escape(name) + r"\b", line):
+                        continue
+                    if re.search(r"\bfn\s+" + re.escape(name) + r"\s*\(",
+                                 line):
+                        continue
+                    fn, fnline = _external_enclosing(lines, i)
+                    out.append({"file": rel, "line": i + 1,
+                                "function": fn, "function_line": fnline,
+                                "symbol": sym, "name": name,
+                                "text": stripped[:160]})
+                    break
+    cache[ckey] = (out, None)
+    return out, None
+
+
+def _external_line_number(text: str, needle: str):
+    for i, line in enumerate(text.splitlines()):
+        if needle in line and not line.lstrip().startswith("//"):
+            return i + 1
+    return None
+
+
+def _external_guard_chain(g: "DsoGraph", fstart: int, site_addr: int,
+                          want_zero: bool):
+    """Prove the `%r12` guard polarity that selects this close path.
+
+    Both close sites sit under the same pair of `test %r12,%r12` branches:
+    0x1c2513 `je` to the legacy block and 0x1c2756 `jne` to the provider
+    block.  The witness checks those exact instructions and targets; a new or
+    moved predecessor refuses.
+    """
+    je = STORE_LOADER_CLOSE_GUARDS["legacy_je"]
+    jne = STORE_LOADER_CLOSE_GUARDS["provider_jne"]
+    insns = g.precision.insns_by_func.get(fstart, ())
+    by_addr = {a: t for a, t in insns}
+    for test_addr, branch_addr, reg, target in (je, jne):
+        text = by_addr.get(test_addr, "").strip()
+        if not re.fullmatch(r"test\s+" + re.escape(reg) + r"," +
+                            re.escape(reg), text):
+            return None, f"guard test at {hex(test_addr)} is not test {reg},{reg}"
+        mn, tgt, text = _external_branch(g, fstart, branch_addr)
+        if mn not in ("je", "jne") or tgt != target:
+            return None, (f"guard branch at {hex(branch_addr)} is not the "
+                          f"enumerated {target:#x} branch: {text!r}")
+    # je taken / jne not taken selects the legacy block (r12 == 0); je not
+    # taken / jne taken selects the provider block (r12 != 0).
+    cfg = _function_cfg(g, fstart)
+    idx = None
+    for i, (a, _t) in enumerate(insns):
+        if a == site_addr:
+            idx = i
+            break
+    if idx is None:
+        return None, "site instruction not found"
+    preds = [p for p, ss in cfg["succ"].items() if cfg["block_of"][idx] in ss]
+    if len(preds) != 1:
+        return None, (f"site {hex(site_addr)} has {len(preds)} predecessor "
+                      "blocks, not one")
+    block_start = insns[cfg["blocks"][preds[0]][0]][0]
+    expected = je[3] if want_zero else jne[3]
+    if block_start != expected:
+        return None, (f"site {hex(site_addr)} is preceded by block "
+                      f"{hex(block_start)}, not the enumerated "
+                      f"{hex(expected)} block")
+    return {"guard_zero": want_zero,
+            "tests": [hex(je[0]), hex(jne[0])],
+            "branches": [hex(je[1]), hex(jne[1])],
+            "targets": [hex(je[3]), hex(jne[3])]}, None
+
+
+def _external_base_defs(g: "DsoGraph", site: dict, load: dict):
+    """The positive reaching definitions of the load's base register."""
+    defs = _external_reg_defs(g, site["func"], load["def"], load["base_reg"])
+    if defs is None:
+        return None, (f"{load['base_reg']} has an open or entry definition")
+    return defs, None
+
+
+def _external_def_call(g: "DsoGraph", site: dict, def_index: int):
+    return _external_call_symbol(g, site["func"], def_index)
+
+
+def _external_exported(g: "DsoGraph", symbol: str):
+    return (getattr(g, "dynamic_defs", {}) or {}).get(symbol)
+
+
+def _external_header_cb(g: "DsoGraph", symbol: str, index: int):
+    return _header_callback_param(g, symbol, index)
+
+
+def _external_witness(cls: str, name: str, site: dict, *, slot: str,
+                      writer: str, interface: str, basis: str,
+                      conditions, does_not_cover, **extra) -> dict:
+    w = _witness(cls, name, site, slot=slot, writer=writer,
+                 interface=interface, basis=basis)
+    w["resolved"] = False
+    w["conditions"] = conditions
+    w["does_not_cover"] = list(does_not_cover)
+    w.update(extra)
+    return w
+
+
+def pbe_registry_witness(g: "DsoGraph", site: dict, name: str):
+    """The `EVP_PBE_CipherInit_ex` plain-keygen dispatch."""
+    if not _external_site_matches(site, name, PBE_FUNCTION, PBE_SITE):
+        return None
+    cls = ABI_CONTRACT_PBE_REGISTRY
+    if not site.get("unresolved"):
+        return None
+    load, why = _external_operand_load(g, site, "%rax")
+    if load is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "operand-not-a-single-load",
+                                            detail=why)
+    if load["base_reg"] != "%rsp":
+        return cls, None, _external_refusal(
+            cls, name, site, "operand-load-base-is-not-the-frame",
+            base_reg=load["base_reg"])
+    fstart = site["func"]
+    slot_abs = _stack_slot_abs(g, fstart, load["def"], load["slot_text"])
+    if slot_abs is None:
+        return cls, None, _external_refusal(
+            cls, name, site, "frame-slot-not-resolvable",
+            slot=load["slot_text"])
+    writes = _stack_slot_writes(g, fstart, slot_abs)
+    stores = [w for w in writes if w["kind"] == "store"]
+    escapes = [w for w in writes if w["kind"] == "address"]
+    if len(stores) != 1 or stores[0]["source"] != "$0x0":
+        return cls, None, _external_refusal(
+            cls, name, site, "keygen-local-does-not-start-zeroed",
+            stores=stores)
+    if len(escapes) != 1:
+        return cls, None, _external_refusal(
+            cls, name, site, "keygen-local-escapes-are-not-unique",
+            escapes=escapes)
+    esc = escapes[0]
+    insns = g.precision.insns_by_func[fstart]
+    m = re.fullmatch(r"lea\s+(-?0x[0-9a-f]+)?\((%rsp|%rbp)\),(%r\w+)",
+                     esc["text"])
+    if not m or _canon(m.group(3)) != "%r8":
+        return cls, None, _external_refusal(
+            cls, name, site, "keygen-local-does-not-escape-as-arg5",
+            escape=esc)
+    find_calls = [i for i, (_a, text) in enumerate(insns)
+                  if _external_call_symbol(g, fstart, i) == PBE_FIND]
+    if len(find_calls) != 1:
+        return cls, None, _external_refusal(
+            cls, name, site, "pbe-find-ex-call-is-not-unique",
+            call_sites=[hex(insns[i][0]) for i in find_calls])
+    find_idx = find_calls[0]
+    origin = _reg_origin(g, fstart, find_idx, "%r8")
+    if (origin.get("kind") != "load" or origin.get("base_reg") != "%rsp"
+            or origin.get("at") != esc["index"]):
+        return cls, None, _external_refusal(
+            cls, name, site, "arg5-of-pbe-find-ex-is-not-the-keygen-local",
+            origin=origin)
+    esc_abs = _stack_slot_abs(g, fstart, esc["index"], m.group(0).split(",")[0]
+                              .split()[-1])
+    if esc_abs != slot_abs:
+        return cls, None, _external_refusal(
+            cls, name, site, "keygen-local-and-find-ex-out-parameter-disagree",
+            slot=slot_abs, escape_slot=esc_abs)
+
+    text, lines, err = _external_source(g, PBE_SOURCE)
+    if text is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-unavailable", detail=err)
+    layout, err = _external_struct_layout(g, PBE_OWNER)
+    if layout is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "owner-layout-not-decidable",
+                                            detail=err)
+    fld = next((f for f in layout["fields"] if f["name"] == PBE_FIELD), None)
+    if fld is None or fld["offset"] != PBE_FIELD_OFFSET:
+        return cls, None, _external_refusal(
+            cls, name, site, "declared-field-offset-is-not-the-enumerated-one",
+            field=PBE_FIELD, declared=fld, expected=hex(PBE_FIELD_OFFSET))
+    if "Option<EvpPbeKeygen>" not in (fld["type"] or ""):
+        return cls, None, _external_refusal(
+            cls, name, site, "declared-field-is-not-the-keygen-callback",
+            field=fld)
+    writers, err = _external_field_writers(g, PBE_OWNER, {PBE_FIELD},
+                                           owner_tokens=("OwnedPbeCtl",))
+    if writers is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-scan-unavailable",
+                                            detail=err)
+    macro_slot = [w for w in writers if w["kind"] == "macro-slot"]
+    if macro_slot:
+        return cls, None, _external_refusal(
+            cls, name, site, "macro-expanded-slot-store-unattributed",
+            writers=macro_slot)
+    stores = [w for w in writers if w["kind"] == "store"]
+    literals = [w for w in writers if w["kind"] == "literal"]
+    undecidable = [w for w in stores if w["attribution"] == "undecidable"]
+    own_stores = [w for w in stores if w["attribution"] == "owner"]
+    other_stores = [w for w in stores if w["attribution"] == "other"]
+    if undecidable:
+        return cls, None, _external_refusal(
+            cls, name, site, "unqualified-or-aliasing-keygen-store",
+            stores=undecidable)
+    if len(own_stores) != 1:
+        return cls, None, _external_refusal(
+            cls, name, site, "keygen-field-writer-set-is-not-exactly-the-registry",
+            stores=own_stores, other_type_stores=other_stores)
+    st = own_stores[0]
+    if st["function"] != PBE_REGISTRY or st["value"] != PBE_FIELD:
+        # The registry may be absent (a control) or a second writer may exist.
+        reason = ("pbe-registry-writer-absent" if st["function"] != PBE_REGISTRY
+                  else "keygen-store-is-not-the-registry-parameter")
+        return cls, None, _external_refusal(cls, name, site, reason,
+                                            store=st)
+    builtin = [w for w in literals if w["function"] == "BUILTIN_PBE"]
+    search = [w for w in literals
+              if w["function"] == PBE_FIND
+              and all((w["fields"].get(f) or "").strip() == "None"
+                      for f in ("keygen", "keygen_ex"))]
+    unaccounted = [w for w in literals
+                   if w not in builtin and w not in search]
+    if unaccounted:
+        return cls, None, _external_refusal(
+            cls, name, site, "unaccounted-keygen-row-writer",
+            writers=unaccounted)
+    if len(builtin) != 34:
+        return cls, None, _external_refusal(
+            cls, name, site, "builtin-row-set-is-not-the-declared-table",
+            builtin_rows=len(builtin))
+    if _external_exported(g, PBE_REGISTRY) is None:
+        return cls, None, _external_refusal(
+            cls, name, site, "registry-writer-is-not-exported")
+    if _external_line_number(text, "*pkeygen = keygen") is None:
+        return cls, None, _external_refusal(
+            cls, name, site, "find-ex-does-not-copy-the-row-keygen")
+    cb, why = _external_header_cb(g, PBE_REGISTRY, PBE_OUT_INDEX)
+    if cb is None or cb.get("type_typedef") != "EVP_PBE_KEYGEN":
+        return cls, None, _external_refusal(
+            cls, name, site, "header-does-not-declare-the-keygen-parameter",
+            detail=why, declaration=cb)
+    find_cb, why = _external_header_cb(g, PBE_FIND, PBE_OUT_INDEX)
+    if find_cb is None or find_cb.get("type_typedef") != "EVP_PBE_KEYGEN":
+        return cls, None, _external_refusal(
+            cls, name, site, "header-does-not-declare-the-keygen-out-parameter",
+            detail=why, declaration=find_cb)
+
+    witness = _external_witness(
+        cls, name, site,
+        slot=(f"{PBE_OWNER}.{PBE_FIELD} (offset {hex(PBE_FIELD_OFFSET)}) "
+              "copied through EVP_PBE_find_ex's `pkeygen` out-parameter"),
+        writer=("EVP_PBE_alg_add_type stores its `keygen` parameter into the "
+                "application row; BUILTIN_PBE rows are link-time constants; "
+                "EVP_PBE_find_ex copies the selected row's keygen"),
+        interface=(f"{cb['declaration']} -- {cb['parameter_text']}; "
+                   f"{find_cb['declaration']} -- {find_cb['parameter_text']}"),
+        basis=("the call operand is the zero-initialised `keygen` local whose "
+               "only address escape is argument 5 of the unique EVP_PBE_find_ex "
+               "call; the source has exactly one keygen-field writer "
+               "(EVP_PBE_alg_add_type, storing its parameter), the 34 builtin "
+               "rows, and the function-local search key; the exported registry "
+               "seam makes the target set unbounded"),
+        conditions={
+            "site_enumerated": f"{PBE_FUNCTION} {hex(PBE_SITE)}",
+            "operand_is_the_keygen_local": (
+                f"{load['text']} -> the zeroed frame slot at "
+                f"{hex(slot_abs)}"),
+            "keygen_local_is_find_ex_arg5": (
+                f"{esc['text']} -> %r8 of {PBE_FIND} at "
+                f"{hex(insns[find_idx][0])}"),
+            "declared_field_offset": (f"{PBE_OWNER}.{PBE_FIELD} at "
+                                      f"{hex(fld['offset'])}"),
+            "writer_set": ("keygen store: EVP_PBE_alg_add_type(keygen); "
+                           "rows: BUILTIN_PBE (34 static) and the find_ex "
+                           "search key"),
+            "documented_interface": f"{PBE_REGISTRY} / {PBE_FIND} declarations",
+            "target_set_unbounded": ("the exported EVP_PBE_alg_add_type seam "
+                                     "admits any EVP_PBE_KEYGEN"),
+        },
+        does_not_cover=ABI_CONTRACTS[cls]["does_not_cover"],
+        target_set=[],
+        operand={"reg": "%rax", "load": load["text"],
+                 "frame_slot": hex(slot_abs)},
+        object={"type": PBE_OWNER, "constructor": PBE_FIND,
+                "out_parameter": PBE_OUT_INDEX,
+                "call_site": hex(insns[find_idx][0])},
+        field={"type": PBE_OWNER, "repr_c": True, "name": PBE_FIELD,
+               "offset": hex(fld["offset"]), "writer": PBE_REGISTRY},
+        writer_set={"keygen": [PBE_REGISTRY],
+                    "builtin_rows": len(builtin),
+                    "search_key_literals": len(search),
+                    "other_type_stores": len(other_stores),
+                    "unaccounted": 0},
+        registry={"symbol": PBE_REGISTRY, "exported": True,
+                  "address": hex(_external_exported(g, PBE_REGISTRY))},
+        source={"file": PBE_SOURCE, "layout_line": layout["line"],
+                "registry_store_line": st["line"],
+                "find_copy_line": _external_line_number(
+                    text, "*pkeygen = keygen")},
+    )
+    return cls, witness, None
+
+
+def store_loader_legacy_witness(g: "DsoGraph", site: dict, name: str):
+    """The legacy `OSSL_STORE_LOADER` open/open_ex/closefn dispatch."""
+    spec = STORE_LOADER_LEGACY_SITES.get(site.get("addr"))
+    if spec is None or not _external_site_matches(
+            site, name, STORE_LOADER_FUNCTION, site.get("addr")):
+        return None
+    cls = ABI_CONTRACT_STORE_LOADER
+    if not site.get("unresolved"):
+        return None
+    load, why = _external_operand_load(g, site, "%rax")
+    if load is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "operand-not-a-single-load",
+                                            detail=why)
+    if load["base_reg"] != "%r14" or load["offset"] != spec["offset"]:
+        return cls, None, _external_refusal(
+            cls, name, site, "operand-is-not-the-enumerated-loader-field",
+            base_reg=load["base_reg"], offset=hex(load["offset"]),
+            expected=hex(spec["offset"]))
+    base_defs, why = _external_base_defs(g, site, load)
+    if base_defs is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "base-object-not-proven",
+                                            detail=why)
+    fstart = site["func"]
+    insns = g.precision.insns_by_func[fstart]
+    if spec["base"] == "legacy-single":
+        if len(base_defs) != 1:
+            return cls, None, _external_refusal(
+                cls, name, site, "base-register-has-more-than-one-definition",
+                definitions=[hex(insns[d][0]) for d in sorted(base_defs)])
+        bd = next(iter(base_defs))
+        if insns[bd][1].strip() != "mov    %rax,%r14":
+            return cls, None, _external_refusal(
+                cls, name, site, "base-definition-is-not-the-constructor-return",
+                definition=insns[bd][1])
+        call_sym = _external_def_call(g, site, bd - 1)
+        if _external_function_leaf(call_sym) != STORE_LOADER_GET0:
+            return cls, None, _external_refusal(
+                cls, name, site, "wrong-base-constructor",
+                callee=call_sym)
+        guard = None
+    else:
+        if len(base_defs) != 3:
+            return cls, None, _external_refusal(
+                cls, name, site, "base-register-definition-set-is-not-enumerated",
+                definitions=[hex(insns[d][0]) for d in sorted(base_defs)])
+        legacy = [d for d in base_defs
+                  if insns[d][1].strip() == "mov    %rax,%r14"]
+        provider = [d for d in base_defs
+                    if insns[d][1].strip() == "mov    %r12,%r14"]
+        zero = [d for d in base_defs
+                if insns[d][1].strip() == "xor    %r14d,%r14d"]
+        if len(legacy) != 1 or len(provider) != 1 or len(zero) != 1:
+            return cls, None, _external_refusal(
+                cls, name, site, "base-definition-shape-changed",
+                definitions=[insns[d][1] for d in sorted(base_defs)])
+        call_sym = _external_def_call(g, site, legacy[0] - 1)
+        if _external_function_leaf(call_sym) != STORE_LOADER_GET0:
+            return cls, None, _external_refusal(
+                cls, name, site, "wrong-base-constructor", callee=call_sym)
+        guard, why = _external_guard_chain(g, fstart, site["addr"], True)
+        if guard is None:
+            return cls, None, _external_refusal(
+                cls, name, site, "closefn-guard-is-not-the-enumerated-pair",
+                detail=why)
+    text, lines, err = _external_source(g, STORE_LOADER_SOURCE)
+    if text is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-unavailable", detail=err)
+    layout, err = _external_struct_layout(g, STORE_LOADER_OWNER)
+    if layout is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "owner-layout-not-decidable",
+                                            detail=err)
+    fld = next((f for f in layout["fields"] if f["name"] == spec["field"]),
+               None)
+    if fld is None or fld["offset"] != spec["offset"]:
+        return cls, None, _external_refusal(
+            cls, name, site, "declared-field-offset-is-not-the-enumerated-one",
+            field=spec["field"], declared=fld, expected=hex(spec["offset"]))
+    if not (spec["typedef"] in (fld["type"] or "")
+            or spec.get("rust_typedef", "") in (fld["type"] or "")):
+        return cls, None, _external_refusal(
+            cls, name, site, "declared-field-is-not-the-documented-callback",
+            field=fld, expected=spec["typedef"])
+    writers, err = _external_field_writers(
+        g, STORE_LOADER_OWNER,
+        {s["field"] for s in STORE_LOADER_LEGACY_SITES.values()},
+        owner_tokens=("new_loader",))
+    if writers is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-scan-unavailable",
+                                            detail=err)
+    macro_slot = [w for w in writers if w["kind"] == "macro-slot"]
+    if macro_slot:
+        return cls, None, _external_refusal(
+            cls, name, site, "macro-expanded-slot-store-unattributed",
+            writers=macro_slot)
+    stores = [w for w in writers if w["kind"] == "store"]
+    literals = [w for w in writers if w["kind"] == "literal"]
+    undecidable = [w for w in stores if w["attribution"] == "undecidable"]
+    own = [w for w in stores if w["field"] == spec["field"]
+           and w["attribution"] == "owner"]
+    other = [w for w in stores if w["attribution"] == "other"]
+    if undecidable:
+        return cls, None, _external_refusal(
+            cls, name, site, "unqualified-or-aliasing-loader-store",
+            stores=undecidable)
+    if len(own) != 1:
+        return cls, None, _external_refusal(
+            cls, name, site, f"{spec['field']}-writer-set-is-not-the-setter",
+            writers=own, other_type_stores=other)
+    st = own[0]
+    if st["function"] != spec["setter"] or st["value"] != spec["parameter"]:
+        return cls, None, _external_refusal(
+            cls, name, site, "field-store-is-not-the-documented-setter",
+            store=st)
+    if literals:
+        return cls, None, _external_refusal(
+            cls, name, site, "loader-object-literal-writes-an-unqualified-slot",
+            literals=literals)
+    reg_symbols = ({s["setter"]
+                    for s in STORE_LOADER_LEGACY_SITES.values()}
+                   | {STORE_LOADER_REGISTER, STORE_LOADER_REGISTER_INT})
+    if "e7abi-registration-alias" in _MUTED:
+        # Negative control: the pre-fix call-only scan sees `f(loader)` as no
+        # reference when `f` is an alias of the registration symbol.
+        refs = []
+        for sym in sorted(reg_symbols):
+            calls, err = _external_calls(g, sym)
+            if calls is None:
+                return cls, None, _external_refusal(
+                    cls, name, site, "source-scan-unavailable", detail=err)
+            refs.extend(dict(c, symbol=sym) for c in calls)
+    else:
+        refs, err = _external_registration_references(g, reg_symbols)
+        if refs is None:
+            return cls, None, _external_refusal(
+                cls, name, site, "source-scan-unavailable", detail=err)
+    public_refs = [r for r in refs
+                   if r["symbol"] != STORE_LOADER_REGISTER_INT]
+    if public_refs:
+        return cls, None, _external_refusal(
+            cls, name, site, "in-image-registration-reference",
+            references=public_refs)
+    int_refs = [r for r in refs
+                if r["symbol"] == STORE_LOADER_REGISTER_INT]
+    if (len(int_refs) != 1
+            or int_refs[0]["function"] != STORE_LOADER_REGISTER):
+        return cls, None, _external_refusal(
+            cls, name, site, "registration-entry-point-is-not-the-only-int-caller",
+            callers=int_refs)
+    reg_text, _rl, err = _external_source(g, STORE_LOADER_REGISTER_SOURCE)
+    if reg_text is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-unavailable", detail=err)
+    if ("OPENSSL_sk_new_null()" not in reg_text
+            or "OPENSSL_sk_push(stack, loader.cast::<c_void>())" not in reg_text
+            or "find_loader(scheme)" not in reg_text):
+        return cls, None, _external_refusal(
+            cls, name, site, "registry-base-is-not-the-documented-stack")
+    if _external_exported(g, spec["setter"]) is None:
+        return cls, None, _external_refusal(
+            cls, name, site, "setter-is-not-exported")
+    cb, why = _external_header_cb(g, spec["setter"], 1)
+    if cb is None or cb.get("type_typedef") != spec["typedef"]:
+        return cls, None, _external_refusal(
+            cls, name, site, "header-does-not-declare-the-setter-callback",
+            detail=why, declaration=cb)
+    lib_text, _ll, err = _external_source(g, STORE_LOADER_LIB_SOURCE)
+    if lib_text is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-unavailable", detail=err)
+    if "(*loader).open_ex" not in lib_text or "(*loader).open" not in lib_text:
+        return cls, None, _external_refusal(
+            cls, name, site, "open-dispatch-is-not-the-enumerated-source-path")
+    if spec["field"] == "closefn":
+        if ("(*ctx).fetched_loader }.is_null()" not in lib_text
+                or "closefn((*ctx).loader_ctx)" not in lib_text
+                or "if !loader_ctx.is_null()" not in lib_text):
+            return cls, None, _external_refusal(
+                cls, name, site, "closefn-path-guard-is-not-the-enumerated-one")
+
+    witness = _external_witness(
+        cls, name, site,
+        slot=(f"{STORE_LOADER_OWNER}.{spec['field']} (offset "
+              f"{hex(spec['offset'])})"),
+        writer=(f"{spec['setter']} stores its `{spec['parameter']}` parameter; "
+                "the registry stack is published only by "
+                f"{STORE_LOADER_REGISTER}"),
+        interface=(f"{cb['declaration']} -- {cb['parameter_text']}; "
+                   f"{STORE_LOADER_REGISTER} (store.h:353)"),
+        basis=("the operand is the enumerated field of the loader returned by "
+               "ossl_store_get0_loader_int; the only writers are the exported "
+               "setters; no in-image caller registers a loader; the exported "
+               "seam makes the target set unbounded"),
+        conditions={
+            "site_enumerated": f"{STORE_LOADER_FUNCTION} {hex(site['addr'])}",
+            "operand_field": f"{spec['field']} at {hex(spec['offset'])}",
+            "base_object": ("the ossl_store_get0_loader_int return"
+                            if spec["base"] == "legacy-single" else
+                            "the legacy loader on the fetched_loader == NULL "
+                            "closefn path"),
+            "writer_set": f"{spec['setter']}({spec['parameter']})",
+            "no_in_image_registration_caller": True,
+            "documented_interface": f"{spec['setter']} / {STORE_LOADER_REGISTER}",
+            "target_set_unbounded": "the exported registration seam admits any "
+                                    "OSSL_STORE_LOADER",
+        },
+        does_not_cover=ABI_CONTRACTS[cls]["does_not_cover"],
+        target_set=[],
+        operand={"reg": "%rax", "load": load["text"],
+                 "base_reg": load["base_reg"],
+                 "offset": hex(load["offset"])},
+        object={"type": STORE_LOADER_OWNER,
+                "constructor": STORE_LOADER_GET0,
+                "base": spec["base"],
+                "definitions": [hex(insns[d][0]) for d in sorted(base_defs)]},
+        field={"type": STORE_LOADER_OWNER, "repr_c": True,
+               "name": spec["field"], "offset": hex(fld["offset"]),
+               "writer": spec["setter"]},
+        writer_set={spec["field"]: [spec["setter"]],
+                    "field_literals": 0,
+                    "other_type_stores": len(other),
+                    "in_image_registration_callers": 0},
+        guard=guard,
+        source={"file": STORE_LOADER_SOURCE, "layout_line": layout["line"],
+                "setter_line": st["line"],
+                "registry_line": _external_line_number(
+                    reg_text, "OPENSSL_sk_push(stack, loader")},
+    )
+    return cls, witness, None
+
+
+def store_loader_provider_witness(g: "DsoGraph", site: dict, name: str):
+    """The provider `OsslStoreLoader.p_close` dispatch (OSSL_FUNC_STORE_CLOSE)."""
+    if not _external_site_matches(site, name, STORE_LOADER_FUNCTION,
+                                  STORE_LOADER_PROVIDER_SITE):
+        return None
+    cls = ABI_CONTRACT_PROVIDER
+    if not site.get("unresolved"):
+        return None
+    load, why = _external_operand_load(g, site, "%rax")
+    if load is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "operand-not-a-single-load",
+                                            detail=why)
+    if (load["base_reg"] != "%r14"
+            or load["offset"] != STORE_LOADER_PROVIDER_OFFSET):
+        return cls, None, _external_refusal(
+            cls, name, site, "operand-is-not-the-enumerated-provider-field",
+            base_reg=load["base_reg"], offset=hex(load["offset"]))
+    base_defs, why = _external_base_defs(g, site, load)
+    if base_defs is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "base-object-not-proven",
+                                            detail=why)
+    fstart = site["func"]
+    insns = g.precision.insns_by_func[fstart]
+    if len(base_defs) != 3:
+        return cls, None, _external_refusal(
+            cls, name, site, "base-register-definition-set-is-not-enumerated",
+            definitions=[hex(insns[d][0]) for d in sorted(base_defs)])
+    provider = [d for d in base_defs
+                if insns[d][1].strip() == "mov    %r12,%r14"]
+    zero = [d for d in base_defs
+            if insns[d][1].strip() == "xor    %r14d,%r14d"]
+    if len(provider) != 1 or len(zero) != 1:
+        return cls, None, _external_refusal(
+            cls, name, site, "base-definition-shape-changed",
+            definitions=[insns[d][1] for d in sorted(base_defs)])
+    r12_defs = _external_reg_defs(g, fstart, provider[0], "%r12")
+    if r12_defs is None or len(r12_defs) != 2:
+        return cls, None, _external_refusal(
+            cls, name, site, "fetched-loader-definition-set-is-not-enumerated",
+            definitions=sorted(r12_defs or ()))
+    fetch = [d for d in r12_defs
+             if insns[d][1].strip() == "mov    %rax,%r12"]
+    if len(fetch) != 1:
+        return cls, None, _external_refusal(
+            cls, name, site, "fetched-loader-is-not-a-call-return")
+    fetch_sym = _external_def_call(g, site, fetch[0] - 1)
+    if _external_function_leaf(fetch_sym) != STORE_LOADER_FETCH:
+        return cls, None, _external_refusal(
+            cls, name, site, "wrong-base-constructor", callee=fetch_sym)
+    guard, why = _external_guard_chain(g, fstart, site["addr"], False)
+    if guard is None:
+        return cls, None, _external_refusal(
+            cls, name, site, "p_close-guard-is-not-the-enumerated-pair",
+            detail=why)
+    text, lines, err = _external_source(g, STORE_LOADER_SOURCE)
+    if text is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-unavailable", detail=err)
+    layout, err = _external_struct_layout(g, STORE_LOADER_OWNER)
+    if layout is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "owner-layout-not-decidable",
+                                            detail=err)
+    fld = next((f for f in layout["fields"]
+                if f["name"] == STORE_LOADER_PROVIDER_FIELD), None)
+    if fld is None or fld["offset"] != STORE_LOADER_PROVIDER_OFFSET:
+        return cls, None, _external_refusal(
+            cls, name, site, "declared-field-offset-is-not-the-enumerated-one",
+            field=STORE_LOADER_PROVIDER_FIELD, declared=fld)
+    if not (STORE_LOADER_PROVIDER_TYPEDEF in (fld["type"] or "")
+            or STORE_LOADER_PROVIDER_RUST_TYPEDEF in (fld["type"] or "")):
+        return cls, None, _external_refusal(
+            cls, name, site, "declared-field-is-not-the-provider-callback",
+            field=fld)
+    meth_text, _ml, err = _external_source(g, STORE_LOADER_METH_SOURCE)
+    if meth_text is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-unavailable", detail=err)
+    writers, err = _external_field_writers(
+        g, STORE_LOADER_OWNER, {STORE_LOADER_PROVIDER_FIELD},
+        owner_tokens=("new_loader", STORE_LOADER_PROVIDER_WRITER))
+    if writers is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-scan-unavailable",
+                                            detail=err)
+    macro_slot = [w for w in writers if w["kind"] == "macro-slot"]
+    if macro_slot:
+        return cls, None, _external_refusal(
+            cls, name, site, "macro-expanded-slot-store-unattributed",
+            writers=macro_slot)
+    stores = [w for w in writers if w["kind"] == "store"]
+    literals = [w for w in writers if w["kind"] == "literal"]
+    undecidable = [w for w in stores if w["attribution"] == "undecidable"]
+    own = [w for w in stores if w["attribution"] == "owner"]
+    other = [w for w in stores if w["attribution"] == "other"]
+    if undecidable:
+        return cls, None, _external_refusal(
+            cls, name, site, "unqualified-or-aliasing-p_close-store",
+            stores=undecidable)
+    if len(own) != 1 or own[0]["function"] != STORE_LOADER_PROVIDER_WRITER:
+        return cls, None, _external_refusal(
+            cls, name, site, "p_close-writer-set-is-not-the-dispatch-scan",
+            stores=own, other_type_stores=other)
+    if literals:
+        return cls, None, _external_refusal(
+            cls, name, site, "loader-object-literal-writes-an-unqualified-slot",
+            literals=literals)
+    st = own[0]
+    # The store is inside the OSSL_FUNC_STORE_CLOSE arm; walk back to the
+    # nearest dispatch arm in the same file.
+    ml = meth_text.splitlines()
+    arm = None
+    for j in range(st["line"] - 1, -1, -1):
+        m = re.search(r"(OSSL_FUNC_STORE_[A-Z_]+)\s*=>", ml[j])
+        if m:
+            arm = m.group(1)
+            break
+    if arm != "OSSL_FUNC_STORE_CLOSE":
+        return cls, None, _external_refusal(
+            cls, name, site, "p_close-store-is-not-the-store-close-arm",
+            arm=arm)
+    if "construct: construct_loader" not in meth_text:
+        return cls, None, _external_refusal(
+            cls, name, site, "loader-constructor-is-not-the-enumerated-one")
+    if "loader_from_algorithm(id, algodef, prov)" not in meth_text:
+        return cls, None, _external_refusal(
+            cls, name, site, "loader-from-algorithm-call-is-not-enumerated")
+    if "inner_loader_fetch" not in meth_text:
+        return cls, None, _external_refusal(
+            cls, name, site, "inner-loader-fetch-is-absent")
+    lib_text, _ll, err = _external_source(g, STORE_LOADER_LIB_SOURCE)
+    if lib_text is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-unavailable", detail=err)
+    if "if !fetched_loader.is_null()" not in lib_text:
+        return cls, None, _external_refusal(
+            cls, name, site, "p_close-path-guard-is-not-the-enumerated-one")
+
+    witness = _external_witness(
+        cls, name, site,
+        slot=(f"{STORE_LOADER_OWNER}.{STORE_LOADER_PROVIDER_FIELD} (offset "
+              f"{hex(STORE_LOADER_PROVIDER_OFFSET)})"),
+        writer=(f"{STORE_LOADER_PROVIDER_WRITER} stores the "
+                "OSSL_FUNC_STORE_CLOSE dispatch entry into p_close"),
+        interface=("OSSL_provider_init (include/openssl/core.h:186-195) and "
+                   "OSSL_FUNC_STORE_CLOSE (include/openssl/core_dispatch.h)"),
+        basis=("the site is the fetched_loader != NULL p_close path; the "
+               "fetched loader is the inner_loader_fetch return, whose "
+               "construct_loader -> loader_from_algorithm fills p_close from "
+               "the provider's OSSL_FUNC_STORE_CLOSE dispatch entry"),
+        conditions={
+            "site_enumerated": (f"{STORE_LOADER_FUNCTION} "
+                                f"{hex(STORE_LOADER_PROVIDER_SITE)}"),
+            "operand_field": (f"{STORE_LOADER_PROVIDER_FIELD} at "
+                              f"{hex(STORE_LOADER_PROVIDER_OFFSET)}"),
+            "base_object": "the inner_loader_fetch return on the "
+                           "fetched_loader != NULL path",
+            "writer_set": "loader_from_algorithm / OSSL_FUNC_STORE_CLOSE",
+            "documented_interface": "OSSL_provider_init dispatch table",
+            "target_set_unbounded": "the provider returns its own dispatch "
+                                    "table",
+        },
+        does_not_cover=(
+            "which provider supplies the store loader; the target set is "
+            "unbounded",
+            "the provider callback body and the provider's own memory safety",
+            "a second or aliasing p_close writer; the witness refuses one",
+            "the legacy closefn path, which is "
+            "ABI_CONTRACT_STORE_LOADER",
+        ),
+        scope="store-loader-p_close",
+        target_set=[],
+        operand={"reg": "%rax", "load": load["text"],
+                 "base_reg": load["base_reg"],
+                 "offset": hex(load["offset"])},
+        object={"type": STORE_LOADER_OWNER,
+                "constructor": STORE_LOADER_FETCH,
+                "definitions": [hex(insns[d][0]) for d in sorted(base_defs)],
+                "fetched_loader_definitions": [
+                    hex(insns[d][0]) for d in sorted(r12_defs)]},
+        field={"type": STORE_LOADER_OWNER, "repr_c": True,
+               "name": STORE_LOADER_PROVIDER_FIELD,
+               "offset": hex(fld["offset"]),
+               "writer": STORE_LOADER_PROVIDER_WRITER},
+        writer_set={STORE_LOADER_PROVIDER_FIELD:
+                    [STORE_LOADER_PROVIDER_WRITER],
+                    "dispatch_id": "OSSL_FUNC_STORE_CLOSE",
+                    "other_type_stores": len(other)},
+        guard=guard,
+        source={"file": STORE_LOADER_METH_SOURCE,
+                "layout_line": layout["line"],
+                "writer_line": st["line"], "arm": arm},
+    )
+    return cls, witness, None
+
+
+def conf_module_witness(g: "DsoGraph", site: dict, name: str):
+    """The `CONF_MODULE` init/finish dispatch."""
+    spec = CONF_SITES.get(site.get("addr"))
+    if spec is None or not _external_site_matches(
+            site, name, CONF_FUNCTION, site.get("addr")):
+        return None
+    cls = ABI_CONTRACT_CONF_MODULE
+    if not site.get("unresolved"):
+        return None
+    load, why = _external_operand_load(g, site,
+                                       "%r15" if spec["field"] == "init"
+                                       else "%rax")
+    if load is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "operand-not-a-single-load",
+                                            detail=why)
+    if load["base_reg"] != "%r12" or load["offset"] != spec["offset"]:
+        return cls, None, _external_refusal(
+            cls, name, site, "operand-is-not-the-enumerated-module-field",
+            base_reg=load["base_reg"], offset=hex(load["offset"]))
+    base_defs, why = _external_base_defs(g, site, load)
+    if base_defs is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "base-object-not-proven",
+                                            detail=why)
+    fstart = site["func"]
+    insns = g.precision.insns_by_func[fstart]
+    # Every non-zero producer is either the module_add return or a load from
+    # the supported_modules list; module_add is the only publisher.
+    producers = []
+    for d in sorted(base_defs):
+        text = insns[d][1].strip()
+        if text in ("xor    %r12d,%r12d", "mov    $0x0,%r12d"):
+            continue
+        if text == "mov    %rax,%r12":
+            call_sym = _external_def_call(g, site, d - 1)
+            if _external_function_leaf(call_sym) != CONF_MODULE_ADD:
+                return cls, None, _external_refusal(
+                    cls, name, site, "wrong-base-constructor", callee=call_sym)
+            producers.append({"kind": "module_add", "address": hex(insns[d][0])})
+            continue
+        if re.fullmatch(r"mov\s+\(%rcx(?:,%rsi,8)?\),%r12", text):
+            producers.append({"kind": "supported-modules-load",
+                              "address": hex(insns[d][0])})
+            continue
+        return cls, None, _external_refusal(
+            cls, name, site, "unaccounted-base-object-producer",
+            definition=text, address=hex(insns[d][0]))
+    if not any(p["kind"] == "module_add" for p in producers):
+        return cls, None, _external_refusal(
+            cls, name, site, "module-add-return-is-not-a-base-producer")
+    text, lines, err = _external_source(g, CONF_SOURCE)
+    if text is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-unavailable", detail=err)
+    layout, err = _external_struct_layout(g, CONF_OWNER)
+    if layout is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "owner-layout-not-decidable",
+                                            detail=err)
+    fld = next((f for f in layout["fields"] if f["name"] == spec["field"]),
+               None)
+    if fld is None or fld["offset"] != spec["offset"]:
+        return cls, None, _external_refusal(
+            cls, name, site, "declared-field-offset-is-not-the-enumerated-one",
+            field=spec["field"], declared=fld, expected=hex(spec["offset"]))
+    if not (spec["typedef"] in (fld["type"] or "")
+            or spec.get("rust_typedef", "") in (fld["type"] or "")):
+        return cls, None, _external_refusal(
+            cls, name, site, "declared-field-is-not-the-documented-callback",
+            field=fld, expected=spec["typedef"])
+    writers, err = _external_field_writers(
+        g, CONF_OWNER, {s["field"] for s in CONF_SITES.values()},
+        owner_tokens=("module_find", "supported_modules",
+                      CONF_MODULE_ADD))
+    if writers is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-scan-unavailable",
+                                            detail=err)
+    macro_slot = [w for w in writers if w["kind"] == "macro-slot"]
+    if macro_slot:
+        return cls, None, _external_refusal(
+            cls, name, site, "macro-expanded-slot-store-unattributed",
+            writers=macro_slot)
+    stores = [w for w in writers if w["kind"] == "store"]
+    literals = [w for w in writers if w["kind"] == "literal"]
+    undecidable = [w for w in stores if w["attribution"] == "undecidable"]
+    own = [w for w in stores if w["field"] == spec["field"]
+           and w["attribution"] == "owner"]
+    other = [w for w in stores if w["attribution"] == "other"]
+    if undecidable:
+        return cls, None, _external_refusal(
+            cls, name, site, "unqualified-or-aliasing-module-store",
+            stores=undecidable)
+    if len(own) != 1:
+        return cls, None, _external_refusal(
+            cls, name, site, f"{spec['field']}-writer-set-is-not-module-add",
+            writers=own, other_type_stores=other)
+    st = own[0]
+    if st["function"] != CONF_MODULE_ADD or st["value"] != spec["parameter"]:
+        return cls, None, _external_refusal(
+            cls, name, site, "field-store-is-not-the-module-add-parameter",
+            store=st)
+    if literals:
+        return cls, None, _external_refusal(
+            cls, name, site, "module-object-literal-writes-an-unqualified-slot",
+            literals=literals)
+    add_calls, err = _external_calls(g, CONF_MODULE_ADD)
+    if add_calls is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-scan-unavailable",
+                                            detail=err)
+    allowed = {CONF_MODULE_SETTER, "module_load_dso"}
+    bad = [c for c in add_calls if c["function"] not in allowed]
+    if bad or len(add_calls) != 2:
+        return cls, None, _external_refusal(
+            cls, name, site, "module-add-callers-are-not-the-documented-pair",
+            callers=add_calls)
+    if _external_exported(g, CONF_MODULE_SETTER) is None:
+        return cls, None, _external_refusal(
+            cls, name, site, "module-add-setter-is-not-exported")
+    init_cb, why = _external_header_cb(g, CONF_MODULE_SETTER, 1)
+    if init_cb is None or init_cb.get("type_typedef") != "conf_init_func":
+        return cls, None, _external_refusal(
+            cls, name, site, "header-does-not-declare-the-init-callback",
+            detail=why, declaration=init_cb)
+    finish_cb, why = _external_header_cb(g, CONF_MODULE_SETTER, 2)
+    if finish_cb is None or finish_cb.get("type_typedef") != "conf_finish_func":
+        return cls, None, _external_refusal(
+            cls, name, site, "header-does-not-declare-the-finish-callback",
+            detail=why, declaration=finish_cb)
+    cb = init_cb if spec["field"] == "init" else finish_cb
+    if cb.get("type_typedef") != spec["typedef"]:
+        return cls, None, _external_refusal(
+            cls, name, site, "header-does-not-declare-the-module-callback",
+            declaration=cb, expected=spec["typedef"])
+    if ("DSO_bind_func(dso, c\"OPENSSL_init\".as_ptr())" not in text
+            or "DSO_bind_func(dso, c\"OPENSSL_finish\".as_ptr())" not in text
+            or "module_add(dso, name, ifunc, ffunc)" not in text):
+        return cls, None, _external_refusal(
+            cls, name, site, "dso-path-is-not-the-enumerated-bind")
+    if ("(*tmod).init = ifunc" not in text
+            or "(*tmod).finish = ffunc" not in text):
+        return cls, None, _external_refusal(
+            cls, name, site, "module-add-does-not-store-its-parameters")
+    # In-image callers of the exported setter are documented interface users;
+    # they are enumerated, never treated as a finite target bound.
+    setter_calls, err = _external_calls(g, CONF_MODULE_SETTER)
+    if setter_calls is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-scan-unavailable",
+                                            detail=err)
+
+    witness = _external_witness(
+        cls, name, site,
+        slot=(f"{CONF_OWNER}.{spec['field']} (offset "
+              f"{hex(spec['offset'])})"),
+        writer=(f"{CONF_MODULE_ADD} stores its `{spec['parameter']}` parameter; "
+                "module_load_dso binds OPENSSL_init/OPENSSL_finish"),
+        interface=(f"{cb['declaration']} -- {cb['parameter_text']}; "
+                   f"{finish_cb['parameter_text']}; "
+                   "OPENSSL_init/OPENSSL_finish via DSO_bind_func"),
+        basis=("the module is produced by module_add (or read from the list "
+               "module_add is the only publisher of); the source has exactly "
+               "one init writer and one finish writer, both module_add, whose "
+               "only callers are the exported CONF_module_add and the DSO "
+               "bind path; both seams are public, so the target set is "
+               "unbounded"),
+        conditions={
+            "site_enumerated": f"{CONF_FUNCTION} {hex(site['addr'])}",
+            "operand_field": f"{spec['field']} at {hex(spec['offset'])}",
+            "base_object": "module_add's return or a supported_modules entry",
+            "writer_set": f"{CONF_MODULE_ADD}({spec['parameter']})",
+            "documented_interface": (f"{CONF_MODULE_SETTER} and "
+                                     "OPENSSL_init/OPENSSL_finish"),
+            "target_set_unbounded": ("the exported CONF_module_add and DSO "
+                                     "seams admit any callback"),
+        },
+        does_not_cover=ABI_CONTRACTS[cls]["does_not_cover"],
+        target_set=[],
+        operand={"reg": ("%r15" if spec["field"] == "init" else "%rax"),
+                 "load": load["text"], "base_reg": load["base_reg"],
+                 "offset": hex(load["offset"])},
+        object={"type": CONF_OWNER, "constructor": CONF_MODULE_ADD,
+                "producers": producers},
+        field={"type": CONF_OWNER, "repr_c": True, "name": spec["field"],
+               "offset": hex(fld["offset"]), "writer": CONF_MODULE_ADD},
+        writer_set={spec["field"]: [CONF_MODULE_ADD],
+                    "module_add_callers": [c["function"] for c in add_calls],
+                    "other_type_stores": len(other),
+                    "in_image_setter_users": [c["function"]
+                                              for c in setter_calls]},
+        source={"file": CONF_SOURCE, "layout_line": layout["line"],
+                "writer_line": st["line"]},
+    )
+    return cls, witness, None
+
+
+def _external_header_cb_index(g: "DsoGraph", symbol: str, typedef: str):
+    """(index, declaration) when exactly one parameter has ``typedef``."""
+    cache = getattr(g, "_e7abi_header_cb_cache", None)
+    if cache is None:
+        cache = {}
+        g._e7abi_header_cb_cache = cache
+    ckey = (str(getattr(g, "install_prefix", None)), symbol, typedef)
+    if ckey in cache:
+        return cache[ckey]
+    hits = []
+    for i in range(0, 16):
+        cb, _why = _header_callback_param(g, symbol, i)
+        if cb is not None and cb.get("type_typedef") == typedef:
+            hits.append((i, cb))
+    result = hits[0] if len(hits) == 1 else (None, None)
+    cache[ckey] = result
+    return result
+
+
+def _external_macro_cb_declaration(g: "DsoGraph", symbol: str):
+    """The header-macro declaration for a PEM writer with a `cb` parameter.
+
+    `PEM_write_bio_PrivateKey_ex` is declared through
+    `DECLARE_PEM_rw_cb_ex(PrivateKey, EVP_PKEY)` -> ... ->
+    `PEM_write_cb_ex_fnsig`, whose `pem_password_cb *cb` parameter is the
+    documented interface.  `_header_callback_param` does not expand macros, so
+    the macro text is checked directly here.
+    """
+    m = re.fullmatch(r"PEM_write_(?:(?:bio|fp)_)?(\w+?)(_ex)?",
+                     symbol or "")
+    if not m:
+        return None
+    cache = getattr(g, "_e7abi_macro_cb_cache", None)
+    if cache is None:
+        cache = {}
+        g._e7abi_macro_cb_cache = cache
+    ckey = (str(getattr(g, "install_prefix", None)), symbol)
+    if ckey in cache:
+        return cache[ckey]
+    name = m.group(1)
+    for path, text in _header_texts(g):
+        if "pem_password_cb *cb" not in text:
+            continue
+        if not re.search(r"DECLARE_PEM_(?:rw|write)_cb(?:_ex)?\s*\(\s*" +
+                         re.escape(name) + r"\s*,", text):
+            continue
+        result = {"symbol": symbol,
+                  "declaration": (f"{path.name} macro "
+                                  f"DECLARE_PEM_rw_cb*({name}, ...)"),
+                  "parameter_text": "pem_password_cb *cb",
+                  "type_typedef": "pem_password_cb",
+                  "callback": True, "macro": True}
+        cache[ckey] = result
+        return result
+    cache[ckey] = None
+    return None
+
+
+def _external_source_param_index(g: "DsoGraph", fn: int, rust_typedef: str):
+    """The parameter index whose declared type is ``rust_typedef``, from src."""
+    leaf = _external_function_leaf((g.funcs or {}).get(fn))
+    if not leaf:
+        return None
+    pat = re.compile(r"\bfn\s+" + re.escape(leaf) + r"\s*\(")
+    hits = set()
+    for _path, text in _s1_docs(g).items():
+        for m in pat.finditer(text):
+            params = _split_params(text[m.start():])
+            for i, param in enumerate(params):
+                if rust_typedef in param:
+                    hits.add(i)
+    return hits.pop() if len(hits) == 1 else None
+
+
+def _external_forward_chain(g: "DsoGraph", fstart: int, index: int,
+                            typedef: str | None = None,
+                            rust_typedef: str | None = None):
+    """Follow one callback parameter to exported entry points.
+
+    The *exported* parameter index is taken from the header (the documented
+    interface) rather than from a stack-argument heuristic; a private wrapper
+    is followed through its source signature.  The machine call site is still
+    checked to forward a parameter and never a constant.
+    """
+    roots, chain, bad = {}, [], []
+    seen = set()
+    frontier = [(fstart, index)]
+    while frontier:
+        fn, k = frontier.pop()
+        if (fn, k) in seen:
+            continue
+        seen.add((fn, k))
+        exported = _export_name(g, fn)
+        if exported is not None:
+            if typedef:
+                hidx, hcb = _external_header_cb_index(g, exported, typedef)
+                if hidx is None:
+                    hcb = _external_macro_cb_declaration(g, exported)
+                    hidx = _external_source_param_index(g, fn, rust_typedef) \
+                        if (hcb is not None and rust_typedef) else None
+                if hidx is None or hcb is None:
+                    bad.append({"function": exported,
+                                "reason": "header has no unique callback "
+                                          "parameter"})
+                    continue
+                roots.setdefault((exported, hidx), {
+                    "function": g.funcs.get(fn),
+                    "parameter": hidx, "declaration": hcb})
+            else:
+                roots.setdefault((exported, k), {
+                    "function": g.funcs.get(fn), "parameter": k})
+            continue
+        callers = _callers_of(g, fn)
+        if not callers:
+            bad.append({"function": g.funcs.get(fn), "parameter": k,
+                        "reason": "no in-image direct caller"})
+            continue
+        for caller, ci, addr in callers:
+            origin = _arg_origin_at_call(g, caller, ci, k)
+            if origin.get("kind") != "param":
+                bad.append({"function": g.funcs.get(caller),
+                            "call_site": hex(addr),
+                            "reason": "passes a non-parameter value",
+                            "origin": origin.get("kind")})
+                continue
+            caller_param = origin["index"]
+            if rust_typedef:
+                src_param = _external_source_param_index(g, caller,
+                                                         rust_typedef)
+                if src_param is not None:
+                    caller_param = src_param
+            chain.append({"callee": g.funcs.get(fn), "callee_parameter": k,
+                          "caller": g.funcs.get(caller),
+                          "caller_parameter": caller_param,
+                          "call_site": hex(addr)})
+            frontier.append((caller, caller_param))
+    return roots, chain, bad
+
+
+def _external_param_name(param: str):
+    text = param.strip()
+    m = re.match(r"(?:mut\s+)?([A-Za-z_]\w*)\s*:", text)
+    if m:
+        return m.group(1)
+    m = re.search(r"([A-Za-z_]\w*)\s*(?:\[[^]]*\])?\s*$", text)
+    return m.group(1) if m else None
+
+
+def _external_normalize_arg(arg: str) -> str:
+    a = " ".join((arg or "").strip().split())
+    m = re.fullmatch(r"Some\((.*)\)", a)
+    if m:
+        a = m.group(1).strip()
+    return a
+
+
+def _external_source_signature(g: "DsoGraph", fn: int, rust_typedef: str):
+    """The unique parameter of ``rust_typedef`` in ``fn``'s source signature."""
+    leaf = _external_function_leaf((g.funcs or {}).get(fn))
+    if not leaf:
+        return None
+    return _external_source_signature_by_leaf(g, leaf, rust_typedef)
+
+
+def _external_source_signature_by_leaf(g: "DsoGraph", leaf: str,
+                                        rust_typedef: str):
+    if not leaf:
+        return None
+    cache = getattr(g, "_e7abi_source_sig_cache", None)
+    if cache is None:
+        cache = {}
+        g._e7abi_source_sig_cache = cache
+    ckey = (str(getattr(g, "source_root", None)), leaf, rust_typedef,
+            tuple(sorted(_MUTED)))
+    if ckey in cache:
+        return cache[ckey]
+    docs = _s1_docs(g)
+    ordered = [rel for rel in PEM_SOURCE_FILES if rel in docs]
+    ordered += [rel for rel in docs if rel not in ordered]
+    for rel in ordered:
+        text = docs[rel]
+        lines = text.splitlines()
+        for m in re.finditer(r"\bfn\s+" + re.escape(leaf) + r"\s*\(", text):
+            ln = text.count("\n", 0, m.start()) + 1
+            if lines[ln - 1].lstrip().startswith(("//", "///", "//!")):
+                continue
+            params = _split_params(text[m.start():])
+            hits = [(i, p) for i, p in enumerate(params) if rust_typedef in p]
+            if len(hits) != 1:
+                continue
+            i, p = hits[0]
+            result = {"index": i, "name": _external_param_name(p),
+                      "parameter": p, "file": rel, "line": ln}
+            cache[ckey] = result
+            return result
+    cache[ckey] = None
+    return None
+
+
+def _external_function_address(g: "DsoGraph", leaf: str):
+    addr = (getattr(g, "dynamic_defs", {}) or {}).get(leaf)
+    if addr is not None:
+        return addr
+    hits = [a for a, n in (g.funcs or {}).items()
+            if _external_function_leaf(n) == leaf]
+    return hits[0] if len(hits) == 1 else None
+
+
+def _external_pem_source_chain(g: "DsoGraph", fstart: int, index: int,
+                               rust_typedef: str):
+    """Follow the *source* PEM forwarding chain, binding every argument.
+
+    Every in-image hop must pass the caller's declared `cb` parameter at the
+    callee's `cb` index; a hop that passes `u`, `kstr`, a literal or any other
+    parameter refuses.  Exported roots are recorded, and the walk continues
+    through exported wrappers so an inlined `PEM_write_bio_PrivateKey_ex` is
+    still reached.  Non-exported test callers are ignored; only the documented
+    exported wrappers and the private `do_pk8pkey_fp` wrapper are followed.
+    """
+    roots, chain, bad = {}, [], []
+    cache = getattr(g, "_e7abi_pem_chain_cache", None)
+    if cache is None:
+        cache = {}
+        g._e7abi_pem_chain_cache = cache
+    ckey = (str(getattr(g, "source_root", None)), fstart, index, rust_typedef,
+            tuple(sorted(_MUTED)))
+    if ckey in cache:
+        return cache[ckey]
+    seen = set()
+    frontier = [(fstart, _external_function_leaf((g.funcs or {}).get(fstart)),
+                 index)]
+    while frontier:
+        fn, callee_leaf, k = frontier.pop()
+        if not callee_leaf or (callee_leaf, k) in seen:
+            continue
+        seen.add((callee_leaf, k))
+        docs = _s1_docs(g)
+        ordered = [rel for rel in PEM_SOURCE_FILES if rel in docs]
+        ordered += [rel for rel in docs if rel not in ordered]
+        for rel in ordered:
+            text = docs[rel]
+            lines = text.splitlines()
+            for m in re.finditer(r"\b" + re.escape(callee_leaf) +
+                                 r"\s*\(", text):
+                ln = text.count("\n", 0, m.start()) + 1
+                raw = lines[ln - 1]
+                if raw.lstrip().startswith(("//", "///", "//!")):
+                    continue
+                if re.search(r"\bfn\s+" + re.escape(callee_leaf) + r"\s*\(",
+                             raw):
+                    continue
+                args = _split_params(text[m.start():])
+                if k >= len(args):
+                    bad.append({"file": rel, "line": ln,
+                                "reason": "call has fewer arguments than "
+                                          "the cb index",
+                                "callee": callee_leaf, "index": k})
+                    continue
+                caller_name, _cl = _external_enclosing(lines, ln - 1)
+                caller_fn = (_external_function_address(g, caller_name)
+                             if caller_name else None)
+                exported = (_export_name(g, caller_fn)
+                            if caller_fn is not None else None)
+                documented_private = caller_name == "do_pk8pkey_fp"
+                sig = _external_source_signature_by_leaf(
+                    g, caller_name, rust_typedef)
+                if sig is None:
+                    if exported is not None or documented_private:
+                        bad.append({"file": rel, "line": ln,
+                                    "reason": "caller has no unique cb "
+                                              "parameter",
+                                    "caller": caller_name})
+                    continue
+                passed = _external_normalize_arg(args[k])
+                if passed != sig["name"]:
+                    if exported is not None or documented_private:
+                        bad.append({"file": rel, "line": ln,
+                                    "caller": caller_name,
+                                    "callee": callee_leaf,
+                                    "callee_index": k, "passed": passed,
+                                    "expected": sig["name"],
+                                    "reason": "forwarded argument is not "
+                                              "the caller's cb parameter"})
+                    # A private helper or test that does not forward cb is
+                    # not part of the documented exported chain.
+                    continue
+                if exported is not None:
+                    hidx, hcb = _external_header_cb_index(
+                        g, exported, "pem_password_cb")
+                    if hidx is None:
+                        hcb = _external_macro_cb_declaration(g, exported)
+                        hidx = sig["index"] if hcb is not None else None
+                    if hidx is None or hcb is None:
+                        bad.append({"file": rel, "line": ln,
+                                    "caller": caller_name,
+                                    "reason": "exported root has no "
+                                              "documented cb declaration"})
+                        continue
+                    if hidx != sig["index"]:
+                        bad.append({"file": rel, "line": ln,
+                                    "caller": caller_name,
+                                    "reason": "header and source cb index "
+                                              "disagree",
+                                    "header_index": hidx,
+                                    "source_index": sig["index"]})
+                        continue
+                    roots[(exported, hidx)] = {
+                        "function": (g.funcs.get(caller_fn)
+                                     if caller_fn is not None else caller_name),
+                        "parameter": hidx, "declaration": hcb,
+                        "source": f"{rel}:{ln}"}
+                chain.append({"callee": callee_leaf, "callee_parameter": k,
+                              "caller": caller_name,
+                              "caller_parameter": sig["index"],
+                              "call_site": f"{rel}:{ln}",
+                              "passed_argument": passed})
+                frontier.append((caller_fn, caller_name, sig["index"]))
+    cache[ckey] = (roots, chain, bad)
+    return roots, chain, bad
+
+
+def pem_password_default_witness(g: "DsoGraph", site: dict, name: str):
+    """The PEM PKCS#8 writer's `cb` parameter with its PEM_def_callback default."""
+    if not _external_site_matches(site, name, PEM_FUNCTION, PEM_SITE):
+        return None
+    cls = ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT
+    if not site.get("unresolved"):
+        return None
+    idx = _external_insn_index(g, site)
+    if idx is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "call-instruction-not-found")
+    fstart = site["func"]
+    insns = g.precision.insns_by_func[fstart]
+    opnd = _site_operand(site)
+    if _canon(opnd) != "%r14":
+        return cls, None, _external_refusal(
+            cls, name, site, "operand-is-not-the-enumerated-callback-register",
+            operand=opnd)
+    defs = _external_reg_defs(g, fstart, idx, "%r14")
+    if defs is None or len(defs) != 2:
+        return cls, None, _external_refusal(
+            cls, name, site, "callback-register-definition-set-is-not-enumerated",
+            definitions=sorted(defs or ()))
+    copy = [d for d in defs if insns[d][1].strip() == "mov    %rcx,%r14"]
+    default = [d for d in defs if "PEM_def_callback" in insns[d][1]]
+    if len(copy) != 1 or len(default) != 1:
+        return cls, None, _external_refusal(
+            cls, name, site, "callback-load-shape-is-not-enumerated",
+            definitions=[insns[d][1] for d in sorted(defs)])
+    copy_def, default_def = copy[0], default[0]
+    rcx_defs = _external_reg_defs(g, fstart, copy_def, "%rcx")
+    if rcx_defs is None or len(rcx_defs) != 3:
+        return cls, None, _external_refusal(
+            cls, name, site, "callback-source-definition-set-is-not-enumerated",
+            definitions=sorted(rcx_defs or ()))
+    param = [d for d in rcx_defs if "(%rsp)" in insns[d][1]
+             and insns[d][1].lstrip().startswith("mov")]
+    if len(param) != 1:
+        return cls, None, _external_refusal(
+            cls, name, site, "callback-is-not-a-stack-parameter")
+    slot = None
+    m = re.search(r"(0x[0-9a-f]+\(%rsp\))", insns[param[0]][1])
+    if m:
+        slot = m.group(1)
+    stack = _stack_param(g, fstart, param[0], slot, None) if slot else None
+    if stack is None or stack.get("kind") != "param" \
+            or stack.get("index") != PEM_CB_STACK_INDEX:
+        return cls, None, _external_refusal(
+            cls, name, site, "callback-is-not-the-declared-stack-parameter",
+            slot=slot, origin=stack)
+    source_text, _sl, err = _external_source(g, PEM_SOURCE)
+    if source_text is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-unavailable", detail=err)
+    if "cb.unwrap_or(PEM_def_callback)" not in source_text:
+        return cls, None, _external_refusal(
+            cls, name, site, "default-callback-arm-is-absent-from-the-source")
+    if "cb = Some(PEM_def_callback)" not in source_text:
+        return cls, None, _external_refusal(
+            cls, name, site, "null-default-installation-is-absent")
+    default_addr = _external_exported(g, PEM_DEFAULT)
+    if default_addr is None or default_addr not in g.start_set:
+        return cls, None, _external_refusal(
+            cls, name, site, "default-target-is-missing-or-not-in-image",
+            default=default_addr)
+    dtext = insns[default_def][1]
+    dm = re.search(r"<([A-Za-z_]\w*)", dtext.split("#", 1)[1]) \
+        if "#" in dtext else None
+    if dm is None or dm.group(1) != PEM_DEFAULT:
+        return cls, None, _external_refusal(
+            cls, name, site, "default-target-is-not-PEM_def_callback",
+            instruction=dtext)
+    mroots, mchain, mbad = _external_forward_chain(
+        g, fstart, PEM_CB_STACK_INDEX, typedef="pem_password_cb",
+        rust_typedef="PemPasswordCb")
+    if mbad:
+        return cls, None, _external_refusal(
+            cls, name, site, "callback-chain-passes-a-non-parameter-value",
+            in_image=mbad)
+    if not mroots:
+        return cls, None, _external_refusal(
+            cls, name, site, "callback-chain-has-no-exported-root")
+    if "e7abi-forward-binding" in _MUTED:
+        # Negative control: the pre-fix chain used the header index but never
+        # compared it to the parameter actually forwarded.
+        roots, chain, sbad = mroots, mchain, []
+    else:
+        roots, chain, sbad = _external_pem_source_chain(
+            g, fstart, PEM_CB_STACK_INDEX, "PemPasswordCb")
+        if sbad:
+            return cls, None, _external_refusal(
+                cls, name, site,
+                "callback-chain-forwarded-argument-is-not-the-cb-parameter",
+                in_image=sbad)
+        missing = ({sym for sym, _k in mroots}
+                   - {sym for sym, _k in roots})
+        if missing:
+            return cls, None, _external_refusal(
+                cls, name, site, "machine-root-not-source-bound",
+                symbols=sorted(missing))
+    declarations = {}
+    for (symbol, k), info in sorted(roots.items()):
+        cb = info.get("declaration")
+        if cb is None or not cb.get("macro"):
+            cb, why = _external_header_cb(g, symbol, k)
+        if cb is None or cb.get("type_typedef") != "pem_password_cb":
+            return cls, None, _external_refusal(
+                cls, name, site, "header-does-not-declare-the-pem-callback",
+                symbol=symbol, declaration=cb)
+        declarations[symbol] = cb
+    if _external_exported(g, PEM_DEFAULT) is None:
+        return cls, None, _external_refusal(
+            cls, name, site, "default-callback-is-not-exported")
+
+    witness = _external_witness(
+        cls, name, site,
+        slot=(f"{PEM_FUNCTION}'s `cb` parameter (stack argument "
+              f"{PEM_CB_STACK_INDEX}) and the NULL-selected "
+              f"{PEM_DEFAULT} default"),
+        writer=("the exported PEM PKCS#8 writers forward their own `cb` "
+                "parameter; do_pk8pkey installs PEM_def_callback when both "
+                "the key string and cb are NULL"),
+        interface=("include/openssl/types.h:237 pem_password_cb; "
+                   "include/openssl/pem.h:439-440 PEM_def_callback and "
+                   "pem.h:492-503/514-521 the writer prototypes"),
+        basis=("the call operand has exactly two definitions: the cb stack "
+               "parameter (index 7) and the in-image PEM_def_callback load; "
+               "every in-image chain forwards the same parameter to an "
+               "exported writer whose header declares pem_password_cb; the "
+               "default target is recorded and the target set is unbounded"),
+        conditions={
+            "site_enumerated": f"{PEM_FUNCTION} {hex(PEM_SITE)}",
+            "operand_is_the_cb_register": "%r14",
+            "cb_is_stack_parameter": f"index {PEM_CB_STACK_INDEX}",
+            "default_arm": (f"{insns[default_def][1]} -> "
+                            f"{PEM_DEFAULT} at {hex(default_addr)}"),
+            "exported_roots": sorted(s for s, _k in roots),
+            "documented_interface": "pem_password_cb",
+            "target_set_unbounded": "the exported writers admit any "
+                                    "application pem_password_cb",
+        },
+        does_not_cover=ABI_CONTRACTS[cls]["does_not_cover"],
+        target_set=[],
+        operand={"reg": "%r14", "definitions": [hex(insns[d][0])
+                                                 for d in sorted(defs)]},
+        parameter={"name": "cb", "index": PEM_CB_STACK_INDEX,
+                   "source": insns[param[0]][1]},
+        default_target={"symbol": PEM_DEFAULT, "address": hex(default_addr),
+                        "load": dtext},
+        caller_chain=chain,
+        machine_caller_chain=mchain,
+        source_bound=("e7abi-forward-binding" not in _MUTED),
+        in_image_callers=[],
+        header=declarations,
+        source={"file": PEM_SOURCE,
+                "default_install_line": _external_line_number(
+                    source_text, "cb = Some(PEM_def_callback)"),
+                "default_call_line": _external_line_number(
+                    source_text, "cb.unwrap_or(PEM_def_callback)")},
+    )
+    return cls, witness, None
+
+
+EXTERNAL_ABI_WITNESSES = (
+    pbe_registry_witness,
+    store_loader_legacy_witness,
+    store_loader_provider_witness,
+    conf_module_witness,
+    pem_password_default_witness,
+)
+# The address is not the identity: the documented function leaf must match too.
+EXTERNAL_ABI_SITE_FUNCTIONS = {
+    PBE_SITE: PBE_FUNCTION,
+    0x1C21A8: STORE_LOADER_FUNCTION,
+    0x1C229D: STORE_LOADER_FUNCTION,
+    0x1C2768: STORE_LOADER_FUNCTION,
+    STORE_LOADER_PROVIDER_SITE: STORE_LOADER_FUNCTION,
+    0x2E111A: CONF_FUNCTION,
+    0x2E1532: CONF_FUNCTION,
+    PEM_SITE: PEM_FUNCTION,
+}
+EXTERNAL_ABI_SITE_ADDRESSES = frozenset(EXTERNAL_ABI_SITE_FUNCTIONS)
+EXTERNAL_ABI_CLASSES = frozenset({
+    ABI_CONTRACT_PBE_REGISTRY,
+    ABI_CONTRACT_STORE_LOADER,
+    ABI_CONTRACT_CONF_MODULE,
+    ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
+})
+
+
+def external_abi_contract_witness(g: "DsoGraph", site: dict, name: str):
+    """The external-ABI witness for this exact site, or None.
+
+    A site is enumerated by (function leaf, call address).  A refusal is
+    returned as ``(class, None, refusal)`` and keeps the site target-bounded;
+    it is never absorbed by a same-shaped call elsewhere.
+    """
+    expected = EXTERNAL_ABI_SITE_FUNCTIONS.get(site.get("addr"))
+    if expected is None:
+        return None
+    if _external_function_leaf(name) != expected:
+        return None
+    if not site.get("unresolved"):
+        return None
+    for witness_fn in EXTERNAL_ABI_WITNESSES:
+        result = witness_fn(g, site, name)
+        if result is not None:
+            return result
+    return None
+
+
+def external_contract_sites(graphs: dict) -> list:
+    """Every external-ABI site in one receipt list, tagged by class.
+
+    Site 5 is admitted under `ABI_CONTRACT_PROVIDER` (the provider dispatch
+    contract) but is the store-loader `p_close` use; it is included here by its
+    witness scope so a reader counting this one key sees all eight sites.
+    """
+    out = []
+    for name, g in graphs.items():
+        for s in g.sites.values():
+            if not s.get("unresolved"):
+                continue
+            w = s.get("witness") or {}
+            if s.get("class") not in EXTERNAL_ABI_CLASSES:
+                if not (s.get("class") == ABI_CONTRACT_PROVIDER
+                        and w.get("scope") == "store-loader-p_close"):
+                    continue
+            out.append({"dso": name, "function": hex(s["func"]),
+                        "function_name": g.funcs.get(s["func"], "?"),
+                        "site": hex(s["addr"]), "class": s["class"],
+                        "reason": s["reason"], "witness": w,
+                        "resolved": False})
+    out.sort(key=lambda r: (r["dso"], r["site"]))
+    return out
+
+
 def evaluate_predicate_element_7(reachable_residual_sites, unclassified_sites) -> dict:
     """Element 7 under AGENTS.md section 7 criterion 2.
 
@@ -17486,6 +19982,25 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                                   + str(site.get("seam") or ""))
                 stats["O1_witness_missing"] += 1
             continue
+        # E7-ABI: the eight external application/provider/DSO-registerable
+        # callbacks.  Each witness is enumerated by (function, call address)
+        # and proves the operand, base, field offset, writer set and documented
+        # interface.  A refusal is recorded and the site stays target-bounded;
+        # it is never passed to the finite-target rules below.
+        ext = external_abi_contract_witness(g, site, name)
+        if ext is not None:
+            ext_cls, ext_witness, ext_refusal = ext
+            if ext_witness is not None:
+                site["class"] = ext_cls
+                site["unresolved"] = True
+                site["reason"] = ("external ABI contract witness: "
+                                  + ext_witness["slot"])
+                site["witness"] = ext_witness
+                stats["E7ABI_" + ext_cls + "_contract_bounded"] += 1
+            else:
+                site["external_abi_refusal"] = ext_refusal
+                stats["E7ABI_refused"] += 1
+            continue
         # Stored-value slot targets: Method.free is written only by the in-image
         # method-store writers, so its target set is derived from the values
         # reachable code stores, never from declared symbol names.  A reachable
@@ -18748,6 +21263,9 @@ def _edge_record(g, site: dict, ordinal: int, oracle=None, seen_ids=None) -> dic
         w = site.get("witness") or {}
         extra["witness_id"] = (f"{site.get('class')}:{w.get('slot') or 'unknown'}")
         extra["contract_bounded"] = True
+        # AGENTS.md section 22: the per-call-site witness is persisted with the
+        # edge, not merely named by the class.
+        extra["contract_witness"] = w
         for nm in admitted:
             chains[nm] = [{"step": "abi-contract",
                            "slot": w.get("slot"),
@@ -25485,6 +28003,34 @@ def build_receipt(args) -> dict:
                         "a provider module selected by configuration can return its "
                         "own dispatch table; the target set is unbounded"),
                 },
+                "external_call_sites": {
+                    "classes": [ABI_CONTRACT_PBE_REGISTRY,
+                                ABI_CONTRACT_STORE_LOADER,
+                                ABI_CONTRACT_CONF_MODULE,
+                                ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
+                                ABI_CONTRACT_PROVIDER],
+                    "rule": (
+                        "each site carries its own per-call-site witness: the "
+                        "enumerated function and call address, the operand and "
+                        "base object, the declared field offset or exported "
+                        "parameter, the source writer set and the documented "
+                        "interface; the target set stays unbounded.  The "
+                        "store-loader p_close use is admitted under "
+                        "ABI_CONTRACT_PROVIDER and is tagged by witness scope, "
+                        "so this one list contains all eight sites"),
+                    "sites": external_contract_sites(graphs),
+                    "count": len(external_contract_sites(graphs)),
+                    "by_class": dict(sorted(collections.Counter(
+                        r["class"]
+                        for r in external_contract_sites(graphs)).items())),
+                    "contracts": {
+                        cls: ABI_CONTRACTS[cls] for cls in
+                        (ABI_CONTRACT_PBE_REGISTRY,
+                         ABI_CONTRACT_STORE_LOADER,
+                         ABI_CONTRACT_CONF_MODULE,
+                         ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
+                         ABI_CONTRACT_PROVIDER)},
+                },
                 "distinct_from_resolved": (
                     "a statically resolved edge has resolved=true and an in-image "
                     "target set; every site above has resolved=false and an unbounded "
@@ -25702,6 +28248,255 @@ def build_receipt(args) -> dict:
 # --------------------------------------------------------------------------- #
 # self-test
 # --------------------------------------------------------------------------- #
+
+def _e7abi_self_test():
+    """Committed positive and negative controls for the E7-ABI witnesses.
+
+    Runs against the exact candidate when the admitted install is present (the
+    court environment).  The positive shape covers all eight sites; the
+    negative fixtures are the reviewer's counterexamples, each paired with a
+    mutation switch that must flip the refusal back to acceptance, so the
+    control is load-bearing rather than a vacuous assertion.
+    """
+    root = Path(__file__).resolve().parents[2]
+    dso = root / "artifacts/phase2/install/lib/libcrypto.so.3"
+    install = root / "artifacts/phase2/install"
+    if not dso.is_file() or not (install / "include/openssl/pem.h").is_file():
+        return [], "e7abi controls: skipped (candidate or install absent)"
+    if not (shutil.which("nm") and shutil.which("objdump")):
+        return [], "e7abi controls: skipped (nm/objdump absent)"
+    workdir = root / "court/tmp/closure-b64-e7pk12/work-ssh"
+    if not workdir.is_dir():
+        workdir = root / "court/tmp/e7abi-selftest-work"
+    failures = []
+
+    def chk(name, got, want):
+        if got != want:
+            failures.append(f"{name}: got {got!r}, want {want!r}")
+
+    try:
+        g = DsoGraph(dso, workdir)
+    except Exception as e:  # noqa: BLE001 -- a missing tool is a skip, not a fail
+        return [], f"e7abi controls: skipped (graph unavailable: {e})"
+    g.source_root = str(root)
+    g.install_prefix = str(install)
+    g.precision = PrecisionResolver(g)
+    site_specs = (
+        (0x179A0D, 0x179870, "call   *%rax"),
+        (0x1C21A8, 0x1C1D20, "call   *%rax"),
+        (0x1C229D, 0x1C1D20, "call   *%rax"),
+        (0x1C2768, 0x1C1D20, "call   *%rax"),
+        (0x1C2528, 0x1C1D20, "call   *%rax"),
+        (0x2E111A, 0x2E0C10, "call   *%r15"),
+        (0x2E1532, 0x2E0C10, "call   *%rax"),
+        (0x4FA4C6, 0x4FA240, "call   *%r14"),
+    )
+    g.sites = {}
+    for addr, func, text in site_specs:
+        g.sites[(func, addr, "call")] = {
+            "kind": "call", "func": func, "addr": addr, "text": text,
+            "targets": set(), "unresolved": True,
+            "reason": "materialised", "class": "materialised",
+            "field_offsets": set(), "seam": None,
+            "arg_deps": set(), "arg_targets": set()}
+    expected = {
+        0x179A0D: ABI_CONTRACT_PBE_REGISTRY,
+        0x1C21A8: ABI_CONTRACT_STORE_LOADER,
+        0x1C229D: ABI_CONTRACT_STORE_LOADER,
+        0x1C2768: ABI_CONTRACT_STORE_LOADER,
+        0x1C2528: ABI_CONTRACT_PROVIDER,
+        0x2E111A: ABI_CONTRACT_CONF_MODULE,
+        0x2E1532: ABI_CONTRACT_CONF_MODULE,
+        0x4FA4C6: ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
+    }
+
+    def site(addr):
+        return next(s for s in g.sites.values() if s.get("addr") == addr)
+
+    def wit(addr):
+        s = site(addr)
+        return external_abi_contract_witness(g, s,
+                                             g.funcs.get(s["func"], ""))
+
+    for addr, cls in sorted(expected.items()):
+        res = wit(addr)
+        if res is None:
+            failures.append(f"e7abi {addr:#x}: no witness")
+            continue
+        got_cls, w, ref = res
+        chk(f"e7abi {addr:#x} class", got_cls, cls)
+        if w is None:
+            failures.append(f"e7abi {addr:#x}: refused: "
+                            f"{(ref or {}).get('reason')}")
+            continue
+        chk(f"e7abi {addr:#x} contract_bounded",
+            w.get("contract_bounded"), True)
+        chk(f"e7abi {addr:#x} target set", w.get("target_set"), [])
+    chk("e7abi site 5 scope",
+        ((wit(0x1C2528) or (None, {}))[1] or {}).get("scope"),
+        "store-loader-p_close")
+    chk("e7abi site 8 default",
+        ((wit(0x4FA4C6) or (None, {}))[1] or {}).get("default_target",
+                                                    {}).get("symbol"),
+        PEM_DEFAULT)
+
+    def reset_caches():
+        for attr in list(vars(g)):
+            if attr.startswith(("_s1_", "_source_")):
+                try:
+                    delattr(g, attr)
+                except AttributeError:
+                    pass
+
+    def fixture(case, files):
+        d = Path(tempfile.mkdtemp(prefix=f"e7abi-selftest-{case}-",
+                                  dir=root / "court/tmp"))
+        for rel in files:
+            src = root / rel
+            dst = d / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+        return d
+
+    def append(d, rel, text):
+        p = d / rel
+        p.write_text(p.read_text() + "\n" + text + "\n")
+
+    def drop(d, rel, needle):
+        p = d / rel
+        lines = p.read_text().splitlines()
+        kept = [line for line in lines if needle not in line]
+        if len(kept) == len(lines):
+            raise AssertionError(f"{needle!r} not found in {rel}")
+        p.write_text("\n".join(kept) + "\n")
+
+    def control(label, d, addr, mute, reason):
+        global _MUTED
+        old = g.source_root
+        g.source_root = str(d)
+        reset_caches()
+        saved = set(_MUTED)
+        try:
+            _MUTED = set()
+            res = wit(addr)
+            ok = (res is not None and res[1] is None
+                  and (reason is None or res[2].get("reason") == reason))
+            chk(f"e7abi {label} refusal", ok, True)
+            _MUTED = {mute}
+            res2 = wit(addr)
+            chk(f"e7abi {label} control is load-bearing",
+                bool(res2 is not None and res2[1] is not None), True)
+        finally:
+            _MUTED = saved
+            g.source_root = old
+            reset_caches()
+
+    cases = []
+    d = fixture("pbe-alias", ["src/evp/evp_pbe.rs"])
+    append(d, "src/evp/evp_pbe.rs",
+           "type E7AliasPbe = EvpPbeCtl;\n"
+           "#[allow(dead_code)]\n"
+           "unsafe fn e7abi_alias(row: *mut E7AliasPbe, "
+           "k: Option<EvpPbeKeygen>) { unsafe { (*row).keygen = k; } }")
+    cases.append(("PBE type alias", d, 0x179A0D, "e7abi-type-alias",
+                  "keygen-field-writer-set-is-not-exactly-the-registry"))
+
+    d = fixture("store-alias", ["src/store/mod.rs",
+                                "src/store/store_register.rs",
+                                "src/store/store_meth.rs",
+                                "src/store/store_lib.rs"])
+    append(d, "src/store/store_register.rs",
+           "type E7AliasLoader = OsslStoreLoader;\n"
+           "#[allow(dead_code)]\n"
+           "unsafe fn e7abi_alias(loader: *mut E7AliasLoader, "
+           "f: Option<OsslStoreOpenExFn>) { unsafe { (*loader).open_ex = f; } }")
+    cases.append(("STORE type alias", d, 0x1C21A8, "e7abi-type-alias",
+                  "open_ex-writer-set-is-not-the-setter"))
+
+    d = fixture("conf-alias", ["src/runtime/confmod/mod.rs"])
+    append(d, "src/runtime/confmod/mod.rs",
+           "type E7AliasModule = ConfModule;\n"
+           "#[allow(dead_code)]\n"
+           "unsafe fn e7abi_alias(m: *mut E7AliasModule, "
+           "f: Option<ConfInitFn>) { unsafe { (*m).init = f; } }")
+    cases.append(("CONF type alias", d, 0x2E111A, "e7abi-type-alias",
+                  "init-writer-set-is-not-module-add"))
+
+    d = fixture("pbe-cont", ["src/evp/evp_pbe.rs"])
+    append(d, "src/evp/evp_pbe.rs",
+           "#[allow(dead_code)]\n"
+           "unsafe fn e7abi_cont(row: *mut EvpPbeCtl, "
+           "k: Option<EvpPbeKeygen>) {\n"
+           "    unsafe { (*row)\n        .keygen = k; }\n}")
+    cases.append(("PBE continuation writer", d, 0x179A0D,
+                  "e7abi-continuation",
+                  "keygen-field-writer-set-is-not-exactly-the-registry"))
+
+    d = fixture("pbe-macro-slot", ["src/evp/evp_pbe.rs"])
+    append(d, "src/evp/evp_pbe.rs",
+           "macro_rules! e7abi_m {\n"
+           "    ($p:ident, $v:expr) => { unsafe { (*$p).keygen = $v; } };\n"
+           "}")
+    cases.append(("PBE macro-expanded slot store", d, 0x179A0D,
+                  "e7abi-macro-slot",
+                  "macro-expanded-slot-store-unattributed"))
+
+    d = fixture("store-reg", ["src/store/mod.rs",
+                              "src/store/store_register.rs",
+                              "src/store/store_meth.rs",
+                              "src/store/store_lib.rs"])
+    (d / "src/store/e7abi_alias.rs").write_text(
+        "use crate::store::store_register::OSSL_STORE_register_loader as reg;\n"
+        "#[allow(dead_code)]\n"
+        "unsafe fn e7abi_reg_alias(loader: *mut "
+        "crate::store::OsslStoreLoader) { unsafe { reg(loader); } }\n"
+        "#[allow(dead_code)]\n"
+        "unsafe fn e7abi_reg_value(loader: *mut "
+        "crate::store::OsslStoreLoader) {\n"
+        "    let f = "
+        "crate::store::store_register::OSSL_STORE_register_loader;\n"
+        "    unsafe { f(loader); }\n}\n")
+    cases.append(("STORE registration alias", d, 0x1C21A8,
+                  "e7abi-registration-alias",
+                  "in-image-registration-reference"))
+
+    d = fixture("store-reg-split-use", ["src/store/mod.rs",
+                                       "src/store/store_register.rs",
+                                       "src/store/store_meth.rs",
+                                       "src/store/store_lib.rs"])
+    (d / "src/store/e7abi_split_use.rs").write_text(
+        "use crate::store::store_register::OSSL_STORE_register_loader\n"
+        "    as reg;\n"
+        "#[allow(dead_code)]\n"
+        "unsafe fn e7abi_reg_split(loader: *mut "
+        "crate::store::OsslStoreLoader) { unsafe { reg(loader); } }\n")
+    cases.append(("STORE split-line registration alias", d, 0x1C21A8,
+                  "e7abi-registration-alias",
+                  "in-image-registration-reference"))
+
+    d = fixture("pem-forward", ["src/pem/pem_pk8.rs",
+                                "src/pem/pem_pkey.rs"])
+    p = d / "src/pem/pem_pk8.rs"
+    text = p.read_text().replace(
+        "do_pk8pkey(bp, x, 0, -1, enc, kstr, klen, cb, u, ptr::null())",
+        "do_pk8pkey(bp, x, 0, -1, enc, kstr, klen, u, u, ptr::null())")
+    p.write_text(text)
+    cases.append(("PEM forwarded non-cb", d, 0x4FA4C6,
+                  "e7abi-forward-binding",
+                  "callback-chain-forwarded-argument-is-not-the-cb-parameter"))
+
+    try:
+        for label, d, addr, mute, reason in cases:
+            control(label, d, addr, mute, reason)
+    finally:
+        for _label, d, _addr, _mute, _reason in cases:
+            shutil.rmtree(d, ignore_errors=True)
+    return failures, ("e7abi controls: positive shape for all eight sites; "
+                      "type-alias, continuation, registration-alias, "
+                      "split-line-use, macro-expanded-slot-store and "
+                      "forwarded-parameter counterexamples refused, each "
+                      "mutation switch flips it to accepted")
+
 
 def self_test() -> int:
     failures = []
@@ -29979,6 +32774,10 @@ def self_test() -> int:
     check("E7PKCS12 first site still resolves when only the second guard is "
           "removed", (_w_nb1 or {}).get("targets"), ["0x531fe0"])
 
+    _e7abi_failures, _e7abi_line = _e7abi_self_test()
+    failures.extend(_e7abi_failures)
+    print(f"[consumer-closure] {_e7abi_line}")
+
     if failures:
         print("[consumer-closure] SELF-TEST FAILED")
         for f in failures:
@@ -30032,7 +32831,12 @@ def self_test() -> int:
           f"forwarded/computed/dropped-store/no-guard/tail-jump refusals; "
           f"exported and address-taken refusals; the foreign-function "
           f"non-widening control; and the three recorded residuals, each "
-          f"mutation- and fixture-tested)")
+          f"mutation- and fixture-tested), and the eight E7-ABI external-"
+          f"application/provider/DSO-registerable witnesses (positive shape "
+          f"for all eight sites; type-alias, continuation-line, split-line "
+          f"`use ... as`, function-pointer registration, macro-expanded slot "
+          f"store and forwarded-parameter counterexamples, each with its own "
+          f"load-bearing mutation switch)")
     return 0
 
 
