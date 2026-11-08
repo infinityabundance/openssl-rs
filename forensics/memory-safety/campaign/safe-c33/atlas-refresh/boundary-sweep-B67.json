@@ -1,0 +1,269 @@
+{
+ "receipt": "boundary-sweep-B67",
+ "kind": "site-enumerating-boundary-receipt",
+ "date": "2026-11-08",
+ "campaign": "safe-c33",
+ "subphase": "B67",
+ "candidate": {
+  "source_head": "b5ff19ce788518e25478df5dced1e03600c616d0",
+  "evidence_head": "e8ebd05d8d38e79b58b326d20404f035f24727dc",
+  "branch": "stage/p25/element7-s2b",
+  "source_state": "S = b5ff19ce7 (consumer_closure.py sha256 4c4f6e9c950dd32539f3c76c10416f17c5c33488b0e4e169c137287092a7d01b). src/ is not edited by this receipt; src/runtime/bio/bf_readbuff.rs is byte-identical at b5ff19ce7, at the inventory/span source b8bba9555 and at the evidence HEAD e8ebd05d8 (sha256 602841bf736952a4712da7a1079592f032d5663b72c67f8b946515eaeb4a840b).",
+  "files": [
+   "src/runtime/bio/bf_readbuff.rs",
+   "courts/phase25/rt_bio_readbuffer_control.c"
+  ],
+  "files_sha256": {
+   "src/runtime/bio/bf_readbuff.rs": "602841bf736952a4712da7a1079592f032d5663b72c67f8b946515eaeb4a840b",
+   "courts/phase25/rt_bio_readbuffer_control.c": "0500c866cabcdae91b94de94cf5115cc2ca7e016c7f4625b414e13e656ba21ef"
+  },
+  "note": "No src/ change. The receipt adds a site-scoped discharge, a ledger row and an external C probe."
+ },
+ "authority": {
+  "id": "openssl-3.6.4",
+  "source": "forensics/authorities/src/openssl-3.6.4/crypto/bio/bf_readbuff.c",
+  "dispatch": "BIO_METHOD field layout: bwrite_conv, readbuffer_write (the bwrite_old field), bread_conv, readbuffer_read, readbuffer_puts, readbuffer_gets, readbuffer_ctrl, readbuffer_new, readbuffer_free, readbuffer_callback_ctrl",
+  "note": "crypto/bio/bf_readbuff.c:153-160 defines both functions as `{ return 0; }`; the Rust static at src/runtime/bio/bf_readbuff.rs:44-59 mirrors the same slots."
+ },
+ "mechanism": {
+  "id": "BIO",
+  "state": "UNSAFE_OPEN",
+  "state_source": "state.json#/mechanisms[id=BIO]",
+  "mechanism_state_after": "UNSAFE_OPEN",
+  "discharge": "none mechanism-wide; this receipt discharges only the two named boundaries (site-scoped)"
+ },
+ "obligations": [
+  {
+   "id": "V1:src/runtime/bio/bf_readbuff.rs:231:UNSAFE_FN_DEF",
+   "stable_id": "src/runtime/bio/bf_readbuff.rs::UNSAFE_FN_DEF::readbuffer_write",
+   "file": "src/runtime/bio/bf_readbuff.rs",
+   "line": 231,
+   "kind": "UNSAFE_FN_DEF",
+   "item": "readbuffer_write",
+   "mechanism": "BIO",
+   "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+   "status_before": "BLOCKED",
+   "status_after": "DISCHARGED (boundary BIO-READBUF-001)"
+  },
+  {
+   "id": "V1:src/runtime/bio/bf_readbuff.rs:237:UNSAFE_FN_DEF",
+   "stable_id": "src/runtime/bio/bf_readbuff.rs::UNSAFE_FN_DEF::readbuffer_puts",
+   "file": "src/runtime/bio/bf_readbuff.rs",
+   "line": 237,
+   "kind": "UNSAFE_FN_DEF",
+   "item": "readbuffer_puts",
+   "mechanism": "BIO",
+   "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+   "status_before": "BLOCKED",
+   "status_after": "DISCHARGED (boundary BIO-READBUF-002)"
+  }
+ ],
+ "boundaries": [
+  {
+   "id": "BIO-READBUF-001",
+   "file": "src/runtime/bio/bf_readbuff.rs",
+   "line": 231,
+   "line_current": 230,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "readbuffer_write",
+   "mechanism": "BIO",
+   "signature": "unsafe extern \"C\" fn(*mut Bio, *const c_char, c_int) -> c_int",
+   "registration": "READBUFFER_METHOD.bwrite_old at src/runtime/bio/bf_readbuff.rs:48 (the only writer)",
+   "body": "#[allow(clippy::missing_safety_doc)]\nunsafe extern \"C\" fn readbuffer_write(_b: *mut Bio, _in: *const c_char, _inl: c_int) -> c_int {\n    0\n}",
+   "precondition_set": [],
+   "disposition": "SAFETY_DISCHARGED: src/runtime/bio/bf_readbuff.rs:231 — readbuffer_write has an empty precondition set. The body ignores _b, _in and _inl, dereferences nothing, touches no global or thread state, contains no unsafe block, call or allocation, and returns the constant 0. Therefore every argument value (NULL, dangling, unaligned, arbitrary _inl) yields 0 without UB. Its only writer is READBUFFER_METHOD.bwrite_old at :48; neither an export nor any other writer exists. The 3.6.4 authority's readbuffer_write is also `{ return 0; }`.",
+   "contract": "The C ABI operation is `int (BIO *, const char *, int)`. Because the body is the constant `0`, the callee derives no Rust reference, reads and writes no pointee, and has no failure path. `bwrite_conv` copies `legacy_write` out of the live method table before calling it and passes the raw arguments; no property of `_b`, `_in` or `_inl` is needed for this body to be UB-free.",
+   "established": [
+    "The full body is exactly `{\\n    0\\n}`: one integer literal and no other expression (src/runtime/bio/bf_readbuff.rs:231-233).",
+    "The parameters are named `_b`, `_in`, `_inl`; Rust's unused-parameter convention confirms the body does not bind or read them.",
+    "The body contains no unsafe block, no dereference, no function call, no static/thread-local access and no allocation.",
+    "A grep over src/ finds `readbuffer_write` only at this definition, at the static slot :48 and in the doc comment :229; there is no `#[no_mangle]`, `#[export_name]`, address-of or second assignment.",
+    "`nm -D` on the admitted artifacts/phase2/install/lib/libcrypto.so.3 lists no readbuffer_write symbol, so no external code can name the function directly.",
+    "The reachable path is BIO_write -> bio_write_intern -> bwrite_conv -> BioMethod::legacy_write -> this body; BIO_f_readbuffer is exported at OPENSSL_3.0.0 and returns the single static READBUFFER_METHOD."
+   ],
+   "authority_derived": [
+    "forensics/authorities/src/openssl-3.6.4/crypto/bio/bf_readbuff.c:24-45 declares both callbacks and installs readbuffer_write in the bwrite_old slot through the same BIO_METHOD layout.",
+    "forensics/authorities/src/openssl-3.6.4/crypto/bio/bf_readbuff.c:153-156 is `static int readbuffer_write(BIO *b, const char *in, int inl) { return 0; }`."
+   ],
+   "tests": [
+    "courts/phase25/rt_bio_readbuffer_control.c (public BIO_write path, admitted install)"
+   ],
+   "span_sha256": "c345d2b09a79fe6222b26980881961d3ba37580450a5f7d59e278f483bd150d0",
+   "span_start_line": 230,
+   "span_end_line": 233,
+   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_schema": "safe-c33/operation-span-sha256/v1",
+   "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "span_claim_scope": "the operation's own text and its attributes, from the first non-documentation attribute/qualifier line through the brace-matched closing brace; dispatchers, guards and callers are outside the hash",
+   "caller_closure_ref": "shared caller_closure"
+  },
+  {
+   "id": "BIO-READBUF-002",
+   "file": "src/runtime/bio/bf_readbuff.rs",
+   "line": 237,
+   "line_current": 236,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "readbuffer_puts",
+   "mechanism": "BIO",
+   "signature": "unsafe extern \"C\" fn(*mut Bio, *const c_char) -> c_int",
+   "registration": "READBUFFER_METHOD.bputs at src/runtime/bio/bf_readbuff.rs:51 (the only writer)",
+   "body": "#[allow(clippy::missing_safety_doc)]\nunsafe extern \"C\" fn readbuffer_puts(_b: *mut Bio, _str_: *const c_char) -> c_int {\n    0\n}",
+   "precondition_set": [],
+   "disposition": "SAFETY_DISCHARGED: src/runtime/bio/bf_readbuff.rs:237 — readbuffer_puts has an empty precondition set. The body ignores _b and _str_, dereferences nothing, does not call strlen, touches no global or thread state, contains no unsafe block, call or allocation, and returns the constant 0. Therefore every argument value (NULL, dangling, unaligned) yields 0 without UB. Its only writer is READBUFFER_METHOD.bputs at :51; neither an export nor any other writer exists. The 3.6.4 authority's readbuffer_puts is also `{ return 0; }`.",
+   "contract": "The C ABI operation is `int (BIO *, const char *)`. Because the body is the constant `0`, the callee derives no Rust reference, performs no string read and has no failure path. `BIO_puts` reads `m.bputs` from the live method table and calls it with the caller's `buf`; no property of `_b` or `_str_` is needed for this body to be UB-free.",
+   "established": [
+    "The full body is exactly `{\\n    0\\n}`: one integer literal and no other expression (src/runtime/bio/bf_readbuff.rs:237-239).",
+    "The parameters are named `_b`, `_str_`; Rust's unused-parameter convention confirms the body does not bind or read them.",
+    "The body contains no unsafe block, no dereference, no function call (in particular no strlen), no static/thread-local access and no allocation.",
+    "A grep over src/ finds `readbuffer_puts` only at this definition, at the static slot :51 and in the doc comment :235; there is no `#[no_mangle]`, `#[export_name]`, address-of or second assignment.",
+    "`nm -D` on the admitted artifacts/phase2/install/lib/libcrypto.so.3 lists no readbuffer_puts symbol, so no external code can name the function directly.",
+    "The reachable path is BIO_puts -> method->bputs -> this body; BIO_f_readbuffer is exported at OPENSSL_3.0.0 and returns the single static READBUFFER_METHOD."
+   ],
+   "authority_derived": [
+    "forensics/authorities/src/openssl-3.6.4/crypto/bio/bf_readbuff.c:24-45 installs readbuffer_puts in the bputs slot through the same BIO_METHOD layout.",
+    "forensics/authorities/src/openssl-3.6.4/crypto/bio/bf_readbuff.c:157-160 is `static int readbuffer_puts(BIO *b, const char *str) { return 0; }`."
+   ],
+   "tests": [
+    "courts/phase25/rt_bio_readbuffer_control.c (public BIO_puts path, admitted install)"
+   ],
+   "span_sha256": "16d8492f7898d9b15c45795fee7abdc89df1cc191c5d2c9f0a356389639e5ce2",
+   "span_start_line": 236,
+   "span_end_line": 239,
+   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_schema": "safe-c33/operation-span-sha256/v1",
+   "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "span_claim_scope": "the operation's own text and its attributes, from the first non-documentation attribute/qualifier line through the brace-matched closing brace; dispatchers, guards and callers are outside the hash",
+   "caller_closure_ref": "shared caller_closure"
+  }
+ ],
+ "caller_closure": {
+  "static_slot_writers": [
+   {
+    "file": "src/runtime/bio/bf_readbuff.rs",
+    "line": 48,
+    "slot": "bwrite_old",
+    "value": "Some(readbuffer_write)",
+    "owner": "READBUFFER_METHOD"
+   },
+   {
+    "file": "src/runtime/bio/bf_readbuff.rs",
+    "line": 51,
+    "slot": "bputs",
+    "value": "Some(readbuffer_puts)",
+    "owner": "READBUFFER_METHOD"
+   }
+  ],
+  "other_writers": [],
+  "other_references": "A grep over src/ for both names returns only the two definitions, the two static initialisers (:48, :51) and the two doc comments (:229, :235). Neither function is assigned anywhere else, and neither address is taken elsewhere.",
+  "export_status": "Neither function carries #[no_mangle] or #[export_name] and `nm -D` on the admitted libcrypto.so.3 lists neither symbol. Only BIO_f_readbuffer is exported; it returns &READBUFFER_METHOD.",
+  "static_table": "READBUFFER_METHOD is a private `static BioMethod` at src/runtime/bio/bf_readbuff.rs:44-59; its only owner is the module, and the only public accessor is `BIO_f_readbuffer`.",
+  "reachability": "A public caller can reach both slots with BIO_new(BIO_f_readbuffer()); BIO_f_readbuffer is exported at OPENSSL_3.0.0 (install symbol 0x20b430).",
+  "invocation_paths": [
+   "BIO_write -> bio_write_intern -> bwrite_conv -> BioMethod::legacy_write -> readbuffer_write (bwrite_old)",
+   "BIO_puts -> method->bputs -> readbuffer_puts"
+  ],
+  "no_other_export_or_writer": true
+ },
+ "negative_control": {
+  "id": "B67-C1",
+  "name": "public BIO_write/BIO_puts on a readbuffer BIO return 0 and leave the cache unchanged",
+  "kind": "external C probe against the admitted install (no src change)",
+  "source": "courts/phase25/rt_bio_readbuffer_control.c",
+  "source_sha256": "0500c866cabcdae91b94de94cf5115cc2ca7e016c7f4625b414e13e656ba21ef",
+  "binary": "court/tmp/closure-b67-bio/rt_bio_readbuffer_control",
+  "binary_sha256": "4705347994f81de3b96e1476d5cc3bf66bea12431474e706324126ba891f4a9e",
+  "build": "cc -std=c11 -O1 -Wall -Wextra -I artifacts/phase2/install/include -o court/tmp/closure-b67-bio/rt_bio_readbuffer_control courts/phase25/rt_bio_readbuffer_control.c -L artifacts/phase2/install/lib -lcrypto -Wl,-rpath,/work/artifacts/phase2/install/lib",
+  "run": "court/tmp/closure-b67-bio/rt_bio_readbuffer_control",
+  "guard": "BIO_write and BIO_puts both return 0; BIO_C_FILE_TELL and the forwarded BIO_CTRL_PENDING are unchanged; a seek back to 0 re-reads the original cached bytes and the source remainder.",
+  "observed": "PASS readbuffer write/puts: BIO_write=0 BIO_puts=0 tell_before=4 tell_after=4 pending_before=4 pending_after=4 cache_unchanged=1",
+  "exit_code": 0,
+  "result": "PASS",
+  "mutation_sensitive": "If either slot returned non-zero, or if write/puts advanced the cache or altered a cached byte, the probe exits non-zero. The probe observes the admitted DSO and does not mutate src/.",
+  "reachability_note": "The readbuffer method is reachable from the public API: BIO_new(BIO_f_readbuffer()) constructs it and BIO_push chains a memory source, so no fallback and no NOT_RUN is needed."
+ },
+ "neutral_control": {
+  "id": "B67-N1",
+  "assertion": "The zero observed for the readbuffer slot is a property of that slot, not of an inert chain: the memory source itself accepts a write.",
+  "observed": "The probe seeds the memory source with BIO_write(src, \"ABCDEFGH\", 8) and requires 8; that write succeeds before the readbuffer slot is exercised."
+ },
+ "supersedes": [
+  {
+   "receipt": "p25-vestigial-marker-sites",
+   "ids": ["P25-VESTIGIAL-MARKER-005", "P25-VESTIGIAL-MARKER-006"],
+   "reason": "the same (file, kind, operation) boundaries carried a BLOCKED disposition; this receipt's site-scoped SAFETY_DISCHARGED is the operative disposition for these two operations. The marker receipt is not edited; this record is the supersession."
+  }
+ ],
+ "related_receipts": ["p25-vestigial-marker-sites"],
+ "instrument_gaps": [
+  {
+   "id": "B67-G1",
+   "detail": "This discharge is reviewer-established, not verifier-enforced. consumer_closure.py does not parse the disposition text for SAFETY_DISCHARGED, does not gate on applied/adjudicated, and has no conflicting-disposition check; acceptance is (file, kind, operation) identity plus the recorded span hash. The reviewer independently verified the dispositions, the span hashes, the bodies and the probe. The gap must be closed before a receipt is applied without manual adjudication."
+  }
+ ],
+ "residuals": [
+  {
+   "id": "B67-R1",
+   "class": "atlas_conflicting_disposition",
+   "detail": "p25-vestigial-marker-sites still records P25-VESTIGIAL-MARKER-005/006 as BLOCKED for the same operations; this receipt is their supersession and the marker file is left unmodified so the prior record is preserved. The tool has no conflicting-disposition detection, so the conflict is visible only by reading both receipts.",
+   "disposition": "open",
+   "owner": "atlas-maintainer"
+  }
+ ],
+ "not_run": [
+  {
+   "gate": "Miri (Stacked/Tree Borrows)",
+   "blocker": "not invoked; the two bodies contain no memory operation or reference, so there is no aliasing model to check, but no Miri run is claimed"
+  },
+  {
+   "gate": "ASan / LeakSanitizer / TSan",
+   "blocker": "not invoked; the bodies allocate and synchronise nothing, but no sanitizer run is claimed"
+  },
+  {
+   "gate": "authority differential execution",
+   "blocker": "the pinned 3.6.4 source was read; no differential binary was executed"
+  },
+  {
+   "gate": "full library suite (BATCH flight)",
+   "blocker": "no src/ change was made; the closure is the only executed gate, and a FAST/BATCH pass would not be a safety certificate"
+  },
+  {
+   "gate": "independent BOUNDARY adjudication",
+   "blocker": "PENDING by design; the author does not self-approve"
+  }
+ ],
+ "non_claims": [
+  "This receipt is site-scoped to BIO-READBUF-001 and BIO-READBUF-002. The BIO mechanism remains UNSAFE_OPEN mechanism-wide; no ownership reconstruction or mechanism-wide discharge is claimed.",
+  "The proof covers only the two named bodies and their single static slots. readbuffer_read, readbuffer_resize, readbuffer_new, readbuffer_free, readbuffer_ctrl, readbuffer_callback_ctrl and readbuffer_gets are unclaimed here and remain governed by the existing BLOCKED state.",
+  "An empty precondition set is established for the two bodies as written. This is not a claim that the public BIO_write/BIO_puts contracts accept invalid pointers: the public exports still require a live BIO and valid input per their own documentation; the probe uses valid arguments.",
+  "A closure status of DISCHARGED is not SAFE_COMPATIBLE and does not graduate the BIO family or any consumer.",
+  "No cryptographic, constant-time, sanitizer, Miri or authority-differential claim is made.",
+  "This receipt is not independently adjudicated; the review block is PENDING."
+ ],
+ "review": {
+  "state": "APPROVED_WITH_CONDITIONS",
+  "reviewer": "independent adversarial adjudicator (separate agent; not the author)",
+  "verdict": "APPROVE_WITH_CONDITIONS",
+  "adjudicated": true,
+  "date": "2026-11-08",
+  "adjudication": {
+   "bodies": "both bodies are exactly { 0 } with ignored parameters; the admitted DSO compiles them to xor eax,eax; ret",
+   "span_hashes": "recomputed independently and matched (c345d2b0..., 16d8492f...)",
+   "caller_closure": "definitions + single static slots + doc comments only; no export; reachable only through BIO_f_readbuffer",
+   "negative_control": "rebuilt byte-identically and re-run: BIO_write=0 BIO_puts=0, tell/pending unchanged, cache unchanged",
+   "closure": "re-adjudicated 378 obligations: 188 DISCHARGED / 190 BLOCKED / 0 UNKNOWN; element 7 remains PASS",
+   "counterexample_power": "a deref present in the authored body would not be caught by the span hash; the empty-precondition proof is established by body inspection and the xor eax,eax; ret code, not by a semantic verifier"
+  },
+  "conditions": [
+   "record the supersession of P25-VESTIGIAL-MARKER-005/006 (same sites, BLOCKED) in this receipt",
+   "record that the discharge is reviewer-established, not verifier-enforced"
+  ],
+  "conditions_met": [
+   "supersedes + related_receipts + residual B67-R1 recorded",
+   "instrument_gaps B67-G1 recorded"
+  ],
+  "note": "Approved on the exact candidate after the two evidence-hygiene conditions were met. The author did not self-approve."
+ },
+ "applied": true,
+ "applied_in_ledger": "CAMPAIGN-STATUS.json scoped_boundary_discharges[receipt=boundary-sweep-B67] (adjudicated=true)",
+ "schema_note": "Same boundary shape as boundary-sweep-B52.json. `line` is the V1 census coordinate; `line_current` is the resolver's span start; span_sha256 is the acceptance binding produced by consumer_closure.resolve_operation_span at the inventory/span source b8bba9555 (the closures bind spans to that commit). The ledger row is present with adjudicated=false."
+}
