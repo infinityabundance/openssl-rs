@@ -31,21 +31,32 @@ generator is measurement-only and claims no discharge.
 
 ### Current element-7 and obligation truth (2026-11-07)
 
-Measured at source `b95b7814c` with tool `consumer_closure.py` sha256
-`86fc09b1…`, against artifacts built at `b8bba9555` (libcrypto `1c03ec0a`,
-ssh `926975c8`, sshd `0d3f5e92`). Receipts:
-`evidence/closure-ssh-b62-element7.json` and
-`evidence/inventory-sshd-b62-element7.json`; compact record:
-`atlas-refresh/element7-current-truth-b62.json`.
+Measured at source `9b8b35999` with tool `consumer_closure.py` sha256
+`fb4121c9…`, against artifacts built at `b8bba9555` (libcrypto `1c03ec0a`,
+ssh `926975c8`, sshd `0d3f5e92`; no rebuild, because the build-relevant tree is
+byte-identical). Receipts:
+`evidence/closure-ssh-b63-e7bs.json` and
+`evidence/inventory-sshd-b63-e7bs.json`; compact record:
+`atlas-refresh/element7-b63-e7bs.json`.
 
 - Obligations: **378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN**, identical
   for ssh and sshd; verdict `ACCEPTED` with 0 refusals; `safe_compatible`
   false for both.
-- **Element 7: FAIL — 14 target-bounded unresolved sites** (contract-bounded
-  119, reachable-unresolved 133, unclassified 0). This supersedes the
-  previously documented 15 at `363a3168d`: the registration-ABI atexit witness
-  moved one site (commit `091c6e78`).
-- Identity residual: the b62 receipts record `build_provenance: null` and
+- **Element 7: FAIL — 12 target-bounded unresolved sites** (contract-bounded
+  119, reachable-unresolved 131, unclassified 0). The two base-slot-partial
+  sites are now resolved by source-backed per-call-site witnesses:
+  `msblob2key_decode`'s `KeytypeDesc.read_private_key` (exactly the two internal
+  statics, `dsa_decode_void`/`rsa_decode_void`) and `ossl_synchronize_rcu`'s
+  closed writer list (proved empty: writer/constructor absent, no production
+  caller). That moved 14 → 12 and 133 → 131; contract-bounded stayed 119.
+- Remaining 12 (all `reg-top`): `store_loader_object_table` 4,
+  `pbe_registry_row` 3, `exported_callback_param` 3,
+  `conf_module_registry_row` 2.
+- Witness residuals are recorded, not hidden: the address gate is
+  candidate-bound and must be re-derived at every re-freeze; RCU inlining/ICF
+  and out-of-module writers are not excluded; msblob writer completeness is
+  source/module-scoped.
+- Identity residual: the b63 receipts record `build_provenance: null` and
   `artifact_matches_this_build: false`; the B53 freeze and census supply the
   tie to `b8bba9555`. This is a recorded provenance gap, not a passing
   identity claim.
