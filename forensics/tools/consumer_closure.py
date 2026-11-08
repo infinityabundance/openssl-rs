@@ -15509,6 +15509,50 @@ PBE_REGISTRY = "EVP_PBE_alg_add_type"
 PBE_FIND = "EVP_PBE_find_ex"
 PBE_OUT_INDEX = 4
 
+# ---- E7-PBE: the `keygen_ex` out-parameter dispatch ---------------------- #
+#
+# `EVP_PBE_find_ex` has two out-parameters.  The plain `keygen`
+# (EVP_PBE_KEYGEN, argument 5) is the unbounded registry contract carried by
+# `pbe_registry_witness`.  The `keygen_ex` (EVP_PBE_KEYGEN_EX, argument 6) has
+# no registry writer at all: `EVP_PBE_alg_add_type` forces `keygen_ex = None`.
+# The two call sites therefore have a finite target set, the `keygen_ex`
+# members of the link-time `BUILTIN_PBE` table.  The witness proves the call
+# target is a reload of the frame slot whose address escaped as argument 6 of
+# the unique in-image `EVP_PBE_find_ex` call, enumerates the table from
+# `.rela.dyn`, and refuses on any unproven row, writer, binding or argument.
+PBE_EX_FIELD = "keygen_ex"
+PBE_EX_FIELD_OFFSET = 0x18
+PBE_EX_OUT_INDEX = 5
+PBE_EX_TYPEDEF = "EVP_PBE_KEYGEN_EX"
+PBE_EX_SCHEMA = "openssl-rs/consumer-closure/pbe-outparam-builtin-table/v1"
+PBE_EX_RESOLUTION_KIND = "pbe_outparam_builtin_table"
+PBE_EX_CLASS = "pbe-outparam-builtin-table"
+PBE_EX_TABLE = "BUILTIN_PBE"
+PBE_EX_TYPE_KDF = 2
+PBE_EX_TYPE_NAMES = {
+    0: "EVP_PBE_TYPE_OUTER",
+    1: "EVP_PBE_TYPE_PRF",
+    2: "EVP_PBE_TYPE_KDF",
+}
+PBE_EX_SITES = {
+    0x179C85: {
+        "function": "EVP_PBE_CipherInit_ex",
+        "selection": "all",
+        "selection_note": (
+            "the call passes EVP_PBE_TYPE_OUTER; every table row's keygen_ex "
+            "member is used as a conservative superset (the KDF rows cannot "
+            "be selected by this call, but including them cannot narrow the "
+            "bound)"),
+    },
+    0x17C408: {
+        "function": "PKCS5_v2_PBE_keyivgen_ex",
+        "selection": "EVP_PBE_TYPE_KDF",
+        "selection_note": (
+            "the call passes EVP_PBE_TYPE_KDF; only rows whose pbe_type is "
+            "EVP_PBE_TYPE_KDF can be returned by the builtin search"),
+    },
+}
+
 STORE_LOADER_OWNER = "OsslStoreLoader"
 STORE_LOADER_SOURCE = "src/store/mod.rs"
 STORE_LOADER_REGISTER_SOURCE = "src/store/store_register.rs"
@@ -19907,6 +19951,954 @@ def private_parameter_assignment_witness(g: "DsoGraph", site: dict,
     }
 
 
+def _pbe_outparam_refusal(reason: str, name: str, site: dict, **extra) -> dict:
+    rec = {
+        "schema": PBE_EX_SCHEMA,
+        "class": PBE_EX_CLASS,
+        "resolution_kind": PBE_EX_RESOLUTION_KIND,
+        "contract_bounded": False,
+        "resolved": False,
+        "function": name,
+        "function_start": hex(site.get("func") or 0),
+        "call_site": hex(site.get("addr") or 0),
+        "refusal": reason,
+    }
+    rec.update(extra)
+    return rec
+
+
+def _pbe_is_64bit_store(text: str) -> bool:
+    """A full 8-byte immediate store (`movq $0x0, <slot>`)."""
+    mn, _rest, _ops = _insn_parts(text.split("#", 1)[0].strip())
+    return mn == "movq"
+
+
+def _pbe_reg_width(reg: str):
+    """Byte width of a register operand, or None when it is not a GPR/XMM."""
+    if reg in _REGS:
+        return 8
+    if reg.startswith("%xmm"):
+        return 16
+    if reg in _SUBREG:
+        if reg in ("%eax", "%ebx", "%ecx", "%edx", "%esi", "%edi",
+                   "%ebp", "%esp") or re.fullmatch(r"%r\d+d", reg):
+            return 4
+        if reg in ("%ax", "%bx", "%cx", "%dx", "%si", "%di",
+                   "%bp", "%sp") or re.fullmatch(r"%r\d+w", reg):
+            return 2
+        if reg in ("%al", "%ah", "%bl", "%bh", "%cl", "%ch",
+                   "%dl", "%dh", "%sil", "%dil", "%bpl", "%spl") \
+                or re.fullmatch(r"%r\d+b", reg):
+            return 1
+    return None
+
+
+def _pbe_store_width(mn: str, ops):
+    """Width in bytes of an explicit memory-destination instruction."""
+    if mn in ("movaps", "movups", "movdqa", "movdqu"):
+        return 16
+    if mn == "movss":
+        return 4
+    if mn == "movsd":
+        return 8
+    m = re.fullmatch(
+        r"(?:mov|add|sub|adc|sbb|and|or|xor|inc|dec|neg|not|shl|shr|sar|"
+        r"sal|rol|ror|rcl|rcr|xchg|cmpxchg)([bwlq])", mn)
+    if m:
+        return {"b": 1, "w": 2, "l": 4, "q": 8}[m.group(1)]
+    if mn.startswith("set"):
+        return 1
+    if ops:
+        # `mov %rax,(%rsp)`, `add %ecx,(%rsp)`, `xchg %rax,(%rsp)`: the
+        # source register carries the operation width.
+        width = _pbe_reg_width(ops[0])
+        if width is not None:
+            return width
+    return None
+
+
+def _pbe_store_range(g: "DsoGraph", fstart: int, i: int):
+    """(entry-relative address, width, text) for one explicit store.
+
+    A width of None means the destination range is not decidable; the caller
+    treats it conservatively only when its address is near the slot.
+    """
+    insns = g.precision.insns_by_func.get(fstart, ())
+    if i >= len(insns):
+        return None
+    text = insns[i][1]
+    mn, rest, ops = _insn_parts(text)
+    if mn == "push":
+        deltas = _semantic_rsp_deltas(g, fstart)
+        d = deltas[i] if i < len(deltas) else None
+        return None if d is None else (d - 8, 8, text)
+    if mn.startswith("call"):
+        # The return address is written at the pre-call `rsp - 8`.
+        deltas = _semantic_rsp_deltas(g, fstart)
+        d = deltas[i] if i < len(deltas) else None
+        return None if d is None else (d - 8, 8, text)
+    if mn in ("lea", "cmp", "cmpl", "cmpb", "cmpw", "cmpq", "test",
+              "testl", "testb", "testw", "testq", "nop", "ret",
+              "ud2") or mn.startswith(("j", "prefetch")):
+        return None
+    if mn == "lock":
+        mn, rest, ops = _insn_parts(rest)
+    if not ops:
+        return None
+    dst = ops[-1]
+    m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%rsp|%rbp)\)", dst)
+    if not m:
+        return None
+    abs_off = _stack_slot_abs(g, fstart, i, dst)
+    if abs_off is None:
+        return None
+    return abs_off, _pbe_store_width(mn, ops), text
+
+
+def _pbe_frame_reloads(g: "DsoGraph", fstart: int, idx: int, reg: str):
+    """Every reaching definition of the call operand, all frame-slot loads."""
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None:
+        return None, "call-target-has-an-open-or-non-convergent-definition"
+    if not defs or _ENTRY_DEF in defs:
+        return None, "call-target-is-an-entry-value"
+    insns = g.precision.insns_by_func.get(fstart, ())
+    rows, slots = [], set()
+    for d in sorted(x for x in defs if x >= 0):
+        mn, _rest, ops = _insn_parts(insns[d][1])
+        if mn not in ("mov", "movq", "movl") or len(ops) < 2:
+            return None, f"call-target-writer-{hex(insns[d][0])}-is-not-a-load"
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[0])
+        if not m:
+            return None, (f"call-target-writer-{hex(insns[d][0])}-is-not-a-"
+                          "frame-load")
+        if _canon(m.group(2)) not in ("%rsp", "%rbp"):
+            return None, (f"call-target-writer-{hex(insns[d][0])}-is-not-"
+                          "frame-relative")
+        # The slot holds an 8-byte pointer.  A 32-bit load truncates the
+        # upper half, so the destination must be a 64-bit GPR and the
+        # mnemonic must not be the explicit 32-bit form.
+        if (mn == "movl" or ops[1] not in _REGS):
+            if "e7pbe-outparam-reload-width" not in _MUTED:
+                return None, "slot-width-is-not-64-bit"
+        off = int(m.group(1), 16) if m.group(1) else 0
+        slot = _stack_slot_abs(g, fstart, d, ops[0])
+        if slot is None:
+            return None, (f"call-target-slot-is-not-resolvable-at-"
+                          f"{hex(insns[d][0])}")
+        slots.add(slot)
+        rows.append({"def": d, "addr": insns[d][0],
+                     "text": insns[d][1].strip(), "offset": off,
+                     "slot_text": ops[0], "slot": slot})
+    if len(slots) != 1:
+        return None, "call-target-reloads-different-frame-slots"
+    return rows, None
+
+
+def _pbe_call_binding(g: "DsoGraph", fstart: int, idx: int):
+    """Resolve a call's callee, directly or through its GOT relocation."""
+    insns = g.precision.insns_by_func.get(fstart, ())
+    if idx >= len(insns):
+        return None
+    text = insns[idx][1]
+    mn, rest, _ops = _insn_parts(text)
+    if not mn.startswith("call"):
+        return None
+    if not rest.startswith("*"):
+        direct = _direct_call_target(g, fstart, idx)
+        if direct is None:
+            return None
+        _addr, target = direct
+        return {"kind": "direct", "call_site": hex(insns[idx][0]),
+                "target": hex(target), "symbol": g.funcs.get(target),
+                "in_image": target in g.start_set}
+    # A GOT/PLT call: objdump resolves the RIP-relative slot in its comment.
+    m = re.search(r"#\s*([0-9a-f]+)\s+<([^>]+)>", text)
+    if not m:
+        return None
+    slot = int(m.group(1), 16)
+    annotation = m.group(2)
+    relocs = [r for r in (getattr(g, "relocs", ()) or ()) if r[0] == slot]
+    if len(relocs) != 1:
+        return {"kind": "got", "call_site": hex(insns[idx][0]),
+                "slot": hex(slot), "annotation": annotation,
+                "relocations": len(relocs), "symbol": None,
+                "in_image": False}
+    _off, typ, sym, add, symval = relocs[0]
+    base = (sym or "").split("@")[0]
+    target = None
+    if base:
+        target = (getattr(g, "dynamic_defs", {}) or {}).get(base)
+    return {"kind": "got", "call_site": hex(insns[idx][0]),
+            "slot": hex(slot), "relocation": typ,
+            "relocation_raw": sym, "symbol": base,
+            "symval": None if symval is None else hex(symval),
+            "addend": None if add is None else hex(add),
+            "target": None if target is None else hex(target),
+            "in_image": target is not None and target in g.start_set,
+            "annotation": annotation}
+
+
+def _pbe_find_call(g: "DsoGraph", fstart: int):
+    """The unique call instruction that names EVP_PBE_find_ex."""
+    insns = g.precision.insns_by_func.get(fstart, ())
+    hits = []
+    for i, (a, text) in enumerate(insns):
+        mn, _rest, _ops = _insn_parts(text)
+        if not mn.startswith("call"):
+            continue
+        ann = _s1_call_symbol(g, fstart, i)
+        binding = _pbe_call_binding(g, fstart, i)
+        ann_leaf = (ann or "").split("@")[0]
+        bind_leaf = ((binding or {}).get("symbol") or "").split("@")[0]
+        if ann_leaf == PBE_FIND or bind_leaf == PBE_FIND:
+            hits.append((i, ann, binding))
+    if len(hits) != 1:
+        return None, None, "pbe-find-ex-call-is-not-unique", {
+            "candidates": [hex(insns[i][0]) for i, _a, _b in hits]}
+    i, ann, binding = hits[0]
+    return i, {"annotation": ann, "binding": binding}, None, None
+
+
+def _pbe_binding_flags(g: "DsoGraph") -> dict:
+    """The dynamic binding flags relevant to the GOT caveat."""
+    preset = getattr(g, "dynamic_flags", None)
+    if isinstance(preset, dict):
+        return dict(preset)
+    cache = getattr(g, "_pbe_binding_flags_cache", None)
+    if cache is not None:
+        return cache
+    path = getattr(g, "path", None)
+    out = {"symbolic": None, "bind_now": None, "source": "unavailable",
+           "flags": ""}
+    if path is not None:
+        text = run(["readelf", "-dW", str(path)]).stdout
+        flags = " ".join(line for line in text.splitlines()
+                         if "(FLAGS)" in line or "(FLAGS_1)" in line)
+        out = {
+            "symbolic": bool(re.search(r"\bSYMBOLIC\b", flags)),
+            "bind_now": bool(re.search(r"\bBIND_NOW\b|\bNOW\b", flags)),
+            "source": "readelf -dW (.dynamic FLAGS/FLAGS_1)",
+            "flags": flags.strip(),
+        }
+    try:
+        g._pbe_binding_flags_cache = out
+    except Exception:  # noqa: BLE001 -- a cache write is never load-bearing
+        pass
+    return out
+
+
+def _pbe_reload_guard(g: "DsoGraph", fstart: int, reload_idx: int,
+                      call_idx: int, reg: str):
+    """A same-block non-NULL guard that routes the zero edge away from the call."""
+    cfg = _function_cfg(g, fstart)
+    insns = cfg["insns"]
+    rb = cfg["block_of"].get(reload_idx)
+    cb = cfg["block_of"].get(call_idx)
+    if rb is None or cb is None:
+        return None
+    _lo, hi = cfg["blocks"][rb]
+    if not (_lo <= reload_idx < hi):
+        return None
+    idx_of = {a: i for i, (a, _t) in enumerate(insns)}
+    for k in range(reload_idx + 1, hi - 1):
+        if k != hi - 2:
+            continue
+        mn, _rest, ops = _insn_parts(insns[k][1].split("#", 1)[0].strip())
+        if mn == "test":
+            if not (len(ops) == 2 and _canon(ops[0]) == reg
+                    and _canon(ops[1]) == reg):
+                continue
+        elif mn == "cmp":
+            if not (len(ops) == 2 and ops[0].strip() in ("$0x0", "$0")
+                    and _canon(ops[1]) == reg):
+                continue
+        else:
+            continue
+        bmn, brest, _bops = _insn_parts(
+            insns[k + 1][1].split("#", 1)[0].strip())
+        if bmn not in ("je", "jz", "jne", "jnz"):
+            continue
+        m = re.match(r"^([0-9a-f]+)", brest)
+        if not m:
+            continue
+        tb = cfg["block_of"].get(idx_of.get(int(m.group(1), 16)))
+        ft = cfg["block_of"].get(hi)
+        if tb is None or ft is None:
+            continue
+        if bmn in ("je", "jz"):
+            zero_edge, nonzero_edge = tb, ft
+        else:
+            zero_edge, nonzero_edge = ft, tb
+        if _reaching_defs(g, fstart, k, reg) != {reload_idx}:
+            continue
+        if not _e7pk12_block_reachable(cfg, nonzero_edge, cb):
+            continue
+        if _e7pk12_block_reachable(cfg, zero_edge, cb):
+            continue
+        return {"register": reg,
+                "test": hex(insns[k][0]), "text": insns[k][1].strip(),
+                "branch": hex(insns[k + 1][0]),
+                "branch_text": insns[k + 1][1].strip(),
+                "zero_edge": zero_edge, "nonzero_edge": nonzero_edge,
+                "call_block": cb,
+                "basis": ("the guard is in the reload's own block after the "
+                          "reload; the zero edge does not reach the call "
+                          "block and the non-zero edge does")}
+    return None
+
+
+def _pbe_success_edge(g: "DsoGraph", fstart: int, find_idx: int,
+                      site_idx: int):
+    """Prove the call block is reached only through the find_ex non-zero edge."""
+    cfg = _function_cfg(g, fstart)
+    insns = cfg["insns"]
+    if find_idx + 2 >= len(insns):
+        return None
+    k = find_idx + 1
+    mn, _rest, ops = _insn_parts(insns[k][1].split("#", 1)[0].strip())
+    if mn == "test":
+        if not (len(ops) == 2 and _canon(ops[0]) == "%rax"
+                and _canon(ops[1]) == "%rax"):
+            return None
+    elif mn == "cmp":
+        if not (len(ops) == 2 and ops[0].strip() in ("$0x0", "$0")
+                and _canon(ops[1]) == "%rax"):
+            return None
+    else:
+        return None
+    bmn, brest, _bops = _insn_parts(insns[k + 1][1].split("#", 1)[0].strip())
+    if bmn not in ("je", "jz", "jne", "jnz"):
+        return None
+    m = re.match(r"^([0-9a-f]+)", brest)
+    if not m:
+        return None
+    idx_of = {a: i for i, (a, _t) in enumerate(insns)}
+    tb = cfg["block_of"].get(idx_of.get(int(m.group(1), 16)))
+    bi = cfg["block_of"].get(k + 1)
+    if tb is None or bi is None or cfg["blocks"][bi][1] != k + 2:
+        return None
+    ft = cfg["block_of"].get(cfg["blocks"][bi][1])
+    cb = cfg["block_of"].get(site_idx)
+    if ft is None or cb is None:
+        return None
+    if bmn in ("je", "jz"):
+        zero_edge, nonzero_edge = tb, ft
+    else:
+        zero_edge, nonzero_edge = ft, tb
+    if not _e7pk12_block_reachable(cfg, nonzero_edge, cb):
+        return None
+    if _e7pk12_block_reachable(cfg, zero_edge, cb):
+        return None
+    return {"test": hex(insns[k][0]), "text": insns[k][1].strip(),
+            "branch": hex(insns[k + 1][0]),
+            "branch_text": insns[k + 1][1].strip(),
+            "zero_edge": zero_edge, "nonzero_edge": nonzero_edge,
+            "call_block": cb,
+            "basis": ("the zero return path does not reach the call block "
+                      "and the non-zero path does")}
+
+
+def _pbe_builtin_members(g: "DsoGraph", layout: dict, text: str,
+                        builtin_literals: list):
+    """The table's `keygen_ex` members, from `.rela.dyn` only."""
+    table_hits = []
+    for addr, names in (getattr(g, "names_at", {}) or {}).items():
+        for nm in names:
+            base = nm.split("@")[0]
+            if base.endswith(PBE_EX_TABLE):
+                table_hits.append((addr, base))
+    if len({a for a, _n in table_hits}) != 1:
+        return None, None, "builtin-table-symbol-is-not-unique"
+    table_addr = next(iter({a for a, _n in table_hits}))
+    names = [n for a, n in table_hits if a == table_addr]
+    if len(names) != 1:
+        return None, None, "builtin-table-symbol-is-not-unique"
+    table_name = names[0]
+    size = (getattr(g, "sym_sizes", {}) or {}).get(table_name)
+    if size is None:
+        return None, None, "builtin-table-size-is-not-known"
+    fields = {f["name"]: f for f in layout["fields"]}
+    type_off = fields["pbe_type"]["offset"]
+    nid_off = fields["pbe_nid"]["offset"]
+    ex_off = fields[PBE_EX_FIELD]["offset"]
+    if ex_off != PBE_EX_FIELD_OFFSET or layout["size"] <= 0:
+        return None, None, "owner-layout-does-not-match-the-enumerated-fields"
+    m = re.search(r"static\s+BUILTIN_PBE\s*:\s*\[\s*EvpPbeCtl\s*;\s*(\d+)\s*\]",
+                  text)
+    if not m:
+        return None, None, "builtin-row-count-is-not-declared"
+    declared_rows = int(m.group(1))
+    if declared_rows <= 0 or size != declared_rows * layout["size"]:
+        return None, None, ("builtin-table-size-does-not-match-the-declared-"
+                           "row-count")
+    if len(builtin_literals) != declared_rows:
+        return None, None, "builtin-row-literal-set-is-not-the-declared-table"
+    section = g.section_of(table_addr)
+    if section not in (".data.rel.ro", ".rodata", ".data.rel.ro.local"):
+        return None, None, ("builtin-table-is-not-in-a-read-only-relocated-"
+                           "section")
+    relmap = collections.defaultdict(list)
+    for rec in getattr(g, "relocs", ()) or ():
+        relmap[rec[0]].append(rec)
+    rows = []
+    for k in range(declared_rows):
+        row_addr = table_addr + k * layout["size"]
+        pbe_type = g.read_u32(row_addr + type_off)
+        pbe_nid = g.read_u32(row_addr + nid_off)
+        if pbe_type is None or pbe_nid is None:
+            return None, None, "row-member-unreadable"
+        member_addr = row_addr + ex_off
+        rels = relmap.get(member_addr, [])
+        value, reltype, symbol = None, None, None
+        if not rels:
+            raw = g.read_u64(member_addr)
+            if raw is None:
+                return None, None, "row-member-unreadable"
+            if raw != 0:
+                return None, None, "row-member-not-a-function-start"
+        elif len(rels) != 1:
+            return None, None, "row-member-has-no-unique-relocation"
+        else:
+            _off, typ, rsym, add, symval = rels[0]
+            if typ == "R_X86_64_RELATIVE":
+                if add is None:
+                    return None, None, "row-member-relocation-not-enumerated"
+                value = add
+                reltype = typ
+                symbol = g.funcs.get(value)
+            elif typ == "R_X86_64_64":
+                if symval is None:
+                    return None, None, "row-member-relocation-not-enumerated"
+                value = symval + (add or 0)
+                reltype = typ
+                symbol = (rsym or "").split("@")[0]
+            else:
+                return None, None, "row-member-relocation-not-enumerated"
+            if (value not in g.start_set
+                    and "e7pbe-outparam-row-target" not in _MUTED):
+                return None, None, "row-member-not-a-function-start"
+        lit = builtin_literals[k]
+        src_type_text = " ".join(
+            (lit.get("fields", {}).get("pbe_type") or "").split())
+        src_type = next(
+            (t for t, nm in PBE_EX_TYPE_NAMES.items()
+             if src_type_text.endswith(nm)), None)
+        if src_type is None:
+            return None, None, "builtin-row-source-type-unreadable"
+        if src_type != pbe_type:
+            return None, None, "builtin-row-source-and-image-disagree"
+        src_ex_text = " ".join(
+            (lit.get("fields", {}).get(PBE_EX_FIELD) or "").split())
+        src_nonnull = src_ex_text not in ("", "None")
+        if src_nonnull != (value is not None):
+            return None, None, "builtin-row-source-and-image-disagree"
+        rows.append({
+            "index": k,
+            "row_address": hex(row_addr),
+            "pbe_type": pbe_type,
+            "pbe_type_name": PBE_EX_TYPE_NAMES.get(pbe_type),
+            "pbe_nid": pbe_nid,
+            "member_address": hex(member_addr),
+            "relocation": reltype,
+            "member": None if value is None else hex(value),
+            "member_value": value,
+            "symbol": symbol,
+            "source_type": src_type_text,
+            "source_member": src_ex_text,
+        })
+    table = {
+        "symbol": table_name,
+        "address": table_addr,
+        "size": size,
+        "section": section,
+        "rows": declared_rows,
+        "stride": layout["size"],
+        "member": PBE_EX_FIELD,
+        "member_offset": ex_off,
+        "source_declaration": m.group(0),
+    }
+    return table, rows, None
+
+
+def _pbe_instruction_dominates(cfg: dict, a: int, b: int) -> bool:
+    """Instruction ``a`` executes before ``b`` on every path to ``b``."""
+    ba = cfg["block_of"].get(a)
+    bb = cfg["block_of"].get(b)
+    if ba is None or bb is None:
+        return False
+    if ba == bb:
+        return a < b
+    return _e7pk12_dominates(cfg, ba, bb)
+
+
+def pbe_outparam_instance_witness(g: "DsoGraph", site: dict, name: str):
+    """Resolve the two `EVP_PBE_KEYGEN_EX` out-parameter dispatches.
+
+    The finite set is the `keygen_ex` member of the link-time `BUILTIN_PBE`
+    table.  The application registry cannot contribute a member because
+    `EVP_PBE_alg_add_type` stores `None` into the field.  Every step is a
+    conjunction: a failed proof returns ``resolved=False`` with its own
+    refusal reason and never a partial or widened target set.
+    """
+    spec = PBE_EX_SITES.get(site.get("addr"))
+    if spec is None or _external_function_leaf(name) != spec["function"]:
+        return None
+    if not site.get("unresolved"):
+        return None
+    fstart = site.get("func")
+    if not _has_insns(g):
+        return _pbe_outparam_refusal("no-instruction-stream", name, site)
+    idx = _external_insn_index(g, site)
+    if idx is None:
+        return _pbe_outparam_refusal("call-site-not-found", name, site)
+    insns = g.precision.insns_by_func.get(fstart, ())
+    opnd = _site_operand(site)
+    reg = _canon(opnd)
+    if not opnd or reg not in _REGS:
+        return _pbe_outparam_refusal("call-target-operand-is-not-a-register",
+                                     name, site, operand=opnd)
+
+    # 1. The call target is a reload of one frame slot.
+    reloads, why = _pbe_frame_reloads(g, fstart, idx, reg)
+    if reloads is None:
+        return _pbe_outparam_refusal(why, name, site, operand=opnd)
+    slot = reloads[0]["slot"]
+
+    # 2. The slot starts zeroed, is written once, and its address escapes once.
+    writes = _stack_slot_writes(g, fstart, slot)
+    stores = [w for w in writes if w["kind"] == "store"]
+    escapes = [w for w in writes if w["kind"] == "address"]
+    if not stores:
+        return _pbe_outparam_refusal("slot-is-not-zero-initialised", name,
+                                     site, slot=hex(slot))
+    if len(stores) > 1 and "e7pbe-outparam-second-writer" not in _MUTED:
+        return _pbe_outparam_refusal("slot-has-a-second-writer", name, site,
+                                     stores=stores)
+    zero = next((w for w in stores if w["source"] == "$0x0"), None)
+    if zero is None:
+        return _pbe_outparam_refusal("slot-is-not-zero-initialised", name,
+                                     site, stores=stores)
+    # The zero initialiser must write all 8 bytes.  A `movl $0x0` leaves the
+    # upper half of the slot stale and must not be accepted as initialisation.
+    if not _pbe_is_64bit_store(zero["text"]):
+        if "e7pbe-outparam-zero-width" not in _MUTED:
+            return _pbe_outparam_refusal("slot-width-is-not-64-bit", name,
+                                         site, zero=zero)
+    # Any other store whose destination range intersects the 8-byte slot is a
+    # partial or foreign write.  The exact 8-byte zero initialiser is skipped;
+    # an exact 8-byte store at the slot is left to the zero/multiplicity checks
+    # above (so the second-writer control keeps its own refusal).
+    if "e7pbe-outparam-overlap" not in _MUTED:
+        for i, (a, _t) in enumerate(insns):
+            if i == zero["index"]:
+                continue
+            rec = _pbe_store_range(g, fstart, i)
+            if rec is None:
+                continue
+            abs_off, width, text = rec
+            if width is None:
+                if slot - 16 <= abs_off < slot + 8:
+                    return _pbe_outparam_refusal(
+                        "slot-overlap-store", name, site,
+                        instruction=hex(a), text=text.strip(),
+                        range=hex(abs_off), width="unknown")
+                continue
+            if abs_off < slot + 8 and abs_off + width > slot:
+                if abs_off == slot and width == 8:
+                    continue
+                return _pbe_outparam_refusal(
+                    "slot-overlap-store", name, site,
+                    instruction=hex(a), text=text.strip(),
+                    range=[hex(abs_off), hex(abs_off + width)],
+                    width=width)
+    if len(escapes) != 1:
+        return _pbe_outparam_refusal("slot-address-escapes-are-not-unique",
+                                     name, site, escapes=escapes)
+    esc = escapes[0]
+    m = re.fullmatch(r"lea\s+(-?0x[0-9a-f]+)?\((%rsp|%rbp)\),(%r\w+)",
+                     esc["text"])
+    if not m:
+        return _pbe_outparam_refusal("slot-address-escape-is-not-a-lea",
+                                     name, site, escape=esc)
+    esc_reg = _canon(m.group(3))
+    cfg = _function_cfg(g, fstart)
+    if not _pbe_instruction_dominates(cfg, zero["index"], esc["index"]):
+        return _pbe_outparam_refusal(
+            "slot-zero-initialisation-does-not-dominate-the-address-escape",
+            name, site, zero=zero, escape=esc)
+    if not _pbe_instruction_dominates(cfg, zero["index"], idx):
+        return _pbe_outparam_refusal(
+            "slot-zero-initialisation-does-not-dominate-the-call",
+            name, site, zero=zero)
+
+    # 3. The unique in-image EVP_PBE_find_ex call.
+    find_idx, info, why, extra = _pbe_find_call(g, fstart)
+    if find_idx is None:
+        return _pbe_outparam_refusal(why, name, site, **(extra or {}))
+    if esc["index"] >= find_idx:
+        return _pbe_outparam_refusal(
+            "slot-address-escapes-after-the-find-ex-call", name, site,
+            escape=esc, find_ex_call=hex(insns[find_idx][0]))
+    for k in range(esc["index"] + 1, find_idx):
+        _mn, _rest, ops = _insn_parts(_insn(g, fstart, k))
+        if any(_canon(op) == esc_reg for op in ops):
+            return _pbe_outparam_refusal(
+                "slot-address-is-used-before-the-find-ex-call", name, site,
+                instruction=hex(insns[k][0]), text=insns[k][1].strip())
+    binding = info.get("binding")
+    if binding is None:
+        return _pbe_outparam_refusal("pbe-find-ex-callee-is-not-in-image",
+                                     name, site, find_ex_call=info)
+    if "e7pbe-outparam-callee" not in _MUTED:
+        if (binding.get("symbol") or "").split("@")[0] != PBE_FIND:
+            return _pbe_outparam_refusal(
+                "pbe-find-ex-callee-is-not-the-documented-symbol", name, site,
+                callee=binding)
+        if (binding.get("kind") == "got" and binding.get("relocation")
+                not in (None, "R_X86_64_GLOB_DAT", "R_X86_64_JUMP_SLOT")):
+            return _pbe_outparam_refusal(
+                "pbe-find-ex-got-relocation-type-not-enumerated", name, site,
+                callee=binding)
+        if "e7pbe-outparam-got-not-in-image" not in _MUTED:
+            if not binding.get("in_image") or binding.get("target") is None:
+                return _pbe_outparam_refusal(
+                    "pbe-find-ex-callee-is-not-in-image", name, site,
+                    callee=binding)
+
+    # 4. That address is argument 6 (`pkeygen_ex`), not argument 5.
+    header5, why5 = _header_callback_param(g, PBE_FIND, PBE_EX_OUT_INDEX)
+    if (header5 is None or header5.get("name") != "pkeygen_ex"
+            or header5.get("type_typedef") != PBE_EX_TYPEDEF):
+        return _pbe_outparam_refusal(
+            "header-does-not-declare-the-pkeygen-ex-parameter", name, site,
+            detail=why5, declaration=header5)
+    header4, why4 = _header_callback_param(g, PBE_FIND, PBE_OUT_INDEX)
+    if (header4 is None or header4.get("name") != "pkeygen"
+            or header4.get("type_typedef") != "EVP_PBE_KEYGEN"):
+        return _pbe_outparam_refusal(
+            "header-does-not-declare-the-pkeygen-parameter", name, site,
+            detail=why4, declaration=header4)
+    expected_reg = _ARGREGS[PBE_EX_OUT_INDEX]
+    if "e7pbe-outparam-arg-index" not in _MUTED and esc_reg != expected_reg:
+        return _pbe_outparam_refusal(
+            "escaped-slot-is-not-the-pkeygen-ex-argument", name, site,
+            escape_register=esc_reg, expected_register=expected_reg)
+    esc_defs = _reaching_defs(g, fstart, find_idx, esc_reg)
+    if esc_defs is None or esc_defs != {esc["index"]}:
+        return _pbe_outparam_refusal(
+            "escaped-slot-is-not-the-pkeygen-ex-argument", name, site,
+            escape_register=esc_reg,
+            reaching_definitions=None if esc_defs is None else sorted(
+                insns[d][0] for d in esc_defs if d >= 0))
+    arg_rows = []
+    for ai, areg in enumerate(_ARGREGS):
+        origin = _reg_origin(g, fstart, find_idx, areg)
+        if origin.get("kind") != "load" or origin.get("base_reg") not in (
+                "%rsp", "%rbp"):
+            continue
+        _amn, _arest, aops = _insn_parts(_insn(g, fstart, origin["at"]))
+        if not aops:
+            continue
+        a_slot = _stack_slot_abs(g, fstart, origin["at"], aops[0])
+        if a_slot == slot:
+            arg_rows.append({"index": ai, "register": areg,
+                             "definition": hex(insns[origin["at"]][0]),
+                             "text": _insn(g, fstart, origin["at"]).strip()})
+    if len(arg_rows) != 1:
+        reason = ("slot-address-escapes-into-more-than-one-argument"
+                  if len(arg_rows) > 1
+                  else "escaped-slot-is-not-the-pkeygen-ex-argument")
+        return _pbe_outparam_refusal(reason, name, site, arguments=arg_rows)
+    if ("e7pbe-outparam-arg-index" not in _MUTED
+            and arg_rows[0]["index"] != PBE_EX_OUT_INDEX):
+        return _pbe_outparam_refusal(
+            "escaped-slot-is-not-the-pkeygen-ex-argument", name, site,
+            arguments=arg_rows, expected_index=PBE_EX_OUT_INDEX)
+
+    # The site-2 selection is only sound if the call's `type` argument is the
+    # KDF type.  Site 1 uses the whole table, so its type is recorded rather
+    # than required.
+    type_origin = _reg_origin(g, fstart, find_idx, _ARGREGS[0])
+    type_arg = (type_origin.get("value")
+                if type_origin.get("kind") == "int" else None)
+    if spec["selection"] == "EVP_PBE_TYPE_KDF" and type_arg != PBE_EX_TYPE_KDF:
+        return _pbe_outparam_refusal(
+            "find-ex-type-argument-is-not-EVP_PBE_TYPE_KDF", name, site,
+            type_origin=type_origin, expected=PBE_EX_TYPE_KDF)
+
+    # 5. Every reload is non-NULL on the path to the call, and the call is
+    #    reached only through the find_ex non-zero return edge.
+    guards = []
+    for reload in reloads:
+        guard = _pbe_reload_guard(g, fstart, reload["def"], idx, reg)
+        if guard is None:
+            return _pbe_outparam_refusal(
+                "call-target-is-not-proven-non-null", name, site,
+                reload=reload)
+        guards.append(guard)
+    success = _pbe_success_edge(g, fstart, find_idx, idx)
+    if success is None:
+        return _pbe_outparam_refusal("find-ex-success-edge-is-not-proven",
+                                     name, site,
+                                     find_ex_call=hex(insns[find_idx][0]))
+
+    # 6. Source proof: the registry cannot write a non-NULL keygen_ex.
+    text, _lines, err = _external_source(g, PBE_SOURCE)
+    if text is None:
+        return _pbe_outparam_refusal("source-unavailable", name, site,
+                                     detail=err)
+    layout, err = _external_struct_layout(g, PBE_OWNER)
+    if layout is None:
+        return _pbe_outparam_refusal("owner-layout-not-decidable", name,
+                                     site, detail=err)
+    fields = {f["name"]: f for f in layout["fields"]}
+    fld = fields.get(PBE_EX_FIELD)
+    if fld is None or fld["offset"] != PBE_EX_FIELD_OFFSET:
+        return _pbe_outparam_refusal(
+            "declared-field-offset-is-not-the-enumerated-one", name, site,
+            field=PBE_EX_FIELD, declared=fld, expected=hex(PBE_EX_FIELD_OFFSET))
+    if "Option<EvpPbeKeygenEx>" not in (fld["type"] or ""):
+        return _pbe_outparam_refusal(
+            "declared-field-is-not-the-keygen-ex-callback", name, site,
+            field=fld)
+    writers, err = _external_field_writers(
+        g, PBE_OWNER, {PBE_EX_FIELD}, owner_tokens=("OwnedPbeCtl",))
+    if writers is None:
+        return _pbe_outparam_refusal("source-scan-unavailable", name, site,
+                                     detail=err)
+    macro_slot = [w for w in writers if w["kind"] == "macro-slot"]
+    if macro_slot:
+        return _pbe_outparam_refusal(
+            "macro-expanded-slot-store-unattributed", name, site,
+            writers=macro_slot)
+    store_rows = [w for w in writers if w["kind"] == "store"]
+    literal_rows = [w for w in writers if w["kind"] == "literal"]
+    undecidable = [w for w in store_rows if w["attribution"] == "undecidable"]
+    if undecidable:
+        return _pbe_outparam_refusal(
+            "unqualified-or-aliasing-keygen-ex-store", name, site,
+            stores=undecidable)
+    own_stores = [w for w in store_rows if w["attribution"] == "owner"]
+    other_stores = [w for w in store_rows if w["attribution"] == "other"]
+    if len(own_stores) != 1:
+        return _pbe_outparam_refusal(
+            "keygen-ex-field-writer-set-is-not-exactly-the-registry", name,
+            site, stores=own_stores, other_type_stores=other_stores)
+    st = own_stores[0]
+    if st["function"] != PBE_REGISTRY:
+        return _pbe_outparam_refusal("pbe-registry-writer-absent", name, site,
+                                     store=st)
+    if st["value"] != "None" and "e7pbe-outparam-registry" not in _MUTED:
+        return _pbe_outparam_refusal(
+            "pbe-registry-writes-a-non-null-keygen-ex", name, site, store=st)
+    builtin_literals = sorted(
+        (w for w in literal_rows if w["function"] == PBE_EX_TABLE),
+        key=lambda w: (w["file"], w["line"]))
+    search_literals = [
+        w for w in literal_rows
+        if w["function"] == PBE_FIND
+        and all((w["fields"].get(f) or "").strip() in ("None", "")
+                for f in ("keygen", PBE_EX_FIELD))]
+    unaccounted = [w for w in literal_rows
+                   if w not in builtin_literals and w not in search_literals]
+    if unaccounted:
+        return _pbe_outparam_refusal("unaccounted-keygen-ex-row-writer",
+                                     name, site, writers=unaccounted)
+    if len(search_literals) != 1:
+        return _pbe_outparam_refusal("find-ex-search-key-is-not-unique", name,
+                                     site, literals=len(search_literals))
+    if _external_exported(g, PBE_REGISTRY) is None:
+        return _pbe_outparam_refusal("registry-writer-is-not-exported", name,
+                                     site)
+    if _external_line_number(text, "*pkeygen_ex = keygen_ex") is None:
+        return _pbe_outparam_refusal(
+            "find-ex-does-not-copy-the-row-keygen-ex", name, site)
+    registry_header, _why = _header_callback_param(
+        g, PBE_REGISTRY, PBE_EX_OUT_INDEX)
+    if registry_header is not None:
+        return _pbe_outparam_refusal(
+            "registry-declares-a-pkeygen-ex-parameter", name, site,
+            declaration=registry_header)
+
+    # 7. Enumerate the table from the exact image's relocations.
+    table, rows, why = _pbe_builtin_members(g, layout, text, builtin_literals)
+    if table is None:
+        return _pbe_outparam_refusal(why, name, site)
+    if spec["selection"] == "all":
+        selected = rows
+    elif spec["selection"] == "EVP_PBE_TYPE_KDF":
+        selected = (rows if "e7pbe-outparam-all-rows" in _MUTED else
+                    [r for r in rows if r["pbe_type"] == PBE_EX_TYPE_KDF])
+    else:
+        return _pbe_outparam_refusal("selection-rule-not-enumerated", name,
+                                     site, selection=spec["selection"])
+    if not selected:
+        return _pbe_outparam_refusal("selected-row-set-is-empty", name, site)
+    targets = {r["member_value"] for r in selected
+               if r["member_value"] is not None}
+    if not targets:
+        return _pbe_outparam_refusal("row-target-set-is-empty", name, site)
+    if "e7pbe-outparam-row-target" not in _MUTED:
+        bad = sorted(t for t in targets if t not in g.start_set)
+        if bad:
+            return _pbe_outparam_refusal("row-member-not-a-function-start",
+                                         name, site,
+                                         targets=[hex(t) for t in bad])
+    selected_idx = {r["index"] for r in selected}
+    for r in rows:
+        r["selected"] = r["index"] in selected_idx
+    target_list = sorted(targets)
+
+    got_binding = None
+    if binding.get("kind") == "got":
+        flags = _pbe_binding_flags(g)
+        got_binding = {
+            "slot": binding.get("slot"),
+            "relocation": binding.get("relocation"),
+            "symbol": binding.get("symbol"),
+            "definition": binding.get("target"),
+            "in_image": binding.get("in_image"),
+            "symbolic": flags.get("symbolic"),
+            "bind_now": flags.get("bind_now"),
+            "flags_source": flags.get("source"),
+            "policy": ("the tool's established GOT-binding policy: a "
+                       "R_X86_64_GLOB_DAT/JUMP_SLOT whose symbol is defined "
+                       "in this image is treated as that definition"),
+            "caveat": ("EVP_PBE_find_ex is reached through a "
+                       "R_X86_64_GLOB_DAT GOT relocation; the image declares "
+                       "no DF_SYMBOLIC or "
+                       "DF_BIND_NOW, so the finite set holds only under the "
+                       "tool's in-image GOT-binding policy.  A preempting "
+                       "interposer outside this image is outside this "
+                       "witness."),
+        }
+
+    conditions = {
+        "site_enumerated": f"{spec['function']} {hex(site['addr'])}",
+        "call_target_is_a_reload_of_the_frame_slot": (
+            f"{len(reloads)} reaching load(s) of {hex(slot)}: "
+            + ", ".join(f"{r['text']} @ {hex(r['addr'])}" for r in reloads)),
+        "slot_is_zero_initialised": (
+            f"{zero['text']} at {hex(insns[zero['index']][0])} dominates the "
+            "address escape and the call"),
+        "slot_address_escapes_once": (
+            f"{esc['text']} at {hex(insns[esc['index']][0])}"),
+        "escape_is_find_ex_argument_6": (
+            f"{esc_reg} is {header5['name']} ({header5['parameter_text']}) "
+            f"in {header5['declaration']}"),
+        "find_ex_call_is_unique": hex(insns[find_idx][0]),
+        "callee_binds_to_in_image_EVP_PBE_find_ex": (
+            f"{binding.get('kind')} {binding.get('symbol')} -> "
+            f"{binding.get('target')}"),
+        "find_ex_success_edge_dominates_the_call": success["basis"],
+        "find_ex_type_argument": (
+            f"{type_origin.get('kind')} {type_arg}" + (
+                f" ({PBE_EX_TYPE_NAMES[type_arg]})"
+                if type_arg in PBE_EX_TYPE_NAMES else "")),
+        "registry_cannot_supply_keygen_ex": (
+            f"{PBE_REGISTRY} stores None into {PBE_OWNER}.{PBE_EX_FIELD} at "
+            f"line {st['line']}; the registry declares no pkeygen_ex "
+            "parameter"),
+        "builtin_table_is_the_declared_link_time_table": (
+            f"{table['symbol']} at {hex(table['address'])}, {table['rows']} "
+            f"rows of {table['stride']} bytes in {table['section']}; source "
+            f"declares {table['source_declaration']}"),
+        "every_nonnull_member_is_an_in_image_function_start": (
+            f"{len(target_list)} distinct target(s)"),
+        "selection": spec["selection_note"],
+        "target_set_is_finite": ", ".join(hex(t) for t in target_list),
+    }
+    residuals = [
+        {"residual": "got-binding-policy",
+         "detail": (got_binding or {}).get("caveat") or
+                   "direct call: no GOT binding exists"},
+        {"residual": "table-selection",
+         "detail": spec["selection_note"]},
+        {"residual": "table-immutability",
+         "detail": (f"{table['symbol']} is in {table['section']}; runtime "
+                    "mutation of the table is outside this witness")},
+        {"residual": "symbolic-row-form",
+         "detail": ("R_X86_64_64 rows are read from the relocation symbol "
+                    "value and addend, not from file bytes")},
+    ]
+    return {
+        "schema": PBE_EX_SCHEMA,
+        "class": PBE_EX_CLASS,
+        "resolution_kind": PBE_EX_RESOLUTION_KIND,
+        "contract_bounded": False,
+        "resolved": True,
+        "function": name,
+        "function_start": hex(fstart),
+        "call_site": hex(site["addr"]),
+        "selection": spec["selection"],
+        "selection_note": spec["selection_note"],
+        "operand": {"register": reg, "reloads": [
+            {"address": hex(r["addr"]), "text": r["text"],
+             "frame_slot": hex(r["slot"])} for r in reloads]},
+        "frame_slot": hex(slot),
+        "zero_initialisation": {
+            "store": hex(insns[zero["index"]][0]),
+            "text": zero["text"],
+            "dominates_escape": True,
+            "dominates_call": True},
+        "address_escape": {"address": hex(insns[esc["index"]][0]),
+                           "text": esc["text"], "register": esc_reg},
+        "argument": {
+            "index": PBE_EX_OUT_INDEX,
+            "register": expected_reg,
+            "name": header5["name"],
+            "declaration": header5["declaration"],
+            "parameter_text": header5["parameter_text"],
+            "typedef": header5["type_typedef"],
+            "plain_keygen_parameter": header4["parameter_text"]},
+        "find_ex_type": {"origin": type_origin, "value": type_arg},
+        "null_guards": guards,
+        "find_ex": {**info, "call_site": hex(insns[find_idx][0]),
+                    "binding": binding},
+        "got_binding": got_binding,
+        "success_edge": success,
+        "table": table,
+        "rows": rows,
+        "selected_rows": [r["index"] for r in selected],
+        "targets": [hex(t) for t in target_list],
+        "target_symbols": {hex(t): g.funcs.get(t) for t in target_list},
+        "registry": {
+            "symbol": PBE_REGISTRY,
+            "exported": True,
+            "address": hex(_external_exported(g, PBE_REGISTRY)),
+            "store_line": st["line"],
+            "store_value": st["value"],
+            "declares_keygen_ex_parameter": False},
+        "source": {
+            "file": PBE_SOURCE,
+            "layout_line": layout["line"],
+            "registry_store_line": st["line"],
+            "find_copy_line": _external_line_number(
+                text, "*pkeygen_ex = keygen_ex")},
+        "conditions": conditions,
+        "residuals": residuals,
+        "does_not_cover": [
+            "the behaviour of the target keygen_ex functions once called",
+            "a keygen_ex row supplied by an application: the registry cannot "
+            "write one (source proof) and this witness does not model a row "
+            "injected by a non-source writer",
+            "a runtime GOT interposer outside this image: the finite set is "
+            "under the tool's in-image GOT-binding policy (no DF_SYMBOLIC or "
+            "DF_BIND_NOW)",
+            "runtime mutation of the table: the symbol is link-time constant "
+            "in a read-only relocated section",
+            "the call's semantic arguments beyond the out-parameter pointer",
+        ],
+        "basis": (
+            "the call target is a reload of a zero-initialised frame slot "
+            "whose only address escape is argument 6 of the unique in-image "
+            "EVP_PBE_find_ex call; the registry cannot write keygen_ex; the "
+            "table's keygen_ex members are enumerated from .rela.dyn and "
+            "every non-null member is an in-image function start"),
+    }
+
+
 def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                            reachable: set | None = None) -> dict:
     """Apply the R2/R3/A1/A2 evidence classes to one candidate DSO.
@@ -20000,6 +20992,30 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
             else:
                 site["external_abi_refusal"] = ext_refusal
                 stats["E7ABI_refused"] += 1
+            continue
+        # E7-PBE: the two `EVP_PBE_KEYGEN_EX` out-parameter dispatches.  The
+        # out-parameter has a finite link-time target set and no registry
+        # writer, so the site is resolved by its own witness.  A refusal is
+        # recorded and the site is left unresolved; it is never passed to the
+        # weaker rules below (a rejected out-parameter proof must not be
+        # replaced by an unrelated finite set).  This block is immediately
+        # after E7-ABI and before every other evidence class so the two exact
+        # sites cannot be absorbed by a same-shaped rule.
+        pbe_ex = pbe_outparam_instance_witness(g, site, name)
+        if pbe_ex is not None:
+            if pbe_ex.get("resolved"):
+                site["targets"] = {int(t, 16) for t in pbe_ex["targets"]}
+                site["unresolved"] = False
+                site["class"] = PBE_EX_CLASS
+                site["reason"] = (
+                    "PBE keygen_ex out-parameter builtin table ("
+                    + str(pbe_ex.get("selection")) + "): "
+                    + str(len(pbe_ex["targets"])) + " function start(s)")
+                site["pbe_outparam_witness"] = pbe_ex
+                stats["E7PBE_outparam_resolved"] += 1
+            else:
+                site["pbe_outparam_refusal"] = pbe_ex
+                stats["E7PBE_outparam_refused"] += 1
             continue
         # Stored-value slot targets: Method.free is written only by the in-image
         # method-store writers, so its target set is derived from the values
@@ -20894,6 +21910,10 @@ def _edge_record(g, site: dict, ordinal: int, oracle=None, seen_ids=None) -> dic
                     or site.get("e7bs_writer_list_refusal"))
     if e7bs_witness is not None:
         extra["e7bs_witness"] = e7bs_witness
+    pbe_ex_witness = (site.get("pbe_outparam_witness")
+                      or site.get("pbe_outparam_refusal"))
+    if pbe_ex_witness is not None:
+        extra["pbe_outparam_witness"] = pbe_ex_witness
     lp_witness = (site.get("private_parameter_assignment_witness")
                   or site.get("private_parameter_assignment_refusal"))
     if lp_witness is not None:
@@ -21435,6 +22455,78 @@ def e7bs_receipt_section(graphs: dict) -> dict:
                                 if r.get("proved_empty") is True),
             "by_resolution_kind": dict(sorted(collections.Counter(
                 str(r.get("resolution_kind")) for r in resolved).items())),
+            "by_refusal": dict(sorted(collections.Counter(
+                str(r.get("refusal")) for r in refused).items())),
+        },
+        "resolved_sites": resolved,
+        "refused_sites": refused,
+    }
+
+
+def pbe_outparam_receipt_section(graphs: dict) -> dict:
+    """Persist the E7-PBE `keygen_ex` out-parameter witness evidence."""
+    def _witness(site):
+        return (site.get("pbe_outparam_witness")
+                or site.get("pbe_outparam_refusal") or {})
+
+    sites = []
+    for dso, g in graphs.items():
+        for s in getattr(g, "sites", {}).values():
+            w = _witness(s)
+            if not w:
+                continue
+            sites.append({
+                "dso": dso,
+                "function": w.get("function"),
+                "function_start": w.get("function_start"),
+                "call_site": w.get("call_site"),
+                "schema": w.get("schema"),
+                "resolution_kind": w.get("resolution_kind"),
+                "selection": w.get("selection"),
+                "selection_note": w.get("selection_note"),
+                "operand": w.get("operand"),
+                "frame_slot": w.get("frame_slot"),
+                "zero_initialisation": w.get("zero_initialisation"),
+                "address_escape": w.get("address_escape"),
+                "argument": w.get("argument"),
+                "find_ex_type": w.get("find_ex_type"),
+                "got_binding": w.get("got_binding"),
+                "success_edge": w.get("success_edge"),
+                "table": w.get("table"),
+                "selected_rows": w.get("selected_rows"),
+                "rows": w.get("rows"),
+                "targets": w.get("targets"),
+                "target_symbols": w.get("target_symbols"),
+                "conditions": w.get("conditions"),
+                "residuals": w.get("residuals"),
+                "refusal": w.get("refusal"),
+            })
+    resolved = [r for r in sites if not r.get("refusal")]
+    refused = [r for r in sites if r.get("refusal")]
+    return {
+        "schema": PBE_EX_SCHEMA,
+        "resolution_kind": PBE_EX_RESOLUTION_KIND,
+        "rule": (
+            "the call target is a reload of a zero-initialised frame slot "
+            "whose only address escape is argument 6 (`pkeygen_ex`) of the "
+            "unique in-image `EVP_PBE_find_ex` call; `EVP_PBE_alg_add_type` "
+            "stores `None` into `EvpPbeCtl.keygen_ex`, so the application "
+            "registry cannot contribute a target; the `keygen_ex` members of "
+            "`BUILTIN_PBE` are enumerated from `.rela.dyn` and every "
+            "non-null member is an in-image function start."),
+        "got_binding_caveat": (
+            "`EVP_PBE_find_ex` is reached through a R_X86_64_GLOB_DAT GOT "
+            "relocation; the image declares no DF_SYMBOLIC or DF_BIND_NOW, "
+            "so the finite set holds only under the tool's in-image "
+            "GOT-binding policy.  A preempting interposer outside this image "
+            "is outside this witness."),
+        "summary": {
+            "resolved": len(resolved),
+            "refused": len(refused),
+            "by_selection": dict(sorted(collections.Counter(
+                str(r.get("selection")) for r in resolved).items())),
+            "target_sets": {r.get("call_site"): r.get("targets")
+                            for r in resolved},
             "by_refusal": dict(sorted(collections.Counter(
                 str(r.get("refusal")) for r in refused).items())),
         },
@@ -27818,6 +28910,7 @@ def build_receipt(args) -> dict:
                     if w],
             },
             "e7bs_witnesses": e7bs_receipt_section(graphs),
+            "pbe_outparam_witnesses": pbe_outparam_receipt_section(graphs),
             "private_parameter_assignment": (
                 private_parameter_assignment_section(graphs)),
             "unclassified_reachable_sites": closure["unclassified_sites"],
@@ -28496,6 +29589,332 @@ def _e7abi_self_test():
                       "split-line-use, macro-expanded-slot-store and "
                       "forwarded-parameter counterexamples refused, each "
                       "mutation switch flips it to accepted")
+
+
+def _pbe_outparam_self_test():
+    """Committed positive and negative controls for the E7-PBE witness.
+
+    The positive shape is the exact candidate's two sites.  Every negative is
+    paired with a mutation switch that must flip the refusal back to
+    acceptance, so the control is load-bearing, and the unmutated witness is
+    re-run afterwards to show it was restored.
+    """
+    root = Path(__file__).resolve().parents[2]
+    dso = root / "artifacts/phase2/install/lib/libcrypto.so.3"
+    install = root / "artifacts/phase2/install"
+    if not dso.is_file() or not (install / "include/openssl/evp.h").is_file():
+        return [], "e7pbe controls: skipped (candidate or install absent)"
+    if not (shutil.which("nm") and shutil.which("objdump")):
+        return [], "e7pbe controls: skipped (nm/objdump absent)"
+    workdir = root / "court/tmp/closure-b65-e7abi/work-ssh"
+    if not workdir.is_dir():
+        workdir = root / "court/tmp/e7pbe-selftest-work"
+    failures = []
+
+    def chk(name, got, want):
+        if got != want:
+            failures.append(f"{name}: got {got!r}, want {want!r}")
+
+    try:
+        g = DsoGraph(dso, workdir)
+    except Exception as e:  # noqa: BLE001 -- a missing tool is a skip, not a fail
+        return [], f"e7pbe controls: skipped (graph unavailable: {e})"
+    g.source_root = str(root)
+    g.install_prefix = str(install)
+    g.precision = PrecisionResolver(g)
+
+    def site(addr, func, text="call   *%rax"):
+        return {"kind": "call", "func": func, "addr": addr, "text": text,
+                "targets": set(), "unresolved": True,
+                "reason": "materialised", "class": "materialised",
+                "field_offsets": set(), "seam": None,
+                "arg_deps": set(), "arg_targets": set()}
+
+    site_func = {0x179C85: 0x179870, 0x17C408: 0x17C200}
+
+    def wit(addr, graph=None):
+        gr = graph or g
+        func = site_func[addr]
+        return pbe_outparam_instance_witness(
+            gr, site(addr, func), gr.funcs.get(func, ""))
+
+    def _mut(name, fn):
+        _MUTED.add(name)
+        try:
+            return fn()
+        finally:
+            _MUTED.discard(name)
+
+    class _PbeProxy:
+        def __init__(self, base, **overrides):
+            object.__setattr__(self, "_base", base)
+            for k, v in overrides.items():
+                object.__setattr__(self, k, v)
+            if "precision" in overrides:
+                # The CFG and reaching-definition caches belong to a specific
+                # instruction stream.  A proxy that replaces the stream must
+                # not inherit the base graph's caches or the indices shift.
+                object.__setattr__(self, "_fn_cfg_cache", {})
+                object.__setattr__(self, "_reaching_cache", {})
+
+        def __getattr__(self, name):
+            return getattr(object.__getattribute__(self, "_base"), name)
+
+    class _PbePrecision:
+        def __init__(self, insns):
+            self.insns_by_func = insns
+
+    def _insns_copy(func):
+        return [(a, t) for a, t in g.precision.insns_by_func[func]]
+
+    def _replace_insn(insns, addr, new_text):
+        return [(a, new_text if a == addr else t) for a, t in insns]
+
+    def _insert_insn(insns, after_addr, new_addr, new_text):
+        out = []
+        for a, t in insns:
+            out.append((a, t))
+            if a == after_addr:
+                out.append((new_addr, new_text))
+        return out
+
+    def _relocs_with_symbol(slot, symbol, value):
+        out = []
+        for r in g.relocs:
+            if r[0] == slot:
+                out.append((r[0], r[1], symbol, r[3], value))
+            else:
+                out.append(r)
+        return out
+
+    def _relocs_with_value(slot, value):
+        out = []
+        for r in g.relocs:
+            if r[0] != slot:
+                out.append(r)
+            elif r[1] == "R_X86_64_RELATIVE":
+                out.append((r[0], r[1], r[2], value, None))
+            else:
+                out.append((r[0], r[1], r[2], r[3], value))
+        return out
+
+    w1 = wit(0x179C85)
+    w2 = wit(0x17C408)
+    want1 = ["0x17c200", "0x199140", "0x254a30", "0x35e3f0", "0x49b8b0"]
+    want2 = ["0x199140", "0x49b8b0"]
+    chk("e7pbe site 1 resolved", (w1 or {}).get("resolved"), True)
+    chk("e7pbe site 1 targets", (w1 or {}).get("targets"), want1)
+    chk("e7pbe site 2 resolved", (w2 or {}).get("resolved"), True)
+    chk("e7pbe site 2 targets", (w2 or {}).get("targets"), want2)
+    chk("e7pbe schema", (w1 or {}).get("schema"), PBE_EX_SCHEMA)
+    chk("e7pbe resolution kind", (w1 or {}).get("resolution_kind"),
+        PBE_EX_RESOLUTION_KIND)
+    chk("e7pbe argument is pkeygen_ex",
+        ((w1 or {}).get("argument") or {}).get("name"), "pkeygen_ex")
+    chk("e7pbe plain keygen is argument 5",
+        "EVP_PBE_KEYGEN **pkeygen" in
+        str(((w1 or {}).get("argument") or {}).get(
+            "plain_keygen_parameter")), True)
+    chk("e7pbe got caveat recorded",
+        bool(((w1 or {}).get("got_binding") or {}).get("caveat")), True)
+    chk("e7pbe got flags", (
+        ((w1 or {}).get("got_binding") or {}).get("symbolic"),
+        ((w1 or {}).get("got_binding") or {}).get("bind_now")),
+        (False, False))
+    chk("e7pbe builtin row count", len((w1 or {}).get("rows") or []), 34)
+    chk("e7pbe site 2 selected rows", (w2 or {}).get("selected_rows"),
+        [32, 33])
+
+    # Wrong callee: the GOT relocation names another in-image function while
+    # the disassembly annotation still names EVP_PBE_find_ex.
+    wrong = _PbeProxy(g, relocs=_relocs_with_symbol(
+        0x892B90, "EVP_PBE_alg_add_type@@OPENSSL_3.0.0", 0x17A0A0))
+    rec = wit(0x179C85, graph=wrong)
+    chk("e7pbe wrong callee refusal", (rec or {}).get("refusal"),
+        "pbe-find-ex-callee-is-not-the-documented-symbol")
+    acc = _mut("e7pbe-outparam-callee", lambda: wit(0x179C85, graph=wrong))
+    chk("e7pbe wrong callee control is load-bearing",
+        (acc or {}).get("resolved"), True)
+    chk("e7pbe wrong callee restored", (wit(0x179C85) or {}).get("targets"),
+        want1)
+
+    # Wrong argument index: the same slot escapes in %r8 (the plain keygen
+    # argument) instead of %r9 (pkeygen_ex).
+    arg_insns = _replace_insn(_insns_copy(0x179870), 0x1798E5,
+                              "lea    0xa0(%rsp),%r8")
+    wrong_arg = _PbeProxy(g, precision=_PbePrecision({0x179870: arg_insns}))
+    rec = wit(0x179C85, graph=wrong_arg)
+    chk("e7pbe wrong argument refusal", (rec or {}).get("refusal"),
+        "escaped-slot-is-not-the-pkeygen-ex-argument")
+    acc = _mut("e7pbe-outparam-arg-index",
+               lambda: wit(0x179C85, graph=wrong_arg))
+    chk("e7pbe wrong argument control is load-bearing",
+        (acc or {}).get("resolved"), True)
+
+    # Registry writes a non-NULL keygen_ex.
+    fixture = Path(tempfile.mkdtemp(prefix="e7pbe-registry-",
+                                    dir=root / "court/tmp"))
+    try:
+        (fixture / "src/evp").mkdir(parents=True, exist_ok=True)
+        src_text = (root / PBE_SOURCE).read_text()
+        mutated = src_text.replace(
+            "(*row).keygen_ex = None;",
+            "(*row).keygen_ex = "
+            "Some(crate::evp::p5_crpt::PKCS5_PBE_keyivgen_ex);")
+        if mutated == src_text:
+            failures.append("e7pbe registry fixture: store not found")
+        (fixture / PBE_SOURCE).write_text(mutated)
+        bad_registry = _PbeProxy(g, source_root=str(fixture))
+        rec = wit(0x179C85, graph=bad_registry)
+        chk("e7pbe registry non-null refusal", (rec or {}).get("refusal"),
+            "pbe-registry-writes-a-non-null-keygen-ex")
+        acc = _mut("e7pbe-outparam-registry",
+                   lambda: wit(0x179C85, graph=bad_registry))
+        chk("e7pbe registry non-null control is load-bearing",
+            (acc or {}).get("resolved"), True)
+        chk("e7pbe registry non-null restored",
+            (wit(0x179C85) or {}).get("targets"), want1)
+    finally:
+        shutil.rmtree(fixture, ignore_errors=True)
+
+    # One selected row member is a data address, not a function start.
+    bad_row = _PbeProxy(g, relocs=_relocs_with_value(0x7BC068, 0x7BBC50))
+    rec = wit(0x17C408, graph=bad_row)
+    chk("e7pbe row data target refusal", (rec or {}).get("refusal"),
+        "row-member-not-a-function-start")
+    acc = _mut("e7pbe-outparam-row-target",
+               lambda: wit(0x17C408, graph=bad_row))
+    chk("e7pbe row data target control is load-bearing",
+        (acc or {}).get("resolved"), True)
+    chk("e7pbe row data target restored",
+        (wit(0x17C408) or {}).get("targets"), want2)
+
+    # A second writer of the same frame slot.
+    second_insns = _insert_insn(_insns_copy(0x179870), 0x1798B8, 0x1798BC,
+                                "movq   $0x0,0xa0(%rsp)")
+    second = _PbeProxy(g, precision=_PbePrecision({0x179870: second_insns}))
+    rec = wit(0x179C85, graph=second)
+    chk("e7pbe second writer refusal", (rec or {}).get("refusal"),
+        "slot-has-a-second-writer")
+    acc = _mut("e7pbe-outparam-second-writer",
+               lambda: wit(0x179C85, graph=second))
+    chk("e7pbe second writer control is load-bearing",
+        (acc or {}).get("resolved"), True)
+    chk("e7pbe second writer restored", (wit(0x179C85) or {}).get("targets"),
+        want1)
+
+    # A 4-byte zero store leaves the upper half of the pointer slot stale.
+    zero_width_insns = _replace_insn(_insns_copy(0x179870), 0x1798B8,
+                                     "movl   $0x0,0xa0(%rsp)")
+    zero_width = _PbeProxy(
+        g, precision=_PbePrecision({0x179870: zero_width_insns}))
+    rec = wit(0x179C85, graph=zero_width)
+    chk("e7pbe zero store width refusal", (rec or {}).get("refusal"),
+        "slot-width-is-not-64-bit")
+    acc = _mut("e7pbe-outparam-zero-width",
+               lambda: wit(0x179C85, graph=zero_width))
+    chk("e7pbe zero store width control is load-bearing",
+        (acc or {}).get("resolved"), True)
+    chk("e7pbe zero store width restored",
+        (wit(0x179C85) or {}).get("targets"), want1)
+
+    # A 4-byte reload truncates the pointer in the call-target register.
+    reload_width_insns = _replace_insn(_insns_copy(0x179870), 0x1799BB,
+                                       "mov    0xa0(%rsp),%eax")
+    reload_width = _PbeProxy(
+        g, precision=_PbePrecision({0x179870: reload_width_insns}))
+    rec = wit(0x179C85, graph=reload_width)
+    chk("e7pbe reload width refusal", (rec or {}).get("refusal"),
+        "slot-width-is-not-64-bit")
+    acc = _mut("e7pbe-outparam-reload-width",
+               lambda: wit(0x179C85, graph=reload_width))
+    chk("e7pbe reload width control is load-bearing",
+        (acc or {}).get("resolved"), True)
+    chk("e7pbe reload width restored",
+        (wit(0x179C85) or {}).get("targets"), want1)
+
+    # A partial 4-byte write at slot+4 leaves the upper half of the pointer
+    # stale even though the exact-offset scan sees only the zero store.
+    overlap_insns = _insert_insn(_insns_copy(0x179870), 0x1798B8, 0x1798BC,
+                                 "movl   $0xdead,0xa4(%rsp)")
+    overlap = _PbeProxy(
+        g, precision=_PbePrecision({0x179870: overlap_insns}))
+    rec = wit(0x179C85, graph=overlap)
+    chk("e7pbe overlap store refusal", (rec or {}).get("refusal"),
+        "slot-overlap-store")
+    acc = _mut("e7pbe-outparam-overlap",
+               lambda: wit(0x179C85, graph=overlap))
+    chk("e7pbe overlap store control is load-bearing",
+        (acc or {}).get("resolved"), True)
+    chk("e7pbe overlap store restored",
+        (wit(0x179C85) or {}).get("targets"), want1)
+
+    # The GOT binding is not in this image.
+    dyn = dict(g.dynamic_defs)
+    dyn.pop("EVP_PBE_find_ex", None)
+    bad_got = _PbeProxy(g, dynamic_defs=dyn)
+    rec = wit(0x179C85, graph=bad_got)
+    chk("e7pbe got not in image refusal", (rec or {}).get("refusal"),
+        "pbe-find-ex-callee-is-not-in-image")
+    acc = _mut("e7pbe-outparam-got-not-in-image",
+               lambda: wit(0x179C85, graph=bad_got))
+    chk("e7pbe got not in image control is load-bearing",
+        (acc or {}).get("resolved"), True)
+    chk("e7pbe got not in image restored",
+        (wit(0x179C85) or {}).get("targets"), want1)
+
+    # The site-2 KDF selection is load-bearing: all rows gives 5, not 2.
+    all_rows = _mut("e7pbe-outparam-all-rows", lambda: wit(0x17C408))
+    chk("e7pbe site 2 all-row control count",
+        len((all_rows or {}).get("targets") or []), 5)
+    chk("e7pbe site 2 all-row control set",
+        set((all_rows or {}).get("targets") or []), set(want1))
+    chk("e7pbe site 2 KDF set is a proper subset",
+        set((w2 or {}).get("targets") or [])
+        < set((all_rows or {}).get("targets") or []), True)
+
+    # Non-widening: the plain keygen site and the eight b65 ABI sites keep
+    # their contract class and unbounded target set; the new witness does not
+    # absorb any of them.
+    abi_specs = (
+        (0x179A0D, 0x179870, "call   *%rax", ABI_CONTRACT_PBE_REGISTRY),
+        (0x1C21A8, 0x1C1D20, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
+        (0x1C229D, 0x1C1D20, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
+        (0x1C2768, 0x1C1D20, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
+        (0x1C2528, 0x1C1D20, "call   *%rax", ABI_CONTRACT_PROVIDER),
+        (0x2E111A, 0x2E0C10, "call   *%r15", ABI_CONTRACT_CONF_MODULE),
+        (0x2E1532, 0x2E0C10, "call   *%rax", ABI_CONTRACT_CONF_MODULE),
+        (0x4FA4C6, 0x4FA240, "call   *%r14",
+         ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT),
+    )
+    for addr, func, text, cls in abi_specs:
+        s = site(addr, func, text)
+        res = external_abi_contract_witness(g, s, g.funcs.get(func, ""))
+        if res is None:
+            failures.append(f"e7pbe non-widening {addr:#x}: no ABI witness")
+            continue
+        got_cls, abi_w, abi_ref = res
+        chk(f"e7pbe non-widening {addr:#x} class", got_cls, cls)
+        if abi_w is None:
+            failures.append(f"e7pbe non-widening {addr:#x}: refused: "
+                            f"{(abi_ref or {}).get('reason')}")
+            continue
+        chk(f"e7pbe non-widening {addr:#x} contract_bounded",
+            abi_w.get("contract_bounded"), True)
+        chk(f"e7pbe non-widening {addr:#x} target set",
+            abi_w.get("target_set"), [])
+        chk(f"e7pbe does not absorb {addr:#x}",
+            pbe_outparam_instance_witness(g, s, g.funcs.get(func, "")), None)
+
+    return failures, (
+        "e7pbe controls: both sites resolve to the builtin table sets "
+        "(5 / 2); wrong callee, wrong argument index, non-null registry "
+        "keygen_ex, data row target, second slot writer, 4-byte zero "
+        "store, 4-byte reload, partial overlap store and non-in-image GOT "
+        "binding each refuse with slot-width-is-not-64-bit or "
+        "slot-overlap-store as applicable and each mutation flips it to "
+        "accepted; the KDF selection control distinguishes 5 from 2; the "
+        "plain keygen site and all eight b65 ABI sites are unchanged")
 
 
 def self_test() -> int:
@@ -32778,6 +34197,10 @@ def self_test() -> int:
     failures.extend(_e7abi_failures)
     print(f"[consumer-closure] {_e7abi_line}")
 
+    _e7pbe_failures, _e7pbe_line = _pbe_outparam_self_test()
+    failures.extend(_e7pbe_failures)
+    print(f"[consumer-closure] {_e7pbe_line}")
+
     if failures:
         print("[consumer-closure] SELF-TEST FAILED")
         for f in failures:
@@ -32836,7 +34259,15 @@ def self_test() -> int:
           f"for all eight sites; type-alias, continuation-line, split-line "
           f"`use ... as`, function-pointer registration, macro-expanded slot "
           f"store and forwarded-parameter counterexamples, each with its own "
-          f"load-bearing mutation switch)")
+          f"load-bearing mutation switch), and the E7-PBE keygen_ex "
+          f"out-parameter witness (both sites resolve to the builtin table "
+          f"sets 5 and 2; wrong callee, wrong argument index, non-null "
+          f"registry keygen_ex, data row target, second slot writer, "
+          f"4-byte zero store, 4-byte reload, partial overlap store and "
+          f"non-in-image GOT binding refusals, each with its load-bearing "
+          f"mutation switch; the KDF selection control distinguishes 5 from "
+          f"2; the plain keygen site and the eight b65 ABI sites are "
+          f"unchanged)")
     return 0
 
 
