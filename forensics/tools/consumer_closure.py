@@ -16576,6 +16576,841 @@ def internal_closed_writer_list_witness(g: "DsoGraph", site: dict,
     return _resolved(set(), {"enumerated_from_reachable_callers": False})
 
 
+# ---- E7-PKCS12: a private function's private-parameter assignment set --- #
+#
+# `pkcs12_gen_mac` is a local (`t`) function; its eighth parameter,
+# `pkcs12_key_gen: Option<unsafe extern "C" fn(...)>`, is an incoming stack
+# argument loaded once into `%r15` and tested against NULL before each call.
+# The function is called only directly in this image, and every caller assigns
+# either the zero immediate (None) or exactly one in-image function start.  The
+# target set is therefore finite and closed -- a target claim, not an ABI
+# contract.  The witness is deliberately gated to this candidate's exact
+# (function, call-site, parameter, slot, reload) shape; it can never absorb
+# another private function's parameter at the same stack offset.  Every
+# conjunct is a refusal, never a union.
+
+E7PK12_FINITE_SCHEMA = (
+    "openssl-rs/consumer-closure/private-parameter-assignment-set/v1")
+E7PK12_CLASS = "private-parameter-assignment-set"
+E7PK12_RESOLUTION_KIND = "private_parameter_assignment_set"
+E7PK12_FUNCTION = 0x530E40
+E7PK12_FUNCTION_NAME = "pkcs12_gen_mac"
+E7PK12_CALL_SITES = (0x5314AA, 0x531586)
+E7PK12_PARAM_INDEX = 7
+E7PK12_PARAM_SLOT = 0x10
+E7PK12_PARAM_RELOAD = 0x531307
+E7PK12_SOURCE = "src/pkcs12/p12_mutl.rs"
+E7PK12_SOURCE_PARAM = "pkcs12_key_gen"
+E7PK12_SOURCE_CALL = "kgen"
+
+E7PK12_MUTATIONS = (
+    "e7pk12-nonfunction-arg",
+    "e7pk12-forwarded-param",
+    "e7pk12-drop-store",
+    "e7pk12-computed-arg",
+    "e7pk12-export-function",
+    "e7pk12-nonunique-parameter",
+    "e7pk12-no-null-guard",
+)
+
+# Deliberate residual limits of the converted witness.  They are emitted with
+# every resolved witness and persisted in the receipt section; they are not
+# silently absorbed into the claim.
+E7PKCS12_RESIDUALS = (
+    {
+        "id": "local-copy-taxonomy",
+        "detail": (
+            "a caller that forwards its own parameter through a local copy is "
+            "refused as local-non-function, not local-param-forward; both "
+            "refuse, but the taxonomy is imprecise"),
+    },
+    {
+        "id": "indirect-targets-resolved-only",
+        "detail": (
+            "indirect_targets inspects only resolved sites; soundness rests "
+            "on the separately verified no-address-escape fact "
+            "(taken_code/taken_data/slot_func_targets)"),
+    },
+    {
+        "id": "cfg-closure-underapproximates-undecoded-indirect-jumps",
+        "detail": (
+            "the CFG-closure/dominance proof under-approximates undecoded "
+            "indirect jumps; on this candidate open_reach is empty and both "
+            "switches are bounded-decoded, so the proof holds, but the "
+            "witness does not assert closure itself"),
+    },
+)
+
+
+def _e7pk12_refusal(reason, name, site, **extra):
+    rec = {
+        "schema": E7PK12_FINITE_SCHEMA,
+        "class": E7PK12_CLASS,
+        "resolution_kind": E7PK12_RESOLUTION_KIND,
+        "contract_bounded": False,
+        "resolved": False,
+        "refusal": reason,
+        "function": name,
+        "call_site": hex(site["addr"]),
+    }
+    rec.update(extra)
+    return rec
+
+
+def _e7pk12_function_symbol_name(name: str) -> str:
+    """The mangled symbol's final component, stripped of any .llvm suffix."""
+    base = re.sub(r"\.llvm(?:\.[0-9a-f]+)?$", "", name or "")
+    return base.rsplit("::", 1)[-1]
+
+
+def _e7pk12_local_function_starts(g) -> set:
+    """Addresses whose defined symbol is a local text function (`t`)."""
+    cached = getattr(g, "_e7pk12_local_starts", None)
+    if cached is not None:
+        return set(cached)
+    starts = set()
+    path = getattr(g, "path", None)
+    if path is not None and Path(path).is_file():
+        out = run(["nm", "--defined-only", str(path)]).stdout
+        for line in out.splitlines():
+            parsed = parse_nm_line(line)
+            if parsed is not None and parsed[1] == "t":
+                starts.add(parsed[0])
+    g._e7pk12_local_starts = starts
+    return starts
+
+
+def _e7pk12_private_function(g, fstart: int) -> dict:
+    """Whether ``fstart`` is a private (local, non-.dynsym) function."""
+    names = sorted({(n or "").split("@")[0]
+                    for n in (getattr(g, "names_at", {}) or {}).get(fstart,
+                                                                     ())})
+    export = _export_name(g, fstart)
+    dynamic = [n for n in names
+               if getattr(g, "dynamic_defs", {}).get(n) == fstart]
+    local = _e7pk12_local_function_starts(g)
+    # Privacy is a positive proof: the address must carry a local (`t`) symbol
+    # and must not be named by a .dynsym definition.  An unavailable symbol
+    # table is not evidence of privacy, so it refuses.
+    return {
+        "names": names,
+        "export": export,
+        "dynamic_defs": dynamic,
+        "local_symbol": (fstart in local) if local else None,
+        "private": (export is None and not dynamic and fstart in local),
+        "single_name": len(names) == 1,
+    }
+
+
+def _e7pk12_parameter(g, fstart: int, idx: int, opnd: str):
+    """The unique incoming stack argument the operand reads, or a refusal.
+
+    The operand must have exactly one reaching definition, that definition must
+    be a frame load from entry slot 0x10, and the slot must be the incoming
+    stack argument (not a spill).  The candidate's proven reload address is
+    required as well; a different load of the same slot is refused.
+    """
+    opnd = opnd.strip()
+
+    def _ok(stack, reload_addr):
+        if (stack is None or stack.get("kind") != "param"
+                or stack.get("index") != E7PK12_PARAM_INDEX
+                or stack.get("stack_offset") != E7PK12_PARAM_SLOT):
+            return None
+        return {
+            "index": E7PK12_PARAM_INDEX,
+            "slot": hex(E7PK12_PARAM_SLOT),
+            "reload": hex(reload_addr) if reload_addr is not None else None,
+            "provenance": stack.get("provenance") or [],
+            "operand": opnd,
+        }
+
+    if opnd in _REGS or opnd in _SUBREG:
+        reg = _canon(opnd)
+        defs = _reaching_defs(g, fstart, idx, reg)
+        if defs is None or len(defs) != 1 or _ENTRY_DEF in defs:
+            return None, "parameter-slot-not-unique", {
+                "reaching_definitions": (None if defs is None else
+                                         [hex(g.precision.insns_by_func[fstart][d][0])
+                                          for d in sorted(defs) if d >= 0]),
+                "why": ("the operand does not have exactly one reaching "
+                        "definition"),
+            }
+        d = next(iter(defs))
+        insns = g.precision.insns_by_func.get(fstart, ())
+        mn, _rest, ops = _insn_parts(insns[d][1])
+        src = ops[0] if ops else ""
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%rsp|%rbp)\)", src)
+        if (mn not in ("mov", "movq", "movl", "movzbl", "movzwl", "movslq")
+                or not m):
+            return None, "parameter-slot-not-unique", {
+                "reaching_definition": hex(insns[d][0]),
+                "text": insns[d][1],
+                "why": "the reaching definition is not a frame load",
+            }
+        off = int(m.group(1), 16) if m.group(1) else 0
+        stack = _stack_param(g, fstart, d, off, m.group(2))
+        param = _ok(stack, insns[d][0])
+        if param is None:
+            return None, "parameter-slot-not-unique", {
+                "reaching_definition": hex(insns[d][0]),
+                "text": insns[d][1],
+                "stack_origin": stack,
+                "why": ("the frame slot is not the expected incoming stack "
+                        "argument"),
+            }
+        if insns[d][0] != E7PK12_PARAM_RELOAD:
+            return None, "parameter-slot-not-unique", {
+                "reaching_definition": hex(insns[d][0]),
+                "expected_reload": hex(E7PK12_PARAM_RELOAD),
+                "why": "the parameter is not the candidate's proven reload",
+            }
+        return param, None, None
+    stack = _stack_param(g, fstart, idx, opnd, None)
+    param = _ok(stack, None)
+    if param is None:
+        return None, "parameter-slot-not-unique", {
+            "operand": opnd, "stack_origin": stack,
+            "why": "the operand is not the expected incoming stack argument",
+        }
+    return param, None, None
+
+
+def _e7pk12_block_reachable(cfg, start, goal, blocked=()) -> bool:
+    """CFG block reachability with a set of blocks removed."""
+    if start is None or goal is None:
+        return False
+    if start == goal:
+        return True
+    blocked = set(blocked)
+    if start in blocked:
+        return False
+    seen = set(blocked) | {start}
+    work = [start]
+    while work:
+        b = work.pop()
+        for s in cfg["succ"].get(b, ()):
+            if s == goal:
+                return True
+            if s in seen:
+                continue
+            seen.add(s)
+            work.append(s)
+    return False
+
+
+def _e7pk12_dominates(cfg, dom: int, target: int) -> bool:
+    """``dom`` dominates ``target``: target is unreachable without it."""
+    if dom == target:
+        return True
+    return not _e7pk12_block_reachable(cfg, 0, target, blocked={dom})
+
+
+def _e7pk12_null_guard(g, fstart: int, def_idx: int, call_idx: int, reg: str):
+    """Prove the indirect call is reached only on a non-NULL path.
+
+    A guard is a ``test reg,reg`` (or ``cmp $0,reg``) that is immediately
+    followed by a conditional branch and sits in a block that dominates the
+    call block.  The branch's zero edge must not reach the call block, and the
+    non-zero edge must.  The reaching definition of ``reg`` at both the guard
+    and the call must be the one parameter load, so the guard tests the exact
+    value the call consumes (no redefinition lies on any path between them).
+
+    Returns the guard record, or None when the non-NULL path is not proven.
+    """
+    cfg = _function_cfg(g, fstart)
+    insns = cfg["insns"]
+    cb = cfg["block_of"].get(call_idx)
+    if cb is None:
+        return None
+    idx_of = {a: i for i, (a, _t) in enumerate(insns)}
+    reg = _canon(reg)
+    for gb, (lo, hi) in enumerate(cfg["blocks"]):
+        if hi - lo < 2:
+            continue
+        k = hi - 2
+        mn, _rest, ops = _insn_parts(insns[k][1].split("#", 1)[0].strip())
+        if mn == "test":
+            if not (len(ops) == 2 and _canon(ops[0]) == reg
+                    and _canon(ops[1]) == reg):
+                continue
+        elif mn == "cmp":
+            if not (len(ops) == 2 and ops[0].strip() in ("$0x0", "$0")
+                    and _canon(ops[1]) == reg):
+                continue
+        else:
+            continue
+        bmn, brest, _bops = _insn_parts(
+            insns[k + 1][1].split("#", 1)[0].strip())
+        if bmn not in ("je", "jz", "jne", "jnz"):
+            continue
+        m = re.match(r"^([0-9a-f]+)", brest)
+        if not m:
+            continue
+        tb = cfg["block_of"].get(idx_of.get(int(m.group(1), 16)))
+        ft = cfg["block_of"].get(hi)
+        if tb is None or ft is None:
+            continue
+        if bmn in ("je", "jz"):
+            zero_edge, nonzero_edge = tb, ft
+        else:
+            zero_edge, nonzero_edge = ft, tb
+        if not _e7pk12_dominates(cfg, gb, cb):
+            continue
+        if def_idx >= k:
+            continue
+        if _reaching_defs(g, fstart, k, reg) != {def_idx}:
+            continue
+        if _reaching_defs(g, fstart, call_idx, reg) != {def_idx}:
+            continue
+        if not _e7pk12_block_reachable(cfg, nonzero_edge, cb):
+            continue
+        if _e7pk12_block_reachable(cfg, zero_edge, cb):
+            continue
+        return {
+            "register": reg,
+            "test": hex(insns[k][0]),
+            "text": insns[k][1].strip(),
+            "branch": hex(insns[k + 1][0]),
+            "branch_text": insns[k + 1][1].strip(),
+            "zero_edge": zero_edge,
+            "nonzero_edge": nonzero_edge,
+            "call_block": cb,
+            "provenance": (
+                "the guard block dominates the call block; the zero edge does "
+                "not reach it and the non-zero edge does; the only reaching "
+                "definition at the guard and at the call is the parameter "
+                "load"),
+        }
+    return None
+
+
+def _e7pk12_arg_slot(g, caller: int, call_idx: int, k: int):
+    """Entry-relative frame slot of stack argument ``k`` at a direct call."""
+    deltas = _semantic_rsp_deltas(g, caller)
+    if call_idx >= len(deltas) or deltas[call_idx] is None:
+        return None, "the call's rsp delta is unknown"
+    return deltas[call_idx] + 8 * (k - 6), None
+
+
+def _e7pk12_arg_store(g, caller: int, call_idx: int, k: int):
+    """The store that defines stack argument ``k`` before a direct call.
+
+    ``push`` is a store to ``[rsp-8]``; the shared reaching-store analysis does
+    not model it, so the argument slot is located explicitly in the call's
+    basic block.  Returns ``(store_index, source, via, slot)`` or a named
+    refusal string.  A missing store is a refusal, never an assumption.
+    """
+    slot, why = _e7pk12_arg_slot(g, caller, call_idx, k)
+    if slot is None:
+        return None, "caller-set-not-closed", {"detail": why}
+    insns = g.precision.insns_by_func.get(caller, ())
+    deltas = _semantic_rsp_deltas(g, caller)
+    cfg = _function_cfg(g, caller)
+    bi = cfg["block_of"].get(call_idx)
+    lo = cfg["blocks"][bi][0] if bi is not None else 0
+    for i in range(call_idx - 1, lo - 1, -1):
+        mn, _rest, ops = _insn_parts(insns[i][1])
+        if mn == "push":
+            if deltas[i] is not None and deltas[i] - 8 == slot:
+                return (i, ops[0] if ops else "", "push", slot), None, None
+            continue
+        if not ops:
+            continue
+        dst = ops[-1]
+        if not (dst.endswith("(%rsp)") or dst.endswith("(%rbp)")):
+            continue
+        if mn.startswith(_COMPARE_MN + ("lea", "push", "pop", "call")):
+            continue
+        if _stack_slot_abs(g, caller, i, dst) == slot:
+            return (i, ops[0], "store", slot), None, None
+    return None, "caller-set-not-closed", {
+        "caller": g.funcs.get(caller),
+        "call_site": hex(g.precision.insns_by_func[caller][call_idx][0]),
+        "argument_index": k,
+        "slot": hex(slot),
+        "why": "no store in the call's basic block defines the argument slot",
+    }
+
+
+def _e7pk12_argument_value(g, caller: int, store_idx: int, src: str):
+    """``(kind, value, detail)`` for a stored argument source.
+
+    ``kind`` is ``none`` (zero immediate), ``address``/``immediate`` (a
+    link-time value, checked against the image function starts by the caller),
+    or a named refusal.  A register is followed only to a unique definition; a
+    merge is never unioned.
+    """
+    src = (src or "").strip()
+    if not src:
+        return "caller-argument-is-computed", None, {"why": "empty source"}
+    if src.startswith("$"):
+        try:
+            value = int(src[1:], 16)
+        except ValueError:
+            return "caller-argument-is-computed", None, {"source": src}
+        if value == 0:
+            return "none", None, {"source": src}
+        return "immediate", value, {"source": src}
+    if src in _REGS or src in _SUBREG:
+        reg = _canon(src)
+        insns = g.precision.insns_by_func.get(caller, ())
+        defs = _reaching_defs(g, caller, store_idx, reg)
+        if defs is None:
+            return "caller-argument-is-computed", None, {
+                "source": src, "why": "open or non-convergent CFG"}
+        if defs == {_ENTRY_DEF}:
+            if reg in _ENTRY_ARG_REGS:
+                return "caller-forwards-its-own-parameter", None, {
+                    "source": src,
+                    "parameter_index": _ENTRY_ARG_REGS[reg]}
+            return "caller-argument-is-computed", None, {
+                "source": src, "why": "unknown entry register"}
+        if len(defs) != 1:
+            return "caller-argument-is-computed", None, {
+                "source": src,
+                "reaching_definitions": [hex(insns[d][0])
+                                         for d in sorted(defs) if d >= 0],
+                "why": "the stored value has several reaching definitions"}
+        d = next(iter(defs))
+        mn, _rest, ops = _insn_parts(insns[d][1])
+        dtext = insns[d][1]
+        if mn == "lea":
+            m = (re.fullmatch(r"(-?0x[0-9a-f]+)?\(%rip\)", ops[0])
+                 if ops else None)
+            taddr = _insn_comment_addr(dtext)
+            if not m or taddr is None:
+                return "caller-argument-is-computed", None, {
+                    "source": src, "definition": hex(insns[d][0]),
+                    "text": dtext,
+                    "why": "a computed lea, not a link-time address"}
+            return "address", taddr, {
+                "source": src, "definition": hex(insns[d][0]),
+                "text": dtext}
+        if (mn in ("mov", "movq", "movl", "movabs")
+                and ops and ops[0].startswith("$")):
+            try:
+                value = int(ops[0][1:], 16)
+            except ValueError:
+                return "caller-argument-is-computed", None, {
+                    "source": src, "definition": hex(insns[d][0]),
+                    "text": dtext}
+            if value == 0:
+                return "none", None, {
+                    "source": src, "definition": hex(insns[d][0]),
+                    "text": dtext}
+            return "immediate", value, {
+                "source": src, "definition": hex(insns[d][0]),
+                "text": dtext}
+        return "caller-argument-is-computed", None, {
+            "source": src, "definition": hex(insns[d][0]), "text": dtext,
+            "why": "the stored value is not a link-time function address"}
+    stack = _stack_param(g, caller, store_idx, src, None)
+    if stack is not None and stack.get("kind") == "param":
+        return "caller-forwards-its-own-parameter", None, {
+            "source": src, "parameter_index": stack.get("index")}
+    return "caller-argument-is-computed", None, {"source": src}
+
+
+def _e7pk12_tail_callers(g, fstart: int) -> list:
+    """In-image direct jumps to ``fstart`` from another function."""
+    out = []
+    for caller, insns in g.precision.insns_by_func.items():
+        if caller == fstart:
+            continue
+        for addr, text in insns:
+            mn, rest, _ops = _insn_parts(text)
+            if not mn.startswith("j"):
+                continue
+            m = re.match(r"^([0-9a-f]+)", rest)
+            if not m:
+                continue
+            if _containing(g, int(m.group(1), 16)) == fstart:
+                out.append({"caller": g.funcs.get(caller),
+                            "call_site": hex(addr), "text": text})
+    return out
+
+
+def _e7pk12_strip_comments(text: str) -> str:
+    """Blank Rust line/block comments while preserving every offset."""
+    out = []
+    i = 0
+    while i < len(text):
+        if text.startswith("//", i):
+            j = text.find("\n", i)
+            if j < 0:
+                j = len(text)
+            out.append(" " * (j - i))
+            i = j
+        elif text.startswith("/*", i):
+            j = text.find("*/", i + 2)
+            if j < 0:
+                j = len(text) - 2
+            out.append(" " * (j + 2 - i))
+            i = j + 2
+        else:
+            out.append(text[i])
+            i += 1
+    return "".join(out)
+
+
+def _e7pk12_split_params(text: str) -> list:
+    """Split a Rust parameter list at top-level commas.
+
+    Tracks ``()``/``[]``/``{}`` and ``<>`` so the commas inside a multi-line
+    ``Option<unsafe extern "C" fn(...) -> T>`` are not top-level.  An arrow's
+    ``>`` is not a generic close.
+    """
+    parts, cur = [], []
+    depth = {"(": 0, "[": 0, "{": 0, "<": 0}
+    close = {")": "(", "]": "[", "}": "{", ">": "<"}
+    for i, ch in enumerate(text):
+        if ch in depth:
+            depth[ch] += 1
+        elif ch in close:
+            if not (ch == ">" and i > 0 and text[i - 1] == "-"):
+                key = close[ch]
+                depth[key] = max(0, depth[key] - 1)
+        if ch == "," and not any(depth.values()):
+            parts.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+    if cur:
+        parts.append("".join(cur).strip())
+    return [p for p in parts if p]
+
+
+def _e7pk12_source_evidence(g):
+    """The source declaration and call site, or None when unavailable."""
+    root = _repo_root(g)
+    if root is None:
+        return None
+    cached = getattr(g, "_e7pk12_source_cache", None)
+    if cached is not None:
+        return cached
+    path = Path(root) / E7PK12_SOURCE
+    if not path.is_file():
+        return None
+    try:
+        text = path.read_text(errors="replace")
+    except OSError:
+        return None
+    m = re.search(r"\bfn\s+" + re.escape(E7PK12_FUNCTION_NAME) + r"\s*\(",
+                  text)
+    if m is None:
+        result = {"file": E7PK12_SOURCE, "function": E7PK12_FUNCTION_NAME,
+                  "function_found": False}
+        g._e7pk12_source_cache = result
+        return result
+    start = text.find("(", m.start())
+    depth, end = 0, None
+    for off in range(start, len(text)):
+        ch = text[off]
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                end = off + 1
+                break
+    if end is None:
+        result = {"file": E7PK12_SOURCE, "function": E7PK12_FUNCTION_NAME,
+                  "function_found": True, "parameter_count": None}
+        g._e7pk12_source_cache = result
+        return result
+    clean = _e7pk12_strip_comments(text[start + 1:end - 1])
+    params = _e7pk12_split_params(clean)
+    p7 = (params[E7PK12_PARAM_INDEX]
+          if len(params) > E7PK12_PARAM_INDEX else None)
+    pname = None
+    if p7:
+        mm = re.match(r"\s*([A-Za-z_]\w*)\s*:", p7)
+        if mm:
+            pname = mm.group(1)
+    calls = [text.count("\n", 0, mm.start()) + 1
+             for mm in re.finditer(
+                 r"(?<![\w.])" + re.escape(E7PK12_SOURCE_CALL) + r"\s*\(",
+                 text)]
+    result = {
+        "file": E7PK12_SOURCE,
+        "function": E7PK12_FUNCTION_NAME,
+        "function_found": True,
+        "function_line": text.count("\n", 0, m.start()) + 1,
+        "parameter_count": len(params),
+        "parameter_index": E7PK12_PARAM_INDEX,
+        "parameter_name": pname,
+        "parameter_is_option": bool(p7 and "Option<" in p7),
+        "parameter_text": (" ".join(p7.split())[:240] if p7 else None),
+        "call_name": E7PK12_SOURCE_CALL,
+        "call_lines": calls,
+        "call_count": len(calls),
+    }
+    g._e7pk12_source_cache = result
+    return result
+
+
+def private_parameter_assignment_witness(g: "DsoGraph", site: dict,
+                                          name: str):
+    """Resolve ``pkcs12_gen_mac``'s ``pkcs12_key_gen`` parameter target set.
+
+    This is a *private-parameter assignment set* witness, not a contract: the
+    indirect operand is one incoming stack parameter of a local, non-.dynsym
+    function, and the complete in-image caller set assigns it only a zero
+    immediate (None) or one in-image function start.  The target set is the
+    finite union of those assignments.
+
+    Returns ``None`` for every site that is not this candidate's exact shape
+    (so a different private function's parameter at the same stack offset is
+    never absorbed), a named refusal when a conjunct cannot be proven, or a
+    resolved witness whose ``targets`` are the non-None caller arguments.
+
+    Refusals use these reasons:
+      * ``local-param-forward`` -- a caller forwards its own parameter;
+      * ``local-non-function`` -- a caller assigns a computed/non-start value;
+      * ``local-partial-set`` -- a caller argument or the caller set cannot be
+        resolved, or the parameter/guard provenance is incomplete;
+      * ``local-not-private`` -- the function is exported or address-taken;
+      * ``local-source-unavailable`` -- the source declaration cannot be read;
+      * ``local-source-not-a-callback`` -- the declaration does not carry the
+        expected Option callback at parameter index 7.
+
+    The source conjunct is mandatory: a missing or non-callback declaration is
+    a refusal, not an accepted ``None``.  The witness records its three known
+    residual limits in ``residuals`` so they reach the receipt.
+    """
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    fstart = site.get("func")
+    if fstart != E7PK12_FUNCTION:
+        return None
+    if site.get("addr") not in E7PK12_CALL_SITES:
+        return None
+    facts = _e7pk12_private_function(g, fstart)
+    names = facts["names"]
+    if (len(names) != 1
+            or E7PK12_FUNCTION_NAME not in _e7pk12_function_symbol_name(
+                names[0])):
+        return None
+    insns = g.precision.insns_by_func.get(fstart, ())
+    idx = next((i for i, (a, _t) in enumerate(insns)
+                if a == site["addr"]), None)
+    if idx is None:
+        return None
+    opnd = _site_operand(site)
+    if opnd not in _REGS and opnd not in _SUBREG:
+        return None
+
+    def _refuse(reason, **extra):
+        return _e7pk12_refusal(reason, name, site, **extra)
+
+    if "e7pk12-export-function" in _MUTED:
+        facts = dict(facts, private=False, export="mutated:exported")
+    if not facts["private"]:
+        return _refuse("local-not-private", function_facts=facts)
+    if "e7pk12-nonunique-parameter" in _MUTED:
+        return _refuse("local-partial-set", operand=opnd,
+                       why="mutation: several reaching definitions")
+    param, reason, detail = _e7pk12_parameter(g, fstart, idx, opnd)
+    if param is None:
+        detail = dict(detail or {})
+        detail.setdefault("why", reason)
+        return _refuse("local-partial-set", operand=opnd, **detail)
+    # A NULL parameter must not reach the call: a test-and-branch guard on the
+    # parameter register must dominate the call and route the zero value away.
+    def_idx = next((i for i, (a, _t) in enumerate(insns)
+                    if a == int(param["reload"], 16)), None)
+    if def_idx is None:
+        return _refuse("local-partial-set", operand=opnd,
+                       why="the parameter reload is not in the function")
+    guard = _e7pk12_null_guard(g, fstart, def_idx, idx, opnd)
+    if "e7pk12-no-null-guard" in _MUTED:
+        guard = None
+    if guard is None:
+        return _refuse("local-partial-set", operand=opnd,
+                       parameter=param,
+                       why=("no dominating NULL guard on the parameter is "
+                            "proven for this call site"))
+    source = _e7pk12_source_evidence(g)
+    if source is None:
+        return _refuse("local-source-unavailable", function_facts=facts,
+                       why=("the source declaration cannot be read; this "
+                            "witness is source-backed and cannot resolve "
+                            "without it"))
+    source_ok = bool(
+        source.get("function_found")
+        and source.get("parameter_count") == E7PK12_PARAM_INDEX + 1
+        and source.get("parameter_name") == E7PK12_SOURCE_PARAM
+        and source.get("parameter_is_option")
+        and source.get("call_count") == 1)
+    if not source_ok:
+        return _refuse("local-source-not-a-callback",
+                       function_facts=facts, source=source,
+                       why=("the source declaration does not declare the "
+                            "expected Option callback at parameter index 7"))
+    callers = _callers_of(g, fstart)
+    if not callers:
+        return _refuse("local-partial-set", function_facts=facts,
+                       why="the function has no in-image direct caller")
+    address_taken = {
+        "taken_code": fstart in getattr(g, "taken_code", set()),
+        "taken_data": fstart in getattr(g, "taken_data", set()),
+        "relocated_slot": fstart in getattr(g, "slot_func_targets", set()),
+    }
+    # An address-taken or exported function can be called indirectly by code
+    # outside the enumerated set.  The brief classes that as non-private.
+    indirect_targets = {
+        (g.funcs.get(s["func"]), hex(s["addr"]))
+        for s in getattr(g, "sites", {}).values()
+        if not s.get("unresolved")
+        and fstart in (s.get("targets") or ())
+    }
+    if any(address_taken.values()) or indirect_targets:
+        return _refuse("local-not-private", function_facts=facts,
+                       address_taken=address_taken,
+                       indirect_targets=sorted(indirect_targets),
+                       why=("the function's address escapes or an indirect "
+                            "call site names it, so an indirect caller cannot "
+                            "be excluded"))
+    tail = _e7pk12_tail_callers(g, fstart)
+    if tail:
+        return _refuse("local-partial-set", function_facts=facts,
+                       tail_calls=tail,
+                       why="a direct jump to the function is not a call site")
+    rows = []
+    targets = set()
+    for caller, ci, addr in callers:
+        store, reason, detail = _e7pk12_arg_store(
+            g, caller, ci, E7PK12_PARAM_INDEX)
+        if store is None:
+            detail = dict(detail or {})
+            detail.setdefault("why", reason)
+            return _refuse("local-partial-set", function_facts=facts,
+                           **detail)
+        store_idx, src, via, slot = store
+        kind, value, vdetail = _e7pk12_argument_value(
+            g, caller, store_idx, src)
+        row = {
+            "function": g.funcs.get(caller),
+            "function_start": hex(caller),
+            "call_site": hex(addr),
+            "argument_kind": kind,
+            "argument": None,
+            "argument_symbol": None,
+            "store": hex(g.precision.insns_by_func[caller][store_idx][0]),
+            "via": via,
+            "slot": hex(slot),
+            "source": src,
+            "definition": vdetail,
+        }
+        if kind == "none":
+            if "e7pk12-forwarded-param" in _MUTED:
+                return _refuse("local-param-forward",
+                               function_facts=facts, caller=row,
+                               why=("mutation: the caller forwards its own "
+                                    "parameter"))
+            rows.append(row)
+            continue
+        if kind in ("address", "immediate"):
+            if "e7pk12-nonfunction-arg" in _MUTED:
+                return _refuse("local-non-function",
+                               function_facts=facts, caller=row,
+                               value=hex(value),
+                               why=("mutation: the caller passes a "
+                                    "non-function address"))
+            if "e7pk12-computed-arg" in _MUTED:
+                return _refuse("local-non-function",
+                               function_facts=facts, caller=row,
+                               why=("mutation: the caller's argument is "
+                                    "computed"))
+            if "e7pk12-drop-store" in _MUTED:
+                return _refuse("local-partial-set",
+                               function_facts=facts, caller=row,
+                               why="mutation: the caller's store is dropped")
+            if value not in g.start_set:
+                return _refuse("local-non-function",
+                               function_facts=facts, caller=row,
+                               value=hex(value), kind=kind)
+            row["argument"] = hex(value)
+            row["argument_symbol"] = g.funcs.get(value)
+            targets.add(value)
+            rows.append(row)
+            continue
+        if kind == "caller-forwards-its-own-parameter":
+            return _refuse("local-param-forward", function_facts=facts,
+                           caller=row, **(vdetail or {}))
+        return _refuse("local-non-function", function_facts=facts,
+                       caller=row, kind=kind, **(vdetail or {}))
+    conditions = {
+        "target_is_a_parameter_of_a_private_function": (
+            f"{names[0]} at {hex(fstart)} carries a local (`t`) symbol and no "
+            ".dynsym definition"),
+        "parameter_provenance_is_a_unique_stack_argument": (
+            f"parameter {E7PK12_PARAM_INDEX} at entry stack slot "
+            f"{hex(E7PK12_PARAM_SLOT)}, loaded once at {param['reload']}"),
+        "call_is_on_the_non_null_path": (
+            f"{guard['text']} at {guard['test']} then "
+            f"{guard['branch_text']} dominates {hex(site['addr'])}; the zero "
+            "edge does not reach the call and the non-zero edge does"),
+        "parameter_not_forwarded_from_an_exported_entry_point": (
+            "every in-image caller passes a zero immediate or one in-image "
+            "function start, never its own parameter"),
+        "caller_set_is_closed": (
+            f"{len(callers)} direct call site(s); the function address is not "
+            "taken by code, data or a relocation, no indirect site names it, "
+            "and no direct jump targets it"),
+        "every_argument_is_none_or_one_function_start": (
+            f"{sum(1 for r in rows if r['argument'] is None)} None, "
+            f"{sum(1 for r in rows if r['argument'] is not None)} "
+            "in-image function start(s)"),
+        "nonnull_target_set_is_finite": (
+            f"{len(targets)} target(s): "
+            + (", ".join(hex(t) for t in sorted(targets)) or "empty")),
+        "source_declares_the_forwarded_option_parameter": source_ok,
+    }
+    return {
+        "schema": E7PK12_FINITE_SCHEMA,
+        "class": E7PK12_CLASS,
+        "resolution_kind": E7PK12_RESOLUTION_KIND,
+        "contract_bounded": False,
+        "resolved": True,
+        "function": name,
+        "function_start": hex(fstart),
+        "call_site": hex(site["addr"]),
+        "operand": {"kind": "reg", "text": opnd},
+        "parameter": param,
+        "null_guard": guard,
+        "function_facts": {
+            "names": facts["names"],
+            "private": True,
+            "in_dynsym": False,
+            "local_symbol": facts["local_symbol"],
+            "address_taken": address_taken,
+            "indirect_targets": sorted(indirect_targets),
+            "source": source,
+        },
+        "callers": rows,
+        "caller_count": len(rows),
+        "targets": [hex(t) for t in sorted(targets)],
+        "target_symbols": {hex(t): g.funcs.get(t) for t in sorted(targets)},
+        "conditions": conditions,
+        "residuals": [dict(r) for r in E7PKCS12_RESIDUALS],
+        "basis": (
+            "the indirect operand resolves to one incoming stack argument of a "
+            "local, non-.dynsym function, guarded against NULL on the path to "
+            "the call; the complete in-image direct-caller set is enumerated "
+            "and every caller assigns either the zero immediate or exactly "
+            "one in-image function start; the target set is the finite union "
+            "of those assignments"),
+        "does_not_cover": [
+            "the behaviour of the target function once called",
+            "a caller outside this image: the function is local and its "
+            "address is not taken, so none exists",
+            "the meaning of the parameter value beyond the finite set above",
+        ],
+    }
+
+
 def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                            reachable: set | None = None) -> dict:
     """Apply the R2/R3/A1/A2 evidence classes to one candidate DSO.
@@ -16947,6 +17782,31 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
             continue
         if cap_refusal:
             site["provider_capabilities_refusal"] = cap_refusal
+        # E7-PKCS12: the `pkcs12_key_gen` parameter of the private
+        # `pkcs12_gen_mac`.  The parameter is an incoming stack argument of a
+        # local, non-.dynsym function, guarded against NULL; the complete
+        # in-image caller set assigns either the zero immediate or exactly one
+        # in-image function start, so the target set is finite.  This block
+        # precedes S2, whose honest deferral ("no exported entry point receives
+        # the parameter; the callers are in-image and finite") is precisely the
+        # signal that this private-parameter assignment proof is required.  A
+        # refusal is recorded and then falls through to the existing
+        # conservative rules; it never unions.
+        lp = private_parameter_assignment_witness(g, site, name)
+        if lp is not None:
+            if lp.get("resolved"):
+                site["targets"] = {int(t, 16) for t in lp["targets"]}
+                site["unresolved"] = False
+                site["class"] = E7PK12_CLASS
+                site["reason"] = (
+                    "private parameter assignment set: "
+                    f"{lp['parameter']['reload']} -> "
+                    f"{len(lp['targets'])} in-image function start(s)")
+                site["private_parameter_assignment_witness"] = lp
+                stats["E7PKCS12_private_param_resolved"] += 1
+                continue
+            site["private_parameter_assignment_refusal"] = lp
+            stats["E7PKCS12_private_param_refused"] += 1
         # S2: a callback that is exactly an exported function's parameter.
         # The mandatory deferral is enforced inside the witness: a private
         # chain with finite in-image callers is refused and left to the
@@ -17519,6 +18379,10 @@ def _edge_record(g, site: dict, ordinal: int, oracle=None, seen_ids=None) -> dic
                     or site.get("e7bs_writer_list_refusal"))
     if e7bs_witness is not None:
         extra["e7bs_witness"] = e7bs_witness
+    lp_witness = (site.get("private_parameter_assignment_witness")
+                  or site.get("private_parameter_assignment_refusal"))
+    if lp_witness is not None:
+        extra["private_parameter_assignment_witness"] = lp_witness
     if semantics is not None:
         # Only a resolved derivation enumerates its candidates.  An unresolved
         # row may contain a partial target set from rows that did not fail; it
@@ -18056,6 +18920,64 @@ def e7bs_receipt_section(graphs: dict) -> dict:
             "by_refusal": dict(sorted(collections.Counter(
                 str(r.get("refusal")) for r in refused).items())),
         },
+        "resolved_sites": resolved,
+        "refused_sites": refused,
+    }
+
+
+def private_parameter_assignment_section(graphs: dict) -> dict:
+    """Persist the E7-PKCS12 private-parameter assignment witness."""
+    def _witness(site):
+        return (site.get("private_parameter_assignment_witness")
+                or site.get("private_parameter_assignment_refusal") or {})
+
+    resolved = [
+        {"dso": name,
+         "function": w.get("function"),
+         "call_site": w.get("call_site"),
+         "resolution_kind": w.get("resolution_kind"),
+         "parameter": w.get("parameter"),
+         "null_guard": w.get("null_guard"),
+         "callers": w.get("callers"),
+         "targets": w.get("targets"),
+         "conditions": w.get("conditions"),
+         "residuals": w.get("residuals")}
+        for name, g in graphs.items()
+        for s in getattr(g, "sites", {}).values()
+        for w in [_witness(s)] if w.get("resolved")
+    ]
+    refused = [
+        {"dso": name,
+         "function": w.get("function"),
+         "call_site": w.get("call_site"),
+         "resolution_kind": w.get("resolution_kind"),
+         "refusal": w.get("refusal"),
+         "detail": {k: v for k, v in w.items()
+                    if k not in ("schema", "class", "resolution_kind",
+                                 "contract_bounded", "resolved", "refusal",
+                                 "function", "call_site")}}
+        for name, g in graphs.items()
+        for s in getattr(g, "sites", {}).values()
+        for w in [_witness(s)] if w and not w.get("resolved")
+    ]
+    return {
+        "schema": E7PK12_FINITE_SCHEMA,
+        "rule": (
+            "pkcs12_gen_mac is a local (`t`) function. Its eighth parameter "
+            "(`pkcs12_key_gen`) is the incoming stack argument at entry slot "
+            "0x10, loaded once into %r15 and tested against NULL on the path "
+            "to each call. The function is not address-taken and has no "
+            "direct jump caller; every in-image direct caller assigns the "
+            "zero immediate or exactly one in-image function start. The "
+            "target set is the finite union of those assignments."),
+        "summary": {
+            "resolved": len(resolved),
+            "refused": len(refused),
+            "residuals_recorded": len(E7PKCS12_RESIDUALS),
+            "by_refusal": dict(sorted(collections.Counter(
+                str(r.get("refusal")) for r in refused).items())),
+        },
+        "residuals": [dict(r) for r in E7PKCS12_RESIDUALS],
         "resolved_sites": resolved,
         "refused_sites": refused,
     }
@@ -24378,6 +25300,8 @@ def build_receipt(args) -> dict:
                     if w],
             },
             "e7bs_witnesses": e7bs_receipt_section(graphs),
+            "private_parameter_assignment": (
+                private_parameter_assignment_section(graphs)),
             "unclassified_reachable_sites": closure["unclassified_sites"],
             "evidence_classes": evidence_stats,
             "dlsym_literals": {
@@ -28740,6 +29664,321 @@ def self_test() -> int:
     check("a valid symbol-index cache is preserved",
           _s1_symbol_index(_ig)["exact"], {"B": 0x20})
 
+    # ---- E7-PKCS12: the private function's private-parameter assignment -- #
+    # The fixture reproduces the real image shape: a local `pkcs12_gen_mac`
+    # whose eighth parameter is the incoming stack argument at entry slot
+    # 0x10, loaded once at 0x531307, and two in-image callers -- one passing
+    # the zero immediate and one passing one in-image function start.  Every
+    # conjunct is exercised by a mutation; the non-widening control uses a
+    # different function at the same stack offset.
+    _E7PK12_FUNC = E7PK12_FUNCTION
+    _E7PK12_TARGET = 0x531FE0
+    _E7PK12_CALLER_NONE = 0x51B4D0
+    _E7PK12_CALLER_SOME = 0x51C860
+
+    class _E7PK12G:
+        def __init__(self, insns, funcs, *, source_root=None,
+                     dynamic_defs=None, local_starts=(), taken_code=(),
+                     taken_data=(), slot_funcs=None):
+            self.name = "e7pk12.so"
+            self.funcs = dict(funcs)
+            self.start_set = set(funcs)
+            self.names_at = {a: {n} for a, n in funcs.items()}
+            self.all_syms = dict(funcs)
+            self.sections = {}
+            self.precision = _WPrecision({f: list(v)
+                                          for f, v in insns.items()})
+            self.functions = [(f, list(v)) for f, v in insns.items()]
+            self.source_root = source_root
+            self.install_prefix = None
+            self.sites = {}
+            self.direct = {}
+            self.taken_code = set(taken_code)
+            self.taken_data = set(taken_data)
+            self.slot_funcs = dict(slot_funcs or {})
+            self.slot_data = {}
+            self.slot_syms = {}
+            self.sym_sizes = {}
+            self.dynamic_defs = dict(dynamic_defs or {})
+            self._e7pk12_local_starts = set(local_starts)
+            self.path = None
+
+        @property
+        def slot_func_targets(self):
+            return {v for vs in self.slot_funcs.values() for v in vs}
+
+        def containing(self, addr):
+            return max((f for f in self.funcs if f <= addr), default=None)
+
+        def section_of(self, addr):
+            return None
+
+        def static_slot(self, addr):
+            return None
+
+        def is_data(self, addr):
+            return False
+
+    _E7PK12_SOURCE = (
+        "//! pkcs12 test fixture\n"
+        "unsafe fn pkcs12_gen_mac(\n"
+        "    p12: *mut Pkcs12,\n"
+        "    pass: *const c_char,\n"
+        "    passlen: c_int,\n"
+        "    mac: *mut c_uchar,\n"
+        "    maclen: *mut c_uint,\n"
+        "    pbmac1_md_nid: c_int,\n"
+        "    pbmac1_kdf_nid: c_int,\n"
+        "    // The authority's callback parameter, written inline.\n"
+        "    pkcs12_key_gen: Option<\n"
+        "        unsafe extern \"C\" fn(\n"
+        "            pass: *const c_char,\n"
+        "            passlen: c_int,\n"
+        "            salt: *mut c_uchar,\n"
+        "            slen: c_int,\n"
+        "            id: c_int,\n"
+        "            iter: c_int,\n"
+        "            n: c_int,\n"
+        "            out: *mut c_uchar,\n"
+        "            md_type: *const EvpMd,\n"
+        "        ) -> c_int,\n"
+        "    >,\n"
+        ") -> c_int {\n"
+        "    let res = kgen(0);\n"
+        "    res\n"
+        "}\n"
+    )
+    _E7PK12_SOURCE_NOT_CALLBACK = (
+        "unsafe fn pkcs12_gen_mac(\n"
+        "    a: c_int,\n"
+        "    b: c_int,\n"
+        "    c: c_int,\n"
+        "    d: c_int,\n"
+        "    e: c_int,\n"
+        "    f: c_int,\n"
+        "    g: c_int,\n"
+        "    pkcs12_key_gen: c_int,\n"
+        ") -> c_int {\n"
+        "    let res = kgen(0);\n"
+        "    res\n"
+        "}\n"
+    )
+
+    def _e7pk12_fixture(*, func=_E7PK12_FUNC, exported=False,
+                        address_taken=False, forward_caller=False,
+                        nonfunction_caller=False, tail_jump_caller=False,
+                        guarded=True, guard_b=True, source_missing=False,
+                        source_not_callback=False):
+        root = Path(tempfile.mkdtemp())
+        if not source_missing:
+            srcdir = root / "src" / "pkcs12"
+            srcdir.mkdir(parents=True, exist_ok=True)
+            (srcdir / "p12_mutl.rs").write_text(
+                _E7PK12_SOURCE_NOT_CALLBACK if source_not_callback
+                else _E7PK12_SOURCE)
+        funcs = {
+            func: ("_RNvNtCs1234_10openssl_rs6pkcs128p12_mutl"
+                   "14pkcs12_gen_mac"),
+            _E7PK12_CALLER_NONE: "PKCS12_gen_mac",
+            _E7PK12_CALLER_SOME: "PKCS12_set_pbmac1_pbkdf2",
+            _E7PK12_TARGET: ("_RNvNtCs1234_10openssl_rs6pkcs128p12_mutl"
+                             "28pkcs12_pbmac1_pbkdf2_key_gen"),
+        }
+        if func != _E7PK12_FUNC:
+            funcs[func] = "_RNvNtCs1234_10openssl_rs6other14pkcs12_gen_mac"
+        none_push = ("push   %rdi" if forward_caller else "push   $0x0")
+        some_lea = ("mov    $0x1234,%rax" if nonfunction_caller
+                    else "lea    0x1523c(%rip),%rax        # 531fe0 <key_gen>")
+        test_a = "test   %r15,%r15" if guarded else "nop"
+        je_a = "je     531539 <arm2>" if guarded else "nop"
+        test_b = ("test   %r15,%r15" if (guarded and guard_b) else "nop")
+        je_b = ("je     5315e1 <skip>" if (guarded and guard_b) else "nop")
+        none_call = ("jmp    530e40 <gen_mac>" if tail_jump_caller
+                     else "call   530e40 <gen_mac>")
+        insns = {
+            func: [
+                (func, "push   %rbp"),
+                (func + 1, "push   %r15"),
+                (func + 3, "push   %r14"),
+                (func + 5, "push   %r13"),
+                (func + 7, "push   %r12"),
+                (func + 9, "push   %rbx"),
+                (func + 0xA, "sub    $0x188,%rsp"),
+                (0x531307, "mov    0x1c8(%rsp),%r15"),
+                (0x53130F, test_a),
+                (0x53131D, je_a),
+                (0x5314AA, "call   *%r15"),
+                (0x5314AD, "jmp    53158c <join>"),
+                (0x531539, test_b),
+                (0x53153C, je_b),
+                (0x531586, "call   *%r15"),
+                (0x531589, "jmp    53158c <join>"),
+                (0x53158C, "ret"),
+                (0x5315E1, "ret"),
+            ],
+            _E7PK12_CALLER_NONE: [
+                (0x51B4D0, "push   %rax"),
+                (0x51B4D1, "xor    %r9d,%r9d"),
+                (0x51B4D4, none_push),
+                (0x51B4D6, "push   $0x0"),
+                (0x51B4D8, none_call),
+                (0x51B4DD, "add    $0x10,%rsp"),
+                (0x51B4E1, "pop    %rcx"),
+                (0x51B4E2, "ret"),
+            ],
+            _E7PK12_CALLER_SOME: [
+                (0x51C860, "push   %rbp"),
+                (0x51C861, "push   %r15"),
+                (0x51C863, "push   %r14"),
+                (0x51C865, "push   %r13"),
+                (0x51C867, "push   %r12"),
+                (0x51C869, "push   %rbx"),
+                (0x51C86A, "sub    $0x128,%rsp"),
+                (0x51CD9D, some_lea),
+                (0x51CDB1, "mov    %r12,%rdi"),
+                (0x51CDBD, "push   %rax"),
+                (0x51CDBE, "push   0x50(%rsp)"),
+                (0x51CDC2, "call   530e40 <gen_mac>"),
+                (0x51CDC7, "add    $0x10,%rsp"),
+                (0x51CDCB, "ret"),
+            ],
+        }
+        dynamic = {funcs[func]: func} if exported else {}
+        g = _E7PK12G(insns, funcs, source_root=root,
+                     dynamic_defs=dynamic, local_starts={func},
+                     taken_code=({func} if address_taken else ()))
+        site = {"kind": "call", "func": func, "addr": 0x5314AA,
+                "text": "call   *%r15", "targets": set(),
+                "unresolved": True, "reason": "reg-top",
+                "class": "materialised", "field_offsets": set(),
+                "seam": None, "arg_deps": set(), "arg_targets": set()}
+        return g, site
+
+    _g_lp, _s_lp = _e7pk12_fixture()
+    _w_lp = private_parameter_assignment_witness(
+        _g_lp, _s_lp, _g_lp.funcs[_E7PK12_FUNC])
+    check("E7PKCS12 positive resolves exactly the one function start",
+          ((_w_lp or {}).get("resolved"), (_w_lp or {}).get("targets")),
+          (True, ["0x531fe0"]))
+    check("E7PKCS12 positive resolution kind",
+          (_w_lp or {}).get("resolution_kind"),
+          "private_parameter_assignment_set")
+    check("E7PKCS12 positive parameter index",
+          ((_w_lp or {}).get("parameter") or {}).get("index"), 7)
+    check("E7PKCS12 positive NULL guard is proven",
+          bool((_w_lp or {}).get("null_guard")), True)
+    check("E7PKCS12 positive enumerates both callers",
+          ((_w_lp or {}).get("caller_count"),
+           [r.get("argument") for r in (_w_lp or {}).get("callers") or []]),
+          (2, [None, "0x531fe0"]))
+    check("E7PKCS12 positive source is recorded",
+          ((_w_lp or {}).get("conditions") or {}).get(
+              "source_declares_the_forwarded_option_parameter"), True)
+    check("E7PKCS12 residuals are recorded",
+          sorted(r.get("id") for r in (_w_lp or {}).get("residuals") or []),
+          sorted(r["id"] for r in E7PKCS12_RESIDUALS))
+
+    _s2_lp = dict(_s_lp, addr=0x531586, text="call   *%r15")
+    _w2_lp = private_parameter_assignment_witness(
+        _g_lp, _s2_lp, _g_lp.funcs[_E7PK12_FUNC])
+    check("E7PKCS12 second site resolves exactly the one function start",
+          ((_w2_lp or {}).get("resolved"), (_w2_lp or {}).get("targets")),
+          (True, ["0x531fe0"]))
+    check("E7PKCS12 second site NULL guard is proven",
+          ((_w2_lp or {}).get("null_guard") or {}).get("test"), "0x531539")
+    check("E7PKCS12 both sites share the caller proof",
+          (_w_lp or {}).get("callers"), (_w2_lp or {}).get("callers"))
+    print("[consumer-closure] E7PKCS12 both sites resolve: "
+          f"0x5314aa -> {(_w_lp or {}).get('targets')}; "
+          f"0x531586 -> {(_w2_lp or {}).get('targets')}")
+
+    e7pk12_mutation_matrix = []
+    e7pk12_mutation_wants = {
+        "e7pk12-nonfunction-arg": "local-non-function",
+        "e7pk12-forwarded-param": "local-param-forward",
+        "e7pk12-drop-store": "local-partial-set",
+        "e7pk12-computed-arg": "local-non-function",
+        "e7pk12-export-function": "local-not-private",
+        "e7pk12-nonunique-parameter": "local-partial-set",
+        "e7pk12-no-null-guard": "local-partial-set",
+    }
+    check("E7PKCS12 mutation switches match the declared matrix",
+          sorted(e7pk12_mutation_wants), sorted(E7PK12_MUTATIONS))
+    for _name, _want in e7pk12_mutation_wants.items():
+        _rec = _mutation(
+            _name, lambda: private_parameter_assignment_witness(
+                _g_lp, _s_lp, _g_lp.funcs[_E7PK12_FUNC])) or {}
+        _restored = private_parameter_assignment_witness(
+            _g_lp, _s_lp, _g_lp.funcs[_E7PK12_FUNC])
+        e7pk12_mutation_matrix.append({
+            "mutation": _name,
+            "case_fails": (_rec.get("refusal") == _want
+                            and not _rec.get("resolved")),
+            "expected": True})
+        check(f"E7PKCS12 {_name} refusal", _rec.get("refusal"), _want)
+        check(f"E7PKCS12 {_name} restores exactly", _restored == _w_lp, True)
+    check("E7PKCS12 mutation matrix: every mutation is load-bearing",
+          [row["case_fails"] == row["expected"]
+           for row in e7pk12_mutation_matrix],
+          [True] * len(e7pk12_mutation_matrix))
+    print("[consumer-closure] E7PKCS12 mutation matrix: " + "; ".join(
+        f"{r['mutation']} {'fails as required' if r['case_fails'] else 'STILL PASSES'}"
+        for r in e7pk12_mutation_matrix))
+
+    # Every refusal is load-bearing on a concrete fixture, not only through a
+    # mutation switch.
+    for _kw, _want, _label in [
+            ({"forward_caller": True}, "local-param-forward",
+             "a caller forwards its own parameter"),
+            ({"nonfunction_caller": True}, "local-non-function",
+             "a caller assigns a non-function value"),
+            ({"guarded": False}, "local-partial-set",
+             "the parameter has no proven NULL guard"),
+            ({"tail_jump_caller": True}, "local-partial-set",
+             "a caller becomes a direct jump, so the call set is incomplete"),
+            ({"address_taken": True}, "local-not-private",
+             "the function address is taken"),
+            ({"exported": True}, "local-not-private",
+             "the function is exported")]:
+        _g_c, _s_c = _e7pk12_fixture(**_kw)
+        _rec = private_parameter_assignment_witness(
+            _g_c, _s_c, _g_c.funcs[_E7PK12_FUNC]) or {}
+        check(f"E7PKCS12 fixture refusal: {_label}",
+              (_rec.get("resolved"), _rec.get("refusal")), (False, _want))
+
+    _g_foreign, _s_foreign = _e7pk12_fixture(func=0x540000)
+    _s_foreign = dict(_s_foreign, addr=0x54046A)
+    check("E7PKCS12 non-widening: a different function's parameter at the "
+          "same stack offset is not absorbed",
+          private_parameter_assignment_witness(
+              _g_foreign, _s_foreign, _g_foreign.funcs[0x540000]), None)
+
+    _g_missing, _s_missing = _e7pk12_fixture(source_missing=True)
+    _rec = private_parameter_assignment_witness(
+        _g_missing, _s_missing, _g_missing.funcs[_E7PK12_FUNC]) or {}
+    check("E7PKCS12 missing source is refused, not accepted",
+          (_rec.get("resolved"), _rec.get("refusal")),
+          (False, "local-source-unavailable"))
+
+    _g_ncb, _s_ncb = _e7pk12_fixture(source_not_callback=True)
+    _rec = private_parameter_assignment_witness(
+        _g_ncb, _s_ncb, _g_ncb.funcs[_E7PK12_FUNC]) or {}
+    check("E7PKCS12 non-callback source is refused",
+          (_rec.get("resolved"), _rec.get("refusal")),
+          (False, "local-source-not-a-callback"))
+
+    _g_nb, _s_nb = _e7pk12_fixture(guard_b=False)
+    _s_nb2 = dict(_s_nb, addr=0x531586)
+    _rec = private_parameter_assignment_witness(
+        _g_nb, _s_nb2, _g_nb.funcs[_E7PK12_FUNC]) or {}
+    check("E7PKCS12 second site requires its own guard",
+          (_rec.get("resolved"), _rec.get("refusal")),
+          (False, "local-partial-set"))
+    _w_nb1 = private_parameter_assignment_witness(
+        _g_nb, _s_nb, _g_nb.funcs[_E7PK12_FUNC])
+    check("E7PKCS12 first site still resolves when only the second guard is "
+          "removed", (_w_nb1 or {}).get("targets"), ["0x531fe0"])
+
     if failures:
         print("[consumer-closure] SELF-TEST FAILED")
         for f in failures:
@@ -28782,9 +30021,18 @@ def self_test() -> int:
           f"OPENSSL_atexit registration witness (positive shape, second-call "
           f"R1 control, constructor-store and computed-value refusals, each "
           f"with its load-bearing mutation switch), and the two E7-BS "
-          f"base-slot-partial witnesses (msblob closed descriptor table and "
+          "base-slot-partial witnesses (msblob closed descriptor table and "
           f"rcu closed writer list; the required refusal controls are "
-          f"mutation/fixture-tested and residuals are recorded)")
+          f"mutation/fixture-tested and residuals are recorded), and the "
+          f"E7-PKCS12 private-parameter assignment-set witness (both call "
+          f"sites resolve to the same finite target set; closed in-image "
+          f"caller enumeration; unique stack-argument provenance; a "
+          f"dominating NULL guard per site; mandatory source declaration "
+          f"with missing-source and non-callback refusals; non-function/"
+          f"forwarded/computed/dropped-store/no-guard/tail-jump refusals; "
+          f"exported and address-taken refusals; the foreign-function "
+          f"non-widening control; and the three recorded residuals, each "
+          f"mutation- and fixture-tested)")
     return 0
 
 
