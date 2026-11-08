@@ -31,29 +31,32 @@ generator is measurement-only and claims no discharge.
 
 ### Current element-7 and obligation truth (2026-11-08)
 
-Measured at source `62c71e256` with tool `consumer_closure.py` sha256
-`bb722d3f…`, against artifacts built at `b8bba9555` (libcrypto `1c03ec0a`,
+Measured at source `b5ff19ce7` with tool `consumer_closure.py` sha256
+`4c4f6e9c…`, against artifacts built at `b8bba9555` (libcrypto `1c03ec0a`,
 ssh `926975c8`, sshd `0d3f5e92`; no rebuild, because the build-relevant tree is
 byte-identical). Receipts:
-`evidence/closure-ssh-b65-e7abi.json` and
-`evidence/inventory-sshd-b65-e7abi.json`; compact record:
-`atlas-refresh/element7-b65-e7abi.json`.
+`evidence/closure-ssh-b66-e7pbe.json` and
+`evidence/inventory-sshd-b66-e7pbe.json`; compact record:
+`atlas-refresh/element7-b66-e7pbe.json`.
 
 - Obligations: **378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN**, identical
   for ssh and sshd; verdict `ACCEPTED` with 0 refusals; `safe_compatible`
   false for both.
-- **Element 7: FAIL — 2 target-bounded unresolved sites** (contract-bounded
-  127, reachable-unresolved 129, unclassified 0). Three batches have landed:
-  the two base-slot sites (msblob closed descriptor table; rcu internal closed
-  writer list proved empty), the two finite PKCS12 parameter sites (exactly
-  `{0x531fe0}`), and the eight registerable dispatch sites carried as
-  per-call-site external ABI contracts (PBE keygen, three legacy store-loader
-  slots, provider p_close, CONF init/finish, exported PEM cb). target-bounded
-  14 → 2 and reachable-unresolved 133 → 129; contract-bounded 119 → 127.
-- Remaining 2: `0x179c85` (EVP_PBE_CipherInit_ex `keygen_ex`) and `0x17c408`
-  (PKCS5_v2_PBE_keyivgen_ex kdf). Both are finite only under the GOT-binding
-  policy and need an out-parameter summary; neither is a contract-bounded
-  site and element 7 cannot pass until they are resolved.
+- **Element 7: PASS (contract-bounded) — 0 target-bounded sites**
+  (contract-bounded 127, reachable-unresolved 127, unclassified 0;
+  `established: true`). Four witness batches landed: the two base-slot sites
+  (msblob closed descriptor table; rcu internal closed writer list proved
+  empty), the two finite PKCS12 parameter sites (exactly `{0x531fe0}`), the
+  eight registerable dispatch sites carried as per-call-site external ABI
+  contracts (PBE keygen, three legacy store-loader slots, provider p_close,
+  CONF init/finish, exported PEM cb), and the two PBE out-parameter sites
+  resolved from `BUILTIN_PBE` relocations (5 keygen_ex targets; the 2 KDF
+  targets; in-image GOT-binding caveat recorded).
+- **Element 7 PASS does not graduate the consumer.** 192 safety-relevant
+  obligations remain BLOCKED (186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN of 378),
+  no mechanism is discharged mechanism-wide, and B46/B47/B48, the evidence
+  pipeline and the exact-candidate L7/SEAL verification remain open. Both
+  families remain `safe_compatible: false`.
 - Witness residuals are recorded, not hidden: the candidate-bound address gate
   must be re-derived at every re-freeze; RCU inlining/ICF and out-of-module
   writers are not excluded; msblob writer completeness is source/module-scoped;
@@ -65,8 +68,12 @@ byte-identical). Receipts:
   whose field name is a metavariable, and split-line forms beyond the joined
   cases are not refused), that an address/leaf mismatch falls through to
   target-bounded without a named refusal, and that site `0x1c2768`'s base
-  uniqueness is source-guarded.
-- Identity residual: the b65 receipts record `build_provenance: null` and
+  uniqueness is source-guarded. The PBE witness records that its finite set
+  depends on the in-image GOT-binding policy (no DF_SYMBOLIC/BIND_NOW), that
+  site `0x179c85` uses the whole table as a conservative superset (an OUTER call
+  cannot select KDF rows), and that runtime mutation of the link-time-constant
+  table is outside the witness.
+- Identity residual: the b66 receipts record `build_provenance: null` and
   `artifact_matches_this_build: false`; the B53 freeze and census supply the
   tie to `b8bba9555`. This is a recorded provenance gap, not a passing
   identity claim.
