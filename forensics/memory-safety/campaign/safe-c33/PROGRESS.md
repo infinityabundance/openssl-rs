@@ -31,34 +31,42 @@ generator is measurement-only and claims no discharge.
 
 ### Current element-7 and obligation truth (2026-11-08)
 
-Measured at source `e769ea300` with tool `consumer_closure.py` sha256
-`6c54d8bf…`, against artifacts built at `b8bba9555` (libcrypto `1c03ec0a`,
+Measured at source `62c71e256` with tool `consumer_closure.py` sha256
+`bb722d3f…`, against artifacts built at `b8bba9555` (libcrypto `1c03ec0a`,
 ssh `926975c8`, sshd `0d3f5e92`; no rebuild, because the build-relevant tree is
 byte-identical). Receipts:
-`evidence/closure-ssh-b64-e7pk12.json` and
-`evidence/inventory-sshd-b64-e7pk12.json`; compact record:
-`atlas-refresh/element7-b64-e7pk12.json`.
+`evidence/closure-ssh-b65-e7abi.json` and
+`evidence/inventory-sshd-b65-e7abi.json`; compact record:
+`atlas-refresh/element7-b65-e7abi.json`.
 
 - Obligations: **378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN**, identical
   for ssh and sshd; verdict `ACCEPTED` with 0 refusals; `safe_compatible`
   false for both.
-- **Element 7: FAIL — 10 target-bounded unresolved sites** (contract-bounded
-  119, reachable-unresolved 129, unclassified 0). Two batches have landed:
-  the two base-slot-partial sites (msblob2key closed descriptor table; rcu
-  internal closed writer list proved empty), and the two finite PKCS12
-  parameter sites (exactly `{0x531fe0}`). Together: 14 → 10 and 133 → 129;
-  contract-bounded stayed 119.
-- Remaining 10: `store_loader_object_table` 4, `pbe_registry_row` 3,
-  `conf_module_registry_row` 2, `exported_callback_param` 1. Only
-  `0x179c85` and `0x17c408` are finite source-backed (conditional on GOT
-  binding); the other 8 honestly require external ABI contracts.
+- **Element 7: FAIL — 2 target-bounded unresolved sites** (contract-bounded
+  127, reachable-unresolved 129, unclassified 0). Three batches have landed:
+  the two base-slot sites (msblob closed descriptor table; rcu internal closed
+  writer list proved empty), the two finite PKCS12 parameter sites (exactly
+  `{0x531fe0}`), and the eight registerable dispatch sites carried as
+  per-call-site external ABI contracts (PBE keygen, three legacy store-loader
+  slots, provider p_close, CONF init/finish, exported PEM cb). target-bounded
+  14 → 2 and reachable-unresolved 133 → 129; contract-bounded 119 → 127.
+- Remaining 2: `0x179c85` (EVP_PBE_CipherInit_ex `keygen_ex`) and `0x17c408`
+  (PKCS5_v2_PBE_keyivgen_ex kdf). Both are finite only under the GOT-binding
+  policy and need an out-parameter summary; neither is a contract-bounded
+  site and element 7 cannot pass until they are resolved.
 - Witness residuals are recorded, not hidden: the candidate-bound address gate
   must be re-derived at every re-freeze; RCU inlining/ICF and out-of-module
   writers are not excluded; msblob writer completeness is source/module-scoped;
   the PKCS12 witness records an imprecise forwarded-copy taxonomy, that
   `indirect_targets` inspects only resolved sites, and that its CFG-closure
   proof under-approximates undecoded indirect jumps (open_reach is empty here).
-- Identity residual: the b64 receipts record `build_provenance: null` and
+  The external-ABI classes record that their writer/registration scans are
+  source-text based (opaque aliases in code that never names the owner, a macro
+  whose field name is a metavariable, and split-line forms beyond the joined
+  cases are not refused), that an address/leaf mismatch falls through to
+  target-bounded without a named refusal, and that site `0x1c2768`'s base
+  uniqueness is source-guarded.
+- Identity residual: the b65 receipts record `build_provenance: null` and
   `artifact_matches_this_build: false`; the B53 freeze and census supply the
   tie to `b8bba9555`. This is a recorded provenance gap, not a passing
   identity claim.
