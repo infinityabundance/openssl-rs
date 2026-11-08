@@ -1120,6 +1120,32 @@
     {"verdict": "UNAPPLIED", "date": "2026-11-02", "note": "authoring state: applied = false with a prohibition against application"},
     {"verdict": "APPROVE", "date": "2026-11-02", "note": "single review; no rejection preceded it"}
    ]
+  },
+  {
+   "receipt": "boundary-sweep-B67",
+   "scope": "BIO site-scoped: readbuffer_write (BIO-READBUF-001) and readbuffer_puts (BIO-READBUF-002) in src/runtime/bio/bf_readbuff.rs. Empty-precondition proof over the two constant-0 bodies and their single READBUFFER_METHOD slots.",
+   "base_head": "b5ff19ce7",
+   "source_state": "S = b5ff19ce7 (tool sha256 4c4f6e9c950dd32539f3c76c10416f17c5c33488b0e4e169c137287092a7d01b); the ledger row was authored at evidence HEAD e8ebd05d8. src/runtime/bio/bf_readbuff.rs is byte-identical at b5ff19ce7, b8bba9555 and e8ebd05d8 (sha256 602841bf736952a4712da7a1079592f032d5663b72c67f8b946515eaeb4a840b).",
+   "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+   "discharged_boundaries": ["BIO-READBUF-001", "BIO-READBUF-002"],
+   "retained_boundaries": [],
+   "retained_state": "BLOCKED",
+   "hidden_obligations": 0,
+   "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B67.json",
+   "note": "Site-scoped only. The BIO mechanism remains UNSAFE_OPEN mechanism-wide: no ownership reconstruction or mechanism-wide discharge is claimed, and the rest of the readbuffer filter (read/new/free/ctrl/gets/callback_ctrl) stays BLOCKED and unclaimed. The discharge covers only the two named boundaries, whose bodies have an empty precondition set. Supersedes P25-VESTIGIAL-MARKER-005/006 for the same operations (recorded in the receipt).",
+   "adjudicated": true,
+   "adjudication": {
+    "verdict": "APPROVE_WITH_CONDITIONS",
+    "date": "2026-11-08",
+    "reviewer": "independent adversarial adjudicator (separate agent; not the author)",
+    "verdict_text": "Both bodies are exactly { 0 } with ignored parameters (compiled to xor eax,eax; ret in the admitted DSO); the span hashes were independently recomputed and matched; the caller closure is definitions + the single static slots only, with no export; the negative-control probe was rebuilt byte-identically and re-run (BIO_write=0, BIO_puts=0, tell/pending/cache unchanged); the closure was re-adjudicated at 188 DISCHARGED / 190 BLOCKED / 0 UNKNOWN with element 7 still PASS.",
+    "conditions": "(1) record the supersession of P25-VESTIGIAL-MARKER-005/006; (2) record that the discharge is reviewer-established, not verifier-enforced.",
+    "conditions_met": "Both recorded in boundary-sweep-B67.json (supersedes/related_receipts/B67-R1 and instrument_gaps/B67-G1)."
+   },
+   "review_history": [
+    {"verdict": "PENDING", "date": "2026-11-08", "note": "authoring state: receipt and ledger row added with adjudicated=false; the provisional ssh closure was not committed"},
+    {"verdict": "APPROVE_WITH_CONDITIONS", "date": "2026-11-08", "note": "independent adjudication; both conditions recorded before the row was marked adjudicated"}
+   ]
   }
  ],
  "defects_closed": [
