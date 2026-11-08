@@ -7224,7 +7224,9 @@ def _s1_rust_last_segment(name: str):
 
 def _s1_symbol_index(g: "DsoGraph"):
     cache = getattr(g, "_s1_sym_index", None)
-    if cache is not None:
+    # `_drop_s1_caches` releases this composite index as `{}`; an empty dict is
+    # not a built index (it has no `exact`/`short`), so it must be rebuilt.
+    if cache is not None and "exact" in cache:
         return cache
     exact, short = {}, {}
     for addr, names in (getattr(g, "names_at", {}) or {}).items():
@@ -15361,6 +15363,1219 @@ def _resolve(g: "DsoGraph", site: dict, targets: set, klass: str, reason: str) -
     site["reason"] = reason
 
 
+# --------------------------------------------------------------------------- #
+# E7-BS: the two `base-slot-partial` witnesses
+# --------------------------------------------------------------------------- #
+#
+# The resolver refuses both sites because it cannot follow the loaded base
+# through a frame spill (the msblob descriptor) or a loop phi (the rcu node).
+# Each witness below is **site-enumerated**: it owns exactly one
+# ``(function, call address)`` shape in this image and returns ``None`` for
+# every other site, so a differently-typed base at the same displacement is
+# never absorbed.  A refusal is named and leaves the site's existing class,
+# targets and conservative bound untouched.
+#
+# msblob is a target claim.  The complete ``KeytypeDesc`` declared-instance set
+# is read from the declaring source module (the two macro-generated statics;
+# the sibling ``decode_pvk2key`` module declares a *different* ``KeytypeDesc``
+# with a different layout, so a global by-name scan is deliberately refused).
+# Each instance's ``read_private_key`` member is an in-image function start,
+# and the target set is exactly those starts.
+#
+# rcu is an unreachability claim.  The sole source writer of ``RcuCbItem.func``
+# and the sole non-NULL publication into ``RcuLockSt.cb_items`` are
+# ``ossl_rcu_call``.  In this image neither it nor ``ossl_rcu_cb_item_new`` is
+# emitted and neither has a production caller, so the list is always NULL and
+# the drain loop body is unreachable.  The target set is empty.
+
+E7BS_POINTER_SLOT_SCHEMA = (
+    "openssl-rs/consumer-closure/e7-base-slot-partial-pointer-slot/v1")
+E7BS_WRITER_LIST_SCHEMA = (
+    "openssl-rs/consumer-closure/e7-base-slot-partial-writer-list/v1")
+
+E7BS_MSBLOB_SITE = 0x204890
+E7BS_RCU_SITE = 0x22DF88
+E7BS_MSBLOB_SOURCE = "src/provider/decode_msblob2key.rs"
+E7BS_MSBLOB_FUNCTION = "msblob2key_decode"
+E7BS_MSBLOB_CTX = "Msblob2keyCtx"
+E7BS_MSBLOB_DESC = "desc"
+E7BS_MSBLOB_DESC_TYPE = "KeytypeDesc"
+E7BS_MSBLOB_SLOT = "read_private_key"
+E7BS_RCU_SOURCE = "src/runtime/rcu.rs"
+E7BS_RCU_FUNCTION = "ossl_synchronize_rcu"
+E7BS_RCU_NODE = "RcuCbItem"
+E7BS_RCU_SLOT = "func"
+E7BS_RCU_WRITER = "ossl_rcu_call"
+E7BS_RCU_CTOR = "ossl_rcu_cb_item_new"
+E7BS_RCU_LIST = "cb_items"
+
+# The rcu witness claims an empty target set because the list is always NULL.
+# `_edge_disposition` and `_validate_record` demote an empty target set by
+# default; the gate below is the only exception, and it is keyed to this exact
+# witness schema plus the witness's own recorded conditions.
+E7BS_PROVED_EMPTY_CONDITIONS = (
+    "site_enumerated", "node_is_rcu_cb_item", "sole_writer",
+    "sole_list_publication", "list_clear_only",
+    "writer_and_constructor_absent", "no_production_caller")
+
+
+def _e7bs_proved_empty_witness(w) -> bool:
+    """True only for the narrow, witness-backed empty rcu target set."""
+    if not isinstance(w, dict):
+        return False
+    if w.get("schema") != E7BS_WRITER_LIST_SCHEMA:
+        return False
+    if w.get("resolution_kind") != "internal_closed_writer_list":
+        return False
+    if w.get("resolved") is not True or w.get("proved_empty") is not True:
+        return False
+    if w.get("targets") not in ([], ()):
+        return False
+    conditions = w.get("conditions")
+    if not isinstance(conditions, dict):
+        return False
+    if not all(conditions.get(k) for k in E7BS_PROVED_EMPTY_CONDITIONS):
+        return False
+    facts = w.get("image_facts") or {}
+    absent = set(facts.get("absent_symbols") or ())
+    if not {E7BS_RCU_WRITER, E7BS_RCU_CTOR} <= absent:
+        return False
+    if facts.get("emitted_symbols"):
+        return False
+    if facts.get("production_callers"):
+        return False
+    return True
+
+
+def _e7bs_proved_empty_site(site: dict) -> bool:
+    return (_e7bs_proved_empty_witness(
+                site.get("e7bs_writer_list_witness"))
+            and site.get("class") == "internal-closed-writer-list"
+            and not site.get("unresolved")
+            and not (site.get("targets") or ()))
+
+
+def _e7bs_proved_empty_record(rec: dict) -> bool:
+    return _e7bs_proved_empty_witness(rec.get("e7bs_witness"))
+
+
+def _e7bs_refusal(schema, klass, resolution_kind, reason, name, site, **extra):
+    rec = {"schema": schema, "class": klass,
+           "resolution_kind": resolution_kind,
+           "contract_bounded": False, "resolved": False,
+           "refusal": reason, "function": name,
+           "call_site": hex(site["addr"])}
+    rec.update(extra)
+    return rec
+
+
+def _e7bs_struct_defs(text, type_name):
+    """Every ``struct type_name`` definition in one source document."""
+    pat = re.compile(
+        r"(?m)^[ \t]*(?:pub(?:\s*\([^)]*\))?\s+)?struct\s+"
+        + re.escape(type_name) + r"\b")
+    out = []
+    for m in pat.finditer(text):
+        brace = text.find("{", m.end())
+        if brace < 0:
+            continue
+        semi = text.find(";", m.end(), brace)
+        if semi >= 0:
+            continue
+        end = _s1_brace_span(text, brace)
+        if end is None:
+            continue
+        prefix = text[max(0, m.start() - 600):m.start()]
+        out.append({
+            "line": text.count("\n", 0, m.start()) + 1,
+            "body": text[brace + 1:end - 1],
+            "repr_c": bool(re.search(r"#\[repr\s*\(\s*C\b", prefix)),
+        })
+    return out
+
+
+def _e7bs_type_alias_in_file(text, name):
+    """The one ``type name = ...;`` in this document, or None."""
+    pat = re.compile(r"\btype\s+" + re.escape(name) + r"\s*=\s*([^;]+);")
+    hits = {" ".join(m.group(1).split()) for m in pat.finditer(text)}
+    return hits.pop() if len(hits) == 1 else None
+
+
+def _e7bs_type_size(g, text, type_text, seen=()):
+    """Field size/alignment, resolving file-local function-pointer aliases.
+
+    ``_s1_type_size`` cannot size ``Option<Alias>`` when the alias denotes a
+    function pointer (it looks for the literal word ``fn`` in the inner type).
+    The descriptors below use exactly that shape, so the alias is resolved in
+    the declaring document first; every other type delegates to the existing
+    decidable rule.
+    """
+    t = " ".join((type_text or "").split())
+    if not t or t in seen:
+        return None
+    if t.startswith("Option<") and t.endswith(">"):
+        inner = t[len("Option<"):-1].strip()
+        if "fn" in inner:
+            return (8, 8)
+        alias = _e7bs_type_alias_in_file(text, inner)
+        if alias is not None and ("fn" in alias
+                                  or _e7bs_type_size(g, text, alias,
+                                                    seen + (t,)) == (8, 8)):
+            return (8, 8)
+        return None
+    info = _s1_type_size(g, t, seen)
+    if info is not None:
+        return info
+    alias = _e7bs_type_alias_in_file(text, t)
+    if alias is not None and alias != t:
+        return _e7bs_type_size(g, text, alias, seen + (t,))
+    return None
+
+
+def _e7bs_scoped_layout(g, relpath, type_name):
+    """Repr(C) layout of ``type_name`` as declared in one source document.
+
+    The type name is module-scoped, not global: ``KeytypeDesc`` is declared in
+    both ``decode_msblob2key.rs`` and ``decode_pvk2key.rs`` with different
+    members, so a global by-name lookup is ambiguous and must not be trusted.
+    """
+    text = _s1_docs(g).get(relpath)
+    if text is None:
+        return None, "source-unavailable"
+    defs = _e7bs_struct_defs(text, type_name)
+    repr_defs = [d for d in defs if d["repr_c"]]
+    if len(repr_defs) != 1:
+        return None, ("layout-definition-not-unique" if defs
+                      else "layout-definition-absent")
+    fields = _s1_split_fields(repr_defs[0]["body"])
+    if not fields:
+        return None, "layout-fields-unreadable"
+    infos = []
+    for fname, ftype in fields:
+        info = _e7bs_type_size(g, text, ftype)
+        if info is None:
+            return None, "layout-field-size-undecidable:" + fname
+        size, falign = info
+        if falign <= 0 or falign & (falign - 1):
+            return None, "layout-field-align-undecidable:" + fname
+        infos.append((fname, ftype, size, falign))
+    off, align, rows = 0, 1, []
+    for fname, ftype, size, falign in infos:
+        off = (off + falign - 1) // falign * falign
+        rows.append({"offset": off, "name": fname, "type": ftype})
+        off += size
+        align = max(align, falign)
+    size = (off + align - 1) // align * align
+    return {"name": type_name, "size": size, "align": align, "fields": rows,
+            "repr_c": True, "file": relpath,
+            "line": repr_defs[0]["line"]}, None
+
+
+def _e7bs_function_symbol(g, ident):
+    """The unique in-image function whose source name is ``ident``.
+
+    ``_s1_rust_last_segment`` refuses a legacy Rust symbol with the
+    compiler-generated ``.llvm.<hash>`` suffix, so the suffix is stripped
+    before the segment is parsed.  An exact unmangled symbol is also accepted.
+    """
+    cands = []
+    for addr, name in (getattr(g, "funcs", {}) or {}).items():
+        base = re.sub(r"\.llvm(?:\.[0-9]+)?$", "", name or "")
+        if _s1_rust_last_segment(base) == ident:
+            cands.append((addr, name))
+    if len(cands) == 1:
+        return cands[0]
+    exact = [(addr, name)
+             for addr, name in (getattr(g, "funcs", {}) or {}).items()
+             if (name or "").split("@")[0] == ident]
+    return exact[0] if len(exact) == 1 else None
+
+
+def _e7bs_module_functions(g, fragment):
+    return sorted(addr for addr, name in (getattr(g, "funcs", {}) or {}).items()
+                  if fragment in (name or ""))
+
+
+def _e7bs_enclosing_fn(text, pos):
+    hits = list(re.finditer(r"\bfn\s+([A-Za-z_]\w*)\s*\(", text[:pos]))
+    return hits[-1].group(1) if hits else None
+
+
+def _e7bs_split_args(raw):
+    args, cur, depth = [], [], 0
+    for ch in raw:
+        if ch in "([{<":
+            depth += 1
+        elif ch in ")]}>:":
+            depth = max(0, depth - 1)
+        if ch == "," and depth == 0:
+            args.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+    if cur:
+        args.append("".join(cur).strip())
+    return args
+
+
+def _e7bs_call_args(text, open_paren):
+    depth, i = 0, open_paren
+    while i < len(text):
+        if text[i] == "(":
+            depth += 1
+        elif text[i] == ")":
+            depth -= 1
+            if depth == 0:
+                return text[open_paren + 1:i]
+        i += 1
+    return None
+
+
+def _e7bs_unmodelled_declaration(text):
+    """A KeytypeDesc static/declaration outside the one modelled macro.
+
+    Returns a named form when a literal ``static``/``const``, a ``static mut``,
+    a second macro body, or an extra declaration in the modelled macro exists.
+    A declaration this witness did not enumerate is a completeness gap, so it
+    refuses rather than silently resolving the remaining set.
+    """
+    literal = re.compile(
+        r"\b(?:static|const)\s+(?:mut\s+)?[A-Za-z_]\w*\s*:\s*"
+        + re.escape(E7BS_MSBLOB_DESC_TYPE) + r"\b")
+    if literal.search(text):
+        return "literal-static"
+    decl_pat = re.compile(
+        r"\b(?:static|const)\s+(?:mut\s+)?"
+        r"(?:\$([A-Za-z_]\w*)|([A-Za-z_]\w*))\s*:\s*"
+        + re.escape(E7BS_MSBLOB_DESC_TYPE) + r"\b")
+    for m in re.finditer(r"macro_rules!\s*([A-Za-z_]\w*)\s*\{", text):
+        name = m.group(1)
+        open_at = text.find("{", m.end() - 1)
+        end = _s1_brace_span(text, open_at)
+        if end is None:
+            return "macro-body-unreadable"
+        body = text[open_at:end]
+        decls = list(decl_pat.finditer(body))
+        if not decls:
+            continue
+        if name != "implement_msblob":
+            return "macro-" + name
+        names = {d.group(1) or d.group(2) for d in decls}
+        if names != {"desc"} or len(decls) != 1:
+            return "implement_msblob-extra-declaration"
+        if re.search(r"\bstatic\s+mut\b", body):
+            return "implement_msblob-mut-declaration"
+        if not re.search(r"\bstatic\s+\$desc\s*:\s*"
+                         + re.escape(E7BS_MSBLOB_DESC_TYPE) + r"\b", body):
+            return "implement_msblob-static-form-changed"
+    return None
+
+
+def _e7bs_msblob_constructors(g):
+    """The closed ``implement_msblob!`` constructor/descriptor set.
+
+    Returns the two invocations' ``$newctx`` and ``$desc`` identifiers, or a
+    named reason why the declared set is not closed.  The macro body must
+    declare ``static $desc: KeytypeDesc`` and forward ``&$desc`` through
+    ``msblob2key_newctx``; a literal ``static NAME: KeytypeDesc`` outside the
+    macro is a third instance the parser did not account for and is refused.
+    """
+    text = _s1_docs(g).get(E7BS_MSBLOB_SOURCE)
+    if text is None:
+        return None, "source-unavailable"
+    if _e7bs_unmodelled_declaration(text) is not None:
+        return None, "instance-declaration-form-unmodelled"
+    m = re.search(r"macro_rules!\s*implement_msblob\s*\{", text)
+    if m is None:
+        return None, "macro-absent"
+    open_at = text.find("{", m.end() - 1)
+    end = _s1_brace_span(text, open_at)
+    if end is None:
+        return None, "macro-body-unreadable"
+    body = text[open_at:end]
+    fm = re.search(r"\(([^()]*)\)\s*=>", body)
+    if fm is None:
+        return None, "macro-formals-unreadable"
+    formals = []
+    for p in _e7bs_split_args(fm.group(1)):
+        pm = re.match(r"\$(\w+)\s*:", p)
+        if pm is None:
+            return None, "macro-formal-unreadable"
+        formals.append(pm.group(1))
+    if "desc" not in formals or "newctx" not in formals:
+        return None, "macro-formal-roles-absent"
+    if not re.search(r"\bstatic\s+\$desc\s*:\s*"
+                     + re.escape(E7BS_MSBLOB_DESC_TYPE) + r"\b", body):
+        return None, "macro-static-type-mismatch"
+    if not re.search(r"msblob2key_newctx\s*\(\s*provctx\s*,\s*&\s*\$desc\s*\)",
+                     body):
+        return None, "constructor-does-not-pass-the-descriptor"
+    if not re.search(r"OwnedCtx::new\s*\(\s*provctx\s*,\s*desc\s*\)", text):
+        return None, "constructor-does-not-forward-the-descriptor"
+    inv_re = re.compile(r"\bimplement_msblob\s*!\s*([\(\[\{])")
+    out = []
+    for im in inv_re.finditer(text):
+        open_ch = im.group(1)
+        close_ch = {"(": ")", "[": "]", "{": "}"}[open_ch]
+        depth, i, close_at = 0, im.end() - 1, None
+        while i < len(text):
+            if text[i] == open_ch:
+                depth += 1
+            elif text[i] == close_ch:
+                depth -= 1
+                if depth == 0:
+                    close_at = i
+                    break
+            i += 1
+        if close_at is None:
+            return None, "macro-invocation-unreadable"
+        args = _e7bs_split_args(text[im.end():close_at])
+        if len(args) != len(formals):
+            return None, "macro-invocation-arity-mismatch"
+        rec = dict(zip(formals, args))
+        out.append({"newctx": rec["newctx"], "desc": rec["desc"],
+                    "line": text.count("\n", 0, im.start()) + 1})
+    if len(out) != 2:
+        return None, "declared-instance-set-not-closed"
+    return out, None
+
+
+def _e7bs_msblob_writer(g):
+    """The unique source writer of ``Msblob2keyCtx.desc`` and its value."""
+    text = _s1_docs(g).get(E7BS_MSBLOB_SOURCE)
+    if text is None:
+        return None, "source-unavailable"
+    hits = list(re.finditer(
+        r"\.\s*" + re.escape(E7BS_MSBLOB_DESC) + r"\s*=\s*(?!=)([^;]*);",
+        text))
+    if "e7bs-msblob-second-desc-store" in _MUTED and hits:
+        hits = hits + [hits[0]]
+    if len(hits) != 1:
+        return None, "desc-writer-not-unique"
+    rhs = hits[0].group(1).strip()
+    fn = _e7bs_enclosing_fn(text, hits[0].start())
+    if fn != "new" or rhs != E7BS_MSBLOB_DESC:
+        return None, "desc-writer-not-constructor"
+    sm = re.search(r"fn\s+new\s*\(([^)]*)\)", text)
+    if sm is None:
+        return None, "desc-writer-not-constructor"
+    params = [p.split(":", 1)[0].strip()
+              for p in _e7bs_split_args(sm.group(1))]
+    if len(params) < 2 or params[1] != E7BS_MSBLOB_DESC:
+        return None, "desc-writer-not-constructor"
+    return {"function": fn,
+            "line": text.count("\n", 0, hits[0].start()) + 1,
+            "rhs": rhs, "parameter": params[1]}, None
+
+
+def _e7bs_lea_target(text):
+    m = re.search(r"#\s*([0-9a-f]+)\s+<", text)
+    return int(m.group(1), 16) if m else None
+
+
+def _e7bs_constructor_store(g, caddr, daddr):
+    """The single ``mov <&descriptor>, 0x8(<ctx>)`` in a constructor."""
+    insns = g.precision.insns_by_func.get(caddr, ())
+    lea = None
+    for i, (_a, text) in enumerate(insns):
+        mn, _rest, ops = _insn_parts(text)
+        if mn != "lea" or len(ops) != 2:
+            continue
+        if _e7bs_lea_target(text) != daddr:
+            continue
+        dst = ops[1].strip()
+        if dst not in _REGS and dst not in _SUBREG:
+            continue
+        lea = (i, _canon(dst))
+        break
+    if lea is None:
+        return None, "constructor-descriptor-lea-absent"
+    stores = []
+    for i, (_a, text) in enumerate(insns):
+        mn, _rest, ops = _insn_parts(text)
+        if not mn.startswith("mov") or len(ops) != 2:
+            continue
+        src, dst = ops[0].strip(), ops[1].strip()
+        if not re.fullmatch(r"0x8\(%r[a-z0-9]+\)", dst):
+            continue
+        if _canon(src) != lea[1]:
+            continue
+        stores.append(i)
+    if len(stores) != 1:
+        return None, "constructor-desc-store-not-unique"
+    return {"lea": lea[0], "store": stores[0]}, None
+
+
+def _e7bs_store_value(g, faddr, idx, src):
+    """The in-image address a store source materialises, or None."""
+    src = (src or "").strip()
+    if src.startswith("$"):
+        try:
+            return int(src[1:], 16)
+        except ValueError:
+            return None
+    if src not in _REGS and src not in _SUBREG:
+        return None
+    origin = _reg_origin(g, faddr, idx, _canon(src))
+    if origin.get("kind") == "int":
+        return origin.get("value")
+    if origin.get("kind") == "load" and origin.get("base_reg") == "%rip":
+        at = origin.get("at")
+        insns = g.precision.insns_by_func.get(faddr, ())
+        if at is not None and 0 <= at < len(insns):
+            return _e7bs_lea_target(insns[at][1])
+    return None
+
+
+def _e7bs_foreign_descriptor_store(g, ctor_addrs, desc_addrs, module_funcs):
+    """Every ``Msblob2keyCtx.desc@0x8`` writer outside the closed set.
+
+    The declaring module is the privacy boundary for the private field.  In
+    the constructor set the stored value must be one of the enumerated
+    descriptor addresses.  In any other module function a store is qualified
+    by the points-to/signature owner: a provably different object is disjoint;
+    a proven ``Msblob2keyCtx`` base or an unqualified base refuses.
+    """
+    findings = []
+    for faddr in module_funcs:
+        insns = g.precision.insns_by_func.get(faddr, ())
+        for i, (ia, text) in enumerate(insns):
+            mn, _rest, ops = _insn_parts(text)
+            if not mn.startswith("mov") or len(ops) != 2:
+                continue
+            src, dst = ops[0].strip(), ops[1].strip()
+            m = re.fullmatch(r"0x8\((%r[a-z0-9]+)\)", dst)
+            if m is None:
+                continue
+            base = m.group(1)
+            if base in ("%rsp", "%rbp"):
+                continue
+            if faddr in ctor_addrs:
+                value = _e7bs_store_value(g, faddr, i, src)
+                if value not in desc_addrs:
+                    findings.append({
+                        "function": g.funcs.get(faddr, hex(faddr)),
+                        "store_site": hex(ia),
+                        "owner": E7BS_MSBLOB_CTX,
+                        "value": hex(value) if value is not None else src,
+                        "reason": "constructor-value-not-in-declared-set"})
+                continue
+            owner = _nested_owner_with_points_to(
+                g, faddr, i, _canon(base), member_off=0x8)
+            if owner.get("kind") != "type":
+                findings.append({
+                    "function": g.funcs.get(faddr, hex(faddr)),
+                    "store_site": hex(ia), "owner": None,
+                    "value": src, "reason": "owner-unqualified",
+                    "detail": owner.get("why")})
+                continue
+            if owner.get("type") != E7BS_MSBLOB_CTX:
+                continue
+            value = _e7bs_store_value(g, faddr, i, src)
+            findings.append({
+                "function": g.funcs.get(faddr, hex(faddr)),
+                "store_site": hex(ia), "owner": owner["type"],
+                "value": hex(value) if value is not None else src,
+                "reason": "writer-outside-the-closed-constructor-set"})
+    return findings
+
+
+def pointer_slot_instance_witness(g: "DsoGraph", site: dict, name: str):
+    """Resolve the msblob ``call *0x18(%rax)`` through a closed descriptor set.
+
+    The base is tied to the function's ``vctx`` parameter cast to
+    ``*mut Msblob2keyCtx``, then ``desc`` at the declared offset, through the
+    unique frame spill/reload of the loaded field.  The declared instance set
+    is the two ``implement_msblob!`` descriptors in the declaring module; each
+    instance's ``read_private_key`` member must be an in-image function start.
+    """
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    if site.get("addr") != E7BS_MSBLOB_SITE:
+        return None
+    if site.get("reason") != "base-slot-partial":
+        return None
+    fstart = site.get("func")
+    ctx_info = _s1_site_context(g, fstart)
+    if ctx_info is None:
+        return None
+    if (ctx_info.get("file") != E7BS_MSBLOB_SOURCE
+            or ctx_info.get("function") != E7BS_MSBLOB_FUNCTION):
+        return None
+    owner_type = ("ForeignCtx" if "e7bs-msblob-foreign-owner" in _MUTED
+                  else E7BS_MSBLOB_CTX)
+    if ctx_info.get("type") != owner_type:
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", "base-not-msblob2key-ctx",
+            name, site, context_type=ctx_info.get("type"),
+            expected_type=owner_type)
+    if ctx_info.get("param_index") != 0:
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", "base-not-msblob2key-ctx",
+            name, site, context_type=ctx_info.get("type"),
+            expected_type=owner_type)
+    ctx_layout, why = _e7bs_scoped_layout(g, E7BS_MSBLOB_SOURCE, E7BS_MSBLOB_CTX)
+    if ctx_layout is None:
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", "missing-layout-witness",
+            name, site, detail=why)
+    desc_layout, why = _e7bs_scoped_layout(
+        g, E7BS_MSBLOB_SOURCE, E7BS_MSBLOB_DESC_TYPE)
+    if desc_layout is None:
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", "missing-layout-witness",
+            name, site, detail=why)
+    desc_row = next((r for r in ctx_layout["fields"]
+                     if r["name"] == E7BS_MSBLOB_DESC), None)
+    slot_row = next((r for r in desc_layout["fields"]
+                     if r["name"] == E7BS_MSBLOB_SLOT), None)
+    if desc_row is None or slot_row is None:
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", "missing-layout-witness",
+            name, site, context_fields=[r["name"] for r in ctx_layout["fields"]],
+            descriptor_fields=[r["name"] for r in desc_layout["fields"]])
+    desc_off, slot_off = desc_row["offset"], slot_row["offset"]
+
+    insns = g.precision.insns_by_func.get(fstart, ())
+    idx = next((i for i, (a, _t) in enumerate(insns)
+                if a == site.get("addr")), None)
+    if idx is None:
+        return None
+    m = re.search(r"call\w*\s+\*(.+)$",
+                  (site.get("text") or "").split("#", 1)[0].strip())
+    if m is None:
+        return None
+    mo = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", m.group(1).strip())
+    if mo is None:
+        return None
+    member_off = int(mo.group(1), 16) if mo.group(1) else 0
+    base_reg = mo.group(2)
+    if member_off != slot_off:
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", "slot-offset-mismatch",
+            name, site, operand={"base_reg": base_reg,
+                                 "member_offset": hex(member_off)},
+            declared_member_offset=hex(slot_off))
+    origin = _reg_origin(g, fstart, idx, _canon(base_reg))
+    if (origin.get("kind") != "load"
+            or origin.get("base_reg") not in ("%rsp", "%rbp")):
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", "unknown-base",
+            name, site, operand={"base_reg": base_reg,
+                                 "member_offset": hex(member_off)},
+            origin=origin)
+    spill_abs = _stack_slot_abs(
+        g, fstart, origin["at"],
+        (hex(origin["offset"]) if origin.get("offset")
+         else "") + "(" + origin["base_reg"] + ")")
+    if spill_abs is None:
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", "unknown-base",
+            name, site, origin=origin)
+    writes = _reaching_stores(g, fstart, origin["at"], spill_abs)
+    if writes is None or len(writes) != 1 or _NO_STORE in writes:
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", "desc-spill-not-unique",
+            name, site, spill_slot=hex(spill_abs),
+            reaching_stores=sorted(writes) if writes else None)
+    store_idx = next(iter(writes))
+    _mn, _rest, ops = _insn_parts(_insn(g, fstart, store_idx))
+    src = ops[0].strip() if ops else ""
+    if src not in _REGS and src not in _SUBREG:
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", "unknown-base",
+            name, site, spill_store=hex(insns[store_idx][0]), source=src)
+    desc_origin = _reg_origin(g, fstart, store_idx, _canon(src))
+    if (desc_origin.get("kind") != "load"
+            or desc_origin.get("offset") != desc_off):
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", "unknown-base",
+            name, site, spill_store=hex(insns[store_idx][0]),
+            source_origin=desc_origin, expected_field_offset=hex(desc_off))
+    ctx_origin = _reg_origin(g, fstart, desc_origin["at"],
+                             _canon(desc_origin["base_reg"]))
+    if (ctx_origin.get("kind") != "param"
+            or ctx_origin.get("index") != ctx_info.get("param_index")):
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", "base-not-msblob2key-ctx",
+            name, site, context_origin=ctx_origin,
+            expected_param=ctx_info.get("param"))
+    chain = [
+        {"step": "parameter vctx", "param": ctx_info.get("param"),
+         "type": ctx_info.get("type")},
+        {"step": "field desc", "offset": hex(desc_off),
+         "field": E7BS_MSBLOB_DESC, "load": hex(insns[desc_origin["at"]][0])},
+        {"step": "frame spill", "slot": hex(spill_abs),
+         "store": hex(insns[store_idx][0]), "reload": hex(origin["at"] and
+                                                           insns[origin["at"]][0])},
+        {"step": "slot read_private_key", "offset": hex(slot_off),
+         "call_site": hex(site["addr"])},
+    ]
+
+    constructors, why = _e7bs_msblob_constructors(g)
+    if constructors is None:
+        refusal = ("instance-declaration-form-unmodelled"
+                   if why == "instance-declaration-form-unmodelled"
+                   else ("incomplete-instance-set"
+                         if why.startswith("declared-instance")
+                         else "declared-instance-set-not-closed"))
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", refusal,
+            name, site, detail=why, chain=chain)
+    writer, why = _e7bs_msblob_writer(g)
+    if writer is None:
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", why, name, site, chain=chain)
+    rows, missing = [], []
+    for spec in constructors:
+        hit = _s1_symbol_address(g, spec["desc"])
+        ctor = _e7bs_function_symbol(g, spec["newctx"])
+        if hit is None or ctor is None:
+            missing.append(spec["desc"] if hit is None else spec["newctx"])
+            continue
+        rows.append({"name": spec["desc"], "addr": hit[0],
+                     "symbol": hit[1], "newctx": spec["newctx"],
+                     "constructor_addr": ctor[0],
+                     "constructor_symbol": ctor[1],
+                     "source_line": spec["line"]})
+    if missing:
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", "instance-absent-from-image",
+            name, site, missing=missing, chain=chain)
+    if "e7bs-msblob-drop-instance" in _MUTED and rows:
+        rows = rows[:-1]
+    if len(rows) != 2 or len(rows) != len(constructors):
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", "incomplete-instance-set",
+            name, site, declared=len(constructors), enumerated=len(rows),
+            chain=chain)
+    for row in rows:
+        if "e7bs-msblob-nonfunction-member" in _MUTED and row is rows[0]:
+            vals = frozenset({0xDEAD})
+        else:
+            vals = g.static_slot(row["addr"] + slot_off)
+        ints = {v for v in (vals or ()) if isinstance(v, int) and v != 0}
+        if len(ints) != 1:
+            return _e7bs_refusal(
+                E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+                "internal_closed_descriptor_table",
+                "instance-member-not-function-start", name, site,
+                instance=row["name"], member_offset=hex(slot_off),
+                values=sorted(hex(v) for v in ints), chain=chain)
+        value = next(iter(ints))
+        if value not in g.start_set:
+            return _e7bs_refusal(
+                E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+                "internal_closed_descriptor_table",
+                "instance-member-not-function-start", name, site,
+                instance=row["name"], member_offset=hex(slot_off),
+                value=hex(value), chain=chain)
+        if g.section_of(row["addr"]) not in S1_IMMUTABLE_SECTIONS:
+            return _e7bs_refusal(
+                E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+                "internal_closed_descriptor_table",
+                "instance-not-in-immutable-section", name, site,
+                instance=row["name"], section=g.section_of(row["addr"]),
+                chain=chain)
+        row["member_value"] = value
+        row["member_symbol"] = g.funcs.get(value)
+    foreign = _e7bs_foreign_descriptor_store(
+        g, {r["constructor_addr"] for r in rows}, {r["addr"] for r in rows},
+        _e7bs_module_functions(g, "decode_msblob2key"))
+    if foreign:
+        return _e7bs_refusal(
+            E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+            "internal_closed_descriptor_table", "foreign-descriptor-store",
+            name, site, stores=foreign, chain=chain)
+    for row in rows:
+        store, why = _e7bs_constructor_store(
+            g, row["constructor_addr"], row["addr"])
+        if store is None:
+            return _e7bs_refusal(
+                E7BS_POINTER_SLOT_SCHEMA, "internal-closed-descriptor-table",
+                "internal_closed_descriptor_table",
+                "constructor-store-not-unique", name, site,
+                constructor=row["newctx"], detail=why, chain=chain)
+        row["constructor_store"] = store
+    targets = sorted(hex(r["member_value"]) for r in rows)
+    return {
+        "schema": E7BS_POINTER_SLOT_SCHEMA,
+        "class": "internal-closed-descriptor-table",
+        "resolution_kind": "internal_closed_descriptor_table",
+        "contract_bounded": False,
+        "resolved": True,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "operand": {"base_reg": base_reg, "member_offset": hex(member_off)},
+        "pointer_slot": {"object": E7BS_MSBLOB_CTX,
+                         "field": E7BS_MSBLOB_DESC,
+                         "offset": hex(desc_off),
+                         "descriptor_type": E7BS_MSBLOB_DESC_TYPE,
+                         "member": E7BS_MSBLOB_SLOT,
+                         "member_offset": hex(slot_off)},
+        "targets": targets,
+        "instances": [
+            {"name": r["name"], "addr": hex(r["addr"]),
+             "member_value": hex(r["member_value"]),
+             "member_symbol": r["member_symbol"],
+             "constructor": r["newctx"],
+             "constructor_addr": hex(r["constructor_addr"]),
+             "constructor_store": hex(
+                 g.precision.insns_by_func[r["constructor_addr"]][
+                     r["constructor_store"]["store"]][0])}
+            for r in rows],
+        "writer": writer,
+        "chain": chain,
+        "conditions": {
+            "site_enumerated": (f"{name} {hex(site['addr'])} "
+                                f"`{(site.get('text') or '').strip()}`"),
+            "base_is_vctx_param": (f"{ctx_info.get('param')}: *mut c_void "
+                                   f"cast to *mut {E7BS_MSBLOB_CTX}"),
+            "desc_field_offset": f"{E7BS_MSBLOB_CTX}.{E7BS_MSBLOB_DESC} "
+                                 f"at {hex(desc_off)}",
+            "spill_is_unique": (f"frame slot {hex(spill_abs)} has exactly one "
+                                f"reaching store {hex(insns[store_idx][0])}"),
+            "declared_instance_set_closed": (
+                "two `implement_msblob!` descriptors in "
+                f"{E7BS_MSBLOB_SOURCE}; no literal `static ...: "
+                f"{E7BS_MSBLOB_DESC_TYPE}` in the module"),
+            "instance_members_are_function_starts": (
+                f"every `{E7BS_MSBLOB_SLOT}` member is in the image start set"),
+            "desc_writer_is_the_constructor_parameter": (
+                f"{E7BS_MSBLOB_SOURCE}:{writer['line']} "
+                f"stores its `{writer['parameter']}` parameter unchanged"),
+            "constructor_set_closed": (
+                "exactly two macro-generated `$newctx` functions, each "
+                "storing its own `$desc` at the declared offset"),
+            "targets_are_function_starts": f"{targets}",
+        },
+        "residuals": {
+            "candidate_bound_address_gate": (
+                "the witness is bound to the exact (function, call address) "
+                "in this candidate; it must be re-derived at every re-freeze"),
+            "writer_completeness_source_module_scoped": (
+                "the unique .desc writer is established from the declaring "
+                "module's source and the module-scoped image store scan; it "
+                "is not an image-wide owner-qualified writer index"),
+        },
+    }
+
+
+def _e7bs_image_absences(g, names):
+    """Which of ``names`` have no emitting function in this image."""
+    emitted = [n for n in names
+               if _e7bs_function_symbol(g, n) is not None]
+    return {"absent": [n for n in names if n not in emitted],
+            "emitted": emitted}
+
+
+def _e7bs_brace_end(text, open_at):
+    """End index of the ``{...}`` at ``open_at``, skipping Rust literals.
+
+    ``_s1_brace_span`` is the shared structural helper, but it does not skip
+    string literals.  The rcu test module contains a ``}`` inside a literal,
+    which truncates the module and would leave its calls looking like
+    production callers.  This local scanner is used only to bound the
+    ``#[cfg(test)]`` region.
+    """
+    depth, i, n = 0, open_at, len(text)
+    while i < n:
+        ch = text[i]
+        if ch == "/" and i + 1 < n:
+            if text[i + 1] == "/":
+                j = text.find("\n", i)
+                i = n if j < 0 else j + 1
+                continue
+            if text[i + 1] == "*":
+                j = text.find("*/", i + 2)
+                i = n if j < 0 else j + 2
+                continue
+        if ch == '"':
+            i += 1
+            while i < n:
+                if text[i] == "\\":
+                    i += 2
+                    continue
+                if text[i] == '"':
+                    i += 1
+                    break
+                i += 1
+            continue
+        if ch == "'" and i + 2 < n and text[i + 2] == "'":
+            i += 3
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return i + 1
+        i += 1
+    return None
+
+
+def _e7bs_test_spans(text):
+    """Every ``#[cfg(test)] mod ... { ... }`` span.
+
+    There is more than one test module in ``rcu.rs``; taking only the first
+    would leave the later module's calls looking like production callers.
+    """
+    spans = []
+    for m in re.finditer(r"#\s*\[\s*cfg\s*\(\s*test\s*\)\s*\]\s*"
+                         r"(?:pub\s+)?mod\s+[A-Za-z_]\w*\s*\{", text):
+        open_at = text.find("{", m.end() - 1)
+        end = _e7bs_brace_end(text, open_at)
+        if end is not None:
+            spans.append((m.start(), end))
+    return spans
+
+
+def _e7bs_source_references(g, names):
+    """Every textual call of ``names`` outside ``#[cfg(test)]``.
+
+    A doc comment, a function definition and a signature mention are not
+    callers.  The test-only mutation ``e7bs-rcu-writer-reachable``
+    deliberately treats the test modules as production so the caller
+    enumeration branch is exercised.
+    """
+    out = []
+    for relpath, text in _s1_docs(g).items():
+        spans = _e7bs_test_spans(text)
+        for name in names:
+            for m in re.finditer(r"\b" + re.escape(name) + r"\s*\(", text):
+                line_start = text.rfind("\n", 0, m.start()) + 1
+                line_end = text.find("\n", m.start())
+                stripped = text[line_start:line_end].lstrip()
+                if stripped.startswith("//") or stripped.startswith("*"):
+                    continue
+                if re.search(r"\bfn\s+$", text[:m.start()]):
+                    continue
+                test_only = any(s <= m.start() < e for s, e in spans)
+                if (test_only
+                        and "e7bs-rcu-writer-reachable" not in _MUTED):
+                    continue
+                args = _e7bs_call_args(text, m.end() - 1)
+                out.append({
+                    "file": relpath,
+                    "line": text.count("\n", 0, m.start()) + 1,
+                    "name": name, "test_only": test_only,
+                    "args": _e7bs_split_args(args) if args else [],
+                    "text": text[m.start():line_end][:160]})
+    return out
+
+
+def _e7bs_enumerate_cb(g, refs):
+    """Reachable-caller ``cb`` values, and every value that cannot be bound."""
+    targets, unknown, constructors = set(), [], []
+    for ref in refs:
+        if ref["name"] == E7BS_RCU_CTOR:
+            constructors.append(ref)
+            continue
+        if ref["name"] != E7BS_RCU_WRITER:
+            continue
+        args = ref.get("args") or []
+        cb = args[2].strip() if len(args) > 2 else None
+        if cb is None:
+            unknown.append(dict(ref, cb=None, why="missing cb argument"))
+            continue
+        if not re.fullmatch(r"[A-Za-z_]\w*", cb):
+            unknown.append(dict(ref, cb=cb,
+                                why="cb is not a simple identifier"))
+            continue
+        hit = _e7bs_function_symbol(g, cb)
+        if hit is None or hit[0] not in g.start_set:
+            unknown.append(dict(ref, cb=cb, in_image=False,
+                                why="cb is not an in-image function start"))
+            continue
+        targets.add(hit[0])
+    return targets, unknown, constructors
+
+
+def _e7bs_rcu_writer(g):
+    """The sole source writer/publication of the rcu callback list."""
+    text = _s1_docs(g).get(E7BS_RCU_SOURCE)
+    if text is None:
+        return None, "source-unavailable"
+    hits = list(re.finditer(r"\.\s*func\s*=\s*(?!=)([^;]*);", text))
+    if "e7bs-rcu-second-func-writer" in _MUTED and hits:
+        hits = hits + [hits[0]]
+    if len(hits) != 1:
+        return None, "second-func-writer"
+    rhs = hits[0].group(1).strip()
+    if "e7bs-rcu-computed-value" in _MUTED:
+        rhs = "computed_cb"
+    fn = _e7bs_enclosing_fn(text, hits[0].start())
+    if fn != E7BS_RCU_WRITER:
+        return None, "second-func-writer"
+    sm = re.search(r"fn\s+" + re.escape(E7BS_RCU_WRITER)
+                   + r"\s*\(([^)]*)\)", text)
+    if sm is None:
+        return None, "stored-value-is-not-the-cb-parameter"
+    params = [p.split(":", 1)[0].strip()
+              for p in _e7bs_split_args(sm.group(1))]
+    if len(params) < 3 or params[2] != "cb" or rhs != params[2]:
+        return None, "stored-value-is-not-the-cb-parameter"
+    pubs, clears = [], []
+    for pm in re.finditer(
+            r"\(\s*\*\s*lock\s*\)\s*\.\s*cb_items\s*=\s*([^;]+);", text):
+        value = pm.group(1).strip().rstrip("}").strip()
+        row = {"function": _e7bs_enclosing_fn(text, pm.start()),
+               "line": text.count("\n", 0, pm.start()) + 1,
+               "value": value}
+        if value in ("ptr::null_mut()", "core::ptr::null_mut()",
+                     "null_mut()"):
+            clears.append(row)
+        else:
+            pubs.append(row)
+    if "e7bs-rcu-second-func-writer" in _MUTED and pubs:
+        pubs = pubs + [pubs[0]]
+    if len(pubs) != 1 or pubs[0]["function"] != E7BS_RCU_WRITER:
+        return None, "second-cb-items-publication"
+    return {"writer": {"function": fn,
+                        "line": text.count("\n", 0, hits[0].start()) + 1,
+                        "stored_value": rhs, "parameter": params[2]},
+            "publication": pubs[0], "clears": clears}, None
+
+
+def _e7bs_rcu_list_stores(g, faddr, lock_reg, slot_off):
+    """Stores through the lock register to the list-head displacement."""
+    rows = []
+    for _a, text in g.precision.insns_by_func.get(faddr, ()):
+        mn, _rest, ops = _insn_parts(text)
+        if not mn.startswith("mov") or len(ops) != 2:
+            continue
+        src, dst = ops[0].strip(), ops[1].strip()
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", dst)
+        if m is None:
+            continue
+        off = int(m.group(1), 16) if m.group(1) else 0
+        if (off != slot_off or _canon(m.group(2)) != _canon(lock_reg)
+                or m.group(2) in ("%rsp", "%rbp")):
+            continue
+        rows.append({"store_site": hex(_a), "value": src,
+                     "text": text[:120]})
+    return rows
+
+
+def internal_closed_writer_list_witness(g: "DsoGraph", site: dict,
+                                         name: str):
+    """Resolve the rcu drain call through a closed, absent writer set.
+
+    The node is proven to be ``RcuCbItem`` at the call's displacement, the
+    sole source writer and the sole non-NULL list publication are
+    ``ossl_rcu_call``, and that writer and its constructor are absent from
+    this image with no production caller.  The list is therefore always NULL
+    and the drain loop body is unreachable; the target set is empty.
+    """
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    if site.get("addr") != E7BS_RCU_SITE:
+        return None
+    if site.get("reason") != "base-slot-partial":
+        return None
+    fstart = site.get("func")
+    ctx_info = _s1_site_context(g, fstart)
+    if ctx_info is None:
+        return None
+    if (ctx_info.get("file") != E7BS_RCU_SOURCE
+            or ctx_info.get("function") != E7BS_RCU_FUNCTION):
+        return None
+
+    def _refuse(reason, **extra):
+        return _e7bs_refusal(
+            E7BS_WRITER_LIST_SCHEMA, "internal-closed-writer-list",
+            "internal_closed_writer_list", reason, name, site, **extra)
+
+    node_layout, why = _e7bs_scoped_layout(g, E7BS_RCU_SOURCE, E7BS_RCU_NODE)
+    if node_layout is None:
+        return _refuse("missing-layout-witness", detail=why)
+    func_row = next((r for r in node_layout["fields"]
+                     if r["name"] == E7BS_RCU_SLOT), None)
+    next_row = next((r for r in node_layout["fields"]
+                     if r["name"] == "next"), None)
+    text = _s1_docs(g).get(E7BS_RCU_SOURCE) or ""
+    if (func_row is None or next_row is None or func_row["offset"] != 0
+            or _s1_pointee(next_row["type"]) != E7BS_RCU_NODE
+            or not re.search(r"type\s+RcuCbFn\s*=\s*(?:unsafe\s+)?"
+                             r"extern\s+\"C\"\s+fn", text)):
+        return _refuse("slot-not-rcu-cb-item-func",
+                       layout_fields=[r["name"] for r in
+                                      node_layout["fields"]])
+    if not re.search(r"cb_items\s*:\s*\*mut\s+" + re.escape(E7BS_RCU_NODE),
+                     text):
+        return _refuse("node-origin-not-rcu-cb-item",
+                       detail="RcuLockSt.cb_items is not *mut RcuCbItem")
+
+    insns = g.precision.insns_by_func.get(fstart, ())
+    idx = next((i for i, (a, _t) in enumerate(insns)
+                if a == site.get("addr")), None)
+    if idx is None:
+        return None
+    m = re.search(r"call\w*\s+\*(.+)$",
+                  (site.get("text") or "").split("#", 1)[0].strip())
+    if m is None:
+        return None
+    mo = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", m.group(1).strip())
+    if mo is None:
+        return None
+    member_off = int(mo.group(1), 16) if mo.group(1) else 0
+    base_reg = mo.group(2)
+    if member_off != func_row["offset"]:
+        return _refuse("slot-not-rcu-cb-item-func",
+                       operand={"base_reg": base_reg,
+                                "member_offset": hex(member_off)},
+                       declared_member_offset=hex(func_row["offset"]))
+    defs = _reaching_defs(g, fstart, idx, _canon(base_reg))
+    if defs is None or not defs or _ENTRY_DEF in defs:
+        return _refuse("node-origin-not-rcu-cb-item",
+                       reaching_defs=(sorted(defs) if defs else None))
+    chain, lock_reg = [], None
+    for d in sorted(defs):
+        if d < 0:
+            return _refuse("node-origin-not-rcu-cb-item",
+                           def_index=d)
+        _mn, _rest, ops = _insn_parts(_insn(g, fstart, d))
+        if len(ops) != 2 or _canon(ops[1].strip()) != _canon(base_reg):
+            return _refuse("node-origin-not-rcu-cb-item",
+                           defining_instruction=hex(insns[d][0]),
+                           text=insns[d][1][:120])
+        src = ops[0].strip()
+        if src in _REGS or src in _SUBREG:
+            src_origin = _reg_origin(g, fstart, d, _canon(src))
+            if (src_origin.get("kind") == "load"
+                    and src_origin.get("offset") == next_row["offset"]):
+                chain.append({"step": "node.next", "offset": hex(
+                    next_row["offset"]), "field": "next",
+                    "defining_instruction": hex(insns[d][0])})
+                continue
+            return _refuse("node-origin-not-rcu-cb-item",
+                           source=src, source_origin=src_origin)
+        mem = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", src)
+        if mem is None:
+            return _refuse("node-origin-not-rcu-cb-item", source=src)
+        off = int(mem.group(1), 16) if mem.group(1) else 0
+        base_origin = _reg_origin(g, fstart, d, _canon(mem.group(2)))
+        if (off == 0 and base_origin.get("kind") == "param"
+                and base_origin.get("index") == ctx_info.get("param_index")):
+            lock_reg = mem.group(2)
+            chain.append({"step": "lock.cb_items", "offset": hex(off),
+                          "field": E7BS_RCU_LIST,
+                          "defining_instruction": hex(insns[d][0])})
+            continue
+        return _refuse("node-origin-not-rcu-cb-item",
+                       source=src, base_origin=base_origin)
+    if lock_reg is None:
+        return _refuse("node-origin-not-rcu-cb-item",
+                       detail="no reaching definition loads the list head")
+
+    writer, why = _e7bs_rcu_writer(g)
+    if writer is None:
+        return _refuse(why, chain=chain)
+    list_stores = _e7bs_rcu_list_stores(g, fstart, lock_reg, 0)
+    nonclear = [r for r in list_stores if r["value"] not in ("$0x0", "$0")]
+    if nonclear:
+        return _refuse("second-cb-items-publication",
+                       list_stores=list_stores, chain=chain)
+    absences = _e7bs_image_absences(g, (E7BS_RCU_WRITER, E7BS_RCU_CTOR))
+    refs = _e7bs_source_references(g, (E7BS_RCU_WRITER, E7BS_RCU_CTOR))
+
+    def _resolved(targets, extra):
+        rec = {
+            "schema": E7BS_WRITER_LIST_SCHEMA,
+            "class": "internal-closed-writer-list",
+            "resolution_kind": "internal_closed_writer_list",
+            "contract_bounded": False, "resolved": True,
+            "function": name, "call_site": hex(site["addr"]),
+            "operand": {"base_reg": base_reg,
+                        "member_offset": hex(member_off)},
+            "node": {"type": E7BS_RCU_NODE, "slot": E7BS_RCU_SLOT,
+                     "offset": hex(func_row["offset"]),
+                     "size": hex(node_layout["size"])},
+            "targets": sorted(hex(t) for t in targets),
+            "proved_empty": not targets,
+            "image_facts": {
+                "absent_symbols": absences["absent"],
+                "emitted_symbols": absences["emitted"],
+                "production_callers": refs,
+                "list_stores": list_stores,
+                "writer": writer["writer"],
+                "publication": writer["publication"],
+                "clears": writer["clears"]},
+            "chain": chain,
+            "conditions": {
+                "site_enumerated": (f"{name} {hex(site['addr'])} "
+                                    f"`{(site.get('text') or '').strip()}`"),
+                "node_is_rcu_cb_item": (
+                    f"every reaching definition of {base_reg} is "
+                    f"{E7BS_RCU_NODE}*; slot {E7BS_RCU_SLOT} is at "
+                    f"{hex(func_row['offset'])}"),
+                "sole_writer": (f"{writer['writer']['function']} "
+                                f"({E7BS_RCU_SOURCE}:"
+                                f"{writer['writer']['line']}) stores its "
+                                f"`{writer['writer']['parameter']}` parameter"),
+                "sole_list_publication": (
+                    f"{writer['publication']['function']} "
+                    f"({E7BS_RCU_SOURCE}:{writer['publication']['line']})"),
+                "list_clear_only": ("every store through the lock register "
+                                    "to the list-head offset is a NULL clear"),
+                "writer_and_constructor_absent": (
+                    ", ".join(absences["absent"]) or "none"),
+                "no_production_caller": (
+                    "no textual call outside `#[cfg(test)]`"),
+            },
+            "residuals": {
+                "inlined_or_icf_writer_not_excluded": (
+                    "the source has one writer and its symbol/callers are "
+                    "absent; a compiler-inlined or identical-code-folded "
+                    "copy carries no distinct symbol and is not separately "
+                    "enumerated by this witness"),
+                "writer_scan_scope": (
+                    f"the writer/publication scan covers {E7BS_RCU_SOURCE} "
+                    "only"),
+                "caller_scan_scope": (
+                    "_e7bs_source_references is textual: it does not see "
+                    "indirect or macro-generated calls, and it does not see "
+                    "an out-of-file `#[cfg(test)] mod X;` declaration"),
+                "candidate_bound_address_gate": (
+                    "the witness is bound to the exact (function, call "
+                    "address) in this candidate; it must be re-derived at "
+                    "every re-freeze"),
+            },
+        }
+        rec.update(extra)
+        return rec
+
+    if refs:
+        targets, unknown, _ctors = _e7bs_enumerate_cb(g, refs)
+        if unknown:
+            return _refuse("cb-from-reachable-caller-unknown",
+                           unknown=unknown, chain=chain)
+        return _resolved(targets, {"enumerated_from_reachable_callers": True})
+    if absences["emitted"]:
+        if E7BS_RCU_WRITER in absences["emitted"]:
+            return _refuse("writer-emitted", emitted=absences["emitted"],
+                           chain=chain)
+        return _refuse("constructor-emitted", emitted=absences["emitted"],
+                       chain=chain)
+    return _resolved(set(), {"enumerated_from_reachable_callers": False})
+
+
 def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                            reachable: set | None = None) -> dict:
     """Apply the R2/R3/A1/A2 evidence classes to one candidate DSO.
@@ -15531,6 +16746,44 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                 continue
             site["decoder_method_refusal"] = dec
             stats["S7_decoder_method_object_refused"] += 1
+        # E7-BS: the two `base-slot-partial` sites.  This block precedes S1
+        # because S1 rewrites `reason` on a refusal.  Each witness is
+        # site-enumerated by (function, call address), so a differently-typed
+        # base at the same displacement is never absorbed.  A resolved site
+        # gets its exact target set; a refusal is recorded and then the site
+        # falls through to every existing conservative rule.
+        e7bs_ptr = pointer_slot_instance_witness(g, site, name)
+        if e7bs_ptr is not None:
+            if e7bs_ptr.get("resolved"):
+                site["targets"] = {int(t, 16) for t in e7bs_ptr["targets"]}
+                site["unresolved"] = False
+                site["class"] = "internal-closed-descriptor-table"
+                site["reason"] = (
+                    "internal closed descriptor table: "
+                    + e7bs_ptr["pointer_slot"]["object"] + "."
+                    + e7bs_ptr["pointer_slot"]["field"] + " at "
+                    + e7bs_ptr["pointer_slot"]["offset"] + " -> "
+                    + str(len(e7bs_ptr["targets"])) + " function start(s)")
+                site["e7bs_pointer_slot_witness"] = e7bs_ptr
+                stats["E7BS_pointer_slot_resolved"] += 1
+                continue
+            site["e7bs_pointer_slot_refusal"] = e7bs_ptr
+            stats["E7BS_pointer_slot_refused"] += 1
+        e7bs_rcu = internal_closed_writer_list_witness(g, site, name)
+        if e7bs_rcu is not None:
+            if e7bs_rcu.get("resolved"):
+                site["targets"] = {int(t, 16)
+                                   for t in e7bs_rcu["targets"]}
+                site["unresolved"] = False
+                site["class"] = "internal-closed-writer-list"
+                site["reason"] = (
+                    "internal closed writer list: no production writer or "
+                    "publication in this image")
+                site["e7bs_writer_list_witness"] = e7bs_rcu
+                stats["E7BS_writer_list_resolved"] += 1
+                continue
+            site["e7bs_writer_list_refusal"] = e7bs_rcu
+            stats["E7BS_writer_list_refused"] += 1
         # S1: a field-sensitive static-table instance dispatch.  The witness
         # keys on (object type, pointer-slot offset, member offset), restricts
         # the writer set by the static dispatch table that pairs the consumer
@@ -16214,6 +17467,8 @@ def _edge_disposition(site: dict, name=None):
                 "the containing function has no symbol, so a target set "
                 "cannot be attributed to a function")
     if not (site.get("targets") or ()):
+        if _e7bs_proved_empty_site(site):
+            return DISPOSITION_PROVED, None, None
         return (DISPOSITION_UNRESOLVED, "empty-target-set",
                 site.get("reason") or
                 "empty target set: the resolver admitted no target and "
@@ -16258,6 +17513,12 @@ def _edge_record(g, site: dict, ordinal: int, oracle=None, seen_ids=None) -> dic
     semantics = site.get("semantic_store_target")
     edge_witness = site.get("edge_target_witness")
     caller_bound = site.get("reachable_caller_bound")
+    e7bs_witness = (site.get("e7bs_pointer_slot_witness")
+                    or site.get("e7bs_writer_list_witness")
+                    or site.get("e7bs_pointer_slot_refusal")
+                    or site.get("e7bs_writer_list_refusal"))
+    if e7bs_witness is not None:
+        extra["e7bs_witness"] = e7bs_witness
     if semantics is not None:
         # Only a resolved derivation enumerates its candidates.  An unresolved
         # row may contain a partial target set from rows that did not fail; it
@@ -16718,6 +17979,85 @@ def _edge_record(g, site: dict, ordinal: int, oracle=None, seen_ids=None) -> dic
             "excluded_targets": sorted(excluded_set),
             "unaccounted_targets": unaccounted,
         },
+    }
+
+
+def e7bs_receipt_section(graphs: dict) -> dict:
+    """Persist the E7-BS witness evidence in the closure receipt.
+
+    The site's class/reason alone is not a per-call-site witness record; the
+    computed instance set, chain, conditions and image facts are carried here
+    (and in each edge record's ``e7bs_witness`` field).
+    """
+    def _witness(site):
+        return (site.get("e7bs_pointer_slot_witness")
+                or site.get("e7bs_writer_list_witness") or {})
+
+    def _refusal(site):
+        return (site.get("e7bs_pointer_slot_refusal")
+                or site.get("e7bs_writer_list_refusal") or {})
+
+    resolved = [
+        {"dso": name,
+         "function": w.get("function"),
+         "call_site": w.get("call_site"),
+         "resolution_kind": w.get("resolution_kind"),
+         "proved_empty": w.get("proved_empty"),
+         "operand": w.get("operand"),
+         "pointer_slot": w.get("pointer_slot"),
+         "node": w.get("node"),
+         "targets": w.get("targets"),
+         "instances": w.get("instances"),
+         "writer": w.get("writer"),
+         "chain": w.get("chain"),
+         "conditions": w.get("conditions"),
+         "image_facts": w.get("image_facts"),
+         "residuals": w.get("residuals")}
+        for name, g in graphs.items()
+        for s in getattr(g, "sites", {}).values()
+        for w in [_witness(s)] if w and w.get("resolved")]
+    refused = [
+        {"dso": name,
+         "function": w.get("function"),
+         "call_site": w.get("call_site"),
+         "schema": w.get("schema"),
+         "resolution_kind": w.get("resolution_kind"),
+         "refusal": w.get("refusal"),
+         "operand": w.get("operand"),
+         "pointer_slot": w.get("pointer_slot"),
+         "chain": w.get("chain"),
+         "detail": {k: v for k, v in w.items()
+                    if k not in ("schema", "class", "resolution_kind",
+                                 "contract_bounded", "resolved", "refusal",
+                                 "function", "call_site")}}
+        for name, g in graphs.items()
+        for s in getattr(g, "sites", {}).values()
+        for w in [_refusal(s)] if w]
+    return {
+        "pointer_slot_schema": E7BS_POINTER_SLOT_SCHEMA,
+        "writer_list_schema": E7BS_WRITER_LIST_SCHEMA,
+        "rule": (
+            "msblob: the call base is the vctx parameter cast to "
+            "Msblob2keyCtx, then desc at the module-scoped declared offset, "
+            "through the unique frame spill; the complete KeytypeDesc "
+            "declared-instance set is the two macro-generated statics and "
+            "each read_private_key member is an in-image function start. "
+            "rcu: the node is RcuCbItem at func@0, the sole writer and "
+            "publication are ossl_rcu_call, and that writer and its "
+            "constructor are absent with no production caller, so the list "
+            "is NULL and the target set is empty (`proved_empty`)."),
+        "summary": {
+            "resolved": len(resolved),
+            "refused": len(refused),
+            "proved_empty": sum(1 for r in resolved
+                                if r.get("proved_empty") is True),
+            "by_resolution_kind": dict(sorted(collections.Counter(
+                str(r.get("resolution_kind")) for r in resolved).items())),
+            "by_refusal": dict(sorted(collections.Counter(
+                str(r.get("refusal")) for r in refused).items())),
+        },
+        "resolved_sites": resolved,
+        "refused_sites": refused,
     }
 
 
@@ -17623,7 +18963,8 @@ def _validate_record(rec: dict, oracle=None) -> list:
         defects.append(
             f"{rid}: {disposition} has no defining function symbol "
             f"({defining!r}); a target set cannot be attributed")
-    if disposition == DISPOSITION_PROVED and not rec.get("target_set"):
+    if (disposition == DISPOSITION_PROVED and not rec.get("target_set")
+            and not _e7bs_proved_empty_record(rec)):
         defects.append(f"{rid}: PROVED_TARGET_SET with an empty target set")
     if disposition == DISPOSITION_CONTRACT and not rec.get("witness_id"):
         defects.append(f"{rid}: CONTRACT_BOUNDED without a witness id")
@@ -22836,6 +24177,18 @@ def build_receipt(args) -> dict:
                 "resolved_by_reachable_caller": sum(
                     1 for g in graphs.values() for s in g.sites.values()
                     if s.get("reachable_caller_bound")),
+                "e7bs_resolved_sites": sum(
+                    1 for g in graphs.values() for s in g.sites.values()
+                    if (s.get("e7bs_pointer_slot_witness")
+                        or s.get("e7bs_writer_list_witness"))),
+                "e7bs_refused_sites": sum(
+                    1 for g in graphs.values() for s in g.sites.values()
+                    if (s.get("e7bs_pointer_slot_refusal")
+                        or s.get("e7bs_writer_list_refusal"))),
+                "e7bs_proved_empty_sites": sum(
+                    1 for g in graphs.values() for s in g.sites.values()
+                    for w in [s.get("e7bs_writer_list_witness") or {}]
+                    if w.get("proved_empty") is True),
             },
             "classes": {
                 "got_or_table": {
@@ -23024,6 +24377,7 @@ def build_receipt(args) -> dict:
                     for w in [s.get("nested_instance_refusal") or {}]
                     if w],
             },
+            "e7bs_witnesses": e7bs_receipt_section(graphs),
             "unclassified_reachable_sites": closure["unclassified_sites"],
             "evidence_classes": evidence_stats,
             "dlsym_literals": {
@@ -26936,6 +28290,456 @@ def self_test() -> int:
           _atexit_accepted_with("e7-atexit-stored-value",
                                 stored_value="wrapped") is not None, True)
 
+    # ---- E7-BS: the two `base-slot-partial` witnesses -------------------- #
+    # Replayable fixtures on the real witness functions.  The msblob fixture
+    # has the real provider shape (a c_void `vctx` cast, a spilled `desc`
+    # field, two macro-generated descriptors); the rcu fixture has the real
+    # loop-phi node and the absent writer/constructor.  Every mutation removes
+    # or perturbs exactly one conjunct and must flip the positive to its named
+    # refusal; restoring it must reproduce the positive witness exactly.
+    class _E7BSG:
+        def __init__(self, insns, funcs, names_at=None, start_set=None,
+                     sections=None, static_values=None, source_root=None):
+            self.name = "e7bs.so"
+            self.funcs = dict(funcs)
+            self.start_set = set(start_set if start_set is not None
+                                 else funcs)
+            self.names_at = names_at or {a: {n} for a, n in funcs.items()}
+            self.all_syms = dict(funcs)
+            self.sections = dict(sections or {})
+            self._static_values = dict(static_values or {})
+            self.precision = _WPrecision({f: list(v) for f, v in insns.items()})
+            self.functions = [(f, list(v)) for f, v in insns.items()]
+            self.source_root = source_root
+            self.install_prefix = None
+            self.sites = {}
+            self.direct = {}
+            self.taken_code = set()
+            self.taken_data = set()
+            self.slot_funcs = {}
+            self.slot_data = {}
+            self.slot_syms = {}
+            self.sym_sizes = {}
+            self.dynamic_defs = {}
+            self.field_stores = {}
+            self.field_open = set()
+            self.unknown_call_arg_targets = set()
+            self._s1_ctx_cache = {}
+
+        def containing(self, addr):
+            return max((f for f in self.funcs if f <= addr), default=None)
+
+        def section_of(self, addr):
+            for name, (base, _off, size) in self.sections.items():
+                if base <= addr < base + size:
+                    return name
+            return None
+
+        def static_slot(self, addr):
+            if addr not in self._static_values:
+                return None
+            value = self._static_values[addr]
+            return frozenset(value if isinstance(value, (set, frozenset))
+                             else {value})
+
+        def is_data(self, addr):
+            sec = self.section_of(addr)
+            return sec is not None and sec != ".text"
+
+    _E7BS_MS_SOURCE = (
+        '#[repr(C)]\n'
+        'struct KeytypeDesc {\n'
+        '    type_: c_int,\n'
+        '    name: *const c_char,\n'
+        '    fns: *const OsslDispatch,\n'
+        '    read_private_key: Option<B2iOfVoidFn>,\n'
+        '    read_public_key: Option<B2iOfVoidFn>,\n'
+        '    adjust_key: Option<AdjustKeyFn>,\n'
+        '    free_key: Option<FreeKeyFn>,\n'
+        '}\n\n'
+        'type B2iOfVoidFn = unsafe extern "C" fn(*mut *const u8, c_uint, c_int) -> *mut c_void;\n'
+        'type AdjustKeyFn = unsafe extern "C" fn(*mut c_void, *mut Msblob2keyCtx);\n'
+        'type FreeKeyFn = unsafe extern "C" fn(*mut c_void);\n\n'
+        '#[repr(C)]\n'
+        'pub(crate) struct Msblob2keyCtx {\n'
+        '    provctx: *mut c_void,\n'
+        '    desc: *const KeytypeDesc,\n'
+        '    selection: c_int,\n'
+        '}\n\n'
+        'impl OwnedCtx {\n'
+        '    fn new(provctx: *mut c_void, desc: *const KeytypeDesc) -> Option<OwnedCtx> {\n'
+        '        let ptr = Some(desc)?;\n'
+        '        unsafe { (*ptr.as_ptr()).desc = desc; }\n'
+        '        Some(OwnedCtx(ptr))\n'
+        '    }\n'
+        '}\n\n'
+        'unsafe fn msblob2key_newctx(provctx: *mut c_void, desc: *const KeytypeDesc) -> *mut Msblob2keyCtx {\n'
+        '    match OwnedCtx::new(provctx, desc) {\n'
+        '        Some(ctx) => ctx.into_raw(),\n'
+        '        None => core::ptr::null_mut(),\n'
+        '    }\n'
+        '}\n\n'
+        'macro_rules! implement_msblob {\n'
+        '    ($newctx:ident, $table:ident, $desc:ident, $ty:expr, $name:expr, $keymgmt:path, $read:ident, $adjust:expr, $free:ident) => {\n'
+        '        static $desc: KeytypeDesc = KeytypeDesc {\n'
+        '            type_: $ty, name: $name, fns: $keymgmt.as_ptr(),\n'
+        '            read_private_key: Some($read), read_public_key: Some($read),\n'
+        '            adjust_key: $adjust, free_key: Some($free),\n'
+        '        };\n'
+        '        unsafe extern "C" fn $newctx(provctx: *mut c_void) -> *mut c_void {\n'
+        '            msblob2key_newctx(provctx, &$desc).cast::<c_void>()\n'
+        '        }\n'
+        '    };\n'
+        '}\n\n'
+        'implement_msblob!(msblob2dsa_newctx, MSBLOB_TO_DSA, MSTYPE2DSA_DESC, EVP_PKEY_DSA, c"DSA".as_ptr(), crate::dsa, dsa_decode_void, None, dsa_free_void);\n'
+        'implement_msblob!(msblob2rsa_newctx, MSBLOB_TO_RSA, MSTYPE2RSA_DESC, EVP_PKEY_RSA, c"RSA".as_ptr(), crate::rsa, rsa_decode_void, Some(rsa_adjust), rsa_free_void);\n\n'
+        'unsafe extern "C" fn msblob2key_decode(vctx: *mut c_void, selection: c_int) -> c_int {\n'
+        '    let ctx = vctx.cast::<Msblob2keyCtx>();\n'
+        '    let desc = unsafe { (*ctx).desc };\n'
+        '    let _ = unsafe { (*desc).read_private_key };\n'
+        '    0\n'
+        '}\n'
+    )
+
+    def _e7bs_msblob_fixture(owner_type="Msblob2keyCtx", *,
+                             double_spill=False, extra_declaration=None,
+                             foreign_store=False):
+        td = tempfile.mkdtemp()
+        root = Path(td)
+        path = root / "src" / "provider"
+        path.mkdir(parents=True, exist_ok=True)
+        src = _E7BS_MS_SOURCE + (extra_declaration or "")
+        if foreign_store:
+            src += (
+                'unsafe extern "C" fn foreign_store('
+                'ctx: *mut Msblob2keyCtx, value: *const KeytypeDesc) {\n'
+                '    unsafe { core::ptr::addr_of_mut!((*ctx).desc)'
+                '.write(value); }\n'
+                '}\n')
+        (path / "decode_msblob2key.rs").write_text(src)
+        funcs = {
+            0x204540: "_RNvNtCs1234_10openssl_rs17decode_msblob2key17msblob2key_decode",
+            0x1100: "_RNvNtCs1234_10openssl_rs17decode_msblob2key17msblob2dsa_newctx",
+            0x1200: "_RNvNtCs1234_10openssl_rs17decode_msblob2key17msblob2rsa_newctx",
+            0x2000: "dsa_decode_void",
+            0x2100: "rsa_decode_void",
+        }
+        if foreign_store:
+            funcs[0x204600] = (
+                "_RNvNtCs1234_10openssl_rs"
+                "17decode_msblob2key13foreign_store")
+        names_at = {a: {n} for a, n in funcs.items()}
+        names_at[0x9000] = {"MSTYPE2DSA_DESC"}
+        names_at[0x9040] = {"MSTYPE2RSA_DESC"}
+        if double_spill:
+            decode_insns = [
+                (0x204870, "test   %eax,%eax"),
+                (0x204872, "je     204880 <left>"),
+                (0x204874, "mov    %rdi,%r15"),
+                (0x204876, "mov    0x8(%r15),%rsi"),
+                (0x204878, "mov    %rsi,0x8(%rsp)"),
+                (0x20487a, "jmp    204886 <join>"),
+                (0x204880, "mov    %rdi,%r15"),
+                (0x204882, "mov    0x8(%r15),%rsi"),
+                (0x204884, "mov    %rsi,0x8(%rsp)"),
+                (0x204886, "mov    0x8(%rsp),%rax"),
+                (0x204890, "call   *0x18(%rax)"),
+                (0x204892, "ret"),
+            ]
+        else:
+            decode_insns = [
+                (0x204880, "mov    %rdi,%r15"),
+                (0x204882, "mov    0x8(%r15),%rsi"),
+                (0x204884, "mov    %rsi,0x8(%rsp)"),
+                (0x204886, "nop"),
+                (0x204888, "mov    0x8(%rsp),%rax"),
+                (0x204890, "call   *0x18(%rax)"),
+                (0x204892, "ret"),
+            ]
+        insns = {
+            0x204540: decode_insns,
+            0x1100: [
+                (0x1100, "lea    0x7f00(%rip),%rax        # 9000 <MSTYPE2DSA_DESC>"),
+                (0x1104, "mov    %rax,0x8(%rdi)"),
+                (0x1106, "ret"),
+            ],
+            0x1200: [
+                (0x1200, "lea    0x7f40(%rip),%rax        # 9040 <MSTYPE2RSA_DESC>"),
+                (0x1204, "mov    %rax,0x8(%rdi)"),
+                (0x1206, "ret"),
+            ],
+        }
+        if foreign_store:
+            insns[0x204600] = [
+                (0x204600, "mov    %rsi,0x8(%rdi)"),
+                (0x204604, "ret"),
+            ]
+        g = _E7BSG(
+            insns, funcs, names_at=names_at,
+            start_set=set(funcs) | {0x2000, 0x2100},
+            sections={".text": (0x204000, 0, 0x1000),
+                      ".data.rel.ro": (0x9000, 0, 0x80)},
+            static_values={0x9018: 0x2000, 0x9058: 0x2100},
+            source_root=root)
+        g._s1_ctx_cache = {
+            0x204540: {"file": "src/provider/decode_msblob2key.rs",
+                     "function": "msblob2key_decode", "line": 1,
+                     "var": "ctx", "type": owner_type, "param": "vctx",
+                     "param_index": 0,
+                     "declared": "vctx: *mut c_void"}}
+        site = {"kind": "call", "func": 0x204540, "addr": 0x204890,
+                "text": "call   *0x18(%rax)", "targets": set(),
+                "unresolved": True, "reason": "base-slot-partial",
+                "class": "field", "field_offsets": {0x18}, "seam": None,
+                "arg_deps": set(), "arg_targets": set()}
+        return g, site
+
+    _E7BS_RCU_SOURCE = (
+        '#[repr(C)]\n'
+        'struct RcuCbItem {\n'
+        '    func: RcuCbFn,\n'
+        '    data: *mut c_void,\n'
+        '    next: *mut RcuCbItem,\n'
+        '}\n\n'
+        'type RcuCbFn = unsafe extern "C" fn(*mut c_void);\n\n'
+        'struct RcuLockSt {\n'
+        '    cb_items: *mut RcuCbItem,\n'
+        '    ctx: *mut c_void,\n'
+        '}\n\n'
+        'pub(crate) unsafe fn ossl_rcu_call(lock: *mut RcuLockSt, item: *mut RcuCbItem, cb: RcuCbFn, data: *mut c_void) {\n'
+        '    unsafe {\n'
+        '        (*item).func = cb;\n'
+        '        (*item).data = data;\n'
+        '        (*item).next = (*lock).cb_items;\n'
+        '        (*lock).cb_items = item;\n'
+        '    }\n'
+        '}\n\n'
+        'pub(crate) fn ossl_rcu_cb_item_new() -> *mut RcuCbItem { core::ptr::null_mut() }\n\n'
+        'pub(crate) unsafe fn ossl_synchronize_rcu(lock: *mut RcuLockSt) {\n'
+        '    let mut cb_items = unsafe { (*lock).cb_items };\n'
+        '    unsafe { (*lock).cb_items = ptr::null_mut(); };\n'
+        '    while !cb_items.is_null() {\n'
+        '        let node = cb_items;\n'
+        '        unsafe { cb_items = (*node).next; ((*node).func)((*node).data); }\n'
+        '    }\n'
+        '}\n\n'
+        '#[cfg(test)]\n'
+        'mod tests {\n'
+        '    fn t() { unsafe { ossl_rcu_call(lock, item, count_cb, marker()); } }\n'
+        '}\n'
+    )
+
+    def _e7bs_rcu_fixture():
+        td = tempfile.mkdtemp()
+        root = Path(td)
+        path = root / "src" / "runtime"
+        path.mkdir(parents=True, exist_ok=True)
+        (path / "rcu.rs").write_text(_E7BS_RCU_SOURCE)
+        funcs = {0x22dc90:
+                 "_RNvNtCs1234_10openssl_rs7runtime3rcu20ossl_synchronize_rcu"}
+        insns = {0x22dc90: [
+            (0x22df60, "mov    %rdi,%r14"),
+            (0x22df62, "mov    (%r14),%rbx"),
+            (0x22df64, "movq   $0x0,(%r14)"),
+            (0x22df66, "test   %rbx,%rbx"),
+            (0x22df68, "je     22df80 <exit>"),
+            (0x22df70, "mov    0x8(%rbx),%rdi"),
+            (0x22df74, "mov    0x10(%rbx),%r12"),
+            (0x22df88, "call   *(%rbx)"),
+            (0x22df8a, "mov    %r12,%rbx"),
+            (0x22df8c, "jne    22df70 <loop>"),
+            (0x22df8e, "ret"),
+            (0x22df80, "ret"),
+        ]}
+        g = _E7BSG(insns, funcs, sections={".text": (0x22d000, 0, 0x2000)},
+                   source_root=root)
+        g._s1_ctx_cache = {
+            0x22dc90: {"file": "src/runtime/rcu.rs",
+                     "function": "ossl_synchronize_rcu", "line": 1,
+                     "var": "lock", "type": "RcuLockSt", "param": "lock",
+                     "param_index": 0,
+                     "declared": "lock: *mut RcuLockSt"}}
+        site = {"kind": "call", "func": 0x22dc90, "addr": 0x22df88,
+                "text": "call   *(%rbx)", "targets": set(),
+                "unresolved": True, "reason": "base-slot-partial",
+                "class": "field", "field_offsets": {0}, "seam": None,
+                "arg_deps": set(), "arg_targets": set()}
+        return g, site
+
+    _g_ms, _s_ms = _e7bs_msblob_fixture()
+    _w_ms = pointer_slot_instance_witness(_g_ms, _s_ms,
+                                           _g_ms.funcs[0x204540])
+    check("E7BS msblob positive resolves exactly two function starts",
+          ((_w_ms or {}).get("resolved"), (_w_ms or {}).get("targets")),
+          (True, ["0x2000", "0x2100"]))
+    check("E7BS msblob positive resolution kind",
+          (_w_ms or {}).get("resolution_kind"),
+          "internal_closed_descriptor_table")
+
+    _g_rcu, _s_rcu = _e7bs_rcu_fixture()
+    _w_rcu = internal_closed_writer_list_witness(
+        _g_rcu, _s_rcu, _g_rcu.funcs[0x22dc90])
+    check("E7BS rcu positive resolves an empty target set",
+          ((_w_rcu or {}).get("resolved"), (_w_rcu or {}).get("targets")),
+          (True, []))
+    check("E7BS rcu positive names both absent symbols",
+          sorted((_w_rcu or {}).get("image_facts", {}).get(
+              "absent_symbols", [])),
+          ["ossl_rcu_call", "ossl_rcu_cb_item_new"])
+
+    e7bs_mutation_matrix = []
+    for _name, _want in [
+            ("e7bs-msblob-drop-instance", "incomplete-instance-set"),
+            ("e7bs-msblob-nonfunction-member",
+             "instance-member-not-function-start"),
+            ("e7bs-msblob-second-desc-store", "desc-writer-not-unique"),
+            ("e7bs-msblob-foreign-owner", "base-not-msblob2key-ctx")]:
+        _rec = _mutation(
+            _name, lambda: pointer_slot_instance_witness(
+                _g_ms, _s_ms, _g_ms.funcs[0x204540])) or {}
+        _restored = pointer_slot_instance_witness(
+            _g_ms, _s_ms, _g_ms.funcs[0x204540])
+        e7bs_mutation_matrix.append({
+            "mutation": _name, "case": "msblob",
+            "case_fails": (_rec.get("refusal") == _want
+                           and not _rec.get("resolved")),
+            "expected": True})
+        check(f"E7BS {_name} refusal", _rec.get("refusal"), _want)
+        check(f"E7BS {_name} restores exactly", _restored == _w_ms, True)
+
+    _g_multi, _s_multi = _e7bs_msblob_fixture(double_spill=True)
+    _rec = pointer_slot_instance_witness(
+        _g_multi, _s_multi, _g_multi.funcs[0x204540]) or {}
+    e7bs_mutation_matrix.append({
+        "mutation": "e7bs-msblob-multiple-spill-stores", "case": "msblob",
+        "case_fails": (_rec.get("refusal") == "desc-spill-not-unique"
+                       and not _rec.get("resolved")),
+        "expected": True})
+    check("E7BS e7bs-msblob-multiple-spill-stores refusal",
+          _rec.get("refusal"), "desc-spill-not-unique")
+
+    for _label, _kw in [
+            ("static-mut",
+             {"extra_declaration": "static mut EXTRA_DESC: KeytypeDesc = "
+                                   "unsafe { core::mem::zeroed() };\n"}),
+            ("second-macro",
+             {"extra_declaration": "macro_rules! other {\n"
+                                   "    ($desc:ident) => {\n"
+                                   "        static $desc: KeytypeDesc = "
+                                   "unsafe { core::mem::zeroed() };\n"
+                                   "    };\n"
+                                   "}\n"})]:
+        _g_u, _s_u = _e7bs_msblob_fixture(**_kw)
+        _rec = pointer_slot_instance_witness(
+            _g_u, _s_u, _g_u.funcs[0x204540]) or {}
+        _name = "e7bs-msblob-unmodelled-" + _label
+        e7bs_mutation_matrix.append({
+            "mutation": _name, "case": "msblob",
+            "case_fails": (_rec.get("refusal")
+                           == "instance-declaration-form-unmodelled"
+                           and not _rec.get("resolved")),
+            "expected": True})
+        check(f"E7BS {_name} refusal",
+              _rec.get("refusal"), "instance-declaration-form-unmodelled")
+
+    _g_fs, _s_fs = _e7bs_msblob_fixture(foreign_store=True)
+    _rec = pointer_slot_instance_witness(
+        _g_fs, _s_fs, _g_fs.funcs[0x204540]) or {}
+    e7bs_mutation_matrix.append({
+        "mutation": "e7bs-msblob-foreign-descriptor-store", "case": "msblob",
+        "case_fails": (_rec.get("refusal") == "foreign-descriptor-store"
+                       and not _rec.get("resolved")),
+        "expected": True})
+    check("E7BS e7bs-msblob-foreign-descriptor-store refusal",
+          _rec.get("refusal"), "foreign-descriptor-store")
+    _stores = _rec.get("stores") or []
+    check("E7BS foreign-descriptor-store resolves the proven owner",
+          [(s.get("owner"), s.get("reason")) for s in _stores],
+          [("Msblob2keyCtx", "writer-outside-the-closed-constructor-set")])
+    for _name, _want in [
+            ("e7bs-rcu-second-func-writer", "second-func-writer"),
+            ("e7bs-rcu-computed-value",
+             "stored-value-is-not-the-cb-parameter"),
+            ("e7bs-rcu-writer-reachable",
+             "cb-from-reachable-caller-unknown")]:
+        _rec = _mutation(
+            _name, lambda: internal_closed_writer_list_witness(
+                _g_rcu, _s_rcu, _g_rcu.funcs[0x22dc90])) or {}
+        _restored = internal_closed_writer_list_witness(
+            _g_rcu, _s_rcu, _g_rcu.funcs[0x22dc90])
+        e7bs_mutation_matrix.append({
+            "mutation": _name, "case": "rcu",
+            "case_fails": (_rec.get("refusal") == _want
+                           and not _rec.get("resolved")),
+            "expected": True})
+        check(f"E7BS {_name} refusal", _rec.get("refusal"), _want)
+        check(f"E7BS {_name} restores exactly", _restored == _w_rcu, True)
+    check("E7BS mutation matrix: every mutation is load-bearing",
+          [row["case_fails"] == row["expected"]
+           for row in e7bs_mutation_matrix],
+          [True] * len(e7bs_mutation_matrix))
+    print("[consumer-closure] E7BS mutation matrix: " + "; ".join(
+        f"{r['mutation']} -> {r['case']} "
+        f"{'fails as required' if r['case_fails'] else 'STILL PASSES'}"
+        for r in e7bs_mutation_matrix))
+    print("[consumer-closure] E7BS residuals: candidate-bound address gate; "
+          "RCU inlining/ICF copies not excluded; writer scan covers "
+          "src/runtime/rcu.rs only; textual caller scan misses indirect/"
+          "macro/out-of-file test modules; msblob writer completeness is "
+          "source/module-scoped")
+
+    _g_foreign, _s_foreign = _e7bs_msblob_fixture(owner_type="ForeignCtx")
+    _w_foreign = pointer_slot_instance_witness(
+        _g_foreign, _s_foreign, _g_foreign.funcs[0x204540])
+    check("E7BS non-widening foreign owner is not absorbed",
+          ((_w_foreign or {}).get("resolved"),
+           (_w_foreign or {}).get("refusal")),
+          (False, "base-not-msblob2key-ctx"))
+
+    # The empty rcu target set is only a resolved disposition when the exact
+    # witness says so.  The two negative controls make that gate load-bearing.
+    _empty_site = {
+        "kind": "call", "func": 0x22dc90, "addr": 0x22df88,
+        "text": "call   *(%rbx)", "targets": set(), "unresolved": False,
+        "reason": "internal closed writer list: no production writer or "
+                  "publication in this image",
+        "class": "internal-closed-writer-list",
+        "field_offsets": {0}, "seam": None,
+        "arg_deps": set(), "arg_targets": set()}
+    check("E7BS an empty target set without the witness is demoted",
+          _edge_disposition(_empty_site, "ossl_synchronize_rcu")[:2],
+          (DISPOSITION_UNRESOLVED, "empty-target-set"))
+    _w_cleared = dict(_w_rcu)
+    _w_cleared["proved_empty"] = False
+    check("E7BS cleared proved_empty is demoted",
+          _edge_disposition(dict(_empty_site,
+                                 e7bs_writer_list_witness=_w_cleared),
+                            "ossl_synchronize_rcu")[:2],
+          (DISPOSITION_UNRESOLVED, "empty-target-set"))
+    check("E7BS proved-empty disposition gate accepts the witness",
+          _edge_disposition(dict(_empty_site,
+                                 e7bs_writer_list_witness=_w_rcu),
+                            "ossl_synchronize_rcu"),
+          (DISPOSITION_PROVED, None, None))
+    check("E7BS proved-empty record gate accepts the witness",
+          _e7bs_proved_empty_record({"e7bs_witness": _w_rcu}), True)
+    check("E7BS proved-empty record gate rejects an unwitnessed empty set",
+          _e7bs_proved_empty_record({"e7bs_witness": {}}), False)
+
+    # The symbol-index cache fix is needed when the pass is run twice; it is
+    # inert when the cached index is valid.  The probe's full-site comparison
+    # additionally shows it changes no site on this candidate.
+    class _E7BSIdx:
+        names_at = {0x10: {"A"}}
+
+    _ig = _E7BSIdx()
+    _ig._s1_sym_index = {}
+    check("symbol-index cache sentinel rebuilds",
+          _s1_symbol_index(_ig)["exact"], {"A": 0x10})
+    _ig._s1_sym_index = {"exact": {"B": 0x20}, "short": {}}
+    check("a valid symbol-index cache is preserved",
+          _s1_symbol_index(_ig)["exact"], {"B": 0x20})
+
     if failures:
         print("[consumer-closure] SELF-TEST FAILED")
         for f in failures:
@@ -26977,7 +28781,10 @@ def self_test() -> int:
           f"condition is mutation-tested), and the site-address-bound "
           f"OPENSSL_atexit registration witness (positive shape, second-call "
           f"R1 control, constructor-store and computed-value refusals, each "
-          f"with its load-bearing mutation switch)")
+          f"with its load-bearing mutation switch), and the two E7-BS "
+          f"base-slot-partial witnesses (msblob closed descriptor table and "
+          f"rcu closed writer list; the required refusal controls are "
+          f"mutation/fixture-tested and residuals are recorded)")
     return 0
 
 
