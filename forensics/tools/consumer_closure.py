@@ -26537,6 +26537,19 @@ def load_boundaries(boundary_dir: Path) -> tuple[dict, dict]:
         except Exception:
             continue
         receipt = doc.get("receipt") or p.stem
+        # A receipt may supersede an earlier disposition for the same
+        # (file, kind, operation).  Both supported spellings are accepted: a
+        # bare list of boundary ids, and a list of {receipt, ids} objects (as in
+        # boundary-sweep-B67.json).  Supersession is receipt-scoped evidence and
+        # is attached to every boundary the receipt declares.
+        superseded_ids = set()
+        for item in doc.get("supersedes") or []:
+            if isinstance(item, str):
+                superseded_ids.add(item)
+            elif isinstance(item, dict):
+                for sid in item.get("ids") or []:
+                    if sid:
+                        superseded_ids.add(sid)
         for b in doc.get("boundaries") or []:
             rec = {
                 "receipt": receipt,
@@ -26549,6 +26562,14 @@ def load_boundaries(boundary_dir: Path) -> tuple[dict, dict]:
                 "operation": b.get("operation"),
                 "mechanism": b.get("mechanism"),
                 "disposition": b.get("disposition"),
+                # Whether this boundary's own disposition asserts a site-scoped
+                # discharge.  Identity + span hash alone are not a discharge: a
+                # boundary listed in a scoped-discharge row must also say
+                # SAFETY_DISCHARGED, otherwise a BLOCKED/ELIMINATED/CONTRACTED/
+                # RETAINED site would still discharge (B67-G1).
+                "disposition_discharges": (
+                    boundary_disposition_is_discharge(b.get("disposition"))),
+                "superseded_ids": sorted(superseded_ids),
                 "date": doc.get("date"),
                 "span_sha256": b.get("span_sha256"),
                 "span_schema": b.get("span_schema"),
@@ -27285,8 +27306,119 @@ def resolve_operation_at_line(repo, file, item, line, source_text=None,
     return dict(result)
 
 
+NON_DISCHARGING_DISPOSITIONS = ("BLOCKED", "ELIMINATED", "CONTRACTED",
+                               "RETAINED")
+
+# A disposition asserts a discharge only when, after leading whitespace, it
+# *begins* with the token SAFETY_DISCHARGED.  Substring matching is wrong:
+# "this is not SAFETY_DISCHARGED yet", "NOT_SAFETY_DISCHARGED" and
+# "SAFETY_DISCHARGED_PENDING" must not discharge.  \b requires the next
+# character to be a non-word character (underscore is a word character), so
+# the _PENDING suffix is rejected while ": ", " (" and end-of-string pass.
+DISCHARGE_DISPOSITION_PREFIX = re.compile(r"^\s*SAFETY_DISCHARGED\b")
+
+
+def boundary_disposition_is_discharge(disposition) -> bool:
+    return bool(DISCHARGE_DISPOSITION_PREFIX.match(disposition or ""))
+
+# Off by default.  A same-operation non-discharging disposition in another
+# receipt is a real evidence conflict, but enabling enforcement today would
+# withdraw 72 pre-existing discharges that never declared supersession (see
+# atlas-refresh/b67-g1-conflict-finding.json).  Detection is always on; only the
+# refusal is opt-in, so the tightening becomes available once each receipt
+# declares the conflicting boundary ids in `supersedes`.
+ENFORCE_DISPOSITION_CONFLICTS = False
+
+
+def summarize_disposition_conflicts(obligations, enforced: bool) -> dict:
+    """Compact, grouped diagnostic of same-operation disposition conflicts."""
+    grouped = collections.defaultdict(list)
+    obligation_count = 0
+    unresolved_obligation_count = 0
+    edge_count = 0
+    unresolved_count = 0
+    for o in obligations:
+        conflicts = o.get("disposition_conflicts") or []
+        if not conflicts:
+            continue
+        obligation_count += 1
+        unresolved_here = [c for c in conflicts if not c.get("superseded")]
+        if unresolved_here:
+            unresolved_obligation_count += 1
+        entry = {
+            "obligation": o.get("id"),
+            "file": o.get("file"),
+            "operation": o.get("item"),
+            "discharge_status": o.get("status"),
+            "unresolved": bool(unresolved_here),
+            "discharging_boundary": (conflicts[0].get("discharging_boundary")
+                                    or o.get("discharge_boundary_id")),
+            "conflicting_boundaries": [
+                {"boundary": c.get("boundary"),
+                 "receipt": c.get("receipt"),
+                 "keyword": c.get("keyword"),
+                 "superseded": bool(c.get("superseded"))}
+                for c in conflicts],
+        }
+        edge_count += len(conflicts)
+        unresolved_count += len(unresolved_here)
+        rid = (o.get("discharge_receipt")
+               or o.get("pending_discharge_receipt")
+               or "(no discharge)")
+        grouped[rid].append(entry)
+    return {
+        "enforced": bool(enforced),
+        "policy": (
+            "disposition gate: prefix-structured (^\\s*SAFETY_DISCHARGED\\b; "
+            "substring mentions and SAFETY_DISCHARGED_* reject).  conflict gate: "
+            + ("enforcing -- a same-operation non-discharging disposition in "
+               "another receipt refuses the scoped discharge "
+               "(conflicting-disposition)"
+               if enforced else
+               "diagnostic-only -- conflicts are recorded and never refuse or "
+               "change status; opt in with --enforce-disposition-conflicts (or "
+               "ENFORCE_DISPOSITION_CONFLICTS = True) once supersession is "
+               "declared")),
+        "obligation_count": obligation_count,
+        "unresolved_obligation_count": unresolved_obligation_count,
+        "conflict_edge_count": edge_count,
+        "unresolved_edge_count": unresolved_count,
+        "by_discharging_receipt": {
+            rid: sorted(entries, key=lambda e: (e["file"] or "",
+                                                e["obligation"] or ""))
+            for rid, entries in sorted(grouped.items())},
+    }
+
+
+def disposition_conflict_keyword(disposition):
+    """Return the non-discharging keyword a disposition asserts, if any.
+
+    A disposition that asserts SAFETY_DISCHARGED is never a conflict: it is the
+    operative discharge the site is being admitted against.  Only the explicitly
+    enumerated non-discharging states conflict; an absent or otherwise unusual
+    disposition does not, by itself, block a discharge.  This is the conservative
+    reading -- the gate only refuses a site when another receipt positively says
+    the same operation is not discharged.
+    """
+    if not disposition or boundary_disposition_is_discharge(disposition):
+        return None
+    for keyword in NON_DISCHARGING_DISPOSITIONS:
+        if keyword in disposition:
+            return keyword
+    return None
+
+
+def boundary_operation_key(boundary: dict) -> tuple:
+    """The (file, kind, operation) identity a boundary disposition is about."""
+    return (boundary.get("file"), boundary.get("kind"),
+            boundary.get("operation"))
+
+
 def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
-               plane: dict, repo=None, allow_worktree_span=False) -> dict:
+               plane: dict, repo=None, allow_worktree_span=False,
+               enforce_conflicts=None) -> dict:
+    if enforce_conflicts is None:
+        enforce_conflicts = ENFORCE_DISPOSITION_CONFLICTS
     repo = repo if repo is not None else _repo_root()
     mechanism = obligation["mechanism"]
     state = mechanisms.get(mechanism, {}).get("state") if mechanism else None
@@ -27334,6 +27466,8 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
     scoped_attempt = []
     stale_rejections = []
     span_rejections = []
+    disposition_rejections = []
+    conflict_rejections = []
     current_line = (obligation.get("current_census_line")
                     if isinstance(obligation.get("current_census_line"), int)
                     else obligation["line"])
@@ -27472,34 +27606,100 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
             "content_address_accepts": content_accepts,
         })
         if content_accepts:
-            obligation["status"] = "DISCHARGED"
-            obligation["discharge_receipt"] = rec.get("receipt") or rec.get("artifact")
-            obligation["status_reason"] = (
-                f"boundary {b['id']} is scoped-SAFETY_DISCHARGED; the operation "
-                f"is bound to the boundary site by {binding} "
-                f"({obligation['file']}, {obligation.get('kind')}, "
-                f"{boundary_span['qualified_identity']}, lines "
-                f"{boundary_span['start_line']}-"
-                f"{boundary_span['end_line']}) and its recorded span hash "
-                f"matches the current content ({boundary_span['sha256'][:16]}, "
-                f"source {boundary_span['source']['source']}); the declared "
-                f"coordinate {current_line} is not part of acceptance")
-            obligation["span_discharge"] = {
-                "sha256": boundary_span["sha256"],
-                "start_line": boundary_span["start_line"],
-                "end_line": boundary_span["end_line"],
-                "qualified_identity": boundary_span["qualified_identity"],
-                "obligation_qualified_identity": (obligation_span or {}).get(
-                    "qualified_identity"),
-                "binding": binding,
-                "resolution": boundary_span["resolution"],
-                "source": boundary_span["source"],
-                "normalisation": SPAN_NORMALISATION,
-                "claim_scope": SPAN_CLAIM_SCOPE,
-                "schema": SPAN_HASH_SCHEMA,
-            }
-            obligation["scoped_discharge_attempts"] = scoped_attempt
-            return obligation
+            # Identity + content hash are necessary, but the boundary's own
+            # disposition must also assert a discharge.  A boundary merely
+            # listed in a scoped-discharge row whose disposition says BLOCKED
+            # (or ELIMINATED/CONTRACTED/RETAINED) establishes nothing (B67-G1).
+            if not b.get("disposition_discharges"):
+                disposition_rejections.append({
+                    "boundary": b["id"],
+                    "receipt": rec.get("receipt") or rec.get("artifact"),
+                    "boundary_operation": b.get("operation"),
+                    "operation": obligation.get("item"),
+                    "classification": "disposition-is-not-safety-discharged",
+                    "disposition": b.get("disposition"),
+                    "detail": (
+                        "the boundary is listed in a scoped discharge row, but "
+                        "its own disposition does not assert SAFETY_DISCHARGED"),
+                })
+            else:
+                # Detect, always, a same-operation non-discharging disposition in
+                # another receipt.  Enforcement is opt-in: with the corpus as it
+                # stands, refusing these would withdraw 72 pre-existing
+                # discharges whose receipts never declared supersession.  The
+                # finding is recorded on the obligation either way.
+                conflicts = []
+                for other in boundaries:
+                    if other is b:
+                        continue
+                    if boundary_operation_key(other) != boundary_operation_key(b):
+                        continue
+                    keyword = disposition_conflict_keyword(
+                        other.get("disposition"))
+                    if keyword is None:
+                        continue
+                    conflicts.append({
+                        "discharging_boundary": b["id"],
+                        "boundary": other.get("id"),
+                        "receipt": other.get("receipt"),
+                        "disposition": other.get("disposition"),
+                        "keyword": keyword,
+                        "superseded": other.get("id") in (
+                            b.get("superseded_ids") or []),
+                    })
+                unresolved = [c for c in conflicts if not c["superseded"]]
+                if conflicts:
+                    obligation["disposition_conflicts"] = conflicts
+                    # The boundary being refused is still the pending discharge
+                    # candidate; keep its receipt so the diagnostic groups under
+                    # the real receipt rather than "(no discharge)".
+                    obligation["pending_discharge_receipt"] = (
+                        rec.get("receipt") or rec.get("artifact"))
+                if unresolved and enforce_conflicts:
+                    conflict_rejections.append({
+                        "boundary": b["id"],
+                        "receipt": rec.get("receipt") or rec.get("artifact"),
+                        "boundary_operation": b.get("operation"),
+                        "operation": obligation.get("item"),
+                        "classification": "conflicting-disposition",
+                        "conflicts": conflicts,
+                        "detail": (
+                            "another boundary for the same "
+                            "(file, kind, operation) records a non-discharging "
+                            "disposition, and the discharging receipt does not "
+                            "declare that boundary in supersedes"),
+                    })
+                else:
+                    obligation["status"] = "DISCHARGED"
+                    obligation["discharge_receipt"] = (rec.get("receipt")
+                                                       or rec.get("artifact"))
+                    obligation["discharge_boundary_id"] = b["id"]
+                    obligation["status_reason"] = (
+                        f"boundary {b['id']} is scoped-SAFETY_DISCHARGED; the operation "
+                        f"is bound to the boundary site by {binding} "
+                        f"({obligation['file']}, {obligation.get('kind')}, "
+                        f"{boundary_span['qualified_identity']}, lines "
+                        f"{boundary_span['start_line']}-"
+                        f"{boundary_span['end_line']}) and its recorded span hash "
+                        f"matches the current content ({boundary_span['sha256'][:16]}, "
+                        f"source {boundary_span['source']['source']}); the declared "
+                        f"coordinate {current_line} is not part of acceptance")
+                    obligation["span_discharge"] = {
+                        "sha256": boundary_span["sha256"],
+                        "start_line": boundary_span["start_line"],
+                        "end_line": boundary_span["end_line"],
+                        "qualified_identity": boundary_span["qualified_identity"],
+                        "obligation_qualified_identity": (obligation_span or {}).get(
+                            "qualified_identity"),
+                        "binding": binding,
+                        "resolution": boundary_span["resolution"],
+                        "source": boundary_span["source"],
+                        "normalisation": SPAN_NORMALISATION,
+                        "claim_scope": SPAN_CLAIM_SCOPE,
+                        "schema": SPAN_HASH_SCHEMA,
+                    }
+                    obligation["scoped_discharge_attempts"] = scoped_attempt
+                    return obligation
         if item_match and span_classification is not None:
             # A refusal that names the same last component (including a
             # same-file sibling or a hash refusal) is recorded, not hidden.
@@ -27549,6 +27749,36 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
         obligation["span_discharge_rejections"] = span_rejections
     if stale_rejections:
         obligation["stale_discharge_rejections"] = stale_rejections
+    if disposition_rejections:
+        obligation["disposition_discharge_rejections"] = disposition_rejections
+        first = disposition_rejections[0]
+        obligation["status"] = "BLOCKED"
+        obligation["discharge_receipt"] = None
+        obligation["status_reason"] = (
+            "scoped discharge refused: boundary "
+            f"{first['boundary']} is listed in a scoped discharge row, but its "
+            f"disposition {first.get('disposition')!r} does not assert "
+            "SAFETY_DISCHARGED (disposition-is-not-safety-discharged)")
+        return obligation
+    if conflict_rejections:
+        obligation["conflict_discharge_rejections"] = conflict_rejections
+        first = conflict_rejections[0]
+        unresolved = [c for c in first["conflicts"] if not c["superseded"]]
+        names = ", ".join(
+            f"{c['boundary']} ({c['receipt']}, {c['keyword']})"
+            for c in unresolved[:8])
+        obligation["status"] = "BLOCKED"
+        obligation["discharge_receipt"] = None
+        obligation["status_reason"] = (
+            "scoped discharge refused: boundary "
+            f"{first['boundary']} would discharge "
+            f"({obligation['file']}, {obligation.get('kind')}, "
+            f"{obligation.get('item')!r}), but the same operation carries a "
+            f"non-discharging disposition in another boundary: {names}; the "
+            "discharging receipt does not declare that boundary in supersedes "
+            "(conflicting-disposition)")
+        return obligation
+    if stale_rejections:
         first = stale_rejections[0]
         obligation["status"] = "BLOCKED"
         obligation["discharge_receipt"] = None
@@ -27868,6 +28098,7 @@ def build_receipt(args) -> dict:
     repo = Path(args.repo).resolve()
     tool_identity = _tool_identity()
     tool_sha = tool_identity["sha256"]
+    enforce_conflicts = bool(getattr(args, "enforce_disposition_conflicts", False))
     install = (repo / args.install).resolve()
     _EVIDENCE_ENV["repo"] = str(repo)
     _EVIDENCE_ENV["install"] = str(install)
@@ -28289,7 +28520,7 @@ def build_receipt(args) -> dict:
         o["status_reason"] = None
     for o in obligations:
         adjudicate(o, mechanisms, boundaries_by_file.get(o["file"], []), plane,
-                   repo=repo)
+                   repo=repo, enforce_conflicts=enforce_conflicts)
         if o.get("contract") == "contracted":
             if o.get("status") == "DISCHARGED":
                 # The queue note explains why a documented operation stayed
@@ -29253,6 +29484,11 @@ def build_receipt(args) -> dict:
             },
         },
         "obligations": obligations,
+        # Diagnostic (and, with the opt-in flag, enforcing) same-operation
+        # disposition conflicts.  Always present so every future receipt
+        # surfaces the B67-G1 class of conflict even while it is non-enforcing.
+        "disposition_conflicts": summarize_disposition_conflicts(
+            obligations, enforce_conflicts),
         "documented_enrollment": enrollment,
         "enrolment_source": (enrollment.get("supplementary_enrolment")
                              or enrolment_source),
@@ -29953,10 +30189,16 @@ def self_test() -> int:
         if current is not None:
             rec["current_census_line"] = current
         return rec
-    def bound(file, kind, operation, disposition, span_sha256=None, line=None):
+    def bound(file, kind, operation, disposition, span_sha256=None, line=None,
+              receipt=None, superseded_ids=None):
         rec = {"id": "B23-WPKT-1", "file": file, "kind": kind,
                "operation": operation, "disposition": disposition,
+               "disposition_discharges":
+                   boundary_disposition_is_discharge(disposition),
+               "superseded_ids": sorted(superseded_ids or []),
                "span_sha256": span_sha256}
+        if receipt is not None:
+            rec["receipt"] = receipt
         if line is not None:
             rec["line"] = line
         return rec
@@ -30085,6 +30327,171 @@ def self_test() -> int:
     check("stale range does not discharge a hashless drifted coordinate",
           (stale_ob["status"], bool(stale_ob.get("stale_discharge_rejections"))),
           ("BLOCKED", True))
+
+    # ---- B67-G1 disposition gates ----------------------------------------- #
+    # Every fixture goes through the real load_boundaries path so the parsed
+    # disposition flag and the receipt-level supersedes list are exercised.
+    import tempfile
+    fixture_dirs = []
+
+    def _scenario(files):
+        _td = tempfile.TemporaryDirectory()
+        fixture_dirs.append(_td)
+        _d = Path(_td.name)
+        for _name, _doc in files.items():
+            (_d / _name).write_text(json.dumps(_doc))
+        _bf, _ = load_boundaries(_d)
+        return _bf["src/ssl/x.rs"]
+
+    def _sweep(id_, disposition, span, operation="f"):
+        return {"id": id_, "file": "src/ssl/x.rs", "kind": "UNSAFE_FN_DEF",
+                "operation": operation, "disposition": disposition,
+                "span_sha256": span}
+
+    def _plane(id_, receipt):
+        return {"mechanism_discharges": {},
+                "scoped_boundary_discharges": {id_: {"receipt": receipt}},
+                "err_scope": {}}
+
+    # (a) listed in a discharged row, but the boundary's own disposition is
+    # BLOCKED: it must not discharge, and the refusal must be named.
+    a_bounds = _scenario({"boundary-sweep-BDA.json": {
+        "receipt": "sweep-a",
+        "boundaries": [_sweep("D-BLOCKED", "BLOCKED", hash_f)]}})
+    a_res = adjudicate(ob("src/ssl/x.rs", 1, "SSL_SESSION"), mechs, a_bounds,
+                       _plane("D-BLOCKED", "sweep-a"), repo=span_repo,
+                       allow_worktree_span=True)
+    check("a: a BLOCKED disposition never discharges",
+          (a_res["status"],
+           (a_res.get("disposition_discharge_rejections") or [{}])[0].get(
+               "classification")),
+          ("BLOCKED", "disposition-is-not-safety-discharged"))
+
+    # (b) positive control: an explicit SAFETY_DISCHARGED disposition discharges.
+    b_bounds = _scenario({"boundary-sweep-BDB.json": {
+        "receipt": "sweep-b",
+        "boundaries": [_sweep(
+            "D-OK", "SAFETY_DISCHARGED (scope: src/ssl/x.rs:1-20)", hash_f)]}})
+    b_res = adjudicate(ob("src/ssl/x.rs", 1, "SSL_SESSION"), mechs, b_bounds,
+                       _plane("D-OK", "sweep-b"), repo=span_repo,
+                       allow_worktree_span=True)
+    check("b: an explicit SAFETY_DISCHARGED disposition discharges",
+          b_res["status"], "DISCHARGED")
+
+    # (c) the same operation carries a conflicting BLOCKED boundary with no
+    # supersession.  By default this is diagnostic-only: the conflict is still
+    # recorded, but the status is unchanged.  The opt-in enforcement refuses.
+    c_bounds = _scenario({
+        "boundary-sweep-BDC.json": {
+            "receipt": "sweep-c",
+            "boundaries": [_sweep(
+                "D-CONFLICT", "SAFETY_DISCHARGED (scope: src/ssl/x.rs:1-20)",
+                hash_f)]},
+        "d-conflict-sites.json": {
+            "kind": SITE_RECEIPT_KIND, "receipt": "site-c",
+            "boundaries": [_sweep("D-FOE", "BLOCKED", None)]}})
+    c_plane = _plane("D-CONFLICT", "sweep-c")
+    c_res = adjudicate(ob("src/ssl/x.rs", 1, "SSL_SESSION"), mechs, c_bounds,
+                       c_plane, repo=span_repo, allow_worktree_span=True)
+    check("c: an unexplained conflict is diagnostic-only by default",
+          (c_res["status"],
+           bool(c_res.get("disposition_conflicts")),
+           (c_res.get("disposition_conflicts") or [{}])[0].get("boundary")),
+          ("DISCHARGED", True, "D-FOE"))
+    c_enforced = adjudicate(ob("src/ssl/x.rs", 1, "SSL_SESSION"), mechs,
+                            c_bounds, c_plane, repo=span_repo,
+                            allow_worktree_span=True, enforce_conflicts=True)
+    check("c: opt-in enforcement refuses the conflict",
+          (c_enforced["status"],
+           (c_enforced.get("conflict_discharge_rejections") or [{}])[0].get(
+               "classification")),
+          ("BLOCKED", "conflicting-disposition"))
+
+    # (d) the same conflict, superseded by the discharging receipt.  Both
+    # supported supersedes spellings are exercised: a bare id list, and a
+    # {receipt, ids} object (as in boundary-sweep-B67.json).
+    for label, supersedes, foe_id in (
+            ("bare-ids", ["D-FOE"], "D-FOE"),
+            ("receipt-ids", [{"receipt": "site-d", "ids": ["D-FOE2"]}],
+             "D-FOE2")):
+        d_bounds = _scenario({
+            "boundary-sweep-BDD.json": {
+                "receipt": "sweep-d", "supersedes": supersedes,
+                "boundaries": [_sweep(
+                    "D-CONFLICT",
+                    "SAFETY_DISCHARGED (scope: src/ssl/x.rs:1-20)", hash_f)]},
+            "d-supersede-sites.json": {
+                "kind": SITE_RECEIPT_KIND, "receipt": "site-d",
+                "boundaries": [_sweep(foe_id, "BLOCKED", None)]}})
+        d_res = adjudicate(ob("src/ssl/x.rs", 1, "SSL_SESSION"), mechs,
+                           d_bounds, _plane("D-CONFLICT", "sweep-d"),
+                           repo=span_repo, allow_worktree_span=True)
+        check(f"d/{label}: a superseded conflict discharges (diagnostic records it)",
+              (d_res["status"],
+               bool(d_res.get("disposition_conflicts")),
+               all(x.get("superseded")
+                   for x in d_res.get("disposition_conflicts") or [])),
+              ("DISCHARGED", True, True))
+        d_enforced = adjudicate(ob("src/ssl/x.rs", 1, "SSL_SESSION"), mechs,
+                                d_bounds, _plane("D-CONFLICT", "sweep-d"),
+                                repo=span_repo, allow_worktree_span=True,
+                                enforce_conflicts=True)
+        check(f"d/{label}: a superseded conflict discharges under enforcement",
+              d_enforced["status"], "DISCHARGED")
+
+    # (e) regression: a span-hash mismatch still refuses.
+    e_bounds = _scenario({"boundary-sweep-BDE.json": {
+        "receipt": "sweep-e",
+        "boundaries": [_sweep(
+            "D-HASH", "SAFETY_DISCHARGED (scope: src/ssl/x.rs:1-20)",
+            "0" * 64)]}})
+    e_res = adjudicate(ob("src/ssl/x.rs", 1, "SSL_SESSION"), mechs, e_bounds,
+                       _plane("D-HASH", "sweep-e"), repo=span_repo,
+                       allow_worktree_span=True)
+    check("e: a span-hash mismatch still refuses",
+          (e_res["status"],
+           (e_res.get("span_discharge_rejections") or [{}])[0].get(
+               "classification")),
+          ("BLOCKED", "span-hash-mismatch"))
+
+    # (f) regression: an identity mismatch still refuses.
+    f_bounds = _scenario({"boundary-sweep-BDF.json": {
+        "receipt": "sweep-f",
+        "boundaries": [_sweep(
+            "D-IDENTITY", "SAFETY_DISCHARGED (scope: src/ssl/x.rs:1-20)",
+            hash_f, operation="g")]}})
+    f_res = adjudicate(ob("src/ssl/x.rs", 1, "SSL_SESSION"), mechs, f_bounds,
+                       _plane("D-IDENTITY", "sweep-f"), repo=span_repo,
+                       allow_worktree_span=True)
+    check("f: an identity mismatch still refuses", f_res["status"], "BLOCKED")
+
+    # (g) structured disposition prefix.  A substring mention and the
+    # SAFETY_DISCHARGED_* suffix must not discharge; the documented ":" and
+    # " (scope:" forms must.  Both the predicate and the adjudication path are
+    # exercised, so the fixtures are load-bearing.
+    for disposition, want in (
+            ("this is not SAFETY_DISCHARGED yet", False),
+            ("NOT_SAFETY_DISCHARGED", False),
+            ("SAFETY_DISCHARGED_PENDING", False),
+            ("SAFETY_DISCHARGED: src/ssl/x.rs:1-20", True),
+            ("SAFETY_DISCHARGED (scope: src/ssl/x.rs:1-20)", True)):
+        check(f"structured predicate {disposition!r}",
+              boundary_disposition_is_discharge(disposition), want)
+        s_bounds = _scenario({"boundary-sweep-BDG.json": {
+            "receipt": "sweep-g",
+            "boundaries": [_sweep("D-STRUCT", disposition, hash_f)]}})
+        s_res = adjudicate(ob("src/ssl/x.rs", 1, "SSL_SESSION"), mechs,
+                           s_bounds, _plane("D-STRUCT", "sweep-g"),
+                           repo=span_repo, allow_worktree_span=True)
+        check(f"structured adjudication {disposition!r}",
+              (s_res["status"],
+               (s_res.get("disposition_discharge_rejections") or [{}])[0].get(
+                   "classification")),
+              ("DISCHARGED" if want else "BLOCKED",
+               None if want else "disposition-is-not-safety-discharged"))
+
+    for _td in fixture_dirs:
+        _td.cleanup()
     span_td.cleanup()
     clear_span_cache()
     check("scoped range parser", scoped_ranges(
@@ -34323,6 +34730,15 @@ def main(argv=None) -> int:
         "--no-carry-forward", action="store_true",
         help="control only: do not carry forward a previous closure (the queue is "
              "then not monotone under documentation edits)")
+    ap.add_argument(
+        "--enforce-disposition-conflicts", action="store_true",
+        help="opt in: refuse a scoped discharge when another receipt records a "
+             "same-operation non-discharging disposition and the discharging "
+             "receipt does not declare it in supersedes.  Off by default while "
+             "the corpus lacks those declarations: enabling it would withdraw "
+             "72 pre-existing discharges (atlas-refresh/"
+             "b67-g1-conflict-finding.json).  Conflicts are always reported in "
+             "the receipt's disposition_conflicts section")
     ap.add_argument(
         "--enrolment-blockers", default=None,
         help="explicit supplementary admission source (the callback-enumeration "
