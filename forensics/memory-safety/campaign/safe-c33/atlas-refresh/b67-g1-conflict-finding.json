@@ -1,0 +1,2197 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/disposition-conflict-finding/v1",
+  "kind": "disposition-conflict-finding",
+  "defect": "B67-G1",
+  "date": "2026-11-08",
+  "tool": {
+    "path": "forensics/tools/consumer_closure.py",
+    "sha256": "b13ebd6e5fa4afc1acdc4a477b2b9a556e7182d6e34bb744f655809159b04039",
+    "disposition_gate": "enforcing and prefix-structured: after leading whitespace the disposition must begin with SAFETY_DISCHARGED followed by end-of-string or a non-word character (^\\s*SAFETY_DISCHARGED\\b); substring mentions, NOT_SAFETY_DISCHARGED and SAFETY_DISCHARGED_PENDING refuse with disposition-is-not-safety-discharged",
+    "conflict_gate": "diagnostic-only by default: same-operation non-discharging dispositions are recorded in disposition_conflicts and never refuse or change status; enforcement is opt-in via ENFORCE_DISPOSITION_CONFLICTS=True or --enforce-disposition-conflicts and is not safe until supersession is declared"
+  },
+  "source": {
+    "closure_receipt": "evidence/closure-ssh-b67-io.json",
+    "closure_sha256": "9cd659713f8952854c1d4c8f1f33fa68d5087590229a5d4131961dff93afbbc0",
+    "probe": "court/tmp/b67_after_enforced.json",
+    "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0"
+  },
+  "summary": {
+    "obligation_count": 72,
+    "conflict_edge_count": 85,
+    "by_discharging_receipt": {
+      "boundary-sweep-B45": 9,
+      "boundary-sweep-B48": 19,
+      "boundary-sweep-B49": 16,
+      "boundary-sweep-B50": 11,
+      "boundary-sweep-B51": 8,
+      "boundary-sweep-B52": 9
+    },
+    "conflict_keywords": {
+      "BLOCKED": 85
+    }
+  },
+  "consequence": "the conflict gate, when enabled, would withdraw these 72 pre-existing discharges (188 -> 116 DISCHARGED, 190 -> 262 BLOCKED); it is therefore diagnostic-only until supersession is declared.  The diagnostic default leaves the statuses unchanged at 188/190/0 and reports 74 obligations with detected conflicts (72 unresolved here plus B67's 2 superseded).",
+  "required_resolution": {
+    "rule": "Each of the six discharging receipts below must declare `supersedes` for every named conflicting boundary id (or an equivalent reviewed supersession record).  The declaration must be reviewed; until then the conflict remains diagnostic-only and these discharges stand.",
+    "by_discharging_receipt": {
+      "boundary-sweep-B45": {
+        "requirement": "boundary-sweep-B45 must declare `supersedes` for every listed boundary id (or an equivalent reviewed supersession record) before the conflict gate can be enabled; the declaration must be reviewed and must state why the newer SAFETY_DISCHARGED disposition is operative",
+        "conflicting_receipts": [
+          "p25-engine-callback-sites"
+        ],
+        "conflicting_boundary_ids": [
+          "P25-ENGINE-CB-001",
+          "P25-ENGINE-CB-002",
+          "P25-ENGINE-CB-003",
+          "P25-ENGINE-CB-004",
+          "P25-ENGINE-CB-005",
+          "P25-ENGINE-CB-006",
+          "P25-ENGINE-CB-007",
+          "P25-ENGINE-CB-008",
+          "P25-ENGINE-CB-009"
+        ],
+        "id_count": 9
+      },
+      "boundary-sweep-B48": {
+        "requirement": "boundary-sweep-B48 must declare `supersedes` for every listed boundary id (or an equivalent reviewed supersession record) before the conflict gate can be enabled; the declaration must be reviewed and must state why the newer SAFETY_DISCHARGED disposition is operative",
+        "conflicting_receipts": [
+          "openssh-v1i",
+          "openssh-v1j",
+          "p25-evp-legacy-md-init-sites"
+        ],
+        "conflicting_boundary_ids": [
+          "OSSH-V1I-031",
+          "OSSH-V1I-032",
+          "OSSH-V1I-033",
+          "OSSH-V1I-034",
+          "OSSH-V1I-035",
+          "OSSH-V1I-037",
+          "OSSH-V1I-038",
+          "OSSH-V1I-040",
+          "OSSH-V1I-041",
+          "OSSH-V1I-043",
+          "OSSH-V1I-044",
+          "OSSH-V1I-046",
+          "OSSH-V1I-048",
+          "OSSH-V1J-001",
+          "OSSH-V1J-002",
+          "OSSH-V1J-003",
+          "OSSH-V1J-004",
+          "OSSH-V1J-005",
+          "OSSH-V1J-007",
+          "OSSH-V1J-008",
+          "OSSH-V1J-010",
+          "OSSH-V1J-011",
+          "OSSH-V1J-013",
+          "OSSH-V1J-014",
+          "OSSH-V1J-016",
+          "OSSH-V1J-018",
+          "P25-EVP-LEGACY-MD-002",
+          "P25-EVP-LEGACY-MD-003",
+          "P25-EVP-LEGACY-MD-005",
+          "P25-EVP-LEGACY-MD-006",
+          "P25-EVP-LEGACY-MD-008",
+          "P25-EVP-LEGACY-MD-009"
+        ],
+        "id_count": 32
+      },
+      "boundary-sweep-B49": {
+        "requirement": "boundary-sweep-B49 must declare `supersedes` for every listed boundary id (or an equivalent reviewed supersession record) before the conflict gate can be enabled; the declaration must be reviewed and must state why the newer SAFETY_DISCHARGED disposition is operative",
+        "conflicting_receipts": [
+          "p25-x509-v3-ext-slots-sites"
+        ],
+        "conflicting_boundary_ids": [
+          "P25-X509-V3-SLOT-001",
+          "P25-X509-V3-SLOT-002",
+          "P25-X509-V3-SLOT-003",
+          "P25-X509-V3-SLOT-015",
+          "P25-X509-V3-SLOT-019",
+          "P25-X509-V3-SLOT-025",
+          "P25-X509-V3-SLOT-033",
+          "P25-X509-V3-SLOT-035",
+          "P25-X509-V3-SLOT-036",
+          "P25-X509-V3-SLOT-040",
+          "P25-X509-V3-SLOT-046",
+          "P25-X509-V3-SLOT-049",
+          "P25-X509-V3-SLOT-050",
+          "P25-X509-V3-SLOT-056",
+          "P25-X509-V3-SLOT-060",
+          "P25-X509-V3-SLOT-062"
+        ],
+        "id_count": 16
+      },
+      "boundary-sweep-B50": {
+        "requirement": "boundary-sweep-B50 must declare `supersedes` for every listed boundary id (or an equivalent reviewed supersession record) before the conflict gate can be enabled; the declaration must be reviewed and must state why the newer SAFETY_DISCHARGED disposition is operative",
+        "conflicting_receipts": [
+          "p25-x509-v3-ext-slots-sites"
+        ],
+        "conflicting_boundary_ids": [
+          "P25-X509-V3-SLOT-016",
+          "P25-X509-V3-SLOT-021",
+          "P25-X509-V3-SLOT-023",
+          "P25-X509-V3-SLOT-027",
+          "P25-X509-V3-SLOT-031",
+          "P25-X509-V3-SLOT-038",
+          "P25-X509-V3-SLOT-042",
+          "P25-X509-V3-SLOT-052",
+          "P25-X509-V3-SLOT-055",
+          "P25-X509-V3-SLOT-058",
+          "P25-X509-V3-SLOT-063"
+        ],
+        "id_count": 11
+      },
+      "boundary-sweep-B51": {
+        "requirement": "boundary-sweep-B51 must declare `supersedes` for every listed boundary id (or an equivalent reviewed supersession record) before the conflict gate can be enabled; the declaration must be reviewed and must state why the newer SAFETY_DISCHARGED disposition is operative",
+        "conflicting_receipts": [
+          "p25-x509-v3-ext-slots-sites"
+        ],
+        "conflicting_boundary_ids": [
+          "P25-X509-V3-SLOT-007",
+          "P25-X509-V3-SLOT-009",
+          "P25-X509-V3-SLOT-018",
+          "P25-X509-V3-SLOT-030",
+          "P25-X509-V3-SLOT-034",
+          "P25-X509-V3-SLOT-045",
+          "P25-X509-V3-SLOT-048",
+          "P25-X509-V3-SLOT-061"
+        ],
+        "id_count": 8
+      },
+      "boundary-sweep-B52": {
+        "requirement": "boundary-sweep-B52 must declare `supersedes` for every listed boundary id (or an equivalent reviewed supersession record) before the conflict gate can be enabled; the declaration must be reviewed and must state why the newer SAFETY_DISCHARGED disposition is operative",
+        "conflicting_receipts": [
+          "p25-x509-v3-ext-slots-sites"
+        ],
+        "conflicting_boundary_ids": [
+          "P25-X509-V3-SLOT-022",
+          "P25-X509-V3-SLOT-024",
+          "P25-X509-V3-SLOT-028",
+          "P25-X509-V3-SLOT-032",
+          "P25-X509-V3-SLOT-039",
+          "P25-X509-V3-SLOT-043",
+          "P25-X509-V3-SLOT-053",
+          "P25-X509-V3-SLOT-059",
+          "P25-X509-V3-SLOT-064"
+        ],
+        "id_count": 9
+      }
+    }
+  },
+  "obligations": {
+    "boundary-sweep-B45": [
+      {
+        "id": "V1:src/engine/tb_asnmth.rs:79:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/engine/tb_asnmth.rs",
+        "line": 79,
+        "operation": "engine_unregister_all_pkey_asn1_meths",
+        "discharging_boundary": "B45-ENG-CB-001",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-ENGINE-CB-001",
+            "conflicting_receipt": "p25-engine-callback-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/engine/tb_cipher.rs:62:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/engine/tb_cipher.rs",
+        "line": 62,
+        "operation": "engine_unregister_all_ciphers",
+        "discharging_boundary": "B45-ENG-CB-002",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-ENGINE-CB-002",
+            "conflicting_receipt": "p25-engine-callback-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/engine/tb_dh.rs:58:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/engine/tb_dh.rs",
+        "line": 58,
+        "operation": "engine_unregister_all_dh",
+        "discharging_boundary": "B45-ENG-CB-003",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-ENGINE-CB-003",
+            "conflicting_receipt": "p25-engine-callback-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/engine/tb_digest.rs:73:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/engine/tb_digest.rs",
+        "line": 73,
+        "operation": "engine_unregister_all_digests",
+        "discharging_boundary": "B45-ENG-CB-004",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-ENGINE-CB-004",
+            "conflicting_receipt": "p25-engine-callback-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/engine/tb_dsa.rs:58:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/engine/tb_dsa.rs",
+        "line": 58,
+        "operation": "engine_unregister_all_dsa",
+        "discharging_boundary": "B45-ENG-CB-005",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-ENGINE-CB-005",
+            "conflicting_receipt": "p25-engine-callback-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/engine/tb_eckey.rs:58:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/engine/tb_eckey.rs",
+        "line": 58,
+        "operation": "engine_unregister_all_ec",
+        "discharging_boundary": "B45-ENG-CB-006",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-ENGINE-CB-006",
+            "conflicting_receipt": "p25-engine-callback-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/engine/tb_pkmeth.rs:60:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/engine/tb_pkmeth.rs",
+        "line": 60,
+        "operation": "engine_unregister_all_pkey_meths",
+        "discharging_boundary": "B45-ENG-CB-007",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-ENGINE-CB-007",
+            "conflicting_receipt": "p25-engine-callback-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/engine/tb_rand.rs:58:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/engine/tb_rand.rs",
+        "line": 58,
+        "operation": "engine_unregister_all_rand",
+        "discharging_boundary": "B45-ENG-CB-008",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-ENGINE-CB-008",
+            "conflicting_receipt": "p25-engine-callback-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/engine/tb_rsa.rs:59:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/engine/tb_rsa.rs",
+        "line": 59,
+        "operation": "engine_unregister_all_rsa",
+        "discharging_boundary": "B45-ENG-CB-009",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-ENGINE-CB-009",
+            "conflicting_receipt": "p25-engine-callback-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      }
+    ],
+    "boundary-sweep-B48": [
+      {
+        "id": "V1:src/evp/legacy_md4.rs:191:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_md4.rs",
+        "line": 191,
+        "operation": "md4_update",
+        "discharging_boundary": "B48-MD4-001",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-EVP-LEGACY-MD-002",
+            "conflicting_receipt": "p25-evp-legacy-md-init-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_md4.rs:198:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_md4.rs",
+        "line": 198,
+        "operation": "md4_final",
+        "discharging_boundary": "B48-MD4-002",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-EVP-LEGACY-MD-003",
+            "conflicting_receipt": "p25-evp-legacy-md-init-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_ripemd.rs:192:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_ripemd.rs",
+        "line": 192,
+        "operation": "ripe_update",
+        "discharging_boundary": "B48-RIPE-001",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-EVP-LEGACY-MD-005",
+            "conflicting_receipt": "p25-evp-legacy-md-init-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_ripemd.rs:199:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_ripemd.rs",
+        "line": 199,
+        "operation": "ripe_final",
+        "discharging_boundary": "B48-RIPE-002",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-EVP-LEGACY-MD-006",
+            "conflicting_receipt": "p25-evp-legacy-md-init-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_sha.rs:262:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_sha.rs",
+        "line": 262,
+        "operation": "sha1_update",
+        "discharging_boundary": "B48-SHA-001",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "OSSH-V1I-031",
+            "conflicting_receipt": "openssh-v1i",
+            "conflict_keyword": "BLOCKED"
+          },
+          {
+            "conflicting_boundary": "OSSH-V1J-001",
+            "conflicting_receipt": "openssh-v1j",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_sha.rs:269:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_sha.rs",
+        "line": 269,
+        "operation": "sha1_final",
+        "discharging_boundary": "B48-SHA-002",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "OSSH-V1I-032",
+            "conflicting_receipt": "openssh-v1i",
+            "conflict_keyword": "BLOCKED"
+          },
+          {
+            "conflicting_boundary": "OSSH-V1J-002",
+            "conflicting_receipt": "openssh-v1j",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_sha.rs:277:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_sha.rs",
+        "line": 277,
+        "operation": "sha1_int_ctrl",
+        "discharging_boundary": "B48-SHA-003",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "OSSH-V1I-033",
+            "conflicting_receipt": "openssh-v1i",
+            "conflict_keyword": "BLOCKED"
+          },
+          {
+            "conflicting_boundary": "OSSH-V1J-003",
+            "conflicting_receipt": "openssh-v1j",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_sha.rs:324:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_sha.rs",
+        "line": 324,
+        "operation": "sha224_update",
+        "discharging_boundary": "B48-SHA-004",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "OSSH-V1I-034",
+            "conflicting_receipt": "openssh-v1i",
+            "conflict_keyword": "BLOCKED"
+          },
+          {
+            "conflicting_boundary": "OSSH-V1J-004",
+            "conflicting_receipt": "openssh-v1j",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_sha.rs:330:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_sha.rs",
+        "line": 330,
+        "operation": "sha224_final",
+        "discharging_boundary": "B48-SHA-005",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "OSSH-V1I-035",
+            "conflicting_receipt": "openssh-v1i",
+            "conflict_keyword": "BLOCKED"
+          },
+          {
+            "conflicting_boundary": "OSSH-V1J-005",
+            "conflicting_receipt": "openssh-v1j",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_sha.rs:360:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_sha.rs",
+        "line": 360,
+        "operation": "sha256_update",
+        "discharging_boundary": "B48-SHA-006",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "OSSH-V1I-037",
+            "conflicting_receipt": "openssh-v1i",
+            "conflict_keyword": "BLOCKED"
+          },
+          {
+            "conflicting_boundary": "OSSH-V1J-007",
+            "conflicting_receipt": "openssh-v1j",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_sha.rs:366:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_sha.rs",
+        "line": 366,
+        "operation": "sha256_final",
+        "discharging_boundary": "B48-SHA-007",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "OSSH-V1I-038",
+            "conflicting_receipt": "openssh-v1i",
+            "conflict_keyword": "BLOCKED"
+          },
+          {
+            "conflicting_boundary": "OSSH-V1J-008",
+            "conflicting_receipt": "openssh-v1j",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_sha.rs:396:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_sha.rs",
+        "line": 396,
+        "operation": "sha384_update",
+        "discharging_boundary": "B48-SHA-008",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "OSSH-V1I-040",
+            "conflicting_receipt": "openssh-v1i",
+            "conflict_keyword": "BLOCKED"
+          },
+          {
+            "conflicting_boundary": "OSSH-V1J-010",
+            "conflicting_receipt": "openssh-v1j",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_sha.rs:402:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_sha.rs",
+        "line": 402,
+        "operation": "sha384_final",
+        "discharging_boundary": "B48-SHA-009",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "OSSH-V1I-041",
+            "conflicting_receipt": "openssh-v1i",
+            "conflict_keyword": "BLOCKED"
+          },
+          {
+            "conflicting_boundary": "OSSH-V1J-011",
+            "conflicting_receipt": "openssh-v1j",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_sha.rs:432:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_sha.rs",
+        "line": 432,
+        "operation": "sha512_update",
+        "discharging_boundary": "B48-SHA-010",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "OSSH-V1I-043",
+            "conflicting_receipt": "openssh-v1i",
+            "conflict_keyword": "BLOCKED"
+          },
+          {
+            "conflicting_boundary": "OSSH-V1J-013",
+            "conflicting_receipt": "openssh-v1j",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_sha.rs:438:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_sha.rs",
+        "line": 438,
+        "operation": "sha512_final",
+        "discharging_boundary": "B48-SHA-011",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "OSSH-V1I-044",
+            "conflicting_receipt": "openssh-v1i",
+            "conflict_keyword": "BLOCKED"
+          },
+          {
+            "conflicting_boundary": "OSSH-V1J-014",
+            "conflicting_receipt": "openssh-v1j",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_sha.rs:471:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_sha.rs",
+        "line": 471,
+        "operation": "sha512_224_int_final",
+        "discharging_boundary": "B48-SHA-012",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "OSSH-V1I-046",
+            "conflicting_receipt": "openssh-v1i",
+            "conflict_keyword": "BLOCKED"
+          },
+          {
+            "conflicting_boundary": "OSSH-V1J-016",
+            "conflicting_receipt": "openssh-v1j",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_sha.rs:501:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_sha.rs",
+        "line": 501,
+        "operation": "sha512_256_int_final",
+        "discharging_boundary": "B48-SHA-013",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "OSSH-V1I-048",
+            "conflicting_receipt": "openssh-v1i",
+            "conflict_keyword": "BLOCKED"
+          },
+          {
+            "conflicting_boundary": "OSSH-V1J-018",
+            "conflicting_receipt": "openssh-v1j",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_wp.rs:194:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_wp.rs",
+        "line": 194,
+        "operation": "wp_update",
+        "discharging_boundary": "B48-WP-001",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-EVP-LEGACY-MD-008",
+            "conflicting_receipt": "p25-evp-legacy-md-init-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/evp/legacy_wp.rs:201:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/evp/legacy_wp.rs",
+        "line": 201,
+        "operation": "wp_final",
+        "discharging_boundary": "B48-WP-002",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-EVP-LEGACY-MD-009",
+            "conflicting_receipt": "p25-evp-legacy-md-init-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      }
+    ],
+    "boundary-sweep-B49": [
+      {
+        "id": "V1:src/x509/v3_aaa.rs:382:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_aaa.rs",
+        "line": 382,
+        "operation": "i2r_ALLOWED_ATTRIBUTES_CHOICE",
+        "discharging_boundary": "B49-I2R-001",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-001",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_aaa.rs:452:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_aaa.rs",
+        "line": 452,
+        "operation": "i2r_ALLOWED_ATTRIBUTES_ITEM",
+        "discharging_boundary": "B49-I2R-002",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-002",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_aaa.rs:500:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_aaa.rs",
+        "line": 500,
+        "operation": "i2r_ALLOWED_ATTRIBUTES_SYNTAX",
+        "discharging_boundary": "B49-I2R-003",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-003",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_cpols.rs:1366:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_cpols.rs",
+        "line": 1366,
+        "operation": "i2r_certpol",
+        "discharging_boundary": "B49-I2R-005",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-015",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_group_ac.rs:33:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_group_ac.rs",
+        "line": 33,
+        "operation": "i2r_GROUP_AC",
+        "discharging_boundary": "B49-I2R-006",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-019",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_ind_iss.rs:33:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_ind_iss.rs",
+        "line": 33,
+        "operation": "i2r_INDIRECT_ISSUER",
+        "discharging_boundary": "B49-I2R-007",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-025",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_iobo.rs:42:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_iobo.rs",
+        "line": 42,
+        "operation": "i2r_ISSUED_ON_BEHALF_OF",
+        "discharging_boundary": "B49-I2R-008",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-033",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_ist.rs:331:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_ist.rs",
+        "line": 331,
+        "operation": "i2r_issuer_sign_tool",
+        "discharging_boundary": "B49-I2R-009",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-035",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_no_ass.rs:36:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_no_ass.rs",
+        "line": 36,
+        "operation": "i2r_NO_ASSERTION",
+        "discharging_boundary": "B49-I2R-010",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-036",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_no_rev_avail.rs:33:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_no_rev_avail.rs",
+        "line": 33,
+        "operation": "i2r_NO_REV_AVAIL",
+        "discharging_boundary": "B49-I2R-011",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-040",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_pku.rs:164:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_pku.rs",
+        "line": 164,
+        "operation": "i2r_PKEY_USAGE_PERIOD",
+        "discharging_boundary": "B49-I2R-012",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-046",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_sda.rs:140:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_sda.rs",
+        "line": 140,
+        "operation": "i2r_ATTRIBUTES_SYNTAX",
+        "discharging_boundary": "B49-I2R-013",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-049",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_single_use.rs:34:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_single_use.rs",
+        "line": 34,
+        "operation": "i2r_SINGLE_USE",
+        "discharging_boundary": "B49-I2R-014",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-050",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_soa_id.rs:33:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_soa_id.rs",
+        "line": 33,
+        "operation": "i2r_SOA_IDENTIFIER",
+        "discharging_boundary": "B49-I2R-015",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-056",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_sxnet.rs:332:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_sxnet.rs",
+        "line": 332,
+        "operation": "sxnet_i2r",
+        "discharging_boundary": "B49-I2R-016",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-060",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_usernotice.rs:287:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_usernotice.rs",
+        "line": 287,
+        "operation": "i2r_USER_NOTICE_SYNTAX",
+        "discharging_boundary": "B49-I2R-022",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-062",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      }
+    ],
+    "boundary-sweep-B50": [
+      {
+        "id": "V1:src/x509/v3_enum.rs:120:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_enum.rs",
+        "line": 120,
+        "operation": "enum_i2s",
+        "discharging_boundary": "B50-I2S-001",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-016",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_group_ac.rs:64:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_group_ac.rs",
+        "line": 64,
+        "operation": "i2s_GROUP_AC",
+        "discharging_boundary": "B50-I2S-002",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-021",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_ia5.rs:180:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_ia5.rs",
+        "line": 180,
+        "operation": "ia5_i2s",
+        "discharging_boundary": "B50-I2S-003",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-023",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_ind_iss.rs:64:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_ind_iss.rs",
+        "line": 64,
+        "operation": "i2s_INDIRECT_ISSUER",
+        "discharging_boundary": "B50-I2S-004",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-027",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_int.rs:29:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_int.rs",
+        "line": 29,
+        "operation": "int_i2s",
+        "discharging_boundary": "B50-I2S-005",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-031",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_no_ass.rs:72:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_no_ass.rs",
+        "line": 72,
+        "operation": "i2s_NO_ASSERTION",
+        "discharging_boundary": "B50-I2S-006",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-038",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_no_rev_avail.rs:64:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_no_rev_avail.rs",
+        "line": 64,
+        "operation": "i2s_NO_REV_AVAIL",
+        "discharging_boundary": "B50-I2S-007",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-042",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_single_use.rs:65:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_single_use.rs",
+        "line": 65,
+        "operation": "i2s_SINGLE_USE",
+        "discharging_boundary": "B50-I2S-008",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-052",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_skid.rs:249:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_skid.rs",
+        "line": 249,
+        "operation": "skid_i2s",
+        "discharging_boundary": "B50-I2S-009",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-055",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_soa_id.rs:64:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_soa_id.rs",
+        "line": 64,
+        "operation": "i2s_SOA_IDENTIFIER",
+        "discharging_boundary": "B50-I2S-010",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-058",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_utf8.rs:164:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_utf8.rs",
+        "line": 164,
+        "operation": "utf8_i2s",
+        "discharging_boundary": "B50-I2S-011",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-063",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      }
+    ],
+    "boundary-sweep-B51": [
+      {
+        "id": "V1:src/x509/v3_battcons.rs:208:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_battcons.rs",
+        "line": 208,
+        "operation": "v2i_OSSL_BASIC_ATTR_CONSTRAINTS",
+        "discharging_boundary": "B51-V2I-002",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-007",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_bcons.rs:209:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_bcons.rs",
+        "line": 209,
+        "operation": "v2i_BASIC_CONSTRAINTS",
+        "discharging_boundary": "B51-V2I-003",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-009",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_extku.rs:212:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_extku.rs",
+        "line": 212,
+        "operation": "v2i_EXTENDED_KEY_USAGE",
+        "discharging_boundary": "B51-V2I-004",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-018",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_info.rs:414:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_info.rs",
+        "line": 414,
+        "operation": "v2i_AUTHORITY_INFO_ACCESS",
+        "discharging_boundary": "B51-V2I-005",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-030",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_ist.rs:246:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_ist.rs",
+        "line": 246,
+        "operation": "v2i_issuer_sign_tool",
+        "discharging_boundary": "B51-V2I-006",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-034",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_pcons.rs:179:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_pcons.rs",
+        "line": 179,
+        "operation": "v2i_POLICY_CONSTRAINTS",
+        "discharging_boundary": "B51-V2I-007",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-045",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_pmaps.rs:229:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_pmaps.rs",
+        "line": 229,
+        "operation": "v2i_POLICY_MAPPINGS",
+        "discharging_boundary": "B51-V2I-008",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-048",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_sxnet.rs:420:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_sxnet.rs",
+        "line": 420,
+        "operation": "sxnet_v2i",
+        "discharging_boundary": "B51-V2I-009",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-061",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      }
+    ],
+    "boundary-sweep-B52": [
+      {
+        "id": "V1:src/x509/v3_group_ac.rs:87:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_group_ac.rs",
+        "line": 87,
+        "operation": "s2i_GROUP_AC",
+        "discharging_boundary": "B52-S2I-001",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-022",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_ia5.rs:197:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_ia5.rs",
+        "line": 197,
+        "operation": "ia5_s2i",
+        "discharging_boundary": "B52-S2I-002",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-024",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_ind_iss.rs:87:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_ind_iss.rs",
+        "line": 87,
+        "operation": "s2i_INDIRECT_ISSUER",
+        "discharging_boundary": "B52-S2I-003",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-028",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_int.rs:51:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_int.rs",
+        "line": 51,
+        "operation": "s2i_asn1_int",
+        "discharging_boundary": "B52-S2I-004",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-032",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_no_ass.rs:96:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_no_ass.rs",
+        "line": 96,
+        "operation": "s2i_NO_ASSERTION",
+        "discharging_boundary": "B52-S2I-005",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-039",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_no_rev_avail.rs:87:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_no_rev_avail.rs",
+        "line": 87,
+        "operation": "s2i_NO_REV_AVAIL",
+        "discharging_boundary": "B52-S2I-006",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-043",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_single_use.rs:88:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_single_use.rs",
+        "line": 88,
+        "operation": "s2i_SINGLE_USE",
+        "discharging_boundary": "B52-S2I-007",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-053",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_soa_id.rs:87:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_soa_id.rs",
+        "line": 87,
+        "operation": "s2i_SOA_IDENTIFIER",
+        "discharging_boundary": "B52-S2I-008",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-059",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      },
+      {
+        "id": "V1:src/x509/v3_utf8.rs:182:UNSAFE_FN_DEF",
+        "kind": "UNSAFE_FN_DEF",
+        "file": "src/x509/v3_utf8.rs",
+        "line": 182,
+        "operation": "utf8_s2i",
+        "discharging_boundary": "B52-S2I-009",
+        "conflicting_boundaries": [
+          {
+            "conflicting_boundary": "P25-X509-V3-SLOT-064",
+            "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+            "conflict_keyword": "BLOCKED"
+          }
+        ]
+      }
+    ]
+  },
+  "conflict_edges": [
+    {
+      "obligation": "V1:src/engine/tb_asnmth.rs:79:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/engine/tb_asnmth.rs",
+      "operation": "engine_unregister_all_pkey_asn1_meths",
+      "discharging_boundary": "B45-ENG-CB-001",
+      "conflicting_boundary": "P25-ENGINE-CB-001",
+      "conflicting_receipt": "p25-engine-callback-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/engine/tb_cipher.rs:62:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/engine/tb_cipher.rs",
+      "operation": "engine_unregister_all_ciphers",
+      "discharging_boundary": "B45-ENG-CB-002",
+      "conflicting_boundary": "P25-ENGINE-CB-002",
+      "conflicting_receipt": "p25-engine-callback-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/engine/tb_dh.rs:58:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/engine/tb_dh.rs",
+      "operation": "engine_unregister_all_dh",
+      "discharging_boundary": "B45-ENG-CB-003",
+      "conflicting_boundary": "P25-ENGINE-CB-003",
+      "conflicting_receipt": "p25-engine-callback-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/engine/tb_digest.rs:73:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/engine/tb_digest.rs",
+      "operation": "engine_unregister_all_digests",
+      "discharging_boundary": "B45-ENG-CB-004",
+      "conflicting_boundary": "P25-ENGINE-CB-004",
+      "conflicting_receipt": "p25-engine-callback-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/engine/tb_dsa.rs:58:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/engine/tb_dsa.rs",
+      "operation": "engine_unregister_all_dsa",
+      "discharging_boundary": "B45-ENG-CB-005",
+      "conflicting_boundary": "P25-ENGINE-CB-005",
+      "conflicting_receipt": "p25-engine-callback-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/engine/tb_eckey.rs:58:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/engine/tb_eckey.rs",
+      "operation": "engine_unregister_all_ec",
+      "discharging_boundary": "B45-ENG-CB-006",
+      "conflicting_boundary": "P25-ENGINE-CB-006",
+      "conflicting_receipt": "p25-engine-callback-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/engine/tb_pkmeth.rs:60:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/engine/tb_pkmeth.rs",
+      "operation": "engine_unregister_all_pkey_meths",
+      "discharging_boundary": "B45-ENG-CB-007",
+      "conflicting_boundary": "P25-ENGINE-CB-007",
+      "conflicting_receipt": "p25-engine-callback-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/engine/tb_rand.rs:58:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/engine/tb_rand.rs",
+      "operation": "engine_unregister_all_rand",
+      "discharging_boundary": "B45-ENG-CB-008",
+      "conflicting_boundary": "P25-ENGINE-CB-008",
+      "conflicting_receipt": "p25-engine-callback-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/engine/tb_rsa.rs:59:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/engine/tb_rsa.rs",
+      "operation": "engine_unregister_all_rsa",
+      "discharging_boundary": "B45-ENG-CB-009",
+      "conflicting_boundary": "P25-ENGINE-CB-009",
+      "conflicting_receipt": "p25-engine-callback-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_md4.rs:191:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_md4.rs",
+      "operation": "md4_update",
+      "discharging_boundary": "B48-MD4-001",
+      "conflicting_boundary": "P25-EVP-LEGACY-MD-002",
+      "conflicting_receipt": "p25-evp-legacy-md-init-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_md4.rs:198:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_md4.rs",
+      "operation": "md4_final",
+      "discharging_boundary": "B48-MD4-002",
+      "conflicting_boundary": "P25-EVP-LEGACY-MD-003",
+      "conflicting_receipt": "p25-evp-legacy-md-init-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_ripemd.rs:192:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_ripemd.rs",
+      "operation": "ripe_update",
+      "discharging_boundary": "B48-RIPE-001",
+      "conflicting_boundary": "P25-EVP-LEGACY-MD-005",
+      "conflicting_receipt": "p25-evp-legacy-md-init-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_ripemd.rs:199:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_ripemd.rs",
+      "operation": "ripe_final",
+      "discharging_boundary": "B48-RIPE-002",
+      "conflicting_boundary": "P25-EVP-LEGACY-MD-006",
+      "conflicting_receipt": "p25-evp-legacy-md-init-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:262:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha1_update",
+      "discharging_boundary": "B48-SHA-001",
+      "conflicting_boundary": "OSSH-V1I-031",
+      "conflicting_receipt": "openssh-v1i",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:262:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha1_update",
+      "discharging_boundary": "B48-SHA-001",
+      "conflicting_boundary": "OSSH-V1J-001",
+      "conflicting_receipt": "openssh-v1j",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:269:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha1_final",
+      "discharging_boundary": "B48-SHA-002",
+      "conflicting_boundary": "OSSH-V1I-032",
+      "conflicting_receipt": "openssh-v1i",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:269:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha1_final",
+      "discharging_boundary": "B48-SHA-002",
+      "conflicting_boundary": "OSSH-V1J-002",
+      "conflicting_receipt": "openssh-v1j",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:277:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha1_int_ctrl",
+      "discharging_boundary": "B48-SHA-003",
+      "conflicting_boundary": "OSSH-V1I-033",
+      "conflicting_receipt": "openssh-v1i",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:277:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha1_int_ctrl",
+      "discharging_boundary": "B48-SHA-003",
+      "conflicting_boundary": "OSSH-V1J-003",
+      "conflicting_receipt": "openssh-v1j",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:324:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha224_update",
+      "discharging_boundary": "B48-SHA-004",
+      "conflicting_boundary": "OSSH-V1I-034",
+      "conflicting_receipt": "openssh-v1i",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:324:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha224_update",
+      "discharging_boundary": "B48-SHA-004",
+      "conflicting_boundary": "OSSH-V1J-004",
+      "conflicting_receipt": "openssh-v1j",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:330:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha224_final",
+      "discharging_boundary": "B48-SHA-005",
+      "conflicting_boundary": "OSSH-V1I-035",
+      "conflicting_receipt": "openssh-v1i",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:330:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha224_final",
+      "discharging_boundary": "B48-SHA-005",
+      "conflicting_boundary": "OSSH-V1J-005",
+      "conflicting_receipt": "openssh-v1j",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:360:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha256_update",
+      "discharging_boundary": "B48-SHA-006",
+      "conflicting_boundary": "OSSH-V1I-037",
+      "conflicting_receipt": "openssh-v1i",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:360:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha256_update",
+      "discharging_boundary": "B48-SHA-006",
+      "conflicting_boundary": "OSSH-V1J-007",
+      "conflicting_receipt": "openssh-v1j",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:366:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha256_final",
+      "discharging_boundary": "B48-SHA-007",
+      "conflicting_boundary": "OSSH-V1I-038",
+      "conflicting_receipt": "openssh-v1i",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:366:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha256_final",
+      "discharging_boundary": "B48-SHA-007",
+      "conflicting_boundary": "OSSH-V1J-008",
+      "conflicting_receipt": "openssh-v1j",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:396:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha384_update",
+      "discharging_boundary": "B48-SHA-008",
+      "conflicting_boundary": "OSSH-V1I-040",
+      "conflicting_receipt": "openssh-v1i",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:396:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha384_update",
+      "discharging_boundary": "B48-SHA-008",
+      "conflicting_boundary": "OSSH-V1J-010",
+      "conflicting_receipt": "openssh-v1j",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:402:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha384_final",
+      "discharging_boundary": "B48-SHA-009",
+      "conflicting_boundary": "OSSH-V1I-041",
+      "conflicting_receipt": "openssh-v1i",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:402:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha384_final",
+      "discharging_boundary": "B48-SHA-009",
+      "conflicting_boundary": "OSSH-V1J-011",
+      "conflicting_receipt": "openssh-v1j",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:432:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha512_update",
+      "discharging_boundary": "B48-SHA-010",
+      "conflicting_boundary": "OSSH-V1I-043",
+      "conflicting_receipt": "openssh-v1i",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:432:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha512_update",
+      "discharging_boundary": "B48-SHA-010",
+      "conflicting_boundary": "OSSH-V1J-013",
+      "conflicting_receipt": "openssh-v1j",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:438:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha512_final",
+      "discharging_boundary": "B48-SHA-011",
+      "conflicting_boundary": "OSSH-V1I-044",
+      "conflicting_receipt": "openssh-v1i",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:438:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha512_final",
+      "discharging_boundary": "B48-SHA-011",
+      "conflicting_boundary": "OSSH-V1J-014",
+      "conflicting_receipt": "openssh-v1j",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:471:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha512_224_int_final",
+      "discharging_boundary": "B48-SHA-012",
+      "conflicting_boundary": "OSSH-V1I-046",
+      "conflicting_receipt": "openssh-v1i",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:471:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha512_224_int_final",
+      "discharging_boundary": "B48-SHA-012",
+      "conflicting_boundary": "OSSH-V1J-016",
+      "conflicting_receipt": "openssh-v1j",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:501:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha512_256_int_final",
+      "discharging_boundary": "B48-SHA-013",
+      "conflicting_boundary": "OSSH-V1I-048",
+      "conflicting_receipt": "openssh-v1i",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_sha.rs:501:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "operation": "sha512_256_int_final",
+      "discharging_boundary": "B48-SHA-013",
+      "conflicting_boundary": "OSSH-V1J-018",
+      "conflicting_receipt": "openssh-v1j",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_wp.rs:194:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_wp.rs",
+      "operation": "wp_update",
+      "discharging_boundary": "B48-WP-001",
+      "conflicting_boundary": "P25-EVP-LEGACY-MD-008",
+      "conflicting_receipt": "p25-evp-legacy-md-init-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/evp/legacy_wp.rs:201:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_wp.rs",
+      "operation": "wp_final",
+      "discharging_boundary": "B48-WP-002",
+      "conflicting_boundary": "P25-EVP-LEGACY-MD-009",
+      "conflicting_receipt": "p25-evp-legacy-md-init-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_aaa.rs:382:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_aaa.rs",
+      "operation": "i2r_ALLOWED_ATTRIBUTES_CHOICE",
+      "discharging_boundary": "B49-I2R-001",
+      "conflicting_boundary": "P25-X509-V3-SLOT-001",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_aaa.rs:452:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_aaa.rs",
+      "operation": "i2r_ALLOWED_ATTRIBUTES_ITEM",
+      "discharging_boundary": "B49-I2R-002",
+      "conflicting_boundary": "P25-X509-V3-SLOT-002",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_aaa.rs:500:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_aaa.rs",
+      "operation": "i2r_ALLOWED_ATTRIBUTES_SYNTAX",
+      "discharging_boundary": "B49-I2R-003",
+      "conflicting_boundary": "P25-X509-V3-SLOT-003",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_battcons.rs:208:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_battcons.rs",
+      "operation": "v2i_OSSL_BASIC_ATTR_CONSTRAINTS",
+      "discharging_boundary": "B51-V2I-002",
+      "conflicting_boundary": "P25-X509-V3-SLOT-007",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_bcons.rs:209:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_bcons.rs",
+      "operation": "v2i_BASIC_CONSTRAINTS",
+      "discharging_boundary": "B51-V2I-003",
+      "conflicting_boundary": "P25-X509-V3-SLOT-009",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_cpols.rs:1366:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_cpols.rs",
+      "operation": "i2r_certpol",
+      "discharging_boundary": "B49-I2R-005",
+      "conflicting_boundary": "P25-X509-V3-SLOT-015",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_enum.rs:120:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_enum.rs",
+      "operation": "enum_i2s",
+      "discharging_boundary": "B50-I2S-001",
+      "conflicting_boundary": "P25-X509-V3-SLOT-016",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_extku.rs:212:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_extku.rs",
+      "operation": "v2i_EXTENDED_KEY_USAGE",
+      "discharging_boundary": "B51-V2I-004",
+      "conflicting_boundary": "P25-X509-V3-SLOT-018",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_group_ac.rs:33:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_group_ac.rs",
+      "operation": "i2r_GROUP_AC",
+      "discharging_boundary": "B49-I2R-006",
+      "conflicting_boundary": "P25-X509-V3-SLOT-019",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_group_ac.rs:64:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_group_ac.rs",
+      "operation": "i2s_GROUP_AC",
+      "discharging_boundary": "B50-I2S-002",
+      "conflicting_boundary": "P25-X509-V3-SLOT-021",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_group_ac.rs:87:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_group_ac.rs",
+      "operation": "s2i_GROUP_AC",
+      "discharging_boundary": "B52-S2I-001",
+      "conflicting_boundary": "P25-X509-V3-SLOT-022",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_ia5.rs:180:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_ia5.rs",
+      "operation": "ia5_i2s",
+      "discharging_boundary": "B50-I2S-003",
+      "conflicting_boundary": "P25-X509-V3-SLOT-023",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_ia5.rs:197:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_ia5.rs",
+      "operation": "ia5_s2i",
+      "discharging_boundary": "B52-S2I-002",
+      "conflicting_boundary": "P25-X509-V3-SLOT-024",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_ind_iss.rs:33:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_ind_iss.rs",
+      "operation": "i2r_INDIRECT_ISSUER",
+      "discharging_boundary": "B49-I2R-007",
+      "conflicting_boundary": "P25-X509-V3-SLOT-025",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_ind_iss.rs:64:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_ind_iss.rs",
+      "operation": "i2s_INDIRECT_ISSUER",
+      "discharging_boundary": "B50-I2S-004",
+      "conflicting_boundary": "P25-X509-V3-SLOT-027",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_ind_iss.rs:87:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_ind_iss.rs",
+      "operation": "s2i_INDIRECT_ISSUER",
+      "discharging_boundary": "B52-S2I-003",
+      "conflicting_boundary": "P25-X509-V3-SLOT-028",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_info.rs:414:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_info.rs",
+      "operation": "v2i_AUTHORITY_INFO_ACCESS",
+      "discharging_boundary": "B51-V2I-005",
+      "conflicting_boundary": "P25-X509-V3-SLOT-030",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_int.rs:29:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_int.rs",
+      "operation": "int_i2s",
+      "discharging_boundary": "B50-I2S-005",
+      "conflicting_boundary": "P25-X509-V3-SLOT-031",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_int.rs:51:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_int.rs",
+      "operation": "s2i_asn1_int",
+      "discharging_boundary": "B52-S2I-004",
+      "conflicting_boundary": "P25-X509-V3-SLOT-032",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_iobo.rs:42:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_iobo.rs",
+      "operation": "i2r_ISSUED_ON_BEHALF_OF",
+      "discharging_boundary": "B49-I2R-008",
+      "conflicting_boundary": "P25-X509-V3-SLOT-033",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_ist.rs:246:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_ist.rs",
+      "operation": "v2i_issuer_sign_tool",
+      "discharging_boundary": "B51-V2I-006",
+      "conflicting_boundary": "P25-X509-V3-SLOT-034",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_ist.rs:331:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_ist.rs",
+      "operation": "i2r_issuer_sign_tool",
+      "discharging_boundary": "B49-I2R-009",
+      "conflicting_boundary": "P25-X509-V3-SLOT-035",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_no_ass.rs:36:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_no_ass.rs",
+      "operation": "i2r_NO_ASSERTION",
+      "discharging_boundary": "B49-I2R-010",
+      "conflicting_boundary": "P25-X509-V3-SLOT-036",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_no_ass.rs:72:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_no_ass.rs",
+      "operation": "i2s_NO_ASSERTION",
+      "discharging_boundary": "B50-I2S-006",
+      "conflicting_boundary": "P25-X509-V3-SLOT-038",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_no_ass.rs:96:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_no_ass.rs",
+      "operation": "s2i_NO_ASSERTION",
+      "discharging_boundary": "B52-S2I-005",
+      "conflicting_boundary": "P25-X509-V3-SLOT-039",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_no_rev_avail.rs:33:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_no_rev_avail.rs",
+      "operation": "i2r_NO_REV_AVAIL",
+      "discharging_boundary": "B49-I2R-011",
+      "conflicting_boundary": "P25-X509-V3-SLOT-040",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_no_rev_avail.rs:64:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_no_rev_avail.rs",
+      "operation": "i2s_NO_REV_AVAIL",
+      "discharging_boundary": "B50-I2S-007",
+      "conflicting_boundary": "P25-X509-V3-SLOT-042",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_no_rev_avail.rs:87:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_no_rev_avail.rs",
+      "operation": "s2i_NO_REV_AVAIL",
+      "discharging_boundary": "B52-S2I-006",
+      "conflicting_boundary": "P25-X509-V3-SLOT-043",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_pcons.rs:179:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_pcons.rs",
+      "operation": "v2i_POLICY_CONSTRAINTS",
+      "discharging_boundary": "B51-V2I-007",
+      "conflicting_boundary": "P25-X509-V3-SLOT-045",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_pku.rs:164:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_pku.rs",
+      "operation": "i2r_PKEY_USAGE_PERIOD",
+      "discharging_boundary": "B49-I2R-012",
+      "conflicting_boundary": "P25-X509-V3-SLOT-046",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_pmaps.rs:229:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_pmaps.rs",
+      "operation": "v2i_POLICY_MAPPINGS",
+      "discharging_boundary": "B51-V2I-008",
+      "conflicting_boundary": "P25-X509-V3-SLOT-048",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_sda.rs:140:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_sda.rs",
+      "operation": "i2r_ATTRIBUTES_SYNTAX",
+      "discharging_boundary": "B49-I2R-013",
+      "conflicting_boundary": "P25-X509-V3-SLOT-049",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_single_use.rs:34:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_single_use.rs",
+      "operation": "i2r_SINGLE_USE",
+      "discharging_boundary": "B49-I2R-014",
+      "conflicting_boundary": "P25-X509-V3-SLOT-050",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_single_use.rs:65:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_single_use.rs",
+      "operation": "i2s_SINGLE_USE",
+      "discharging_boundary": "B50-I2S-008",
+      "conflicting_boundary": "P25-X509-V3-SLOT-052",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_single_use.rs:88:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_single_use.rs",
+      "operation": "s2i_SINGLE_USE",
+      "discharging_boundary": "B52-S2I-007",
+      "conflicting_boundary": "P25-X509-V3-SLOT-053",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_skid.rs:249:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_skid.rs",
+      "operation": "skid_i2s",
+      "discharging_boundary": "B50-I2S-009",
+      "conflicting_boundary": "P25-X509-V3-SLOT-055",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_soa_id.rs:33:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_soa_id.rs",
+      "operation": "i2r_SOA_IDENTIFIER",
+      "discharging_boundary": "B49-I2R-015",
+      "conflicting_boundary": "P25-X509-V3-SLOT-056",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_soa_id.rs:64:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_soa_id.rs",
+      "operation": "i2s_SOA_IDENTIFIER",
+      "discharging_boundary": "B50-I2S-010",
+      "conflicting_boundary": "P25-X509-V3-SLOT-058",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_soa_id.rs:87:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_soa_id.rs",
+      "operation": "s2i_SOA_IDENTIFIER",
+      "discharging_boundary": "B52-S2I-008",
+      "conflicting_boundary": "P25-X509-V3-SLOT-059",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_sxnet.rs:332:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_sxnet.rs",
+      "operation": "sxnet_i2r",
+      "discharging_boundary": "B49-I2R-016",
+      "conflicting_boundary": "P25-X509-V3-SLOT-060",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_sxnet.rs:420:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_sxnet.rs",
+      "operation": "sxnet_v2i",
+      "discharging_boundary": "B51-V2I-009",
+      "conflicting_boundary": "P25-X509-V3-SLOT-061",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_usernotice.rs:287:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_usernotice.rs",
+      "operation": "i2r_USER_NOTICE_SYNTAX",
+      "discharging_boundary": "B49-I2R-022",
+      "conflicting_boundary": "P25-X509-V3-SLOT-062",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_utf8.rs:164:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_utf8.rs",
+      "operation": "utf8_i2s",
+      "discharging_boundary": "B50-I2S-011",
+      "conflicting_boundary": "P25-X509-V3-SLOT-063",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    },
+    {
+      "obligation": "V1:src/x509/v3_utf8.rs:182:UNSAFE_FN_DEF",
+      "kind": "UNSAFE_FN_DEF",
+      "file": "src/x509/v3_utf8.rs",
+      "operation": "utf8_s2i",
+      "discharging_boundary": "B52-S2I-009",
+      "conflicting_boundary": "P25-X509-V3-SLOT-064",
+      "conflicting_receipt": "p25-x509-v3-ext-slots-sites",
+      "conflict_keyword": "BLOCKED"
+    }
+  ],
+  "non_claims": [
+    "This receipt records measured instrument behaviour and an evidence gap; it is not a memory-safety result and does not discharge any obligation.",
+    "The 72 discharges are left standing by the diagnostic default; this receipt does not assert they are correct, only that enabling the gate today would withdraw them without a reviewed supersession.",
+    "The conflict is between recorded dispositions for the same (file, kind, operation); it does not by itself prove either disposition wrong.",
+    "No full closure, rebuild, or compatibility court was run to produce this finding; the measurement reuses the B67 closure's enumerated obligations and the current boundary/status inputs."
+  ]
+}
