@@ -44,6 +44,13 @@ byte-identical). Receipts:
   false for both. B67 discharged the two BIO readbuffer callbacks
   (`readbuffer_write`, `readbuffer_puts`): both ignore every argument and
   return a constant 0, so their precondition set is empty.
+- **Discharge instrument:** the disposition gate is now enforcing and
+  structured (`^\s*SAFETY_DISCHARGED\b`), measured at **0 withdrawals**. The
+  conflict detector is diagnostic-only and reports **72 unresolved
+  conflicts** (`B45 9 / B48 19 / B49 16 / B50 11 / B51 8 / B52 9`), preserved
+  in `atlas-refresh/b67-g1-conflict-finding.json`. Enabling enforcement would
+  withdraw those 72 until each receipt declares a reviewed `supersedes` entry;
+  the gate stays diagnostic rather than silently regressing the ledger.
 - **Element 7: PASS (contract-bounded) — 0 target-bounded sites**
   (contract-bounded 127, reachable-unresolved 127, unclassified 0;
   `established: true`). Four witness batches landed: the two base-slot sites
