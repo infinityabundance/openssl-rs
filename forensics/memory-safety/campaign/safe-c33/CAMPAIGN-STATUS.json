@@ -1146,6 +1146,38 @@
     {"verdict": "PENDING", "date": "2026-11-08", "note": "authoring state: receipt and ledger row added with adjudicated=false; the provisional ssh closure was not committed"},
     {"verdict": "APPROVE_WITH_CONDITIONS", "date": "2026-11-08", "note": "independent adjudication; both conditions recorded before the row was marked adjudicated"}
    ]
+  },
+  {
+   "receipt": "boundary-sweep-B69",
+   "scope": "RAND_CMS_STORE_KEYFMT site-scoped: ossl_rand_ctx_new (RAND-CTX-001), ossl_rand_ctx_free (RAND-CTX-002) and drbg_status (RAND-CTX-003) in src/rand/rand_lib.rs. The three V1 UNSAFE_FN_DEF obligations at :426, :468 and :2032; src/ is unchanged.",
+   "base_head": "04acfb7ea",
+   "source_state": "S = 04acfb7ea03a2713ab69bf10a4b331c6ae65a29d (tool sha256 b13ebd6e5fa4afc1acdc4a477b2b9a556e7182d6e34bb744f655809159b04039); src/rand/rand_lib.rs is sha256 ee19112d10a5a9c96d39db3b6d466044acb4185479149810a0585ad520a7c5e5 and is byte-identical at the inventory/span source b8bba9555 and at this HEAD.",
+   "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+   "discharged_boundaries": ["RAND-CTX-001", "RAND-CTX-002", "RAND-CTX-003"],
+   "retained_boundaries": [],
+   "retained_state": "BLOCKED",
+   "hidden_obligations": 0,
+   "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B69.json",
+   "note": "Site-scoped only. RAND_CMS_STORE_KEYFMT remains OWNERSHIP_RECONSTRUCTED mechanism-wide. The live release-caller set for ossl_rand_ctx_free is one site (context_deinit_objs); release_default_drbg_ctx is reachability-dead through the uncalled, unexported and BLOCKED ossl_rand_cleanup_int (rand_lib.rs:562). ossl_rand_cleanup_int at src/rand/rand_lib.rs:535 is deliberately NOT a boundary of this receipt and remains BLOCKED. artifacts/phase25/exposure.json's ossl_rand_cleanup_int coordinate (:458) is stale; the true definition is :535 and the stale record is not used as reachability evidence. No supersession is declared: no older boundary or p25-* receipt records the same (file, kind, operation) as BLOCKED.",
+   "adjudicated": true,
+   "adjudication": {
+    "status": "APPROVED_WITH_CONDITIONS",
+    "verdict": "APPROVE_WITH_CONDITIONS",
+    "date": "2026-11-09",
+    "reviewer": "independent adversarial adjudicator (separate agent; not the author)",
+    "verdict_text": "Independent adjudication: APPROVE_WITH_CONDITIONS.",
+    "conditions": [
+     "Correct the caller closure: the live release-caller set is ONE site (context_deinit_objs); release_default_drbg_ctx is reachability-dead through the uncalled ossl_rand_cleanup_int.",
+     "Replace the 'exclusive teardown' phrase with wording naming the external OSSL_LIB_CTX_free application contract, not a library guarantee.",
+     "Record that artifacts/phase25/exposure.json has a stale ossl_rand_cleanup_int coordinate (458 vs 535) and must not be used as reachability evidence."
+    ],
+    "conditions_met": "Conditions 1-3 are recorded in boundary-sweep-B69.json under boundaries[RAND-CTX-002].caller_closure, boundaries[RAND-CTX-002].established, caller_closure and stale_reachability_evidence; adjudicated=true in this receipt and in this CAMPAIGN-STATUS row.",
+    "adjudicated": true
+   },
+   "review_history": [
+    {"verdict": "PENDING", "date": "2026-11-09", "note": "authoring state: receipt and ledger row added with adjudicated=false; the provisional ssh closure was not committed"},
+    {"verdict": "APPROVE_WITH_CONDITIONS", "date": "2026-11-09", "note": "independent adjudication; the three conditions were applied and recorded before the row was marked adjudicated"}
+   ]
   }
  ],
  "defects_closed": [
