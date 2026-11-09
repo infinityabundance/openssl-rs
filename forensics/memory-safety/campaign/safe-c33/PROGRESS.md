@@ -39,11 +39,13 @@ byte-identical). Receipts:
 `evidence/inventory-sshd-b66-e7pbe.json`; compact record:
 `atlas-refresh/element7-b66-e7pbe.json`.
 
-- Obligations: **378 = 188 DISCHARGED / 190 BLOCKED / 0 UNKNOWN**, identical
+- Obligations: **378 = 191 DISCHARGED / 187 BLOCKED / 0 UNKNOWN**, identical
   for ssh and sshd; verdict `ACCEPTED` with 0 refusals; `safe_compatible`
   false for both. B67 discharged the two BIO readbuffer callbacks
   (`readbuffer_write`, `readbuffer_puts`): both ignore every argument and
-  return a constant 0, so their precondition set is empty.
+  return a constant 0, so their precondition set is empty. B69 discharged
+  three RAND lifecycle sites (`ossl_rand_ctx_new`, `ossl_rand_ctx_free`,
+  `drbg_status`) and retained the uncalled `ossl_rand_cleanup_int` BLOCKED.
 - **Discharge instrument:** the disposition gate is now enforcing and
   structured (`^\s*SAFETY_DISCHARGED\b`), measured at **0 withdrawals**. The
   conflict detector is diagnostic-only and reports **72 unresolved
@@ -61,8 +63,8 @@ byte-identical). Receipts:
   CONF init/finish, exported PEM cb), and the two PBE out-parameter sites
   resolved from `BUILTIN_PBE` relocations (5 keygen_ex targets; the 2 KDF
   targets; in-image GOT-binding caveat recorded).
-- **Element 7 PASS does not graduate the consumer.** 190 safety-relevant
-  obligations remain BLOCKED (188 DISCHARGED / 190 BLOCKED / 0 UNKNOWN of 378),
+- **Element 7 PASS does not graduate the consumer.** 187 safety-relevant
+  obligations remain BLOCKED (191 DISCHARGED / 187 BLOCKED / 0 UNKNOWN of 378),
   no mechanism is discharged mechanism-wide, and B46/B47/B48, the evidence
   pipeline and the exact-candidate L7/SEAL verification remain open. Both
   families remain `safe_compatible: false`.
