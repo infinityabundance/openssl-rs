@@ -1178,6 +1178,39 @@
     {"verdict": "PENDING", "date": "2026-11-09", "note": "authoring state: receipt and ledger row added with adjudicated=false; the provisional ssh closure was not committed"},
     {"verdict": "APPROVE_WITH_CONDITIONS", "date": "2026-11-09", "note": "independent adjudication; the three conditions were applied and recorded before the row was marked adjudicated"}
    ]
+  },
+  {
+   "receipt": "boundary-sweep-B70",
+   "scope": "RAND_CMS_STORE_KEYFMT site-scoped: x509_free_void (CMS-FREE-001) and x509_crl_free_void (CMS-FREE-002) in src/cms/cms_lib.rs. The two V1 UNSAFE_FN_DEF obligations at :1378 and :1384; src/ is unchanged. Reuses the freefunc contract already recorded in cms_smime.rs / p12_kiss.rs / store_result.rs / t_x509.rs and OSSH-V1I-055.",
+   "base_head": "c2597a87a",
+   "source_state": "S = c2597a87ade6ce155c6a104dd080ef1e902a63eb (tool sha256 b13ebd6e5fa4afc1acdc4a477b2b9a556e7182d6e34bb744f655809159b04039); src/cms/cms_lib.rs is sha256 8262fd205418541f1ce08d20c49051f6c1e06305a031769193c526576ba7977e and is byte-identical (git diff empty) at the inventory/span source b8bba9555 and at this HEAD.",
+   "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+   "discharged_boundaries": ["CMS-FREE-001", "CMS-FREE-002"],
+   "retained_boundaries": [],
+   "retained_state": "BLOCKED",
+   "hidden_obligations": 0,
+   "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B70.json",
+   "note": "Site-scoped only. RAND_CMS_STORE_KEYFMT remains OWNERSHIP_RECONSTRUCTED mechanism-wide. Supersedes P25-CMS-FREEFUNC-001/002 in p25-cms-freefunc-sites.json (same file/kind/operation, previously BLOCKED). The certificate failure arm was genuinely reached through the exported CMS_get1_certs path; the CRL failure arm is NOT_RUN because the only deterministic external trigger faults in X509_CRL_up_ref before the thunk, and a push failure needs an allocation failure. ASan is NOT_RUN under the court RLIMIT_DATA; LeakSanitizer passed.",
+   "adjudicated": true,
+   "adjudication": {
+    "status": "APPROVED_WITH_CONDITIONS",
+    "verdict": "APPROVE_WITH_CONDITIONS",
+    "date": "2026-11-09",
+    "reviewer": "independent adversarial adjudicator (separate agent; not the author)",
+    "verdict_text": "APPROVE_WITH_CONDITIONS.",
+    "conditions": [
+     "C1: record that x509_crl_free_void was never executed (tracer hit=0) and its failure arm is NOT_RUN; the CMS-FREE-002 discharge is contract/body-level (static establishment at the registration sites plus callee equivalence), not runtime coverage. Correct the tests wording so it does not imply the thunk was exercised; the probe-local callback is not the thunk.",
+     "C2: record that the NULL-datum fault occurs inside X509_CRL_up_ref as authority-identical C-invalid opaque-layout misuse, not a B70 defect.",
+     "Record residual B70-R3: the CRL push-failure path leaves the up-ref'd CRL outside the stack and unfreed (one ref leak; authority-identical in release, OOM-only).",
+     "Record residual B70-R4: the closure attaches both disposition texts to each obligation (reporting artifact only; per-obligation discharge_boundary_id/status_reason are correct)."
+    ],
+    "conditions_met": "C1 is recorded in boundary-sweep-B70.json under boundaries[CMS-FREE-002].disposition/established/tests and not_run; C2 in B70-R2; B70-R3 and B70-R4 are added to residuals. Span hashes, the two boundaries and the supersedes list are unchanged. adjudicated=true in the receipt and in this CAMPAIGN-STATUS row.",
+    "adjudicated": true
+   },
+   "review_history": [
+    {"verdict": "PENDING", "date": "2026-11-09", "note": "authoring state: receipt and ledger row added with adjudicated=false; the provisional ssh closure was not committed"},
+    {"verdict": "APPROVE_WITH_CONDITIONS", "date": "2026-11-09", "note": "independent adjudication; the four conditions were applied and recorded before the row was marked adjudicated"}
+   ]
   }
  ],
  "defects_closed": [
