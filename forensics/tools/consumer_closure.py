@@ -30187,6 +30187,11 @@ def build_receipt(args) -> dict:
 # self-test
 # --------------------------------------------------------------------------- #
 
+def _pin_leaf(symbol: str) -> str:
+    """Source leaf of a pin symbol: a demangled path or a plain C name."""
+    return (symbol or "").rsplit("::", 1)[-1]
+
+
 def _e7abi_self_test():
     """Committed positive and negative controls for the E7-ABI witnesses.
 
@@ -30219,15 +30224,31 @@ def _e7abi_self_test():
     g.source_root = str(root)
     g.install_prefix = str(install)
     g.precision = PrecisionResolver(g)
+    # (site -> containing symbol, offset) for the literal keys below.  The
+    # literal VAs identify one exact artefact (libcrypto.so.3, sha256
+    # 136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5dbe88d09a9a44); the
+    # pins are the mechanical re-pin key.  Each literal is checked against its
+    # pin against the graph, so a stale VA fails loudly instead of silently
+    # retiring the control.
+    site_pins = {
+        0x50604D: ("EVP_PBE_CipherInit_ex", 0x19D),
+        0x3E2088: ("OSSL_STORE_open_ex", 0x488),
+        0x3E217D: ("OSSL_STORE_open_ex", 0x57D),
+        0x3E2648: ("OSSL_STORE_open_ex", 0xA48),
+        0x3E2408: ("OSSL_STORE_open_ex", 0x808),
+        0x17319A: ("CONF_modules_load", 0x50A),
+        0x1735B2: ("CONF_modules_load", 0x922),
+        0x495DE6: ("openssl_rs::pem::pem_pk8::do_pk8pkey", 0x286),
+    }
     site_specs = (
-        (0x179A0D, 0x179870, "call   *%rax"),
-        (0x1C21A8, 0x1C1D20, "call   *%rax"),
-        (0x1C229D, 0x1C1D20, "call   *%rax"),
-        (0x1C2768, 0x1C1D20, "call   *%rax"),
-        (0x1C2528, 0x1C1D20, "call   *%rax"),
-        (0x2E111A, 0x2E0C10, "call   *%r15"),
-        (0x2E1532, 0x2E0C10, "call   *%rax"),
-        (0x4FA4C6, 0x4FA240, "call   *%r14"),
+        (0x50604D, 0x505EB0, "call   *%rax"),
+        (0x3E2088, 0x3E1C00, "call   *%rax"),
+        (0x3E217D, 0x3E1C00, "call   *%rax"),
+        (0x3E2648, 0x3E1C00, "call   *%rax"),
+        (0x3E2408, 0x3E1C00, "call   *%rax"),
+        (0x17319A, 0x172C90, "call   *%r15"),
+        (0x1735B2, 0x172C90, "call   *%rax"),
+        (0x495DE6, 0x495B60, "call   *%r14"),
     )
     g.sites = {}
     for addr, func, text in site_specs:
@@ -30238,15 +30259,24 @@ def _e7abi_self_test():
             "field_offsets": set(), "seam": None,
             "arg_deps": set(), "arg_targets": set()}
     expected = {
-        0x179A0D: ABI_CONTRACT_PBE_REGISTRY,
-        0x1C21A8: ABI_CONTRACT_STORE_LOADER,
-        0x1C229D: ABI_CONTRACT_STORE_LOADER,
-        0x1C2768: ABI_CONTRACT_STORE_LOADER,
-        0x1C2528: ABI_CONTRACT_PROVIDER,
-        0x2E111A: ABI_CONTRACT_CONF_MODULE,
-        0x2E1532: ABI_CONTRACT_CONF_MODULE,
-        0x4FA4C6: ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
+        0x50604D: ABI_CONTRACT_PBE_REGISTRY,
+        0x3E2088: ABI_CONTRACT_STORE_LOADER,
+        0x3E217D: ABI_CONTRACT_STORE_LOADER,
+        0x3E2648: ABI_CONTRACT_STORE_LOADER,
+        0x3E2408: ABI_CONTRACT_PROVIDER,
+        0x17319A: ABI_CONTRACT_CONF_MODULE,
+        0x1735B2: ABI_CONTRACT_CONF_MODULE,
+        0x495DE6: ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
     }
+    for addr, func, _text in site_specs:
+        pin = site_pins[addr]
+        names = getattr(g, "names_at", {}).get(func) or {g.funcs.get(func, "")}
+        if not (addr - func == pin[1]
+                and any(_external_function_leaf(n) == _pin_leaf(pin[0])
+                        for n in names)):
+            failures.append(
+                f"e7abi {addr:#x}: literal does not match pin "
+                f"{(pin[0], hex(pin[1]))!r}; re-pin")
 
     def site(addr):
         return next(s for s in g.sites.values() if s.get("addr") == addr)
@@ -30271,10 +30301,10 @@ def _e7abi_self_test():
             w.get("contract_bounded"), True)
         chk(f"e7abi {addr:#x} target set", w.get("target_set"), [])
     chk("e7abi site 5 scope",
-        ((wit(0x1C2528) or (None, {}))[1] or {}).get("scope"),
+        ((wit(0x3E2408) or (None, {}))[1] or {}).get("scope"),
         "store-loader-p_close")
     chk("e7abi site 8 default",
-        ((wit(0x4FA4C6) or (None, {}))[1] or {}).get("default_target",
+        ((wit(0x495DE6) or (None, {}))[1] or {}).get("default_target",
                                                     {}).get("symbol"),
         PEM_DEFAULT)
 
@@ -30336,7 +30366,7 @@ def _e7abi_self_test():
            "#[allow(dead_code)]\n"
            "unsafe fn e7abi_alias(row: *mut E7AliasPbe, "
            "k: Option<EvpPbeKeygen>) { unsafe { (*row).keygen = k; } }")
-    cases.append(("PBE type alias", d, 0x179A0D, "e7abi-type-alias",
+    cases.append(("PBE type alias", d, 0x50604D, "e7abi-type-alias",
                   "keygen-field-writer-set-is-not-exactly-the-registry"))
 
     d = fixture("store-alias", ["src/store/mod.rs",
@@ -30348,7 +30378,7 @@ def _e7abi_self_test():
            "#[allow(dead_code)]\n"
            "unsafe fn e7abi_alias(loader: *mut E7AliasLoader, "
            "f: Option<OsslStoreOpenExFn>) { unsafe { (*loader).open_ex = f; } }")
-    cases.append(("STORE type alias", d, 0x1C21A8, "e7abi-type-alias",
+    cases.append(("STORE type alias", d, 0x3E2088, "e7abi-type-alias",
                   "open_ex-writer-set-is-not-the-setter"))
 
     d = fixture("conf-alias", ["src/runtime/confmod/mod.rs"])
@@ -30357,7 +30387,7 @@ def _e7abi_self_test():
            "#[allow(dead_code)]\n"
            "unsafe fn e7abi_alias(m: *mut E7AliasModule, "
            "f: Option<ConfInitFn>) { unsafe { (*m).init = f; } }")
-    cases.append(("CONF type alias", d, 0x2E111A, "e7abi-type-alias",
+    cases.append(("CONF type alias", d, 0x17319A, "e7abi-type-alias",
                   "init-writer-set-is-not-module-add"))
 
     d = fixture("pbe-cont", ["src/evp/evp_pbe.rs"])
@@ -30366,7 +30396,7 @@ def _e7abi_self_test():
            "unsafe fn e7abi_cont(row: *mut EvpPbeCtl, "
            "k: Option<EvpPbeKeygen>) {\n"
            "    unsafe { (*row)\n        .keygen = k; }\n}")
-    cases.append(("PBE continuation writer", d, 0x179A0D,
+    cases.append(("PBE continuation writer", d, 0x50604D,
                   "e7abi-continuation",
                   "keygen-field-writer-set-is-not-exactly-the-registry"))
 
@@ -30375,7 +30405,7 @@ def _e7abi_self_test():
            "macro_rules! e7abi_m {\n"
            "    ($p:ident, $v:expr) => { unsafe { (*$p).keygen = $v; } };\n"
            "}")
-    cases.append(("PBE macro-expanded slot store", d, 0x179A0D,
+    cases.append(("PBE macro-expanded slot store", d, 0x50604D,
                   "e7abi-macro-slot",
                   "macro-expanded-slot-store-unattributed"))
 
@@ -30394,7 +30424,7 @@ def _e7abi_self_test():
         "    let f = "
         "crate::store::store_register::OSSL_STORE_register_loader;\n"
         "    unsafe { f(loader); }\n}\n")
-    cases.append(("STORE registration alias", d, 0x1C21A8,
+    cases.append(("STORE registration alias", d, 0x3E2088,
                   "e7abi-registration-alias",
                   "in-image-registration-reference"))
 
@@ -30408,7 +30438,7 @@ def _e7abi_self_test():
         "#[allow(dead_code)]\n"
         "unsafe fn e7abi_reg_split(loader: *mut "
         "crate::store::OsslStoreLoader) { unsafe { reg(loader); } }\n")
-    cases.append(("STORE split-line registration alias", d, 0x1C21A8,
+    cases.append(("STORE split-line registration alias", d, 0x3E2088,
                   "e7abi-registration-alias",
                   "in-image-registration-reference"))
 
@@ -30419,7 +30449,7 @@ def _e7abi_self_test():
         "do_pk8pkey(bp, x, 0, -1, enc, kstr, klen, cb, u, ptr::null())",
         "do_pk8pkey(bp, x, 0, -1, enc, kstr, klen, u, u, ptr::null())")
     p.write_text(text)
-    cases.append(("PEM forwarded non-cb", d, 0x4FA4C6,
+    cases.append(("PEM forwarded non-cb", d, 0x495DE6,
                   "e7abi-forward-binding",
                   "callback-chain-forwarded-argument-is-not-the-cb-parameter"))
 
@@ -30475,7 +30505,39 @@ def _pbe_outparam_self_test():
                 "field_offsets": set(), "seam": None,
                 "arg_deps": set(), "arg_targets": set()}
 
-    site_func = {0x179C85: 0x179870, 0x17C408: 0x17C200}
+    # (site -> containing symbol, offset) and target symbols for this exact
+    # artefact (libcrypto.so.3 sha256
+    # 136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5dbe88d09a9a44).
+    # Site 2's offset is 0x1C2 in this build, not 0x208 as in the previous one:
+    # instruction selection changed inside PKCS5_v2_PBE_keyivgen_ex, so the pin
+    # records the window-verified offset.  A literal that stops matching its
+    # pin is reported, never silently accepted.
+    site_pins = {
+        0x5062C5: ("EVP_PBE_CipherInit_ex", 0x415),
+        0x2BD122: ("PKCS5_v2_PBE_keyivgen_ex", 0x1C2),
+    }
+    target_pins = {
+        0x1AC1C0: ("PKCS12_PBE_keyivgen_ex", 0),
+        0x2BCF60: ("PKCS5_v2_PBE_keyivgen_ex", 0),
+        0x2C5FE0: ("PKCS5_v2_PBKDF2_keyivgen_ex", 0),
+        0x4B51D0: ("PKCS5_PBE_keyivgen_ex", 0),
+        0x53BF10: ("PKCS5_v2_scrypt_keyivgen_ex", 0),
+    }
+    site_func = {0x5062C5: 0x505EB0, 0x2BD122: 0x2BCF60}
+    for addr, func in site_func.items():
+        pin = site_pins[addr]
+        names = getattr(g, "names_at", {}).get(func) or {g.funcs.get(func, "")}
+        if not (addr - func == pin[1]
+                and any(_external_function_leaf(n) == _pin_leaf(pin[0])
+                        for n in names)):
+            failures.append(
+                f"e7pbe {addr:#x}: literal does not match pin "
+                f"{(pin[0], hex(pin[1]))!r}; re-pin")
+    for addr, (leaf, _off) in target_pins.items():
+        names = getattr(g, "names_at", {}).get(addr) or {g.funcs.get(addr, "")}
+        if not any(_external_function_leaf(n) == _pin_leaf(leaf) for n in names):
+            failures.append(
+                f"e7pbe target {addr:#x}: does not match pin {leaf!r}; re-pin")
 
     def wit(addr, graph=None):
         gr = graph or g
@@ -30543,10 +30605,10 @@ def _pbe_outparam_self_test():
                 out.append((r[0], r[1], r[2], r[3], value))
         return out
 
-    w1 = wit(0x179C85)
-    w2 = wit(0x17C408)
-    want1 = ["0x17c200", "0x199140", "0x254a30", "0x35e3f0", "0x49b8b0"]
-    want2 = ["0x199140", "0x49b8b0"]
+    w1 = wit(0x5062C5)
+    w2 = wit(0x2BD122)
+    want1 = ["0x1ac1c0", "0x2bcf60", "0x2c5fe0", "0x4b51d0", "0x53bf10"]
+    want2 = ["0x2c5fe0", "0x53bf10"]
     chk("e7pbe site 1 resolved", (w1 or {}).get("resolved"), True)
     chk("e7pbe site 1 targets", (w1 or {}).get("targets"), want1)
     chk("e7pbe site 2 resolved", (w2 or {}).get("resolved"), True)
@@ -30572,27 +30634,29 @@ def _pbe_outparam_self_test():
 
     # Wrong callee: the GOT relocation names another in-image function while
     # the disassembly annotation still names EVP_PBE_find_ex.
+    # The GOT slot is pinned by its relocation symbol (EVP_PBE_find_ex); the
+    # 0x898b68 literal is the slot the candidate's site-1 load names.
     wrong = _PbeProxy(g, relocs=_relocs_with_symbol(
-        0x892B90, "EVP_PBE_alg_add_type@@OPENSSL_3.0.0", 0x17A0A0))
-    rec = wit(0x179C85, graph=wrong)
+        0x898B68, "EVP_PBE_alg_add_type@@OPENSSL_3.0.0", 0x5066E0))
+    rec = wit(0x5062C5, graph=wrong)
     chk("e7pbe wrong callee refusal", (rec or {}).get("refusal"),
         "pbe-find-ex-callee-is-not-the-documented-symbol")
-    acc = _mut("e7pbe-outparam-callee", lambda: wit(0x179C85, graph=wrong))
+    acc = _mut("e7pbe-outparam-callee", lambda: wit(0x5062C5, graph=wrong))
     chk("e7pbe wrong callee control is load-bearing",
         (acc or {}).get("resolved"), True)
-    chk("e7pbe wrong callee restored", (wit(0x179C85) or {}).get("targets"),
+    chk("e7pbe wrong callee restored", (wit(0x5062C5) or {}).get("targets"),
         want1)
 
     # Wrong argument index: the same slot escapes in %r8 (the plain keygen
     # argument) instead of %r9 (pkeygen_ex).
-    arg_insns = _replace_insn(_insns_copy(0x179870), 0x1798E5,
+    arg_insns = _replace_insn(_insns_copy(0x505EB0), 0x505F25,
                               "lea    0xa0(%rsp),%r8")
-    wrong_arg = _PbeProxy(g, precision=_PbePrecision({0x179870: arg_insns}))
-    rec = wit(0x179C85, graph=wrong_arg)
+    wrong_arg = _PbeProxy(g, precision=_PbePrecision({0x505EB0: arg_insns}))
+    rec = wit(0x5062C5, graph=wrong_arg)
     chk("e7pbe wrong argument refusal", (rec or {}).get("refusal"),
         "escaped-slot-is-not-the-pkeygen-ex-argument")
     acc = _mut("e7pbe-outparam-arg-index",
-               lambda: wit(0x179C85, graph=wrong_arg))
+               lambda: wit(0x5062C5, graph=wrong_arg))
     chk("e7pbe wrong argument control is load-bearing",
         (acc or {}).get("resolved"), True)
 
@@ -30610,106 +30674,108 @@ def _pbe_outparam_self_test():
             failures.append("e7pbe registry fixture: store not found")
         (fixture / PBE_SOURCE).write_text(mutated)
         bad_registry = _PbeProxy(g, source_root=str(fixture))
-        rec = wit(0x179C85, graph=bad_registry)
+        rec = wit(0x5062C5, graph=bad_registry)
         chk("e7pbe registry non-null refusal", (rec or {}).get("refusal"),
             "pbe-registry-writes-a-non-null-keygen-ex")
         acc = _mut("e7pbe-outparam-registry",
-                   lambda: wit(0x179C85, graph=bad_registry))
+                   lambda: wit(0x5062C5, graph=bad_registry))
         chk("e7pbe registry non-null control is load-bearing",
             (acc or {}).get("resolved"), True)
         chk("e7pbe registry non-null restored",
-            (wit(0x179C85) or {}).get("targets"), want1)
+            (wit(0x5062C5) or {}).get("targets"), want1)
     finally:
         shutil.rmtree(fixture, ignore_errors=True)
 
     # One selected row member is a data address, not a function start.
-    bad_row = _PbeProxy(g, relocs=_relocs_with_value(0x7BC068, 0x7BBC50))
-    rec = wit(0x17C408, graph=bad_row)
+    # 0x889948 is BUILTIN_PBE + 0x418 (row 32, member 0x18); 0x889530 is the
+    # BUILTIN_PBE data object, which is not an in-image function start.
+    bad_row = _PbeProxy(g, relocs=_relocs_with_value(0x889948, 0x889530))
+    rec = wit(0x2BD122, graph=bad_row)
     chk("e7pbe row data target refusal", (rec or {}).get("refusal"),
         "row-member-not-a-function-start")
     acc = _mut("e7pbe-outparam-row-target",
-               lambda: wit(0x17C408, graph=bad_row))
+               lambda: wit(0x2BD122, graph=bad_row))
     chk("e7pbe row data target control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe row data target restored",
-        (wit(0x17C408) or {}).get("targets"), want2)
+        (wit(0x2BD122) or {}).get("targets"), want2)
 
     # A second writer of the same frame slot.
-    second_insns = _insert_insn(_insns_copy(0x179870), 0x1798B8, 0x1798BC,
+    second_insns = _insert_insn(_insns_copy(0x505EB0), 0x505EF8, 0x505EFC,
                                 "movq   $0x0,0xa0(%rsp)")
-    second = _PbeProxy(g, precision=_PbePrecision({0x179870: second_insns}))
-    rec = wit(0x179C85, graph=second)
+    second = _PbeProxy(g, precision=_PbePrecision({0x505EB0: second_insns}))
+    rec = wit(0x5062C5, graph=second)
     chk("e7pbe second writer refusal", (rec or {}).get("refusal"),
         "slot-has-a-second-writer")
     acc = _mut("e7pbe-outparam-second-writer",
-               lambda: wit(0x179C85, graph=second))
+               lambda: wit(0x5062C5, graph=second))
     chk("e7pbe second writer control is load-bearing",
         (acc or {}).get("resolved"), True)
-    chk("e7pbe second writer restored", (wit(0x179C85) or {}).get("targets"),
+    chk("e7pbe second writer restored", (wit(0x5062C5) or {}).get("targets"),
         want1)
 
     # A 4-byte zero store leaves the upper half of the pointer slot stale.
-    zero_width_insns = _replace_insn(_insns_copy(0x179870), 0x1798B8,
+    zero_width_insns = _replace_insn(_insns_copy(0x505EB0), 0x505EF8,
                                      "movl   $0x0,0xa0(%rsp)")
     zero_width = _PbeProxy(
-        g, precision=_PbePrecision({0x179870: zero_width_insns}))
-    rec = wit(0x179C85, graph=zero_width)
+        g, precision=_PbePrecision({0x505EB0: zero_width_insns}))
+    rec = wit(0x5062C5, graph=zero_width)
     chk("e7pbe zero store width refusal", (rec or {}).get("refusal"),
         "slot-width-is-not-64-bit")
     acc = _mut("e7pbe-outparam-zero-width",
-               lambda: wit(0x179C85, graph=zero_width))
+               lambda: wit(0x5062C5, graph=zero_width))
     chk("e7pbe zero store width control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe zero store width restored",
-        (wit(0x179C85) or {}).get("targets"), want1)
+        (wit(0x5062C5) or {}).get("targets"), want1)
 
     # A 4-byte reload truncates the pointer in the call-target register.
-    reload_width_insns = _replace_insn(_insns_copy(0x179870), 0x1799BB,
+    reload_width_insns = _replace_insn(_insns_copy(0x505EB0), 0x505FFB,
                                        "mov    0xa0(%rsp),%eax")
     reload_width = _PbeProxy(
-        g, precision=_PbePrecision({0x179870: reload_width_insns}))
-    rec = wit(0x179C85, graph=reload_width)
+        g, precision=_PbePrecision({0x505EB0: reload_width_insns}))
+    rec = wit(0x5062C5, graph=reload_width)
     chk("e7pbe reload width refusal", (rec or {}).get("refusal"),
         "slot-width-is-not-64-bit")
     acc = _mut("e7pbe-outparam-reload-width",
-               lambda: wit(0x179C85, graph=reload_width))
+               lambda: wit(0x5062C5, graph=reload_width))
     chk("e7pbe reload width control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe reload width restored",
-        (wit(0x179C85) or {}).get("targets"), want1)
+        (wit(0x5062C5) or {}).get("targets"), want1)
 
     # A partial 4-byte write at slot+4 leaves the upper half of the pointer
     # stale even though the exact-offset scan sees only the zero store.
-    overlap_insns = _insert_insn(_insns_copy(0x179870), 0x1798B8, 0x1798BC,
+    overlap_insns = _insert_insn(_insns_copy(0x505EB0), 0x505EF8, 0x505EFC,
                                  "movl   $0xdead,0xa4(%rsp)")
     overlap = _PbeProxy(
-        g, precision=_PbePrecision({0x179870: overlap_insns}))
-    rec = wit(0x179C85, graph=overlap)
+        g, precision=_PbePrecision({0x505EB0: overlap_insns}))
+    rec = wit(0x5062C5, graph=overlap)
     chk("e7pbe overlap store refusal", (rec or {}).get("refusal"),
         "slot-overlap-store")
     acc = _mut("e7pbe-outparam-overlap",
-               lambda: wit(0x179C85, graph=overlap))
+               lambda: wit(0x5062C5, graph=overlap))
     chk("e7pbe overlap store control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe overlap store restored",
-        (wit(0x179C85) or {}).get("targets"), want1)
+        (wit(0x5062C5) or {}).get("targets"), want1)
 
     # The GOT binding is not in this image.
     dyn = dict(g.dynamic_defs)
     dyn.pop("EVP_PBE_find_ex", None)
     bad_got = _PbeProxy(g, dynamic_defs=dyn)
-    rec = wit(0x179C85, graph=bad_got)
+    rec = wit(0x5062C5, graph=bad_got)
     chk("e7pbe got not in image refusal", (rec or {}).get("refusal"),
         "pbe-find-ex-callee-is-not-in-image")
     acc = _mut("e7pbe-outparam-got-not-in-image",
-               lambda: wit(0x179C85, graph=bad_got))
+               lambda: wit(0x5062C5, graph=bad_got))
     chk("e7pbe got not in image control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe got not in image restored",
-        (wit(0x179C85) or {}).get("targets"), want1)
+        (wit(0x5062C5) or {}).get("targets"), want1)
 
     # The site-2 KDF selection is load-bearing: all rows gives 5, not 2.
-    all_rows = _mut("e7pbe-outparam-all-rows", lambda: wit(0x17C408))
+    all_rows = _mut("e7pbe-outparam-all-rows", lambda: wit(0x2BD122))
     chk("e7pbe site 2 all-row control count",
         len((all_rows or {}).get("targets") or []), 5)
     chk("e7pbe site 2 all-row control set",
@@ -30722,14 +30788,14 @@ def _pbe_outparam_self_test():
     # their contract class and unbounded target set; the new witness does not
     # absorb any of them.
     abi_specs = (
-        (0x179A0D, 0x179870, "call   *%rax", ABI_CONTRACT_PBE_REGISTRY),
-        (0x1C21A8, 0x1C1D20, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
-        (0x1C229D, 0x1C1D20, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
-        (0x1C2768, 0x1C1D20, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
-        (0x1C2528, 0x1C1D20, "call   *%rax", ABI_CONTRACT_PROVIDER),
-        (0x2E111A, 0x2E0C10, "call   *%r15", ABI_CONTRACT_CONF_MODULE),
-        (0x2E1532, 0x2E0C10, "call   *%rax", ABI_CONTRACT_CONF_MODULE),
-        (0x4FA4C6, 0x4FA240, "call   *%r14",
+        (0x50604D, 0x505EB0, "call   *%rax", ABI_CONTRACT_PBE_REGISTRY),
+        (0x3E2088, 0x3E1C00, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
+        (0x3E217D, 0x3E1C00, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
+        (0x3E2648, 0x3E1C00, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
+        (0x3E2408, 0x3E1C00, "call   *%rax", ABI_CONTRACT_PROVIDER),
+        (0x17319A, 0x172C90, "call   *%r15", ABI_CONTRACT_CONF_MODULE),
+        (0x1735B2, 0x172C90, "call   *%rax", ABI_CONTRACT_CONF_MODULE),
+        (0x495DE6, 0x495B60, "call   *%r14",
          ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT),
     )
     for addr, func, text, cls in abi_specs:
