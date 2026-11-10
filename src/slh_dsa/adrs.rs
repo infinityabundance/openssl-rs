@@ -266,7 +266,9 @@ unsafe extern "C" fn slh_adrsc_copy(dst: *mut u8, src: *const u8) {
 ///
 /// `is_compressed == 0` answers the uncompressed (SHAKE) table, anything else the compressed
 /// (SHA-2) one — which is the authority's `methods[is_compressed == 0 ? 0 : 1]`.
-pub(crate) unsafe fn ossl_slh_get_adrs_fn(is_compressed: c_int) -> *const SlhAdrsFunc {
+///
+/// No caller precondition: the selector is an integer and the answer is a `'static` table.
+pub(crate) fn ossl_slh_get_adrs_fn(is_compressed: c_int) -> *const SlhAdrsFunc {
     const METHODS: [SlhAdrsFunc; 2] = [
         SlhAdrsFunc {
             set_layer_address: slh_adrs_set_layer_address,
@@ -301,3 +303,8 @@ pub(crate) unsafe fn ossl_slh_get_adrs_fn(is_compressed: c_int) -> *const SlhAdr
         &METHODS[1]
     }
 }
+
+// Load-bearing control: a safe `fn` coerces to this type, `unsafe fn` does not. Restoring the
+// `unsafe` qualifier breaks this build.
+#[cfg(test)]
+const _: fn(c_int) -> *const SlhAdrsFunc = ossl_slh_get_adrs_fn;

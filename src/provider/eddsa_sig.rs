@@ -937,7 +937,9 @@ unsafe extern "C" fn eddsa_dupctx(vctx: *mut c_void) -> *mut c_void {
 }
 
 /// `static const char **ed25519_sigalg_query_key_types(void)` — `eddsa_sig.c.in:783-788`.
-unsafe extern "C" fn ed25519_sigalg_query_key_types() -> *mut *const c_char {
+///
+/// No pointer precondition: the answer is a `'static`, NULL-terminated name table.
+extern "C" fn ed25519_sigalg_query_key_types() -> *mut *const c_char {
     /// `static const char *keytypes[] = { "ED25519", NULL }`.
     #[repr(C)]
     struct KeyTypeNames([*const c_char; 2]);
@@ -948,7 +950,9 @@ unsafe extern "C" fn ed25519_sigalg_query_key_types() -> *mut *const c_char {
 }
 
 /// `static const char **ed448_sigalg_query_key_types(void)` — `eddsa_sig.c.in:790-795`.
-unsafe extern "C" fn ed448_sigalg_query_key_types() -> *mut *const c_char {
+///
+/// No pointer precondition: the answer is a `'static`, NULL-terminated name table.
+extern "C" fn ed448_sigalg_query_key_types() -> *mut *const c_char {
     /// `static const char *keytypes[] = { "ED448", NULL }`.
     #[repr(C)]
     struct KeyTypeNames([*const c_char; 2]);
@@ -1663,3 +1667,10 @@ fn c_u8(b: bool) -> u8 {
 // it once `eddsa_setup_instance` has run, but the constant is named so a reader can see the enum's
 // full range.
 const _: () = assert!(ID_NOT_SET == 0);
+
+// Load-bearing control: a safe `extern "C" fn` coerces to this type, `unsafe extern "C" fn`
+// does not. Restoring the `unsafe` qualifier breaks this build.
+#[cfg(test)]
+const _: extern "C" fn() -> *mut *const c_char = ed25519_sigalg_query_key_types;
+#[cfg(test)]
+const _: extern "C" fn() -> *mut *const c_char = ed448_sigalg_query_key_types;

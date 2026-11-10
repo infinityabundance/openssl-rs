@@ -898,12 +898,16 @@ unsafe extern "C" fn ed448_get_params(key: *mut c_void, params: *mut OsslParam) 
 }
 
 /// `static const OSSL_PARAM *x25519_gettable_params(void *provctx)` — `ecx_kmgmt.c:826-829`.
-unsafe extern "C" fn x25519_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+///
+/// No pointer precondition: the argument is unread and the answer is a `'static` table.
+extern "C" fn x25519_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
     ECX_GET_PARAMS_LIST.as_ptr()
 }
 
 /// `static const OSSL_PARAM *x448_gettable_params(void *provctx)` — `ecx_kmgmt.c:831-834`.
-unsafe extern "C" fn x448_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+///
+/// No pointer precondition: the argument is unread and the answer is a `'static` table.
+extern "C" fn x448_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
     ECX_GET_PARAMS_LIST.as_ptr()
 }
 
@@ -1086,9 +1090,20 @@ unsafe extern "C" fn ed448_set_params(_key: *mut c_void, _params: *const OsslPar
 static ED_SETTABLE_PARAMS: [OsslParam; 1] = [END];
 
 /// `static const OSSL_PARAM *x25519_settable_params(void *provctx)` — `ecx_kmgmt.c:968-971`.
-unsafe extern "C" fn x25519_settable_params(_provctx: *mut c_void) -> *const OsslParam {
+///
+/// No pointer precondition: the argument is unread and the answer is a `'static` table.
+extern "C" fn x25519_settable_params(_provctx: *mut c_void) -> *const OsslParam {
     ECX_SET_PARAMS_LIST.as_ptr()
 }
+
+// Load-bearing control: a safe `extern "C" fn` coerces to these types, `unsafe extern "C" fn`
+// does not. Restoring the `unsafe` qualifier breaks this build.
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void) -> *const OsslParam = x25519_gettable_params;
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void) -> *const OsslParam = x448_gettable_params;
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void) -> *const OsslParam = x25519_settable_params;
 
 /// `static const OSSL_PARAM *x448_settable_params(void *provctx)` — `ecx_kmgmt.c:973-976`.
 extern "C" fn x448_settable_params(_provctx: *mut c_void) -> *const OsslParam {

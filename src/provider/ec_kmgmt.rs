@@ -235,7 +235,9 @@ const fn param_bn(key: *const c_char) -> OsslParam {
 }
 
 /// `static const char *ec_query_operation_name(int operation_id)` — `ec_kmgmt.c:82-91`.
-unsafe extern "C" fn ec_query_operation_name(operation_id: c_int) -> *const c_char {
+///
+/// No pointer precondition: the argument is an integer and the answer is a `'static` literal.
+extern "C" fn ec_query_operation_name(operation_id: c_int) -> *const c_char {
     match operation_id {
         x if x == OSSL_OP_KEYEXCH => c"ECDH".as_ptr(),
         x if x == OSSL_OP_SIGNATURE => c"ECDSA".as_ptr(),
@@ -244,7 +246,9 @@ unsafe extern "C" fn ec_query_operation_name(operation_id: c_int) -> *const c_ch
 }
 
 /// `static const char *sm2_query_operation_name(int operation_id)` — `ec_kmgmt.c:95-102`.
-unsafe extern "C" fn sm2_query_operation_name(operation_id: c_int) -> *const c_char {
+///
+/// No pointer precondition: the argument is an integer and the answer is a `'static` literal.
+extern "C" fn sm2_query_operation_name(operation_id: c_int) -> *const c_char {
     match operation_id {
         x if x == OSSL_OP_SIGNATURE => c"SM2".as_ptr(),
         _ => ptr::null(),
@@ -907,7 +911,9 @@ static EC_TYPES: EcTypes = EcTypes([
 
 /// `static ossl_inline const OSSL_PARAM *ec_imexport_types(int selection)` —
 /// `ec_kmgmt.c:543-556`.
-unsafe extern "C" fn ec_imexport_types(selection: c_int) -> *const OsslParam {
+///
+/// No pointer precondition: the argument is an integer and the answer is a `'static` table row.
+extern "C" fn ec_imexport_types(selection: c_int) -> *const OsslParam {
     let mut type_select = 0usize;
 
     if (selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0 {
@@ -926,15 +932,13 @@ unsafe extern "C" fn ec_imexport_types(selection: c_int) -> *const OsslParam {
 }
 
 /// `static const OSSL_PARAM *ec_import_types(int selection)` — `ec_kmgmt.c:558-561`.
-unsafe extern "C" fn ec_import_types(selection: c_int) -> *const OsslParam {
-    // SAFETY: the shared helper reads only its argument.
-    unsafe { ec_imexport_types(selection) }
+extern "C" fn ec_import_types(selection: c_int) -> *const OsslParam {
+    ec_imexport_types(selection)
 }
 
 /// `static const OSSL_PARAM *ec_export_types(int selection)` — `ec_kmgmt.c:563-566`.
-unsafe extern "C" fn ec_export_types(selection: c_int) -> *const OsslParam {
-    // SAFETY: as above.
-    unsafe { ec_imexport_types(selection) }
+extern "C" fn ec_export_types(selection: c_int) -> *const OsslParam {
+    ec_imexport_types(selection)
 }
 
 /// `static int ec_get_ecm_params(const EC_GROUP *group, OSSL_PARAM params[])` —
@@ -1228,7 +1232,9 @@ static EC_KNOWN_GETTABLE_PARAMS: [OsslParam; 32] = ec_types_with_dom!(
 );
 
 /// `static const OSSL_PARAM *ec_gettable_params(void *provctx)` — `ec_kmgmt.c:787-790`.
-unsafe extern "C" fn ec_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+///
+/// No pointer precondition: the argument is unread and the answer is a `'static` table.
+extern "C" fn ec_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
     EC_KNOWN_GETTABLE_PARAMS.as_ptr()
 }
 
@@ -1251,7 +1257,9 @@ static SM2_KNOWN_GETTABLE_PARAMS: [OsslParam; 23] = ec_types_with_dom!(
 );
 
 /// `static const OSSL_PARAM *sm2_gettable_params(void *provctx)` — `ec_kmgmt.c:860-863`.
-unsafe extern "C" fn sm2_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+///
+/// No pointer precondition: the argument is unread and the answer is a `'static` table.
+extern "C" fn sm2_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
     SM2_KNOWN_GETTABLE_PARAMS.as_ptr()
 }
 
@@ -1268,7 +1276,9 @@ static EC_KNOWN_SETTABLE_PARAMS: [OsslParam; 8] = [
 ];
 
 /// `static const OSSL_PARAM *ec_settable_params(void *provctx)` — `ec_kmgmt.c:803-806`.
-unsafe extern "C" fn ec_settable_params(_provctx: *mut c_void) -> *const OsslParam {
+///
+/// No pointer precondition: the argument is unread and the answer is a `'static` table.
+extern "C" fn ec_settable_params(_provctx: *mut c_void) -> *const OsslParam {
     EC_KNOWN_SETTABLE_PARAMS.as_ptr()
 }
 
@@ -1276,7 +1286,9 @@ unsafe extern "C" fn ec_settable_params(_provctx: *mut c_void) -> *const OsslPar
 static SM2_KNOWN_SETTABLE_PARAMS: [OsslParam; 2] = [param_octet_string(P_ENCODED_PUBLIC_KEY), END];
 
 /// `static const OSSL_PARAM *sm2_settable_params(void *provctx)` — `ec_kmgmt.c:870-873`.
-unsafe extern "C" fn sm2_settable_params(_provctx: *mut c_void) -> *const OsslParam {
+///
+/// No pointer precondition: the argument is unread and the answer is a `'static` table.
+extern "C" fn sm2_settable_params(_provctx: *mut c_void) -> *const OsslParam {
     SM2_KNOWN_SETTABLE_PARAMS.as_ptr()
 }
 
@@ -1878,7 +1890,9 @@ static EC_GEN_SETTABLE_PARAMS: [OsslParam; 14] = [
 
 /// `static const OSSL_PARAM *ec_gen_settable_params(void *genctx, void *provctx)` —
 /// `ec_kmgmt.c:1192-1213`.
-unsafe extern "C" fn ec_gen_settable_params(
+///
+/// No pointer precondition: both arguments are unread and the answer is a `'static` table.
+extern "C" fn ec_gen_settable_params(
     _genctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -1891,12 +1905,40 @@ static EC_GEN_GETTABLE_PARAMS: [OsslParam; 1] = [END];
 
 /// `static const OSSL_PARAM *ec_gen_gettable_params(void *genctx, void *provctx)` —
 /// `ec_kmgmt.c:1215-1223`.
-unsafe extern "C" fn ec_gen_gettable_params(
+///
+/// No pointer precondition: both arguments are unread and the answer is a `'static` table.
+extern "C" fn ec_gen_gettable_params(
     _genctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
     EC_GEN_GETTABLE_PARAMS.as_ptr()
 }
+
+// Load-bearing control for the vacuous-contract eliminations above: a safe `extern "C" fn`
+// coerces to these safe pointer types, while `unsafe extern "C" fn` does not. Restoring the
+// `unsafe` qualifier on any declaration breaks this build.
+#[cfg(test)]
+const _: extern "C" fn(c_int) -> *const c_char = ec_query_operation_name;
+#[cfg(test)]
+const _: extern "C" fn(c_int) -> *const c_char = sm2_query_operation_name;
+#[cfg(test)]
+const _: extern "C" fn(c_int) -> *const OsslParam = ec_imexport_types;
+#[cfg(test)]
+const _: extern "C" fn(c_int) -> *const OsslParam = ec_import_types;
+#[cfg(test)]
+const _: extern "C" fn(c_int) -> *const OsslParam = ec_export_types;
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void) -> *const OsslParam = ec_gettable_params;
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void) -> *const OsslParam = ec_settable_params;
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void) -> *const OsslParam = sm2_gettable_params;
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void) -> *const OsslParam = sm2_settable_params;
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void, *mut c_void) -> *const OsslParam = ec_gen_settable_params;
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void, *mut c_void) -> *const OsslParam = ec_gen_gettable_params;
 
 /// `static int ec_gen_get_params(void *genctx, OSSL_PARAM *params)` — `ec_kmgmt.c:1225-1236`. The
 /// `OSSL_FIPS_IND_GET_CTX_PARAM` call is not this profile's, so the function answers 1.

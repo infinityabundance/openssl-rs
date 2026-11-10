@@ -346,12 +346,10 @@ unsafe fn rc2_meth_to_magic(e: *mut EvpCipherCtx) -> c_int {
 
 /// `rc2_magic_to_meth` — `e_rc2.c:116-128`.
 ///
-/// # Safety
-///
-/// No pointer precondition: `i` is an integer and the function reads no memory. The `unsafe`
-/// qualifier is retained because the body enters an `unsafe` raise site; a caller cannot cause
-/// undefined behaviour through this function.
-unsafe fn rc2_magic_to_meth(i: c_int) -> c_int {
+/// No pointer precondition: `i` is an integer and the function reads no memory. It is a safe fn
+/// because a caller cannot cause undefined behaviour through it; the only unsafe operation is the
+/// internal raise site, which takes a compile-time-constant description.
+fn rc2_magic_to_meth(i: c_int) -> c_int {
     match i {
         RC2_128_MAGIC => 128,
         RC2_64_MAGIC => 64,
@@ -363,6 +361,11 @@ unsafe fn rc2_magic_to_meth(i: c_int) -> c_int {
         }
     }
 }
+
+// Load-bearing control: a safe `fn` coerces to this type, `unsafe fn` does not. Restoring the
+// `unsafe` qualifier breaks this build.
+#[cfg(test)]
+const _: fn(c_int) -> c_int = rc2_magic_to_meth;
 
 /// `rc2_get_asn1_type_and_iv` — `e_rc2.c:130-156`.
 ///
@@ -385,8 +388,7 @@ unsafe extern "C" fn rc2_get_asn1_type_and_iv(c: *mut c_void, type_: *mut c_void
         if i != l as c_int {
             return -1;
         }
-        // SAFETY: `num` is a plain integer and `rc2_magic_to_meth` only reads it.
-        let key_bits = unsafe { rc2_magic_to_meth(num as c_int) };
+        let key_bits = rc2_magic_to_meth(num as c_int);
         if key_bits == 0 {
             return -1;
         }

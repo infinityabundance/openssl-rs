@@ -646,7 +646,9 @@ unsafe extern "C" fn slh_t_sha2(
 ///
 /// `is_shake != 0` answers the SHAKE table, zero the SHA-2 one — the authority's
 /// `methods[is_shake ? 0 : 1]`.
-pub(crate) unsafe fn ossl_slh_get_hash_fn(is_shake: c_int) -> *const SlhHashFunc {
+///
+/// No caller precondition: the selector is an integer and the answer is a `'static` table.
+pub(crate) fn ossl_slh_get_hash_fn(is_shake: c_int) -> *const SlhHashFunc {
     const METHODS: [SlhHashFunc; 2] = [
         SlhHashFunc {
             h_msg: slh_hmsg_shake,
@@ -671,3 +673,8 @@ pub(crate) unsafe fn ossl_slh_get_hash_fn(is_shake: c_int) -> *const SlhHashFunc
         &METHODS[1]
     }
 }
+
+// Load-bearing control: a safe `fn` coerces to this type, `unsafe fn` does not. Restoring the
+// `unsafe` qualifier breaks this build.
+#[cfg(test)]
+const _: fn(c_int) -> *const SlhHashFunc = ossl_slh_get_hash_fn;

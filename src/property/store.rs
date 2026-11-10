@@ -1597,9 +1597,20 @@ unsafe fn c_memcpy(dst: *mut c_void, src: *const c_void, n: usize) {
 /// them, because a key is not stored. Rust cannot spell an indeterminate function pointer, so the
 /// fields are initialised to functions that abort if they are ever reached, which turns "the table
 /// never calls this" from a comment into a check.
-unsafe extern "C" fn unused_up_ref(_method: *mut c_void) -> c_int {
+///
+/// This sentinel never dereferences `_method`, which may be any value (NULL, dangling or
+/// unaligned), and never returns — a reached call panics and the runtime aborts at the
+/// `extern "C"` boundary rather than unwinding, so even a violated call is not UB. The
+/// declaration is therefore a safe fn: there is no caller obligation to discharge, only the ABI
+/// shape `int (*)(void *)`.
+extern "C" fn unused_up_ref(_method: *mut c_void) -> c_int {
     unreachable!("a stack-built QUERY key's `method.up_ref` was called")
 }
+
+// Load-bearing control: a safe `extern "C" fn` coerces to this type, `unsafe extern "C" fn`
+// does not. Restoring the `unsafe` qualifier breaks this build.
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void) -> c_int = unused_up_ref;
 
 /// See [`unused_up_ref`].
 ///
