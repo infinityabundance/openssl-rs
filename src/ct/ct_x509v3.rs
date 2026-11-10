@@ -46,6 +46,12 @@ use crate::x509::v3_lib::{
     X509V3ExtD2i, X509V3ExtFree, X509V3ExtI2d, X509V3ExtI2r, X509V3ExtMethod,
 };
 
+#[cfg(test)]
+const _: extern "C" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char = i2s_poison;
+#[cfg(test)]
+const _: extern "C" fn(*const X509V3ExtMethod, *mut c_void, *const c_char) -> *mut c_void =
+    s2i_poison;
+
 /// `static char *i2s_poison(const X509V3_EXT_METHOD *method, void *val)` —
 /// `crypto/ct/ct_x509v3.c:16-19`.
 ///
@@ -53,10 +59,8 @@ use crate::x509::v3_lib::{
 /// result, so `X509V3_EXT_print` owns it and releases it once at `crypto/x509/v3_prn.c:130`.
 /// This function must not free it.
 ///
-/// # Safety
-///
-/// The caller's contract is the row's: neither argument is read.
-unsafe extern "C" fn i2s_poison(_method: *const X509V3ExtMethod, _val: *mut c_void) -> *mut c_char {
+/// Neither argument is read, so it imposes no caller obligation.
+extern "C" fn i2s_poison(_method: *const X509V3ExtMethod, _val: *mut c_void) -> *mut c_char {
     // SAFETY: `"NULL"` is a static NUL-terminated string.
     unsafe { CRYPTO_strdup(c"NULL".as_ptr(), ptr::null(), 0) }
 }
@@ -64,10 +68,8 @@ unsafe extern "C" fn i2s_poison(_method: *const X509V3ExtMethod, _val: *mut c_vo
 /// `static void *s2i_poison(const X509V3_EXT_METHOD *method, X509V3_CTX *ctx, const char *str)` —
 /// `crypto/ct/ct_x509v3.c:21-24`.
 ///
-/// # Safety
-///
-/// The caller's contract is the row's: no argument is read.
-unsafe extern "C" fn s2i_poison(
+/// No argument is read, so it imposes no caller obligation.
+extern "C" fn s2i_poison(
     _method: *const X509V3ExtMethod,
     _ctx: *mut c_void,
     _str: *const c_char,

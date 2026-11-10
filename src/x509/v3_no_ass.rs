@@ -26,6 +26,10 @@ use crate::runtime::mem::CRYPTO_strdup;
 use crate::runtime::obj::NID_no_assertion;
 use crate::x509::v3_lib::X509V3ExtMethod;
 
+#[cfg(test)]
+const _: extern "C" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int =
+    i2r_NO_ASSERTION;
+
 /// `OPENSSL_FILE` for this unit's `OPENSSL_strdup` expansion — `crypto/x509/v3_no_ass.c`.
 const FILE: &core::ffi::CStr = c"crypto/x509/v3_no_ass.c";
 /// `i2s_NO_ASSERTION`'s `OPENSSL_strdup("NULL")` (`crypto/x509/v3_no_ass.c:32`).
@@ -34,17 +38,10 @@ const LINE_STRDUP: c_int = 32;
 /// `static int i2r_NO_ASSERTION(X509V3_EXT_METHOD *method, void *su, BIO *out, int indent)`
 /// — `crypto/x509/v3_no_ass.c:17-22`. The authority returns a bare `1` and reads nothing.
 ///
-/// # Safety
-///
-/// The `i2r` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
-/// `X509V3_EXT_print`'s `i2r` arm (`src/x509/v3_prn.rs:341`), which decoded the extension
-/// through the row's `ASN1_NULL` item and refused a NULL result (`:300-303`), and refused a
-/// NULL `out`/`ext` prologue (`:254-256`). The body reads none of `method`, `su`, `out` or
-/// `indent`; those are non-NULL per the dispatcher where the parameter is a pointer, and stay
-/// live for the call. No further property is required.
+/// Reads no argument, so it imposes no caller obligation.
 ///
 /// Authority-derived: `crypto/x509/v3_no_ass.c:17-22` reads nothing and answers 1.
-unsafe extern "C" fn i2r_NO_ASSERTION(
+extern "C" fn i2r_NO_ASSERTION(
     _method: *const X509V3ExtMethod,
     _su: *mut c_void,
     _out: *mut Bio,
@@ -55,7 +52,9 @@ unsafe extern "C" fn i2r_NO_ASSERTION(
 
 /// `static void *r2i_NO_ASSERTION(X509V3_EXT_METHOD *method, X509V3_CTX *ctx, const char *value)`
 /// — `crypto/x509/v3_no_ass.c:24-28`. Answers the `ASN1_NULL` sentinel.
-unsafe extern "C" fn r2i_NO_ASSERTION(
+///
+/// Reads no argument, so it imposes no caller obligation.
+extern "C" fn r2i_NO_ASSERTION(
     _method: *const X509V3ExtMethod,
     _ctx: *mut c_void,
     _value: *const c_char,
@@ -70,19 +69,11 @@ unsafe extern "C" fn r2i_NO_ASSERTION(
 /// releases it through the allocator seam. There is no local release, so the transfer edge
 /// is the raw return rather than an owner that would free a returned block.
 ///
-/// # Safety
-///
-/// The `i2s` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
-/// `X509V3_EXT_print`'s `i2s` arm (`src/x509/v3_prn.rs:334-352`), which resolved the row under
-/// the extension registry's read hold and decoded a non-NULL value through the row's item.
-/// Neither argument is read, so no further property is required.
+/// Neither argument is read, so it imposes no caller obligation.
 ///
 /// Authority-derived: `crypto/x509/v3_no_ass.c:30-33` reads no argument and duplicates
 /// `"NULL"`.
-unsafe extern "C" fn i2s_NO_ASSERTION(
-    _method: *const X509V3ExtMethod,
-    _val: *mut c_void,
-) -> *mut c_char {
+extern "C" fn i2s_NO_ASSERTION(_method: *const X509V3ExtMethod, _val: *mut c_void) -> *mut c_char {
     // SAFETY: `c"NULL"` is a compile-time constant NUL-terminated string.
     //
     // The returned block belongs to the caller: the extension machinery owns the returned
@@ -94,21 +85,13 @@ unsafe extern "C" fn i2s_NO_ASSERTION(
 /// `static void *s2i_NO_ASSERTION(X509V3_EXT_METHOD *method, X509V3_CTX *ctx, const char *str)`
 /// — `crypto/x509/v3_no_ass.c:35-40`. The input is checked by nobody, as in the authority.
 ///
-/// # Safety
-///
-/// The `s2i` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
-/// `do_ext_nconf`'s `s2i` arm (`src/x509/v3_conf.rs:1095`), which resolved `method` under the
-/// extension registry's read hold (held across the lookup, this callback and `do_ext_i2d`) and
-/// passes the caller's NUL-terminated configuration `value`; `ctx` is NULL or live. This
-/// callback reads no argument, so no further property is required; in particular it does not
-/// read `value`, matching the authority's unchecked input. `method` stays live for the call, and
-/// `value` is borrowed, not freed or retained. The `ASN1_NULL` sentinel it returns belongs to
-/// the dispatcher, which encodes it with this row's `ASN1_NULL_it` and releases it once
-/// (`src/x509/v3_conf.rs:1126-1132`).
+/// Reads no argument, so it imposes no caller obligation. The `ASN1_NULL` sentinel it returns
+/// belongs to the dispatcher, which encodes it with this row's `ASN1_NULL_it` and releases it
+/// once (`src/x509/v3_conf.rs:1126-1132`).
 ///
 /// Authority-derived: `crypto/x509/v3_no_ass.c:35-40` returns `ASN1_NULL_new()` and reads no
 /// argument.
-unsafe extern "C" fn s2i_NO_ASSERTION(
+extern "C" fn s2i_NO_ASSERTION(
     _method: *const X509V3ExtMethod,
     _ctx: *mut c_void,
     _str: *const c_char,

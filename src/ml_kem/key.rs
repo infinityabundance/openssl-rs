@@ -283,12 +283,14 @@ fn raise_fixed(site: &crate::runtime::err::err_sites::ErrSite, msg: &str) {
 // `unsafe` qualifier breaks this build.
 #[cfg(test)]
 const _: fn(&crate::runtime::err::err_sites::ErrSite, &str) = raise_fixed;
+#[cfg(test)]
+const _: fn(c_int) -> *const MlKemVinfo = ossl_ml_kem_get_vinfo;
 
 /// `ossl_ml_kem_get_vinfo(evp_type)` — `ml_kem.c:1977-1988`.
 ///
-/// # Safety
-/// Nothing: the answer is a pointer into this module's own static table or NULL.
-pub(crate) unsafe fn ossl_ml_kem_get_vinfo(evp_type: c_int) -> *const MlKemVinfo {
+/// No caller obligation: nothing is read except the integer, and the answer is a pointer into
+/// this module's own static table or NULL.
+pub(crate) fn ossl_ml_kem_get_vinfo(evp_type: c_int) -> *const MlKemVinfo {
     match evp_type {
         super::EVP_PKEY_ML_KEM_512 => &VINFO_MAP.0[0],
         super::EVP_PKEY_ML_KEM_768 => &VINFO_MAP.0[1],
@@ -753,7 +755,7 @@ pub(crate) unsafe fn ossl_ml_kem_key_new(
     evp_type: c_int,
 ) -> *mut MlKemKey {
     // SAFETY: the answer is a pointer into this module's static table.
-    let vinfo = unsafe { ossl_ml_kem_get_vinfo(evp_type) };
+    let vinfo = ossl_ml_kem_get_vinfo(evp_type);
     if vinfo.is_null() {
         raise_fixed(
             &err_sites::ML_KEM_1997,
