@@ -6,10 +6,10 @@
  "candidate": {
   "base_commit": "fcd22e3987a4e4d49d2c896b46103cfa26942f85",
   "base_commit_subject": "feat(analyzer): intraprocedural type propagation for store bases",
-  "head_commit": "d00d885df0742195ac8ed10eac5a33fed516e886",
-  "head_commit_subject": "fix(evp): refuse EVP_MD_meth_set_app_datasize on a GLOBAL method",
+  "head_commit": "7e235f09d9a5626129702bb5c08ced1c1cdc555c",
+  "head_commit_subject": "fix(evp): gate every mutating EVP_MD_meth_set_* on origin, and re-freeze B48",
   "branch": "main",
-  "working_tree": "HEAD d00d885df0742195ac8ed10eac5a33fed516e886 (branch `main`) plus the uncommitted B48 sibling-setter repair: the origin gate is now on all ten mutating `EVP_MD_meth_set_*` functions, with one load-bearing test and the extended `D-MD-APPDATASIZE-GLOBAL-1` entry. `files_sha256` is computed over this working tree with the receipt's own convention (plain SHA-256 of the file bytes), so the receipt names exactly the source it describes. The historical full-surface work is in the history behind d00d885df. CAMPAIGN-STATUS.json is untouched, nothing was rebuilt into an install, and the REJECT verdict and `applied: false` are retained: this is the repair of the rejected batch, not an application.",
+  "working_tree": "clean at S = 7e235f09d9a5626129702bb5c08ced1c1cdc555c (branch `main`); the 2026-11-10 B48 test repair is uncommitted over S and every `files_sha256` below is computed over that working tree (plain SHA-256 of the file bytes). CAMPAIGN-STATUS.json is untouched, nothing was rebuilt into an install, and the REJECT verdict and `applied: false` are retained: this is the repair of the rejected batch, not an application.",
   "files": [
    "src/evp/legacy_sha.rs",
    "src/evp/legacy_md5.rs",
@@ -36,11 +36,11 @@
    "src/evp/legacy_wp.rs": "f3672077940d0e860c6c35bfe17c1a5be4677127f9adfd11cdb2bfeeae43693f",
    "src/sm3/legacy_sm3.rs": "675834621bb42eae608e388d6e4c176231219ce30feac6c093e22c433c4c3f94",
    "src/evp/e_rc2.rs": "ef0cc7760e22b883ae5f3889941c0b456f97f0422a28f1a7f92f60f11fadb4d3",
-   "src/evp/digest.rs": "eb4759053426cc6d1ce6221517f4b6024e7c497ef998ac3529497af6a138b1d4",
+   "src/evp/digest.rs": "e7b4c30ccfd68a44a1cb3d8b0597a3d375ed8f13ee032a781a49f737fdf417ec",
    "src/evp/mod.rs": "99fbd7f17d4b1d5a066d5223af7eecc31f6c069674ffe0c46db47f737675be94",
    "src/evp/legacy_digest_callback_surface.rs": "4d2308934d973362537ffbb0efebce8bfbe1769ce99a6ad3666e15dcfc3d6c49"
   },
-  "note": "No freeze tag was created. `line` retains the V1 census coordinate where one exists. `line_current` for the `EVP_MD_meth_*` rows and the file-prefixed `src/evp/digest.rs:` references were refreshed to this working tree; line numbers are advisory under content addressing and `files_sha256` (plain SHA-256 of the file bytes, the convention `atlas_refresh.py` uses) is the acceptance binding. Embedded references to other files retain their historical repair-tree coordinates and are likewise advisory; every one is bound through that file's hash."
+  "note": "S is the commit 7e235f09d9a5626129702bb5c08ced1c1cdc555c; the uncommitted test repair over it is what `files_sha256` describes. Every row's `line_current` and every scope coordinate was re-derived on 2026-11-10 by locating the operation's definition in the frozen file (exactly one `fn <operation>(` match per row), not incremented: 38 `line_current` values, 22 `line` values (the 22 that had been set to a current-tree coordinate; the V1 census coordinate in `line` is retained where it differs from `line_current`) and 25 disposition scope lines changed. Provenance hashes naming the superseded repair tree were corrected to the frozen file hashes: src/evp/legacy_sha.rs a15209b0... -> 18b8eae2... (20 rows) and src/evp/legacy_sha3.rs 3bc98b1e... -> 89e78d58... (5 rows). `line` retains the V1 census coordinate where one exists. Embedded references to other files retain their historical coordinates and are advisory; every one is bound through that file's hash. The `files_sha256` convention is plain SHA-256 of the file bytes, as `atlas_refresh.py` uses."
  },
  "authority": {
   "id": "openssl-3.6.4-production",
@@ -223,15 +223,15 @@
    "id": "B48-SHA-001",
    "file": "src/evp/legacy_sha.rs",
    "line": 262,
-   "line_current": 298,
-   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line_current": 310,
+   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha1_update",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
    "registration": "SHA1_MD at :904; Some(sha1_update) at :910",
    "guard": "init_md_data(ctx, addr_of!(SHA1_MD.0), size_of::<ShaCtx>()); data.is_null() && count != 0 -> 0",
-   "disposition": "SAFETY_DISCHARGED (scope: sha1_update and its dispatch path; src/evp/legacy_sha.rs:298)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha1_update and its dispatch path; src/evp/legacy_sha.rs:310)",
    "contract": "Update contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA_CTX` (owner `SHA1_MD`, or a live method with `ctx_size >= size_of::<ShaCtx>()`). `data` is readable for `count` bytes and NULL only when `count == 0` (`md32::update` returns 1 for zero length at src/digest/md32.rs:106-109; `EVP_DigestUpdate` does not invoke the callback for zero length at src/evp/digest.rs:2496). The callback refuses a context without the block with 0 before any dereference; the refusal leaves the context untouched and retryable. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
@@ -261,15 +261,15 @@
    "id": "B48-SHA-002",
    "file": "src/evp/legacy_sha.rs",
    "line": 269,
-   "line_current": 334,
-   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line_current": 346,
+   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha1_final",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
    "registration": "SHA1_MD at :904; Some(sha1_final) at :911",
    "guard": "init_md_data(ctx, addr_of!(SHA1_MD.0), size_of::<ShaCtx>())",
-   "disposition": "SAFETY_DISCHARGED (scope: sha1_final and its dispatch path; src/evp/legacy_sha.rs:334)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha1_final and its dispatch path; src/evp/legacy_sha.rs:346)",
    "contract": "Final contract: `ctx` NULL or live and exclusively borrowed with a writable `SHA_CTX` (same owner/size rule as `sha1_update`); `md` writable for `SHA_DIGEST_LENGTH` (20) bytes. The callback refuses a context without the block with 0 before `md` is touched. A successful final consumes the block per the authority; a second final is refused by `EVP_DigestFinal_ex`'s FINALISED check (src/evp/digest.rs:2599-2604), so retry-after-success is not allowed; retry after a guard refusal is allowed.",
    "established": [
     "`evp_md_final_legacy` (:2635) calls `final_` at :2652; `evp_digest_final_xof_legacy` (:2757) calls it at :2783; the exported `EVP_MD_meth_get_final` (:1606) is the direct source."
@@ -296,15 +296,15 @@
    "id": "B48-SHA-003",
    "file": "src/evp/legacy_sha.rs",
    "line": 277,
-   "line_current": 372,
-   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line_current": 384,
+   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha1_int_ctrl",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, c_int, c_int, *mut c_void) -> c_int",
    "registration": "SHA1_MD at :904; Some(sha1_int_ctrl) at :912",
    "guard": "init_md_data(ctx, addr_of!(SHA1_MD.0), size_of::<ShaCtx>())",
-   "disposition": "SAFETY_DISCHARGED (scope: sha1_int_ctrl and its dispatch path; src/evp/legacy_sha.rs:372)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha1_int_ctrl and its dispatch path; src/evp/legacy_sha.rs:384)",
    "contract": "Control contract over `SHA_CTX`: `ctx` NULL or live; `p2` readable for `p1` bytes when `cmd == EVP_CTRL_SSL3_MASTER_SECRET` (48). The callback establishes a writable `SHA_CTX` through `init_md_data` and refuses before any write when the context or method is NULL, `md_data` is NULL, or the method's `app_datasize` is smaller than `size_of::<ShaCtx>()`: the master-secret command answers 0, any other command -2, with no state change. On a valid block it forwards the four arguments to `ossl_sha1_ctrl` unchanged, so a valid call's result is unchanged. When the method is not `sha1_md`, owner identity does not establish the block type; the caller's declared `app_datasize` establishes the extent, the same contract `init_md_data` applies to the initialisers, and every write is bounded by it. Candidate divergence from the authority, which passes an undersized block to `SHA1_Update`.",
    "established": [
     "`evp_md_ctx_ctrl_legacy` (:3667) calls `md_ctrl` at :3680; the exported `EVP_MD_meth_get_ctrl` (:1651) is the direct source."
@@ -331,15 +331,15 @@
    "id": "B48-SHA-004",
    "file": "src/evp/legacy_sha.rs",
    "line": 324,
-   "line_current": 448,
-   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line_current": 460,
+   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha224_update",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
    "registration": "SHA224_MD at :916; Some(sha224_update) at :922",
    "guard": "init_md_data(ctx, addr_of!(SHA224_MD.0), size_of::<Sha256Ctx>()); data.is_null() && count != 0 -> 0",
-   "disposition": "SAFETY_DISCHARGED (scope: sha224_update and its dispatch path; src/evp/legacy_sha.rs:448)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha224_update and its dispatch path; src/evp/legacy_sha.rs:460)",
    "contract": "Update contract over `SHA256_CTX` (owner `SHA224_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0` (`md32::update` early return); a context without the block answers 0 before any dereference, leaving the context untouched and retryable. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
@@ -368,15 +368,15 @@
    "id": "B48-SHA-005",
    "file": "src/evp/legacy_sha.rs",
    "line": 330,
-   "line_current": 481,
-   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line_current": 493,
+   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha224_final",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
    "registration": "SHA224_MD at :916; Some(sha224_final) at :923",
    "guard": "init_md_data(ctx, addr_of!(SHA224_MD.0), size_of::<Sha256Ctx>())",
-   "disposition": "SAFETY_DISCHARGED (scope: sha224_final and its dispatch path; src/evp/legacy_sha.rs:481)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha224_final and its dispatch path; src/evp/legacy_sha.rs:493)",
    "contract": "Final contract over `SHA256_CTX`: `ctx` NULL or live and exclusive with the block; `md` writable for `SHA224_DIGEST_LENGTH` (28) bytes; refusal before `md` is touched; successful final consumes the block; retry-after-success is refused by the FINALISED check at src/evp/digest.rs:2599-2604.",
    "established": [
     "`evp_md_final_legacy` (:2635) calls `final_` at :2652; `evp_digest_final_xof_legacy` (:2757) calls it at :2783; the exported `EVP_MD_meth_get_final` (:1606) is the direct source."
@@ -402,15 +402,15 @@
    "id": "B48-SHA-006",
    "file": "src/evp/legacy_sha.rs",
    "line": 360,
-   "line_current": 540,
-   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line_current": 552,
+   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha256_update",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
    "registration": "SHA256_MD at :928; Some(sha256_update) at :934",
    "guard": "init_md_data(ctx, addr_of!(SHA256_MD.0), size_of::<Sha256Ctx>()); data.is_null() && count != 0 -> 0",
-   "disposition": "SAFETY_DISCHARGED (scope: sha256_update and its dispatch path; src/evp/legacy_sha.rs:540)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha256_update and its dispatch path; src/evp/legacy_sha.rs:552)",
    "contract": "Update contract over `SHA256_CTX` (owner `SHA256_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0`; refusal with 0 before any dereference; no state change on refusal. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
@@ -439,15 +439,15 @@
    "id": "B48-SHA-007",
    "file": "src/evp/legacy_sha.rs",
    "line": 366,
-   "line_current": 573,
-   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line_current": 585,
+   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha256_final",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
    "registration": "SHA256_MD at :928; Some(sha256_final) at :935",
    "guard": "init_md_data(ctx, addr_of!(SHA256_MD.0), size_of::<Sha256Ctx>())",
-   "disposition": "SAFETY_DISCHARGED (scope: sha256_final and its dispatch path; src/evp/legacy_sha.rs:573)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha256_final and its dispatch path; src/evp/legacy_sha.rs:585)",
    "contract": "Final contract over `SHA256_CTX`: `ctx` NULL or live and exclusive with the block; `md` writable for `SHA256_DIGEST_LENGTH` (32) bytes; refusal before `md` is touched; successful final consumes the block; retry-after-success refused by the FINALISED check.",
    "established": [
     "`evp_md_final_legacy` (:2635) calls `final_` at :2652; `evp_digest_final_xof_legacy` (:2757) calls it at :2783; the exported `EVP_MD_meth_get_final` (:1606) is the direct source."
@@ -473,15 +473,15 @@
    "id": "B48-SHA-008",
    "file": "src/evp/legacy_sha.rs",
    "line": 396,
-   "line_current": 634,
-   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line_current": 646,
+   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha384_update",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
    "registration": "SHA384_MD at :940; Some(sha384_update) at :946; SHA512_224_MD at :966; Some(sha384_update) at :972; SHA512_256_MD at :979; Some(sha384_update) at :985",
    "guard": "init_md_data_any(ctx, [SHA384_MD, SHA512_224_MD, SHA512_256_MD], size_of::<Sha512Ctx>()); data.is_null() && count != 0 -> 0",
-   "disposition": "SAFETY_DISCHARGED (scope: sha384_update and its dispatch path; src/evp/legacy_sha.rs:634)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha384_update and its dispatch path; src/evp/legacy_sha.rs:646)",
    "contract": "Update contract over `SHA512_CTX` with three owners (`SHA384_MD`, `SHA512_224_MD`, `SHA512_256_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0` (`SHA512_Update` returns 1 at src/digest/sha2.rs:615); a context without the block answers 0 before any dereference. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
@@ -510,15 +510,15 @@
    "id": "B48-SHA-009",
    "file": "src/evp/legacy_sha.rs",
    "line": 402,
-   "line_current": 672,
-   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line_current": 684,
+   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha384_final",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
    "registration": "SHA384_MD at :940; Some(sha384_final) at :947",
    "guard": "init_md_data(ctx, addr_of!(SHA384_MD.0), size_of::<Sha512Ctx>())",
-   "disposition": "SAFETY_DISCHARGED (scope: sha384_final and its dispatch path; src/evp/legacy_sha.rs:672)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha384_final and its dispatch path; src/evp/legacy_sha.rs:684)",
    "contract": "Final contract over `SHA512_CTX` (owner `SHA384_MD`): `ctx` NULL or live and exclusive; `md` writable for `SHA384_DIGEST_LENGTH` (48) bytes; refusal before `md` is touched; successful final consumes the block.",
    "established": [
     "`evp_md_final_legacy` (:2635) calls `final_` at :2652; `evp_digest_final_xof_legacy` (:2757) calls it at :2783; the exported `EVP_MD_meth_get_final` (:1606) is the direct source."
@@ -544,15 +544,15 @@
    "id": "B48-SHA-010",
    "file": "src/evp/legacy_sha.rs",
    "line": 432,
-   "line_current": 731,
-   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line_current": 743,
+   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha512_update",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
    "registration": "SHA512_MD at :952; Some(sha512_update) at :958",
    "guard": "init_md_data(ctx, addr_of!(SHA512_MD.0), size_of::<Sha512Ctx>()); data.is_null() && count != 0 -> 0",
-   "disposition": "SAFETY_DISCHARGED (scope: sha512_update and its dispatch path; src/evp/legacy_sha.rs:731)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha512_update and its dispatch path; src/evp/legacy_sha.rs:743)",
    "contract": "Update contract over `SHA512_CTX` (owner `SHA512_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0`; refusal with 0 before any dereference; no state change on refusal. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
@@ -581,15 +581,15 @@
    "id": "B48-SHA-011",
    "file": "src/evp/legacy_sha.rs",
    "line": 438,
-   "line_current": 764,
-   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line_current": 776,
+   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha512_final",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
    "registration": "SHA512_MD at :952; Some(sha512_final) at :959",
    "guard": "init_md_data(ctx, addr_of!(SHA512_MD.0), size_of::<Sha512Ctx>())",
-   "disposition": "SAFETY_DISCHARGED (scope: sha512_final and its dispatch path; src/evp/legacy_sha.rs:764)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha512_final and its dispatch path; src/evp/legacy_sha.rs:776)",
    "contract": "Final contract over `SHA512_CTX`: `ctx` NULL or live and exclusive; `md` writable for `SHA512_DIGEST_LENGTH` (64) bytes; refusal before `md` is touched; successful final consumes the block per the authority.",
    "established": [
     "`evp_md_final_legacy` (:2635) calls `final_` at :2652; `evp_digest_final_xof_legacy` (:2757) calls it at :2783; the exported `EVP_MD_meth_get_final` (:1606) is the direct source."
@@ -615,15 +615,15 @@
    "id": "B48-SHA-012",
    "file": "src/evp/legacy_sha.rs",
    "line": 471,
-   "line_current": 825,
-   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line_current": 837,
+   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha512_224_int_final",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
    "registration": "SHA512_224_MD at :966; Some(sha512_224_int_final) at :973",
    "guard": "init_md_data(ctx, addr_of!(SHA512_224_MD.0), size_of::<Sha512Ctx>())",
-   "disposition": "SAFETY_DISCHARGED (scope: sha512_224_int_final and its dispatch path; src/evp/legacy_sha.rs:825)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha512_224_int_final and its dispatch path; src/evp/legacy_sha.rs:837)",
    "contract": "Final contract over `SHA512_CTX` (owner `SHA512_224_MD`): `ctx` NULL or live and exclusive; `md` writable for 28 bytes; refusal before `md` is touched; successful final consumes the block. The update half of this table is `sha384_update`, contracted as B48-SHA-008.",
    "established": [
     "`evp_md_final_legacy` (:2635) calls `final_` at :2652; `evp_digest_final_xof_legacy` (:2757) calls it at :2783; the exported `EVP_MD_meth_get_final` (:1606) is the direct source."
@@ -649,15 +649,15 @@
    "id": "B48-SHA-013",
    "file": "src/evp/legacy_sha.rs",
    "line": 501,
-   "line_current": 883,
-   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line_current": 895,
+   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha512_256_int_final",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
    "registration": "SHA512_256_MD at :979; Some(sha512_256_int_final) at :986",
    "guard": "init_md_data(ctx, addr_of!(SHA512_256_MD.0), size_of::<Sha512Ctx>())",
-   "disposition": "SAFETY_DISCHARGED (scope: sha512_256_int_final and its dispatch path; src/evp/legacy_sha.rs:883)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha512_256_int_final and its dispatch path; src/evp/legacy_sha.rs:895)",
    "contract": "Final contract over `SHA512_CTX` (owner `SHA512_256_MD`): `ctx` NULL or live and exclusive; `md` writable for 32 bytes; refusal before `md` is touched; successful final consumes the block. The update half of this table is `sha384_update`, contracted as B48-SHA-008.",
    "established": [
     "`evp_md_final_legacy` (:2635) calls `final_` at :2652; `evp_digest_final_xof_legacy` (:2757) calls it at :2783; the exported `EVP_MD_meth_get_final` (:1606) is the direct source."
@@ -1109,15 +1109,15 @@
    "id": "B48-SHA3-001",
    "file": "src/evp/legacy_sha3.rs",
    "line": 277,
-   "line_current": 299,
-   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 3bc98b1ef29a18b0bdcb7c08f174d7cab591cc9ebeea1d8b2f40323b9b904dd5)",
+   "line_current": 310,
+   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 89e78d58492837959ae50b7c6e70ea8cac91f9c2591d4fbfafd2d9d3df20faee)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha3_int_update",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int",
    "registration": "SHA3_224_MD at :471; Some(sha3_int_update) at :478; SHA3_256_MD at :484; Some(sha3_int_update) at :491; SHA3_384_MD at :497; Some(sha3_int_update) at :504; SHA3_512_MD at :510; Some(sha3_int_update) at :517; SHAKE128_MD at :526; Some(sha3_int_update) at :533; SHAKE256_MD at :540; Some(sha3_int_update) at :547",
    "guard": "init_keccak(ctx, [SHA3_224_MD, SHA3_256_MD, SHA3_384_MD, SHA3_512_MD, SHAKE128_MD, SHAKE256_MD]); data.is_null() && count != 0 -> 0",
-   "disposition": "SAFETY_DISCHARGED (scope: sha3_int_update and its dispatch path; src/evp/legacy_sha3.rs:299)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha3_int_update and its dispatch path; src/evp/legacy_sha3.rs:310)",
    "contract": "Update contract over `KECCAK1600_CTX` with six owners: `ctx` NULL or live and exclusive; the context's `md_data` must be a writable `KeccakCtx` and the method's `md_size` positive, established by ownership of one of the six tables or a live method with `ctx_size >= size_of::<KeccakCtx>()`; `data` readable for `count` bytes and NULL only at `count == 0` (`ossl_sha3_update` returns 1 at src/digest/sha3.rs:331); a context without the block or with a non-positive `md_size` answers 0 before any dereference. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
@@ -1146,15 +1146,15 @@
    "id": "B48-SHA3-002",
    "file": "src/evp/legacy_sha3.rs",
    "line": 289,
-   "line_current": 346,
-   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 3bc98b1ef29a18b0bdcb7c08f174d7cab591cc9ebeea1d8b2f40323b9b904dd5)",
+   "line_current": 357,
+   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 89e78d58492837959ae50b7c6e70ea8cac91f9c2591d4fbfafd2d9d3df20faee)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha3_int_final",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int",
    "registration": "SHA3_224_MD at :471; Some(sha3_int_final) at :479; SHA3_256_MD at :484; Some(sha3_int_final) at :492; SHA3_384_MD at :497; Some(sha3_int_final) at :505; SHA3_512_MD at :510; Some(sha3_int_final) at :518; SHAKE128_MD at :526; Some(sha3_int_final) at :534; SHAKE256_MD at :540; Some(sha3_int_final) at :548",
    "guard": "init_keccak(ctx, [the six owners])",
-   "disposition": "SAFETY_DISCHARGED (scope: sha3_int_final and its dispatch path; src/evp/legacy_sha3.rs:346)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha3_int_final and its dispatch path; src/evp/legacy_sha3.rs:357)",
    "contract": "Final contract over `KECCAK1600_CTX`: `ctx` NULL or live and exclusive; `md` writable for the context's current `md_size` bytes (the authority uses `kctx->md_size`, which a SHAKE `shake_ctrl` may have changed, not the digest size); the block and a positive `md_size` are established as for `sha3_int_update`; refusal before `md` is touched.",
    "established": [
     "`evp_md_final_legacy` (:2635) calls `final_` at :2652; `evp_digest_final_xof_legacy` (:2757) calls it at :2783; the exported `EVP_MD_meth_get_final` (:1606) is the direct source."
@@ -1180,15 +1180,15 @@
    "id": "B48-SHA3-003",
    "file": "src/evp/legacy_sha3.rs",
    "line": 332,
-   "line_current": 425,
-   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 3bc98b1ef29a18b0bdcb7c08f174d7cab591cc9ebeea1d8b2f40323b9b904dd5)",
+   "line_current": 436,
+   "line_provenance": "V1 census coordinate; line_current refreshed to this repair tree (sha256 89e78d58492837959ae50b7c6e70ea8cac91f9c2591d4fbfafd2d9d3df20faee)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "shake_ctrl",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, c_int, c_int, *mut c_void) -> c_int",
    "registration": "SHAKE128_MD at :526; Some(shake_ctrl) at :535; SHAKE256_MD at :540; Some(shake_ctrl) at :549",
    "guard": "init_keccak(ctx, [SHAKE128_MD, SHAKE256_MD]); p1 < 0 -> 0",
-   "disposition": "SAFETY_DISCHARGED (scope: shake_ctrl and its dispatch path; src/evp/legacy_sha3.rs:425)",
+   "disposition": "SAFETY_DISCHARGED (scope: shake_ctrl and its dispatch path; src/evp/legacy_sha3.rs:436)",
    "contract": "Control contract over `KECCAK1600_CTX`: `evp_ctx` NULL or live and exclusive; `_p2` is not read; `p1` is an integer length. The callback establishes a writable `KeccakCtx` and a positive `md_size` through `init_keccak` (owner identity for the two SHAKE tables, otherwise a live method with `app_datasize` at least `size_of::<KeccakCtx>()`) and refuses with 0 before the `EVP_MD_CTRL_XOF_LEN` write when the context, method or block is NULL, the block is too small, or `md_size` is non-positive. On a valid call it stores `p1` in `KeccakCtx::md_size` and returns 1; any other command returns 0 and changes nothing. When the method is not a SHAKE table, the declared `app_datasize` establishes the extent, not the type; the store is bounded by it. Candidate divergence from the authority, which writes through a NULL or undersized block.",
    "established": [
     "`evp_md_ctx_ctrl_legacy` (:3667) calls `md_ctrl` at :3680; the exported `EVP_MD_meth_get_ctrl` (:1651) is the direct source."
@@ -1491,16 +1491,16 @@
   {
    "id": "B48-SHA-100",
    "file": "src/evp/legacy_sha.rs",
-   "line": 266,
-   "line_current": 266,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line": 278,
+   "line_current": 278,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba); coordinate re-derived from the frozen source on 2026-11-10 (was 266)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha1_init",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx) -> c_int",
    "registration": "SHA1_MD at :904; Some(sha1_init) at :909",
    "guard": "init_md_data(ctx, addr_of!(SHA1_MD.0), size_of::<ShaCtx>())",
-   "disposition": "SAFETY_DISCHARGED (scope: sha1_init and its dispatch path; src/evp/legacy_sha.rs:266)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha1_init and its dispatch path; src/evp/legacy_sha.rs:278)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA_CTX` (owner `SHA1_MD`, or a live method with `ctx_size >= size_of::<ShaCtx>()`). The callback writes a full `SHA_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
     "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
@@ -1527,16 +1527,16 @@
   {
    "id": "B48-SHA-101",
    "file": "src/evp/legacy_sha.rs",
-   "line": 418,
-   "line_current": 418,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line": 430,
+   "line_current": 430,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba); coordinate re-derived from the frozen source on 2026-11-10 (was 418)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha224_init",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx) -> c_int",
    "registration": "SHA224_MD at :916; Some(sha224_init) at :921",
    "guard": "init_md_data(ctx, addr_of!(SHA224_MD.0), size_of::<Sha256Ctx>())",
-   "disposition": "SAFETY_DISCHARGED (scope: sha224_init and its dispatch path; src/evp/legacy_sha.rs:418)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha224_init and its dispatch path; src/evp/legacy_sha.rs:430)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA256_CTX` (owner `SHA224_MD`, or a live method with `ctx_size >= size_of::<Sha256Ctx>()`). The callback writes a full `SHA256_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
     "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
@@ -1563,16 +1563,16 @@
   {
    "id": "B48-SHA-102",
    "file": "src/evp/legacy_sha.rs",
-   "line": 511,
-   "line_current": 511,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line": 523,
+   "line_current": 523,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba); coordinate re-derived from the frozen source on 2026-11-10 (was 511)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha256_init",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx) -> c_int",
    "registration": "SHA256_MD at :928; Some(sha256_init) at :933",
    "guard": "init_md_data(ctx, addr_of!(SHA256_MD.0), size_of::<Sha256Ctx>())",
-   "disposition": "SAFETY_DISCHARGED (scope: sha256_init and its dispatch path; src/evp/legacy_sha.rs:511)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha256_init and its dispatch path; src/evp/legacy_sha.rs:523)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA256_CTX` (owner `SHA256_MD`, or a live method with `ctx_size >= size_of::<Sha256Ctx>()`). The callback writes a full `SHA256_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
     "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
@@ -1599,16 +1599,16 @@
   {
    "id": "B48-SHA-103",
    "file": "src/evp/legacy_sha.rs",
-   "line": 603,
-   "line_current": 603,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line": 615,
+   "line_current": 615,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba); coordinate re-derived from the frozen source on 2026-11-10 (was 603)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha384_init",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx) -> c_int",
    "registration": "SHA384_MD at :940; Some(sha384_init) at :945",
    "guard": "init_md_data(ctx, addr_of!(SHA384_MD.0), size_of::<Sha512Ctx>())",
-   "disposition": "SAFETY_DISCHARGED (scope: sha384_init and its dispatch path; src/evp/legacy_sha.rs:603)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha384_init and its dispatch path; src/evp/legacy_sha.rs:615)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA512_CTX` (owner `SHA384_MD`, or a live method with `ctx_size >= size_of::<Sha512Ctx>()`). The callback writes a full `SHA512_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
     "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
@@ -1635,16 +1635,16 @@
   {
    "id": "B48-SHA-104",
    "file": "src/evp/legacy_sha.rs",
-   "line": 797,
-   "line_current": 797,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line": 809,
+   "line_current": 809,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba); coordinate re-derived from the frozen source on 2026-11-10 (was 797)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha512_224_int_init",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx) -> c_int",
    "registration": "SHA512_224_MD at :966; Some(sha512_224_int_init) at :971",
    "guard": "init_md_data(ctx, addr_of!(SHA512_224_MD.0), size_of::<Sha512Ctx>())",
-   "disposition": "SAFETY_DISCHARGED (scope: sha512_224_int_init and its dispatch path; src/evp/legacy_sha.rs:797)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha512_224_int_init and its dispatch path; src/evp/legacy_sha.rs:809)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA512_CTX` (owner `SHA512_224_MD`, or a live method with `ctx_size >= size_of::<Sha512Ctx>()`). The callback writes a full `SHA512_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
     "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
@@ -1671,16 +1671,16 @@
   {
    "id": "B48-SHA-105",
    "file": "src/evp/legacy_sha.rs",
-   "line": 855,
-   "line_current": 855,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line": 867,
+   "line_current": 867,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba); coordinate re-derived from the frozen source on 2026-11-10 (was 855)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha512_256_int_init",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx) -> c_int",
    "registration": "SHA512_256_MD at :979; Some(sha512_256_int_init) at :984",
    "guard": "init_md_data(ctx, addr_of!(SHA512_256_MD.0), size_of::<Sha512Ctx>())",
-   "disposition": "SAFETY_DISCHARGED (scope: sha512_256_int_init and its dispatch path; src/evp/legacy_sha.rs:855)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha512_256_int_init and its dispatch path; src/evp/legacy_sha.rs:867)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA512_CTX` (owner `SHA512_256_MD`, or a live method with `ctx_size >= size_of::<Sha512Ctx>()`). The callback writes a full `SHA512_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
     "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
@@ -1707,16 +1707,16 @@
   {
    "id": "B48-SHA-106",
    "file": "src/evp/legacy_sha.rs",
-   "line": 702,
-   "line_current": 702,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a)",
+   "line": 714,
+   "line_current": 714,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba); coordinate re-derived from the frozen source on 2026-11-10 (was 702)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha512_init",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx) -> c_int",
    "registration": "SHA512_MD at :952; Some(sha512_init) at :957",
    "guard": "init_md_data(ctx, addr_of!(SHA512_MD.0), size_of::<Sha512Ctx>())",
-   "disposition": "SAFETY_DISCHARGED (scope: sha512_init and its dispatch path; src/evp/legacy_sha.rs:702)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha512_init and its dispatch path; src/evp/legacy_sha.rs:714)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA512_CTX` (owner `SHA512_MD`, or a live method with `ctx_size >= size_of::<Sha512Ctx>()`). The callback writes a full `SHA512_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
     "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
@@ -1887,16 +1887,16 @@
   {
    "id": "B48-SHA3-100",
    "file": "src/evp/legacy_sha3.rs",
-   "line": 259,
-   "line_current": 259,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 3bc98b1ef29a18b0bdcb7c08f174d7cab591cc9ebeea1d8b2f40323b9b904dd5)",
+   "line": 270,
+   "line_current": 270,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 89e78d58492837959ae50b7c6e70ea8cac91f9c2591d4fbfafd2d9d3df20faee); coordinate re-derived from the frozen source on 2026-11-10 (was 259)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "sha3_int_init",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx) -> c_int",
    "registration": "SHA3_224_MD at :471; Some(sha3_int_init) at :477; SHA3_256_MD at :484; Some(sha3_int_init) at :490; SHA3_384_MD at :497; Some(sha3_int_init) at :503; SHA3_512_MD at :510; Some(sha3_int_init) at :516",
    "guard": "init_keccak(ctx, [SHA3_224_MD, SHA3_256_MD, SHA3_384_MD, SHA3_512_MD])",
-   "disposition": "SAFETY_DISCHARGED (scope: sha3_int_init and its dispatch path; src/evp/legacy_sha3.rs:259)",
+   "disposition": "SAFETY_DISCHARGED (scope: sha3_int_init and its dispatch path; src/evp/legacy_sha3.rs:270)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `KeccakCtx` (owner `SHA3_224_MD`, `SHA3_256_MD`, `SHA3_384_MD`, `SHA3_512_MD`, or a live method with `ctx_size >= size_of::<KeccakCtx>()`). The callback writes a full `KeccakCtx`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
     "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
@@ -1923,16 +1923,16 @@
   {
    "id": "B48-SHA3-101",
    "file": "src/evp/legacy_sha3.rs",
-   "line": 386,
-   "line_current": 386,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 3bc98b1ef29a18b0bdcb7c08f174d7cab591cc9ebeea1d8b2f40323b9b904dd5)",
+   "line": 397,
+   "line_current": 397,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate (sha256 89e78d58492837959ae50b7c6e70ea8cac91f9c2591d4fbfafd2d9d3df20faee); coordinate re-derived from the frozen source on 2026-11-10 (was 386)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "shake_init",
    "mechanism": "EVP_PKEY_PROVIDER",
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx) -> c_int",
    "registration": "SHAKE128_MD at :526; Some(shake_init) at :532; SHAKE256_MD at :540; Some(shake_init) at :546",
    "guard": "init_keccak(ctx, [SHAKE128_MD, SHAKE256_MD])",
-   "disposition": "SAFETY_DISCHARGED (scope: shake_init and its dispatch path; src/evp/legacy_sha3.rs:386)",
+   "disposition": "SAFETY_DISCHARGED (scope: shake_init and its dispatch path; src/evp/legacy_sha3.rs:397)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `KeccakCtx` (owner `SHAKE128_MD`, `SHAKE256_MD`, or a live method with `ctx_size >= size_of::<KeccakCtx>()`). The callback writes a full `KeccakCtx`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
     "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
@@ -2141,9 +2141,9 @@
   {
    "id": "B48-NULL-001",
    "file": "src/evp/digest.rs",
-   "line": 4035,
-   "line_current": 4035,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate",
+   "line": 4075,
+   "line_current": 4075,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate; coordinate re-derived from the frozen source on 2026-11-10 (was 4035)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "md_null_init",
    "mechanism": "EVP_PKEY_PROVIDER",
@@ -2170,9 +2170,9 @@
   {
    "id": "B48-NULL-002",
    "file": "src/evp/digest.rs",
-   "line": 4043,
-   "line_current": 4043,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate",
+   "line": 4083,
+   "line_current": 4083,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate; coordinate re-derived from the frozen source on 2026-11-10 (was 4043)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "md_null_update",
    "mechanism": "EVP_PKEY_PROVIDER",
@@ -2199,9 +2199,9 @@
   {
    "id": "B48-NULL-003",
    "file": "src/evp/digest.rs",
-   "line": 4055,
-   "line_current": 4055,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate",
+   "line": 4095,
+   "line_current": 4095,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate; coordinate re-derived from the frozen source on 2026-11-10 (was 4055)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "md_null_final",
    "mechanism": "EVP_PKEY_PROVIDER",
@@ -2228,9 +2228,9 @@
   {
    "id": "B48-METH-001",
    "file": "src/evp/digest.rs",
-   "line": 1531,
-   "line_current": 1531,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate",
+   "line": 1571,
+   "line_current": 1571,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate; coordinate re-derived from the frozen source on 2026-11-10 (was 1531)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "EVP_MD_meth_get_input_blocksize",
    "mechanism": "EVP_MD_METH_API",
@@ -2258,9 +2258,9 @@
   {
    "id": "B48-METH-002",
    "file": "src/evp/digest.rs",
-   "line": 1541,
-   "line_current": 1541,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate",
+   "line": 1581,
+   "line_current": 1581,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate; coordinate re-derived from the frozen source on 2026-11-10 (was 1541)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "EVP_MD_meth_get_result_size",
    "mechanism": "EVP_MD_METH_API",
@@ -2288,9 +2288,9 @@
   {
    "id": "B48-METH-003",
    "file": "src/evp/digest.rs",
-   "line": 1551,
-   "line_current": 1551,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate",
+   "line": 1591,
+   "line_current": 1591,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate; coordinate re-derived from the frozen source on 2026-11-10 (was 1551)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "EVP_MD_meth_get_app_datasize",
    "mechanism": "EVP_MD_METH_API",
@@ -2318,9 +2318,9 @@
   {
    "id": "B48-METH-004",
    "file": "src/evp/digest.rs",
-   "line": 1561,
-   "line_current": 1561,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate",
+   "line": 1601,
+   "line_current": 1601,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate; coordinate re-derived from the frozen source on 2026-11-10 (was 1561)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "EVP_MD_meth_get_flags",
    "mechanism": "EVP_MD_METH_API",
@@ -2348,9 +2348,9 @@
   {
    "id": "B48-METH-005",
    "file": "src/evp/digest.rs",
-   "line": 1577,
-   "line_current": 1577,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate",
+   "line": 1617,
+   "line_current": 1617,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate; coordinate re-derived from the frozen source on 2026-11-10 (was 1577)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "EVP_MD_meth_get_init",
    "mechanism": "EVP_MD_METH_API",
@@ -2378,9 +2378,9 @@
   {
    "id": "B48-METH-006",
    "file": "src/evp/digest.rs",
-   "line": 1592,
-   "line_current": 1592,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate",
+   "line": 1632,
+   "line_current": 1632,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate; coordinate re-derived from the frozen source on 2026-11-10 (was 1592)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "EVP_MD_meth_get_update",
    "mechanism": "EVP_MD_METH_API",
@@ -2408,9 +2408,9 @@
   {
    "id": "B48-METH-007",
    "file": "src/evp/digest.rs",
-   "line": 1606,
-   "line_current": 1606,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate",
+   "line": 1646,
+   "line_current": 1646,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate; coordinate re-derived from the frozen source on 2026-11-10 (was 1606)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "EVP_MD_meth_get_final",
    "mechanism": "EVP_MD_METH_API",
@@ -2438,9 +2438,9 @@
   {
    "id": "B48-METH-008",
    "file": "src/evp/digest.rs",
-   "line": 1621,
-   "line_current": 1621,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate",
+   "line": 1661,
+   "line_current": 1661,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate; coordinate re-derived from the frozen source on 2026-11-10 (was 1621)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "EVP_MD_meth_get_copy",
    "mechanism": "EVP_MD_METH_API",
@@ -2468,9 +2468,9 @@
   {
    "id": "B48-METH-009",
    "file": "src/evp/digest.rs",
-   "line": 1635,
-   "line_current": 1635,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate",
+   "line": 1675,
+   "line_current": 1675,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate; coordinate re-derived from the frozen source on 2026-11-10 (was 1635)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "EVP_MD_meth_get_cleanup",
    "mechanism": "EVP_MD_METH_API",
@@ -2498,9 +2498,9 @@
   {
    "id": "B48-METH-010",
    "file": "src/evp/digest.rs",
-   "line": 1651,
-   "line_current": 1651,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate",
+   "line": 1691,
+   "line_current": 1691,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate; coordinate re-derived from the frozen source on 2026-11-10 (was 1651)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "EVP_MD_meth_get_ctrl",
    "mechanism": "EVP_MD_METH_API",
@@ -2556,7 +2556,7 @@
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
     "evp::digest::tests::the_app_datasize_setter_refuses_a_global_method_but_accepts_a_hand_built_one",
-    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_non_meth_origin_and_accepts_a_hand_built_one"
    ]
   },
   {
@@ -2585,7 +2585,7 @@
     "B48-R5"
    ],
    "tests": [
-    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_non_meth_origin_and_accepts_a_hand_built_one"
    ]
   },
   {
@@ -2614,7 +2614,7 @@
     "B48-R5"
    ],
    "tests": [
-    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_non_meth_origin_and_accepts_a_hand_built_one"
    ]
   },
   {
@@ -2643,7 +2643,7 @@
     "B48-R5"
    ],
    "tests": [
-    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_non_meth_origin_and_accepts_a_hand_built_one"
    ]
   },
   {
@@ -2672,7 +2672,7 @@
     "B48-R5"
    ],
    "tests": [
-    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_non_meth_origin_and_accepts_a_hand_built_one"
    ]
   },
   {
@@ -2701,7 +2701,7 @@
     "B48-R5"
    ],
    "tests": [
-    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_non_meth_origin_and_accepts_a_hand_built_one"
    ]
   },
   {
@@ -2730,7 +2730,7 @@
     "B48-R5"
    ],
    "tests": [
-    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_non_meth_origin_and_accepts_a_hand_built_one"
    ]
   },
   {
@@ -2759,7 +2759,7 @@
     "B48-R5"
    ],
    "tests": [
-    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_non_meth_origin_and_accepts_a_hand_built_one"
    ]
   },
   {
@@ -2788,7 +2788,7 @@
     "B48-R5"
    ],
    "tests": [
-    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_non_meth_origin_and_accepts_a_hand_built_one"
    ]
   },
   {
@@ -2817,7 +2817,7 @@
     "B48-R5"
    ],
    "tests": [
-    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_non_meth_origin_and_accepts_a_hand_built_one"
    ]
   }
  ],
@@ -2925,9 +2925,9 @@
  },
  "evidence": {
   "fast": {
-   "fmt": "cargo fmt --all -- --check: PASS (exit 0, no output) at the candidate hashes above",
-   "clippy": "cargo clippy --all-targets -- -D warnings: PASS (Finished dev profile) at the same source",
-   "focused_tests": "cargo test --lib -- evp:: -- --test-threads=4: PASS, 290 passed / 0 failed / 0 ignored (2012 filtered out); cargo test --lib -- evp::legacy_digest_callback_surface -- --test-threads=4: PASS, 9 passed / 0 failed / 0 ignored (2293 filtered out). The earlier sm3:: run (5 passed / 0 failed) is retained from the pre-repair source; it was not rerun for this test-only change."
+   "fmt": "cargo fmt --all -- --check: PASS (exit 0, no output) at the candidate hashes below",
+   "clippy": "cargo clippy --lib -- -D warnings: PASS (exit 0, Finished dev profile) at the same source",
+   "focused_tests": "cargo test --lib -- evp:: -- --test-threads=4: PASS, 296 passed / 0 failed / 0 ignored (2037 filtered out); evp::legacy_digest_callback_surface: PASS, 10 passed / 0 failed / 0 ignored (2323 filtered out); cargo test --lib -- --test-threads=4: PASS, 2281 passed / 0 failed / 52 ignored."
   },
   "mutation": {
    "canary": "B48-C1 (sha1_update guard) retained; the new control B48-C6 drives the 15 NULL-data guards.",
@@ -3065,7 +3065,75 @@
      "restore": "byte-for-byte sha256 match"
     }
    ],
-   "prior": "The B48-C1 sha1_update mutation and the H1 sha1_int_ctrl/shake_ctrl undersized-block reproductions are retained from the rejected receipt; the new controls reuse the same helper contracts."
+   "prior": "The B48-C1 sha1_update mutation and the H1 sha1_int_ctrl/shake_ctrl undersized-block reproductions are retained from the rejected receipt; the new controls reuse the same helper contracts.",
+   "setter_origin_gates": {
+    "test": "evp::digest::tests::every_mutating_meth_setter_refuses_a_non_meth_origin_and_accepts_a_hand_built_one",
+    "object": "`evp_md_new()` -- the constructor `evp_md_from_algorithm` uses -- which is `EVP_ORIG_DYNAMIC` with every legacy field empty (the exact shape a fetched method has). The `EVP_sha1`/`EVP_sha256` arm is retained as the static-safety record but is not load-bearing for these six: a GLOBAL already carries block_size 64, md_size 20, init/update/final set and flags 0x8, so its write-once test refuses them either way.",
+    "reproduction_before_repair": "Each of the six origin gates (set_input_blocksize, set_result_size, set_init, set_update, set_final, set_flags) deleted in turn from the pre-repair source: the focused test PASSED in all six runs, i.e. it did not detect the deleted gate.",
+    "results_after_repair": [
+     {
+      "setter": "EVP_MD_meth_set_input_blocksize",
+      "gate_deleted": "returns 0 replaced by `if false`",
+      "test": "FAILED (rc 101)",
+      "restored": "sha256 match"
+     },
+     {
+      "setter": "EVP_MD_meth_set_result_size",
+      "gate_deleted": "returns 0 replaced by `if false`",
+      "test": "FAILED (rc 101)",
+      "restored": "sha256 match"
+     },
+     {
+      "setter": "EVP_MD_meth_set_app_datasize",
+      "gate_deleted": "returns 0 replaced by `if false`",
+      "test": "FAILED (rc 101)",
+      "restored": "sha256 match"
+     },
+     {
+      "setter": "EVP_MD_meth_set_init",
+      "gate_deleted": "returns 0 replaced by `if false`",
+      "test": "FAILED (rc 101)",
+      "restored": "sha256 match"
+     },
+     {
+      "setter": "EVP_MD_meth_set_update",
+      "gate_deleted": "returns 0 replaced by `if false`",
+      "test": "FAILED (rc 101)",
+      "restored": "sha256 match"
+     },
+     {
+      "setter": "EVP_MD_meth_set_final",
+      "gate_deleted": "returns 0 replaced by `if false`",
+      "test": "FAILED (rc 101)",
+      "restored": "sha256 match"
+     },
+     {
+      "setter": "EVP_MD_meth_set_copy",
+      "gate_deleted": "returns 0 replaced by `if false`",
+      "test": "FAILED (rc 101)",
+      "restored": "sha256 match"
+     },
+     {
+      "setter": "EVP_MD_meth_set_cleanup",
+      "gate_deleted": "returns 0 replaced by `if false`",
+      "test": "FAILED (rc 101)",
+      "restored": "sha256 match"
+     },
+     {
+      "setter": "EVP_MD_meth_set_ctrl",
+      "gate_deleted": "returns 0 replaced by `if false`",
+      "test": "FAILED (rc 101)",
+      "restored": "sha256 match"
+     },
+     {
+      "setter": "EVP_MD_meth_set_flags",
+      "gate_deleted": "returns 0 replaced by `if false`",
+      "test": "FAILED (rc 101)",
+      "restored": "sha256 match"
+     }
+    ],
+    "limits": "Mutation sensitivity establishes that each origin gate is the guard the test observes; it is a Rust-soundness check, not an ABI or cryptographic result."
+   }
   },
   "bounded_reuse": "No prior SAFETY_DISCHARGED receipt covered the 18 uncensused callbacks, the 3 EVP_md_null callbacks, the 10 getters or the app-datasize setter. The initialiser guards were established under D-LEGACY-MD-INIT-MD-DATA-1 / D-LEGACY-BLAKE2-INIT-MD-DATA-1; B48 reuses that audited helper (same source identity, same contract)."
  },
@@ -3227,9 +3295,9 @@
   ]
  },
  "repair_for_review": {
-  "date": "2026-11-01",
+  "date": "2026-11-10",
   "state": "REPAIRED, NOT APPLIED",
-  "what_changed": "full-surface enumeration (68 rows) plus the nine newly gated sibling setters (77 rows); all ten mutating EVP_MD_meth_set_* functions now test origin == EVP_ORIG_METH before their write-once test; 15 NULL-data guards; shake_ctrl negative-length guard; shared adversarial test module, with the setter test proving refusal and acceptance; refreshed getter/setter docs and coordinates; extended D-MD-APPDATASIZE-GLOBAL-1",
+  "what_changed": "third repair: (1) the ten mutating `EVP_MD_meth_set_*` origin gates are now proven by a `DYNAMIC` object (`evp_md_new`) whose legacy fields are empty, so the origin gate is the only possible refusal; each of the ten was shown load-bearing by deleting its gate in turn and observing the test fail, and the six that the previous GLOBAL-only test could not see were shown non-load-bearing on that older test first; (2) 38 `line_current` values, 22 `line` values and 25 scope lines re-derived from the code, and two superseded provenance hashes corrected to the frozen source; (3) `candidate` now names S = 7e235f09d.",
   "review_verdict_retained": "REJECT",
   "next": "independent re-review against candidate.files_sha256; CAMPAIGN-STATUS.json untouched and closure not run"
  },
