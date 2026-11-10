@@ -7,7 +7,7 @@
     "base_commit": "fcd22e3987a4e4d49d2c896b46103cfa26942f85",
     "base_commit_subject": "feat(analyzer): intraprocedural type propagation for store bases",
     "head_commit": "cdaf16816",
-    "head_commit_subject": "fix(evp): gate every mutating EVP_MD_meth_set_* on origin, and re-freeze B48",
+    "head_commit_subject": "test(evp): make every one of the ten setter gates load-bearing; re-derive B48 coords",
     "branch": "main",
     "working_tree": "clean",
     "files": [
@@ -40,7 +40,7 @@
       "src/evp/mod.rs": "99fbd7f17d4b1d5a066d5223af7eecc31f6c069674ffe0c46db47f737675be94",
       "src/evp/legacy_digest_callback_surface.rs": "4d2308934d973362537ffbb0efebce8bfbe1769ce99a6ad3666e15dcfc3d6c49"
     },
-    "note": "S is the commit 7e235f09d9a5626129702bb5c08ced1c1cdc555c; the uncommitted test repair over it is what `files_sha256` describes. Every row's `line_current` and every scope coordinate was re-derived on 2026-11-10 by locating the operation's definition in the frozen file (exactly one `fn <operation>(` match per row), not incremented: 38 `line_current` values, 22 `line` values (the 22 that had been set to a current-tree coordinate; the V1 census coordinate in `line` is retained where it differs from `line_current`) and 25 disposition scope lines changed. Provenance hashes naming the superseded repair tree were corrected to the frozen file hashes: src/evp/legacy_sha.rs a15209b0... -> 18b8eae2... (20 rows) and src/evp/legacy_sha3.rs 3bc98b1e... -> 89e78d58... (5 rows). `line` retains the V1 census coordinate where one exists. Embedded references to other files retain their historical coordinates and are advisory; every one is bound through that file's hash. The `files_sha256` convention is plain SHA-256 of the file bytes, as `atlas_refresh.py` uses."
+    "note": "S' is the commit cdaf16816. The 2026-11-10 test repair was committed there, so every files_sha256 below describes that commit's tree and verifies against it (git show 7e235f09d:src/evp/digest.rs is eb475905..., which is NOT what the receipt records -- the receipt describes cdaf16816, not 7e235f09d)."
   },
   "authority": {
     "id": "openssl-3.6.4-production",
@@ -3270,6 +3270,12 @@
       "description": "EVP_MD_meth_set_app_datasize tested only `ctx_size != 0`, with no origin test. EVP_sha1() returns the immutable EVP_ORIG_GLOBAL static SHA1_MD, whose ctx_size is 0, so the write-once test passed and the setter stored into memory other threads may read. That is undefined behaviour and contradicted the StaticMd Sync justification at src/evp/legacy_sha.rs:169-172 ('never written').",
       "correction": "The authority has the same gap (crypto/evp/evp_lib.c:893-899), so reproducing it would reproduce authority UB rather than preserve defined behaviour. The guard now requires origin == EVP_ORIG_METH before the write-once test.",
       "resolution": "EVP_sha1() answers 0 and its app_datasize stays 0; a hand-built EVP_MD_meth_new method still accepts the value. Recorded as D-MD-APPDATASIZE-GLOBAL-1. Mutation-proven: without the origin gate the test fails with left: 1, right: 0."
+    },
+    {
+      "id": "B48-H7",
+      "state": "CLOSED",
+      "severity": "high",
+      "statement": "The earlier hidden_obligations=0 for the setter arm also rested on a false premise: nine further mutating setters (input_blocksize, result_size, init, update, final, copy, cleanup, ctrl, flags) stored unconditionally. All ten setters are now origin-gated and every gate is mutation-proven."
     }
   ],
   "review": {
@@ -3297,7 +3303,7 @@
   "repair_for_review": {
     "date": "2026-11-10",
     "state": "REPAIRED, NOT APPLIED",
-    "what_changed": "third repair: (1) the ten mutating `EVP_MD_meth_set_*` origin gates are now proven by a `DYNAMIC` object (`evp_md_new`) whose legacy fields are empty, so the origin gate is the only possible refusal; each of the ten was shown load-bearing by deleting its gate in turn and observing the test fail, and the six that the previous GLOBAL-only test could not see were shown non-load-bearing on that older test first; (2) 38 `line_current` values, 22 `line` values and 25 scope lines re-derived from the code, and two superseded provenance hashes corrected to the frozen source; (3) `candidate` now names S = 7e235f09d.",
+    "what_changed": "The candidate now names S' = cdaf16816 (the commit that contains the test repair); the 13 files_sha256 describe that tree and were re-verified against it.",
     "review_verdict_retained": "REJECT",
     "next": "independent re-review against candidate.files_sha256; CAMPAIGN-STATUS.json untouched and closure not run"
   },
