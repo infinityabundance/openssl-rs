@@ -327,10 +327,17 @@ Every one of the 1000 counted families, partitioned by its **deepest blocker** a
 
 | blocker class | families | mover potential | fixability | per-fix leverage |
 |---|---|---|---|---|
-| `no-admitted-recipe` | 965 | 965 | `recipe-admission` | 1.0 |
-| `recipe-build-system-unsupported` | 2 | 2 | `recipe-build-system` | 2.0 |
+| `no-admitted-recipe` | 697 | 697 | `recipe-admission` | 1.0 |
+| `authority-baseline-limited` | 90 | 90 | `authority-limited` | 90.0 |
+| `candidate-configure-failure` | 28 | 28 | `candidate-fix` | 28.0 |
+| `no-fixture` | 9 | 9 | `fixture-addition` | 1.0 |
+| `candidate-load-failure` | 4 | 4 | `candidate-fix` | 4.0 |
+| `candidate-link-failure` | 3 | 3 | `candidate-fix` | 3.0 |
+| `candidate-functional-failure` | 2 | 2 | `candidate-fix` | 2.0 |
+| `candidate-runtime-failure` | 2 | 2 | `candidate-fix` | 2.0 |
+| `recipe-build-system-unsupported` | 1 | 1 | `recipe-build-system` | 1.0 |
 
-**967 of the 1000 counted families are blocked; 33 are `DROP_IN_PASS`** (967 are `DROP_IN_NOT_APPLICABLE`, 33 measurable). The `drop-in-pass` figure is a baseline-normalized verdict count, not a rung: of the 33 drop-in passes, 25 are at L4-linked with no admitted runtime workload for those families and 8 reach L5 or above.
+**836 of the 1000 counted families are blocked; 164 are `DROP_IN_PASS`** (819 are `DROP_IN_NOT_APPLICABLE`, 181 measurable). The `drop-in-pass` figure is a baseline-normalized verdict count, not a rung: of the 164 drop-in passes, 15 are at L4-linked with no admitted runtime workload for those families and 149 reach L5 or above.
 
 * a selected population is not a random sample: the 1,000 counted families are selected from frozen ranking evidence, so their blocker shares do not generalise to all downstream software
 * 1000/1000 is not a security proof: a full pass is not a guarantee that any consumer is safe, and the analysis makes no statement about an unmeasured consumer

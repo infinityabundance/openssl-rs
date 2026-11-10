@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "boundary": "the population covers the catalogue and records a status per node; it is not a compatibility claim about any release. The `downstream-evidenced` rung is read from forensics/multitrack/downstream-multitrack.json (23.11): a node attains it when an unmodified real downstream consumer was built against its authority and ran a real workload, and it may be attained without the oracle-to-oracle `runtime-evidenced` rung, because the two are independent evidence planes rather than a contiguous prefix. An unavailable release is archaeology -- studied, catalogued, and never runtime-compatible -- and each major ABI epoch carries at least one built representative: 0.9.8zh (pre-1.0), 1.0.2u (1.0.x), 1.1.1w (1.1.x), 3.0.0 (3.x) and 3.6.3/3.6.4 (3.6+/4.x). The epoch representatives are built in the historical and forensic venues; the profile each was built with is a property of its authority node, not of its release identity",
-    "content_hash": "9f5d692c91ef004dc978eb0d0fddc8caa4a4bc05cd36f5bfc80ec3ce2775784f",
+    "content_hash": "5cf3ae71de31fda84341fc5a6f24d3b7265def7f3a43d3427fec959dcc216ada",
     "counts": {
       "built": 20,
       "by_epoch": {
@@ -2004,7 +2004,7 @@
           },
           {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "e88b75b65c409010725c5eea373647eefb928e04ca25c3ba150040e55f06a688",
+            "sha256": "5fa902fa6b0613b8a0911d3d9cfdd62b177eeb956997a17dd87932dd76b55b3a",
             "what": "the downstream consumer that exercised this authority"
           }
         ],
@@ -3638,7 +3638,7 @@
           },
           {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "e88b75b65c409010725c5eea373647eefb928e04ca25c3ba150040e55f06a688",
+            "sha256": "5fa902fa6b0613b8a0911d3d9cfdd62b177eeb956997a17dd87932dd76b55b3a",
             "what": "the downstream consumer that exercised this authority"
           }
         ],
@@ -4742,7 +4742,7 @@
           },
           {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "e88b75b65c409010725c5eea373647eefb928e04ca25c3ba150040e55f06a688",
+            "sha256": "5fa902fa6b0613b8a0911d3d9cfdd62b177eeb956997a17dd87932dd76b55b3a",
             "what": "the downstream consumer that exercised this authority"
           }
         ],
@@ -4787,7 +4787,7 @@
           },
           {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "e88b75b65c409010725c5eea373647eefb928e04ca25c3ba150040e55f06a688",
+            "sha256": "5fa902fa6b0613b8a0911d3d9cfdd62b177eeb956997a17dd87932dd76b55b3a",
             "what": "the downstream consumer that exercised this authority"
           }
         ],
@@ -7031,7 +7031,7 @@
           },
           {
             "path": "forensics/multitrack/downstream-multitrack.json",
-            "sha256": "e88b75b65c409010725c5eea373647eefb928e04ca25c3ba150040e55f06a688",
+            "sha256": "5fa902fa6b0613b8a0911d3d9cfdd62b177eeb956997a17dd87932dd76b55b3a",
             "what": "the downstream consumer that exercised this authority"
           },
           {

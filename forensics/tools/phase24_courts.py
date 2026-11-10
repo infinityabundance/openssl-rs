@@ -2249,8 +2249,9 @@ def _blocker_remediation_court(name: str) -> dict:
     control. It establishes that the preserved `before` partition is the 24.16 partition (1,000
     families, content-addressed), that the `after` partition and the movement reproduce from the
     re-measured planes, that every action's observed family transitions match the two partitions,
-    that a still-blocked action shows no movement and names its missing tool, that a resolving action
-    shows its families moved, and that the admitted recipes are exactly the catalogue families outside
+    that a still-blocked action reaches no resolving class, cites the measured rung it stopped at and
+    names its missing tool, that a resolving action shows its families reached the resolving class, and
+    that the admitted recipes are exactly the catalogue families outside
     the 24.16 baseline. Five seeded mutations are each detected with specificity holding. A passing
     record is an **instrument**: it says what was repaired and what the planes then measured, not that
     the population now passes, and a still-blocked record is a measurement of the fixed venue rather
@@ -2297,10 +2298,11 @@ def _blocker_remediation_court(name: str) -> dict:
             "establishes that the preserved `before` partition is the 24.16 partition (1,000 "
             "families, content-addressed); that the `after` partition and the movement reproduce from "
             "the re-measured planes; that every action's observed family transitions match the two "
-            "partitions; that a still-blocked action shows no movement and names its missing tool; "
-            "that a resolving action shows its families moved; and that the admitted recipes are "
+            "partitions; that a still-blocked action reaches no resolving class, cites the measured "
+            "rung it stopped at and names its missing tool; that a resolving action shows its "
+            "families reached the resolving class; and that the admitted recipes are "
             "exactly the catalogue families outside the 24.16 baseline. A claimed fix with no "
-            "re-measured movement, a still-blocked class marked resolved, a movement figure that "
+            "measured progress, a still-blocked class marked resolved, a movement figure that "
             "disagrees with the planes, a fabricated new recipe and a mutated before count are each "
             "detected with specificity holding (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections "
             "2, 4.13 and 3.8)."

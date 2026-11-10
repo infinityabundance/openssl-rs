@@ -9,8 +9,8 @@ same figure regenerates in all three, so none can drift from the derivation.
 
 ## The honest accounting
 
-Of the **1000 counted families**, only **35 have an admitted pristine-source recipe** in this
-venue, and **965 have none** (`no-admitted-recipe`); **967 of the 1000** are `DROP_IN_NOT_APPLICABLE`, so the drop-in measurement reaches a small measured surface of **33 measurable families**. The **mechanically-shared**
+Of the **1000 counted families**, only **307 have an admitted pristine-source recipe** in this
+venue, and **697 have none** (`no-admitted-recipe`); **819 of the 1000** are `DROP_IN_NOT_APPLICABLE`, so the drop-in measurement reaches a small measured surface of **181 measurable families**. The **mechanically-shared**
 blockers — the classes where one fix unlocks several families — are the recipe-backed
 failures, not the breadth of recipe admission. This is a measurement of a *selected*
 population, not a rate over all downstream software.
@@ -19,15 +19,22 @@ population, not a rate over all downstream software.
 
 Every counted family is placed in exactly one blocker class by its deepest blocker,
 derived from the committed run rows (never typed). The partition covers the counted
-families exactly once, and its content hash is `22ba6c469496542f530095fc5ba56c575cd794ad252f3d8fd06f8b50a4f4b330`.
+families exactly once, and its content hash is `412df51ec22538e27c1efd8ba40d69878d602d7c000386a3d6e76af324247e29`.
 
 | blocker class | families | share of the counted population |
 |---|---|---|
-| `no-admitted-recipe` | 965 | 965/1000 (96.5%) |
-| `none` | 33 | 33/1000 (3.3%) |
-| `recipe-build-system-unsupported` | 2 | 2/1000 (0.2%) |
+| `no-admitted-recipe` | 697 | 697/1000 (69.7%) |
+| `none` | 164 | 164/1000 (16.4%) |
+| `authority-baseline-limited` | 90 | 90/1000 (9.0%) |
+| `candidate-configure-failure` | 28 | 28/1000 (2.8%) |
+| `no-fixture` | 9 | 9/1000 (0.9%) |
+| `candidate-load-failure` | 4 | 4/1000 (0.4%) |
+| `candidate-link-failure` | 3 | 3/1000 (0.3%) |
+| `candidate-functional-failure` | 2 | 2/1000 (0.2%) |
+| `candidate-runtime-failure` | 2 | 2/1000 (0.2%) |
+| `recipe-build-system-unsupported` | 1 | 1/1000 (0.1%) |
 
-**967 of the 1000 counted families are blocked; 33 reached `DROP_IN_PASS`.**
+**836 of the 1000 counted families are blocked; 164 reached `DROP_IN_PASS`.**
 
 ## The ranked shared blockers
 
@@ -40,19 +47,48 @@ leverage 1.
 
 | rank | blocker class | blocked families | mover potential | to-pass potential | fixability | per-fix leverage | fix mechanism |
 |---|---|---|---|---|---|---|---|
-| 1 | `no-admitted-recipe` | 965 | 965 (structural-upper-bound) | 0 | `recipe-admission` | 1.0 | admit a pristine-source build recipe for the family |
-| 2 | `recipe-build-system-unsupported` | 2 | 2 (measured) | 2 | `recipe-build-system` | 2.0 | teach the recipe the project's actual build system (the source tree carries no runnable `./configure`) |
+| 1 | `no-admitted-recipe` | 697 | 697 (structural-upper-bound) | 0 | `recipe-admission` | 1.0 | admit a pristine-source build recipe for the family |
+| 2 | `authority-baseline-limited` | 90 | 90 (measured) | 90 | `authority-limited` | 90.0 | raise the authority baseline (the authority itself could not go higher) |
+| 3 | `candidate-configure-failure` | 28 | 28 (measured) | 28 | `candidate-fix` | 28.0 | fix the candidate so the family configures |
+| 4 | `no-fixture` | 9 | 9 (measured) | 9 | `fixture-addition` | 1.0 | add the missing deterministic workload or fixture the venue does not pose |
+| 5 | `candidate-load-failure` | 4 | 4 (measured) | 4 | `candidate-fix` | 4.0 | fix the candidate so the family loads |
+| 6 | `candidate-link-failure` | 3 | 3 (measured) | 3 | `candidate-fix` | 3.0 | fix the candidate so the family links |
+| 7 | `candidate-functional-failure` | 2 | 2 (measured) | 2 | `candidate-fix` | 2.0 | fix the candidate so the family behaves |
+| 8 | `candidate-runtime-failure` | 2 | 2 (measured) | 2 | `candidate-fix` | 2.0 | fix the candidate so the family runs |
+| 9 | `recipe-build-system-unsupported` | 1 | 1 (measured) | 1 | `recipe-build-system` | 1.0 | teach the recipe the project's actual build system (the source tree carries no runnable `./configure`) |
 
-**A shared blocker** is a class with two or more counted families. There are 2 of them; the rest are single-family classes.
+**A shared blocker** is a class with two or more counted families. There are 8 of them; the rest are single-family classes.
 
 ### The mechanism behind each shared blocker
 
 * `no-admitted-recipe` — no admitted pristine-source recipe is recorded for this family in this venue, so the run is not attempted and manufactures no source URL
-  * fixability `recipe-admission`, 965 distinct mechanism(s), per-fix leverage 1.0: admit a pristine-source build recipe for the family
-* `recipe-build-system-unsupported` — the recipe stops at configure because the build system it invokes is not the project's
-  * fixability `recipe-build-system`, 1 distinct mechanism(s), per-fix leverage 2.0: teach the recipe the project's actual build system (the source tree carries no runnable `./configure`)
-  * mechanisms: `teach-recipe-build-system:no-configure`
-  * families: family:libssh, family:lighttpd
+  * fixability `recipe-admission`, 697 distinct mechanism(s), per-fix leverage 1.0: admit a pristine-source build recipe for the family
+* `authority-baseline-limited` — the authority itself stopped here, so the candidate is not the blocker
+  * fixability `authority-limited`, 1 distinct mechanism(s), per-fix leverage 90.0: raise the authority baseline (the authority itself could not go higher)
+* `candidate-configure-failure` — the candidate fails configure at a level the authority reached
+  * fixability `candidate-fix`, 1 distinct mechanism(s), per-fix leverage 28.0: fix the candidate so the family configures
+  * mechanisms: `fix-candidate:candidate-configure-failure`
+  * families: family:apk-tools, family:atheme-services, family:canl-c, family:canl-c-examples, family:dmg2img, family:epic4, family:ftp-ssl, family:ftpd-ssl, family:imapproxy, family:imx-code-signing-tool, family:ipmiutil, family:kannel, family:kore, family:krb5-k5tls, family:lcmaps-plugins-verify-proxy, family:libcrypt-ssleay-perl, family:libcxxtools10, family:libdkim1d, family:nagios-plugins-ldap, family:nzbget, family:openfortivpn, family:perdition, family:perl-crypt-ssleay, family:sqlcipher, family:vboot-utils, family:weex, family:yafc, family:yapet
+* `no-fixture` — the family reached its baseline but the venue poses no deterministic local workload, so it is not driven to the functional level
+  * fixability `fixture-addition`, 9 distinct mechanism(s), per-fix leverage 1.0: add the missing deterministic workload or fixture the venue does not pose
+  * mechanisms: `add-fixture:family:bip`, `add-fixture:family:bruteforce-wallet`, `add-fixture:family:gsocket`, `add-fixture:family:gvpe`, `add-fixture:family:hopm`, `add-fixture:family:ike-scan`, `add-fixture:family:mosh`, `add-fixture:family:trousers`, `add-fixture:family:yadifa`
+  * families: family:bip, family:bruteforce-wallet, family:gsocket, family:gvpe, family:hopm, family:ike-scan, family:mosh, family:trousers, family:yadifa
+* `candidate-load-failure` — the candidate fails to load at a level the authority reached
+  * fixability `candidate-fix`, 1 distinct mechanism(s), per-fix leverage 4.0: fix the candidate so the family loads
+  * mechanisms: `fix-candidate:candidate-load-failure`
+  * families: family:afflib, family:afftools, family:libafflib0v5, family:medusa
+* `candidate-link-failure` — the candidate fails to link at a level the authority reached
+  * fixability `candidate-fix`, 1 distinct mechanism(s), per-fix leverage 3.0: fix the candidate so the family links
+  * mechanisms: `fix-candidate:candidate-link-failure`
+  * families: family:bind9, family:libewf, family:libfsapfs-utils
+* `candidate-functional-failure` — the candidate fails to behave at a level the authority reached
+  * fixability `candidate-fix`, 1 distinct mechanism(s), per-fix leverage 2.0: fix the candidate so the family behaves
+  * mechanisms: `fix-candidate:candidate-functional-failure`
+  * families: family:fdm, family:perl-net-dns-sec
+* `candidate-runtime-failure` — the candidate fails at runtime at a level the authority reached
+  * fixability `candidate-fix`, 1 distinct mechanism(s), per-fix leverage 2.0: fix the candidate so the family runs
+  * mechanisms: `fix-candidate:candidate-runtime-failure`
+  * families: family:libshout, family:xilinx-bootgen
 
 ## The funnel
 
@@ -66,26 +102,26 @@ above it, so the figure is visibly not a single monotone funnel.
 | kind | step | families | share of the counted population |
 |---|---|---|---|
 | rung | counted | 1000 | 1000/1000 (100.0%) |
-| rung | with-admitted-recipe | 35 | 35/1000 (3.5%) |
-| rung | configured | 33 | 33/1000 (3.3%) |
-| rung | linked | 33 | 33/1000 (3.3%) |
-| rung | loaded | 8 | 8/1000 (0.8%) |
-| rung | runtime | 8 | 8/1000 (0.8%) |
-| rung | functional | 8 | 8/1000 (0.8%) |
-| verdict | drop-in-pass | 33 | 33/1000 (3.3%) |
+| rung | with-admitted-recipe | 307 | 307/1000 (30.7%) |
+| rung | configured | 202 | 202/1000 (20.2%) |
+| rung | linked | 181 | 181/1000 (18.1%) |
+| rung | loaded | 162 | 162/1000 (16.2%) |
+| rung | runtime | 150 | 150/1000 (15.0%) |
+| rung | functional | 149 | 149/1000 (14.9%) |
+| verdict | drop-in-pass | 164 | 164/1000 (16.4%) |
 
-The material caveat this makes visible: of the 33 drop-in passes, 25 are at L4-linked with no admitted runtime workload for those families and 8 reach L5 or above.
+The material caveat this makes visible: of the 164 drop-in passes, 15 are at L4-linked with no admitted runtime workload for those families and 149 reach L5 or above.
 
 ## The recipe-less decomposition
 
-The **965** `no-admitted-recipe` families are the dominant class, broken
+The **697** `no-admitted-recipe` families are the dominant class, broken
 down by what the frozen universe already knows about them — never by a claim about
 their buildability:
 
-* **source ecosystem**: `crates` 6, `distro` 959
-* **direct/transitive linkage**: `direct` 965
-* **distro breadth**: 0 → 2, 1 → 556, 2 → 308, 3 → 99
-* **consensus source breadth**: 1 → 493, 2 → 325, 3 → 109, 4 → 38
+* **source ecosystem**: `crates` 4, `distro` 693
+* **direct/transitive linkage**: `direct` 697
+* **distro breadth**: 0 → 2, 1 → 459, 2 → 189, 3 → 47
+* **consensus source breadth**: 1 → 416, 2 → 206, 3 → 56, 4 → 19
 
 * criterion: the frozen universe's own signals, read from forensics/downstream/families.json and forensics/downstream/family-freeze.json: the source ecosystem and the direct/transitive linkage a family carries, its distro breadth (how many distro packages list it) and its consensus source breadth (how many frozen ranking sources selected it). No signal here is a claim about the family's buildability
 
@@ -96,50 +132,50 @@ it is **not a measurement of buildability**: no family in it has been built by t
 analysis. The criterion is recorded with the artefact and repeated here.
 
 * criterion: source breadth descending, then distro breadth descending, then popularity descending, then canonical name ascending, then family_id ascending; the list is a **heuristic** ranking of which recipe-less counted families to admit next, never a measurement that any of them builds
-* showing the first 40 of 965 recipe-less families, `heuristic: true`
+* showing the first 40 of 697 recipe-less families, `heuristic: true`
 
 | rank | family | p1000 rank | ecosystem | linkage | source breadth | distro breadth | popularity |
 |---|---|---|---|---|---|---|---|
-| 1 | jwt | 2 | crates | direct | 4 | 3 | 14274078 |
-| 2 | cargo | 3 | crates | direct | 4 | 3 | 1899 |
-| 3 | alpine | 4 | distro | direct | 4 | 3 | 0 |
-| 4 | borgbackup | 5 | distro | direct | 4 | 3 | 0 |
-| 5 | cargo-c | 6 | distro | direct | 4 | 3 | 0 |
-| 6 | clamav | 7 | distro | direct | 4 | 3 | 0 |
-| 7 | coturn | 8 | distro | direct | 4 | 3 | 0 |
-| 8 | dnsdist | 10 | distro | direct | 4 | 3 | 0 |
-| 9 | fido2 | 12 | distro | direct | 4 | 3 | 0 |
-| 10 | grpc | 13 | distro | direct | 4 | 3 | 0 |
-| 11 | hydra | 15 | distro | direct | 4 | 3 | 0 |
-| 12 | lastpass-cli | 18 | distro | direct | 4 | 3 | 0 |
-| 13 | libimobiledevice | 19 | distro | direct | 4 | 3 | 0 |
-| 14 | libpq | 20 | distro | direct | 4 | 3 | 0 |
-| 15 | libshout | 22 | distro | direct | 4 | 3 | 0 |
-| 16 | libstrophe | 23 | distro | direct | 4 | 3 | 0 |
-| 17 | libwebsockets | 24 | distro | direct | 4 | 3 | 0 |
-| 18 | mariadb | 26 | distro | direct | 4 | 3 | 0 |
-| 19 | mupdf | 29 | distro | direct | 4 | 3 | 0 |
-| 20 | netdata | 30 | distro | direct | 4 | 3 | 0 |
-| 21 | nmap | 31 | distro | direct | 4 | 3 | 0 |
-| 22 | nmh | 32 | distro | direct | 4 | 3 | 0 |
-| 23 | nsd | 33 | distro | direct | 4 | 3 | 0 |
-| 24 | pam-u2f | 36 | distro | direct | 4 | 3 | 0 |
-| 25 | pdns | 37 | distro | direct | 4 | 3 | 0 |
-| 26 | pgbouncer | 38 | distro | direct | 4 | 3 | 0 |
-| 27 | rpki-client | 41 | distro | direct | 4 | 3 | 0 |
-| 28 | s-nail | 42 | distro | direct | 4 | 3 | 0 |
-| 29 | shairport-sync | 43 | distro | direct | 4 | 3 | 0 |
-| 30 | sofia-sip | 44 | distro | direct | 4 | 3 | 0 |
-| 31 | ssldump | 46 | distro | direct | 4 | 3 | 0 |
-| 32 | syslog-ng | 47 | distro | direct | 4 | 3 | 0 |
-| 33 | thrift | 48 | distro | direct | 4 | 3 | 0 |
-| 34 | tor | 49 | distro | direct | 4 | 3 | 0 |
-| 35 | unbound | 50 | distro | direct | 4 | 3 | 0 |
-| 36 | uwsgi | 51 | distro | direct | 4 | 3 | 0 |
-| 37 | w3m | 52 | distro | direct | 4 | 3 | 0 |
-| 38 | znc | 53 | distro | direct | 4 | 3 | 0 |
-| 39 | ausweisapp2 | 54 | distro | direct | 3 | 3 | 0 |
-| 40 | axel | 55 | distro | direct | 3 | 3 | 0 |
+| 1 | cargo | 3 | crates | direct | 4 | 3 | 1899 |
+| 2 | alpine | 4 | distro | direct | 4 | 3 | 0 |
+| 3 | borgbackup | 5 | distro | direct | 4 | 3 | 0 |
+| 4 | cargo-c | 6 | distro | direct | 4 | 3 | 0 |
+| 5 | clamav | 7 | distro | direct | 4 | 3 | 0 |
+| 6 | grpc | 13 | distro | direct | 4 | 3 | 0 |
+| 7 | libimobiledevice | 19 | distro | direct | 4 | 3 | 0 |
+| 8 | libpq | 20 | distro | direct | 4 | 3 | 0 |
+| 9 | mariadb | 26 | distro | direct | 4 | 3 | 0 |
+| 10 | mupdf | 29 | distro | direct | 4 | 3 | 0 |
+| 11 | netdata | 30 | distro | direct | 4 | 3 | 0 |
+| 12 | pam-u2f | 36 | distro | direct | 4 | 3 | 0 |
+| 13 | pgbouncer | 38 | distro | direct | 4 | 3 | 0 |
+| 14 | rpki-client | 41 | distro | direct | 4 | 3 | 0 |
+| 15 | shairport-sync | 43 | distro | direct | 4 | 3 | 0 |
+| 16 | syslog-ng | 47 | distro | direct | 4 | 3 | 0 |
+| 17 | thrift | 48 | distro | direct | 4 | 3 | 0 |
+| 18 | tor | 49 | distro | direct | 4 | 3 | 0 |
+| 19 | uwsgi | 51 | distro | direct | 4 | 3 | 0 |
+| 20 | ausweisapp2 | 54 | distro | direct | 3 | 3 | 0 |
+| 21 | certmonger | 56 | distro | direct | 3 | 3 | 0 |
+| 22 | dillo | 57 | distro | direct | 3 | 3 | 0 |
+| 23 | falkon | 61 | distro | direct | 3 | 3 | 0 |
+| 24 | freeradius | 64 | distro | direct | 3 | 3 | 0 |
+| 25 | gsoap | 66 | distro | direct | 3 | 3 | 0 |
+| 26 | hexchat | 67 | distro | direct | 3 | 3 | 0 |
+| 27 | hostapd | 69 | distro | direct | 3 | 3 | 0 |
+| 28 | kitty | 74 | distro | direct | 3 | 3 | 0 |
+| 29 | libnvme | 78 | distro | direct | 3 | 3 | 0 |
+| 30 | libtorrent | 80 | distro | direct | 3 | 3 | 0 |
+| 31 | mariadb-backup | 85 | distro | direct | 3 | 3 | 0 |
+| 32 | mumble | 87 | distro | direct | 3 | 3 | 0 |
+| 33 | ntpsec | 89 | distro | direct | 3 | 3 | 0 |
+| 34 | opensc | 91 | distro | direct | 3 | 3 | 0 |
+| 35 | openvswitch | 93 | distro | direct | 3 | 3 | 0 |
+| 36 | poedit | 96 | distro | direct | 3 | 3 | 0 |
+| 37 | qbittorrent | 100 | distro | direct | 3 | 3 | 0 |
+| 38 | qbittorrent-nox | 101 | distro | direct | 3 | 3 | 0 |
+| 39 | sylpheed | 106 | distro | direct | 3 | 3 | 0 |
+| 40 | tin | 109 | distro | direct | 3 | 3 | 0 |
 
 ## Non-claims
 
