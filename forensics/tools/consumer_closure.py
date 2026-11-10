@@ -18029,8 +18029,14 @@ E7BS_POINTER_SLOT_SCHEMA = (
 E7BS_WRITER_LIST_SCHEMA = (
     "openssl-rs/consumer-closure/e7-base-slot-partial-writer-list/v1")
 
-E7BS_MSBLOB_SITE = 0x204890
-E7BS_RCU_SITE = 0x22DF88
+# The literal VA is this artefact's identity; ``*_SITE_PIN`` is the
+# (symbol leaf, offset) key that survives a re-freeze.  Either selects the
+# site, so a stale literal VA cannot silently stop the witness firing (the
+# 0.0.46 re-pin missed these two constants).
+E7BS_MSBLOB_SITE = 0x426AD1
+E7BS_MSBLOB_SITE_PIN = ("msblob2key_decode", 0x331)
+E7BS_RCU_SITE = 0x259E98
+E7BS_RCU_SITE_PIN = ("ossl_synchronize_rcu", 0x2F8)
 E7BS_MSBLOB_SOURCE = "src/provider/decode_msblob2key.rs"
 E7BS_MSBLOB_FUNCTION = "msblob2key_decode"
 E7BS_MSBLOB_CTX = "Msblob2keyCtx"
@@ -18053,6 +18059,24 @@ E7BS_PROVED_EMPTY_CONDITIONS = (
     "site_enumerated", "node_is_rcu_cb_item", "sole_writer",
     "sole_list_publication", "list_clear_only",
     "writer_and_constructor_absent", "no_production_caller")
+
+
+def _e7bs_site_selected(site: dict, name: str, addr: int, pin) -> bool:
+    """True only for the pinned (function, call) shape.
+
+    A site is selected by the literal VA in this artefact *or* by the
+    symbol-leaf + offset key, so the witness keeps firing after a re-freeze
+    without accepting a same-shaped call in another function.
+    """
+    if site.get("kind") != "call":
+        return False
+    if site.get("addr") == addr:
+        return True
+    fstart = site.get("func")
+    leaf, off = pin
+    return (fstart is not None
+            and _external_function_leaf(name) == leaf
+            and site.get("addr", -1) - fstart == off)
 
 
 def _e7bs_proved_empty_witness(w) -> bool:
@@ -18525,9 +18549,8 @@ def pointer_slot_instance_witness(g: "DsoGraph", site: dict, name: str):
     is the two ``implement_msblob!`` descriptors in the declaring module; each
     instance's ``read_private_key`` member must be an in-image function start.
     """
-    if site.get("kind") != "call" or not _has_insns(g):
-        return None
-    if site.get("addr") != E7BS_MSBLOB_SITE:
+    if not _has_insns(g) or not _e7bs_site_selected(
+            site, name, E7BS_MSBLOB_SITE, E7BS_MSBLOB_SITE_PIN):
         return None
     if site.get("reason") != "base-slot-partial":
         return None
@@ -18639,8 +18662,12 @@ def pointer_slot_instance_witness(g: "DsoGraph", site: dict, name: str):
             "internal_closed_descriptor_table", "unknown-base",
             name, site, spill_store=hex(insns[store_idx][0]),
             source_origin=desc_origin, expected_field_offset=hex(desc_off))
-    ctx_origin = _reg_origin(g, fstart, desc_origin["at"],
-                             _canon(desc_origin["base_reg"]))
+    # The context pointer may reach the descriptor load directly or through
+    # its entry spill slot; `_param_of_operand` proves either and refuses a
+    # frame slot with any other writer.  It must not be narrowed back to a
+    # bare `_reg_origin` shape: 0.0.46 reloads `vctx` from its spill.
+    ctx_origin = _param_of_operand(g, fstart, desc_origin["at"],
+                                   desc_origin["base_reg"])
     if (ctx_origin.get("kind") != "param"
             or ctx_origin.get("index") != ctx_info.get("param_index")):
         return _e7bs_refusal(
@@ -19019,9 +19046,8 @@ def internal_closed_writer_list_witness(g: "DsoGraph", site: dict,
     this image with no production caller.  The list is therefore always NULL
     and the drain loop body is unreachable; the target set is empty.
     """
-    if site.get("kind") != "call" or not _has_insns(g):
-        return None
-    if site.get("addr") != E7BS_RCU_SITE:
+    if not _has_insns(g) or not _e7bs_site_selected(
+            site, name, E7BS_RCU_SITE, E7BS_RCU_SITE_PIN):
         return None
     if site.get("reason") != "base-slot-partial":
         return None
@@ -19229,12 +19255,17 @@ E7PK12_FINITE_SCHEMA = (
     "openssl-rs/consumer-closure/private-parameter-assignment-set/v1")
 E7PK12_CLASS = "private-parameter-assignment-set"
 E7PK12_RESOLUTION_KIND = "private_parameter_assignment_set"
-E7PK12_FUNCTION = 0x530E40
+# Literal VAs are this artefact's identity; the *_PIN entries are the
+# (symbol leaf, offset) keys that survive a re-freeze.  Either selects the
+# shape; a stale literal VA can no longer silently retire the witness.
+E7PK12_FUNCTION = 0x38C340
 E7PK12_FUNCTION_NAME = "pkcs12_gen_mac"
-E7PK12_CALL_SITES = (0x5314AA, 0x531586)
+E7PK12_CALL_SITES = (0x38C9AA, 0x38CA86)
+E7PK12_CALL_SITE_OFFSETS = (0x66A, 0x746)
 E7PK12_PARAM_INDEX = 7
 E7PK12_PARAM_SLOT = 0x10
-E7PK12_PARAM_RELOAD = 0x531307
+E7PK12_PARAM_RELOAD = 0x38C807
+E7PK12_PARAM_RELOAD_OFFSET = 0x4C7
 E7PK12_SOURCE = "src/pkcs12/p12_mutl.rs"
 E7PK12_SOURCE_PARAM = "pkcs12_key_gen"
 E7PK12_SOURCE_CALL = "kgen"
@@ -19297,6 +19328,19 @@ def _e7pk12_function_symbol_name(name: str) -> str:
     """The mangled symbol's final component, stripped of any .llvm suffix."""
     base = re.sub(r"\.llvm(?:\.[0-9a-f]+)?$", "", name or "")
     return base.rsplit("::", 1)[-1]
+
+
+def _e7pk12_site_selected(site: dict, name: str) -> bool:
+    """True only for this private function's pinned call sites."""
+    if site.get("kind") != "call":
+        return False
+    fstart = site.get("func")
+    if fstart is None:
+        return False
+    if fstart == E7PK12_FUNCTION and site.get("addr") in E7PK12_CALL_SITES:
+        return True
+    return (_external_function_leaf(name) == E7PK12_FUNCTION_NAME
+            and site.get("addr", -1) - fstart in E7PK12_CALL_SITE_OFFSETS)
 
 
 def _e7pk12_local_function_starts(g) -> set:
@@ -19395,7 +19439,8 @@ def _e7pk12_parameter(g, fstart: int, idx: int, opnd: str):
                 "why": ("the frame slot is not the expected incoming stack "
                         "argument"),
             }
-        if insns[d][0] != E7PK12_PARAM_RELOAD:
+        if (insns[d][0] != E7PK12_PARAM_RELOAD
+                and insns[d][0] - fstart != E7PK12_PARAM_RELOAD_OFFSET):
             return None, "parameter-slot-not-unique", {
                 "reaching_definition": hex(insns[d][0]),
                 "expected_reload": hex(E7PK12_PARAM_RELOAD),
@@ -19817,11 +19862,9 @@ def private_parameter_assignment_witness(g: "DsoGraph", site: dict,
     """
     if site.get("kind") != "call" or not _has_insns(g):
         return None
+    if not _e7pk12_site_selected(site, name):
+        return None
     fstart = site.get("func")
-    if fstart != E7PK12_FUNCTION:
-        return None
-    if site.get("addr") not in E7PK12_CALL_SITES:
-        return None
     facts = _e7pk12_private_function(g, fstart)
     names = facts["names"]
     if (len(names) != 1
@@ -20043,6 +20086,393 @@ def private_parameter_assignment_witness(g: "DsoGraph", site: dict,
             "a caller outside this image: the function is local and its "
             "address is not taken, so none exists",
             "the meaning of the parameter value beyond the finite set above",
+        ],
+    }
+
+
+# ---- E7-PMETH: the closed `standard_methods[]` accessor table ----------- #
+#
+# `EVP_PKEY_meth_find` asks `OBJ_bsearch_ex_` for a slot in
+# `PMETH_STANDARD_METHODS` and then calls the pointer stored in that slot.
+# The table holds *accessors* (`pmeth_fn`), not method objects, so the two
+# tables cannot be conflated.  The search is made with `flags == 0`, whose
+# documented result is NULL or a pointer to one of the `num` elements; the
+# one-past-the-end slot that `OBJ_BSEARCH_VALUE_ON_NOMATCH` would return is
+# therefore excluded, and the NULL check before the call is likewise
+# required.  The target set is the table's own ten in-image function starts:
+# this is an *internal closed table*, not an external ABI contract.  The
+# documented search interface is used only to confine the slot pointer; the
+# callee values are enumerated from the immutable image table and checked
+# against the declaring module's array.
+
+E7PMETH_SCHEMA = (
+    "openssl-rs/consumer-closure/internal-closed-method-table/v1")
+E7PMETH_CLASS = "internal-closed-method-table"
+E7PMETH_RESOLUTION_KIND = "internal_closed_method_table"
+E7PMETH_SITE = 0x474E5C
+E7PMETH_SITE_PIN = ("EVP_PKEY_meth_find", 0x16C)
+E7PMETH_FUNCTION = "EVP_PKEY_meth_find"
+E7PMETH_SOURCE = "src/evp/pkey_ctx.rs"
+E7PMETH_TABLE = "PMETH_STANDARD_METHODS"
+E7PMETH_TABLE_ROWS = 10
+E7PMETH_ELEMENT_SIZE = 8
+E7PMETH_COMPARATOR = "pmeth_func_cmp"
+E7PMETH_BSEARCH = "OBJ_bsearch_ex_"
+
+E7PMETH_MUTATIONS = (
+    "e7pmeth-nonfunction-member",
+    "e7pmeth-table-rows",
+    "e7pmeth-flags",
+    "e7pmeth-wrong-table",
+    "e7pmeth-no-guard",
+    "e7pmeth-mutable-table",
+)
+
+E7PMETH_RESIDUALS = (
+    {
+        "id": "search-interface-is-a-documented-contract",
+        "detail": (
+            "the slot is confined by the documented `OBJ_bsearch_ex_` "
+            "element-return contract (flags == 0); an interposed definition "
+            "that violates that contract is outside this witness, exactly as "
+            "for any other external call"),
+    },
+    {
+        "id": "candidate-bound-address-gate",
+        "detail": (
+            "the witness is bound to the pinned (function, call) shape in "
+            "this candidate and must be re-derived at every re-freeze"),
+    },
+)
+
+
+def _e7pmeth_refusal(reason, name, site, **extra):
+    rec = {
+        "schema": E7PMETH_SCHEMA,
+        "class": E7PMETH_CLASS,
+        "resolution_kind": E7PMETH_RESOLUTION_KIND,
+        "contract_bounded": False,
+        "resolved": False,
+        "refusal": reason,
+        "function": name,
+        "call_site": hex(site.get("addr") or 0),
+    }
+    rec.update(extra)
+    return rec
+
+
+def _e7pmeth_source(g):
+    """(span, table idents, detail) for the declaring module, or a refusal."""
+    docs = _s1_docs(g)
+    files = [p for p, t in docs.items()
+             if re.search(r"\bfn\s+" + re.escape(E7PMETH_FUNCTION) + r"\s*\(",
+                          t)]
+    if len(files) != 1:
+        return None, None, {"reason": "source-function-not-unique",
+                            "files": sorted(files)}
+    rel = files[0]
+    span = _s1_src_fn(g, rel, E7PMETH_FUNCTION)
+    if span is None:
+        return None, None, {"reason": "source-function-unreadable",
+                            "file": rel}
+    text = _e7pk12_strip_comments(docs[rel])
+    tm = re.search(
+        r"\bstatic\s+" + re.escape(E7PMETH_TABLE)
+        + r"\s*:\s*\[\s*[A-Za-z_]\w*\s*;\s*(\d+)\s*\]\s*=\s*\[", text)
+    if tm is None:
+        return None, None, {"reason": "source-table-unreadable", "file": rel}
+    open_at = tm.end() - 1
+    depth, end = 0, None
+    for i in range(open_at, len(text)):
+        if text[i] == "[":
+            depth += 1
+        elif text[i] == "]":
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                break
+    if end is None:
+        return None, None, {"reason": "source-table-unreadable", "file": rel}
+    idents = []
+    for entry in _e7pk12_split_params(text[open_at + 1:end - 1]):
+        m = re.fullmatch(
+            r"(?:\s*(?:crate|super|self|[A-Za-z_]\w*)\s*::)*"
+            r"\s*([A-Za-z_]\w*)\s*", entry)
+        if m is None:
+            return None, None, {"reason": "source-table-entry-unmodelled",
+                                "entry": entry[:120], "file": rel}
+        idents.append(m.group(1))
+    body = span["body"]
+    if (body.count("OBJ_bsearch_") != 1
+            or E7PMETH_TABLE + ".as_ptr()" not in body
+            or "Some(" + E7PMETH_COMPARATOR + ")" not in body
+            or "accessor()" not in body):
+        return None, None, {"reason": "source-search-shape-unmodelled",
+                            "file": rel}
+    return span, {"file": rel, "rows": int(tm.group(1)),
+                  "idents": idents}, None
+
+
+def _e7pmeth_search_arg_def(g, fstart, call_idx, reg):
+    """The single defining instruction of ``reg`` at the search call."""
+    defs = _reaching_defs(g, fstart, call_idx, _canon(reg))
+    if defs is None or len(defs) != 1 or _ENTRY_DEF in defs:
+        return None
+    return next(iter(defs))
+
+
+def _e7pmeth_search_arg_addr(g, fstart, call_idx, reg):
+    d = _e7pmeth_search_arg_def(g, fstart, call_idx, reg)
+    if d is None:
+        return None
+    mn, _rest, _ops = _insn_parts(_insn(g, fstart, d))
+    return _insn_comment_addr(_insn(g, fstart, d)) if mn == "lea" else None
+
+
+def _e7pmeth_search_arg_int(g, fstart, call_idx, reg):
+    origin = _reg_origin(g, fstart, call_idx, _canon(reg))
+    if origin.get("kind") != "int":
+        return None
+    return origin.get("value")
+
+
+def _e7pmeth_null_guard(g, fstart, call_idx, site_idx, reg):
+    """A ``test reg,reg`` + ``je`` whose fall-through is the call."""
+    cfg = _function_cfg(g, fstart)
+    insns = cfg["insns"]
+    for j in range(call_idx + 1, site_idx):
+        mn, _rest, ops = _insn_parts(insns[j][1].split("#", 1)[0].strip())
+        if mn != "test" or len(ops) != 2:
+            continue
+        if _canon(ops[0]) != _canon(reg) or _canon(ops[1]) != _canon(reg):
+            continue
+        if j + 1 >= site_idx:
+            continue
+        bmn, brest, _bops = _insn_parts(
+            insns[j + 1][1].split("#", 1)[0].strip())
+        if bmn not in ("je", "jz"):
+            continue
+        m = re.match(r"^([0-9a-f]+)", brest)
+        if m is None or int(m.group(1), 16) == insns[site_idx][0]:
+            continue
+        later = next((k for k in range(j + 2, len(insns))
+                      if insns[k][0] > insns[j + 1][0]), None)
+        if later != site_idx:
+            continue
+        return {"register": _canon(reg),
+                "test": hex(insns[j][0]),
+                "text": insns[j][1].strip(),
+                "branch": hex(insns[j + 1][0]),
+                "branch_text": insns[j + 1][1].strip(),
+                "fallthrough": hex(insns[site_idx][0])}
+    return None
+
+
+def internal_closed_method_table_witness(g: "DsoGraph", site: dict,
+                                         name: str):
+    """Resolve the `standard_methods[]` accessor dispatch, or refuse by name.
+
+    The site is the indirect call of the slot returned by the documented
+    `OBJ_bsearch_ex_` search over ``PMETH_STANDARD_METHODS``.  The row count,
+    element width and zero flags confine the slot; every slot value must be a
+    single in-image function start and the complete slot set must equal the
+    declaring module's declared array.  Any unproved conjunct is a named
+    refusal that leaves the site target-bounded.
+    """
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    fstart = site.get("func")
+    if fstart is None:
+        return None
+    leaf, off = E7PMETH_SITE_PIN
+    if not (site.get("addr") == E7PMETH_SITE
+            or (_external_function_leaf(name) == leaf
+                and site.get("addr", -1) - fstart == off)):
+        return None
+    insns = g.precision.insns_by_func.get(fstart, ())
+    site_idx = next((i for i, (a, _t) in enumerate(insns)
+                     if a == site.get("addr")), None)
+    if site_idx is None:
+        return None
+
+    def _refuse(reason, **extra):
+        return _e7pmeth_refusal(reason, name, site, **extra)
+
+    m = re.search(r"call\w*\s+\*(.+)$",
+                  (site.get("text") or "").split("#", 1)[0].strip())
+    if m is None:
+        return _refuse("operand-is-not-an-indirect-call")
+    mo = re.fullmatch(r"\((%r[a-z0-9]+)\)", m.group(1).strip())
+    if mo is None:
+        return _refuse("operand-is-not-a-slot-read",
+                       operand=m.group(1).strip())
+    base = _canon(mo.group(1))
+    defs = _reaching_defs(g, fstart, site_idx, base)
+    if defs is None or len(defs) != 1 or _ENTRY_DEF in defs:
+        return _refuse("slot-not-single-definition",
+                       reaching_defs=(None if defs is None else
+                                      sorted(defs)))
+    call_idx = next(iter(defs))
+    call_text = _insn(g, fstart, call_idx)
+    cmn, crest, _cops = _insn_parts(call_text)
+    if cmn != "call" or not crest.startswith("*"):
+        return _refuse("slot-not-a-call-result",
+                       definition=hex(insns[call_idx][0]),
+                       text=call_text)
+    got = _insn_comment_addr(call_text)
+    symbols = set()
+    if got is not None:
+        symbols = {str(s).split("@")[0]
+                   for s in (getattr(g, "slot_syms", {}) or {}).get(got, ())}
+    if symbols != {E7PMETH_BSEARCH}:
+        return _refuse("search-call-is-not-the-documented-interface",
+                       got=(hex(got) if got is not None else None),
+                       symbols=sorted(symbols),
+                       expected=E7PMETH_BSEARCH)
+
+    table_addr = _e7pmeth_search_arg_addr(g, fstart, call_idx, "%rsi")
+    comparator = _e7pmeth_search_arg_addr(g, fstart, call_idx, "%r8")
+    rows = _e7pmeth_search_arg_int(g, fstart, call_idx, "%rdx")
+    size = _e7pmeth_search_arg_int(g, fstart, call_idx, "%rcx")
+    flags = _e7pmeth_search_arg_int(g, fstart, call_idx, "%r9")
+    key = _reg_origin(g, fstart, call_idx, "%rdi")
+    if flags != 0 or "e7pmeth-flags" in _MUTED:
+        return _refuse("search-flags-not-zero", flags=flags,
+                       why=("a non-zero OBJ_BSEARCH_VALUE_ON_NOMATCH flag can "
+                            "return the one-past-the-end slot"))
+    if rows is None or size is None or size != E7PMETH_ELEMENT_SIZE:
+        return _refuse("search-row-or-size-mismatch",
+                       rows=rows, element_size=size)
+    table = _s1_symbol_address(g, E7PMETH_TABLE)
+    if table is None:
+        return _refuse("table-symbol-absent")
+    if table_addr is None or table_addr != table[0]:
+        return _refuse("search-base-is-not-the-table",
+                       base=(hex(table_addr) if table_addr is not None else None),
+                       expected=hex(table[0]))
+    section = g.section_of(table[0])
+    if (section not in S1_IMMUTABLE_SECTIONS
+            or "e7pmeth-mutable-table" in _MUTED):
+        return _refuse("table-not-in-immutable-section", section=section)
+    cmp_sym = _s1_symbol_address(g, E7PMETH_COMPARATOR)
+    if cmp_sym is None or comparator != cmp_sym[0]:
+        return _refuse("comparator-is-not-the-declared-function",
+                       comparator=(hex(comparator) if comparator is not None
+                                   else None),
+                       expected=(hex(cmp_sym[0]) if cmp_sym else None))
+    if key.get("kind") != "load" or key.get("base_reg") not in ("%rsp", "%rbp"):
+        return _refuse("search-key-is-not-a-live-local", origin=key)
+    guard = _e7pmeth_null_guard(g, fstart, call_idx, site_idx, base)
+    if guard is None or "e7pmeth-no-guard" in _MUTED:
+        return _refuse("slot-not-null-guarded",
+                       reaching_definition=hex(insns[call_idx][0]))
+
+    span, source, why = _e7pmeth_source(g)
+    if span is None:
+        return _refuse(why.get("reason", "source-unavailable"), detail=why)
+    if source["rows"] != rows:
+        return _refuse("table-row-count-mismatch",
+                       source_rows=source["rows"], searched_rows=rows)
+    if rows != E7PMETH_TABLE_ROWS:
+        return _refuse("table-row-count-mismatch",
+                       expected=E7PMETH_TABLE_ROWS, searched_rows=rows)
+    source_targets, missing = set(), []
+    for ident in source["idents"]:
+        hit = _e7bs_function_symbol(g, ident)
+        if hit is None:
+            missing.append(ident)
+        else:
+            source_targets.add(hit[0])
+    if missing or len(source["idents"]) != rows:
+        return _refuse("source-table-member-not-an-in-image-function",
+                       missing=missing, declared=len(source["idents"]))
+
+    rows_out, targets = [], set()
+    for i in range(rows):
+        slot = table[0] + E7PMETH_ELEMENT_SIZE * i
+        values = g.static_slot(slot)
+        ints = {v for v in (values or ())
+                if isinstance(v, int) and v != 0}
+        if "e7pmeth-nonfunction-member" in _MUTED and i == 0:
+            ints = {0xDEAD}
+        if len(ints) != 1 or next(iter(ints)) not in g.start_set:
+            return _refuse("table-member-not-function-start",
+                           row=i, slot=hex(slot),
+                           values=sorted(hex(v) for v in ints))
+        value = next(iter(ints))
+        rows_out.append({"row": i, "slot": hex(slot), "value": hex(value),
+                         "symbol": g.funcs.get(value),
+                         "source": source["idents"][i]})
+        targets.add(value)
+    if "e7pmeth-table-rows" in _MUTED:
+        return _refuse("table-row-count-mismatch", searched_rows=rows - 1)
+    if len(targets) != rows or targets != source_targets:
+        return _refuse("table-does-not-match-the-declared-array",
+                       image=len(targets), declared=len(source_targets),
+                       symmetric_difference=sorted(
+                           hex(v) for v in (targets ^ source_targets)))
+    return {
+        "schema": E7PMETH_SCHEMA,
+        "class": E7PMETH_CLASS,
+        "resolution_kind": E7PMETH_RESOLUTION_KIND,
+        "contract_bounded": False,
+        "resolved": True,
+        "function": name,
+        "function_start": hex(fstart),
+        "call_site": hex(site["addr"]),
+        "operand": {"text": m.group(1).strip(), "base": base,
+                    "reaching_definition": hex(insns[call_idx][0])},
+        "search": {
+            "interface": E7PMETH_BSEARCH,
+            "got": hex(got),
+            "table": hex(table[0]),
+            "table_symbol": table[1],
+            "rows": rows,
+            "element_size": size,
+            "flags": flags,
+            "comparator": hex(comparator),
+            "comparator_symbol": cmp_sym[1],
+            "key_origin": key,
+            "null_guard": guard,
+        },
+        "table": {
+            "symbol": E7PMETH_TABLE,
+            "source": source["file"],
+            "section": section,
+            "rows": rows_out,
+        },
+        "targets": [hex(t) for t in sorted(targets)],
+        "target_symbols": {hex(t): g.funcs.get(t) for t in sorted(targets)},
+        "conditions": {
+            "slot_is_the_documented_search_result": (
+                f"{E7PMETH_BSEARCH} through GOT {hex(got)}, rows {rows}, "
+                f"element size {size}, flags 0"),
+            "slot_is_null_guarded": (
+                f"{guard['text']} at {guard['test']} then "
+                f"{guard['branch_text']} falls through to "
+                f"{guard['fallthrough']}"),
+            "table_is_the_declared_immutable_array": (
+                f"{table[1]} at {hex(table[0])} in {section}"),
+            "table_members_are_function_starts": (
+                f"all {rows} slots are single in-image function starts"),
+            "table_equals_the_declared_source_array": (
+                f"{len(source['idents'])} declared row(s) in "
+                f"{source['file']}"),
+            "nonnull_target_set_is_finite": (
+                f"{len(targets)} target(s): "
+                + ", ".join(hex(t) for t in sorted(targets))),
+        },
+        "residuals": [dict(r) for r in E7PMETH_RESIDUALS],
+        "basis": (
+            "the indirect call consumes the slot returned by the documented "
+            "zero-flag OBJ_bsearch_ex_ search over the static accessor table; "
+            "the slot is NULL-guarded, every table entry is one in-image "
+            "function start, and the image table equals the declaring "
+            "module's declared array, so the target set is the closed table"),
+        "does_not_cover": [
+            "the behaviour of an accessor once called",
+            "a search implementation that violates its documented "
+            "element-return contract",
         ],
     }
 
@@ -21246,6 +21676,27 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                 continue
             site["e7bs_writer_list_refusal"] = e7bs_rcu
             stats["E7BS_writer_list_refused"] += 1
+        # E7-PMETH: the `standard_methods[]` accessor table.  The site's only
+        # indirect call consumes the slot returned by the documented zero-flag
+        # `OBJ_bsearch_ex_` search over the module's static table; the target
+        # set is the table's ten in-image function starts.  This is an
+        # internal closed table, not an external ABI contract.  A refusal is
+        # recorded and then falls through to every existing conservative rule.
+        pmeth = internal_closed_method_table_witness(g, site, name)
+        if pmeth is not None:
+            if pmeth.get("resolved"):
+                site["targets"] = {int(t, 16) for t in pmeth["targets"]}
+                site["unresolved"] = False
+                site["class"] = E7PMETH_CLASS
+                site["reason"] = (
+                    "internal closed method-accessor table: "
+                    + E7PMETH_TABLE + " -> "
+                    + str(len(pmeth["targets"])) + " function start(s)")
+                site["e7pmeth_witness"] = pmeth
+                stats["E7PMETH_method_table_resolved"] += 1
+                continue
+            site["e7pmeth_refusal"] = pmeth
+            stats["E7PMETH_method_table_refused"] += 1
         # S1: a field-sensitive static-table instance dispatch.  The witness
         # keys on (object type, pointer-slot offset, member offset), restricts
         # the writer set by the static dispatch table that pairs the consumer
@@ -22006,6 +22457,10 @@ def _edge_record(g, site: dict, ordinal: int, oracle=None, seen_ids=None) -> dic
                     or site.get("e7bs_writer_list_refusal"))
     if e7bs_witness is not None:
         extra["e7bs_witness"] = e7bs_witness
+    e7pmeth_witness = (site.get("e7pmeth_witness")
+                       or site.get("e7pmeth_refusal"))
+    if e7pmeth_witness is not None:
+        extra["e7pmeth_witness"] = e7pmeth_witness
     pbe_ex_witness = (site.get("pbe_outparam_witness")
                       or site.get("pbe_outparam_refusal"))
     if pbe_ex_witness is not None:
@@ -22626,6 +23081,63 @@ def pbe_outparam_receipt_section(graphs: dict) -> dict:
             "by_refusal": dict(sorted(collections.Counter(
                 str(r.get("refusal")) for r in refused).items())),
         },
+        "resolved_sites": resolved,
+        "refused_sites": refused,
+    }
+
+
+def method_table_section(graphs: dict) -> dict:
+    """Persist the E7-PMETH internal closed method-table witness."""
+    def _witness(site):
+        return (site.get("e7pmeth_witness")
+                or site.get("e7pmeth_refusal") or {})
+
+    resolved = [
+        {"dso": name,
+         "function": w.get("function"),
+         "call_site": w.get("call_site"),
+         "resolution_kind": w.get("resolution_kind"),
+         "search": w.get("search"),
+         "table": w.get("table"),
+         "targets": w.get("targets"),
+         "conditions": w.get("conditions"),
+         "residuals": w.get("residuals")}
+        for name, g in graphs.items()
+        for s in getattr(g, "sites", {}).values()
+        for w in [_witness(s)] if w.get("resolved")
+    ]
+    refused = [
+        {"dso": name,
+         "function": w.get("function"),
+         "call_site": w.get("call_site"),
+         "resolution_kind": w.get("resolution_kind"),
+         "refusal": w.get("refusal"),
+         "detail": {k: v for k, v in w.items()
+                    if k not in ("schema", "class", "resolution_kind",
+                                 "contract_bounded", "resolved", "refusal",
+                                 "function", "call_site")}}
+        for name, g in graphs.items()
+        for s in getattr(g, "sites", {}).values()
+        for w in [_witness(s)] if w and not w.get("resolved")
+    ]
+    return {
+        "schema": E7PMETH_SCHEMA,
+        "rule": (
+            "EVP_PKEY_meth_find searches the static PMETH_STANDARD_METHODS "
+            "array with the documented zero-flag OBJ_bsearch_ex_ interface "
+            "and calls the returned slot. The result is then NULL and a "
+            "pointer to one of the searched elements only; every element is "
+            "a single in-image accessor start and the image table equals the "
+            "declaring module's declared array. The target set is the "
+            "internal closed table, not an external ABI contract."),
+        "summary": {
+            "resolved": len(resolved),
+            "refused": len(refused),
+            "residuals_recorded": len(E7PMETH_RESIDUALS),
+            "by_refusal": dict(sorted(collections.Counter(
+                str(r.get("refusal")) for r in refused).items())),
+        },
+        "residuals": [dict(r) for r in E7PMETH_RESIDUALS],
         "resolved_sites": resolved,
         "refused_sites": refused,
     }
@@ -29240,6 +29752,7 @@ def build_receipt(args) -> dict:
             "pbe_outparam_witnesses": pbe_outparam_receipt_section(graphs),
             "private_parameter_assignment": (
                 private_parameter_assignment_section(graphs)),
+            "method_table_witnesses": method_table_section(graphs),
             "unclassified_reachable_sites": closure["unclassified_sites"],
             "evidence_classes": evidence_stats,
             "dlsym_literals": {
@@ -34059,14 +34572,14 @@ def self_test() -> int:
                 '}\n')
         (path / "decode_msblob2key.rs").write_text(src)
         funcs = {
-            0x204540: "_RNvNtCs1234_10openssl_rs17decode_msblob2key17msblob2key_decode",
+            0x4267A0: "_RNvNtCs1234_10openssl_rs17decode_msblob2key17msblob2key_decode",
             0x1100: "_RNvNtCs1234_10openssl_rs17decode_msblob2key17msblob2dsa_newctx",
             0x1200: "_RNvNtCs1234_10openssl_rs17decode_msblob2key17msblob2rsa_newctx",
             0x2000: "dsa_decode_void",
             0x2100: "rsa_decode_void",
         }
         if foreign_store:
-            funcs[0x204600] = (
+            funcs[0x426B00] = (
                 "_RNvNtCs1234_10openssl_rs"
                 "17decode_msblob2key13foreign_store")
         names_at = {a: {n} for a, n in funcs.items()}
@@ -34074,31 +34587,31 @@ def self_test() -> int:
         names_at[0x9040] = {"MSTYPE2RSA_DESC"}
         if double_spill:
             decode_insns = [
-                (0x204870, "test   %eax,%eax"),
-                (0x204872, "je     204880 <left>"),
-                (0x204874, "mov    %rdi,%r15"),
-                (0x204876, "mov    0x8(%r15),%rsi"),
-                (0x204878, "mov    %rsi,0x8(%rsp)"),
-                (0x20487a, "jmp    204886 <join>"),
-                (0x204880, "mov    %rdi,%r15"),
-                (0x204882, "mov    0x8(%r15),%rsi"),
-                (0x204884, "mov    %rsi,0x8(%rsp)"),
-                (0x204886, "mov    0x8(%rsp),%rax"),
-                (0x204890, "call   *0x18(%rax)"),
-                (0x204892, "ret"),
+                (0x426AB0, "test   %eax,%eax"),
+                (0x426AB2, "je     426ac0 <left>"),
+                (0x426AB4, "mov    %rdi,%r15"),
+                (0x426AB6, "mov    0x8(%r15),%rsi"),
+                (0x426AB8, "mov    %rsi,0x8(%rsp)"),
+                (0x426ABA, "jmp    426ac6 <join>"),
+                (0x426AC0, "mov    %rdi,%r15"),
+                (0x426AC2, "mov    0x8(%r15),%rsi"),
+                (0x426AC4, "mov    %rsi,0x8(%rsp)"),
+                (0x426AC6, "mov    0x8(%rsp),%rax"),
+                (0x426AD1, "call   *0x18(%rax)"),
+                (0x426AD3, "ret"),
             ]
         else:
             decode_insns = [
-                (0x204880, "mov    %rdi,%r15"),
-                (0x204882, "mov    0x8(%r15),%rsi"),
-                (0x204884, "mov    %rsi,0x8(%rsp)"),
-                (0x204886, "nop"),
-                (0x204888, "mov    0x8(%rsp),%rax"),
-                (0x204890, "call   *0x18(%rax)"),
-                (0x204892, "ret"),
+                (0x426AC0, "mov    %rdi,%r15"),
+                (0x426AC2, "mov    0x8(%r15),%rsi"),
+                (0x426AC4, "mov    %rsi,0x8(%rsp)"),
+                (0x426AC6, "nop"),
+                (0x426AC8, "mov    0x8(%rsp),%rax"),
+                (0x426AD1, "call   *0x18(%rax)"),
+                (0x426AD3, "ret"),
             ]
         insns = {
-            0x204540: decode_insns,
+            0x4267A0: decode_insns,
             0x1100: [
                 (0x1100, "lea    0x7f00(%rip),%rax        # 9000 <MSTYPE2DSA_DESC>"),
                 (0x1104, "mov    %rax,0x8(%rdi)"),
@@ -34111,24 +34624,24 @@ def self_test() -> int:
             ],
         }
         if foreign_store:
-            insns[0x204600] = [
-                (0x204600, "mov    %rsi,0x8(%rdi)"),
-                (0x204604, "ret"),
+            insns[0x426B00] = [
+                (0x426B00, "mov    %rsi,0x8(%rdi)"),
+                (0x426B04, "ret"),
             ]
         g = _E7BSG(
             insns, funcs, names_at=names_at,
             start_set=set(funcs) | {0x2000, 0x2100},
-            sections={".text": (0x204000, 0, 0x1000),
+            sections={".text": (0x426000, 0, 0x2000),
                       ".data.rel.ro": (0x9000, 0, 0x80)},
             static_values={0x9018: 0x2000, 0x9058: 0x2100},
             source_root=root)
         g._s1_ctx_cache = {
-            0x204540: {"file": "src/provider/decode_msblob2key.rs",
+            0x4267A0: {"file": "src/provider/decode_msblob2key.rs",
                      "function": "msblob2key_decode", "line": 1,
                      "var": "ctx", "type": owner_type, "param": "vctx",
                      "param_index": 0,
                      "declared": "vctx: *mut c_void"}}
-        site = {"kind": "call", "func": 0x204540, "addr": 0x204890,
+        site = {"kind": "call", "func": 0x4267A0, "addr": 0x426AD1,
                 "text": "call   *0x18(%rax)", "targets": set(),
                 "unresolved": True, "reason": "base-slot-partial",
                 "class": "field", "field_offsets": {0x18}, "seam": None,
@@ -34176,31 +34689,31 @@ def self_test() -> int:
         path = root / "src" / "runtime"
         path.mkdir(parents=True, exist_ok=True)
         (path / "rcu.rs").write_text(_E7BS_RCU_SOURCE)
-        funcs = {0x22dc90:
+        funcs = {0x259BA0:
                  "_RNvNtCs1234_10openssl_rs7runtime3rcu20ossl_synchronize_rcu"}
-        insns = {0x22dc90: [
-            (0x22df60, "mov    %rdi,%r14"),
-            (0x22df62, "mov    (%r14),%rbx"),
-            (0x22df64, "movq   $0x0,(%r14)"),
-            (0x22df66, "test   %rbx,%rbx"),
-            (0x22df68, "je     22df80 <exit>"),
-            (0x22df70, "mov    0x8(%rbx),%rdi"),
-            (0x22df74, "mov    0x10(%rbx),%r12"),
-            (0x22df88, "call   *(%rbx)"),
-            (0x22df8a, "mov    %r12,%rbx"),
-            (0x22df8c, "jne    22df70 <loop>"),
-            (0x22df8e, "ret"),
-            (0x22df80, "ret"),
+        insns = {0x259BA0: [
+            (0x259E70, "mov    %rdi,%r14"),
+            (0x259E72, "mov    (%r14),%rbx"),
+            (0x259E74, "movq   $0x0,(%r14)"),
+            (0x259E76, "test   %rbx,%rbx"),
+            (0x259E78, "je     259e90 <exit>"),
+            (0x259E80, "mov    0x8(%rbx),%rdi"),
+            (0x259E84, "mov    0x10(%rbx),%r12"),
+            (0x259E98, "call   *(%rbx)"),
+            (0x259E9A, "mov    %r12,%rbx"),
+            (0x259E9C, "jne    259e80 <loop>"),
+            (0x259E9E, "ret"),
+            (0x259E90, "ret"),
         ]}
-        g = _E7BSG(insns, funcs, sections={".text": (0x22d000, 0, 0x2000)},
+        g = _E7BSG(insns, funcs, sections={".text": (0x259000, 0, 0x2000)},
                    source_root=root)
         g._s1_ctx_cache = {
-            0x22dc90: {"file": "src/runtime/rcu.rs",
+            0x259BA0: {"file": "src/runtime/rcu.rs",
                      "function": "ossl_synchronize_rcu", "line": 1,
                      "var": "lock", "type": "RcuLockSt", "param": "lock",
                      "param_index": 0,
                      "declared": "lock: *mut RcuLockSt"}}
-        site = {"kind": "call", "func": 0x22dc90, "addr": 0x22df88,
+        site = {"kind": "call", "func": 0x259BA0, "addr": 0x259E98,
                 "text": "call   *(%rbx)", "targets": set(),
                 "unresolved": True, "reason": "base-slot-partial",
                 "class": "field", "field_offsets": {0}, "seam": None,
@@ -34209,7 +34722,7 @@ def self_test() -> int:
 
     _g_ms, _s_ms = _e7bs_msblob_fixture()
     _w_ms = pointer_slot_instance_witness(_g_ms, _s_ms,
-                                           _g_ms.funcs[0x204540])
+                                           _g_ms.funcs[0x4267A0])
     check("E7BS msblob positive resolves exactly two function starts",
           ((_w_ms or {}).get("resolved"), (_w_ms or {}).get("targets")),
           (True, ["0x2000", "0x2100"]))
@@ -34219,7 +34732,7 @@ def self_test() -> int:
 
     _g_rcu, _s_rcu = _e7bs_rcu_fixture()
     _w_rcu = internal_closed_writer_list_witness(
-        _g_rcu, _s_rcu, _g_rcu.funcs[0x22dc90])
+        _g_rcu, _s_rcu, _g_rcu.funcs[0x259BA0])
     check("E7BS rcu positive resolves an empty target set",
           ((_w_rcu or {}).get("resolved"), (_w_rcu or {}).get("targets")),
           (True, []))
@@ -34237,9 +34750,9 @@ def self_test() -> int:
             ("e7bs-msblob-foreign-owner", "base-not-msblob2key-ctx")]:
         _rec = _mutation(
             _name, lambda: pointer_slot_instance_witness(
-                _g_ms, _s_ms, _g_ms.funcs[0x204540])) or {}
+                _g_ms, _s_ms, _g_ms.funcs[0x4267A0])) or {}
         _restored = pointer_slot_instance_witness(
-            _g_ms, _s_ms, _g_ms.funcs[0x204540])
+            _g_ms, _s_ms, _g_ms.funcs[0x4267A0])
         e7bs_mutation_matrix.append({
             "mutation": _name, "case": "msblob",
             "case_fails": (_rec.get("refusal") == _want
@@ -34250,7 +34763,7 @@ def self_test() -> int:
 
     _g_multi, _s_multi = _e7bs_msblob_fixture(double_spill=True)
     _rec = pointer_slot_instance_witness(
-        _g_multi, _s_multi, _g_multi.funcs[0x204540]) or {}
+        _g_multi, _s_multi, _g_multi.funcs[0x4267A0]) or {}
     e7bs_mutation_matrix.append({
         "mutation": "e7bs-msblob-multiple-spill-stores", "case": "msblob",
         "case_fails": (_rec.get("refusal") == "desc-spill-not-unique"
@@ -34272,7 +34785,7 @@ def self_test() -> int:
                                    "}\n"})]:
         _g_u, _s_u = _e7bs_msblob_fixture(**_kw)
         _rec = pointer_slot_instance_witness(
-            _g_u, _s_u, _g_u.funcs[0x204540]) or {}
+            _g_u, _s_u, _g_u.funcs[0x4267A0]) or {}
         _name = "e7bs-msblob-unmodelled-" + _label
         e7bs_mutation_matrix.append({
             "mutation": _name, "case": "msblob",
@@ -34285,7 +34798,7 @@ def self_test() -> int:
 
     _g_fs, _s_fs = _e7bs_msblob_fixture(foreign_store=True)
     _rec = pointer_slot_instance_witness(
-        _g_fs, _s_fs, _g_fs.funcs[0x204540]) or {}
+        _g_fs, _s_fs, _g_fs.funcs[0x4267A0]) or {}
     e7bs_mutation_matrix.append({
         "mutation": "e7bs-msblob-foreign-descriptor-store", "case": "msblob",
         "case_fails": (_rec.get("refusal") == "foreign-descriptor-store"
@@ -34305,9 +34818,9 @@ def self_test() -> int:
              "cb-from-reachable-caller-unknown")]:
         _rec = _mutation(
             _name, lambda: internal_closed_writer_list_witness(
-                _g_rcu, _s_rcu, _g_rcu.funcs[0x22dc90])) or {}
+                _g_rcu, _s_rcu, _g_rcu.funcs[0x259BA0])) or {}
         _restored = internal_closed_writer_list_witness(
-            _g_rcu, _s_rcu, _g_rcu.funcs[0x22dc90])
+            _g_rcu, _s_rcu, _g_rcu.funcs[0x259BA0])
         e7bs_mutation_matrix.append({
             "mutation": _name, "case": "rcu",
             "case_fails": (_rec.get("refusal") == _want
@@ -34331,7 +34844,7 @@ def self_test() -> int:
 
     _g_foreign, _s_foreign = _e7bs_msblob_fixture(owner_type="ForeignCtx")
     _w_foreign = pointer_slot_instance_witness(
-        _g_foreign, _s_foreign, _g_foreign.funcs[0x204540])
+        _g_foreign, _s_foreign, _g_foreign.funcs[0x4267A0])
     check("E7BS non-widening foreign owner is not absorbed",
           ((_w_foreign or {}).get("resolved"),
            (_w_foreign or {}).get("refusal")),
@@ -34340,7 +34853,7 @@ def self_test() -> int:
     # The empty rcu target set is only a resolved disposition when the exact
     # witness says so.  The two negative controls make that gate load-bearing.
     _empty_site = {
-        "kind": "call", "func": 0x22dc90, "addr": 0x22df88,
+        "kind": "call", "func": 0x259BA0, "addr": 0x259E98,
         "text": "call   *(%rbx)", "targets": set(), "unresolved": False,
         "reason": "internal closed writer list: no production writer or "
                   "publication in this image",
@@ -34388,7 +34901,9 @@ def self_test() -> int:
     # the zero immediate and one passing one in-image function start.  Every
     # conjunct is exercised by a mutation; the non-widening control uses a
     # different function at the same stack offset.
-    _E7PK12_FUNC = E7PK12_FUNCTION
+    # The fixture keeps its own coherent address space; it must not inherit
+    # the candidate's literal VAs (the (symbol, offset) pin is what is shared).
+    _E7PK12_FUNC = 0x530E40
     _E7PK12_TARGET = 0x531FE0
     _E7PK12_CALLER_NONE = 0x51B4D0
     _E7PK12_CALLER_SOME = 0x51C860
@@ -34695,6 +35210,204 @@ def self_test() -> int:
         _g_nb, _s_nb, _g_nb.funcs[_E7PK12_FUNC])
     check("E7PKCS12 first site still resolves when only the second guard is "
           "removed", (_w_nb1 or {}).get("targets"), ["0x531fe0"])
+
+    # ---- E7-PMETH: the closed `standard_methods[]` accessor table -------- #
+    # The fixture reproduces the real shape: a static accessor array, a
+    # zero-flag `OBJ_bsearch_ex_` search whose returned slot is NULL-guarded
+    # and then called.  Every conjunct has a load-bearing mutation or fixture.
+    class _E7PMETHG:
+        def __init__(self, insns, funcs, *, source_root, slot_syms=None,
+                     static_values=None, sections=None, start_set=None):
+            self.name = "e7pmeth.so"
+            self.funcs = dict(funcs)
+            self.start_set = set(start_set if start_set is not None
+                                 else funcs)
+            self.names_at = {a: {n} for a, n in funcs.items()}
+            self.all_syms = dict(funcs)
+            self.sections = dict(sections or {})
+            self.slot_syms = dict(slot_syms or {})
+            self.slot_funcs = {}
+            self.slot_data = {}
+            self.dynamic_defs = {}
+            self.sym_sizes = {}
+            self._static_values = dict(static_values or {})
+            self.precision = _WPrecision({f: list(v)
+                                          for f, v in insns.items()})
+            self.functions = [(f, list(v)) for f, v in insns.items()]
+            self.source_root = source_root
+            self.install_prefix = None
+            self.sites = {}
+            self.direct = {}
+            self.taken_code = set()
+            self.taken_data = set()
+
+        def containing(self, addr):
+            return max((f for f in self.funcs if f <= addr), default=None)
+
+        def section_of(self, addr):
+            for n, (base, _o, size) in self.sections.items():
+                if base <= addr < base + size:
+                    return n
+            return None
+
+        def static_slot(self, addr):
+            if addr not in self._static_values:
+                return None
+            v = self._static_values[addr]
+            return frozenset(v if isinstance(v, (set, frozenset)) else {v})
+
+    _E7PMETH_TABLE = 0x7000
+    _E7PMETH_GOT = 0x7030
+    _E7PMETH_ACC = [0x4100 + i for i in range(10)]
+    _E7PMETH_NAMES = [
+        "ossl_rsa_pkey_method", "ossl_dh_pkey_method",
+        "ossl_dsa_pkey_method", "ossl_ec_pkey_method",
+        "ossl_rsa_pss_pkey_method", "ossl_dhx_pkey_method",
+        "ossl_ecx25519_pkey_method", "ossl_ecx448_pkey_method",
+        "ossl_ed25519_pkey_method", "ossl_ed448_pkey_method"]
+    _E7PMETH_SRC = (
+        "static PMETH_STANDARD_METHODS: [PmethFn; 10] = [\n"
+        + "".join(f"    crate::pfx::{n},\n" for n in _E7PMETH_NAMES)
+        + "];\n\n"
+        "unsafe extern \"C\" fn pmeth_func_cmp(\n"
+        "    a: *const c_void, b: *const c_void) -> c_int { 0 }\n\n"
+        "pub unsafe extern \"C\" fn EVP_PKEY_meth_find(\n"
+        "    type_: c_int) -> *const EvpPkeyMethod {\n"
+        "    let slot = unsafe {\n"
+        "        crate::runtime::obj::OBJ_bsearch_(\n"
+        "            ptr::addr_of!(key).cast::<c_void>(),\n"
+        "            PMETH_STANDARD_METHODS.as_ptr().cast::<c_void>(),\n"
+        "            PMETH_STANDARD_METHODS.len() as c_int,\n"
+        "            core::mem::size_of::<PmethFn>() as c_int,\n"
+        "            Some(pmeth_func_cmp),\n"
+        "        )\n"
+        "    };\n"
+        "    if slot.is_null() { return ptr::null(); }\n"
+        "    let accessor = unsafe { *slot.cast::<PmethFn>() };\n"
+        "    unsafe { accessor() }\n"
+        "}\n")
+
+    def _e7pmeth_fixture(*, guard=True, flags="xor    %r9d,%r9d",
+                         table_addr=_E7PMETH_TABLE, section=".data.rel.ro",
+                         rows=10, symbol_addr=_E7PMETH_TABLE):
+        root = Path(tempfile.mkdtemp())
+        (root / "src" / "evp").mkdir(parents=True, exist_ok=True)
+        (root / "src" / "evp" / "pkey_ctx.rs").write_text(_E7PMETH_SRC)
+        # The function start is placed so that the site offset equals the
+        # pinned (symbol, offset): the fixture tests the stable key, not a
+        # literal VA.
+        fx = 0x4031 - 0x16C
+        funcs = {fx: "EVP_PKEY_meth_find",
+                 0x4200: "pmeth_func_cmp",
+                 symbol_addr: "PMETH_STANDARD_METHODS"}
+        for addr, name in zip(_E7PMETH_ACC, _E7PMETH_NAMES):
+            funcs[addr] = name
+        body = [
+            (0x4000, "sub    $0x20,%rsp"),
+            (0x4004, "mov    %ecx,0x10(%rsp)"),
+            (0x4008, "lea    0x10(%rsp),%rax"),
+            (0x400C, "mov    %rax,0x8(%rsp)"),
+            (0x4010, "lea    0x2fe9(%rip),%rsi        # 7000 <meths>"),
+            (0x4014, "lea    0x1e5(%rip),%r8        # 4200 <cmp>"),
+            (0x4018, "lea    0x8(%rsp),%rdi"),
+            (0x401A, f"mov    $0x{rows:x},%edx"),
+            (0x401C, "mov    $0x8,%ecx"),
+            (0x401E, flags),
+            (0x4028, "call   *0x1606(%rip)        # 7030 <bsearch>"),
+        ]
+        body += [
+            (0x402E, "test   %rax,%rax" if guard else "nop"),
+            (0x4030, "je     4034 <null>" if guard else "nop"),
+            (0x4031, "call   *(%rax)"),
+            (0x4034, "add    $0x20,%rsp"),
+            (0x4035, "ret"),
+        ]
+        call_at = 0x4031
+        insns = {fx: body}
+        values = {table_addr + 8 * i: _E7PMETH_ACC[i] for i in range(rows)}
+        g = _E7PMETHG(
+            insns, funcs, source_root=root,
+            slot_syms={_E7PMETH_GOT: {"OBJ_bsearch_ex_@@OPENSSL_3.0.0"}},
+            static_values=values,
+            sections={".text": (0x3E00, 0, 0x1000),
+                      section: (min(table_addr, symbol_addr), 0, 0x200)},
+            start_set=set(funcs))
+        site = {"kind": "call", "func": fx, "addr": call_at,
+                "text": "call   *(%rax)", "targets": set(),
+                "unresolved": True, "reason": "field-of-unknown-base",
+                "class": "field", "field_offsets": {0}, "seam": None,
+                "arg_deps": set(), "arg_targets": set()}
+        return g, site
+
+    _g_pm, _s_pm = _e7pmeth_fixture()
+    _w_pm = internal_closed_method_table_witness(
+        _g_pm, _s_pm, _g_pm.funcs[0x3EC5])
+    check("E7PMETH positive resolves the ten table entries",
+          ((_w_pm or {}).get("resolved"), (_w_pm or {}).get("targets")),
+          (True, [hex(a) for a in _E7PMETH_ACC]))
+    check("E7PMETH positive is an internal table, not a contract",
+          ((_w_pm or {}).get("class"), (_w_pm or {}).get("contract_bounded")),
+          (E7PMETH_CLASS, False))
+    check("E7PMETH positive records the zero-flag search",
+          (((_w_pm or {}).get("search") or {}).get("interface"),
+           ((_w_pm or {}).get("search") or {}).get("rows"),
+           ((_w_pm or {}).get("search") or {}).get("flags")),
+          (E7PMETH_BSEARCH, 10, 0))
+    check("E7PMETH positives residuals are recorded",
+          sorted(r.get("id") for r in (_w_pm or {}).get("residuals") or []),
+          sorted(r["id"] for r in E7PMETH_RESIDUALS))
+
+    e7pmeth_mutation_matrix = []
+
+    def _e7pmeth_mut(name, g, site):
+        rec = _mutation(
+            name, lambda: internal_closed_method_table_witness(
+                g, site, g.funcs[0x3EC5])) or {}
+        restored = internal_closed_method_table_witness(
+            g, site, g.funcs[0x3EC5])
+        return rec, restored
+
+    for _name in ("e7pmeth-nonfunction-member", "e7pmeth-table-rows",
+                  "e7pmeth-flags", "e7pmeth-no-guard",
+                  "e7pmeth-mutable-table"):
+        _rec, _restored = _e7pmeth_mut(_name, _g_pm, _s_pm)
+        e7pmeth_mutation_matrix.append({
+            "mutation": _name, "case_fails": bool(_rec.get("refusal")),
+            "expected": True})
+        check(f"E7PMETH {_name} refuses", bool(_rec.get("refusal")), True)
+        check(f"E7PMETH {_name} restores exactly", _restored == _w_pm, True)
+
+    _g_wt, _s_wt = _e7pmeth_fixture(symbol_addr=0x7100)
+    _rec, _restored = _e7pmeth_mut("e7pmeth-wrong-table", _g_wt, _s_wt)
+    e7pmeth_mutation_matrix.append({
+        "mutation": "e7pmeth-wrong-table",
+        "case_fails": _rec.get("refusal") == "search-base-is-not-the-table",
+        "expected": True})
+    check("E7PMETH e7pmeth-wrong-table refusal", _rec.get("refusal"),
+          "search-base-is-not-the-table")
+
+    for _kw, _want, _label in [
+            ({"guard": False}, "slot-not-null-guarded",
+             "the slot is not NULL-guarded"),
+            ({"flags": "mov    $0x1,%r9d"}, "search-flags-not-zero",
+             "the search sets OBJ_BSEARCH_VALUE_ON_NOMATCH"),
+            ({"section": ".data"}, "table-not-in-immutable-section",
+             "the table is writable"),
+            ({"rows": 9}, "table-row-count-mismatch",
+             "the image table is shorter than declared")]:
+        _g_c, _s_c = _e7pmeth_fixture(**_kw)
+        _rec = internal_closed_method_table_witness(
+            _g_c, _s_c, _g_c.funcs[0x3EC5]) or {}
+        check(f"E7PMETH fixture refusal: {_label}",
+              (_rec.get("resolved"), _rec.get("refusal")), (False, _want))
+    check("E7PMETH mutation matrix: every mutation is load-bearing",
+          [r["case_fails"] == r["expected"]
+           for r in e7pmeth_mutation_matrix],
+          [True] * len(e7pmeth_mutation_matrix))
+    print("[consumer-closure] E7PMETH mutation matrix: " + "; ".join(
+        f"{r['mutation']} "
+        f"{'fails as required' if r['case_fails'] else 'STILL PASSES'}"
+        for r in e7pmeth_mutation_matrix))
 
     _e7abi_failures, _e7abi_line = _e7abi_self_test()
     failures.extend(_e7abi_failures)
