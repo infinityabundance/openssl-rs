@@ -75,10 +75,10 @@
           "154 callback(s) are recorded as possibly outliving their registrar (process-global allocation/async/bio-method/provider-dispatch hooks); the lifetime is a structural classification, not an observed one"
         ],
         "findings_present": true,
-        "measurement_state": "complete",
-        "observation": "MS-OWNERSHIP-PLANES is pass",
+        "measurement_state": "not_measured",
+        "observation": "MS-OWNERSHIP-PLANES is fail",
         "property_status": "not_claimed",
-        "state": "implemented",
+        "state": "open",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "ownership-planes",
         "what": "the ownership, allocation and callback planes: the allocation/deallocation associations, the ownership edges across the Rust/C boundary, the callback lifetimes, the unsafe Send/Sync impls, the global/static state and the panic/unwind boundaries"
@@ -128,10 +128,10 @@
           "the Phase-22 closure's `protocol` family is unpopulated, so a network class is grounded in the parser's committed role (the module or authority unit the peer drives) and is recorded as an `evidence_missing` residual, never read as a wire observation"
         ],
         "findings_present": true,
-        "measurement_state": "complete",
-        "observation": "MS-EXPOSURE-CLASSIFICATION is pass",
+        "measurement_state": "not_measured",
+        "observation": "MS-EXPOSURE-CLASSIFICATION is fail",
         "property_status": "not_claimed",
-        "state": "implemented",
+        "state": "open",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "exposure-classification",
         "what": "the exposure/data-flow classification of every unsafe site into the closed exposure classes (unreachable-profile, test-only, internal, local-API, config, CLI-input, network-client, network-server, downstream-runtime-observed), so a site is reachable by measurement rather than by assertion"
@@ -144,10 +144,10 @@
           "the safe-core reconstruction is separate from the worklist: it replaced the internal unsafe mechanism of one subsystem --- recorded below with its per-operation classification --- so the crate's total operation count moved while the externally reachable count, the ABI and the lints are unchanged"
         ],
         "findings_present": true,
-        "measurement_state": "complete",
-        "observation": "MS-UNSAFE-REDUCTION is pass",
+        "measurement_state": "not_measured",
+        "observation": "MS-UNSAFE-REDUCTION is fail",
         "property_status": "not_claimed",
-        "state": "implemented",
+        "state": "open",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "unsafe-reduction",
         "what": "the unsafe reduction worklist: the reachable unsafe sites reduced by a safe intrinsic or a checked wrapper where the venue can, each reduction with its before/after compiler-derived sites and the sites that remain named rather than dropped, so nothing is weakened to shrink the count"
@@ -362,7 +362,7 @@
       {
         "closure": "the `MS-SEAL` court passes",
         "findings": [
-          "the seal re-derives 21 non-`MS-SEAL` Phase-25 court result(s) from their committed planes: 18 pass, 3 fail (MS-MIRI, MS-NON-RUST-TCB, MS-SOURCE-CENSUS); the runner's registry `artifacts/phase25/COURTS.json` records 22 court row(s), 19 pass and 3 fail, and is not the seal's input, so the two records disagree and this ledger states both rather than adopting the registry's verdicts",
+          "the seal re-derives 21 non-`MS-SEAL` Phase-25 court result(s) from their committed planes: 18 pass, 3 fail (MS-MIRI, MS-NON-RUST-TCB, MS-SOURCE-CENSUS); the runner's registry `artifacts/phase25/COURTS.json` records 22 court row(s), 15 pass and 7 fail, and is not the seal's input, so the two records disagree and this ledger states both rather than adopting the registry's verdicts",
           "the residual census classifies and disposes 698 residual record(s) plus 11 light cross-check leftover(s); 664 are open and 0 undisposed",
           "the seal records passed=false because 183 externally reachable site(s) carry tool state UNSUPPORTED; UNSUPPORTED is never PASS (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
           "the open items are named rather than smoothed to a zero: census-geiger-unavailable, census-unresolved-reachability, cve-replay-unknown, externally-reachable-fail, externally-reachable-unsupported, mechanism-reconciliation-open, rt-phase22-unwitnessed-external",
@@ -371,10 +371,10 @@
           "the non-claims are recorded as findings (safe Rust does not prove protocol correctness; unsafe Rust is not inherently vulnerable; unsafe LOC is not a vulnerability count; Miri/ASan/TSan are not exhaustive; Kani does not prove unsupported or concurrent whole-program behaviour; historical CVE extinction does not predict a future CVE count; compatibility is not security; memory safety is not cryptographic correctness; absence of a crash is not structural proof), so a passing seal is never 'the candidate is memory safe'"
         ],
         "findings_present": true,
-        "measurement_state": "complete",
-        "observation": "MS-SEAL is pass",
+        "measurement_state": "not_measured",
+        "observation": "MS-SEAL is fail",
         "property_status": "NOT_CLAIMED",
-        "state": "implemented",
+        "state": "open",
         "surface": "artifacts/phase25/COURTS.json",
         "unit": "memory-safety-seal",
         "what": "the seal `docs/PHASE-25-MEMORY-SAFETY-SEAL.md`, which closes the bounded claim and records the non-claims it never exceeds"
@@ -385,8 +385,8 @@
       "contract_units": 22,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 19,
-      "open_in_this_stratum": 3,
+      "implemented": 15,
+      "open_in_this_stratum": 7,
       "owned": 22,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -417,17 +417,17 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+      "sha256": "8791e2e2ecffb61fb2b70280bb455bbc26196d886abe8e904c24f44faea55562"
     },
     {
       "name": "phase-25-plan",
       "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
-      "sha256": "1b80484986e7a4cc3646ac88ced5ebecc7040a1ceaba1550a4cd628f4e5bfb02"
+      "sha256": "7653a39374155ec278d1bf13472c9f213bf5a51b6673fd884527e1038e0597f7"
     },
     {
       "name": "phase-25-courts",
       "path": "artifacts/phase25/COURTS.json",
-      "sha256": "1a189c6a5819e6c361f668188cf31f388c5624e3ad81f56a7280f3a7f3d6fa9f"
+      "sha256": "13803068de26641f20255295268e47897ac60e306549a168fa9b9342332b70ae"
     },
     {
       "name": "phase25-guard",

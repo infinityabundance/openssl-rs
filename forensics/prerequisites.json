@@ -1698,12 +1698,12 @@
         "crate_module": "src/apps/asn1parse.rs",
         "evidence": "src/apps/asn1parse.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
         "names": [
-          "libc_free",
+          "OwnedBlock",
           "main",
           "opt_format_asn1",
           "strtol_base0"
         ],
-        "reason": "17.1 lands `apps/asn1parse.c`'s command body in `src/apps/asn1parse.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
+        "reason": "17.1 lands `apps/asn1parse.c`'s command body in `src/apps/asn1parse.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached. `libc_free` was an authority helper the ownership reconstruction removed: the module frees through `OwnedBlock`/`OwnedBlock::from_raw` + `Drop` instead, so the record names the owner that replaced it rather than the eliminated C helper.",
         "unit": "apps/asn1parse.c"
       },
       {
@@ -1980,14 +1980,14 @@
         "crate_module": "src/apps/kdf.rs",
         "evidence": "src/apps/kdf.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
         "names": [
-          "app_malloc",
+          "OwnedBuf",
           "app_params_free",
           "app_params_new_from_opts",
           "atoi",
           "bio_open",
           "main"
         ],
-        "reason": "17.1 lands `apps/kdf.c`'s command body in `src/apps/kdf.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
+        "reason": "17.1 lands `apps/kdf.c`'s command body in `src/apps/kdf.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached. `app_malloc` was an authority helper the ownership reconstruction removed: the module allocates through `OwnedBuf::new_cleansed_at` instead, so the record names the owner that replaced it rather than the eliminated C helper.",
         "unit": "apps/kdf.c"
       },
       {
@@ -1995,13 +1995,13 @@
         "crate_module": "src/apps/mac.rs",
         "evidence": "src/apps/mac.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
         "names": [
-          "app_malloc",
+          "OwnedBuf",
           "app_params_free",
           "app_params_new_from_opts",
           "bio_open",
           "main"
         ],
-        "reason": "17.1 lands `apps/mac.c`'s command body in `src/apps/mac.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
+        "reason": "17.1 lands `apps/mac.c`'s command body in `src/apps/mac.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached. `app_malloc` was an authority helper the ownership reconstruction removed: the module allocates through its own `OwnedBuf` (`new`, `Drop`) instead, so the record names the owner that replaced it rather than the eliminated C helper.",
         "unit": "apps/mac.c"
       },
       {
