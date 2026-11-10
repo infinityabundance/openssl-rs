@@ -1068,18 +1068,17 @@ unsafe extern "C" fn serverinfo_srv_parse_cb(
 
 /// `static int serverinfoex_srv_add_cb(...)` — `ssl/ssl_rsa.c:660-696`, reduced (see header).
 ///
-/// # Safety
-///
 /// No caller-independent precondition on the argument values: the body ignores `s`,
 /// `out`, `outlen`, `x`, `al` and `arg` and returns 0, so NULL, dangling or unaligned
-/// values are not dereferenced. The obligation is the ABI: it may only be installed as the
-/// ex-style add callback (`SSL_custom_ext_add_cb_ex`) of `SSL_CTX_add_custom_ext`, which
+/// values are not dereferenced. The ABI obligation lives in the stored callback slot, not
+/// in this function: it may only be installed as the ex-style add callback
+/// (`SSL_custom_ext_add_cb_ex`) of `SSL_CTX_add_custom_ext`, which
 /// [`serverinfo_process_buffer`] does at `:1173`. It is never invoked at this identity
 /// (`extensions_cust.rs` stores the erased pointer without calling it).
 ///
 /// Authority-derived: the signature is `ssl.h:325`; the reduced body follows
 /// `ssl/ssl_rsa.c:660-696` only as far as refusing to publish serverinfo.
-unsafe extern "C" fn serverinfoex_srv_add_cb(
+extern "C" fn serverinfoex_srv_add_cb(
     _s: *mut Ssl,
     _ext_type: c_uint,
     _context: c_uint,
@@ -1092,6 +1091,20 @@ unsafe extern "C" fn serverinfoex_srv_add_cb(
 ) -> c_int {
     0
 }
+
+#[cfg(test)]
+#[allow(clippy::type_complexity)]
+const _: extern "C" fn(
+    *mut Ssl,
+    c_uint,
+    c_uint,
+    *mut *const u8,
+    *mut usize,
+    *mut X509,
+    usize,
+    *mut c_int,
+    *mut c_void,
+) -> c_int = serverinfoex_srv_add_cb;
 
 /// `static int serverinfo_srv_add_cb(...)` — `ssl/ssl_rsa.c:698-704`.
 ///
@@ -1111,8 +1124,7 @@ unsafe extern "C" fn serverinfo_srv_add_cb(
     al: *mut c_int,
     arg: *mut c_void,
 ) -> c_int {
-    // SAFETY: forwarded per the callback contract.
-    unsafe { serverinfoex_srv_add_cb(s, ext_type, 0, out, outlen, ptr::null_mut(), 0, al, arg) }
+    serverinfoex_srv_add_cb(s, ext_type, 0, out, outlen, ptr::null_mut(), 0, al, arg)
 }
 
 /// `static int serverinfo_process_buffer(unsigned int version, const unsigned char *serverinfo,

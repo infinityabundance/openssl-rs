@@ -8843,24 +8843,22 @@ pub unsafe extern "C" fn SSL_set_ct_validation_callback(
 
 /// `ct_permissive` — `ssl/ssl_lib.c:6529-6533`: the information-gathering callback, always 1.
 ///
-/// # Safety
-///
 /// No caller-independent precondition on the argument values: `_ctx`, `_scts` and `_arg`
 /// are never read (the body returns 1), so NULL, dangling or unaligned pointers are
-/// harmless. The obligation is the ABI: it may only be installed as an
+/// harmless. The ABI obligation lives in the stored `ssl_ct_validation_cb` slot, not in
+/// this function: it may only be installed as an
 /// `SSL_CTX_set_ct_validation_callback`/`SSL_set_ct_validation_callback` callback
 /// (`ssl_ct_validation_cb`), which [`SSL_CTX_enable_ct`] (`:8897`) and [`SSL_enable_ct`]
 /// (`:8920`) do with `arg = NULL`. This slice stores the callback but has no invocation
 /// path for it.
 ///
 /// Authority-derived: the signature and return value are `ssl/ssl_lib.c:6529-6533`.
-unsafe extern "C" fn ct_permissive(
-    _ctx: *const c_void,
-    _scts: *const c_void,
-    _arg: *mut c_void,
-) -> c_int {
+extern "C" fn ct_permissive(_ctx: *const c_void, _scts: *const c_void, _arg: *mut c_void) -> c_int {
     1
 }
+
+#[cfg(test)]
+const _: extern "C" fn(*const c_void, *const c_void, *mut c_void) -> c_int = ct_permissive;
 
 /// `ct_strict` — `ssl/ssl_lib.c:6535-6550`: 1 only when an SCT validates. Parsed SCT stacks are
 /// 14.9's, so no SCT list ever reaches this slice and the authority's `SSL_R_NO_VALID_SCTS` refusal
