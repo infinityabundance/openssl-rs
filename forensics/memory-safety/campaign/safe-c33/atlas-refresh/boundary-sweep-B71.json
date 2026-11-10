@@ -1,0 +1,564 @@
+{
+ "receipt": "boundary-sweep-B71",
+ "kind": "site-enumerating-boundary-receipt",
+ "date": "2026-11-10",
+ "campaign": "safe-c33",
+ "subphase": "B71",
+ "candidate": {
+  "source_head": "525408edf2e679ac2cf6042893d862d5f19583ee",
+  "branch": "detached HEAD (evidence commit)",
+  "tool": "forensics/tools/consumer_closure.py",
+  "tool_sha256": "b13ebd6e5fa4afc1acdc4a477b2b9a556e7182d6e34bb744f655809159b04039",
+  "source_state": "src/ is not edited by this receipt. src/cms/cms_asn1.rs is sha256 f6d459a64b9f0e3ee81d296a107add8f97addf10aa93eeca058f84c856b627d1 and src/pkcs7/pk7_asn1.rs is sha256 3e3ad7863d0cbd5773bb5ac075ffbfa4a5eeedaefe73135e27bfa5c8039e54de at HEAD 525408edf; git diff against the inventory/span source b8bba955503014c8fd86303314c6deebaea093b0 is empty for both. The repository files this subphase adds are the receipt, the CAMPAIGN-STATUS scoped row, the external C probe courts/phase25/rt_cms_asn1_callbacks.c and the closure evidence evidence/closure-ssh-b71-cmscb.json; no src/ file changes.",
+  "files": [
+   "src/cms/cms_asn1.rs",
+   "src/pkcs7/pk7_asn1.rs",
+   "courts/phase25/rt_cms_asn1_callbacks.c"
+  ],
+  "files_sha256": {
+   "src/cms/cms_asn1.rs": "f6d459a64b9f0e3ee81d296a107add8f97addf10aa93eeca058f84c856b627d1",
+   "src/pkcs7/pk7_asn1.rs": "3e3ad7863d0cbd5773bb5ac075ffbfa4a5eeedaefe73135e27bfa5c8039e54de",
+   "courts/phase25/rt_cms_asn1_callbacks.c": "d58af5cd537338488b696a76778e2eb7b5745ed39e336339df2ef5694623c5a1"
+  },
+  "admitted_install": {
+   "prefix": "artifacts/phase2/install",
+   "libcrypto_so_3_sha256": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3"
+  }
+ },
+ "authority": {
+  "id": "openssl-3.6.4",
+  "source": "forensics/authorities/src/openssl-3.6.4/crypto/cms/cms_asn1.c, crypto/pkcs7/pk7_asn1.c",
+  "item_callback_abi": "ASN1_AUX.asn1_cb is an informational callback called by the ASN.1 item machinery around each operation. On NEW_POST/D2I_POST/FREE_PRE/FREE_POST `*pval` is the live value slot for the declared item type; NEW_PRE and CHOICE D2I_PRE may be called before allocation, so `*pval` may be NULL there. For a non-primitive item the free walk returns before any callback when the stored value is NULL (tasn_fre.c's item-embed-free guard), so FREE_PRE/FREE_POST only see NULL for primitive items whose value lives in the slot. The streaming operations receive the caller-supplied value and the ASN1_STREAM_ARG.",
+  "registrations": "cms_ec_cb : ASN1_SEQUENCE_cb(CMS_EncryptedContentInfo, cms_ec_cb); cms_rek_cb : ASN1_SEQUENCE_cb(CMS_RecipientEncryptedKey, cms_rek_cb); cms_kari_cb : ASN1_SEQUENCE_cb(CMS_KeyAgreeRecipientInfo, cms_kari_cb); cms_kemri_cb : ASN1_SEQUENCE_cb(CMS_KEMRecipientInfo, cms_kemri_cb); cms_ri_cb : ASN1_CHOICE_cb(CMS_RecipientInfo, cms_ri_cb); cms_cb : ASN1_SEQUENCE_cb(CMS_ContentInfo, cms_cb); ri_cb : ASN1_SEQUENCE_cb(PKCS7_RECIP_INFO, ri_cb)."
+ },
+ "mechanism": {
+  "id": "RAND_CMS_STORE_KEYFMT",
+  "state_before": "OWNERSHIP_RECONSTRUCTED",
+  "state_after": "OWNERSHIP_RECONSTRUCTED",
+  "state_source": "state.json#/mechanisms[id=RAND_CMS_STORE_KEYFMT]",
+  "discharge": "none mechanism-wide; this receipt discharges only the seven named item-callback boundaries (site-scoped)"
+ },
+ "obligations": [
+  {
+   "id": "V1:src/cms/cms_asn1.rs:523:UNSAFE_FN_DEF",
+   "stable_id": "src/cms/cms_asn1.rs::UNSAFE_FN_DEF::cms_ec_cb",
+   "file": "src/cms/cms_asn1.rs",
+   "line": 523,
+   "kind": "UNSAFE_FN_DEF",
+   "item": "cms_ec_cb",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+   "status_before": "BLOCKED",
+   "status_after": "DISCHARGED (boundary CMS-CB-001)"
+  },
+  {
+   "id": "V1:src/cms/cms_asn1.rs:539:UNSAFE_FN_DEF",
+   "stable_id": "src/cms/cms_asn1.rs::UNSAFE_FN_DEF::cms_rek_cb",
+   "file": "src/cms/cms_asn1.rs",
+   "line": 539,
+   "kind": "UNSAFE_FN_DEF",
+   "item": "cms_rek_cb",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+   "status_before": "BLOCKED",
+   "status_after": "DISCHARGED (boundary CMS-CB-002)"
+  },
+  {
+   "id": "V1:src/cms/cms_asn1.rs:556:UNSAFE_FN_DEF",
+   "stable_id": "src/cms/cms_asn1.rs::UNSAFE_FN_DEF::cms_kari_cb",
+   "file": "src/cms/cms_asn1.rs",
+   "line": 556,
+   "kind": "UNSAFE_FN_DEF",
+   "item": "cms_kari_cb",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+   "status_before": "BLOCKED",
+   "status_after": "DISCHARGED (boundary CMS-CB-003)"
+  },
+  {
+   "id": "V1:src/cms/cms_asn1.rs:585:UNSAFE_FN_DEF",
+   "stable_id": "src/cms/cms_asn1.rs::UNSAFE_FN_DEF::cms_kemri_cb",
+   "file": "src/cms/cms_asn1.rs",
+   "line": 585,
+   "kind": "UNSAFE_FN_DEF",
+   "item": "cms_kemri_cb",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+   "status_before": "BLOCKED",
+   "status_after": "DISCHARGED (boundary CMS-CB-004)"
+  },
+  {
+   "id": "V1:src/cms/cms_asn1.rs:617:UNSAFE_FN_DEF",
+   "stable_id": "src/cms/cms_asn1.rs::UNSAFE_FN_DEF::cms_ri_cb",
+   "file": "src/cms/cms_asn1.rs",
+   "line": 617,
+   "kind": "UNSAFE_FN_DEF",
+   "item": "cms_ri_cb",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+   "status_before": "BLOCKED",
+   "status_after": "DISCHARGED (boundary CMS-CB-005)"
+  },
+  {
+   "id": "V1:src/cms/cms_asn1.rs:668:UNSAFE_FN_DEF",
+   "stable_id": "src/cms/cms_asn1.rs::UNSAFE_FN_DEF::cms_cb",
+   "file": "src/cms/cms_asn1.rs",
+   "line": 668,
+   "kind": "UNSAFE_FN_DEF",
+   "item": "cms_cb",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+   "status_before": "BLOCKED",
+   "status_after": "DISCHARGED (boundary CMS-CB-006)"
+  },
+  {
+   "id": "V1:src/pkcs7/pk7_asn1.rs:607:UNSAFE_FN_DEF",
+   "stable_id": "src/pkcs7/pk7_asn1.rs::UNSAFE_FN_DEF::ri_cb",
+   "file": "src/pkcs7/pk7_asn1.rs",
+   "line": 607,
+   "kind": "UNSAFE_FN_DEF",
+   "item": "ri_cb",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+   "status_before": "BLOCKED",
+   "status_after": "DISCHARGED (boundary PK7-CB-001)"
+  }
+ ],
+ "boundaries": [
+  {
+   "id": "CMS-CB-001",
+   "file": "src/cms/cms_asn1.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "cms_ec_cb",
+   "line": 523,
+   "line_current": 523,
+   "inventory_line": 523,
+   "span_start_line": 523,
+   "span_end_line": 536,
+   "span_sha256": "ba423a8ccae9f8f1db109a2bff88197501f54d94dc6dea26b1bb0005298ec711",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "signature": "unsafe extern \"C\" fn cms_ec_cb(operation: c_int, pval: *mut *mut c_void, _it: *const Asn1Item, _exarg: *mut c_void) -> c_int",
+   "body": "unsafe extern \"C\" fn cms_ec_cb(\n    operation: c_int,\n    pval: *mut *mut c_void,\n    _it: *const Asn1Item,\n    _exarg: *mut c_void,\n) -> c_int {\n    if operation == ASN1_OP_FREE_POST {\n        // SAFETY: `pval` is the object being freed.\n        let ec = unsafe { (*pval).cast::<CmsEncryptedContentInfo>() };\n        // SAFETY: `ec` is live; `key`/`keylen` are its own fields.\n        unsafe { OPENSSL_clear_free((*ec).key, (*ec).keylen) };\n    }\n    1\n}",
+   "precondition_set": [
+    "At ASN1_OP_FREE_POST, `*pval` is a live `CmsEncryptedContentInfo` owned by the free walk; `key` is NULL or this object's own CRYPTO_* block of `keylen` bytes, released exactly once."
+   ],
+   "disposition": "SAFETY_DISCHARGED: src/cms/cms_asn1.rs:523 \u2014 cms_ec_cb dereferences `*pval` only inside the `ASN1_OP_FREE_POST` arm. The item free walk returns before invoking any callback when a non-primitive item's stored value is NULL, and the item is an NDEF_SEQUENCE, so FREE_POST always receives a live object. The template walk has already released the ASN.1 fields (`content_type`, `content_encryption_algorithm`, `encrypted_content`); `key`/`keylen` are runtime members it does not touch, so the callback is their single release.",
+   "contract": "C ABI `int (int, ASN1_VALUE **, const ASN1_ITEM *, void *)`. The callback acts only on ASN1_OP_FREE_POST, where `*pval` is a live `CMS_EncryptedContentInfo`. `key` is NULL or the object's own single CRYPTO_* allocation of `keylen` bytes, and is released exactly once with `OPENSSL_clear_free(key, keylen)`. No other operation has a precondition: every other operation returns 1 without reading `*pval`.",
+   "established": [
+    "`item_embed_free` evaluates `let value = *pval; if item.itype != ASN1_ITYPE_PRIMITIVE && value.is_null() { return; }` before the SEQUENCE/CHOICE arms (src/asn1/fre.rs:217-221), so a NULL slot never reaches FREE_PRE/FREE_POST for a non-primitive item.",
+    "`ASN1_item_free`/`ASN1_item_ex_free` are the only free entries (src/asn1/fre.rs:430-448); both pass a live slot to `item_embed_free`.",
+    "The item is `ASN1_ITYPE_NDEF_SEQUENCE` (src/cms/cms_asn1.rs:1322-1330), so the guard applies and the FREE_POST call at src/asn1/fre.rs:345-348 has a non-NULL `*pval`.",
+    "`CmsEncryptedContentInfo.key`/`keylen` are not template fields (the three templates are content_type, content_encryption_algorithm, encrypted_content); the generic walk cannot release them, so the callback owns their single release.",
+    "Every other operation returns 1 without forming a reference: the arm test is `operation == ASN1_OP_FREE_POST`, so NEW_PRE (where `*pval` may be NULL) and all D2I/I2D/PRINT/DUP operations are inert."
+   ],
+   "unsafe_operations": [],
+   "caller_closure_ref": "shared caller_closure",
+   "tests": [
+    "courts/phase25/rt_cms_asn1_callbacks.c: a CMS_encrypt RSA and EC EnvelopedData install a live session key in `ec.key`; d2i/i2d round trips, malformed/truncated decodes and CMS_ContentInfo_free exercise FREE_POST. Plain run PASS; LeakSanitizer run PASS under the recorded baseline suppression (a missing release would surface as an unsuppressed CRYPTO_* leak)."
+   ],
+   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_schema": "safe-c33/operation-span-sha256/v1",
+   "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one."
+  },
+  {
+   "id": "CMS-CB-002",
+   "file": "src/cms/cms_asn1.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "cms_rek_cb",
+   "line": 539,
+   "line_current": 539,
+   "inventory_line": 539,
+   "span_start_line": 539,
+   "span_end_line": 552,
+   "span_sha256": "07f3677ae912eeba4af564e31b9d81d45aa555432ec80ca13a4bed144359cfe9",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "signature": "unsafe extern \"C\" fn cms_rek_cb(operation: c_int, pval: *mut *mut c_void, _it: *const Asn1Item, _exarg: *mut c_void) -> c_int",
+   "body": "unsafe extern \"C\" fn cms_rek_cb(\n    operation: c_int,\n    pval: *mut *mut c_void,\n    _it: *const Asn1Item,\n    _exarg: *mut c_void,\n) -> c_int {\n    if operation == ASN1_OP_FREE_POST {\n        // SAFETY: `pval` is the object being freed.\n        let rek = unsafe { (*pval).cast::<CmsRecipientEncryptedKey>() };\n        // SAFETY: `rek` is live.\n        unsafe { EVP_PKEY_free((*rek).pkey) };\n    }\n    1\n}",
+   "precondition_set": [
+    "At ASN1_OP_FREE_POST, `*pval` is a live `CMS_RecipientEncryptedKey` owned by the free walk; `pkey` is NULL or an `EVP_PKEY` reference owned by it, released exactly once."
+   ],
+   "disposition": "SAFETY_DISCHARGED: src/cms/cms_asn1.rs:539 \u2014 cms_rek_cb dereferences `*pval` only inside the `ASN1_OP_FREE_POST` arm. The item is a SEQUENCE, and `item_embed_free` returns before the callback when its stored value is NULL, so FREE_POST receives a live object. `pkey` is a runtime member, not a template field, so the callback is its single release.",
+   "contract": "C ABI `int (int, ASN1_VALUE **, const ASN1_ITEM *, void *)`. On ASN1_OP_FREE_POST `*pval` is a live `CMS_RecipientEncryptedKey`; `pkey` is NULL or an `EVP_PKEY` reference owned by it and is released exactly once with `EVP_PKEY_free`. Every other operation returns 1 without reading `*pval`.",
+   "established": [
+    "`item_embed_free` returns for a NULL non-primitive value before the SEQUENCE arm (src/asn1/fre.rs:217-221); the item is `ASN1_ITYPE_SEQUENCE` (src/cms/cms_asn1.rs:1512-1520).",
+    "The FREE_POST invocation at src/asn1/fre.rs:345-348 is therefore always on a live slot.",
+    "The two template fields are `rid` and `encryptedKey`; `pkey` is runtime state the generic walk does not release.",
+    "The arm test is `operation == ASN1_OP_FREE_POST`, so NEW_PRE's possible NULL slot is never dereferenced."
+   ],
+   "unsafe_operations": [],
+   "caller_closure_ref": "shared caller_closure",
+   "tests": [
+    "courts/phase25/rt_cms_asn1_callbacks.c: the EC (KARI) EnvelopedData round trip carries a RecipientEncryptedKey, and CMS_ContentInfo_free drives its FREE_POST. Plain PASS; LeakSanitizer PASS under the recorded baseline suppression."
+   ],
+   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_schema": "safe-c33/operation-span-sha256/v1",
+   "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one."
+  },
+  {
+   "id": "CMS-CB-003",
+   "file": "src/cms/cms_asn1.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "cms_kari_cb",
+   "line": 556,
+   "line_current": 556,
+   "inventory_line": 556,
+   "span_start_line": 556,
+   "span_end_line": 582,
+   "span_sha256": "ace207bbd437a2049f420c466c82759bb50f5f121aaaaeb6c0e1061465c988c4",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "signature": "unsafe extern \"C\" fn cms_kari_cb(operation: c_int, pval: *mut *mut c_void, _it: *const Asn1Item, _exarg: *mut c_void) -> c_int",
+   "body": "unsafe extern \"C\" fn cms_kari_cb(\n    operation: c_int,\n    pval: *mut *mut c_void,\n    _it: *const Asn1Item,\n    _exarg: *mut c_void,\n) -> c_int {\n    // SAFETY: `pval` is a live value slot per the callback contract.\n    let kari = unsafe { (*pval).cast::<CmsKeyAgreeRecipientInfo>() };\n    if operation == ASN1_OP_NEW_POST {\n        // SAFETY: `kari` was just allocated by the item machinery.\n        unsafe {\n            (*kari).ctx = EVP_CIPHER_CTX_new().cast();\n            if (*kari).ctx.is_null() {\n                return 0;\n            }\n            EVP_CIPHER_CTX_set_flags((*kari).ctx.cast(), EVP_CIPHER_CTX_FLAG_WRAP_ALLOW);\n            (*kari).pctx = ptr::null_mut();\n        }\n    } else if operation == ASN1_OP_FREE_POST {\n        // SAFETY: `kari` is live.\n        unsafe {\n            EVP_PKEY_CTX_free((*kari).pctx.cast());\n            EVP_CIPHER_CTX_free((*kari).ctx.cast());\n        }\n    }\n    1\n}",
+   "precondition_set": [
+    "At ASN1_OP_NEW_POST `*pval` is the fresh zeroed object; at ASN1_OP_FREE_POST it is the live object. `ctx`/`pctx` are NULL or owned contexts."
+   ],
+   "disposition": "SAFETY_DISCHARGED: src/cms/cms_asn1.rs:556 \u2014 The body reads `*pval` unconditionally but only dereferences the resulting pointer in the NEW_POST and FREE_POST arms. NEW_POST follows the allocation in `item_embed_new` (or follows the caller-provided embedded storage), so the slot is non-NULL and the block is zeroed before the callback; FREE_POST is guarded by `item_embed_free`'s non-primitive NULL check. The callback therefore never dereferences a NULL `*pval`.",
+   "contract": "C ABI `int (int, ASN1_VALUE **, const ASN1_ITEM *, void *)`. At ASN1_OP_NEW_POST `*pval` is the freshly allocated and zero-initialised `CMS_KeyAgreeRecipientInfo`, so its `ctx`/`pctx` slots are writable; the callback installs a new cipher context or fails. At ASN1_OP_FREE_POST `*pval` is the live object and `ctx`/`pctx` are NULL or contexts it owns, released exactly once. All other operations return 1 after at most casting the slot contents (never dereferencing a NULL value).",
+   "established": [
+    "`item_embed_new` calls ASN1_OP_NEW_PRE before allocating (slot may be NULL) and ASN1_OP_NEW_POST after the block is allocated/zeroed (src/asn1/new.rs:264-352); the callback only acts on NEW_POST.",
+    "`item_embed_free` returns for a NULL non-primitive value before the callback (src/asn1/fre.rs:217-221); the item is `ASN1_ITYPE_SEQUENCE` (src/cms/cms_asn1.rs:1643-1651).",
+    "A zeroed `CmsKeyAgreeRecipientInfo` is a valid value for this callback: every field is a raw pointer, integer or pointer to `CmsCtx`; the callback writes only `ctx` and `pctx`.",
+    "`EVP_CIPHER_CTX_new` failure returns 0, and the item machinery then frees the partially initialised value through `item_embed_free`; FREE_POST sees `ctx == NULL`/`pctx == NULL`, and both `EVP_CIPHER_CTX_free`/`EVP_PKEY_CTX_free` accept NULL.",
+    "D2I_PRE for a SEQUENCE is invoked after allocation (src/asn1/d2i.rs:1922-1939) and D2I_POST after a successful decode (src/asn1/d2i.rs:2088-2095); both are inert arms here."
+   ],
+   "unsafe_operations": [],
+   "caller_closure_ref": "shared caller_closure",
+   "tests": [
+    "courts/phase25/rt_cms_asn1_callbacks.c: an EC (P-256) certificate makes CMS_encrypt build a KARI recipient; after d2i, `CMS_RecipientInfo_kari_get0_ctx` is non-NULL, which proves NEW_POST ran; CMS_ContentInfo_free then drives FREE_POST. Plain PASS; LeakSanitizer PASS."
+   ],
+   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_schema": "safe-c33/operation-span-sha256/v1",
+   "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one."
+  },
+  {
+   "id": "CMS-CB-004",
+   "file": "src/cms/cms_asn1.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "cms_kemri_cb",
+   "line": 585,
+   "line_current": 585,
+   "inventory_line": 585,
+   "span_start_line": 585,
+   "span_end_line": 612,
+   "span_sha256": "9cfcdd4c464b5d1355b0e4fd27000b9eb07a0e92cc3b9b5b26ca2426f292399a",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "signature": "unsafe extern \"C\" fn cms_kemri_cb(operation: c_int, pval: *mut *mut c_void, _it: *const Asn1Item, _exarg: *mut c_void) -> c_int",
+   "body": "unsafe extern \"C\" fn cms_kemri_cb(\n    operation: c_int,\n    pval: *mut *mut c_void,\n    _it: *const Asn1Item,\n    _exarg: *mut c_void,\n) -> c_int {\n    // SAFETY: `pval` is a live value slot per the callback contract.\n    let kemri = unsafe { (*pval).cast::<CmsKemRecipientInfo>() };\n    if operation == ASN1_OP_NEW_POST {\n        // SAFETY: `kemri` was just allocated.\n        unsafe {\n            (*kemri).ctx = EVP_CIPHER_CTX_new().cast();\n            if (*kemri).ctx.is_null() {\n                return 0;\n            }\n            EVP_CIPHER_CTX_set_flags((*kemri).ctx.cast(), EVP_CIPHER_CTX_FLAG_WRAP_ALLOW);\n            (*kemri).pctx = ptr::null_mut();\n        }\n    } else if operation == ASN1_OP_FREE_POST {\n        // SAFETY: `kemri` is live; `ukm` is its own field.\n        unsafe {\n            EVP_PKEY_CTX_free((*kemri).pctx.cast());\n            EVP_CIPHER_CTX_free((*kemri).ctx.cast());\n            crate::asn1::string::ASN1_STRING_free((*kemri).ukm);\n        }\n    }\n    1\n}",
+   "precondition_set": [
+    "At ASN1_OP_NEW_POST `*pval` is the fresh zeroed object; at FREE_POST it is live. `pctx`/`ctx` are NULL or owned; `ukm` is NULL or already released and cleared by the template walk."
+   ],
+   "disposition": "SAFETY_DISCHARGED: src/cms/cms_asn1.rs:585 \u2014 The body dereferences the value only in the NEW_POST and FREE_POST arms. NEW_POST runs after `item_embed_new` allocated and zeroed the object; FREE_POST is guarded by the free walk's non-primitive NULL check. The FREE_POST `ASN1_STRING_free((*kemri).ukm)` is safe even though the template walk already released that field: it is a non-embedded pointer field, so `template_free` nulls it, and `ASN1_STRING_free(NULL)` is a no-op.",
+   "contract": "C ABI `int (int, ASN1_VALUE **, const ASN1_ITEM *, void *)`. At ASN1_OP_NEW_POST `*pval` is the fresh zeroed `CMS_KEMRecipientInfo`; at ASN1_OP_FREE_POST it is live. `pctx`/`ctx` are NULL or owned contexts; `ukm` is NULL or the OCTET STRING the template walk has already released and cleared. All other operations return 1 after at most casting the slot contents.",
+   "established": [
+    "`item_embed_new` NEW_POST runs after allocation/zeroing (src/asn1/new.rs:264-352); NEW_PRE, where `*pval` may be NULL, is inert here.",
+    "`item_embed_free` returns for a NULL non-primitive value before the callback (src/asn1/fre.rs:217-221); the item is `ASN1_ITYPE_SEQUENCE` (src/cms/cms_asn1.rs:1861-1869).",
+    "`ukm` is template field 6 at offset 48, `ASN1_TFLG_EXPLICIT | ASN1_TFLG_OPTIONAL`, not EMBED (src/cms/cms_asn1.rs:1838-1844). The reverse template walk frees and nulls non-embedded pointer fields before FREE_POST, so the callback's second release is a NULL no-op.",
+    "`pctx`/`ctx` are runtime members outside the template; the callback is their single release, and both frees accept NULL.",
+    "The 9 template fields decode before NEW_POST/D2I_POST as applicable; the callback reads only the three runtime slots."
+   ],
+   "unsafe_operations": [],
+   "caller_closure_ref": "shared caller_closure",
+   "tests": [
+    "courts/phase25/rt_cms_asn1_callbacks.c: an ML-KEM-768 certificate (signed by an RSA key) makes CMS_encrypt build a KEM ORI recipient. After d2i, `CMS_RecipientInfo_type` is CMS_RECIPINFO_KEM (5) and `CMS_RecipientInfo_kemri_get0_ctx` is non-NULL, which prove the cms_ri_cb D2I_POST mapping and the cms_kemri_cb NEW_POST ran; free drives FREE_POST. Plain PASS; LeakSanitizer PASS."
+   ],
+   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_schema": "safe-c33/operation-span-sha256/v1",
+   "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one."
+  },
+  {
+   "id": "CMS-CB-005",
+   "file": "src/cms/cms_asn1.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "cms_ri_cb",
+   "line": 617,
+   "line_current": 617,
+   "inventory_line": 617,
+   "span_start_line": 617,
+   "span_end_line": 663,
+   "span_sha256": "f1f667a2ee29d16557a4a1d5744051081c6f8aabf26b7be8702adfc63aab0ee9",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "signature": "unsafe extern \"C\" fn cms_ri_cb(operation: c_int, pval: *mut *mut c_void, _it: *const Asn1Item, _exarg: *mut c_void) -> c_int",
+   "body": "unsafe extern \"C\" fn cms_ri_cb(\n    operation: c_int,\n    pval: *mut *mut c_void,\n    _it: *const Asn1Item,\n    _exarg: *mut c_void,\n) -> c_int {\n    // SAFETY: `pval` is a live value slot per the callback contract.\n    let ri = unsafe { (*pval).cast::<CmsRecipientInfo>() };\n    if operation == ASN1_OP_FREE_PRE {\n        // SAFETY: `ri` is live and `type_` selects the arm.\n        unsafe {\n            match (*ri).type_ {\n                CMS_RECIPINFO_TRANS => {\n                    let ktri = (*ri).d.cast::<CmsKeyTransRecipientInfo>();\n                    EVP_PKEY_free((*ktri).pkey);\n                    crate::x509::x_x509::X509_free((*ktri).recip);\n                    EVP_PKEY_CTX_free((*ktri).pctx.cast());\n                }\n                CMS_RECIPINFO_KEK => {\n                    let kekri = (*ri).d.cast::<CmsKekRecipientInfo>();\n                    OPENSSL_clear_free((*kekri).key, (*kekri).keylen);\n                }\n                CMS_RECIPINFO_PASS => {\n                    let pwri = (*ri).d.cast::<CmsPasswordRecipientInfo>();\n                    OPENSSL_clear_free((*pwri).pass, (*pwri).passlen);\n                }\n                _ => {}\n            }\n        }\n    } else if operation == ASN1_OP_D2I_POST {\n        // SAFETY: `ri` is live; its selector field is readable.\n        unsafe {\n            (*ri).type_ = (*ri).encoded_type;\n            if (*ri).type_ == CMS_RECIPINFO_OTHER {\n                let ori = (*ri).d.cast::<CmsOtherRecipientInfo>();\n                let nid = crate::runtime::obj::OBJ_obj2nid((*ori).ori_type);\n                if nid == NID_id_smime_ori_kem {\n                    (*ri).type_ = CMS_RECIPINFO_KEM;\n                }\n            }\n        }\n    } else if operation == ASN1_OP_NEW_POST {\n        // SAFETY: `ri` was just allocated.\n        unsafe { (*ri).type_ = (*ri).encoded_type };\n    }\n    1\n}",
+   "precondition_set": [
+    "`*pval` is a live `CMS_RecipientInfo` whenever the callback runs; when `type_` is TRANS/KEK/PASS, `d` points at the corresponding live arm."
+   ],
+   "disposition": "SAFETY_DISCHARGED: src/cms/cms_asn1.rs:617 \u2014 Every dereference (FREE_PRE, D2I_POST, NEW_POST) is on a non-NULL value: the free guard excludes NULL for a CHOICE, and both decode/create paths allocate before the POST callback. The FREE_PRE switch reads `type_`; the invariant 'type_ is an arm index implies d is live' is established by the constructors (which store `d` before setting `type_`) and by D2I_POST (`type_ = encoded_type`, the selector of the alternative just decoded). NEW_POST stores the selector value -1, so a fresh value takes the `_ => {}` arm rather than an arm dereference.",
+   "contract": "C ABI `int (int, ASN1_VALUE **, const ASN1_ITEM *, void *)`. The value slot is live whenever the callback runs: CHOICE FREE_PRE/FREE_POST are guarded by `item_embed_free`; CHOICE D2I_POST runs only after an alternative matched and the selector was stored; CHOICE NEW_POST runs after the fresh block was allocated and the selector set to -1. When `type_` names an arm (TRANS/KEK/PASS), `d` points at that arm's live object. `encoded_type` is the CHOICE selector at offset 0.",
+   "established": [
+    "`item_embed_free` returns for a NULL non-primitive value before the CHOICE arm (src/asn1/fre.rs:217-221); the item is `ASN1_ITYPE_CHOICE` with `utype: 0` (selector at offset 0) (src/cms/cms_asn1.rs:1991-1999).",
+    "`item_embed_new` allocates or zeroes the CHOICE block, calls `set_choice_selector(pval, -1)`, then NEW_POST (src/asn1/new.rs:214-261). NEW_POST therefore stores `type_ = -1` (`CMS_RECIPINFO_NONE`), not an arm index (src/cms/cms_asn1.rs:658-661; constants at :74-80).",
+    "`embed_d2i` CHOICE calls D2I_POST only after `template_ex_d2i` matched an alternative and `set_choice_selector` stored its index (src/asn1/d2i.rs:1822-1854); the arm pointer `d` was installed by that decode.",
+    "Every in-crate constructor stores `d` before setting `type_`: `cms_RecipientInfo_ktri_init` (:775 then :781-782), `ossl_cms_RecipientInfo_kari_init` (:832 then :838-839), `CMS_add0_recipient_key` (cms_env.rs:1917-1920), `CMS_add0_recipient_password` (cms_pwri.rs:397 then :411-412), `ossl_cms_RecipientInfo_kemri_init` (cms_kemri.rs:191-194 with the ORI installed first).",
+    "`CMS_RecipientInfo` is a private item (`cms_recipientinfo_it` is pub(crate) and not exported); the only re-decode path into an existing CHOICE element is the generic `embed_d2i` existing-value branch, which `SEQUENCE OF`/`SET OF` element decoding never reaches because each element is decoded into a fresh local slot (src/asn1/d2i.rs:2448-2463). No safe CMS API re-decodes into an existing `CMS_RecipientInfo`.",
+    "D2I_POST reads `(*ori).ori_type` only when `type_ == CMS_RECIPINFO_OTHER`; that alternative was just decoded, so `d` is the live ORI (src/cms/cms_asn1.rs:646-657)."
+   ],
+   "unsafe_operations": [],
+   "caller_closure_ref": "shared caller_closure",
+   "tests": [
+    "courts/phase25/rt_cms_asn1_callbacks.c: d2i of a KARI recipient yields `CMS_RecipientInfo_type == CMS_RECIPINFO_AGREE (1)`, and d2i of a KEM ORI yields `CMS_RECIPINFO_KEM (5)`; a zeroed block would read 0, so the D2I_POST arm provably ran. Freeing TRANS, AGREE and KEM recipients drives FREE_PRE for the three arms plus the `_` arm. Plain PASS; LeakSanitizer PASS."
+   ],
+   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_schema": "safe-c33/operation-span-sha256/v1",
+   "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one."
+  },
+  {
+   "id": "CMS-CB-006",
+   "file": "src/cms/cms_asn1.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "cms_cb",
+   "line": 668,
+   "line_current": 668,
+   "inventory_line": 668,
+   "span_start_line": 668,
+   "span_end_line": 719,
+   "span_sha256": "b47d0fc434e8f8ca828c9b43babb30a5f94b018e8c847eeefddc2ad605f396f5",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "signature": "unsafe extern \"C\" fn cms_cb(operation: c_int, pval: *mut *mut c_void, _it: *const Asn1Item, exarg: *mut c_void) -> c_int",
+   "body": "unsafe extern \"C\" fn cms_cb(\n    operation: c_int,\n    pval: *mut *mut c_void,\n    _it: *const Asn1Item,\n    exarg: *mut c_void,\n) -> c_int {\n    if pval.is_null() {\n        return 1;\n    }\n    // SAFETY: `pval` is a live value slot per the callback contract.\n    let cms = unsafe { (*pval).cast::<CmsContentInfo>() };\n    // SAFETY: `exarg` is the `ASN1_STREAM_ARG` the streaming encoder passes.\n    let sarg = exarg.cast::<Asn1StreamArg>();\n    match operation {\n        ASN1_OP_STREAM_PRE => {\n            // SAFETY: `sarg` and `cms` are live.\n            if unsafe { CMS_stream(ptr::addr_of_mut!((*sarg).boundary), cms) } <= 0 {\n                return 0;\n            }\n            // SAFETY: `sarg` and `cms` are live.\n            unsafe {\n                (*sarg).ndef_bio = CMS_dataInit(cms, (*sarg).out);\n                if (*sarg).ndef_bio.is_null() {\n                    return 0;\n                }\n            }\n        }\n        ASN1_OP_DETACHED_PRE => {\n            // SAFETY: `sarg` and `cms` are live.\n            unsafe {\n                (*sarg).ndef_bio = CMS_dataInit(cms, (*sarg).out);\n                if (*sarg).ndef_bio.is_null() {\n                    return 0;\n                }\n            }\n        }\n        ASN1_OP_STREAM_POST | ASN1_OP_DETACHED_POST => {\n            // SAFETY: `sarg` and `cms` are live.\n            if unsafe { CMS_dataFinal(cms, (*sarg).ndef_bio) } <= 0 {\n                return 0;\n            }\n        }\n        ASN1_OP_FREE_POST => {\n            // SAFETY: `cms` is live; its `ctx.propq` obeys the member-buffer invariant (NULL or\n            // this object's own single `CRYPTO_strdup` block), so `clear` is that block's one\n            // release at the authority's own site (`cms_asn1.c:375`).\n            unsafe { CmsPropqSlot::of(&mut (*cms).ctx).clear(SeamFile::new(FILE), 375) };\n        }\n        _ => {}\n    }\n    1\n}",
+   "precondition_set": [
+    "At FREE_POST `*pval` is live. For STREAM/DETACHED, the caller of `BIO_new_NDEF`/`asn1_output_data` passes a live `CMS_ContentInfo` and a live `ASN1_STREAM_ARG`; a NULL value is outside the C ABI contract."
+   ],
+   "disposition": "SAFETY_DISCHARGED: src/cms/cms_asn1.rs:668 \u2014 The FREE_POST dereference is guarded by the free walk's non-primitive NULL check (the item is an NDEF_SEQUENCE). The streaming arms are not reached from the generic free path: they are invoked by the stream/detach machinery with a caller-supplied live value and a live argument block. The body's own `pval.is_null()` test guards the slot address, which the machinery always provides; the value itself is non-NULL by the caller contract.",
+   "contract": "C ABI `int (int, ASN1_VALUE **, const ASN1_ITEM *, void *)`. On ASN1_OP_FREE_POST `*pval` is a live `CMS_ContentInfo`. On STREAM_PRE/STREAM_POST/DETACHED_PRE/DETACHED_POST the item machinery is entered from `BIO_new_NDEF`/`asn1_output_data`, whose contract requires the value slot to hold a live `CMS_ContentInfo` and `exarg` to be the live `ASN1_STREAM_ARG`; the body dereferences both. All other operations return 1 without dereferencing `*pval`.",
+   "established": [
+    "`item_embed_free` returns for a NULL non-primitive value before the callback (src/asn1/fre.rs:217-221); the item is `ASN1_ITYPE_NDEF_SEQUENCE` (src/cms/cms_asn1.rs:2480-2488).",
+    "STREAM_PRE/POST are invoked by `BIO_new_NDEF` with `val` from its caller and a local `sarg` (src/asn1/bio_asn1.rs:903-911); STREAM_POST reuses the stored value in the support block (src/asn1/bio_asn1.rs:1114-1127).",
+    "DETACHED_PRE/POST are invoked by `asn1_output_data` with its `val` parameter and a local `sarg` (src/asn1/asn_mime.rs:992-1028).",
+    "`BIO_new_NDEF` documents `val` as 'a live value of it's type' (src/asn1/bio_asn1.rs:802-805); `asn1_output_data` documents 'val and it as the encoder requires' (src/asn1/asn_mime.rs:961-963). A NULL value is C-invalid for both, exactly as in the authority.",
+    "The I2D_PRE/I2D_POST callbacks, which the encoder also issues, return 1 here without touching `*pval`/`exarg`; `item_ex_i2d` additionally returns before them when a non-primitive value is NULL (src/asn1/i2d.rs:228-237).",
+    "FREE_POST releases only `ctx.propq`, a member buffer owned by the object; the template walk does not release it."
+   ],
+   "unsafe_operations": [],
+   "caller_closure_ref": "shared caller_closure",
+   "tests": [
+    "courts/phase25/rt_cms_asn1_callbacks.c: `i2d_CMS_bio_stream(..., SMIME_STREAM)` on a CMS built with CMS_STREAM drives STREAM_PRE and STREAM_POST to a successful return; the same CMS and a decoded CMS are freed (FREE_POST). The DETACHED arms are NOT_RUN (see not_run). Plain PASS; LeakSanitizer PASS for the non-streaming paths."
+   ],
+   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_schema": "safe-c33/operation-span-sha256/v1",
+   "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one."
+  },
+  {
+   "id": "PK7-CB-001",
+   "file": "src/pkcs7/pk7_asn1.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ri_cb",
+   "line": 607,
+   "line_current": 607,
+   "inventory_line": 607,
+   "span_start_line": 607,
+   "span_end_line": 620,
+   "span_sha256": "5f0c47c7284311262665d10f8cf664ad8f00e11ac6bb4584edff8cde91dd57c5",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "signature": "unsafe extern \"C\" fn ri_cb(operation: c_int, pval: *mut *mut c_void, _it: *const Asn1Item, _exarg: *mut c_void) -> c_int",
+   "body": "unsafe extern \"C\" fn ri_cb(\n    operation: c_int,\n    pval: *mut *mut c_void,\n    _it: *const Asn1Item,\n    _exarg: *mut c_void,\n) -> c_int {\n    if operation == ASN1_OP_FREE_POST {\n        // SAFETY: `pval` is the item's value slot per the callback contract.\n        let ri = unsafe { *pval }.cast::<Pkcs7RecipInfo>();\n        // SAFETY: `ri` is a live `PKCS7_RECIP_INFO` being freed.\n        unsafe { X509_free((*ri).cert) };\n    }\n    1\n}",
+   "precondition_set": [
+    "At ASN1_OP_FREE_POST, `*pval` is a live `PKCS7_RECIP_INFO`; `cert` is NULL or an `X509` reference owned by it, released exactly once."
+   ],
+   "disposition": "SAFETY_DISCHARGED: src/pkcs7/pk7_asn1.rs:607 \u2014 ri_cb dereferences `*pval` only inside the FREE_POST arm. The item is a SEQUENCE, so `item_embed_free` returns before the callback when the stored value is NULL; FREE_POST therefore receives a live object. `cert` is a runtime member, not a template field, so the callback is its single release.",
+   "contract": "C ABI `int (int, ASN1_VALUE **, const ASN1_ITEM *, void *)`. On ASN1_OP_FREE_POST `*pval` is a live `PKCS7_RECIP_INFO`; `cert` is NULL or an `X509` reference owned by it and is released exactly once with `X509_free`. Every other operation returns 1 without reading `*pval`.",
+   "established": [
+    "`item_embed_free` returns for a NULL non-primitive value before the SEQUENCE arm (src/asn1/fre.rs:217-221); the item is `ASN1_ITYPE_SEQUENCE` (src/pkcs7/pk7_asn1.rs:898-906).",
+    "The FREE_POST invocation at src/asn1/fre.rs:345-348 is therefore always on a live slot.",
+    "The four template fields are version, issuer_and_serial, key_encryption_algorithm and encrypted_key; `cert` is runtime state the generic walk does not release.",
+    "The arm test is `operation == ASN1_OP_FREE_POST`, so NEW_PRE's possible NULL slot is never dereferenced."
+   ],
+   "unsafe_operations": [],
+   "caller_closure_ref": "shared caller_closure",
+   "tests": [
+    "courts/phase25/rt_cms_asn1_callbacks.c: PKCS7_encrypt(i2d -> d2i) round trip; a live certificate is attached to a decoded recipient with PKCS7_add_recipient, and PKCS7_free drives the FREE_POST release. LeakSanitizer observes the release (an omitted X509_free would be an unsuppressed leak). Plain PASS; LeakSanitizer PASS."
+   ],
+   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_schema": "safe-c33/operation-span-sha256/v1",
+   "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one."
+  }
+ ],
+ "caller_closure": {
+  "callers": [
+   {
+    "file": "src/cms/cms_asn1.rs",
+    "line": 1288,
+    "function": "static initializer CMS_EncryptedContentInfo_aux",
+    "guard": "static `Asn1Aux.asn1_cb` slot, read only by the item machinery",
+    "obligation": "the sole writer of the callback slot; `funcs` of `CMS_EncryptedContentInfo_it` at :1322 points at this aux (itype ASN1_ITYPE_NDEF_SEQUENCE). The callback symbol `cms_ec_cb` is local `t` at 0x1961c0; no direct caller, no `#[no_mangle]`, no address-of elsewhere."
+   },
+   {
+    "file": "src/cms/cms_asn1.rs",
+    "line": 1485,
+    "function": "static initializer CMS_RecipientEncryptedKey_aux",
+    "guard": "static `Asn1Aux.asn1_cb` slot, read only by the item machinery",
+    "obligation": "the sole writer of the callback slot; `funcs` of `CMS_RecipientEncryptedKey_it` at :1512 points at this aux (itype ASN1_ITYPE_SEQUENCE). The callback symbol `cms_rek_cb` is local `t` at 0x195b80; no direct caller, no `#[no_mangle]`, no address-of elsewhere."
+   },
+   {
+    "file": "src/cms/cms_asn1.rs",
+    "line": 1595,
+    "function": "static initializer CMS_KeyAgreeRecipientInfo_aux",
+    "guard": "static `Asn1Aux.asn1_cb` slot, read only by the item machinery",
+    "obligation": "the sole writer of the callback slot; `funcs` of `CMS_KeyAgreeRecipientInfo_it` at :1643 points at this aux (itype ASN1_ITYPE_SEQUENCE). The callback symbol `cms_kari_cb` is local `t` at 0x195c40; no direct caller, no `#[no_mangle]`, no address-of elsewhere."
+   },
+   {
+    "file": "src/cms/cms_asn1.rs",
+    "line": 1785,
+    "function": "static initializer CMS_KEMRecipientInfo_aux",
+    "guard": "static `Asn1Aux.asn1_cb` slot, read only by the item machinery",
+    "obligation": "the sole writer of the callback slot; `funcs` of `CMS_KEMRecipientInfo_it` at :1861 points at this aux (itype ASN1_ITYPE_SEQUENCE). The callback symbol `cms_kemri_cb` is local `t` at 0x195d30; no direct caller, no `#[no_mangle]`, no address-of elsewhere."
+   },
+   {
+    "file": "src/cms/cms_asn1.rs",
+    "line": 1943,
+    "function": "static initializer CMS_RecipientInfo_aux",
+    "guard": "static `Asn1Aux.asn1_cb` slot, read only by the item machinery",
+    "obligation": "the sole writer of the callback slot; `funcs` of `CMS_RecipientInfo_it` at :1991 points at this aux (itype ASN1_ITYPE_CHOICE). The callback symbol `cms_ri_cb` is local `t` at 0x196280; no direct caller, no `#[no_mangle]`, no address-of elsewhere."
+   },
+   {
+    "file": "src/cms/cms_asn1.rs",
+    "line": 2453,
+    "function": "static initializer CMS_ContentInfo_aux",
+    "guard": "static `Asn1Aux.asn1_cb` slot, read only by the item machinery",
+    "obligation": "the sole writer of the callback slot; `funcs` of `CMS_ContentInfo_it` at :2480 points at this aux (itype ASN1_ITYPE_NDEF_SEQUENCE). The callback symbol `cms_cb` is local `t` at 0x1960e0; no direct caller, no `#[no_mangle]`, no address-of elsewhere."
+   },
+   {
+    "file": "src/pkcs7/pk7_asn1.rs",
+    "line": 646,
+    "function": "static initializer PKCS7_RECIP_INFO_aux",
+    "guard": "static `Asn1Aux.asn1_cb` slot, read only by the item machinery",
+    "obligation": "the sole writer of the callback slot; `funcs` of `PKCS7_RECIP_INFO_it` at :898 points at this aux (itype ASN1_ITYPE_SEQUENCE). The callback symbol `ri_cb` is local `t` at 0x1a2480; no direct caller, no `#[no_mangle]`, no address-of elsewhere."
+   }
+  ],
+  "other_references": "A grep over src/ finds each callback name only at its definition, at the single `asn1_cb: Some(...)` field of its static `Asn1Aux`, and in doc comments (cms_env.rs refers to cms_ri_cb in prose). There is no direct call, no `#[no_mangle]`, no `#[export_name]`, and no address-of outside the aux initializer. The aux statics are referenced only through the corresponding `Asn1Item.funcs`.",
+  "export_status": "Not exported. `nm` on the admitted libcrypto.so.3 lists all seven as local (`t`) symbols: cms_rek_cb 0x195b80, cms_kari_cb 0x195c40, cms_kemri_cb 0x195d30, cms_cb 0x1960e0, cms_ec_cb 0x1961c0, cms_ri_cb 0x196280, pk7 ri_cb 0x1a2480.",
+  "slot_writers": "One writer per slot: the static `Asn1Aux.asn1_cb` initializer. No runtime store, table copy or re-registration exists.",
+  "reachability": "Reached only through the ASN.1 item machinery: exported d2i/i2d/CMS_* and PKCS7_* entry points allocate/decode/encode/free values of these item types, and the machinery invokes the registered callbacks. The callbacks are private and cannot be called directly by a consumer."
+ },
+ "negative_control": {
+  "id": "B71-C1",
+  "name": "CMS/PKCS7 item callbacks tolerate the NULL-slot arm and release their live members",
+  "kind": "external C probe against the admitted install (no src change)",
+  "source": "courts/phase25/rt_cms_asn1_callbacks.c",
+  "source_sha256": "d58af5cd537338488b696a76778e2eb7b5745ed39e336339df2ef5694623c5a1",
+  "build_plain": "cc -std=c11 -O1 -Wall -Wextra -I artifacts/phase2/install/include -o court/tmp/closure-b71-cms/rt_cms_asn1_callbacks courts/phase25/rt_cms_asn1_callbacks.c -L artifacts/phase2/install/lib -lcrypto -Wl,-rpath,/work/artifacts/phase2/install/lib",
+  "binary_plain": "court/tmp/closure-b71-cms/rt_cms_asn1_callbacks",
+  "binary_plain_sha256": "5a9744390c05bf187a40006aa45e45f06a92904441761fa007c2c25e4fa9af6d",
+  "run_plain": "court/tmp/closure-b71-cms/rt_cms_asn1_callbacks",
+  "observed_plain": "NOT_RUN cms_cb DETACHED_PRE/POST (SMIME write refused); PASS cms asn1 callbacks: ktri=1 kari=1 kari_ctx=1 kem=1 pkcs7=1 stream=1 malformed=clean",
+  "exit_plain": 0,
+  "build_lsan": "cc -std=c11 -O1 -g -Wall -Wextra -fsanitize=leak -fno-omit-frame-pointer -I artifacts/phase2/install/include -o court/tmp/closure-b71-cms/rt_cms_asn1_callbacks_lsan courts/phase25/rt_cms_asn1_callbacks.c -L artifacts/phase2/install/lib -lcrypto -Wl,-rpath,/work/artifacts/phase2/install/lib",
+  "binary_lsan": "court/tmp/closure-b71-cms/rt_cms_asn1_callbacks_lsan",
+  "binary_lsan_sha256": "1d05b925ffa207277164e0ddfd36888155d218145bda10b278c8cffa9d1a6beb",
+  "run_lsan": "RT_B71_SKIP_STREAM=1 LSAN_OPTIONS=suppressions=court/tmp/closure-b71-cms/lsan.supp:exitcode=23 court/tmp/closure-b71-cms/rt_cms_asn1_callbacks_lsan",
+  "observed_lsan": "PASS cms asn1 callbacks: ktri=1 kari=1 kari_ctx=1 kem=1 pkcs7=1 stream=SKIPPED malformed=clean; 4688 BN_value_one baseline allocations suppressed (93760 bytes)",
+  "exit_lsan": 0,
+  "result": "PASS (plain all arms; LeakSanitizer on the callback d2i/free/PKCS7 paths)",
+  "mutation_sensitive": "The probe exits non-zero if a KARI recipient does not decode as CMS_RECIPINFO_AGREE, if a KEM ORI does not map to CMS_RECIPINFO_KEM, if the KARI/KEM context allocated by NEW_POST is NULL, if i2d_CMS_bio_stream(SMIME_STREAM) fails, if a malformed/truncated CMS/PKCS7 decode succeeds or crashes, or if PKCS7_encrypt/d2i/add_recipient/free fails. LeakSanitizer observes the live-member releases.",
+  "neutral_control": {
+   "id": "B71-N1",
+   "assertion": "The decode observables are produced by the callbacks, not by default storage: a zeroed CHOICE reads type 0 (TRANS), so a KARI decode reading type 1 and a KEM decode reading type 5 can only come from cms_ri_cb; the context pointers are installed only by cms_kari_cb/cms_kemri_cb NEW_POST.",
+   "observed": "KARI type=1 with non-NULL kari ctx; KEM type=5 with non-NULL kemri ctx; both round-trip and free cleanly."
+  }
+ },
+ "adjudicated": false,
+ "review": {
+  "state": "PENDING",
+  "verdict": "PENDING",
+  "adjudicated": false,
+  "date": "2026-11-10",
+  "reviewer": null,
+  "review_history": [
+   {
+    "verdict": "PENDING",
+    "date": "2026-11-10",
+    "note": "authoring state: receipt and ledger row added with adjudicated=false; the ssh closure is provisional and not committed"
+   }
+  ]
+ },
+ "supersedes": [],
+ "related_receipts": [
+  "boundary-sweep-B70",
+  "boundary-sweep-B69"
+ ],
+ "instrument_gaps": [
+  {
+   "id": "B71-G1",
+   "detail": "consumer_closure.py accepts a scoped discharge on (file, kind, operation) identity plus the recorded span hash and the `^SAFETY_DISCHARGED\\b` disposition prefix. It does not re-audit the callback bodies, the per-site contracts or the probe; those are reviewer-established."
+  },
+  {
+   "id": "B71-G2",
+   "detail": "The admitted install leaks in `BN_generate_prime_ex` under LeakSanitizer: a minimal RSA-keygen program leaks 71080 bytes / 3554 allocations attributed to `BN_value_one`, scaling with the number of prime candidates. This is pre-existing candidate/library behaviour outside the seven callback boundaries (no keygen code is in any B71 span). The probe run suppresses only `leak:BN_value_one`; any release omitted by a callback would still surface as an unsuppressed CRYPTO_* leak."
+  },
+  {
+   "id": "B71-G3",
+   "detail": "The STREAM arm exposes a separate 387-byte leak in `bio_asn1::ndef_prefix` (its DER buffer is overwritten by `ndef_suffix`'s buffer assignment). This is in the ASN.1 BIO machinery, not in any B71 callback, and is not repaired here (src/ is out of scope). It is why the LSan run sets RT_B71_SKIP_STREAM=1; the plain run still exercises STREAM_PRE/STREAM_POST."
+  }
+ ],
+ "residuals": [
+  {
+   "id": "B71-R1",
+   "class": "private_callback_reachability",
+   "detail": "The seven callbacks are private local symbols; the probe cannot name them and observes them through the machinery's effects (recipient type, allocated ctx) and LeakSanitizer. Direct per-callback counters are not expressible without editing src/ or instrumenting the DSO.",
+   "disposition": "open",
+   "owner": "atlas-maintainer"
+  },
+  {
+   "id": "B71-R2",
+   "class": "cms_ri_type_arm_invariant",
+   "detail": "cms_ri_cb FREE_PRE relies on `type_` being an arm index only when `d` is live. This is established for decoded values (D2I_POST copies the matched selector) and fresh values (NEW_POST copies the -1 selector), and every constructor stores `d` before `type_`. A hypothetical caller that re-decoded into an existing CMS_RecipientInfo could leave a stale `type_`; no such caller exists in the crate (the item is private and `SEQUENCE OF` elements decode into fresh slots).",
+   "disposition": "open",
+   "owner": "atlas-maintainer"
+  },
+  {
+   "id": "B71-R3",
+   "class": "stream_caller_contract",
+   "detail": "cms_cb STREAM/DETACHED dereferences the caller-supplied value. `BIO_new_NDEF`/`asn1_output_data` require a live value; a C-invalid NULL value faults there, authority-identical. This is a caller precondition of the C ABI, not a hidden obligation of the callback.",
+   "disposition": "open",
+   "owner": "atlas-maintainer"
+  },
+  {
+   "id": "B71-R4",
+   "class": "detached_arms_not_run",
+   "detail": "The cms_cb DETACHED_PRE/DETACHED_POST arms were not executed: SMIME_write_CMS(SMIME_DETACHED) refused both an EnvelopedData and a partial SignedData built for the probe. The arms share CMS_dataInit/CMS_dataFinal with the exercised STREAM arms and are discharged at contract level; runtime coverage is NOT_RUN.",
+   "disposition": "open",
+   "owner": "atlas-maintainer"
+  },
+  {
+   "id": "B71-R5",
+   "class": "lsan_baseline",
+   "detail": "A clean LeakSanitizer verdict is reported only after suppressing the candidate's pre-existing `BN_value_one` prime-generation leak (B71-G2) and excluding the unrelated `bio_asn1::ndef_prefix` leak (B71-G3). The suppressed population is recorded; no cleanup performed by any B71 callback is suppressed.",
+   "disposition": "open",
+   "owner": "atlas-maintainer"
+  }
+ ],
+ "not_run": [
+  {
+   "gate": "cms_cb ASN1_OP_DETACHED_PRE/ASN1_OP_DETACHED_POST",
+   "blocker": "NOT_RUN: SMIME_write_CMS(SMIME_DETACHED) returned 0 for both an EnvelopedData (CMS_PARTIAL) and a partial SignedData; the arms were not entered. STREAM_PRE/STREAM_POST were entered and returned success."
+  },
+  {
+   "gate": "AddressSanitizer",
+   "blocker": "NOT_RUN: the court enforces RLIMIT_DATA=4 GiB and ASan cannot reserve its shadow region; LeakSanitizer ran and passed under the recorded baseline suppression."
+  },
+  {
+   "gate": "Miri (Stacked/Tree Borrows)",
+   "blocker": "not invoked; the callback bodies are FFI-only and construct no Rust references, but no Miri run is claimed."
+  },
+  {
+   "gate": "authority differential execution",
+   "blocker": "the pinned 3.6.4 source was read; no differential binary was executed."
+  },
+  {
+   "gate": "independent BOUNDARY adjudication",
+   "blocker": "PENDING by design; the author does not self-approve (adjudicated=false)."
+  }
+ ],
+ "non_claims": [
+  "Site-scoped to the seven named item callbacks only. RAND_CMS_STORE_KEYFMT remains OWNERSHIP_RECONSTRUCTED mechanism-wide; no mechanism-wide discharge is claimed.",
+  "No claim about cms_si_cb, pk7_cb or any other ASN.1 callback, nor about the surrounding CMS/PKCS7 encode/decode/free code beyond the callbacks' own spans.",
+  "No claim that the DETACHED arms executed; they are NOT_RUN.",
+  "No AddressSanitizer result; LeakSanitizer passed only with the recorded baseline suppression and stream exclusion.",
+  "No SAFE_COMPATIBLE consumer graduation."
+ ]
+}
