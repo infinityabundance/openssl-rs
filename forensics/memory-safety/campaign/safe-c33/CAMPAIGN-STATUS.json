@@ -890,6 +890,123 @@
    "note": "Site-scoped only. mechanisms.C_ABI_CONTRACT remains UNSAFE_OPEN. Engine table cleanup (B20-TBL-3) stays CONTRACTED with B20-R2/R3 open; eng_list.rs engine_list_cleanup and eng_dyn.rs:401 remain BLOCKED. Applied at v1u; the control for this boundary is the mutation-sensitive test in src/engine/eng_table.rs."
   },
   {
+   "receipt": "boundary-sweep-B48",
+   "scope": "the 77 exported legacy digest callback boundaries enumerated in boundary-sweep-B48.json (B48-SHA-001..B48-METH-020) across src/evp/legacy_*.rs, src/sm3/legacy_sm3.rs, src/evp/digest.rs, src/evp/mod.rs and the EVP_MD_meth_* surface; 76 are applied here and B48-RC2-001 is retained BLOCKED",
+   "base_head": "cdaf16816",
+   "source_state": "S' = cdaf16816 (evidence commit 77e1a3024); all 13 files_sha256 in the receipt verify against that tree",
+   "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+   "discharged_boundaries": [
+    "B48-SHA-001",
+    "B48-SHA-002",
+    "B48-SHA-003",
+    "B48-SHA-004",
+    "B48-SHA-005",
+    "B48-SHA-006",
+    "B48-SHA-007",
+    "B48-SHA-008",
+    "B48-SHA-009",
+    "B48-SHA-010",
+    "B48-SHA-011",
+    "B48-SHA-012",
+    "B48-SHA-013",
+    "B48-MD5-001",
+    "B48-MD5-002",
+    "B48-MD5-003",
+    "B48-MD5-004",
+    "B48-MD5-005",
+    "B48-MD5-006",
+    "B48-MD4-001",
+    "B48-MD4-002",
+    "B48-BLAKE2-001",
+    "B48-BLAKE2-002",
+    "B48-BLAKE2-003",
+    "B48-BLAKE2-004",
+    "B48-SHA3-001",
+    "B48-SHA3-002",
+    "B48-SHA3-003",
+    "B48-MDC2-001",
+    "B48-MDC2-002",
+    "B48-RIPE-001",
+    "B48-RIPE-002",
+    "B48-WP-001",
+    "B48-WP-002",
+    "B48-SM3-001",
+    "B48-SHA-100",
+    "B48-SHA-101",
+    "B48-SHA-102",
+    "B48-SHA-103",
+    "B48-SHA-104",
+    "B48-SHA-105",
+    "B48-SHA-106",
+    "B48-MD5-100",
+    "B48-MD4-100",
+    "B48-BLAKE2-100",
+    "B48-BLAKE2-101",
+    "B48-SHA3-100",
+    "B48-SHA3-101",
+    "B48-MDC2-100",
+    "B48-RIPE-100",
+    "B48-WP-100",
+    "B48-SM3-100",
+    "B48-SM3-101",
+    "B48-NULL-001",
+    "B48-NULL-002",
+    "B48-NULL-003",
+    "B48-METH-001",
+    "B48-METH-002",
+    "B48-METH-003",
+    "B48-METH-004",
+    "B48-METH-005",
+    "B48-METH-006",
+    "B48-METH-007",
+    "B48-METH-008",
+    "B48-METH-009",
+    "B48-METH-010",
+    "B48-METH-011",
+    "B48-METH-012",
+    "B48-METH-013",
+    "B48-METH-014",
+    "B48-METH-015",
+    "B48-METH-016",
+    "B48-METH-017",
+    "B48-METH-018",
+    "B48-METH-019",
+    "B48-METH-020"
+   ],
+   "retained_boundaries": [
+    "B48-RC2-001"
+   ],
+   "retained_state": "BLOCKED",
+   "hidden_obligations": 0,
+   "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B48.json",
+   "receipt_sha256": "8ea4d0003cc65c8a98387204a9800db902b803e010b8aa49bc4f3671df6d2edf",
+   "note": "Site-scoped only. EVP_PKEY_PROVIDER remains OWNERSHIP_RECONSTRUCTED mechanism-wide; the shared B20-TBL-3 and the provider-context writer-set sites stay BLOCKED. 76 of the receipt's 77 boundaries are applied here. B48-RC2-001 is retained BLOCKED and is named in retained_boundaries: its co-boundary P25-VESTIGIAL-MARKER-002 is BLOCKED and its residual B48-R8 (no test covers the magic-to-key-length mapping) is NOT_RUN. Re-applied after an independent adjudicator returned DISCHARGE at S' = cdaf16816 (evidence commit 77e1a3024): 76 SAFETY_DISCHARGED / 1 BLOCKED, all 13 files_sha256 verified, every discharged row carrying a load-bearing, mutation-proven test.",
+   "adjudicated": true,
+   "adjudication": {
+    "status": "DISCHARGED",
+    "verdict": "DISCHARGE",
+    "date": "2026-11-10",
+    "reviewer": "independent adjudicator (separate agent; not the author)",
+    "verdict_text": "DISCHARGE: 77 rows = 76 SAFETY_DISCHARGED + 1 BLOCKED (B48-RC2-001); all 13 files_sha256 verified; identity statements consistent; every discharged row carries a load-bearing, mutation-proven test.",
+    "source": "S' = cdaf16816",
+    "evidence_commit": "77e1a3024",
+    "receipt_sha256": "8ea4d0003cc65c8a98387204a9800db902b803e010b8aa49bc4f3671df6d2edf",
+    "adjudicated": true
+   },
+   "review_history": [
+    {
+     "verdict": "REJECT",
+     "date": "2026-10-30",
+     "note": "prior independent adversarial review of an earlier receipt revision; superseded by the 2026-11-10 discharge at S' = cdaf16816"
+    },
+    {
+     "verdict": "DISCHARGE",
+     "date": "2026-11-10",
+     "note": "independent adjudication at S' = cdaf16816; 76 SAFETY_DISCHARGED / 1 BLOCKED, all 13 files_sha256 verified"
+    }
+   ]
+  },
+  {
    "receipt": "boundary-sweep-B49",
    "scope": "the 22 X509_VERIFY_POLICY i2r printer boundaries enumerated in boundary-sweep-B49.json (B49-I2R-001..B49-I2R-022) across src/x509/v3_aaa.rs, v3_asid.rs, v3_cpols.rs, v3_group_ac.rs, v3_ind_iss.rs, v3_iobo.rs, v3_ist.rs, v3_no_ass.rs, v3_no_rev_avail.rs, v3_pku.rs, v3_sda.rs, v3_single_use.rs, v3_soa_id.rs, v3_sxnet.rs, v3_timespec.rs and v3_usernotice.rs, dispatched through X509V3_EXT_print in src/x509/v3_prn.rs",
    "base_head": "a736c4ccf",
@@ -1132,23 +1249,7 @@
    ]
   }
  ],
- "withdrawn_boundary_discharges": [
-  {
-   "receipt": "boundary-sweep-B48",
-   "scope": "the 68 exported legacy digest callback boundaries enumerated in boundary-sweep-B48.json (B48-SHA-001..B48-METH-011) across src/evp/legacy_*.rs, src/sm3/legacy_sm3.rs and the EVP_MD_meth_* surface; 67 ids were previously claimed in this ledger",
-   "base_head": "e2ab9584c",
-   "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B48.json",
-   "withdrawn_date": "2026-11-10",
-   "state": "WITHDRAWN - NOT APPLIED",
-   "reason": "The formal receipt records review.verdict = REJECT, review.applied = false (independent adversarial reviewer, 2026-10-30), state = 'REPAIRED, NOT APPLIED'. Under campaign rules sections 5 and 7 a rejected or unreviewed receipt must not affect the applied obligation ledger, so the 67-id row is removed from scoped_boundary_discharges.",
-   "blocking_findings": [
-    "two of 36 sites, sha1_int_ctrl and shake_ctrl, validate NULL but not block type/size; an exported path lets a C caller supply an undersized block and turns them into out-of-bounds writes",
-    "the receipt's remedy clause to re-prove mutation sensitivity for each guard remains unaddressed",
-    "no independent re-review of the repaired receipt exists"
-   ],
-   "re_application_requires": "independent re-review establishing both the undersized-block OOB fixes and per-guard mutation sensitivity before any id returns to scoped_boundary_discharges"
-  }
- ],
+ "withdrawn_boundary_discharges": [],
  "defects_closed": [
   {
    "id": "S27-1",
@@ -2063,24 +2164,24 @@
   "candidate_source_identity": "S = 0c4028198 is the source-plus-verification-tool-and-ledger candidate this block is measured at (tool sha256 b13ebd6e). Its build-relevant inputs (src/, Cargo.toml, Cargo.lock, build.rs, rust-toolchain.toml) are byte-identical to b8bba9555, which is the commit the install and both consumers were built and relinked at: libcrypto.so.3 1c03ec0a, ssh 926975c8, sshd 0d3f5e92, frozen in atlas-refresh/b53-candidate-freeze.json, court/freeze-b53/census-b53.json and build commit fdfdfc456. No rebuild was performed because no build-relevant input changed; the three artifact hashes are unchanged. Every closure field below is derived from the two b70 receipts cited below.",
   "identity_correction": "The previous block claimed S = a8716b4f2 with libcrypto ececbd98 / ssh 560652df / sshd 51f00033. That triple is the SUPERSEDED B52 lineage (bound in atlas-refresh/b52-candidate-freeze.json) and contradicted the b53 receipts the block cited. It is replaced here by the receipt-bound B53 identity; the B52 hashes remain recorded in their own freeze receipt and are not overwritten.",
   "closure": {
-   "ssh": {"DISCHARGED": 157, "BLOCKED": 221, "UNKNOWN": 0, "obligations_total": 378, "verdict": "ACCEPTED", "refusals": 0, "safe_compatible": false},
-   "sshd": {"DISCHARGED": 157, "BLOCKED": 221, "UNKNOWN": 0, "obligations_total": 378, "verdict": "ACCEPTED", "refusals": 0, "safe_compatible": false}
+   "ssh": {"DISCHARGED": 193, "BLOCKED": 185, "UNKNOWN": 0, "obligations_total": 378, "verdict": "ACCEPTED", "refusals": 0, "safe_compatible": false},
+   "sshd": {"DISCHARGED": 193, "BLOCKED": 185, "UNKNOWN": 0, "obligations_total": 378, "verdict": "ACCEPTED", "refusals": 0, "safe_compatible": false}
   },
   "closure_receipts": ["evidence/closure-ssh-b70-thunk.json", "evidence/inventory-sshd-b70-thunk.json"],
   "receipt_identity": {
    "ssh": {"path": "evidence/closure-ssh-b70-thunk.json", "sha256": "ecaf5402845436e24b06eb6d0f6a3eaaf4c00f403bee6faee1859b7bc63979af", "source_head": "0c402819872b4d29e5234291cc759ddfe162678d", "artifact_sha256": "926975c81fe8d56297196a703a8a7b0f5eb0fae1644bbfa4643d4cd517f22ba0"},
    "sshd": {"path": "evidence/inventory-sshd-b70-thunk.json", "sha256": "c7a6bcd088a2c240def1bf585a32fc020fb5541e45801111076a502664fc4b7d", "source_head": "0c402819872b4d29e5234291cc759ddfe162678d", "artifact_sha256": "0d3f5e924ff361cba290fb150b89e85806adf69c3a9de9440c4b8a6c09803ce2"}
   },
-  "discharge_instrument": {"tool_sha256": "b13ebd6e5fa4afc1acdc4a477b2b9a556e7182d6e34bb744f655809159b04039", "disposition_gate": "enforcing: a listed boundary must start with SAFETY_DISCHARGED (structured prefix); 1 withdrawal (boundary-sweep-B48 removed from the applied ledger by the 2026-11-10 correction)", "conflict_gate": "diagnostic-only by default; opt-in --enforce-disposition-conflicts", "unresolved_conflicts": 53, "conflict_finding": "atlas-refresh/b67-g1-conflict-finding.json", "note": "enabling the conflict gate now would withdraw 53 applied discharges (B45 9, B49 16, B50 11, B51 8, B52 9) that never declared supersession of the older site receipts; it is therefore diagnostic until those receipts declare reviewed supersedes entries. The b67-g1 finding recorded 72 at b70, of which B48 contributed 19; B48 is no longer applied (see withdrawn_boundary_discharges)"},
+  "discharge_instrument": {"tool_sha256": "b13ebd6e5fa4afc1acdc4a477b2b9a556e7182d6e34bb744f655809159b04039", "disposition_gate": "enforcing: a listed boundary must start with SAFETY_DISCHARGED (structured prefix); 0 withdrawals", "conflict_gate": "diagnostic-only by default; opt-in --enforce-disposition-conflicts", "unresolved_conflicts": 72, "conflict_finding": "atlas-refresh/b67-g1-conflict-finding.json", "note": "enabling the conflict gate now would withdraw 72 applied discharges (B45 9, B48 19, B49 16, B50 11, B51 8, B52 9) that never declared supersession of the older site receipts; it is therefore diagnostic until those receipts declare reviewed supersedes entries. The b67-g1 finding recorded 72 at b70, of which B48 contributed 19; B48 is re-applied under the 2026-11-10 independent DISCHARGE at S' = cdaf16816 (see scoped_boundary_discharges)"},
   "element7": {"status": "PASS (contract-bounded)", "established": true, "target_bounded_unresolved_sites": 0, "contract_bounded_sites": 127, "reachable_unresolved_sites": 127, "unclassified_reachable_sites": 0, "batch_receipt": "atlas-refresh/element7-b66-e7pbe.json", "delta_from_previous": "2 -> 0: the two PBE out-parameter sites are resolved from the BUILTIN_PBE relocations (5 keygen_ex targets; the 2 KDF targets), with the in-image GOT-binding caveat recorded. reachable_unresolved 129 -> 127; contract_bounded stays 127; obligations unchanged. The ssh and sshd receipts agree exactly."},
-  "safe_compatible_blockers": {"safe_compatible": false, "DISCHARGED": 157, "BLOCKED": 221, "UNKNOWN": 0, "disposition_conflicts_unresolved": 53, "note": "element 7 PASS closes only the indirect-call precision predicate; B67, B69 and B70 close seven site-scoped obligations (two BIO readbuffer callbacks, three RAND lifecycle sites, two CMS stack free thunks). 221 safety-relevant obligations remain BLOCKED, the discharge instrument surfaces 53 unresolved disposition conflicts that keep the conflict gate diagnostic-only, no mechanism is discharged mechanism-wide, B46/B47 remain open and B48 is withdrawn pending independent re-review, and the evidence pipeline and the exact-candidate L7/SEAL verification remain open."},
+  "safe_compatible_blockers": {"safe_compatible": false, "DISCHARGED": 193, "BLOCKED": 185, "UNKNOWN": 0, "disposition_conflicts_unresolved": 72, "note": "element 7 PASS closes only the indirect-call precision predicate; B67, B69 and B70 close seven site-scoped obligations (two BIO readbuffer callbacks, three RAND lifecycle sites, two CMS stack free thunks). 185 safety-relevant obligations remain BLOCKED, the discharge instrument surfaces 72 unresolved disposition conflicts that keep the conflict gate diagnostic-only, no mechanism is discharged mechanism-wide, B46/B47 remain open and B48 is re-applied under the 2026-11-10 independent DISCHARGE at S' = cdaf16816, and the evidence pipeline and the exact-candidate L7/SEAL verification remain open."},
   "identity_residual": "The b64 receipts themselves record artifact_identity.build_provenance = null and ledger_record.artifact_matches_this_build = false. Their tie to b8bba9555 rests on the B53 freeze and census, not on a build record inside the receipt. This is a recorded receipt-level provenance gap; it is not a passing identity claim and must be closed before a SEAL identity is asserted.",
-  "derived_from": "the scoped_boundary_discharges rows applied at or before S: openssh-v1i 74, B49 22, openssl-v1l 15, B50 11, B45 9, B51 10, B52 9, B67 2, B69 3, B70 2 = 157 DISCHARGED, plus 66 supplementary admissions from the callback-enumeration gate, all 66 of which now have an exact site record. The B48 row's 36 obligations are not counted: the row is withdrawn because the receipt is REJECT/applied=false (see withdrawn_boundary_discharges). Totals 378 = 157 / 221 / 0.",
+  "derived_from": "the scoped_boundary_discharges rows applied at or before S: openssh-v1i 74, B48 36, B49 22, openssl-v1l 15, B50 11, B45 9, B51 10, B52 9, B67 2, B69 3, B70 2 = 193 DISCHARGED, plus 66 supplementary admissions from the callback-enumeration gate, all 66 of which now have an exact site record. The B48 row's 36 obligations are counted under the 2026-11-10 independent DISCHARGE at S' = cdaf16816 (see scoped_boundary_discharges). Totals 378 = 193 / 185 / 0.",
   "enrolment_source": {"path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json", "schema": "openssl-rs/campaign/safe-c33/callback-enrolment/v1", "records": 66, "requested_status": "BLOCKED", "gate": "callback_enumeration_gate.py exit 0 (0 missing, 0 unresolved) plus compiled-artifact cross-check 0 unaccounted"},
   "refusal_history": ["MISSING_BOUNDARY_RECEIPT over 13 files appeared when the 66 admissions were enrolled, because those files had no owning receipt. It was resolved by owning the files with site-enumerating receipts, NOT by discharging or excluding anything: all 40 records are RETAINED (BLOCKED). The refusal itself is preserved in evidence/closure-ssh-b52-enumerated.json."],
   "coverage_instrument": "content-addressed (span_sha256 bound to the git blob at the inventory's own source head). B51: 167/145/0 -> 177/135/0 (10 moved). B52: 177/135/0 -> 186/126/0 (9 moved). Enrolment: -> 186/192/0 (66 admitted BLOCKED, no discharge inherited). Ownership: 13 files owned, still 186/192/0. B53/B62 re-bind the spans at b8bba9555 (span_source_commit in both b62 receipts); the B51/B52 span history remains at a8716b4f2.",
   "staleness_of_blocks_above": ["generated_date", "branch", "source_head", "source_head_subject", "source_head_note", "release_candidate", "closure"],
-  "note": "The top-level generated_date/branch/source_head/release_candidate/closure blocks remain the 0.0.44 release snapshot and are NOT the current applied state; they are marked stale for current reading rather than overwritten. Element 7 remains FAIL at this candidate (131 reachable unresolved = 66 target-bounded + 65 contract-bounded) in the first B53 measurement; the reviewed rules below reduce it to the current 14. Two element-7 rule fixes are reviewed: ten provider fetch bindings restored after a codegen-shape change masked them, and four provider capability callbacks modelled as a declared ABI contract. A third reviewed rule closes the six SLH-DSA method-table sites with per-field target pairs, and a fourth follows exported callback parameters through copies, spill/reload and phis (60 -> 56 target-bounded). An earlier version of that fourth rule was rejected and reverted for bundling an undisclosed header-gate rewrite; the re-landed version is chain-only with a mixed-arm phi control and exact per-step accounting. A fifth reviewed rule closes the 25 provider hw-table sites after a first attempt was rejected and reverted for an incomplete owner set; the repair computes the owner set by scan and gates on exhaustiveness. A sixth reviewed rule closes the legacy cipher block slots and the decoder method object (31 -> 26 target-bounded), correcting a triage label that had named the wrong field. A seventh reviewed rule stops the header scanner reading #define bodies as declarations, which had poisoned the callback classification for nine sites (26 -> 17 target-bounded). An eighth reviewed rule handles merged call sites (one call, two reaching loads from the same fetch result), closing the two KEM sites (17 -> 15 target-bounded) while refusing fifteen other merged-shaped sites. Element 7 now PASSES at b5ff19ce7 (see element7 above): target-bounded is 0 and all 127 reachable unresolved sites are contract-bounded, so the predicate is established under AGENTS.md section 7 criterion 2. Four witness batches landed: the base-slot sites (msblob closed descriptor table; rcu proved-empty writer list), the finite PKCS12 parameter sites, the eight registerable dispatch sites carried as per-call-site external ABI contracts, and the two PBE out-parameter sites resolved from the BUILTIN_PBE relocations (5 keygen_ex targets; the 2 KDF targets; in-image GOT-binding caveat recorded). The ssh and sshd receipts agree exactly. B67 then closed the two BIO readbuffer callbacks (empty precondition set), taking the ledger to 188 DISCHARGED / 190 BLOCKED / 0 UNKNOWN. Element 7 PASS plus B67/B69/B70 still do NOT graduate the consumer: 221 safety-relevant obligations remain BLOCKED, B69 closed three RAND lifecycle sites (ctx_new, ctx_free, drbg_status) while retaining the uncalled cleanup_int, and B70 closed the two CMS stack free thunks (the CRL thunk at contract/body level, its arm NOT_RUN), the discharge instrument now enforces a structured disposition gate but reports 53 unresolved disposition conflicts (B45 9 / B49 16 / B50 11 / B51 8 / B52 9) that keep its conflict gate diagnostic-only, no mechanism is discharged mechanism-wide, and B46/B47, the evidence pipeline and the exact-candidate L7/SEAL verification remain open (B48 is withdrawn pending independent re-review), so SAFE_COMPATIBLE is still false for both families. ACCEPTED here means the closure raises no refusal on this universe; it does not mean the 221 BLOCKED obligations are safe, and no mechanism is discharged mechanism-wide."
+  "note": "The top-level generated_date/branch/source_head/release_candidate/closure blocks remain the 0.0.44 release snapshot and are NOT the current applied state; they are marked stale for current reading rather than overwritten. Element 7 remains FAIL at this candidate (131 reachable unresolved = 66 target-bounded + 65 contract-bounded) in the first B53 measurement; the reviewed rules below reduce it to the current 14. Two element-7 rule fixes are reviewed: ten provider fetch bindings restored after a codegen-shape change masked them, and four provider capability callbacks modelled as a declared ABI contract. A third reviewed rule closes the six SLH-DSA method-table sites with per-field target pairs, and a fourth follows exported callback parameters through copies, spill/reload and phis (60 -> 56 target-bounded). An earlier version of that fourth rule was rejected and reverted for bundling an undisclosed header-gate rewrite; the re-landed version is chain-only with a mixed-arm phi control and exact per-step accounting. A fifth reviewed rule closes the 25 provider hw-table sites after a first attempt was rejected and reverted for an incomplete owner set; the repair computes the owner set by scan and gates on exhaustiveness. A sixth reviewed rule closes the legacy cipher block slots and the decoder method object (31 -> 26 target-bounded), correcting a triage label that had named the wrong field. A seventh reviewed rule stops the header scanner reading #define bodies as declarations, which had poisoned the callback classification for nine sites (26 -> 17 target-bounded). An eighth reviewed rule handles merged call sites (one call, two reaching loads from the same fetch result), closing the two KEM sites (17 -> 15 target-bounded) while refusing fifteen other merged-shaped sites. Element 7 now PASSES at b5ff19ce7 (see element7 above): target-bounded is 0 and all 127 reachable unresolved sites are contract-bounded, so the predicate is established under AGENTS.md section 7 criterion 2. Four witness batches landed: the base-slot sites (msblob closed descriptor table; rcu proved-empty writer list), the finite PKCS12 parameter sites, the eight registerable dispatch sites carried as per-call-site external ABI contracts, and the two PBE out-parameter sites resolved from the BUILTIN_PBE relocations (5 keygen_ex targets; the 2 KDF targets; in-image GOT-binding caveat recorded). The ssh and sshd receipts agree exactly. B67 then closed the two BIO readbuffer callbacks (empty precondition set), taking the ledger to 188 DISCHARGED / 190 BLOCKED / 0 UNKNOWN. Element 7 PASS plus B67/B69/B70 still do NOT graduate the consumer: 185 safety-relevant obligations remain BLOCKED, B69 closed three RAND lifecycle sites (ctx_new, ctx_free, drbg_status) while retaining the uncalled cleanup_int, and B70 closed the two CMS stack free thunks (the CRL thunk at contract/body level, its arm NOT_RUN), the discharge instrument now enforces a structured disposition gate but reports 72 unresolved disposition conflicts (B45 9 / B48 19 / B49 16 / B50 11 / B51 8 / B52 9) that keep its conflict gate diagnostic-only, no mechanism is discharged mechanism-wide, and B46/B47, the evidence pipeline and the exact-candidate L7/SEAL verification remain open (B48 is re-applied under the 2026-11-10 independent DISCHARGE at S' = cdaf16816), so SAFE_COMPATIBLE is still false for both families. ACCEPTED here means the closure raises no refusal on this universe; it does not mean the 185 BLOCKED obligations are safe, and no mechanism is discharged mechanism-wide."
  },
  "closure": {
   "receipt": "evidence/closure-ssh-v1r.json; evidence/inventory-sshd-v1r.json",
