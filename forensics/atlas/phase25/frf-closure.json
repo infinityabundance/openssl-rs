@@ -78,11 +78,11 @@
       "checkpoints_naming_phase": [],
       "current": "checkpoint.4b913a19e54b61b2f21bf0ed78a152424a79e6dbd291684b2b5f4dc0d713d35d",
       "identity": {
-        "candidate_version": "0.0.43",
+        "candidate_version": "0.0.45",
         "checkpoint_state_hash": "a887e4176ee59aec0a6d958696c805efffe6df8a2620c4b9339b849138ac805d",
         "plan": {
           "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
-          "sha256": "1b80484986e7a4cc3646ac88ced5ebecc7040a1ceaba1550a4cd628f4e5bfb02"
+          "sha256": "7653a39374155ec278d1bf13472c9f213bf5a51b6673fd884527e1038e0597f7"
         },
         "registry": {
           "path": "forensics/tools/gen_frf_courts.py",
@@ -428,7 +428,7 @@
       {
         "artefact": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
         "artefact_present": true,
-        "artefact_sha256": "1b80484986e7a4cc3646ac88ced5ebecc7040a1ceaba1550a4cd628f4e5bfb02",
+        "artefact_sha256": "7653a39374155ec278d1bf13472c9f213bf5a51b6673fd884527e1038e0597f7",
         "court": "MS-CONSTITUTION",
         "generator": "forensics/tools/phase25_courts.py",
         "generator_present": true,
@@ -1089,13 +1089,13 @@
     "sort_key": "records by unit; obligations by unit; receipts/challenges/claims by court id; residual_census planes/by_class/by_disposition by key with every list sorted; chain.declared_courts and chain.probe_pairs sorted; gemel so the current checkpoint and the naming sets are derived from the committed projection; every list sorted",
     "what_this_is": "Phase 25.20's FRF/Gemel closure: the record set (every Phase-25 contract unit joined to its committed evidence and its committed generator), the obligation and receipt joins (no unit and no receipt orphaned), the residual census (every residual classified and disposed, the open ones named), the FRF chain staging (why no Phase-25 court is declarable, and the harness challenge that stands in its place) and the Gemel checkpoint projection (the state of the committed forensics/GEMEL_TRAJECTORY.md, never the store). It is an instrument plus an observation record, not a claim that the stratum has a declarable court."
   },
-  "body_hash": "7b0172e11b9ed032c6b2f61e0cd0de947916b7a3a5a152e5cebec4c2f184802b",
+  "body_hash": "a2e2eb784a6162c378fb8dbbb707e6f15f37511482338620326f27ab0ab2efdf",
   "generator": "forensics/tools/ms_frf_closure.py",
   "inputs": [
     {
       "name": "phase-25-plan",
       "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
-      "sha256": "1b80484986e7a4cc3646ac88ced5ebecc7040a1ceaba1550a4cd628f4e5bfb02"
+      "sha256": "7653a39374155ec278d1bf13472c9f213bf5a51b6673fd884527e1038e0597f7"
     },
     {
       "name": "memory-safety-schemas",

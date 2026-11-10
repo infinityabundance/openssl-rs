@@ -1,0 +1,1 @@
+{"authority":"openssl-rt-3.6.4-r2","blocks_claims":["rt-handoff exit parity"],"disposition":"open","kind":"exit","magnitude":"class-change","next_court":"cli-exit-minimize","residual_id":"c8a9d3ed17a88e2c9e7e6640c842c5389bc6e1e13a72ef046c580139855fc343","schema_version":"frf-token-v1","scope":"rt-handoff","surface":"exit-class","token":"exit/exit-class/class-change/open"}
