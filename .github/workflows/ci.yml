@@ -205,11 +205,13 @@ jobs:
       # non-zero until the measured enrolment step lands. The out-dir is a
       # fresh RUNNER_TEMP path, which also exercises the gate's mkdir contract.
       # The inventory this gate compares against is the ENUMERATED closure
-      # (378 obligations: 186 discharged / 192 blocked / 0 unknown), because the
-      # 66 admissions from this gate are part of the queue. Pointing it at the
-      # pre-enrolment closure would fail forever on entries that are now present.
-      # The closure is ACCEPTED at this candidate: 378 obligations
-      # (186 discharged / 192 blocked / 0 unknown). The gate above and the
+      # (378 obligations: 193 discharged / 185 blocked / 0 unknown at the
+      # current candidate), because the 66 admissions from this gate are part
+      # of the queue. The path is resolved from CAMPAIGN-STATUS
+      # current_applied_state.closure_receipts[0] rather than pinned: a fixed
+      # pin drifts as src/ advances and then fails on source-drift even when
+      # zero registrations are missing (the B52 pin did exactly that).
+      # The closure is ACCEPTED at this candidate. The gate above and the
       # artifact cross-check below guard that state; they measure different
       # properties, so neither replaces the closure's own verdict.
       - name: Callback enumeration completeness (extension-slot registrations vs inventory)
@@ -219,7 +221,13 @@ jobs:
           || github.event_name == 'workflow_dispatch'
         run: |
           set -euo pipefail
-          closure=evidence/closure-ssh-b52-enumerated.json
+          closure=$(python3 - <<'PY'
+          import json
+          d = json.load(open(
+              'forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json'))
+          print(d['current_applied_state']['closure_receipts'][0])
+          PY
+          )
           if [ ! -f "$closure" ]; then
             echo "::error::callback gate prerequisite missing: $closure"
             exit 1
