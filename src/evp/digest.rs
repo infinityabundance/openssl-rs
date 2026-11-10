@@ -1237,6 +1237,11 @@ pub unsafe extern "C" fn EVP_MD_gettable_ctx_params(md: *const EvpMd) -> *const 
 // The same two contracts as the cipher constructors: every setter refuses a second write, so a
 // method built by hand is append-only, and the two functions that test their subject are
 // `EVP_MD_meth_dup` and `EVP_MD_meth_free`.
+//
+// Every mutating setter also refuses any origin but `EVP_ORIG_METH` **before** that write-once
+// test: a global method is an immutable compile-time `static` shared across threads (`StaticMd`'s
+// `Sync` justification), and a fetched method is owned by the library. The authority stores
+// unconditionally; the refusal is `D-MD-APPDATASIZE-GLOBAL-1`.
 // ---------------------------------------------------------------------------------------------
 
 /// `EVP_MD *EVP_MD_meth_new(int md_type, int pkey_type)`.
@@ -1345,6 +1350,9 @@ pub unsafe extern "C" fn EVP_MD_meth_set_input_blocksize(
 ) -> c_int {
     // SAFETY: `md` is live per the contract.
     unsafe {
+        if (*md).origin != EVP_ORIG_METH {
+            return 0;
+        }
         if (*md).block_size != 0 {
             return 0;
         }
@@ -1361,6 +1369,9 @@ pub unsafe extern "C" fn EVP_MD_meth_set_input_blocksize(
 pub unsafe extern "C" fn EVP_MD_meth_set_result_size(md: *mut EvpMd, resultsize: c_int) -> c_int {
     // SAFETY: `md` is live per the contract.
     unsafe {
+        if (*md).origin != EVP_ORIG_METH {
+            return 0;
+        }
         if (*md).md_size != 0 {
             return 0;
         }
@@ -1410,6 +1421,9 @@ pub unsafe extern "C" fn EVP_MD_meth_set_init(
 ) -> c_int {
     // SAFETY: `md` is live per the contract.
     unsafe {
+        if (*md).origin != EVP_ORIG_METH {
+            return 0;
+        }
         if (*md).init.is_some() {
             return 0;
         }
@@ -1430,6 +1444,9 @@ pub unsafe extern "C" fn EVP_MD_meth_set_update(
 ) -> c_int {
     // SAFETY: `md` is live per the contract.
     unsafe {
+        if (*md).origin != EVP_ORIG_METH {
+            return 0;
+        }
         if (*md).update.is_some() {
             return 0;
         }
@@ -1449,6 +1466,9 @@ pub unsafe extern "C" fn EVP_MD_meth_set_final(
 ) -> c_int {
     // SAFETY: `md` is live per the contract.
     unsafe {
+        if (*md).origin != EVP_ORIG_METH {
+            return 0;
+        }
         if (*md).final_.is_some() {
             return 0;
         }
@@ -1468,6 +1488,9 @@ pub unsafe extern "C" fn EVP_MD_meth_set_copy(
 ) -> c_int {
     // SAFETY: `md` is live per the contract.
     unsafe {
+        if (*md).origin != EVP_ORIG_METH {
+            return 0;
+        }
         if (*md).copy.is_some() {
             return 0;
         }
@@ -1487,6 +1510,9 @@ pub unsafe extern "C" fn EVP_MD_meth_set_cleanup(
 ) -> c_int {
     // SAFETY: `md` is live per the contract.
     unsafe {
+        if (*md).origin != EVP_ORIG_METH {
+            return 0;
+        }
         if (*md).cleanup.is_some() {
             return 0;
         }
@@ -1507,6 +1533,9 @@ pub unsafe extern "C" fn EVP_MD_meth_set_ctrl(
 ) -> c_int {
     // SAFETY: `md` is live per the contract.
     unsafe {
+        if (*md).origin != EVP_ORIG_METH {
+            return 0;
+        }
         if (*md).md_ctrl.is_some() {
             return 0;
         }
@@ -1523,6 +1552,9 @@ pub unsafe extern "C" fn EVP_MD_meth_set_ctrl(
 pub unsafe extern "C" fn EVP_MD_meth_set_flags(md: *mut EvpMd, flags: core::ffi::c_ulong) -> c_int {
     // SAFETY: `md` is live per the contract.
     unsafe {
+        if (*md).origin != EVP_ORIG_METH {
+            return 0;
+        }
         if (*md).flags != 0 {
             return 0;
         }
@@ -6042,6 +6074,162 @@ mod tests {
                 "positive control: a `METH` method still accepts the value"
             );
             assert_eq!(EVP_MD_meth_get_app_datasize(md), 64);
+            EVP_MD_meth_free(md);
+        }
+    }
+
+    // Callbacks whose identity is the observable: each is installed on a hand-built method and read
+    // back through the getter, so a setter that stored nothing would fail the positive control.
+    unsafe extern "C" fn init_probe(_ctx: *mut EvpMdCtx) -> c_int {
+        1
+    }
+    unsafe extern "C" fn update_probe(
+        _ctx: *mut EvpMdCtx,
+        _data: *const c_void,
+        _count: usize,
+    ) -> c_int {
+        1
+    }
+    unsafe extern "C" fn final_probe(_ctx: *mut EvpMdCtx, _md: *mut c_uchar) -> c_int {
+        1
+    }
+    unsafe extern "C" fn copy_probe(_to: *mut EvpMdCtx, _from: *const EvpMdCtx) -> c_int {
+        1
+    }
+    unsafe extern "C" fn cleanup_probe(_ctx: *mut EvpMdCtx) -> c_int {
+        1
+    }
+    unsafe extern "C" fn ctrl_probe(
+        _ctx: *mut EvpMdCtx,
+        _cmd: c_int,
+        _p1: c_int,
+        _p2: *mut c_void,
+    ) -> c_int {
+        1
+    }
+
+    // `assert_eq!` compares an `Option<fn>` and does not coerce a fn item to a fn pointer, so each
+    // probe is named at its pointer type once.
+    const INIT_PROBE: MdLegacyInitFn = init_probe;
+    const UPDATE_PROBE: MdLegacyUpdateFn = update_probe;
+    const FINAL_PROBE: MdLegacyFinalFn = final_probe;
+    const COPY_PROBE: MdLegacyCopyFn = copy_probe;
+    const CLEANUP_PROBE: MdLegacyCleanupFn = cleanup_probe;
+    const CTRL_PROBE: MdLegacyCtrlFn = ctrl_probe;
+
+    /// Function pointers cannot be compared with `==` (their addresses need not be unique), so the
+    /// callback assertions use `core::ptr::fn_addr_eq`.
+    macro_rules! assert_same_fn {
+        ($got:expr, $want:expr) => {
+            assert!(
+                $got.map_or(false, |f| core::ptr::fn_addr_eq(f, $want)),
+                "the getter did not answer the installed callback"
+            )
+        };
+    }
+
+    /// The nine sibling setters are the same mutating arms as `set_app_datasize`, so the same
+    /// origin test protects them: each refuses a `GLOBAL` method before its write-once test, the
+    /// static keeps the value its table installed, and a fresh `METH` method still accepts a value
+    /// the getter reports back. `set_ctrl` uses `EVP_sha256()` because `EVP_sha1()` already carries
+    /// `sha1_int_ctrl`, so only the six SHA-256-family globals are the empty, writable case.
+    #[test]
+    fn every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one() {
+        let sha1 = crate::evp::legacy_sha::EVP_sha1().cast_mut();
+        let sha256 = crate::evp::legacy_sha::EVP_sha256().cast_mut();
+        // SAFETY: both entry points answer live global methods, and every refused setter writes
+        // nothing for a non-`METH` origin.
+        unsafe {
+            assert_eq!((*sha1).origin, EVP_ORIG_GLOBAL);
+
+            assert_eq!(EVP_MD_meth_get_input_blocksize(sha1), 64);
+            assert_eq!(EVP_MD_meth_set_input_blocksize(sha1, 32), 0);
+            assert_eq!(EVP_MD_meth_get_input_blocksize(sha1), 64);
+
+            assert_eq!(EVP_MD_meth_get_result_size(sha1), 20);
+            assert_eq!(EVP_MD_meth_set_result_size(sha1, 32), 0);
+            assert_eq!(EVP_MD_meth_get_result_size(sha1), 20);
+
+            let init = EVP_MD_meth_get_init(sha1);
+            assert!(init.is_some());
+            assert_eq!(EVP_MD_meth_set_init(sha1, None), 0);
+            assert_same_fn!(EVP_MD_meth_get_init(sha1), init.unwrap());
+
+            let update = EVP_MD_meth_get_update(sha1);
+            assert!(update.is_some());
+            assert_eq!(EVP_MD_meth_set_update(sha1, None), 0);
+            assert_same_fn!(EVP_MD_meth_get_update(sha1), update.unwrap());
+
+            let final_ = EVP_MD_meth_get_final(sha1);
+            assert!(final_.is_some());
+            assert_eq!(EVP_MD_meth_set_final(sha1, None), 0);
+            assert_same_fn!(EVP_MD_meth_get_final(sha1), final_.unwrap());
+
+            assert!(EVP_MD_meth_get_copy(sha1).is_none());
+            assert_eq!(EVP_MD_meth_set_copy(sha1, Some(COPY_PROBE)), 0);
+            assert!(EVP_MD_meth_get_copy(sha1).is_none());
+
+            assert!(EVP_MD_meth_get_cleanup(sha1).is_none());
+            assert_eq!(EVP_MD_meth_set_cleanup(sha1, Some(CLEANUP_PROBE)), 0);
+            assert!(EVP_MD_meth_get_cleanup(sha1).is_none());
+
+            let flags = EVP_MD_meth_get_flags(sha1);
+            assert_eq!(flags, EVP_MD_FLAG_DIGALGID_ABSENT);
+            assert_eq!(EVP_MD_meth_set_flags(sha1, EVP_MD_FLAG_XOF), 0);
+            assert_eq!(EVP_MD_meth_get_flags(sha1), flags);
+
+            assert_eq!((*sha256).origin, EVP_ORIG_GLOBAL);
+            assert!(EVP_MD_meth_get_ctrl(sha256).is_none());
+            assert_eq!(EVP_MD_meth_set_ctrl(sha256, Some(CTRL_PROBE)), 0);
+            assert!(EVP_MD_meth_get_ctrl(sha256).is_none());
+        }
+
+        // SAFETY: each `md` is a fresh `METH` method this test owns and frees. One object per
+        // setter, because each setter refuses a second write to the same field.
+        unsafe {
+            let md = EVP_MD_meth_new(4, 5);
+            assert_eq!(EVP_MD_meth_set_input_blocksize(md, 32), 1);
+            assert_eq!(EVP_MD_meth_get_input_blocksize(md), 32);
+            EVP_MD_meth_free(md);
+
+            let md = EVP_MD_meth_new(4, 5);
+            assert_eq!(EVP_MD_meth_set_result_size(md, 32), 1);
+            assert_eq!(EVP_MD_meth_get_result_size(md), 32);
+            EVP_MD_meth_free(md);
+
+            let md = EVP_MD_meth_new(4, 5);
+            assert_eq!(EVP_MD_meth_set_init(md, Some(INIT_PROBE)), 1);
+            assert_same_fn!(EVP_MD_meth_get_init(md), INIT_PROBE);
+            EVP_MD_meth_free(md);
+
+            let md = EVP_MD_meth_new(4, 5);
+            assert_eq!(EVP_MD_meth_set_update(md, Some(UPDATE_PROBE)), 1);
+            assert_same_fn!(EVP_MD_meth_get_update(md), UPDATE_PROBE);
+            EVP_MD_meth_free(md);
+
+            let md = EVP_MD_meth_new(4, 5);
+            assert_eq!(EVP_MD_meth_set_final(md, Some(FINAL_PROBE)), 1);
+            assert_same_fn!(EVP_MD_meth_get_final(md), FINAL_PROBE);
+            EVP_MD_meth_free(md);
+
+            let md = EVP_MD_meth_new(4, 5);
+            assert_eq!(EVP_MD_meth_set_copy(md, Some(COPY_PROBE)), 1);
+            assert_same_fn!(EVP_MD_meth_get_copy(md), COPY_PROBE);
+            EVP_MD_meth_free(md);
+
+            let md = EVP_MD_meth_new(4, 5);
+            assert_eq!(EVP_MD_meth_set_cleanup(md, Some(CLEANUP_PROBE)), 1);
+            assert_same_fn!(EVP_MD_meth_get_cleanup(md), CLEANUP_PROBE);
+            EVP_MD_meth_free(md);
+
+            let md = EVP_MD_meth_new(4, 5);
+            assert_eq!(EVP_MD_meth_set_ctrl(md, Some(CTRL_PROBE)), 1);
+            assert_same_fn!(EVP_MD_meth_get_ctrl(md), CTRL_PROBE);
+            EVP_MD_meth_free(md);
+
+            let md = EVP_MD_meth_new(4, 5);
+            assert_eq!(EVP_MD_meth_set_flags(md, EVP_MD_FLAG_XOF), 1);
+            assert_eq!(EVP_MD_meth_get_flags(md), EVP_MD_FLAG_XOF);
             EVP_MD_meth_free(md);
         }
     }

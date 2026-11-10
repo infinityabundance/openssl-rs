@@ -2,12 +2,14 @@
  "receipt": "boundary-sweep-B48",
  "date": "2026-11-01",
  "campaign": "safe-c33 shared-contract establishment (E2: the legacy provider digest vtables)",
- "subphase": "B48 repair for re-review: the whole exported legacy digest callback surface is enumerated, not only the 36 census sites. The 17 legacy initialisers the census omitted, `sm3_int_update`, the three `EVP_md_null` callbacks, the ten `EVP_MD_meth_get_*` getters and `EVP_MD_meth_set_app_datasize` now have rows and fn-level contracts. Every update callback refuses a NULL `data` with `count != 0`; `shake_ctrl` refuses a negative XOF length. A shared adversarial module drives all 22 tables through the exported getters with undersized, wrong-typed, NULL-block, NULL-data, zero-`ctx_size` and valid contexts. The discharge is NOT applied: CAMPAIGN-STATUS.json is untouched and the closure was not run.",
+ "subphase": "B48 repair for re-review: the whole exported legacy digest callback surface is enumerated, not only the 36 census sites. The 17 legacy initialisers the census omitted, `sm3_int_update`, the three `EVP_md_null` callbacks, the ten `EVP_MD_meth_get_*` getters and `EVP_MD_meth_set_app_datasize` now have rows and fn-level contracts. Every update callback refuses a NULL `data` with `count != 0`; `shake_ctrl` refuses a negative XOF length. A shared adversarial module drives all 22 tables through the exported getters with undersized, wrong-typed, NULL-block, NULL-data, zero-`ctx_size` and valid contexts. The discharge is NOT applied: CAMPAIGN-STATUS.json is untouched and the closure was not run. The 2026-11-10 repair adds rows and fn-level contracts for the nine sibling `EVP_MD_meth_set_*` setters, which are origin-gated with `EVP_MD_meth_set_app_datasize`.",
  "candidate": {
   "base_commit": "fcd22e3987a4e4d49d2c896b46103cfa26942f85",
   "base_commit_subject": "feat(analyzer): intraprocedural type propagation for store bases",
-  "branch": "stage/p25/element7-s2b",
-  "working_tree": "clean at d7a1c485079ea5d1639ade2621d0cd110183d32f (branch `stage/p25/element7-s2b`): the full-surface fn-level contracts, the 15 NULL-data guards, the `shake_ctrl` negative-length guard, the shared adversarial test module, and the refreshed getter/app-datasize docs are all committed there, CAMPAIGN-STATUS.json is untouched, and nothing was rebuilt into an install. The three previously vacuous surface tests install each table's own callbacks and invoke them. This receipt's five evidence-only corrections are uncommitted and change no Rust source, so the candidate S is the clean committed tree at d7a1c4850. The REJECT verdict is retained: this is the repair of the rejected batch, not an application.",
+  "head_commit": "d00d885df0742195ac8ed10eac5a33fed516e886",
+  "head_commit_subject": "fix(evp): refuse EVP_MD_meth_set_app_datasize on a GLOBAL method",
+  "branch": "main",
+  "working_tree": "HEAD d00d885df0742195ac8ed10eac5a33fed516e886 (branch `main`) plus the uncommitted B48 sibling-setter repair: the origin gate is now on all ten mutating `EVP_MD_meth_set_*` functions, with one load-bearing test and the extended `D-MD-APPDATASIZE-GLOBAL-1` entry. `files_sha256` is computed over this working tree with the receipt's own convention (plain SHA-256 of the file bytes), so the receipt names exactly the source it describes. The historical full-surface work is in the history behind d00d885df. CAMPAIGN-STATUS.json is untouched, nothing was rebuilt into an install, and the REJECT verdict and `applied: false` are retained: this is the repair of the rejected batch, not an application.",
   "files": [
    "src/evp/legacy_sha.rs",
    "src/evp/legacy_md5.rs",
@@ -24,21 +26,21 @@
    "src/evp/legacy_digest_callback_surface.rs"
   ],
   "files_sha256": {
-   "src/evp/legacy_sha.rs": "a15209b0857f4b06b521ea90ee3fe9bad2fe7ce27df898b1b84f427e4d43f75a",
+   "src/evp/legacy_sha.rs": "18b8eae20efb93d4d5b174dfe05c82e9c42789dd64fe16644d7a79879484a7ba",
    "src/evp/legacy_md5.rs": "fd96a4558088f4e3e975ad2b942e3deb119a365808965ac3d57a122e3285fd8e",
    "src/evp/legacy_md4.rs": "a9604e048c42aca93063b3bc1fb55beeeafe8ac957a1b68c11be7a295ed9dbec",
    "src/evp/legacy_blake2.rs": "f7519a28fe2880d3aa129ca4e183572bd2d57e737b0f0e7accb2df8cf8ade5c9",
-   "src/evp/legacy_sha3.rs": "3bc98b1ef29a18b0bdcb7c08f174d7cab591cc9ebeea1d8b2f40323b9b904dd5",
+   "src/evp/legacy_sha3.rs": "89e78d58492837959ae50b7c6e70ea8cac91f9c2591d4fbfafd2d9d3df20faee",
    "src/evp/legacy_mdc2.rs": "bb31c14de3f2e83b2c41c82989d0b4933b61a2113edd4c04919f41be193b9adc",
    "src/evp/legacy_ripemd.rs": "4e09a91c070a653f40b83c4eb111c370dcccde0ae73b9b8d72661c62f720336e",
    "src/evp/legacy_wp.rs": "f3672077940d0e860c6c35bfe17c1a5be4677127f9adfd11cdb2bfeeae43693f",
    "src/sm3/legacy_sm3.rs": "675834621bb42eae608e388d6e4c176231219ce30feac6c093e22c433c4c3f94",
    "src/evp/e_rc2.rs": "ef0cc7760e22b883ae5f3889941c0b456f97f0422a28f1a7f92f60f11fadb4d3",
-   "src/evp/digest.rs": "63a5a4941d2694b492390c3ac21aaeb1cd9a6b596b9cf8b97fe7d2d464ee1f1a",
+   "src/evp/digest.rs": "eb4759053426cc6d1ce6221517f4b6024e7c497ef998ac3529497af6a138b1d4",
    "src/evp/mod.rs": "99fbd7f17d4b1d5a066d5223af7eecc31f6c069674ffe0c46db47f737675be94",
-   "src/evp/legacy_digest_callback_surface.rs": "de51eb1bf21923d498f68e08b972d013ad1824036f090f6f48e78e7b356d0043"
+   "src/evp/legacy_digest_callback_surface.rs": "4d2308934d973362537ffbb0efebce8bfbe1769ce99a6ad3666e15dcfc3d6c49"
   },
-  "note": "No freeze tag was created. `line` retains the V1 census coordinate where one exists; `line_current` and every embedded candidate line reference are refreshed to this working tree and bound to files_sha256."
+  "note": "No freeze tag was created. `line` retains the V1 census coordinate where one exists. `line_current` for the `EVP_MD_meth_*` rows and the file-prefixed `src/evp/digest.rs:` references were refreshed to this working tree; line numbers are advisory under content addressing and `files_sha256` (plain SHA-256 of the file bytes, the convention `atlas_refresh.py` uses) is the acceptance binding. Embedded references to other files retain their historical repair-tree coordinates and are likewise advisory; every one is bound through that file's hash."
  },
  "authority": {
   "id": "openssl-3.6.4-production",
@@ -201,13 +203,13 @@
  },
  "shared_contract": "Every vtable site is an `unsafe extern \"C\"` callback whose first argument is the caller-supplied `*mut EvpMdCtx` and whose remaining arguments are the operation's input/output. The shared contract is: (1) `ctx` is NULL or a live, aligned, initialised `EVP_MD_CTX`; (2) when the operation needs the legacy digest block, the context must expose a writable block of the callback's concrete type (`SHA_CTX`, `SHA256_CTX`, `SHA512_CTX`, `MD5_CTX`, `Md4Ctx`, `Md5Sha1Ctx`, `BLAKE2B/S_CTX`, `KeccakCtx`, `MDC2_CTX`, `Ripemd160Ctx`, `WhirlpoolCtx`, `SM3_CTX`), established by `ctx->digest` being one of the table objects that installs the callback (provenance by identity) or by a live method whose `ctx_size >= size_of::<block>()` (extent by declaration); (3) every callback establishes or refuses that precondition through `init_md_data` / `init_md_data_any` / `init_keccak`, answering `0` before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative declared `ctx_size`; (4) for update, `data` is readable for `count` bytes and is refused with `0` when NULL and `count != 0`; a zero-length update is answered without touching `data`; (5) the call is exclusive for the context for its duration and no pointer is retained; (6) on the guard path the operation leaves the context untouched and is retryable; a primitive-level failure may leave partial state and is not transactional, and a successful final consumes the block per the authority; (7) `shake_ctrl` refuses a negative `EVP_MD_CTRL_XOF_LEN` before storing it; (8) `copy`, `cleanup`, `sign` and `verify` are not installed by any of these tables (`copy`/`cleanup` are NULL; `sign`/`verify` are not fields of the 3.x legacy method), so the exported `EVP_MD_meth_get_copy`/`get_cleanup` answer `None`; `rc2_magic_to_meth` has no pointer precondition at all.",
  "dispatch_paths": {
-  "init": "`evp_md_init_internal` (src/evp/digest.rs:2098) takes the legacy arm only for `NO_INIT` or `EVP_ORIG_METH`; the normal path for these global tables fetches the provider method and rebinds before any callback runs. On the legacy arm, `evp_md_init_legacy` (:2325) installs `ctx->update` at :2340 and allocates `md_data` only when `ctx_size != 0` (:2333-2352); these tables have `ctx_size == 0`, so the init callback is reached only through `NO_INIT` or the exported `EVP_MD_meth_get_init` (:1577). The init call is at :2382.",
-  "update": "`EVP_DigestUpdate` (:2451; public # Safety :2448) returns 1 for `count == 0` (:2456-2458), refuses a FINALISED context (:2461-2466), and on the legacy arm reads `(*ctx).update` at :2502 and calls it at :2505. `ctx->update` is installed by `evp_md_init_legacy` at :2340 when `ctx_size != 0`, or by `EVP_MD_CTX_set_update_fn` at :3981; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
+  "init": "`evp_md_init_internal` (src/evp/digest.rs:2138) takes the legacy arm only for `NO_INIT` or `EVP_ORIG_METH`; the normal path for these global tables fetches the provider method and rebinds before any callback runs. On the legacy arm, `evp_md_init_legacy` (:2365) installs `ctx->update` at :2380 and allocates `md_data` only when `ctx_size != 0` (:2373-2392); these tables have `ctx_size == 0`, so the init callback is reached only through `NO_INIT` or the exported `EVP_MD_meth_get_init` (:1617). The init call is at :2422.",
+  "update": "`EVP_DigestUpdate` (:2451; public # Safety :2448) returns 1 for `count == 0` (:2456-2458), refuses a FINALISED context (:2461-2466), and on the legacy arm reads `(*ctx).update` at :2502 and calls it at :2505. `ctx->update` is installed by `evp_md_init_legacy` at :2380 when `ctx_size != 0`, or by `EVP_MD_CTX_set_update_fn` at :3981; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
   "final": "`EVP_DigestFinal_ex` (:2560; public # Safety :2557) refuses a NULL `digest` at :2566-2569, and for `digest->prov == NULL` calls `evp_md_final_legacy` (:2635), which reads `digest->final_` at :2644 and calls it at :2652. The XOF arm `evp_digest_final_xof_legacy` (:2757) calls the same `final_` at :2783. The exported `EVP_MD_meth_get_final` (:1606) is the direct source.",
   "ctrl": "`EVP_MD_CTX_ctrl` (:3581) reaches `evp_md_ctx_ctrl_legacy` (:3667), which reads `digest->md_ctrl` at :3674 and calls it at :3680; `evp_digest_final_xof_legacy` calls `md_ctrl` at :2769. The exported `EVP_MD_meth_get_ctrl` (:1651) is the direct source.",
-  "getters": "`EVP_MD_meth_get_input_blocksize` (:1531), `get_result_size` (:1541), `get_app_datasize` (:1551), `get_flags` (:1561), `get_init` (:1577), `get_update` (:1592), `get_final` (:1606), `get_copy` (:1621), `get_cleanup` (:1635) and `get_ctrl` (:1651) return the method's fields. Their returned callbacks are invoked under the callback's own contract, not the getter's.",
+  "getters": "`EVP_MD_meth_get_input_blocksize` (:1531), `get_result_size` (:1541), `get_app_datasize` (:1551), `get_flags` (:1561), `get_init` (:1617), `get_update` (:1592), `get_final` (:1606), `get_copy` (:1621), `get_cleanup` (:1635) and `get_ctrl` (:1651) return the method's fields. Their returned callbacks are invoked under the callback's own contract, not the getter's.",
   "app_datasize": "`EVP_MD_meth_set_app_datasize` (:1383) stores `ctx_size`; `evp_md_init_legacy` allocates exactly that many bytes for a `METH` method. It declares extent only, never type.",
-  "md_null": "`EVP_md_null` answers `N_MD` (src/evp/digest.rs:4066), whose `init` (:4035), `update` (:4043) and `final` (:4055) read no argument and answer 1; `ctx_size` is `sizeof(EVP_MD *)`.",
+  "md_null": "`EVP_md_null` answers `N_MD` (src/evp/digest.rs:4106), whose `init` (:4035), `update` (:4043) and `final` (:4055) read no argument and answer 1; `ctx_size` is `sizeof(EVP_MD *)`.",
   "rc2": "`rc2_magic_to_meth` is called at src/evp/e_rc2.rs:389 inside `rc2_get_asn1_type_and_iv` (:371), the `EVP_CIPHER::get_asn1_parameters` callback; it only reads the integer `num` decoded by `ASN1_TYPE_get_int_octetstring` at :384."
  },
  "defect_class": {
@@ -230,10 +232,10 @@
    "registration": "SHA1_MD at :904; Some(sha1_update) at :910",
    "guard": "init_md_data(ctx, addr_of!(SHA1_MD.0), size_of::<ShaCtx>()); data.is_null() && count != 0 -> 0",
    "disposition": "SAFETY_DISCHARGED (scope: sha1_update and its dispatch path; src/evp/legacy_sha.rs:298)",
-   "contract": "Update contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA_CTX` (owner `SHA1_MD`, or a live method with `ctx_size >= size_of::<ShaCtx>()`). `data` is readable for `count` bytes and NULL only when `count == 0` (`md32::update` returns 1 for zero length at src/digest/md32.rs:106-109; `EVP_DigestUpdate` does not invoke the callback for zero length at src/evp/digest.rs:2422). The callback refuses a context without the block with 0 before any dereference; the refusal leaves the context untouched and retryable. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
+   "contract": "Update contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA_CTX` (owner `SHA1_MD`, or a live method with `ctx_size >= size_of::<ShaCtx>()`). `data` is readable for `count` bytes and NULL only when `count == 0` (`md32::update` returns 1 for zero length at src/digest/md32.rs:106-109; `EVP_DigestUpdate` does not invoke the callback for zero length at src/evp/digest.rs:2496). The callback refuses a context without the block with 0 before any dereference; the refusal leaves the context untouched and retryable. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
-    "`ctx->update` is installed by `evp_md_init_legacy` at :2340 only when `ctx_size != 0`."
+    "`ctx->update` is installed by `evp_md_init_legacy` at :2380 only when `ctx_size != 0`."
    ],
    "authority_derived": [
     "The authority's body is `SHA1_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)` with no block test (crypto/evp/legacy_meth.h:15-18); `EVP_MD_CTX_get0_md_data` is `return ctx->md_data` (crypto/evp/evp_lib.c:1087).",
@@ -268,7 +270,7 @@
    "registration": "SHA1_MD at :904; Some(sha1_final) at :911",
    "guard": "init_md_data(ctx, addr_of!(SHA1_MD.0), size_of::<ShaCtx>())",
    "disposition": "SAFETY_DISCHARGED (scope: sha1_final and its dispatch path; src/evp/legacy_sha.rs:334)",
-   "contract": "Final contract: `ctx` NULL or live and exclusively borrowed with a writable `SHA_CTX` (same owner/size rule as `sha1_update`); `md` writable for `SHA_DIGEST_LENGTH` (20) bytes. The callback refuses a context without the block with 0 before `md` is touched. A successful final consumes the block per the authority; a second final is refused by `EVP_DigestFinal_ex`'s FINALISED check (src/evp/digest.rs:2559-2564), so retry-after-success is not allowed; retry after a guard refusal is allowed.",
+   "contract": "Final contract: `ctx` NULL or live and exclusively borrowed with a writable `SHA_CTX` (same owner/size rule as `sha1_update`); `md` writable for `SHA_DIGEST_LENGTH` (20) bytes. The callback refuses a context without the block with 0 before `md` is touched. A successful final consumes the block per the authority; a second final is refused by `EVP_DigestFinal_ex`'s FINALISED check (src/evp/digest.rs:2599-2604), so retry-after-success is not allowed; retry after a guard refusal is allowed.",
    "established": [
     "`evp_md_final_legacy` (:2635) calls `final_` at :2652; `evp_digest_final_xof_legacy` (:2757) calls it at :2783; the exported `EVP_MD_meth_get_final` (:1606) is the direct source."
    ],
@@ -341,7 +343,7 @@
    "contract": "Update contract over `SHA256_CTX` (owner `SHA224_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0` (`md32::update` early return); a context without the block answers 0 before any dereference, leaving the context untouched and retryable. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
-    "`ctx->update` is installed by `evp_md_init_legacy` at :2340 only when `ctx_size != 0`."
+    "`ctx->update` is installed by `evp_md_init_legacy` at :2380 only when `ctx_size != 0`."
    ],
    "authority_derived": [
     "The authority's body is `SHA256_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:15-18; SHA224_Update is SHA256_Update in sha.h)."
@@ -375,7 +377,7 @@
    "registration": "SHA224_MD at :916; Some(sha224_final) at :923",
    "guard": "init_md_data(ctx, addr_of!(SHA224_MD.0), size_of::<Sha256Ctx>())",
    "disposition": "SAFETY_DISCHARGED (scope: sha224_final and its dispatch path; src/evp/legacy_sha.rs:481)",
-   "contract": "Final contract over `SHA256_CTX`: `ctx` NULL or live and exclusive with the block; `md` writable for `SHA224_DIGEST_LENGTH` (28) bytes; refusal before `md` is touched; successful final consumes the block; retry-after-success is refused by the FINALISED check at src/evp/digest.rs:2559-2564.",
+   "contract": "Final contract over `SHA256_CTX`: `ctx` NULL or live and exclusive with the block; `md` writable for `SHA224_DIGEST_LENGTH` (28) bytes; refusal before `md` is touched; successful final consumes the block; retry-after-success is refused by the FINALISED check at src/evp/digest.rs:2599-2604.",
    "established": [
     "`evp_md_final_legacy` (:2635) calls `final_` at :2652; `evp_digest_final_xof_legacy` (:2757) calls it at :2783; the exported `EVP_MD_meth_get_final` (:1606) is the direct source."
    ],
@@ -412,7 +414,7 @@
    "contract": "Update contract over `SHA256_CTX` (owner `SHA256_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0`; refusal with 0 before any dereference; no state change on refusal. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
-    "`ctx->update` is installed by `evp_md_init_legacy` at :2340 only when `ctx_size != 0`."
+    "`ctx->update` is installed by `evp_md_init_legacy` at :2380 only when `ctx_size != 0`."
    ],
    "authority_derived": [
     "The authority's body is `SHA256_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:15-18)."
@@ -483,7 +485,7 @@
    "contract": "Update contract over `SHA512_CTX` with three owners (`SHA384_MD`, `SHA512_224_MD`, `SHA512_256_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0` (`SHA512_Update` returns 1 at src/digest/sha2.rs:615); a context without the block answers 0 before any dereference. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
-    "`ctx->update` is installed by `evp_md_init_legacy` at :2340 only when `ctx_size != 0`."
+    "`ctx->update` is installed by `evp_md_init_legacy` at :2380 only when `ctx_size != 0`."
    ],
    "authority_derived": [
     "The authority's SHA512_224/256 tables install the same `SHA512_Update` callback (crypto/evp/legacy_sha.c)."
@@ -554,7 +556,7 @@
    "contract": "Update contract over `SHA512_CTX` (owner `SHA512_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0`; refusal with 0 before any dereference; no state change on refusal. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
-    "`ctx->update` is installed by `evp_md_init_legacy` at :2340 only when `ctx_size != 0`."
+    "`ctx->update` is installed by `evp_md_init_legacy` at :2380 only when `ctx_size != 0`."
    ],
    "authority_derived": [
     "The authority's body is `SHA512_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)`; zero length returns 1 before the pointer is read (src/digest/sha2.rs:615)."
@@ -693,7 +695,7 @@
    "contract": "Update contract over `MD5_CTX` (owner `MD5_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0` (`md32::update` early return); a context without the block answers 0 before any dereference, leaving it untouched and retryable. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
-    "`ctx->update` is installed by `evp_md_init_legacy` at :2340 only when `ctx_size != 0`."
+    "`ctx->update` is installed by `evp_md_init_legacy` at :2380 only when `ctx_size != 0`."
    ],
    "authority_derived": [
     "The authority's body is `MD5_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:15-18)."
@@ -763,7 +765,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: md5_sha1_int_init and its dispatch path; src/evp/legacy_md5.rs:310)",
    "contract": "Init contract over `MD5_SHA1_CTX` (owner `MD5_SHA1_MD`): `ctx` NULL or live; the callback refuses a context without the writable block with 0 instead of the authority's NULL write. This was the one initialiser in the cluster that did not already have the guard; it now does (`D-LEGACY-MD-INIT-MD-DATA-1`). A context bound to `md5_sha1_md` with a writable block still initialises and returns 1.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -799,7 +801,7 @@
    "contract": "Update contract over `MD5_SHA1_CTX`: `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0` (both `MD5_Update` and `SHA1_Update` early-return in md32::update); refusal with 0 before any dereference; no state change on refusal. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
-    "`ctx->update` is installed by `evp_md_init_legacy` at :2340 only when `ctx_size != 0`."
+    "`ctx->update` is installed by `evp_md_init_legacy` at :2380 only when `ctx_size != 0`."
    ],
    "authority_derived": [
     "The authority's body is `ossl_md5_sha1_update(EVP_MD_CTX_get0_md_data(ctx), data, count)`."
@@ -904,7 +906,7 @@
    "contract": "Update contract over `Md4Ctx` (owner `MD4_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0` (`md32::update` early return); a context without the block answers 0 before any dereference, leaving it untouched and retryable. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
-    "`ctx->update` is installed by `evp_md_init_legacy` at :2340 only when `ctx_size != 0`."
+    "`ctx->update` is installed by `evp_md_init_legacy` at :2380 only when `ctx_size != 0`."
    ],
    "authority_derived": [
     "The authority's body is `MD4_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:15-18)."
@@ -975,7 +977,7 @@
    "contract": "Update contract over `BLAKE2B_CTX`: `ctx` NULL or live and exclusive; the callback refuses a context without the block with 0 before any dereference. `count == 0` is answered 1 before `data` is used, so `data` may be NULL at `count == 0`; for `count != 0` it is readable for `count` bytes. The zero-length arm is a candidate divergence: the transcribed `ossl_blake2b_update` reaches `copy_nonoverlapping` even for a zero length (src/digest/blake2.rs:417-420), which requires a non-NULL pointer. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
-    "`ctx->update` is installed by `evp_md_init_legacy` at :2340 only when `ctx_size != 0`."
+    "`ctx->update` is installed by `evp_md_init_legacy` at :2380 only when `ctx_size != 0`."
    ],
    "authority_derived": [
     "The authority's body is `ossl_blake2b_update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:29-32). The authority does not special-case a zero length."
@@ -1047,7 +1049,7 @@
    "contract": "Update contract over `BLAKE2S_CTX`: `ctx` NULL or live and exclusive; refusal with 0 before any dereference; `count == 0` answered 1 before `data` is used, so `data` may be NULL at `count == 0`; otherwise readable for `count` bytes. The zero-length arm is the same candidate divergence as B48-BLAKE2-001. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
-    "`ctx->update` is installed by `evp_md_init_legacy` at :2340 only when `ctx_size != 0`."
+    "`ctx->update` is installed by `evp_md_init_legacy` at :2380 only when `ctx_size != 0`."
    ],
    "authority_derived": [
     "The authority's body is `ossl_blake2s_update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:29-32)."
@@ -1119,7 +1121,7 @@
    "contract": "Update contract over `KECCAK1600_CTX` with six owners: `ctx` NULL or live and exclusive; the context's `md_data` must be a writable `KeccakCtx` and the method's `md_size` positive, established by ownership of one of the six tables or a live method with `ctx_size >= size_of::<KeccakCtx>()`; `data` readable for `count` bytes and NULL only at `count == 0` (`ossl_sha3_update` returns 1 at src/digest/sha3.rs:331); a context without the block or with a non-positive `md_size` answers 0 before any dereference. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
-    "`ctx->update` is installed by `evp_md_init_legacy` at :2340 only when `ctx_size != 0`."
+    "`ctx->update` is installed by `evp_md_init_legacy` at :2380 only when `ctx_size != 0`."
    ],
    "authority_derived": [
     "The authority's body reads `ctx->digest->md_size` and writes `EVP_MD_CTX_get0_md_data(ctx)` with no test (crypto/evp/legacy_sha.c:34-37)."
@@ -1227,7 +1229,7 @@
    "contract": "Update contract over `MDC2_CTX` (owner `MDC2_MD`): `ctx` NULL or live and exclusive; refusal with 0 before any dereference; `count == 0` answered 1 before `data` is used, so `data` may be NULL at `count == 0`; otherwise readable for `count` bytes. The zero-length arm is a candidate divergence: `MDC2_Update` can reach `copy_nonoverlapping` with a zero length (src/digest/mdc2.rs:156-163), which requires a non-NULL pointer. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
-    "`ctx->update` is installed by `evp_md_init_legacy` at :2340 only when `ctx_size != 0`."
+    "`ctx->update` is installed by `evp_md_init_legacy` at :2380 only when `ctx_size != 0`."
    ],
    "authority_derived": [
     "The authority's body is `MDC2_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:15-18)."
@@ -1299,7 +1301,7 @@
    "contract": "Update contract over `Ripemd160Ctx` (owner `RIPEMD160_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0` (`md32::update` early return); a context without the block answers 0 before any dereference, leaving it untouched and retryable. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
-    "`ctx->update` is installed by `evp_md_init_legacy` at :2340 only when `ctx_size != 0`."
+    "`ctx->update` is installed by `evp_md_init_legacy` at :2380 only when `ctx_size != 0`."
    ],
    "authority_derived": [
     "The authority's body is `RIPEMD160_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:15-18)."
@@ -1370,7 +1372,7 @@
    "contract": "Update contract over `WhirlpoolCtx` (owner `WHIRLPOOL_MD`): `ctx` NULL or live and exclusive; `data` readable for `count` bytes and NULL only at `count == 0` (`WHIRLPOOL_Update` skips the zero-length loop and returns 1 at src/digest/wp.rs:166-176); a context without the block answers 0 before any dereference. A NULL `data` with `count != 0` is refused with `0` before the primitive is called.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
-    "`ctx->update` is installed by `evp_md_init_legacy` at :2340 only when `ctx_size != 0`."
+    "`ctx->update` is installed by `evp_md_init_legacy` at :2380 only when `ctx_size != 0`."
    ],
    "authority_derived": [
     "The authority's body is `WHIRLPOOL_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)` (crypto/evp/legacy_meth.h:15-18)."
@@ -1501,7 +1503,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: sha1_init and its dispatch path; src/evp/legacy_sha.rs:266)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA_CTX` (owner `SHA1_MD`, or a live method with `ctx_size >= size_of::<ShaCtx>()`). The callback writes a full `SHA_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -1537,7 +1539,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: sha224_init and its dispatch path; src/evp/legacy_sha.rs:418)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA256_CTX` (owner `SHA224_MD`, or a live method with `ctx_size >= size_of::<Sha256Ctx>()`). The callback writes a full `SHA256_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -1573,7 +1575,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: sha256_init and its dispatch path; src/evp/legacy_sha.rs:511)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA256_CTX` (owner `SHA256_MD`, or a live method with `ctx_size >= size_of::<Sha256Ctx>()`). The callback writes a full `SHA256_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -1609,7 +1611,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: sha384_init and its dispatch path; src/evp/legacy_sha.rs:603)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA512_CTX` (owner `SHA384_MD`, or a live method with `ctx_size >= size_of::<Sha512Ctx>()`). The callback writes a full `SHA512_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -1645,7 +1647,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: sha512_224_int_init and its dispatch path; src/evp/legacy_sha.rs:797)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA512_CTX` (owner `SHA512_224_MD`, or a live method with `ctx_size >= size_of::<Sha512Ctx>()`). The callback writes a full `SHA512_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -1681,7 +1683,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: sha512_256_int_init and its dispatch path; src/evp/legacy_sha.rs:855)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA512_CTX` (owner `SHA512_256_MD`, or a live method with `ctx_size >= size_of::<Sha512Ctx>()`). The callback writes a full `SHA512_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -1717,7 +1719,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: sha512_init and its dispatch path; src/evp/legacy_sha.rs:702)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SHA512_CTX` (owner `SHA512_MD`, or a live method with `ctx_size >= size_of::<Sha512Ctx>()`). The callback writes a full `SHA512_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -1753,7 +1755,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: md5_init and its dispatch path; src/evp/legacy_md5.rs:205)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `MD5_CTX` (owner `MD5_MD`, or a live method with `ctx_size >= size_of::<Md5Ctx>()`). The callback writes a full `MD5_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -1789,7 +1791,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: md4_init and its dispatch path; src/evp/legacy_md4.rs:180)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `Md4Ctx` (owner `MD4_MD`, or a live method with `ctx_size >= size_of::<Md4Ctx>()`). The callback writes a full `Md4Ctx`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -1825,7 +1827,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: blake2b_int_init and its dispatch path; src/evp/legacy_blake2.rs:228)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `BLAKE2B_CTX` (owner `BLAKE2B_MD`, or a live method with `ctx_size >= size_of::<blake2b::Ctx>()`). The callback writes a full `BLAKE2B_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -1861,7 +1863,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: blake2s_int_init and its dispatch path; src/evp/legacy_blake2.rs:345)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `BLAKE2S_CTX` (owner `BLAKE2S_MD`, or a live method with `ctx_size >= size_of::<blake2s::Ctx>()`). The callback writes a full `BLAKE2S_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -1897,7 +1899,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: sha3_int_init and its dispatch path; src/evp/legacy_sha3.rs:259)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `KeccakCtx` (owner `SHA3_224_MD`, `SHA3_256_MD`, `SHA3_384_MD`, `SHA3_512_MD`, or a live method with `ctx_size >= size_of::<KeccakCtx>()`). The callback writes a full `KeccakCtx`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -1933,7 +1935,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: shake_init and its dispatch path; src/evp/legacy_sha3.rs:386)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `KeccakCtx` (owner `SHAKE128_MD`, `SHAKE256_MD`, or a live method with `ctx_size >= size_of::<KeccakCtx>()`). The callback writes a full `KeccakCtx`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -1969,7 +1971,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: mdc2_init and its dispatch path; src/evp/legacy_mdc2.rs:185)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `MDC2_CTX` (owner `MDC2_MD`, or a live method with `ctx_size >= size_of::<Mdc2Ctx>()`). The callback writes a full `MDC2_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -2005,7 +2007,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: ripe_init and its dispatch path; src/evp/legacy_ripemd.rs:181)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `Ripemd160Ctx` (owner `RIPEMD160_MD`, or a live method with `ctx_size >= size_of::<Ripemd160Ctx>()`). The callback writes a full `Ripemd160Ctx`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -2041,7 +2043,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: wp_init and its dispatch path; src/evp/legacy_wp.rs:183)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `WhirlpoolCtx` (owner `WHIRLPOOL_MD`, or a live method with `ctx_size >= size_of::<WhirlpoolCtx>()`). The callback writes a full `WhirlpoolCtx`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -2077,7 +2079,7 @@
    "disposition": "SAFETY_DISCHARGED (scope: sm3_int_init and its dispatch path; src/sm3/legacy_sm3.rs:187)",
    "contract": "Init contract: `ctx` NULL or live and exclusively borrowed; when non-NULL it must expose a writable `SM3_CTX` (owner `SM3_MD`, or a live method with `ctx_size >= size_of::<Sm3Ctx>()`). The callback writes a full `SM3_CTX`. It establishes the block through `init_md_data`/`init_keccak` and answers 0 before any dereference for a NULL context, a fresh `EVP_MD_CTX_new()`, a NULL or too-small method, a NULL/negative `md_size`, or a negative `ctx_size`. Provenance is the method identity or the caller-declared extent; the concrete type is the caller's obligation. No pointer is retained; a refusal leaves the context untouched and retryable.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) installs `ctx->update` at :2340 and calls `init` at :2382; the exported `EVP_MD_meth_get_init` (:1577) is the direct source.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) installs `ctx->update` at :2380 and calls `init` at :2422; the exported `EVP_MD_meth_get_init` (:1617) is the direct source.",
     "These tables have `ctx_size == 0`, so the crate digest path does not invoke this callback; the callback's own guard establishes the block."
    ],
    "authority_derived": [
@@ -2114,7 +2116,7 @@
    "contract": "Update contract: `ctx` NULL or live and exclusively borrowed with a writable `SM3_CTX` (owner `SM3_MD`, or a live method with `ctx_size >= size_of::<Sm3Ctx>()`). `data` is readable for `count` bytes and is refused with 0 when NULL and `count != 0`. The callback refuses a context without the block with 0 before any dereference. No pointer is retained; a refusal is retryable, and a primitive-level failure may leave partial state.",
    "established": [
     "`EVP_DigestUpdate` (:2451) reads `(*ctx).update` at :2502 and calls it at :2505 on the legacy arm; the exported `EVP_MD_meth_get_update` (:1592) is the direct source.",
-    "`ctx->update` is installed by `evp_md_init_legacy` at :2340 only when `ctx_size != 0`."
+    "`ctx->update` is installed by `evp_md_init_legacy` at :2380 only when `ctx_size != 0`."
    ],
    "authority_derived": [
     "The authority's macro forwards `EVP_MD_CTX_get0_md_data(ctx)` without testing the block (`crypto/evp/legacy_meth.h:10-36`); `EVP_MD_CTX_get0_md_data` is a bare `return ctx->md_data` (crypto/evp/evp_lib.c:1087).",
@@ -2148,10 +2150,10 @@
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, ...) -> c_int",
    "registration": "N_MD at :4066; Some(md_null_init) at :4072",
    "guard": "none; the callback reads no argument",
-   "disposition": "SAFETY_DISCHARGED (scope: md_null_init; src/evp/digest.rs:4035)",
+   "disposition": "SAFETY_DISCHARGED (scope: md_null_init; src/evp/digest.rs:4075)",
    "contract": "`EVP_md_null`'s callback reads no argument at all and answers 1. It imposes no block precondition, retains no pointer and cannot leave the context in an invalid state.",
    "established": [
-    "`N_MD` (src/evp/digest.rs:4066) installs these three callbacks; `EVP_md_null` (:4107) answers it.",
+    "`N_MD` (src/evp/digest.rs:4106) installs these three callbacks; `EVP_md_null` (:4147) answers it.",
     "The exported `EVP_MD_meth_get_init/update/final` return them like any other legacy method."
    ],
    "authority_derived": [
@@ -2177,10 +2179,10 @@
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, ...) -> c_int",
    "registration": "N_MD at :4066; Some(md_null_update) at :4073",
    "guard": "none; the callback reads no argument",
-   "disposition": "SAFETY_DISCHARGED (scope: md_null_update; src/evp/digest.rs:4043)",
+   "disposition": "SAFETY_DISCHARGED (scope: md_null_update; src/evp/digest.rs:4083)",
    "contract": "`EVP_md_null`'s callback reads no argument at all and answers 1. It imposes no block precondition, retains no pointer and cannot leave the context in an invalid state.",
    "established": [
-    "`N_MD` (src/evp/digest.rs:4066) installs these three callbacks; `EVP_md_null` (:4107) answers it.",
+    "`N_MD` (src/evp/digest.rs:4106) installs these three callbacks; `EVP_md_null` (:4147) answers it.",
     "The exported `EVP_MD_meth_get_init/update/final` return them like any other legacy method."
    ],
    "authority_derived": [
@@ -2206,10 +2208,10 @@
    "signature": "unsafe extern \"C\" fn(*mut EvpMdCtx, ...) -> c_int",
    "registration": "N_MD at :4066; Some(md_null_final) at :4074",
    "guard": "none; the callback reads no argument",
-   "disposition": "SAFETY_DISCHARGED (scope: md_null_final; src/evp/digest.rs:4055)",
+   "disposition": "SAFETY_DISCHARGED (scope: md_null_final; src/evp/digest.rs:4095)",
    "contract": "`EVP_md_null`'s callback reads no argument at all and answers 1. It imposes no block precondition, retains no pointer and cannot leave the context in an invalid state.",
    "established": [
-    "`N_MD` (src/evp/digest.rs:4066) installs these three callbacks; `EVP_md_null` (:4107) answers it.",
+    "`N_MD` (src/evp/digest.rs:4106) installs these three callbacks; `EVP_md_null` (:4147) answers it.",
     "The exported `EVP_MD_meth_get_init/update/final` return them like any other legacy method."
    ],
    "authority_derived": [
@@ -2235,7 +2237,7 @@
    "signature": "unsafe extern \"C\" fn(*const EvpMd, ...) -> ...",
    "registration": "exported symbol; no table registration",
    "guard": "`md` must be a live `EvpMd`; the getter reads one field and establishes nothing about a returned callback's arguments",
-   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_input_blocksize; src/evp/digest.rs:1531)",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_input_blocksize; src/evp/digest.rs:1571)",
    "contract": "`md` must be a live `EvpMd`. The getter reads `md->block_size`. When it returns a legacy callback, invoking that pointer carries the callback's own `# Safety` contract (block type/size, `data`/`md`/`p2` extent), not this getter's; for a `METH` method the declared `app_datasize` establishes extent only, never type.",
    "established": [
     "Callers in this crate and in C reach these through the exported symbols; the returned callback is the table's own pointer."
@@ -2265,7 +2267,7 @@
    "signature": "unsafe extern \"C\" fn(*const EvpMd, ...) -> ...",
    "registration": "exported symbol; no table registration",
    "guard": "`md` must be a live `EvpMd`; the getter reads one field and establishes nothing about a returned callback's arguments",
-   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_result_size; src/evp/digest.rs:1541)",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_result_size; src/evp/digest.rs:1581)",
    "contract": "`md` must be a live `EvpMd`. The getter reads `md->md_size`. When it returns a legacy callback, invoking that pointer carries the callback's own `# Safety` contract (block type/size, `data`/`md`/`p2` extent), not this getter's; for a `METH` method the declared `app_datasize` establishes extent only, never type.",
    "established": [
     "Callers in this crate and in C reach these through the exported symbols; the returned callback is the table's own pointer."
@@ -2295,7 +2297,7 @@
    "signature": "unsafe extern \"C\" fn(*const EvpMd, ...) -> ...",
    "registration": "exported symbol; no table registration",
    "guard": "`md` must be a live `EvpMd`; the getter reads one field and establishes nothing about a returned callback's arguments",
-   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_app_datasize; src/evp/digest.rs:1551)",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_app_datasize; src/evp/digest.rs:1591)",
    "contract": "`md` must be a live `EvpMd`. The getter reads `md->ctx_size`. When it returns a legacy callback, invoking that pointer carries the callback's own `# Safety` contract (block type/size, `data`/`md`/`p2` extent), not this getter's; for a `METH` method the declared `app_datasize` establishes extent only, never type.",
    "established": [
     "Callers in this crate and in C reach these through the exported symbols; the returned callback is the table's own pointer."
@@ -2325,7 +2327,7 @@
    "signature": "unsafe extern \"C\" fn(*const EvpMd, ...) -> ...",
    "registration": "exported symbol; no table registration",
    "guard": "`md` must be a live `EvpMd`; the getter reads one field and establishes nothing about a returned callback's arguments",
-   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_flags; src/evp/digest.rs:1561)",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_flags; src/evp/digest.rs:1601)",
    "contract": "`md` must be a live `EvpMd`. The getter reads `md->flags`. When it returns a legacy callback, invoking that pointer carries the callback's own `# Safety` contract (block type/size, `data`/`md`/`p2` extent), not this getter's; for a `METH` method the declared `app_datasize` establishes extent only, never type.",
    "established": [
     "Callers in this crate and in C reach these through the exported symbols; the returned callback is the table's own pointer."
@@ -2355,7 +2357,7 @@
    "signature": "unsafe extern \"C\" fn(*const EvpMd, ...) -> ...",
    "registration": "exported symbol; no table registration",
    "guard": "`md` must be a live `EvpMd`; the getter reads one field and establishes nothing about a returned callback's arguments",
-   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_init; src/evp/digest.rs:1577)",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_init; src/evp/digest.rs:1617)",
    "contract": "`md` must be a live `EvpMd`. The getter returns `md->init`, the legacy init callback. When it returns a legacy callback, invoking that pointer carries the callback's own `# Safety` contract (block type/size, `data`/`md`/`p2` extent), not this getter's; for a `METH` method the declared `app_datasize` establishes extent only, never type.",
    "established": [
     "Callers in this crate and in C reach these through the exported symbols; the returned callback is the table's own pointer."
@@ -2385,7 +2387,7 @@
    "signature": "unsafe extern \"C\" fn(*const EvpMd, ...) -> ...",
    "registration": "exported symbol; no table registration",
    "guard": "`md` must be a live `EvpMd`; the getter reads one field and establishes nothing about a returned callback's arguments",
-   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_update; src/evp/digest.rs:1592)",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_update; src/evp/digest.rs:1632)",
    "contract": "`md` must be a live `EvpMd`. The getter returns `md->update`, the legacy update callback. When it returns a legacy callback, invoking that pointer carries the callback's own `# Safety` contract (block type/size, `data`/`md`/`p2` extent), not this getter's; for a `METH` method the declared `app_datasize` establishes extent only, never type.",
    "established": [
     "Callers in this crate and in C reach these through the exported symbols; the returned callback is the table's own pointer."
@@ -2415,7 +2417,7 @@
    "signature": "unsafe extern \"C\" fn(*const EvpMd, ...) -> ...",
    "registration": "exported symbol; no table registration",
    "guard": "`md` must be a live `EvpMd`; the getter reads one field and establishes nothing about a returned callback's arguments",
-   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_final; src/evp/digest.rs:1606)",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_final; src/evp/digest.rs:1646)",
    "contract": "`md` must be a live `EvpMd`. The getter returns `md->final_`, the legacy final callback. When it returns a legacy callback, invoking that pointer carries the callback's own `# Safety` contract (block type/size, `data`/`md`/`p2` extent), not this getter's; for a `METH` method the declared `app_datasize` establishes extent only, never type.",
    "established": [
     "Callers in this crate and in C reach these through the exported symbols; the returned callback is the table's own pointer."
@@ -2445,7 +2447,7 @@
    "signature": "unsafe extern \"C\" fn(*const EvpMd, ...) -> ...",
    "registration": "exported symbol; no table registration",
    "guard": "`md` must be a live `EvpMd`; the getter reads one field and establishes nothing about a returned callback's arguments",
-   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_copy; src/evp/digest.rs:1621)",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_copy; src/evp/digest.rs:1661)",
    "contract": "`md` must be a live `EvpMd`. The getter returns `md->copy`, which no legacy digest table installs. When it returns a legacy callback, invoking that pointer carries the callback's own `# Safety` contract (block type/size, `data`/`md`/`p2` extent), not this getter's; for a `METH` method the declared `app_datasize` establishes extent only, never type.",
    "established": [
     "Callers in this crate and in C reach these through the exported symbols; the returned callback is the table's own pointer."
@@ -2475,7 +2477,7 @@
    "signature": "unsafe extern \"C\" fn(*const EvpMd, ...) -> ...",
    "registration": "exported symbol; no table registration",
    "guard": "`md` must be a live `EvpMd`; the getter reads one field and establishes nothing about a returned callback's arguments",
-   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_cleanup; src/evp/digest.rs:1635)",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_cleanup; src/evp/digest.rs:1675)",
    "contract": "`md` must be a live `EvpMd`. The getter returns `md->cleanup`, which no legacy digest table installs. When it returns a legacy callback, invoking that pointer carries the callback's own `# Safety` contract (block type/size, `data`/`md`/`p2` extent), not this getter's; for a `METH` method the declared `app_datasize` establishes extent only, never type.",
    "established": [
     "Callers in this crate and in C reach these through the exported symbols; the returned callback is the table's own pointer."
@@ -2505,7 +2507,7 @@
    "signature": "unsafe extern \"C\" fn(*const EvpMd, ...) -> ...",
    "registration": "exported symbol; no table registration",
    "guard": "`md` must be a live `EvpMd`; the getter reads one field and establishes nothing about a returned callback's arguments",
-   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_ctrl; src/evp/digest.rs:1651)",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_get_ctrl; src/evp/digest.rs:1691)",
    "contract": "`md` must be a live `EvpMd`. The getter returns `md->md_ctrl`, the legacy control callback. When it returns a legacy callback, invoking that pointer carries the callback's own `# Safety` contract (block type/size, `data`/`md`/`p2` extent), not this getter's; for a `METH` method the declared `app_datasize` establishes extent only, never type.",
    "established": [
     "Callers in this crate and in C reach these through the exported symbols; the returned callback is the table's own pointer."
@@ -2526,19 +2528,20 @@
   {
    "id": "B48-METH-011",
    "file": "src/evp/digest.rs",
-   "line": 1383,
-   "line_current": 1383,
-   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate",
+   "line": 1399,
+   "line_current": 1399,
+   "guard_current": 1402,
+   "line_provenance": "first enumerated in the full-surface repair at the repair-tree coordinate; refreshed to this working tree (origin gate at 1402)",
    "kind": "UNSAFE_FN_DEF",
    "operation": "EVP_MD_meth_set_app_datasize",
    "mechanism": "EVP_MD_METH_API",
    "signature": "unsafe extern \"C\" fn(*mut EvpMd, c_int) -> c_int",
    "registration": "exported symbol; no table registration",
-   "guard": "`md` must be a live `EvpMd`; the setter refuses any origin other than `EVP_ORIG_METH` (a global method is an immutable `static`) and then refuses a second write; `evp_md_init_legacy` allocates `ctx_size` bytes and every callback refuses a negative `ctx_size`",
-   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_set_app_datasize; src/evp/digest.rs:1383)",
-   "contract": "`md` must be a live `EvpMd`. The setter stores only into an object it owns: any origin other than `EVP_ORIG_METH` is refused before the write-once test, because a global method is an immutable compile-time `static` shared across threads. For a `METH` method the value is the size `evp_md_init_legacy` allocates, so it establishes the extent of the block a caller-installed legacy callback receives. It does **not** establish the block's concrete type: the installer chooses the callback and must declare an extent that fits the context that callback casts to and that the allocation actually has. A negative value is stored as the authority stores it and every callback refuses a negative `ctx_size`.",
+   "guard": "`md` must be a live `EvpMd`; the setter refuses any origin other than `EVP_ORIG_METH` (a global method is an immutable `static` and a dynamic method is library-owned) and then refuses a second write; `evp_md_init_legacy` allocates `ctx_size` bytes and every callback refuses a negative `ctx_size`",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_set_app_datasize; src/evp/digest.rs:1399)",
+   "contract": "`md` must be a live `EvpMd`. The setter stores only into an object it owns: any origin other than `EVP_ORIG_METH` is refused before the write-once test, because a global method is an immutable compile-time `static` shared across threads and a dynamic method is owned by the library. For a `METH` method the value is the size `evp_md_init_legacy` allocates, so it establishes the extent of the block a caller-installed legacy callback receives. It does **not** establish the block's concrete type: the installer chooses the callback and must declare an extent that fits the context that callback casts to and that the allocation actually has. A negative value is stored as the authority stores it and every callback refuses a negative `ctx_size`.",
    "established": [
-    "`evp_md_init_legacy` (src/evp/digest.rs:2325) reads `(*type_).ctx_size` at :2333 and allocates it at :2333-2352.",
+    "`evp_md_init_legacy` (src/evp/digest.rs:2365) reads `(*type_).ctx_size` at :2373 and allocates it at :2373-2392.",
     "`extent_is_not_type` records the type boundary explicitly."
    ],
    "authority_derived": [
@@ -2552,18 +2555,280 @@
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::extent_is_not_type",
-    "evp::digest::tests::the_app_datasize_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+    "evp::digest::tests::the_app_datasize_setter_refuses_a_global_method_but_accepts_a_hand_built_one",
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+   ]
+  },
+  {
+   "id": "B48-METH-012",
+   "file": "src/evp/digest.rs",
+   "line": 1347,
+   "line_current": 1347,
+   "guard_current": 1353,
+   "line_provenance": "added by the 2026-11-10 sibling-setter repair; coordinate refreshed to this working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "EVP_MD_meth_set_input_blocksize",
+   "mechanism": "EVP_MD_METH_API",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMd, c_int) -> c_int",
+   "registration": "exported symbol; no table registration",
+   "guard": "`md` must be a live `EvpMd`; the setter refuses any origin other than `EVP_ORIG_METH` (a global method is an immutable `static` and a dynamic method is library-owned) before the write-once test, then refuses a second write",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_set_input_blocksize; src/evp/digest.rs:1347)",
+   "contract": "`md` must be a live `EvpMd`. Only an `EVP_ORIG_METH` method is written; the store sets `md->block_size` once. A global method is an immutable compile-time `static` shared across threads and a dynamic method is owned by the library, so both are refused with 0 before the write-once test.",
+   "established": [
+    "The origin gate at 1353 is exercised by the shared setter test: `EVP_sha1()` is refused and its getter still reports 64; a fresh `EVP_MD_meth_new` method accepts 32 and reports 32."
+   ],
+   "authority_derived": [
+    "The authority's `EVP_MD_meth_set_input_blocksize` tests only `block_size == 0` and stores; it has no origin test."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R5"
+   ],
+   "tests": [
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+   ]
+  },
+  {
+   "id": "B48-METH-013",
+   "file": "src/evp/digest.rs",
+   "line": 1369,
+   "line_current": 1369,
+   "guard_current": 1372,
+   "line_provenance": "added by the 2026-11-10 sibling-setter repair; coordinate refreshed to this working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "EVP_MD_meth_set_result_size",
+   "mechanism": "EVP_MD_METH_API",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMd, c_int) -> c_int",
+   "registration": "exported symbol; no table registration",
+   "guard": "`md` must be a live `EvpMd`; the setter refuses any origin other than `EVP_ORIG_METH` before the write-once test, then refuses a second write",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_set_result_size; src/evp/digest.rs:1369)",
+   "contract": "`md` must be a live `EvpMd`. Only an `EVP_ORIG_METH` method is written; the store sets `md->md_size` once. A negative or zero value is stored as the authority stores it.",
+   "established": [
+    "The origin gate at 1372 is exercised by the shared setter test: `EVP_sha1()` is refused and its getter still reports 20; a fresh `EVP_MD_meth_new` method accepts 32 and reports 32."
+   ],
+   "authority_derived": [
+    "The authority's `EVP_MD_meth_set_result_size` tests only `md_size == 0` and stores; it has no origin test."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R5"
+   ],
+   "tests": [
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+   ]
+  },
+  {
+   "id": "B48-METH-014",
+   "file": "src/evp/digest.rs",
+   "line": 1418,
+   "line_current": 1418,
+   "guard_current": 1424,
+   "line_provenance": "added by the 2026-11-10 sibling-setter repair; coordinate refreshed to this working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "EVP_MD_meth_set_init",
+   "mechanism": "EVP_MD_METH_API",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMd, Option<MdLegacyInitFn>) -> c_int",
+   "registration": "exported symbol; no table registration",
+   "guard": "`md` must be a live `EvpMd`; the setter refuses any origin other than `EVP_ORIG_METH` before the write-once test, then refuses a second write",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_set_init; src/evp/digest.rs:1418)",
+   "contract": "`md` must be a live `EvpMd`. Only an `EVP_ORIG_METH` method is written; the store installs `md->init` once. Invoking the installed callback carries that callback's own `# Safety` contract (a live context and the block precondition), not this setter's.",
+   "established": [
+    "The origin gate at 1424 is exercised by the shared setter test: `EVP_sha1()` is refused and its getter still reports the table's own callback; a fresh `EVP_MD_meth_new` method accepts the probe and reports it back."
+   ],
+   "authority_derived": [
+    "The authority's `EVP_MD_meth_set_init` tests only `init == NULL` and stores; it has no origin test."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R5"
+   ],
+   "tests": [
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+   ]
+  },
+  {
+   "id": "B48-METH-015",
+   "file": "src/evp/digest.rs",
+   "line": 1441,
+   "line_current": 1441,
+   "guard_current": 1447,
+   "line_provenance": "added by the 2026-11-10 sibling-setter repair; coordinate refreshed to this working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "EVP_MD_meth_set_update",
+   "mechanism": "EVP_MD_METH_API",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMd, Option<MdLegacyUpdateFn>) -> c_int",
+   "registration": "exported symbol; no table registration",
+   "guard": "`md` must be a live `EvpMd`; the setter refuses any origin other than `EVP_ORIG_METH` before the write-once test, then refuses a second write",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_set_update; src/evp/digest.rs:1441)",
+   "contract": "`md` must be a live `EvpMd`. Only an `EVP_ORIG_METH` method is written; the store installs `md->update` once. Invoking the installed callback carries that callback's own `# Safety` contract, including `data`'s readable extent and the block precondition.",
+   "established": [
+    "The origin gate at 1447 is exercised by the shared setter test: `EVP_sha1()` is refused and its getter still reports the table's own callback; a fresh `EVP_MD_meth_new` method accepts the probe and reports it back."
+   ],
+   "authority_derived": [
+    "The authority's `EVP_MD_meth_set_update` tests only `update == NULL` and stores; it has no origin test."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R5"
+   ],
+   "tests": [
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+   ]
+  },
+  {
+   "id": "B48-METH-016",
+   "file": "src/evp/digest.rs",
+   "line": 1463,
+   "line_current": 1463,
+   "guard_current": 1469,
+   "line_provenance": "added by the 2026-11-10 sibling-setter repair; coordinate refreshed to this working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "EVP_MD_meth_set_final",
+   "mechanism": "EVP_MD_METH_API",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMd, Option<MdLegacyFinalFn>) -> c_int",
+   "registration": "exported symbol; no table registration",
+   "guard": "`md` must be a live `EvpMd`; the setter refuses any origin other than `EVP_ORIG_METH` before the write-once test, then refuses a second write",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_set_final; src/evp/digest.rs:1463)",
+   "contract": "`md` must be a live `EvpMd`. Only an `EVP_ORIG_METH` method is written; the store installs `md->final_` once. Invoking the installed callback carries that callback's own `# Safety` contract, including the output buffer's writable extent and the block precondition.",
+   "established": [
+    "The origin gate at 1469 is exercised by the shared setter test: `EVP_sha1()` is refused and its getter still reports the table's own callback; a fresh `EVP_MD_meth_new` method accepts the probe and reports it back."
+   ],
+   "authority_derived": [
+    "The authority's `EVP_MD_meth_set_final` tests only `final == NULL` and stores; it has no origin test."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R5"
+   ],
+   "tests": [
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+   ]
+  },
+  {
+   "id": "B48-METH-017",
+   "file": "src/evp/digest.rs",
+   "line": 1485,
+   "line_current": 1485,
+   "guard_current": 1491,
+   "line_provenance": "added by the 2026-11-10 sibling-setter repair; coordinate refreshed to this working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "EVP_MD_meth_set_copy",
+   "mechanism": "EVP_MD_METH_API",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMd, Option<MdLegacyCopyFn>) -> c_int",
+   "registration": "exported symbol; no table registration",
+   "guard": "`md` must be a live `EvpMd`; the setter refuses any origin other than `EVP_ORIG_METH` before the write-once test, then refuses a second write",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_set_copy; src/evp/digest.rs:1485)",
+   "contract": "`md` must be a live `EvpMd`. Only an `EVP_ORIG_METH` method is written; the store installs `md->copy` once. Every legacy digest table leaves `copy` NULL, so a global method is exactly the case where the write-once test would otherwise pass. Invoking the installed callback carries its own `# Safety` contract.",
+   "established": [
+    "Mutation-sensitive: removing the origin gate at 1491 makes the shared setter test fail with `left: 1, right: 0` on `EVP_sha1()`, which stores the probe into the immutable static; restored, the test passes."
+   ],
+   "authority_derived": [
+    "The authority's `EVP_MD_meth_set_copy` tests only `copy == NULL` and stores; it has no origin test."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R5"
+   ],
+   "tests": [
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+   ]
+  },
+  {
+   "id": "B48-METH-018",
+   "file": "src/evp/digest.rs",
+   "line": 1507,
+   "line_current": 1507,
+   "guard_current": 1513,
+   "line_provenance": "added by the 2026-11-10 sibling-setter repair; coordinate refreshed to this working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "EVP_MD_meth_set_cleanup",
+   "mechanism": "EVP_MD_METH_API",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMd, Option<MdLegacyCleanupFn>) -> c_int",
+   "registration": "exported symbol; no table registration",
+   "guard": "`md` must be a live `EvpMd`; the setter refuses any origin other than `EVP_ORIG_METH` before the write-once test, then refuses a second write",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_set_cleanup; src/evp/digest.rs:1507)",
+   "contract": "`md` must be a live `EvpMd`. Only an `EVP_ORIG_METH` method is written; the store installs `md->cleanup` once. Every legacy digest table leaves `cleanup` NULL, so a global method is exactly the case where the write-once test would otherwise pass. Invoking the installed callback carries its own `# Safety` contract.",
+   "established": [
+    "Mutation-sensitive: removing the origin gate at 1513 makes the shared setter test fail with `left: 1, right: 0` on `EVP_sha1()`, which stores the probe into the immutable static; restored, the test passes."
+   ],
+   "authority_derived": [
+    "The authority's `EVP_MD_meth_set_cleanup` tests only `cleanup == NULL` and stores; it has no origin test."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R5"
+   ],
+   "tests": [
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+   ]
+  },
+  {
+   "id": "B48-METH-019",
+   "file": "src/evp/digest.rs",
+   "line": 1530,
+   "line_current": 1530,
+   "guard_current": 1536,
+   "line_provenance": "added by the 2026-11-10 sibling-setter repair; coordinate refreshed to this working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "EVP_MD_meth_set_ctrl",
+   "mechanism": "EVP_MD_METH_API",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMd, Option<MdLegacyCtrlFn>) -> c_int",
+   "registration": "exported symbol; no table registration",
+   "guard": "`md` must be a live `EvpMd`; the setter refuses any origin other than `EVP_ORIG_METH` before the write-once test, then refuses a second write",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_set_ctrl; src/evp/digest.rs:1530)",
+   "contract": "`md` must be a live `EvpMd`. Only an `EVP_ORIG_METH` method is written; the store installs `md->md_ctrl` once. Six of the seven SHA tables leave `md_ctrl` NULL, so `EVP_sha256()` is the empty case the write-once test would otherwise admit. Invoking the installed callback carries its own `# Safety` contract (block precondition and the readable extent of `p2`).",
+   "established": [
+    "Mutation-sensitive: removing the origin gate at 1536 makes the shared setter test fail with `left: 1, right: 0` on `EVP_sha256()`, which stores the probe into the immutable static; restored, the test passes."
+   ],
+   "authority_derived": [
+    "The authority's `EVP_MD_meth_set_ctrl` tests only `ctrl == NULL` and stores; it has no origin test."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R5"
+   ],
+   "tests": [
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
+   ]
+  },
+  {
+   "id": "B48-METH-020",
+   "file": "src/evp/digest.rs",
+   "line": 1552,
+   "line_current": 1552,
+   "guard_current": 1555,
+   "line_provenance": "added by the 2026-11-10 sibling-setter repair; coordinate refreshed to this working tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "EVP_MD_meth_set_flags",
+   "mechanism": "EVP_MD_METH_API",
+   "signature": "unsafe extern \"C\" fn(*mut EvpMd, unsigned long) -> c_int",
+   "registration": "exported symbol; no table registration",
+   "guard": "`md` must be a live `EvpMd`; the setter refuses any origin other than `EVP_ORIG_METH` before the write-once test, then refuses a second write",
+   "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_set_flags; src/evp/digest.rs:1552)",
+   "contract": "`md` must be a live `EvpMd`. Only an `EVP_ORIG_METH` method is written; the store sets `md->flags` once. A global whose flags are zero is exactly the case where the write-once test would otherwise pass, so the origin gate is the guard that protects it.",
+   "established": [
+    "The origin gate at 1555 is exercised by the shared setter test: `EVP_sha1()` is refused and its getter still reports `EVP_MD_FLAG_DIGALGID_ABSENT`; a fresh `EVP_MD_meth_new` method accepts `EVP_MD_FLAG_XOF` and reports it back."
+   ],
+   "authority_derived": [
+    "The authority's `EVP_MD_meth_set_flags` tests only `flags == 0` and stores; it has no origin test."
+   ],
+   "residuals": [
+    "B48-R1",
+    "B48-R5"
+   ],
+   "tests": [
+    "evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
    ]
   }
  ],
  "hidden_obligations": 0,
- "hidden_obligations_note": "Corrected 2026-11-10: the earlier zero rested on a false premise. The `EVP_MD_meth_set_app_datasize` row claimed the write-once check made the store safe, but it had no origin test, so it wrote the immutable `EVP_ORIG_GLOBAL` static returned by `EVP_sha1()`; that is B48-H6, found after the review. The origin gate closes it and the refusal is recorded as `D-MD-APPDATASIZE-GLOBAL-1`. Within all 68 boundary operations every retained precondition is now stated in the fn-level # Safety or the getter/app-datasize doc, and every digest callback enforces the block precondition itself. The conditions not mechanically enforced are: exclusive use of the EVP_MD_CTX (authority-side caller obligation); the concrete block type for a caller-created method (only extent is checked; recorded by `extent_is_not_type` and B48-R5); and the extent of `data`/`md`/`p2`/`app_datasize` beyond their declared lengths. All are stated caller obligations, not hidden. No site other than B48-H6 was silently reclassified.",
+ "hidden_obligations_note": "Corrected again 2026-11-10 (second correction). The first correction closed `EVP_MD_meth_set_app_datasize` (B48-H6) but still left the nine sibling setters ungated, so the zero was false a second time: `EVP_sha1()` leaves `copy`/`cleanup` NULL and six of the seven SHA tables leave `md_ctrl` NULL, and `EVP_MD_meth_set_copy`/`set_cleanup`/`set_ctrl` therefore wrote an immutable `EVP_ORIG_GLOBAL` static. That is B48-H7, found by independent adjudication of d00d885df. All ten mutating setters now test `origin == EVP_ORIG_METH` before the write-once test, and the refusal covers both `EVP_ORIG_GLOBAL` and `EVP_ORIG_DYNAMIC`; the compatibility cost is recorded in `D-MD-APPDATASIZE-GLOBAL-1`. Within all 77 boundary operations every retained precondition is stated in the fn-level # Safety or the getter/setter doc, and every digest callback enforces the block precondition itself. The conditions not mechanically enforced are: exclusive use of the EVP_MD_CTX (authority-side caller obligation); the concrete block type for a caller-created method (only extent is checked; recorded by `extent_is_not_type` and B48-R5); and the extent of `data`/`md`/`p2`/`app_datasize` beyond their declared lengths. All are stated caller obligations, not hidden. No site other than B48-H6 and B48-H7 was silently reclassified.",
  "new_unsafe_assumptions": 0,
  "new_unsafe_assumptions_note": "No production signature, layout, exported symbol or allocator seam changed. The guards add checked reads and early returns. No new unsafe operation was introduced: the only new unsafe expressions are tests calling the existing exported callbacks and the existing `init_md_data`/`init_md_data_any`/`init_keccak` helpers inside their documented contracts.",
  "unsafe_operations_removed": 0,
  "unsafe_operations_introduced": 0,
  "test_only_unsafe_added": 1,
- "boundary_size": "68 boundary operations: 53 legacy digest callbacks in the nine digest modules (18 not in the 36 census), the integer-only RC2 helper, 3 `EVP_md_null` callbacks, 10 `EVP_MD_meth_get_*` getters and `EVP_MD_meth_set_app_datasize`. 36 census sites retained; 32 new rows. 22 legacy `EVP_MD` tables; 18 init, 15 update, 17 final and 3 control callbacks; no `copy`, `cleanup`, `sign` or `verify` callback is installed.",
+ "boundary_size": "77 boundary operations: 53 legacy digest callbacks in the nine digest modules (18 not in the 36 census), the integer-only RC2 helper, 3 `EVP_md_null` callbacks, 10 `EVP_MD_meth_get_*` getters and the ten mutating `EVP_MD_meth_set_*` setters. 36 census sites retained; 41 new rows. 22 legacy `EVP_MD` tables; 18 init, 15 update, 17 final and 3 control callbacks; no `copy`, `cleanup`, `sign` or `verify` callback is installed.",
  "safe_callers_can_cause_ub": true,
  "safe_callers_can_cause_ub_note": "Kept true: all sites remain reachable only through `unsafe extern \"C\"` entry points with caller obligations. The guards now refuse an absent, too-small, NULL, zero-`ctx_size` or wrong-extent block before the first write, and all update callbacks refuse NULL `data` with a non-zero length. The remaining stated obligations are exclusive use of the context (B48-R3), the concrete type of a caller-created block (B48-R5), and the declared extent of caller data beyond the block (B48-R5). A caller that violates those is outside the safe interface; no safe Rust path exists.",
  "negative_control": {
@@ -2964,7 +3229,7 @@
  "repair_for_review": {
   "date": "2026-11-01",
   "state": "REPAIRED, NOT APPLIED",
-  "what_changed": "full-surface enumeration (68 rows), 15 NULL-data guards, shake_ctrl negative-length guard, shared adversarial test module with its three previously vacuous tests now installing and invoking the table callbacks, refreshed getter/app-datasize docs and coordinates",
+  "what_changed": "full-surface enumeration (68 rows) plus the nine newly gated sibling setters (77 rows); all ten mutating EVP_MD_meth_set_* functions now test origin == EVP_ORIG_METH before their write-once test; 15 NULL-data guards; shake_ctrl negative-length guard; shared adversarial test module, with the setter test proving refusal and acceptance; refreshed getter/setter docs and coordinates; extended D-MD-APPDATASIZE-GLOBAL-1",
   "review_verdict_retained": "REJECT",
   "next": "independent re-review against candidate.files_sha256; CAMPAIGN-STATUS.json untouched and closure not run"
  },

@@ -1764,24 +1764,34 @@ D334's state, when the column was recorded as a NULL rather than resolved.
   with eight guard bytes and asserts they survive. Decision record: `docs/DECISIONS.md` D566.
 - **Trigger:** none planned: this is a permanent, deliberate safety divergence.
 
-### D-MD-APPDATASIZE-GLOBAL-1 — `EVP_MD_meth_set_app_datasize` refuses an `EVP_ORIG_GLOBAL` method
+### D-MD-APPDATASIZE-GLOBAL-1 — every mutating `EVP_MD_meth_set_*` refuses a non-`EVP_ORIG_METH` method
 
-- **Obligation:** the write-once store into `md->ctx_size` in
-  `EVP_MD_meth_set_app_datasize` (`src/evp/digest.rs:1383`).
-- **Authority:** `crypto/evp/evp_lib.c:893-899` tests only `md->ctx_size == 0` and then stores
-  `datasize`; it has no origin test. `EVP_sha1()` answers a compile-time `EVP_ORIG_GLOBAL`
-  object, whose `ctx_size` is 0, so the write-once test passes and a public API writes a shared
+- **Obligation:** every write-once store in an `EVP_MD_meth_set_*` setter:
+  `set_input_blocksize`, `set_result_size`, `set_app_datasize`, `set_init`, `set_update`,
+  `set_final`, `set_copy`, `set_cleanup`, `set_ctrl` and `set_flags` (`src/evp/digest.rs`).
+  The first nine are reachable on a global method whose corresponding field is still zero/NULL;
+  `set_app_datasize` was the only gated one until this repair, and `set_copy`, `set_cleanup` and
+  `set_ctrl` wrote `EVP_sha1()`/`EVP_sha256()` directly.
+- **Authority:** `crypto/evp/evp_lib.c:893-899` and its `cmeth_lib.c` siblings test only the
+  write-once condition and then store; they have no origin test. `EVP_sha1()` answers a
+  compile-time `EVP_ORIG_GLOBAL` object whose `copy`/`cleanup` and, for six of the seven SHA
+  tables, `md_ctrl` are NULL, so the write-once test passes and a public API writes a shared
   immutable object.
-- **Crate:** the setter refuses every origin except `EVP_ORIG_METH` before the write-once test
-  and answers 0; an `EVP_MD_meth_new`/`EVP_MD_meth_dup` method still accepts the value.
+- **Crate:** every mutating setter refuses **both** `EVP_ORIG_GLOBAL` and `EVP_ORIG_DYNAMIC`
+  before the write-once test and answers 0; only `EVP_ORIG_METH` (`EVP_MD_meth_new` /
+  `EVP_MD_meth_dup`) is written. A dynamic method is owned by the library, so it is refused on
+  the same boundary even though it is heap-allocated rather than an immutable `static`.
 - **Reason:** the global methods are Rust `static`s shared across threads, and writing one is
   undefined behaviour. It also contradicts the `unsafe impl Sync` justification at
   `src/evp/legacy_sha.rs:169-172` ("never written"). `AGENTS.md` §17 says UB in the C authority
   is eliminated and its compatibility consequence recorded, not reproduced.
-- **Compatibility consequence:** a caller that previously stamped `app_datasize` onto a global
-  method now gets 0 and the field stays 0. This is the only observable change; a caller-created
-  `METH` method behaves exactly as before, and no other `EVP_MD_meth_*` setter is affected.
-- **Evidence:** `evp::digest::tests::the_app_datasize_setter_refuses_a_global_method_but_accepts_a_hand_built_one`
-  drives `EVP_sha1()` (refused, value unchanged) and a hand-built `METH` method (accepted).
-  Removing the origin gate makes it fail (`left: 1, right: 0`).
+- **Compatibility consequence:** a caller that previously stamped any of these values onto a
+  global or dynamic method now gets 0 and the field keeps its previous value. A caller-created
+  `METH` method behaves exactly as before. This is the only observable change across all ten
+  setters; the getters are unchanged.
+- **Evidence:** `evp::digest::tests::every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one`
+  drives `EVP_sha1()` (all except `ctrl`) and `EVP_sha256()` (`ctrl`) — refused, getter
+  unchanged — and a fresh hand-built `METH` method per setter (accepted, getter reports the set
+  value). Removing any single origin gate makes the corresponding assertions fail; the
+  empirically checked gates are `set_copy`, `set_cleanup` and `set_ctrl`.
 - **Trigger:** none planned: permanent, deliberate safety divergence.
