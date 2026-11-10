@@ -639,3 +639,114 @@ fn valid_sha1_call_still_succeeds() {
         );
     }
 }
+
+/// A caller-built method that declares `app_datasize == size_of::<KeccakCtx>()` passes
+/// `init_keccak`'s extent check (`legacy_sha3.rs:156`), so a `result_size` of `0` or `-1` is
+/// refused **only** by the `md_size <= 0` check at `legacy_sha3.rs:162`. All six SHA-3/SHAKE
+/// tables are driven through the exported getters, with `final` first and a byte-identical block
+/// asserted after every call.
+///
+/// **Mutation-sensitive: deleting `md_size <= 0` at `legacy_sha3.rs:162` makes the `final`
+/// assertion fail** for every table and both result sizes (`ossl_sha3_final` answers `1` for the
+/// zeroed block, whose `KeccakCtx::md_size` is 0). The positive control at the end proves the
+/// same declared extent is admitted when `md_size` is positive, i.e. that this test does not fail
+/// on the extent check.
+#[test]
+fn nonpositive_result_size_is_refused_for_every_sha3_and_shake_surface() {
+    use crate::digest::sha3::KeccakCtx;
+
+    let keccak_size = core::mem::size_of::<KeccakCtx>();
+    let mut block = [0u64; 64];
+    assert!(core::mem::size_of_val(&block) >= keccak_size);
+
+    for (name, table) in [
+        ("sha3_224", EVP_sha3_224()),
+        ("sha3_256", EVP_sha3_256()),
+        ("sha3_384", EVP_sha3_384()),
+        ("sha3_512", EVP_sha3_512()),
+        ("shake128", EVP_shake128()),
+        ("shake256", EVP_shake256()),
+    ] {
+        // SAFETY: each getter answers `table`'s own live callbacks.
+        let (init, final_, ctrl) = unsafe {
+            (
+                EVP_MD_meth_get_init(table),
+                EVP_MD_meth_get_final(table),
+                EVP_MD_meth_get_ctrl(table),
+            )
+        };
+        let Some((init, final_)) = init.zip(final_) else {
+            panic!("{name}: the table is missing init/final");
+        };
+
+        for result_size in [0, -1] {
+            // SAFETY: `EVP_MD_meth_new` allocates a fresh method this test owns.
+            let md = unsafe { EVP_MD_meth_new(NID_UNDEF, 0) };
+            assert!(!md.is_null(), "{name}: EVP_MD_meth_new answered NULL");
+            // SAFETY: `md` is the fresh method above; each setter writes one still-zero field.
+            unsafe {
+                assert_eq!(EVP_MD_meth_set_app_datasize(md, keccak_size as c_int), 1);
+                assert_eq!(EVP_MD_meth_set_result_size(md, result_size), 1);
+                assert_eq!(EVP_MD_meth_set_init(md, Some(init)), 1);
+                assert_eq!(EVP_MD_meth_set_final(md, Some(final_)), 1);
+                assert_eq!(EVP_MD_meth_set_ctrl(md, ctrl), 1);
+            }
+            let mut c = ctx(md, block.as_mut_ptr().cast());
+            let mut output = [0u8; 64];
+
+            // SAFETY: `c` is live and its method declares exactly the block's extent, so only the
+            // `md_size <= 0` guard can refuse.
+            assert_eq!(
+                unsafe { final_(&mut c, output.as_mut_ptr()) },
+                0,
+                "{name}: final accepted result_size {result_size}"
+            );
+            assert_eq!(
+                block, [0u64; 64],
+                "{name}: a refused final modified md_data"
+            );
+
+            // SAFETY: as above, for the initialiser.
+            assert_eq!(
+                unsafe { init(&mut c) },
+                0,
+                "{name}: init accepted result_size {result_size}"
+            );
+            assert_eq!(block, [0u64; 64], "{name}: a refused init modified md_data");
+
+            if let Some(ctrl) = ctrl {
+                // SAFETY: `c` is live and the command reads no argument buffer.
+                assert_eq!(
+                    unsafe { ctrl(&mut c, EVP_MD_CTRL_XOF_LEN, 32, core::ptr::null_mut()) },
+                    0,
+                    "{name}: ctrl accepted result_size {result_size}"
+                );
+                assert_eq!(block, [0u64; 64], "{name}: a refused ctrl modified md_data");
+            }
+
+            // SAFETY: `md` is this test's own method, released exactly once here.
+            unsafe { EVP_MD_meth_free(md) };
+        }
+
+        // Positive control: the same extent with a positive `result_size` is admitted.
+        // SAFETY: `EVP_MD_meth_new` allocates a fresh method this test owns.
+        let md = unsafe { EVP_MD_meth_new(NID_UNDEF, 0) };
+        assert!(!md.is_null(), "{name}: EVP_MD_meth_new answered NULL");
+        // SAFETY: `md` is the fresh method above.
+        unsafe {
+            assert_eq!(EVP_MD_meth_set_app_datasize(md, keccak_size as c_int), 1);
+            assert_eq!(EVP_MD_meth_set_result_size(md, 32), 1);
+            assert_eq!(EVP_MD_meth_set_init(md, Some(init)), 1);
+        }
+        let mut c = ctx(md, block.as_mut_ptr().cast());
+        // SAFETY: `c` is live and the block is at least a `KeccakCtx` long.
+        assert_eq!(
+            unsafe { init(&mut c) },
+            1,
+            "{name}: the matching extent was refused"
+        );
+        // SAFETY: `md` is this test's own method, released exactly once here.
+        unsafe { EVP_MD_meth_free(md) };
+        block = [0u64; 64];
+    }
+}
