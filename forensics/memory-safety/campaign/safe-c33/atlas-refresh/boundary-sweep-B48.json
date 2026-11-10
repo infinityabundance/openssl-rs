@@ -3279,10 +3279,10 @@
     }
   ],
   "review": {
-    "reviewer": "independent adversarial reviewer (not the author)",
-    "verdict": "REJECT",
-    "applied": false,
-    "date": "2026-10-30",
+    "reviewer": "independent adjudicator (not the author of the claim); DISCHARGE returned at S' = cdaf16816, evidence commit 77e1a3024; 77 rows = 76 SAFETY_DISCHARGED + 1 BLOCKED (B48-RC2-001); 13 files_sha256 verified against that tree",
+    "verdict": "DISCHARGE",
+    "applied": true,
+    "date": "2026-11-10",
     "decisive_reason": "The discharge is false for two of the 36 sites. sha1_int_ctrl and shake_ctrl validate NULL but not block type/size, and an exported path lets a C caller supply an undersized block, turning them into out-of-bounds writes. That is an unchecked-precondition defect of the same class as SSL_CONF, and it is reachable, so the batch stops.",
     "passing_checks": [
       "scope exactness: 36/36 dispositions parse to one file and one line, and the union equals the 36 BLOCKED EVP_PKEY_PROVIDER ids for those files",
@@ -3331,7 +3331,16 @@
         "Do not apply B48. All sites stay BLOCKED.",
         "Do not fix this by deleting the vacuous tests; install the callbacks and make them exercise the guards."
       ]
+    },
+    {
+      "date": "2026-11-10",
+      "verdict": "DISCHARGE",
+      "applied": true,
+      "source": "cdaf16816",
+      "evidence_commit": "77e1a3024",
+      "basis": "Fifth adjudication, first DISCHARGE. The four prior REJECTs each named a real defect: undersized block via the exported path; three vacuous surface tests; an unguarded global write in set_app_datasize; nine further ungated setters; six gates not load-bearing plus 38 stale coordinates and a false candidate identity; then identity statements naming the wrong commit. All were repaired and independently re-verified. B48-RC2-001 remains BLOCKED."
     }
   ],
-  "note": "Re-pinned to S' = cdaf16816 after the 2026-11-10 test repair was committed; the 13 files_sha256 remain computed over that same tree and were verified against it before pinning."
+  "note": "Re-pinned to S' = cdaf16816 after the 2026-11-10 test repair was committed; the 13 files_sha256 remain computed over that same tree and were verified against it before pinning.",
+  "state": "DISCHARGED (scoped to the named boundaries); B48-RC2-001 remains BLOCKED"
 }
