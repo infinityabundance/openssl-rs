@@ -138,7 +138,7 @@
       {
         "closure": "the `RT-CANDIDATE-FREEZE` court passes",
         "findings": [
-          "the frozen candidate identity does not reproduce from the committed install: recorded identity_hash 'fe1db3e5e2a84059fa7a670ae2cf013901f8319e617e4e5f4b059d672e698d4e' vs derived 'de120fb66261a6c70888a1b5bda4f3362adc1206eebe1d9daaf6f04c00f042fa'"
+          "the frozen candidate identity does not reproduce from the committed install: recorded identity_hash 'fe1db3e5e2a84059fa7a670ae2cf013901f8319e617e4e5f4b059d672e698d4e' vs derived '575dd7f035e7aaa391d42261550fc9778107de8246dd80c0b4cc8e116681e90c'"
         ],
         "findings_present": true,
         "measurement_state": "not_measured",
@@ -300,7 +300,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+      "sha256": "8791e2e2ecffb61fb2b70280bb455bbc26196d886abe8e904c24f44faea55562"
     },
     {
       "name": "phase-24-plan",
@@ -310,7 +310,7 @@
     {
       "name": "phase-24-courts",
       "path": "artifacts/phase24/COURTS.json",
-      "sha256": "d2fb5b5a35e7fb98c639647ad2d0c388636392fea472cb8e682a2c6a785b31b3"
+      "sha256": "52394048a8d0c851516a15b2de35d9d4b1c88882b3736c9417807535e97ee02a"
     },
     {
       "name": "phase24-guard",
