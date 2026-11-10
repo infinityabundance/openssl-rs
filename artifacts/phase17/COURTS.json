@@ -705,7 +705,7 @@
       },
       {
         "authority_observations": 6,
-        "candidate": "0.0.45",
+        "candidate": "0.0.46",
         "candidate_observations": 6,
         "concurrency": {
           "curl": {
@@ -781,7 +781,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "10120c93356aca079308c92ebbc89aa20b896ef09cb8cfe0c1b2dc966ff2f3ea"
+      "sha256": "8791e2e2ecffb61fb2b70280bb455bbc26196d886abe8e904c24f44faea55562"
     },
     {
       "name": "probe",
@@ -836,7 +836,7 @@
     {
       "name": "downstream-corpus",
       "path": "forensics/atlas/downstream-corpus.json",
-      "sha256": "a07bea06bcee68ff21be720741a052508b0bdb539b78c5cf3ab911029fe57dec"
+      "sha256": "3d0940ffcad6eda2cca8fee85005b5c8825ac623a72c2e75447305c43021b074"
     },
     {
       "name": "downstream-readme",
@@ -846,32 +846,32 @@
     {
       "name": "downstream-curl-record",
       "path": "courts/phase17/downstream/curl/result.json",
-      "sha256": "e981473b35f3cf29349d90dc978e6fe4dceb6134068ede8b7d2a6d4ff09224d6"
+      "sha256": "f1e277ad4ede468a72941e90d9c753f91669dd3c45d5a3302388b94dfa978c7d"
     },
     {
       "name": "downstream-git-record",
       "path": "courts/phase17/downstream/git/result.json",
-      "sha256": "5633d104c11a0556c3f6012b97a949fb8bd08aef1b8e8a15ee33ad3ce97b8b25"
+      "sha256": "a8d4b8bc36eef2197ee50eb03023c36da86114f001ee47d1b6ec751497eb6639"
     },
     {
       "name": "downstream-haproxy-record",
       "path": "courts/phase17/downstream/haproxy/result.json",
-      "sha256": "e4e7c8c0136d3b9e059b98e3c62d511a89ab0aa58995808fab3fc740da5250a7"
+      "sha256": "0087ec545cfde2342b2d013e21ced88ca4509544243b8015808d3fea6a4401bf"
     },
     {
       "name": "downstream-nginx-record",
       "path": "courts/phase17/downstream/nginx/result.json",
-      "sha256": "512f719a38a91d534c44ceee5c018cf507a25bbd13bf487ad8f68ce2b2ca9b52"
+      "sha256": "b9517d4f7240f6838bf19cfa85d1f5a46e4551e0fcd6e9d0a71fa5f357d8ba66"
     },
     {
       "name": "downstream-openssh-record",
       "path": "courts/phase17/downstream/openssh/result.json",
-      "sha256": "aceda85c05b634547b8f8ed208c5f339f31986ee1e4b9e4e7af496f58e5eddcf"
+      "sha256": "842f19ceb046df7b2063d111a66912c2b8ec1c1375b61336ddfc0965dc50b5e7"
     },
     {
       "name": "downstream-python-record",
       "path": "courts/phase17/downstream/python/result.json",
-      "sha256": "0f1cef9c4285341a0ee23358353c45a1efc89a15d547efc420174bf5c6e5654f"
+      "sha256": "092da599d06a1b3b517a6ed5c3809a7657367c6f91a90298d8c89ad4d4b2e28f"
     }
   ],
   "kind": "phase17-courts",
