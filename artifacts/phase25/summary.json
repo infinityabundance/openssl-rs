@@ -146,7 +146,7 @@
       },
       {
         "artefact": "artifacts/phase25/unsafe-reduction.json",
-        "artefact_sha256": "ea522c68e0a6fd6a7a3194a6d112a1ca1a54cbb72c01d48a7e07634eb89b73ea",
+        "artefact_sha256": "73dde6d71bf7fe43f52cf672f11982efc864cef50cebacb4c1606a887c8c2346",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-UNSAFE-REDUCTION",
@@ -206,7 +206,7 @@
       },
       {
         "artefact": "artifacts/phase25/phase24-safety-coverage.json",
-        "artefact_sha256": "5cc5720f105919179fcd4295420b4b77b82d7616b25cb80610b4e1e8e90c94f2",
+        "artefact_sha256": "011be5ac3983e2a3d3d28f3517f5b5fb851a11dc7e2643e9a7389deca7e4338d",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-PHASE24-SAFETY-COVERAGE",
@@ -266,7 +266,7 @@
       },
       {
         "artefact": "forensics/atlas/phase25/frf-closure.json",
-        "artefact_sha256": "906dc7eda2a1c60911851578df3bbd5b0aa06dbf5a5cb151db9eaf974a1fc8e2",
+        "artefact_sha256": "bbf5d24eb4ca4f93f947c81947d45f4eb9fd228b29a271be0ee9efda4756d5dc",
         "control_honest": true,
         "control_specificity": true,
         "court": "MS-FRF-CLOSURE",
@@ -409,7 +409,7 @@
     "passed": false,
     "profile": "openssl-rs-court:1 · cargo-profile dev",
     "property_findings": [
-      "the seal re-derives 21 non-`MS-SEAL` Phase-25 court result(s) from their committed planes: 18 pass, 3 fail (MS-SOURCE-CENSUS, MS-NON-RUST-TCB, MS-MIRI); the runner's registry artifacts/phase25/COURTS.json records 22 court row(s), 15 pass and 7 fail, and is not this seal's input, so the two records disagree and the seal states the disagreement rather than adopting the registry's verdicts",
+      "the seal re-derives 21 non-`MS-SEAL` Phase-25 court result(s) from their committed planes: 18 pass, 3 fail (MS-SOURCE-CENSUS, MS-NON-RUST-TCB, MS-MIRI); the runner's registry artifacts/phase25/COURTS.json records 22 court row(s), 18 pass and 4 fail, and is not this seal's input, so the two records disagree and the seal states the disagreement rather than adopting the registry's verdicts",
       "the residual census classifies and disposes 698 residual record(s) plus 11 light cross-check leftover(s); 664 are open and 0 undisposed",
       "the seal records passed=false because 183 externally reachable site(s) carry tool state UNSUPPORTED; UNSUPPORTED is never PASS (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.6)",
       "the open items are named rather than smoothed to a zero: census-geiger-unavailable, census-unresolved-reachability, cve-replay-unknown, externally-reachable-fail, externally-reachable-unsupported, mechanism-reconciliation-open, rt-phase22-unwitnessed-external",
@@ -1221,7 +1221,7 @@
     },
     "what_this_is": "Phase 25.21's memory-safety seal: the courts (the twenty-one landed Phase-25 courts, each re-derived from the committed planes and joined to its committed artefact and digest), the residual census (every residual classified and disposed, the open ones named), the bounded claim (stated verbatim), the withheld parity claim and the non-claims. It is an instrument plus an observation record, and it records passed=false because externally reachable unsafe sites carry tool state UNSUPPORTED; it is never read as 'the candidate is memory safe'."
   },
-  "body_hash": "959b267d6c64c47ff68cc9c8d3179c020da7ed20709e194068793fc0b1e5528e",
+  "body_hash": "4b5b418c09f8a42865f2bda453ca1569addf2ae707f6bf2bcc4b9d24fb4be6fa",
   "generator": "forensics/tools/ms_seal.py",
   "inputs": [
     {
@@ -1282,17 +1282,17 @@
     {
       "name": "phase24-crosswalk",
       "path": "artifacts/phase25/phase24-crosswalk.json",
-      "sha256": "c9c1cc4f937b02e7eedd99f51939651eac1cc047e05e57c3b901b502981d3439"
+      "sha256": "7a50b9e4fd3f9a2b1135807a229cd9665f69314fe7a6ad7d2583a75bdbc235b6"
     },
     {
       "name": "exposure-classification",
       "path": "artifacts/phase25/exposure.json",
-      "sha256": "349b0a2e7b3c57ad50411754e36ac14e62abc6263dd638a2a075f1e9dfb4ebfa"
+      "sha256": "0d3b86eb9dbe5c4a7601d0c05d769bd344219f0f7cbdf2fc554b7279e5665cae"
     },
     {
       "name": "unsafe-reduction",
       "path": "artifacts/phase25/unsafe-reduction.json",
-      "sha256": "4965b62e8ceed4ec154d40d45d41cc0dbf101cc7de2828a95d4330ea256ca52d"
+      "sha256": "d4b9a2e7aa7a953784e6a984167028bb5b068f6ed39ac083d0e45a63db834a3d"
     },
     {
       "name": "miri",
@@ -1322,7 +1322,7 @@
     {
       "name": "phase24-safety-coverage",
       "path": "artifacts/phase25/phase24-safety-coverage.json",
-      "sha256": "9ac203ede992a6364d03dfab29e77ee2163db085d133f983807e850b10456f94"
+      "sha256": "34ad52a3faa702fed6eed16feb82606c2551509fd049cd71583a5a31d14c71d9"
     },
     {
       "name": "historical-cve-census",
@@ -1352,7 +1352,7 @@
     {
       "name": "frf-gemel-closure",
       "path": "forensics/atlas/phase25/frf-closure.json",
-      "sha256": "6e3057e74f2607d78882f720141a9eefd514d6b126c0e2eeb9bb94c00cd55bee"
+      "sha256": "acd96a13a096c5f85c3f0ef14751eadaf8b24400c210f8d43f5e4905430cfbb2"
     }
   ],
   "kind": "phase25-summary",

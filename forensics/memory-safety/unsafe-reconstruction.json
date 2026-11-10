@@ -86,27 +86,27 @@
     }
   ],
   "downstream_baseline": {
-    "drop_in_pass": 33,
+    "drop_in_pass": 164,
     "families": 1000,
     "functional_workloads": 8,
-    "measurable_families": 33,
+    "measurable_families": 181,
     "p1000_ladder_levels": {
-      "L2-configured": 33,
-      "L3-built": 33,
-      "L4-linked": 33,
-      "L5-loaded": 8,
-      "L6-runtime": 8,
-      "L7-functional": 8
+      "L2-configured": 202,
+      "L3-built": 189,
+      "L4-linked": 181,
+      "L5-loaded": 162,
+      "L6-runtime": 150,
+      "L7-functional": 149
     },
     "sources": [
       "forensics/downstream/p1000-run.json",
       "forensics/downstream/runtime-functional-atlas.json"
     ],
     "verdicts": {
-      "DROP_IN_FAIL": 0,
-      "DROP_IN_NOT_APPLICABLE": 967,
-      "DROP_IN_PARTIAL": 0,
-      "DROP_IN_PASS": 33,
+      "DROP_IN_FAIL": 1,
+      "DROP_IN_NOT_APPLICABLE": 819,
+      "DROP_IN_PARTIAL": 16,
+      "DROP_IN_PASS": 164,
       "DROP_IN_UNKNOWN": 0
     }
   },
