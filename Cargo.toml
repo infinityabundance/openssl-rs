@@ -97,6 +97,13 @@ exclude = [
     "forensics/downstream/**",
     "forensics/memory-safety/**",
     "forensics/vectors/**",
+    # The per-batch closure and inventory receipts under `evidence/`: 84 files,
+    # ~918 MB of element-7 witness records. They are reproducible from their
+    # generators, are read by neither `build.rs`, `src/**` nor `tests/**` (the only
+    # occurrences of "evidence" in build.rs are comments), and on their own they
+    # exceed crates.io's 10 MB upload limit by two orders of magnitude. They remain
+    # committed in git as evidence.
+    "evidence/**",
     # The FRF store and its court declarations. The store is ~20 MB of captures
     # and content-addressed objects; the declarations reference absolute court
     # container paths. Neither is usable by a crate consumer.
