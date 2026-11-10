@@ -196,7 +196,7 @@ const fn legacy_md(
     final_: Option<MdLegacyFinalFn>,
     md_ctrl: Option<MdLegacyCtrlFn>,
 ) -> StaticMd {
-    StaticMd(EvpMd {
+    let md = EvpMd {
         type_,
         pkey_type,
         md_size,
@@ -234,7 +234,19 @@ const fn legacy_md(
         gettable_params: None,
         settable_ctx_params: None,
         gettable_ctx_params: None,
-    })
+    };
+    // The owner-identity arm of `init_md_data_any` (`:151-153`) admits a context bound to one of
+    // these tables **without** the extent check, and that is sound only while every table built
+    // here has `ctx_size == 0`: `evp_md_init_legacy` then allocates no block (`digest.rs:2336`), so
+    // the callback trusts the block's type only when the block came from this very table. This is a
+    // compile-time assertion, evaluated for every owner table in this file (the complete owner set
+    // of `init_md_data`/`init_md_data_any`): a table built with a non-zero `ctx_size` fails the
+    // build, not a review.
+    assert!(
+        md.ctx_size == 0,
+        "an init_md_data owner table must have ctx_size == 0"
+    );
+    StaticMd(md)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1669,5 +1681,73 @@ mod tests {
             ],
             "SHA512/256(\"abc\") changed"
         );
+    }
+
+    /// A caller can store a negative `app_datasize` — `EVP_MD_meth_set_app_datasize` keeps it as
+    /// the authority keeps it — so a hand-built method can declare `ctx_size == -1`.
+    /// `init_md_data_any`'s `ctx_size >= 0` test (`legacy_sha.rs:157`) must refuse that method
+    /// before the extent comparison, which would otherwise cast `-1` to a huge `usize` and admit
+    /// the block.
+    ///
+    /// **Reachable only through a hand-built context**: `EVP_DigestInit_ex`'s legacy arm allocates
+    /// `ctx_size as usize` bytes (`digest.rs:2347`), and no allocation of `usize::MAX` bytes
+    /// succeeds, so no context the library builds ever binds this method to a block. The
+    /// `EvpMdCtx` below is therefore constructed by this test.
+    ///
+    /// **Mutation-sensitive: deleting `ctx_size >= 0 &&` at `legacy_sha.rs:157` makes both
+    /// assertions below fail**, because `-1 as usize` then passes the extent comparison and the
+    /// callbacks answer `1`.
+    #[test]
+    fn legacy_sha1_callbacks_refuse_a_negative_ctx_size() {
+        use crate::evp::digest::{
+            EVP_MD_meth_free, EVP_MD_meth_get_final, EVP_MD_meth_get_init, EVP_MD_meth_new,
+            EVP_MD_meth_set_app_datasize, EVP_MD_meth_set_final, EVP_MD_meth_set_init,
+            EVP_MD_meth_set_result_size,
+        };
+
+        // SAFETY: both getters answer the live static SHA-1 method's own callbacks.
+        let (init, final_) = unsafe {
+            (
+                EVP_MD_meth_get_init(EVP_sha1()),
+                EVP_MD_meth_get_final(EVP_sha1()),
+            )
+        };
+        let Some((init, final_)) = init.zip(final_) else {
+            panic!("sha1_md is missing init/final");
+        };
+
+        // SAFETY: `EVP_MD_meth_new` allocates a fresh method this test owns.
+        let md = unsafe { EVP_MD_meth_new(NID_sha1, 0) };
+        assert!(!md.is_null(), "EVP_MD_meth_new answered NULL");
+        // SAFETY: `md` is the fresh method above; the negative size is stored as the authority
+        // stores it, and the positive result size leaves only the negative branch able to refuse.
+        unsafe {
+            assert_eq!(EVP_MD_meth_set_app_datasize(md, -1), 1);
+            assert_eq!(EVP_MD_meth_set_result_size(md, 20), 1);
+            assert_eq!(EVP_MD_meth_set_init(md, Some(init)), 1);
+            assert_eq!(EVP_MD_meth_set_final(md, Some(final_)), 1);
+        }
+
+        let mut block = [0u64; 64];
+        assert!(core::mem::size_of_val(&block) >= core::mem::size_of::<ShaCtx>());
+        let mut ctx = bound_context(md, block.as_mut_ptr().cast());
+        // SAFETY: `ctx` is live and the block has a `SHA_CTX`'s extent; the declared size is
+        // negative, which is the input under test.
+        assert_eq!(
+            unsafe { init(&mut ctx) },
+            0,
+            "init accepted a negative ctx_size"
+        );
+        assert_eq!(block, [0u64; 64], "a refused init modified md_data");
+        let mut output = [0u8; 20];
+        // SAFETY: the same live context and a writable output buffer.
+        assert_eq!(
+            unsafe { final_(&mut ctx, output.as_mut_ptr()) },
+            0,
+            "final accepted a negative ctx_size"
+        );
+        assert_eq!(block, [0u64; 64], "a refused final modified md_data");
+        // SAFETY: `md` is this test's own method, released exactly once here.
+        unsafe { EVP_MD_meth_free(md) };
     }
 }
