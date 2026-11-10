@@ -269,12 +269,20 @@ unsafe fn raise_with_alg(
 }
 
 /// Raise a fixed message.
-unsafe fn raise_fixed(site: &crate::runtime::err::err_sites::ErrSite, msg: &str) {
+///
+/// No pointer or lifetime precondition: both arguments are safe references and the NUL-terminated
+/// copy is built and consumed entirely inside this function.
+fn raise_fixed(site: &crate::runtime::err::err_sites::ErrSite, msg: &str) {
     let mut buf = msg.as_bytes().to_vec();
     buf.push(0);
     // SAFETY: `buf` is NUL-terminated just above.
     unsafe { raise_site_data(site, buf.as_ptr().cast()) };
 }
+
+// Load-bearing control: a safe `fn` coerces to this type, `unsafe fn` does not. Restoring the
+// `unsafe` qualifier breaks this build.
+#[cfg(test)]
+const _: fn(&crate::runtime::err::err_sites::ErrSite, &str) = raise_fixed;
 
 /// `ossl_ml_kem_get_vinfo(evp_type)` — `ml_kem.c:1977-1988`.
 ///
@@ -747,13 +755,10 @@ pub(crate) unsafe fn ossl_ml_kem_key_new(
     // SAFETY: the answer is a pointer into this module's static table.
     let vinfo = unsafe { ossl_ml_kem_get_vinfo(evp_type) };
     if vinfo.is_null() {
-        // SAFETY: the message is a NUL-terminated literal.
-        unsafe {
-            raise_fixed(
-                &err_sites::ML_KEM_1997,
-                &format!("unsupported ML-KEM key type: {evp_type}"),
-            );
-        }
+        raise_fixed(
+            &err_sites::ML_KEM_1997,
+            &format!("unsupported ML-KEM key type: {evp_type}"),
+        );
         return ptr::null_mut();
     }
 

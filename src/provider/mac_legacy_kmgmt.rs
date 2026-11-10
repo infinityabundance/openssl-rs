@@ -650,7 +650,9 @@ static MAC_KEY_TYPES: [OsslParam; 3] = [
 ];
 
 /// `static const OSSL_PARAM *mac_imexport_types(int selection)` — `mac_legacy_kmgmt.c:302-307`.
-unsafe extern "C" fn mac_imexport_types(selection: c_int) -> *const OsslParam {
+///
+/// No pointer precondition: the argument is an integer and the answer is a `'static` table row.
+extern "C" fn mac_imexport_types(selection: c_int) -> *const OsslParam {
     if (selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0 {
         return MAC_KEY_TYPES.as_ptr();
     }
@@ -667,7 +669,9 @@ static CMAC_KEY_TYPES: [OsslParam; 5] = [
 ];
 
 /// `static const OSSL_PARAM *cmac_imexport_types(int selection)` — `mac_legacy_kmgmt.c:316-321`.
-unsafe extern "C" fn cmac_imexport_types(selection: c_int) -> *const OsslParam {
+///
+/// No pointer precondition: the argument is an integer and the answer is a `'static` table row.
+extern "C" fn cmac_imexport_types(selection: c_int) -> *const OsslParam {
     if (selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0 {
         return CMAC_KEY_TYPES.as_ptr();
     }
@@ -688,7 +692,9 @@ unsafe extern "C" fn mac_get_params(key: *mut c_void, params: *mut OsslParam) ->
 static MAC_GETTABLE_PARAMS: [OsslParam; 2] = [param_octet_string(OSSL_PKEY_PARAM_PRIV_KEY), END];
 
 /// `static const OSSL_PARAM *mac_gettable_params(void *provctx)` — `mac_legacy_kmgmt.c:328-335`.
-unsafe extern "C" fn mac_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+///
+/// No pointer precondition: the argument is unread and the answer is a `'static` table.
+extern "C" fn mac_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
     MAC_GETTABLE_PARAMS.as_ptr()
 }
 
@@ -702,7 +708,9 @@ static CMAC_GETTABLE_PARAMS: [OsslParam; 4] = [
 ];
 
 /// `static const OSSL_PARAM *cmac_gettable_params(void *provctx)` — `mac_legacy_kmgmt.c:337-346`.
-unsafe extern "C" fn cmac_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+///
+/// No pointer precondition: the argument is unread and the answer is a `'static` table.
+extern "C" fn cmac_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
     CMAC_GETTABLE_PARAMS.as_ptr()
 }
 
@@ -733,7 +741,9 @@ unsafe extern "C" fn mac_set_params(keydata: *mut c_void, params: *const OsslPar
 static MAC_SETTABLE_PARAMS: [OsslParam; 2] = [param_octet_string(OSSL_PKEY_PARAM_PRIV_KEY), END];
 
 /// `static const OSSL_PARAM *mac_settable_params(void *provctx)` — `mac_legacy_kmgmt.c:363-370`.
-unsafe extern "C" fn mac_settable_params(_provctx: *mut c_void) -> *const OsslParam {
+///
+/// No pointer precondition: the argument is unread and the answer is a `'static` table.
+extern "C" fn mac_settable_params(_provctx: *mut c_void) -> *const OsslParam {
     MAC_SETTABLE_PARAMS.as_ptr()
 }
 
@@ -901,7 +911,9 @@ static MAC_GEN_SETTABLE_PARAMS: [OsslParam; 2] =
 
 /// `static const OSSL_PARAM *mac_gen_settable_params(void *genctx, void *provctx)` —
 /// `mac_legacy_kmgmt.c:451-459`.
-unsafe extern "C" fn mac_gen_settable_params(
+///
+/// No pointer precondition: both arguments are unread and the answer is a `'static` table.
+extern "C" fn mac_gen_settable_params(
     _genctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -917,12 +929,31 @@ static CMAC_GEN_SETTABLE_PARAMS: [OsslParam; 3] = [
 
 /// `static const OSSL_PARAM *cmac_gen_settable_params(void *genctx, void *provctx)` —
 /// `mac_legacy_kmgmt.c:461-470`.
-unsafe extern "C" fn cmac_gen_settable_params(
+///
+/// No pointer precondition: both arguments are unread and the answer is a `'static` table.
+extern "C" fn cmac_gen_settable_params(
     _genctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
     CMAC_GEN_SETTABLE_PARAMS.as_ptr()
 }
+
+// Load-bearing control: a safe `extern "C" fn` coerces to these types, `unsafe extern "C" fn`
+// does not. Restoring the `unsafe` qualifier breaks this build.
+#[cfg(test)]
+const _: extern "C" fn(c_int) -> *const OsslParam = mac_imexport_types;
+#[cfg(test)]
+const _: extern "C" fn(c_int) -> *const OsslParam = cmac_imexport_types;
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void) -> *const OsslParam = mac_gettable_params;
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void) -> *const OsslParam = cmac_gettable_params;
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void) -> *const OsslParam = mac_settable_params;
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void, *mut c_void) -> *const OsslParam = mac_gen_settable_params;
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void, *mut c_void) -> *const OsslParam = cmac_gen_settable_params;
 
 /// `static void *mac_gen(void *genctx, OSSL_CALLBACK *cb, void *cbarg)` —
 /// `mac_legacy_kmgmt.c:472-513`.
