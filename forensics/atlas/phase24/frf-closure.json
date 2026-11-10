@@ -268,15 +268,15 @@
           "tier_member_dropped": true
         },
         "observed": {
-          "baseline_findings": 12,
-          "honest": false,
+          "baseline_findings": 0,
+          "honest": true,
           "mutations_caught": 6,
           "mutations_seeded": 6,
-          "specificity_holds": false
+          "specificity_holds": true
         },
         "plane": "24.9",
-        "reason": "the plane's own checker did not move as its own defect class requires",
-        "status": "NOT_DETECTED"
+        "reason": null,
+        "status": "DETECTED"
       },
       {
         "artefact": "forensics/downstream/hostility-corpus.json",
@@ -328,15 +328,15 @@
           "mutated_partition_root": true
         },
         "observed": {
-          "baseline_findings": 1,
-          "honest": false,
+          "baseline_findings": 0,
+          "honest": true,
           "mutations_caught": 6,
           "mutations_seeded": 6,
-          "specificity_holds": false
+          "specificity_holds": true
         },
         "plane": "24.11",
-        "reason": "the plane's own checker did not move as its own defect class requires",
-        "status": "NOT_DETECTED"
+        "reason": null,
+        "status": "DETECTED"
       },
       {
         "artefact": "forensics/downstream/p1000-run.json",
@@ -357,15 +357,15 @@
           "pass_without_authority_baseline": true
         },
         "observed": {
-          "baseline_findings": 1,
-          "honest": false,
+          "baseline_findings": 0,
+          "honest": true,
           "mutations_caught": 5,
           "mutations_seeded": 5,
-          "specificity_holds": false
+          "specificity_holds": true
         },
         "plane": "24.12",
-        "reason": "the plane's own checker did not move as its own defect class requires",
-        "status": "NOT_DETECTED"
+        "reason": null,
+        "status": "DETECTED"
       },
       {
         "artefact": "forensics/downstream/reconciliation.json",
@@ -399,8 +399,8 @@
       }
     ],
     "counts": {
-      "detected": 10,
-      "not_detected": 3,
+      "detected": 13,
+      "not_detected": 0,
       "not_driven": 0,
       "planes": 13
     },
@@ -459,8 +459,7 @@
       ]
     },
     "property_findings": [
-      "the stratum stages no declarable court: the registry declares no Phase-24 court and no artifacts/phase24/probes/<probe>.{authority,candidate} pair is staged, so by phase_state.py's frf_gemel_blocking_reason scoping the FRF/Gemel chain entry is vacuous and no .frf object or Gemel checkpoint is owed; the RT-FRF-CLOSURE harness challenge and the Gemel projection stand in its place, and a passing atlas is not a chain that ran",
-      "3 Phase-24 plane checker(s) did not detect their own defect class: 24.9, 24.11, 24.12"
+      "the stratum stages no declarable court: the registry declares no Phase-24 court and no artifacts/phase24/probes/<probe>.{authority,candidate} pair is staged, so by phase_state.py's frf_gemel_blocking_reason scoping the FRF/Gemel chain entry is vacuous and no .frf object or Gemel checkpoint is owed; the RT-FRF-CLOSURE harness challenge and the Gemel projection stand in its place, and a passing atlas is not a chain that ran"
     ],
     "property_status": "NOT_CLAIMED",
     "sort_key": "challenges by plane (numeric); mutations by name; counts numeric; chain.declared_courts and chain.probe_pairs sorted; gemel so the current checkpoint and the naming sets are derived from the committed projection; every list sorted",
@@ -606,7 +605,7 @@
     {
       "name": "runtime-functional-atlas",
       "path": "forensics/downstream/runtime-functional-atlas.json",
-      "sha256": "42be6e38fe004fdb0740949fa7baf73d603f7538e4fbd598e7c4336874de3dab"
+      "sha256": "608f984a6fef1163f51c6ba338db4ede4ad80e4a2305d07b7601a0f07ef19374"
     },
     {
       "name": "failures",
@@ -616,7 +615,7 @@
     {
       "name": "high-value-tier",
       "path": "forensics/downstream/high-value-tier.json",
-      "sha256": "88cf859a2bc8e4647850c26adadfa8fcc102332a71509b3456727415a315591d"
+      "sha256": "3a7dba0ed1f5b41f9057707e05794527504de1c472c0a9c499c59aa54a6d155d"
     },
     {
       "name": "hostility-corpus",
@@ -626,17 +625,17 @@
     {
       "name": "candidate-freeze",
       "path": "forensics/downstream/candidate-freeze.json",
-      "sha256": "27993b78f648305bc965265318e28c85dbfb394ee1e1c2fbf446446ac1925dba"
+      "sha256": "e48c6de94a295426d7861b73d779a00522c5a19b3073cee3c90bb7fb8db373b4"
     },
     {
       "name": "p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "725e137ee5165531a4c3550d7cd374a0642575171e5454526cab6aac6a2eb947"
+      "sha256": "ee24745db2ff029c0338d4cff275c3a6d050338aa3a3766a9187b4ac9d23e8d4"
     },
     {
       "name": "reconciliation",
       "path": "forensics/downstream/reconciliation.json",
-      "sha256": "336e4575ad0730935b9320628b6d62b008dab5358f940d214fe8c791a45666df"
+      "sha256": "7175343c48e5ff5cc75ae164769237243774901f2c61e2ccaf99afbeaa006108"
     }
   ],
   "kind": "phase24-frf-closure",
