@@ -2534,15 +2534,15 @@
    "mechanism": "EVP_MD_METH_API",
    "signature": "unsafe extern \"C\" fn(*mut EvpMd, c_int) -> c_int",
    "registration": "exported symbol; no table registration",
-   "guard": "`md` must be a live `EvpMd`; the setter refuses a second write; `evp_md_init_legacy` allocates `ctx_size` bytes and every callback refuses a negative `ctx_size`",
+   "guard": "`md` must be a live `EvpMd`; the setter refuses any origin other than `EVP_ORIG_METH` (a global method is an immutable `static`) and then refuses a second write; `evp_md_init_legacy` allocates `ctx_size` bytes and every callback refuses a negative `ctx_size`",
    "disposition": "SAFETY_DISCHARGED (scope: EVP_MD_meth_set_app_datasize; src/evp/digest.rs:1383)",
-   "contract": "`md` must be a live `EvpMd`. The value is the size `evp_md_init_legacy` allocates for this `METH` method, so it establishes the extent of the block a caller-installed legacy callback receives. It does **not** establish the block's concrete type: the installer chooses the callback and must declare an extent that fits the context that callback casts to and that the allocation actually has. A negative value is stored as the authority stores it and every callback refuses a negative `ctx_size`.",
+   "contract": "`md` must be a live `EvpMd`. The setter stores only into an object it owns: any origin other than `EVP_ORIG_METH` is refused before the write-once test, because a global method is an immutable compile-time `static` shared across threads. For a `METH` method the value is the size `evp_md_init_legacy` allocates, so it establishes the extent of the block a caller-installed legacy callback receives. It does **not** establish the block's concrete type: the installer chooses the callback and must declare an extent that fits the context that callback casts to and that the allocation actually has. A negative value is stored as the authority stores it and every callback refuses a negative `ctx_size`.",
    "established": [
     "`evp_md_init_legacy` (src/evp/digest.rs:2325) reads `(*type_).ctx_size` at :2333 and allocates it at :2333-2352.",
     "`extent_is_not_type` records the type boundary explicitly."
    ],
    "authority_derived": [
-    "The authority's `EVP_MD_meth_set_app_datasize` writes `md->ctx_size` once."
+    "The authority's `EVP_MD_meth_set_app_datasize` writes `md->ctx_size` once and has no origin test (`crypto/evp/evp_lib.c:893-899`), so it writes the `EVP_ORIG_GLOBAL` static `EVP_sha1()` returns. This implementation refuses that write: `D-MD-APPDATASIZE-GLOBAL-1`."
    ],
    "residuals": [
     "B48-R1",
@@ -2551,12 +2551,13 @@
    "tests": [
     "evp::legacy_digest_callback_surface::undersized_block_is_refused_for_every_callback",
     "evp::legacy_digest_callback_surface::zero_ctx_size_legacy_method_is_refused_for_every_callback",
-    "evp::legacy_digest_callback_surface::extent_is_not_type"
+    "evp::legacy_digest_callback_surface::extent_is_not_type",
+    "evp::digest::tests::the_app_datasize_setter_refuses_a_global_method_but_accepts_a_hand_built_one"
    ]
   }
  ],
  "hidden_obligations": 0,
- "hidden_obligations_note": "Within all 68 boundary operations every retained precondition is stated in the fn-level # Safety or the getter/app-datasize doc, and every digest callback enforces the block precondition itself. The conditions not mechanically enforced are: exclusive use of the EVP_MD_CTX (authority-side caller obligation); the concrete block type for a caller-created method (only extent is checked; recorded by `extent_is_not_type` and B48-R5); and the extent of `data`/`md`/`p2`/`app_datasize` beyond their declared lengths. All are stated caller obligations, not hidden. No site was silently reclassified.",
+ "hidden_obligations_note": "Corrected 2026-11-10: the earlier zero rested on a false premise. The `EVP_MD_meth_set_app_datasize` row claimed the write-once check made the store safe, but it had no origin test, so it wrote the immutable `EVP_ORIG_GLOBAL` static returned by `EVP_sha1()`; that is B48-H6, found after the review. The origin gate closes it and the refusal is recorded as `D-MD-APPDATASIZE-GLOBAL-1`. Within all 68 boundary operations every retained precondition is now stated in the fn-level # Safety or the getter/app-datasize doc, and every digest callback enforces the block precondition itself. The conditions not mechanically enforced are: exclusive use of the EVP_MD_CTX (authority-side caller obligation); the concrete block type for a caller-created method (only extent is checked; recorded by `extent_is_not_type` and B48-R5); and the extent of `data`/`md`/`p2`/`app_datasize` beyond their declared lengths. All are stated caller obligations, not hidden. No site other than B48-H6 was silently reclassified.",
  "new_unsafe_assumptions": 0,
  "new_unsafe_assumptions_note": "No production signature, layout, exported symbol or allocator seam changed. The guards add checked reads and early returns. No new unsafe operation was introduced: the only new unsafe expressions are tests calling the existing exported callbacks and the existing `init_md_data`/`init_md_data_any`/`init_keccak` helpers inside their documented contracts.",
  "unsafe_operations_removed": 0,
@@ -2928,6 +2929,14 @@
    "description": "shake_ctrl stored p1 as usize, so a negative length became a huge md_size that a later final/squeeze would write past the caller's buffer.",
    "correction": "the review required the control callbacks to validate their arguments, not only the block.",
    "resolution": "shake_ctrl refuses p1 < 0 with 0 before the store; a non-negative length still succeeds. Mutation-proven."
+  },
+  {
+   "id": "B48-H6",
+   "severity": "high",
+   "state": "CLOSED - the app_datasize setter no longer writes a global method",
+   "description": "EVP_MD_meth_set_app_datasize tested only `ctx_size != 0`, with no origin test. EVP_sha1() returns the immutable EVP_ORIG_GLOBAL static SHA1_MD, whose ctx_size is 0, so the write-once test passed and the setter stored into memory other threads may read. That is undefined behaviour and contradicted the StaticMd Sync justification at src/evp/legacy_sha.rs:169-172 ('never written').",
+   "correction": "The authority has the same gap (crypto/evp/evp_lib.c:893-899), so reproducing it would reproduce authority UB rather than preserve defined behaviour. The guard now requires origin == EVP_ORIG_METH before the write-once test.",
+   "resolution": "EVP_sha1() answers 0 and its app_datasize stays 0; a hand-built EVP_MD_meth_new method still accepts the value. Recorded as D-MD-APPDATASIZE-GLOBAL-1. Mutation-proven: without the origin gate the test fails with left: 1, right: 0."
   }
  ],
  "review": {

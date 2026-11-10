@@ -1377,12 +1377,20 @@ pub unsafe extern "C" fn EVP_MD_meth_set_result_size(md: *mut EvpMd, resultsize:
 /// context that callback casts to, and that the allocation actually has. A negative value is
 /// stored as the authority stores it; every legacy callback refuses a negative `ctx_size`.
 ///
+/// The setter accepts only an `EVP_ORIG_METH` method. A global method is an immutable `static`
+/// shared across threads, so writing its `ctx_size` is undefined behaviour and contradicts the
+/// `StaticMd` `Sync` justification. The authority (`crypto/evp/evp_lib.c:893-899`) has no origin
+/// test; this refusal is the recorded divergence `D-MD-APPDATASIZE-GLOBAL-1`.
+///
 /// # Safety
 /// `md` must be a live `EvpMd`.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_MD_meth_set_app_datasize(md: *mut EvpMd, datasize: c_int) -> c_int {
     // SAFETY: `md` is live per the contract.
     unsafe {
+        if (*md).origin != EVP_ORIG_METH {
+            return 0;
+        }
         if (*md).ctx_size != 0 {
             return 0;
         }
@@ -5998,6 +6006,44 @@ mod tests {
             (*md).md_size = md_size;
         }
         md
+    }
+
+    /// The setter is a mutating arm, and a mutating arm is sound only on an object the method
+    /// table owns. `EVP_sha1` answers an `EVP_ORIG_GLOBAL` object in an immutable `static` that
+    /// other threads may read (`StaticMd`'s `Sync` justification), so the setter must answer 0
+    /// before writing it. The authority writes anyway; the refusal is the recorded divergence,
+    /// and the hand-built method below is the positive control that it refuses only the global.
+    #[test]
+    fn the_app_datasize_setter_refuses_a_global_method_but_accepts_a_hand_built_one() {
+        let sha1 = crate::evp::legacy_sha::EVP_sha1().cast_mut();
+        // SAFETY: `EVP_sha1` answers a live method, and the setter writes nothing for a
+        // non-`METH` origin.
+        unsafe {
+            assert_eq!((*sha1).origin, EVP_ORIG_GLOBAL);
+            assert_eq!(EVP_MD_meth_get_app_datasize(sha1), 0);
+            assert_eq!(
+                EVP_MD_meth_set_app_datasize(sha1, 64),
+                0,
+                "a global method is never written"
+            );
+            assert_eq!(
+                EVP_MD_meth_get_app_datasize(sha1),
+                0,
+                "the refused write left the static untouched"
+            );
+        }
+
+        let md = a_hand_built_method(20);
+        // SAFETY: `md` is a fresh `METH` method this test owns.
+        unsafe {
+            assert_eq!(
+                EVP_MD_meth_set_app_datasize(md, 64),
+                1,
+                "positive control: a `METH` method still accepts the value"
+            );
+            assert_eq!(EVP_MD_meth_get_app_datasize(md), 64);
+            EVP_MD_meth_free(md);
+        }
     }
 
     /// A fresh context is all zeros, and the five accessors that read it say so rather than

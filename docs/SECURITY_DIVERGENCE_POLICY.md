@@ -1763,3 +1763,25 @@ D334's state, when the column was recorded as a NULL rather than resolved.
   (`cve_2026_63072_wrap_pad_cleanse_stops_at_the_queried_extent`) reproduces the CMS allocation
   with eight guard bytes and asserts they survive. Decision record: `docs/DECISIONS.md` D566.
 - **Trigger:** none planned: this is a permanent, deliberate safety divergence.
+
+### D-MD-APPDATASIZE-GLOBAL-1 — `EVP_MD_meth_set_app_datasize` refuses an `EVP_ORIG_GLOBAL` method
+
+- **Obligation:** the write-once store into `md->ctx_size` in
+  `EVP_MD_meth_set_app_datasize` (`src/evp/digest.rs:1383`).
+- **Authority:** `crypto/evp/evp_lib.c:893-899` tests only `md->ctx_size == 0` and then stores
+  `datasize`; it has no origin test. `EVP_sha1()` answers a compile-time `EVP_ORIG_GLOBAL`
+  object, whose `ctx_size` is 0, so the write-once test passes and a public API writes a shared
+  immutable object.
+- **Crate:** the setter refuses every origin except `EVP_ORIG_METH` before the write-once test
+  and answers 0; an `EVP_MD_meth_new`/`EVP_MD_meth_dup` method still accepts the value.
+- **Reason:** the global methods are Rust `static`s shared across threads, and writing one is
+  undefined behaviour. It also contradicts the `unsafe impl Sync` justification at
+  `src/evp/legacy_sha.rs:169-172` ("never written"). `AGENTS.md` §17 says UB in the C authority
+  is eliminated and its compatibility consequence recorded, not reproduced.
+- **Compatibility consequence:** a caller that previously stamped `app_datasize` onto a global
+  method now gets 0 and the field stays 0. This is the only observable change; a caller-created
+  `METH` method behaves exactly as before, and no other `EVP_MD_meth_*` setter is affected.
+- **Evidence:** `evp::digest::tests::the_app_datasize_setter_refuses_a_global_method_but_accepts_a_hand_built_one`
+  drives `EVP_sha1()` (refused, value unchanged) and a hand-built `METH` method (accepted).
+  Removing the origin gate makes it fail (`left: 1, right: 0`).
+- **Trigger:** none planned: permanent, deliberate safety divergence.
