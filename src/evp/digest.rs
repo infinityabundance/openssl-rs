@@ -6128,13 +6128,74 @@ mod tests {
         };
     }
 
-    /// The nine sibling setters are the same mutating arms as `set_app_datasize`, so the same
-    /// origin test protects them: each refuses a `GLOBAL` method before its write-once test, the
-    /// static keeps the value its table installed, and a fresh `METH` method still accepts a value
-    /// the getter reports back. `set_ctrl` uses `EVP_sha256()` because `EVP_sha1()` already carries
-    /// `sha1_int_ctrl`, so only the six SHA-256-family globals are the empty, writable case.
+    /// Every mutating setter refuses an origin the method table does not own, and the dangerous
+    /// case is a **fetched** method: `evp_md_new` is the constructor `evp_md_from_algorithm` uses,
+    /// and a fetch fills only the provider half, so every legacy field these setters write is still
+    /// empty. A `GLOBAL` method cannot prove that: `EVP_sha1` already carries `block_size = 64`,
+    /// `md_size = 20`, `init`/`update`/`final` set and `flags = 0x8`, so the write-once test below
+    /// each origin gate refuses those six whether the gate exists or not. The `DYNAMIC` object is
+    /// therefore the load-bearing arm, and the `GLOBAL` arm stays as the static-safety record.
+    ///
+    /// `set_ctrl` uses `EVP_sha256()` because `EVP_sha1()` already carries `sha1_int_ctrl`, so only
+    /// the six SHA-256-family globals are the empty, writable-case globals.
     #[test]
-    fn every_mutating_meth_setter_refuses_a_global_method_but_accepts_a_hand_built_one() {
+    fn every_mutating_meth_setter_refuses_a_non_meth_origin_and_accepts_a_hand_built_one() {
+        // SAFETY: `evp_md_new` allocates a fresh zeroed object; the empty legacy half asserted
+        // below is exactly what a fetch leaves on the provider-owned object.
+        unsafe {
+            let dynamic = evp_md_new();
+            assert!(!dynamic.is_null());
+            assert_eq!((*dynamic).origin, EVP_ORIG_DYNAMIC);
+            assert_eq!((*dynamic).block_size, 0);
+            assert_eq!((*dynamic).md_size, 0);
+            assert_eq!((*dynamic).flags, 0);
+            assert_eq!((*dynamic).ctx_size, 0);
+
+            // With every corresponding field empty, the origin gate is the only refusal left: a
+            // deleted gate stores the probe below and answers 1, so the test fails.
+            assert_eq!(EVP_MD_meth_get_input_blocksize(dynamic), 0);
+            assert_eq!(EVP_MD_meth_set_input_blocksize(dynamic, 32), 0);
+            assert_eq!(EVP_MD_meth_get_input_blocksize(dynamic), 0);
+
+            assert_eq!(EVP_MD_meth_get_result_size(dynamic), 0);
+            assert_eq!(EVP_MD_meth_set_result_size(dynamic, 32), 0);
+            assert_eq!(EVP_MD_meth_get_result_size(dynamic), 0);
+
+            assert_eq!(EVP_MD_meth_get_app_datasize(dynamic), 0);
+            assert_eq!(EVP_MD_meth_set_app_datasize(dynamic, 64), 0);
+            assert_eq!(EVP_MD_meth_get_app_datasize(dynamic), 0);
+
+            assert!(EVP_MD_meth_get_init(dynamic).is_none());
+            assert_eq!(EVP_MD_meth_set_init(dynamic, Some(INIT_PROBE)), 0);
+            assert!(EVP_MD_meth_get_init(dynamic).is_none());
+
+            assert!(EVP_MD_meth_get_update(dynamic).is_none());
+            assert_eq!(EVP_MD_meth_set_update(dynamic, Some(UPDATE_PROBE)), 0);
+            assert!(EVP_MD_meth_get_update(dynamic).is_none());
+
+            assert!(EVP_MD_meth_get_final(dynamic).is_none());
+            assert_eq!(EVP_MD_meth_set_final(dynamic, Some(FINAL_PROBE)), 0);
+            assert!(EVP_MD_meth_get_final(dynamic).is_none());
+
+            assert!(EVP_MD_meth_get_copy(dynamic).is_none());
+            assert_eq!(EVP_MD_meth_set_copy(dynamic, Some(COPY_PROBE)), 0);
+            assert!(EVP_MD_meth_get_copy(dynamic).is_none());
+
+            assert!(EVP_MD_meth_get_cleanup(dynamic).is_none());
+            assert_eq!(EVP_MD_meth_set_cleanup(dynamic, Some(CLEANUP_PROBE)), 0);
+            assert!(EVP_MD_meth_get_cleanup(dynamic).is_none());
+
+            assert!(EVP_MD_meth_get_ctrl(dynamic).is_none());
+            assert_eq!(EVP_MD_meth_set_ctrl(dynamic, Some(CTRL_PROBE)), 0);
+            assert!(EVP_MD_meth_get_ctrl(dynamic).is_none());
+
+            assert_eq!(EVP_MD_meth_get_flags(dynamic), 0);
+            assert_eq!(EVP_MD_meth_set_flags(dynamic, EVP_MD_FLAG_XOF), 0);
+            assert_eq!(EVP_MD_meth_get_flags(dynamic), 0);
+
+            EVP_MD_free(dynamic);
+        }
+
         let sha1 = crate::evp::legacy_sha::EVP_sha1().cast_mut();
         let sha256 = crate::evp::legacy_sha::EVP_sha256().cast_mut();
         // SAFETY: both entry points answer live global methods, and every refused setter writes
