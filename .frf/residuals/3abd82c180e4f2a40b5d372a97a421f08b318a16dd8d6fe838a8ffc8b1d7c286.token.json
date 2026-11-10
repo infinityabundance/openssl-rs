@@ -1,0 +1,1 @@
+{"authority":"openssl-rt-3.6.4-r2","blocks_claims":["rt-mem-install exit parity"],"disposition":"open","kind":"exit","magnitude":"class-change","next_court":"cli-exit-minimize","residual_id":"3abd82c180e4f2a40b5d372a97a421f08b318a16dd8d6fe838a8ffc8b1d7c286","schema_version":"frf-token-v1","scope":"rt-mem-install","surface":"exit-class","token":"exit/exit-class/class-change/open"}
