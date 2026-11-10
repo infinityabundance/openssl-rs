@@ -104,7 +104,9 @@ BATCH_24_17: frozenset[str] = bl.ADMISSION_BATCH_24_17
 # `families` are the counted families it names; `fix_kind` is the mechanism; `still_blocked` marks an
 # action where the venue cannot host the fix (and `missing_tool` names what is absent); `change` is
 # the exact recipe/flag/fixture the action applied. Every field is a claim the record re-checks
-# against the measured planes: a still-blocked action must show no movement, a resolving action must.
+# against the measured planes: a still-blocked action must show none of its families reached the
+# resolving class (it may still be re-labelled by the partition), and a resolving action must show at
+# least one did. Class movement alone is not progress; reaching `none`/DROP_IN_PASS is.
 ACTIONS: tuple[dict, ...] = (
     {
         "action_id": "recipe-fix:kmod",
@@ -137,19 +139,29 @@ ACTIONS: tuple[dict, ...] = (
         "blocker_class": "recipe-build-system-unsupported",
         "families": ["libssh"], "fix_kind": "recipe-build-system", "still_blocked": True,
         "missing_tool": "cmake",
-        "change": ("libssh 0.10.6 ships only CMakeLists.txt; the venue admits no cmake, so the "
-                   "recipe cannot be repaired here and is recorded still-blocked rather than faked"),
-        "evidence": "tarball inspection: libssh-0.10.6.tar.xz root has CMakeLists.txt and no configure",
+        "change": ("libssh 0.10.6 ships only CMakeLists.txt and the venue still admits no cmake, so "
+                   "both the authority and the candidate stop at L1-admitted-source with `cmake "
+                   "configure failed: [Errno 2] No such file or directory: 'cmake'`. The "
+                   "re-measurement re-labels the family `authority-baseline-limited` because the "
+                   "authority fails identically at the same rung; that is a class transition, not a "
+                   "repair, and the family is still blocked below L4-linked and is recorded "
+                   "still-blocked rather than faked"),
+        "evidence": ("forensics/downstream/p1000-run.json verdict:p1000:libssh (authority and "
+                     "candidate both L1-admitted-source, DROP_IN_NOT_APPLICABLE, configure fails for "
+                     "the absent cmake); tarball inspection: libssh-0.10.6.tar.xz root has "
+                     "CMakeLists.txt and no configure"),
     },
     {
-        "action_id": "still-blocked:lighttpd",
+        "action_id": "recipe-fix:lighttpd",
         "blocker_class": "recipe-build-system-unsupported",
-        "families": ["lighttpd"], "fix_kind": "recipe-build-system", "still_blocked": True,
-        "missing_tool": "autoconf/automake (or cmake/meson)",
-        "change": ("lighttpd 1.4.76 ships no generated ./configure (configure.ac, CMakeLists.txt, "
-                   "meson.build and SConstruct only); the venue admits no autotools, cmake or meson, "
-                   "so the recipe cannot be repaired here and is recorded still-blocked"),
-        "evidence": "tarball inspection: lighttpd-1.4.76.tar.gz root has configure.ac, no configure",
+        "families": ["lighttpd"], "fix_kind": "recipe-build-system", "still_blocked": False,
+        "change": ("lighttpd 1.4.76's release tarball ships configure.ac but no generated "
+                   "./configure; the recipe now bootstraps it with the pinned bookworm autotools, "
+                   "takes PCRE2 from its pinned package seam, and builds LIGHTTPD_STATIC=yes so "
+                   "mod_openssl is compiled into `src/lighttpd`, leaving the source tree pristine. "
+                   "The re-measured verdict is DROP_IN_PASS at L7-functional for both subjects, so "
+                   "the family is no longer blocked"),
+        "evidence": "forensics/tools/downstream_build_link.py:_LATE_RECIPE_OVERRIDES + _LIGHTTPD_AUX",
     },
     {
         "action_id": "fixture:pure-ftpd",
@@ -222,7 +234,9 @@ NON_CLAIMS: list[str] = [
     "a build/link is not a functional proof: a newly-admitted family that reached L4-linked has "
     "compiled and linked, not behaved, and one with no admitted local workload is `no-fixture`",
     "a still-blocked class is a measurement of the fixed venue, not of the project: libssh needs "
-    "cmake and lighttpd needs autotools/cmake/meson, none of which this venue admits",
+    "cmake, which this venue does not admit (its authority and candidate both stop at "
+    "L1-admitted-source); lighttpd's absent generated configure is a recipe gap the pinned-toolchain "
+    "recipe closes, so its L7-functional/DROP_IN_PASS is a recipe fix and not a project claim",
     "the before figures are a preserved measurement of the pre-remediation planes, recorded once and "
     "carried forward like 24.11's holdout first_run, not re-derived from planes that no longer exist",
     "a deterministic local fixture is one exercise of the program's OpenSSL path on loopback, not a "
@@ -357,7 +371,9 @@ def derive_remediation(inputs: dict) -> dict:
             af = after_partition.get(str(fid)) if fid is not None else None
             changed = b != af
             moved += 1 if changed else 0
-            observed.append({"family": name, "before": b, "after": af, "moved": changed})
+            v = verdicts.get(str(fid)) or {}
+            observed.append({"family": name, "before": b, "after": af, "moved": changed,
+                             "level": v.get("candidate_level"), "verdict": v.get("verdict")})
         action["observed"] = observed
         action["families_moved"] = moved
         actions.append(action)
@@ -395,8 +411,9 @@ def derive_remediation(inputs: dict) -> dict:
         ),
         "actions": (
             "the exact recipe/flag/fixture each repair applied, with the family it targets and the "
-            "class it names; a resolving action must show the family moved, and a still-blocked "
-            "action must show it did not"
+            "class it names; a resolving action must show its named families reached the resolving "
+            "class (`none`, DROP_IN_PASS) in the re-measured planes, and a still-blocked action must "
+            "show none of them did, cite the rung the family stopped at, and name the missing tool"
         ),
         "admission_criterion": (
             "a recipe is admissible when its pinned release tarball ships a build entry point the "
@@ -434,9 +451,9 @@ def remediation_findings(inputs: dict, body: dict) -> list[str]:
 
     The conditions: the analysis reproduces; the movement is the subtraction of the recorded before
     and the derived after; every action's observed families match the recorded partitions; a
-    still-blocked action shows no movement and names its missing tool; a resolving action shows its
-    families moved; the new recipes are exactly the catalogue families outside the baseline; and the
-    counts are derived rather than typed.
+    still-blocked action names its missing tool, cites the measured rung and reaches no resolving
+    class; a resolving action shows its families reached one; the new recipes are exactly the
+    catalogue families outside the baseline; and the counts are derived rather than typed.
     """
     out: list[str] = []
     derived = derive_remediation(inputs)
@@ -474,14 +491,18 @@ def remediation_findings(inputs: dict, body: dict) -> list[str]:
             out.append(f"action {aid}: families_moved {a.get('families_moved')!r} disagrees with its "
                        f"observed transitions ({moved})")
         if a.get("still_blocked"):
-            if moved:
-                out.append(f"action {aid}: records still-blocked but {moved} of its families moved "
-                           f"in the re-measured planes")
+            reached = [o for o in obs if o.get("after") == "none"]
+            if reached:
+                out.append(f"action {aid}: records still-blocked but {len(reached)} of its families "
+                           f"reached the resolving class in the re-measured planes")
             if not a.get("missing_tool"):
                 out.append(f"action {aid}: records still-blocked but names no missing tool")
-        elif a.get("action_id") != "admission-batch:24.17" and not moved:
-            out.append(f"action {aid}: claims a fix but none of its families moved in the "
-                       f"re-measured planes (a claimed fix with no measured movement)")
+            if any(o.get("level") is None for o in obs):
+                out.append(f"action {aid}: records still-blocked but cites no measured rung")
+        elif a.get("action_id") != "admission-batch:24.17" and not any(
+                o.get("after") == "none" for o in obs):
+            out.append(f"action {aid}: claims a fix but none of its families reached the resolving "
+                       f"class in the re-measured planes (a claimed fix with no measured progress)")
 
     # The admission batch: every admitted probe family must be a new recipe, and a rejected one must
     # not be.
@@ -738,7 +759,8 @@ def self_test() -> int:
     print("[downstream-remediation] self-test ok: the guard admits this metadata-only generator on a "
           "host, the vocabulary matches the schema, the committed record reproduces with zero "
           "findings, the preserved before partition covers 1,000 families, and every seeded mutation "
-          "(a claimed fix with no movement, a still-blocked class marked resolved, a movement figure "
+          "(a claimed fix with no measured progress, a still-blocked class marked resolved, a "
+          "movement figure "
           "disagreeing with the planes, a fabricated new recipe and a mutated before count) is "
           "caught with specificity holding")
     return 0

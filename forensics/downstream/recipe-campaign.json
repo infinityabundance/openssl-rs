@@ -125,25 +125,25 @@
     ],
     "after": {
       "class_counts": {
-        "authority-baseline-limited": 0,
-        "candidate-configure-failure": 0,
-        "candidate-functional-failure": 0,
-        "candidate-link-failure": 0,
-        "candidate-load-failure": 0,
-        "candidate-runtime-failure": 0,
-        "no-admitted-recipe": 965,
-        "no-fixture": 0,
-        "none": 33,
+        "authority-baseline-limited": 90,
+        "candidate-configure-failure": 28,
+        "candidate-functional-failure": 2,
+        "candidate-link-failure": 3,
+        "candidate-load-failure": 4,
+        "candidate-runtime-failure": 2,
+        "no-admitted-recipe": 697,
+        "no-fixture": 9,
+        "none": 164,
         "out-of-scope": 0,
         "recipe-build-dependency-missing": 0,
-        "recipe-build-system-unsupported": 2
+        "recipe-build-system-unsupported": 1
       },
-      "drop_in_pass": 33,
+      "drop_in_pass": 164,
       "families": 1000,
-      "linked": 33,
-      "measurable_families": 33,
-      "recipe_backed_families": 35,
-      "recipe_less_families": 965
+      "linked": 181,
+      "measurable_families": 181,
+      "recipe_backed_families": 307,
+      "recipe_less_families": 697
     },
     "attempts": [
       {
@@ -1165,34 +1165,34 @@
     },
     "movement": {
       "drop_in_pass": {
-        "after": 33,
+        "after": 164,
         "before": 18,
-        "delta": 15
+        "delta": 146
       },
       "linked": {
-        "after": 33,
+        "after": 181,
         "before": 18,
-        "delta": 15
+        "delta": 163
       },
       "measurable_families": {
-        "after": 33,
+        "after": 181,
         "before": 18,
-        "delta": 15
+        "delta": 163
       },
       "no_admitted_recipe": {
-        "after": 965,
+        "after": 697,
         "before": 980,
-        "delta": -15
+        "delta": -283
       },
       "recipe_backed_families": {
-        "after": 35,
+        "after": 307,
         "before": 20,
-        "delta": 15
+        "delta": 287
       },
       "resolved_none": {
-        "after": 33,
+        "after": 164,
         "before": 18,
-        "delta": 15
+        "delta": 146
       }
     },
     "non_claims": [
@@ -1218,7 +1218,7 @@
       "priority_rule": "the recipe-less counted families in the frozen 24.16 recipe-queue order -- source breadth descending, then distro breadth descending, then popularity descending, then canonical name ascending, then family_id ascending -- preferring well-known direct OpenSSL consumers with stable upstream release tarballs. It is a **heuristic** ranking over frozen breadth signals, never a measurement of buildability"
     }
   },
-  "body_hash": "e2d6bac61cb678a94730feb1baae10c23217835a9373bed95c700658a44faa84",
+  "body_hash": "3792bad9b55b88c4ed4379574bc52b3fd1857565284809683e2b5dd05ef06a69",
   "generator": "forensics/tools/downstream_recipe_campaign.py",
   "inputs": [
     {
@@ -1229,7 +1229,7 @@
     {
       "name": "shared-blockers",
       "path": "forensics/downstream/shared-blockers.json",
-      "sha256": "5be7f3c03774287eea38b30a03d2c986b3983f8e35dcbf9df63423ac491ef807"
+      "sha256": "6e4ce979a4536c0b878569c95939a703f0698238e2c07342e0916bfe3f1ff0ba"
     },
     {
       "name": "build-link-atlas",
@@ -1239,7 +1239,7 @@
     {
       "name": "p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "725e137ee5165531a4c3550d7cd374a0642575171e5454526cab6aac6a2eb947"
+      "sha256": "ee24745db2ff029c0338d4cff275c3a6d050338aa3a3766a9187b4ac9d23e8d4"
     },
     {
       "name": "family-freeze",

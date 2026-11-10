@@ -17,7 +17,9 @@
             "after": "none",
             "before": "recipe-build-dependency-missing",
             "family": "kmod",
-            "moved": true
+            "level": "L7-functional",
+            "moved": true,
+            "verdict": "DROP_IN_PASS"
           }
         ],
         "still_blocked": false
@@ -37,7 +39,9 @@
             "after": "none",
             "before": "recipe-build-dependency-missing",
             "family": "openvpn",
-            "moved": true
+            "level": "L7-functional",
+            "moved": true,
+            "verdict": "DROP_IN_PASS"
           }
         ],
         "still_blocked": false
@@ -57,7 +61,9 @@
             "after": "none",
             "before": "no-fixture",
             "family": "isync",
-            "moved": true
+            "level": "L7-functional",
+            "moved": true,
+            "verdict": "DROP_IN_PASS"
           }
         ],
         "still_blocked": false
@@ -65,44 +71,47 @@
       {
         "action_id": "still-blocked:libssh",
         "blocker_class": "recipe-build-system-unsupported",
-        "change": "libssh 0.10.6 ships only CMakeLists.txt; the venue admits no cmake, so the recipe cannot be repaired here and is recorded still-blocked rather than faked",
-        "evidence": "tarball inspection: libssh-0.10.6.tar.xz root has CMakeLists.txt and no configure",
+        "change": "libssh 0.10.6 ships only CMakeLists.txt and the venue still admits no cmake, so both the authority and the candidate stop at L1-admitted-source with `cmake configure failed: [Errno 2] No such file or directory: 'cmake'`. The re-measurement re-labels the family `authority-baseline-limited` because the authority fails identically at the same rung; that is a class transition, not a repair, and the family is still blocked below L4-linked and is recorded still-blocked rather than faked",
+        "evidence": "forensics/downstream/p1000-run.json verdict:p1000:libssh (authority and candidate both L1-admitted-source, DROP_IN_NOT_APPLICABLE, configure fails for the absent cmake); tarball inspection: libssh-0.10.6.tar.xz root has CMakeLists.txt and no configure",
         "families": [
           "libssh"
         ],
-        "families_moved": 0,
+        "families_moved": 1,
         "fix_kind": "recipe-build-system",
         "missing_tool": "cmake",
         "observed": [
           {
-            "after": "recipe-build-system-unsupported",
+            "after": "authority-baseline-limited",
             "before": "recipe-build-system-unsupported",
             "family": "libssh",
-            "moved": false
+            "level": "L1-admitted-source",
+            "moved": true,
+            "verdict": "DROP_IN_NOT_APPLICABLE"
           }
         ],
         "still_blocked": true
       },
       {
-        "action_id": "still-blocked:lighttpd",
+        "action_id": "recipe-fix:lighttpd",
         "blocker_class": "recipe-build-system-unsupported",
-        "change": "lighttpd 1.4.76 ships no generated ./configure (configure.ac, CMakeLists.txt, meson.build and SConstruct only); the venue admits no autotools, cmake or meson, so the recipe cannot be repaired here and is recorded still-blocked",
-        "evidence": "tarball inspection: lighttpd-1.4.76.tar.gz root has configure.ac, no configure",
+        "change": "lighttpd 1.4.76's release tarball ships configure.ac but no generated ./configure; the recipe now bootstraps it with the pinned bookworm autotools, takes PCRE2 from its pinned package seam, and builds LIGHTTPD_STATIC=yes so mod_openssl is compiled into `src/lighttpd`, leaving the source tree pristine. The re-measured verdict is DROP_IN_PASS at L7-functional for both subjects, so the family is no longer blocked",
+        "evidence": "forensics/tools/downstream_build_link.py:_LATE_RECIPE_OVERRIDES + _LIGHTTPD_AUX",
         "families": [
           "lighttpd"
         ],
-        "families_moved": 0,
+        "families_moved": 1,
         "fix_kind": "recipe-build-system",
-        "missing_tool": "autoconf/automake (or cmake/meson)",
         "observed": [
           {
-            "after": "recipe-build-system-unsupported",
+            "after": "none",
             "before": "recipe-build-system-unsupported",
             "family": "lighttpd",
-            "moved": false
+            "level": "L7-functional",
+            "moved": true,
+            "verdict": "DROP_IN_PASS"
           }
         ],
-        "still_blocked": true
+        "still_blocked": false
       },
       {
         "action_id": "fixture:pure-ftpd",
@@ -119,7 +128,9 @@
             "after": "none",
             "before": "no-fixture",
             "family": "pure-ftpd",
-            "moved": true
+            "level": "L7-functional",
+            "moved": true,
+            "verdict": "DROP_IN_PASS"
           }
         ],
         "still_blocked": false
@@ -139,7 +150,9 @@
             "after": "none",
             "before": "no-fixture",
             "family": "isync",
-            "moved": true
+            "level": "L7-functional",
+            "moved": true,
+            "verdict": "DROP_IN_PASS"
           }
         ],
         "still_blocked": false
@@ -166,49 +179,65 @@
             "after": "none",
             "before": "no-admitted-recipe",
             "family": "cyrus-sasl",
-            "moved": true
+            "level": "L7-functional",
+            "moved": true,
+            "verdict": "DROP_IN_PASS"
           },
           {
             "after": "none",
             "before": "no-admitted-recipe",
             "family": "dovecot",
-            "moved": true
+            "level": "L7-functional",
+            "moved": true,
+            "verdict": "DROP_IN_PASS"
           },
           {
             "after": "none",
             "before": "no-admitted-recipe",
             "family": "fossil",
-            "moved": true
+            "level": "L7-functional",
+            "moved": true,
+            "verdict": "DROP_IN_PASS"
           },
           {
             "after": "none",
             "before": "no-admitted-recipe",
             "family": "ldns",
-            "moved": true
+            "level": "L7-functional",
+            "moved": true,
+            "verdict": "DROP_IN_PASS"
           },
           {
             "after": "none",
             "before": "no-admitted-recipe",
             "family": "libevent",
-            "moved": true
+            "level": "L7-functional",
+            "moved": true,
+            "verdict": "DROP_IN_PASS"
           },
           {
             "after": "none",
             "before": "no-admitted-recipe",
             "family": "links",
-            "moved": true
+            "level": "L7-functional",
+            "moved": true,
+            "verdict": "DROP_IN_PASS"
           },
           {
             "after": "none",
             "before": "no-admitted-recipe",
             "family": "socat",
-            "moved": true
+            "level": "L7-functional",
+            "moved": true,
+            "verdict": "DROP_IN_PASS"
           },
           {
             "after": "none",
             "before": "no-admitted-recipe",
             "family": "stunnel",
-            "moved": true
+            "level": "L7-functional",
+            "moved": true,
+            "verdict": "DROP_IN_PASS"
           }
         ],
         "still_blocked": false
@@ -342,18 +371,18 @@
     ],
     "after": {
       "class_counts": {
-        "authority-baseline-limited": 0,
-        "candidate-configure-failure": 0,
-        "candidate-functional-failure": 0,
-        "candidate-link-failure": 0,
-        "candidate-load-failure": 0,
-        "candidate-runtime-failure": 0,
-        "no-admitted-recipe": 965,
-        "no-fixture": 0,
-        "none": 33,
+        "authority-baseline-limited": 90,
+        "candidate-configure-failure": 28,
+        "candidate-functional-failure": 2,
+        "candidate-link-failure": 3,
+        "candidate-load-failure": 4,
+        "candidate-runtime-failure": 2,
+        "no-admitted-recipe": 697,
+        "no-fixture": 9,
+        "none": 164,
         "out-of-scope": 0,
         "recipe-build-dependency-missing": 0,
-        "recipe-build-system-unsupported": 2
+        "recipe-build-system-unsupported": 1
       },
       "funnel": [
         {
@@ -363,49 +392,49 @@
           "step": "counted"
         },
         {
-          "families": 35,
+          "families": 307,
           "level": "L1-admitted-source",
-          "share_of_counted": "35/1000 (3.5%)",
+          "share_of_counted": "307/1000 (30.7%)",
           "step": "with-admitted-recipe"
         },
         {
-          "families": 33,
+          "families": 202,
           "level": "L2-configured",
-          "share_of_counted": "33/1000 (3.3%)",
+          "share_of_counted": "202/1000 (20.2%)",
           "step": "configured"
         },
         {
-          "families": 33,
+          "families": 181,
           "level": "L4-linked",
-          "share_of_counted": "33/1000 (3.3%)",
+          "share_of_counted": "181/1000 (18.1%)",
           "step": "linked"
         },
         {
-          "families": 8,
+          "families": 162,
           "level": "L5-loaded",
-          "share_of_counted": "8/1000 (0.8%)",
+          "share_of_counted": "162/1000 (16.2%)",
           "step": "loaded"
         },
         {
-          "families": 8,
+          "families": 150,
           "level": "L6-runtime",
-          "share_of_counted": "8/1000 (0.8%)",
+          "share_of_counted": "150/1000 (15.0%)",
           "step": "runtime"
         },
         {
-          "families": 8,
+          "families": 149,
           "level": "L7-functional",
-          "share_of_counted": "8/1000 (0.8%)",
+          "share_of_counted": "149/1000 (14.9%)",
           "step": "functional"
         },
         {
-          "families": 33,
+          "families": 164,
           "level": "",
-          "share_of_counted": "33/1000 (3.3%)",
+          "share_of_counted": "164/1000 (16.4%)",
           "step": "drop-in-pass"
         }
       ],
-      "measurable_families": 33,
+      "measurable_families": 181,
       "partition": {
         "family:389-ds-base": "no-admitted-recipe",
         "family:abuild": "no-admitted-recipe",
@@ -417,12 +446,12 @@
         "family:acme-tiny": "no-admitted-recipe",
         "family:acmed": "no-admitted-recipe",
         "family:acmed-tacd": "no-admitted-recipe",
-        "family:afflib": "no-admitted-recipe",
-        "family:afftools": "no-admitted-recipe",
+        "family:afflib": "candidate-load-failure",
+        "family:afftools": "candidate-load-failure",
         "family:afterburn": "no-admitted-recipe",
         "family:agensgraph": "no-admitted-recipe",
         "family:agensgraph-contrib": "no-admitted-recipe",
-        "family:aircrack-ng": "no-admitted-recipe",
+        "family:aircrack-ng": "none",
         "family:alpine": "no-admitted-recipe",
         "family:althttpd": "no-admitted-recipe",
         "family:amanda": "no-admitted-recipe",
@@ -430,26 +459,26 @@
         "family:anope-openssl": "no-admitted-recipe",
         "family:anytun": "no-admitted-recipe",
         "family:apache-mod-md": "no-admitted-recipe",
-        "family:apache2-bin": "no-admitted-recipe",
+        "family:apache2-bin": "authority-baseline-limited",
         "family:apache2-dev": "no-admitted-recipe",
-        "family:apache2-http2": "no-admitted-recipe",
-        "family:apache2-ssl": "no-admitted-recipe",
-        "family:apache2-utils": "no-admitted-recipe",
-        "family:apk-tools": "no-admitted-recipe",
-        "family:appx-util": "no-admitted-recipe",
-        "family:apr-util": "no-admitted-recipe",
+        "family:apache2-http2": "authority-baseline-limited",
+        "family:apache2-ssl": "authority-baseline-limited",
+        "family:apache2-utils": "authority-baseline-limited",
+        "family:apk-tools": "candidate-configure-failure",
+        "family:appx-util": "authority-baseline-limited",
+        "family:apr-util": "authority-baseline-limited",
         "family:apt-cacher-ng": "no-admitted-recipe",
         "family:arc-gui-clients": "no-admitted-recipe",
         "family:argyll": "no-admitted-recipe",
         "family:argyllcms": "no-admitted-recipe",
-        "family:arm-trusted-firmware-tools": "no-admitted-recipe",
+        "family:arm-trusted-firmware-tools": "none",
         "family:arti": "no-admitted-recipe",
         "family:asdcplib": "no-admitted-recipe",
         "family:asfa": "no-admitted-recipe",
         "family:asterisk": "no-admitted-recipe",
-        "family:asterisk-srtp": "no-admitted-recipe",
+        "family:asterisk-srtp": "authority-baseline-limited",
         "family:asuran-cli": "no-admitted-recipe",
-        "family:atheme-services": "no-admitted-recipe",
+        "family:atheme-services": "candidate-configure-failure",
         "family:atuin-server": "no-admitted-recipe",
         "family:atuin-sync": "no-admitted-recipe",
         "family:ausweisapp2": "no-admitted-recipe",
@@ -458,23 +487,23 @@
         "family:autopostgresqlbackup": "no-admitted-recipe",
         "family:aws-c-cal": "no-admitted-recipe",
         "family:aws-sdk-cpp-core": "no-admitted-recipe",
-        "family:axel": "no-admitted-recipe",
+        "family:axel": "none",
         "family:b3270": "no-admitted-recipe",
         "family:bacula-common": "no-admitted-recipe",
         "family:bacula-libs": "no-admitted-recipe",
         "family:badvpn": "no-admitted-recipe",
-        "family:bannergrab": "no-admitted-recipe",
+        "family:bannergrab": "none",
         "family:bareos": "no-admitted-recipe",
         "family:barnowl": "no-admitted-recipe",
         "family:barrier": "no-admitted-recipe",
         "family:bdsync": "no-admitted-recipe",
         "family:bes": "no-admitted-recipe",
         "family:bfh-base-system": "no-admitted-recipe",
-        "family:bibtexconv": "no-admitted-recipe",
+        "family:bibtexconv": "authority-baseline-limited",
         "family:bigloo-libs": "no-admitted-recipe",
         "family:bind": "no-admitted-recipe",
-        "family:bind9": "no-admitted-recipe",
-        "family:bip": "no-admitted-recipe",
+        "family:bind9": "candidate-link-failure",
+        "family:bip": "no-fixture",
         "family:bitchx": "no-admitted-recipe",
         "family:bodhi-cli": "no-admitted-recipe",
         "family:boinc-client": "no-admitted-recipe",
@@ -484,8 +513,8 @@
         "family:borgbackup2": "no-admitted-recipe",
         "family:boxbackup-client": "no-admitted-recipe",
         "family:boxbackup-server": "no-admitted-recipe",
-        "family:bruteforce-salted-openssl": "no-admitted-recipe",
-        "family:bruteforce-wallet": "no-admitted-recipe",
+        "family:bruteforce-salted-openssl": "none",
+        "family:bruteforce-wallet": "no-fixture",
         "family:btfs": "no-admitted-recipe",
         "family:btrfs-fuse": "no-admitted-recipe",
         "family:burp": "no-admitted-recipe",
@@ -499,10 +528,10 @@
         "family:calibre": "no-admitted-recipe",
         "family:caml-crush-clients": "no-admitted-recipe",
         "family:camo": "no-admitted-recipe",
-        "family:canl-c": "no-admitted-recipe",
-        "family:canl-c-examples": "no-admitted-recipe",
+        "family:canl-c": "candidate-configure-failure",
+        "family:canl-c-examples": "candidate-configure-failure",
         "family:capnproto": "no-admitted-recipe",
-        "family:carbon-c-relay": "no-admitted-recipe",
+        "family:carbon-c-relay": "none",
         "family:cardpeek": "no-admitted-recipe",
         "family:cargo": "no-admitted-recipe",
         "family:cargo-c": "no-admitted-recipe",
@@ -512,7 +541,7 @@
         "family:cargo-tarpaulin": "no-admitted-recipe",
         "family:cargo-web": "no-admitted-recipe",
         "family:cassandra-cpp-driver": "no-admitted-recipe",
-        "family:casync": "no-admitted-recipe",
+        "family:casync": "authority-baseline-limited",
         "family:ccmake": "no-admitted-recipe",
         "family:ccnet": "no-admitted-recipe",
         "family:centerim": "no-admitted-recipe",
@@ -537,11 +566,11 @@
         "family:cfengine": "no-admitted-recipe",
         "family:cfengine3": "no-admitted-recipe",
         "family:cgsi-gsoap": "no-admitted-recipe",
-        "family:charybdis": "no-admitted-recipe",
+        "family:charybdis": "none",
         "family:chatterino2": "no-admitted-recipe",
         "family:checksec": "no-admitted-recipe",
         "family:chiaki": "no-admitted-recipe",
-        "family:cjose": "no-admitted-recipe",
+        "family:cjose": "authority-baseline-limited",
         "family:ckermit": "no-admitted-recipe",
         "family:cl-plus-ssl": "no-admitted-recipe",
         "family:clamav": "no-admitted-recipe",
@@ -562,15 +591,15 @@
         "family:condor": "no-admitted-recipe",
         "family:condure": "no-admitted-recipe",
         "family:conserver": "no-admitted-recipe",
-        "family:conserver-client": "no-admitted-recipe",
-        "family:conserver-server": "no-admitted-recipe",
+        "family:conserver-client": "none",
+        "family:conserver-server": "none",
         "family:coova-chilli": "no-admitted-recipe",
         "family:coreos-installer": "no-admitted-recipe",
         "family:coreos-installer-bootinfra": "no-admitted-recipe",
         "family:coreutils": "no-admitted-recipe",
         "family:coreutils-sha512sum": "no-admitted-recipe",
-        "family:coturn": "no-admitted-recipe",
-        "family:cowpatty": "no-admitted-recipe",
+        "family:coturn": "none",
+        "family:cowpatty": "none",
         "family:cpprest": "no-admitted-recipe",
         "family:cpprestsdk": "no-admitted-recipe",
         "family:cpr": "no-admitted-recipe",
@@ -580,7 +609,7 @@
         "family:cryptsetup-ssh-token": "no-admitted-recipe",
         "family:cups": "no-admitted-recipe",
         "family:curl": "none",
-        "family:curl-minimal": "no-admitted-recipe",
+        "family:curl-minimal": "none",
         "family:cxxtools": "no-admitted-recipe",
         "family:cyrus-caldav": "no-admitted-recipe",
         "family:cyrus-clients": "no-admitted-recipe",
@@ -589,14 +618,14 @@
         "family:cyrus-murder": "no-admitted-recipe",
         "family:cyrus-nntpd": "no-admitted-recipe",
         "family:cyrus-sasl": "none",
-        "family:cyrus-sasl-digestmd5": "no-admitted-recipe",
+        "family:cyrus-sasl-digestmd5": "none",
         "family:cyrus-sasl-md5": "no-admitted-recipe",
-        "family:cyrus-sasl-ntlm": "no-admitted-recipe",
-        "family:cyrus-sasl-scram": "no-admitted-recipe",
+        "family:cyrus-sasl-ntlm": "none",
+        "family:cyrus-sasl-scram": "none",
         "family:datovka": "no-admitted-recipe",
-        "family:davix": "no-admitted-recipe",
-        "family:dcap-tunnel-ssl": "no-admitted-recipe",
-        "family:dcmtk": "no-admitted-recipe",
+        "family:davix": "authority-baseline-limited",
+        "family:dcap-tunnel-ssl": "none",
+        "family:dcmtk": "authority-baseline-limited",
         "family:ddnet": "no-admitted-recipe",
         "family:ddnet-server": "no-admitted-recipe",
         "family:debcargo": "no-admitted-recipe",
@@ -612,8 +641,8 @@
         "family:dillo": "no-admitted-recipe",
         "family:dionaea": "no-admitted-recipe",
         "family:dkim-rotate": "no-admitted-recipe",
-        "family:dma": "no-admitted-recipe",
-        "family:dmg2img": "no-admitted-recipe",
+        "family:dma": "none",
+        "family:dmg2img": "candidate-configure-failure",
         "family:dmlite-apache-httpd": "no-admitted-recipe",
         "family:dmlite-dome": "no-admitted-recipe",
         "family:dmlite-dpm-dsi": "no-admitted-recipe",
@@ -622,9 +651,9 @@
         "family:dmlite-plugins-domeadapter": "no-admitted-recipe",
         "family:dns-compliance-testing": "no-admitted-recipe",
         "family:dnscap": "no-admitted-recipe",
-        "family:dnsdist": "no-admitted-recipe",
+        "family:dnsdist": "authority-baseline-limited",
         "family:dnsdist-luajit": "no-admitted-recipe",
-        "family:dnsperf": "no-admitted-recipe",
+        "family:dnsperf": "authority-baseline-limited",
         "family:dnssec-tools": "no-admitted-recipe",
         "family:dnssec-trigger": "no-admitted-recipe",
         "family:dnssec-trigger-panel": "no-admitted-recipe",
@@ -648,9 +677,9 @@
         "family:dpdk-crypto-openssl": "no-admitted-recipe",
         "family:drg": "no-admitted-recipe",
         "family:drpm": "no-admitted-recipe",
-        "family:dsniff": "no-admitted-recipe",
+        "family:dsniff": "authority-baseline-limited",
         "family:duckscript": "no-admitted-recipe",
-        "family:duo_unix": "no-admitted-recipe",
+        "family:duo_unix": "none",
         "family:dvisvgm": "no-admitted-recipe",
         "family:e2guardian": "no-admitted-recipe",
         "family:eapoltest": "no-admitted-recipe",
@@ -661,18 +690,18 @@
         "family:eclipse-titan": "no-admitted-recipe",
         "family:ecryptfs-utils": "no-admitted-recipe",
         "family:edbrowse": "no-admitted-recipe",
-        "family:efitools": "no-admitted-recipe",
+        "family:efitools": "none",
         "family:efl": "no-admitted-recipe",
         "family:efs-utils": "no-admitted-recipe",
-        "family:eggdrop": "no-admitted-recipe",
+        "family:eggdrop": "none",
         "family:eiskaltdcpp": "no-admitted-recipe",
         "family:ejabberd": "no-admitted-recipe",
-        "family:elinks": "no-admitted-recipe",
-        "family:encfs": "no-admitted-recipe",
+        "family:elinks": "none",
+        "family:encfs": "authority-baseline-limited",
         "family:epic": "no-admitted-recipe",
-        "family:epic4": "no-admitted-recipe",
-        "family:epic5": "no-admitted-recipe",
-        "family:epic5-lite": "no-admitted-recipe",
+        "family:epic4": "candidate-configure-failure",
+        "family:epic5": "none",
+        "family:epic5-lite": "none",
         "family:epoptes": "no-admitted-recipe",
         "family:epoptes-client": "no-admitted-recipe",
         "family:erfs": "no-admitted-recipe",
@@ -683,22 +712,22 @@
         "family:et": "no-admitted-recipe",
         "family:ettercap": "no-admitted-recipe",
         "family:eturnal": "no-admitted-recipe",
-        "family:eurephia": "no-admitted-recipe",
+        "family:eurephia": "authority-baseline-limited",
         "family:eurephia-admin": "no-admitted-recipe",
         "family:eurephia-init": "no-admitted-recipe",
         "family:eurephia-sqlite3": "no-admitted-recipe",
-        "family:ewf-tools": "no-admitted-recipe",
-        "family:ewftools": "no-admitted-recipe",
-        "family:exim": "no-admitted-recipe",
+        "family:ewf-tools": "none",
+        "family:ewftools": "none",
+        "family:exim": "none",
         "family:exim-mysql": "no-admitted-recipe",
         "family:falkon": "no-admitted-recipe",
         "family:fapolicyd": "no-admitted-recipe",
-        "family:fastd": "no-admitted-recipe",
+        "family:fastd": "authority-baseline-limited",
         "family:fastnetmon": "no-admitted-recipe",
         "family:fbrnch": "no-admitted-recipe",
         "family:fbthrift": "no-admitted-recipe",
         "family:fbx-all": "no-admitted-recipe",
-        "family:fdm": "no-admitted-recipe",
+        "family:fdm": "candidate-functional-failure",
         "family:fdo-admin-cli": "no-admitted-recipe",
         "family:fdo-client": "no-admitted-recipe",
         "family:fdo-init": "no-admitted-recipe",
@@ -711,7 +740,7 @@
         "family:fetchmail": "none",
         "family:ffmpeg-libavformat": "no-admitted-recipe",
         "family:ffmpeg-libavutil": "no-admitted-recipe",
-        "family:fido2": "no-admitted-recipe",
+        "family:fido2": "authority-baseline-limited",
         "family:fio-engine-http": "no-admitted-recipe",
         "family:fizz": "no-admitted-recipe",
         "family:fluent-bit": "no-admitted-recipe",
@@ -734,14 +763,14 @@
         "family:freeswitch": "no-admitted-recipe",
         "family:freetds": "no-admitted-recipe",
         "family:frr": "no-admitted-recipe",
-        "family:fsverity-utils": "no-admitted-recipe",
-        "family:ftp-ssl": "no-admitted-recipe",
-        "family:ftpd-ssl": "no-admitted-recipe",
+        "family:fsverity-utils": "none",
+        "family:ftp-ssl": "candidate-configure-failure",
+        "family:ftpd-ssl": "candidate-configure-failure",
         "family:fuse-btfs": "no-admitted-recipe",
         "family:fuse-encfs": "no-admitted-recipe",
         "family:galera": "no-admitted-recipe",
-        "family:galera-3": "no-admitted-recipe",
-        "family:galera-4": "no-admitted-recipe",
+        "family:galera-3": "authority-baseline-limited",
+        "family:galera-4": "authority-baseline-limited",
         "family:galera-arbitrator": "no-admitted-recipe",
         "family:galera-arbitrator-3": "no-admitted-recipe",
         "family:galera-arbitrator-4": "no-admitted-recipe",
@@ -750,12 +779,12 @@
         "family:gdal": "no-admitted-recipe",
         "family:gdcm": "no-admitted-recipe",
         "family:gearmand": "no-admitted-recipe",
-        "family:gensio": "no-admitted-recipe",
-        "family:getdns": "no-admitted-recipe",
+        "family:gensio": "none",
+        "family:getdns": "authority-baseline-limited",
         "family:gfsd": "no-admitted-recipe",
         "family:gftp": "no-admitted-recipe",
         "family:gftp-gtk": "no-admitted-recipe",
-        "family:gftp-text": "no-admitted-recipe",
+        "family:gftp-text": "none",
         "family:ghasher": "no-admitted-recipe",
         "family:ghc-haxr": "no-admitted-recipe",
         "family:ghc-hsopenssl": "no-admitted-recipe",
@@ -765,7 +794,7 @@
         "family:ghc-koji": "no-admitted-recipe",
         "family:ghc-openssl-streams": "no-admitted-recipe",
         "family:git-core": "no-admitted-recipe",
-        "family:git-crypt": "no-admitted-recipe",
+        "family:git-crypt": "none",
         "family:git-email": "no-admitted-recipe",
         "family:gitui": "no-admitted-recipe",
         "family:gkrellm": "no-admitted-recipe",
@@ -781,7 +810,7 @@
         "family:globus-gridmap-eppn-callout": "no-admitted-recipe",
         "family:globus-gridmap-verify-myproxy-callout": "no-admitted-recipe",
         "family:globus-gsi-callback": "no-admitted-recipe",
-        "family:globus-gsi-cert-utils": "no-admitted-recipe",
+        "family:globus-gsi-cert-utils": "authority-baseline-limited",
         "family:globus-gsi-cert-utils-progs": "no-admitted-recipe",
         "family:globus-gsi-credential": "no-admitted-recipe",
         "family:globus-gsi-openssl-error": "no-admitted-recipe",
@@ -801,7 +830,7 @@
         "family:glusterfs-geo-replication": "no-admitted-recipe",
         "family:glusterfs-server": "no-admitted-recipe",
         "family:glusterfs-thin-arbiter": "no-admitted-recipe",
-        "family:gmnisrv": "no-admitted-recipe",
+        "family:gmnisrv": "none",
         "family:gnome-authenticator": "no-admitted-recipe",
         "family:gnome-podcasts": "no-admitted-recipe",
         "family:gnome-shortwave": "no-admitted-recipe",
@@ -816,14 +845,14 @@
         "family:google-cloud-cpp": "no-admitted-recipe",
         "family:google-cloud-cpp-rest-internal": "no-admitted-recipe",
         "family:google-cloud-cpp-storage": "no-admitted-recipe",
-        "family:gostsum": "no-admitted-recipe",
+        "family:gostsum": "authority-baseline-limited",
         "family:gq": "no-admitted-recipe",
         "family:gridengine-client": "no-admitted-recipe",
         "family:gridengine-drmaa1.0": "no-admitted-recipe",
         "family:gridengine-exec": "no-admitted-recipe",
         "family:gridengine-master": "no-admitted-recipe",
         "family:gridengine-qmon": "no-admitted-recipe",
-        "family:gridsite-clients": "no-admitted-recipe",
+        "family:gridsite-clients": "recipe-build-system-unsupported",
         "family:gridsite-libs": "no-admitted-recipe",
         "family:grisbi": "no-admitted-recipe",
         "family:groonga-httpd": "no-admitted-recipe",
@@ -835,8 +864,8 @@
         "family:gsi-openssh-server": "no-admitted-recipe",
         "family:gsoap": "no-admitted-recipe",
         "family:gsoap-2.8.124": "no-admitted-recipe",
-        "family:gsocket": "no-admitted-recipe",
-        "family:gss-ntlmssp": "no-admitted-recipe",
+        "family:gsocket": "no-fixture",
+        "family:gss-ntlmssp": "none",
         "family:gssntlmssp": "no-admitted-recipe",
         "family:gst-plugins-bad": "no-admitted-recipe",
         "family:gstreamer1-plugin-reqwest": "no-admitted-recipe",
@@ -849,15 +878,15 @@
         "family:guacamole-server-ssh": "no-admitted-recipe",
         "family:guacamole-server-vnc": "no-admitted-recipe",
         "family:guacd": "no-admitted-recipe",
-        "family:gvpe": "no-admitted-recipe",
+        "family:gvpe": "no-fixture",
         "family:gwenhywfar": "no-admitted-recipe",
-        "family:h2o": "no-admitted-recipe",
-        "family:h2o-evloop0.13": "no-admitted-recipe",
+        "family:h2o": "authority-baseline-limited",
+        "family:h2o-evloop0.13": "authority-baseline-limited",
         "family:halloy": "no-admitted-recipe",
         "family:haproxy": "none",
         "family:hcxdumptool": "no-admitted-recipe",
-        "family:hcxkeys": "no-admitted-recipe",
-        "family:hcxtools": "no-admitted-recipe",
+        "family:hcxkeys": "none",
+        "family:hcxtools": "none",
         "family:headlines": "no-admitted-recipe",
         "family:hermes": "no-admitted-recipe",
         "family:hexchat": "no-admitted-recipe",
@@ -867,27 +896,27 @@
         "family:hippotat-client": "no-admitted-recipe",
         "family:hiredict-ssl": "no-admitted-recipe",
         "family:hiredis-ssl": "none",
-        "family:hitch": "no-admitted-recipe",
-        "family:hopm": "no-admitted-recipe",
+        "family:hitch": "none",
+        "family:hopm": "no-fixture",
         "family:hostapd": "no-admitted-recipe",
         "family:hplip-libs": "no-admitted-recipe",
         "family:hsmwiz": "no-admitted-recipe",
         "family:htslib": "no-admitted-recipe",
-        "family:httest": "no-admitted-recipe",
+        "family:httest": "authority-baseline-limited",
         "family:http_ping": "no-admitted-recipe",
-        "family:httpd": "no-admitted-recipe",
+        "family:httpd": "authority-baseline-limited",
         "family:httpdirfs": "no-admitted-recipe",
-        "family:httperf": "no-admitted-recipe",
-        "family:httping": "no-admitted-recipe",
+        "family:httperf": "none",
+        "family:httping": "none",
         "family:httrack": "no-admitted-recipe",
-        "family:hydra": "no-admitted-recipe",
+        "family:hydra": "none",
         "family:hylafax+": "no-admitted-recipe",
         "family:hylafax+-client": "no-admitted-recipe",
-        "family:i2pd": "no-admitted-recipe",
+        "family:i2pd": "authority-baseline-limited",
         "family:iamb": "no-admitted-recipe",
         "family:ibmswtpm2": "no-admitted-recipe",
         "family:icecast": "no-admitted-recipe",
-        "family:icecast2": "no-admitted-recipe",
+        "family:icecast2": "none",
         "family:icinga2": "no-admitted-recipe",
         "family:idevicerestore": "no-admitted-recipe",
         "family:igtf-policy-classic": "no-admitted-recipe",
@@ -896,13 +925,13 @@
         "family:igtf-policy-mics": "no-admitted-recipe",
         "family:igtf-policy-slcs": "no-admitted-recipe",
         "family:igtf-policy-unaccredited": "no-admitted-recipe",
-        "family:ike-scan": "no-admitted-recipe",
+        "family:ike-scan": "no-fixture",
         "family:ikiwiki-hosting-web": "no-admitted-recipe",
-        "family:ima-evm-utils": "no-admitted-recipe",
+        "family:ima-evm-utils": "none",
         "family:imap": "no-admitted-recipe",
-        "family:imapfilter": "no-admitted-recipe",
-        "family:imapproxy": "no-admitted-recipe",
-        "family:imx-code-signing-tool": "no-admitted-recipe",
+        "family:imapfilter": "none",
+        "family:imapproxy": "candidate-configure-failure",
+        "family:imx-code-signing-tool": "candidate-configure-failure",
         "family:inadyn": "no-admitted-recipe",
         "family:inetsim": "no-admitted-recipe",
         "family:inn": "no-admitted-recipe",
@@ -912,36 +941,36 @@
         "family:intel-ipp-crypto-mb": "no-admitted-recipe",
         "family:iperf3": "none",
         "family:ipmievd": "no-admitted-recipe",
-        "family:ipmitool": "no-admitted-recipe",
-        "family:ipmiutil": "no-admitted-recipe",
+        "family:ipmitool": "authority-baseline-limited",
+        "family:ipmiutil": "candidate-configure-failure",
         "family:ipv6calc": "no-admitted-recipe",
-        "family:ircd-hybrid": "no-admitted-recipe",
-        "family:ircii": "no-admitted-recipe",
-        "family:irssi": "no-admitted-recipe",
+        "family:ircd-hybrid": "none",
+        "family:ircii": "none",
+        "family:irssi": "none",
         "family:iscsi-initiator-utils": "no-admitted-recipe",
         "family:isns-utils": "no-admitted-recipe",
         "family:istgt": "no-admitted-recipe",
         "family:isync": "none",
-        "family:ixwebsocket-libs": "no-admitted-recipe",
+        "family:ixwebsocket-libs": "authority-baseline-limited",
         "family:jabberd": "no-admitted-recipe",
-        "family:jabberd2": "no-admitted-recipe",
+        "family:jabberd2": "authority-baseline-limited",
         "family:jami-daemon": "no-admitted-recipe",
         "family:janus": "no-admitted-recipe",
         "family:janus-gateway": "no-admitted-recipe",
-        "family:jimtcl": "no-admitted-recipe",
+        "family:jimtcl": "none",
         "family:john": "no-admitted-recipe",
         "family:jujutsu": "no-admitted-recipe",
-        "family:jwt": "no-admitted-recipe",
+        "family:jwt": "authority-baseline-limited",
         "family:kamailio-autheph-modules": "no-admitted-recipe",
         "family:kamailio-authephemeral": "no-admitted-recipe",
         "family:kamailio-ims": "no-admitted-recipe",
         "family:kamailio-outbound": "no-admitted-recipe",
         "family:kamailio-tls": "no-admitted-recipe",
         "family:kamailio-websocket": "no-admitted-recipe",
-        "family:kannel": "no-admitted-recipe",
+        "family:kannel": "candidate-configure-failure",
         "family:kannel-extras": "no-admitted-recipe",
         "family:kdeconnect": "no-admitted-recipe",
-        "family:kea": "no-admitted-recipe",
+        "family:kea": "none",
         "family:kea-ctrl-agent": "no-admitted-recipe",
         "family:kea-hooks": "no-admitted-recipe",
         "family:keepalived": "none",
@@ -960,12 +989,12 @@
         "family:kodi-wayland": "no-admitted-recipe",
         "family:kodi-x11": "no-admitted-recipe",
         "family:koji-tool": "no-admitted-recipe",
-        "family:kore": "no-admitted-recipe",
+        "family:kore": "candidate-configure-failure",
         "family:kqoauth-qt5": "no-admitted-recipe",
-        "family:krb5": "no-admitted-recipe",
+        "family:krb5": "none",
         "family:krb5-3": "no-admitted-recipe",
-        "family:krb5-k5tls": "no-admitted-recipe",
-        "family:krb5-pkinit": "no-admitted-recipe",
+        "family:krb5-k5tls": "candidate-configure-failure",
+        "family:krb5-pkinit": "none",
         "family:krb5-server": "no-admitted-recipe",
         "family:krb5-server-ldap": "no-admitted-recipe",
         "family:kristall": "no-admitted-recipe",
@@ -976,18 +1005,18 @@
         "family:lapce": "no-admitted-recipe",
         "family:lapce-proxy": "no-admitted-recipe",
         "family:lasso": "no-admitted-recipe",
-        "family:lastpass-cli": "no-admitted-recipe",
+        "family:lastpass-cli": "authority-baseline-limited",
         "family:lcmaps": "no-admitted-recipe",
         "family:lcmaps-plugins-jobrep": "no-admitted-recipe",
-        "family:lcmaps-plugins-verify-proxy": "no-admitted-recipe",
+        "family:lcmaps-plugins-verify-proxy": "candidate-configure-failure",
         "family:ldapvi": "no-admitted-recipe",
         "family:ldns": "none",
-        "family:ldnsutils": "no-admitted-recipe",
-        "family:lftp": "no-admitted-recipe",
+        "family:ldnsutils": "none",
+        "family:lftp": "none",
         "family:lib3270": "no-admitted-recipe",
         "family:libace-inet-ssl-7.0.8": "no-admitted-recipe",
         "family:libace-ssl-7.0.8": "no-admitted-recipe",
-        "family:libafflib0v5": "no-admitted-recipe",
+        "family:libafflib0v5": "candidate-load-failure",
         "family:libalpm": "no-admitted-recipe",
         "family:libapache2-mod-auth-gssapi": "no-admitted-recipe",
         "family:libapache2-mod-auth-mellon": "no-admitted-recipe",
@@ -995,7 +1024,7 @@
         "family:libapache2-mod-auth-pubtkt": "no-admitted-recipe",
         "family:libapache2-mod-php8.2": "no-admitted-recipe",
         "family:libapache2-mod-qos": "no-admitted-recipe",
-        "family:libaprutil1": "no-admitted-recipe",
+        "family:libaprutil1": "authority-baseline-limited",
         "family:libarccommon3v5": "no-admitted-recipe",
         "family:libarchive": "none",
         "family:libbobcat6": "no-admitted-recipe",
@@ -1005,70 +1034,70 @@
         "family:libcanl-c4": "no-admitted-recipe",
         "family:libcapnp-0.9.2": "no-admitted-recipe",
         "family:libcgsi-gsoap1": "no-admitted-recipe",
-        "family:libcjose0": "no-admitted-recipe",
+        "family:libcjose0": "authority-baseline-limited",
         "family:libclamav11": "no-admitted-recipe",
-        "family:libcoap": "no-admitted-recipe",
+        "family:libcoap": "authority-baseline-limited",
         "family:libcohttp-lwt-unix-ocaml-dev": "no-admitted-recipe",
         "family:libcouchbase": "no-admitted-recipe",
-        "family:libcpp-httplib0.11": "no-admitted-recipe",
+        "family:libcpp-httplib0.11": "none",
         "family:libcpprest2.10": "no-admitted-recipe",
         "family:libcreaterepo-c0": "no-admitted-recipe",
-        "family:libcrypt-openssl-bignum-perl": "no-admitted-recipe",
-        "family:libcrypt-openssl-dsa-perl": "no-admitted-recipe",
-        "family:libcrypt-openssl-ec-perl": "no-admitted-recipe",
+        "family:libcrypt-openssl-bignum-perl": "none",
+        "family:libcrypt-openssl-dsa-perl": "none",
+        "family:libcrypt-openssl-ec-perl": "none",
         "family:libcrypt-openssl-guess-perl": "no-admitted-recipe",
-        "family:libcrypt-openssl-pkcs10-perl": "no-admitted-recipe",
-        "family:libcrypt-openssl-random-perl": "no-admitted-recipe",
-        "family:libcrypt-openssl-rsa-perl": "no-admitted-recipe",
-        "family:libcrypt-openssl-x509-perl": "no-admitted-recipe",
-        "family:libcrypt-smime-perl": "no-admitted-recipe",
-        "family:libcrypt-ssleay-perl": "no-admitted-recipe",
+        "family:libcrypt-openssl-pkcs10-perl": "none",
+        "family:libcrypt-openssl-random-perl": "none",
+        "family:libcrypt-openssl-rsa-perl": "none",
+        "family:libcrypt-openssl-x509-perl": "none",
+        "family:libcrypt-smime-perl": "none",
+        "family:libcrypt-ssleay-perl": "candidate-configure-failure",
         "family:libcryptmount": "no-admitted-recipe",
         "family:libcryptsetup12": "no-admitted-recipe",
-        "family:libcxxtools10": "no-admitted-recipe",
+        "family:libcxxtools10": "candidate-configure-failure",
         "family:libcyrus-imap-perl": "no-admitted-recipe",
         "family:libdavix0v5": "no-admitted-recipe",
-        "family:libdcmtk17": "no-admitted-recipe",
-        "family:libddsc0debian": "no-admitted-recipe",
-        "family:libdigidoc-tools": "no-admitted-recipe",
-        "family:libdigidoc2": "no-admitted-recipe",
+        "family:libdcmtk17": "authority-baseline-limited",
+        "family:libddsc0debian": "authority-baseline-limited",
+        "family:libdigidoc-tools": "authority-baseline-limited",
+        "family:libdigidoc2": "authority-baseline-limited",
         "family:libdigidocpp": "no-admitted-recipe",
-        "family:libdkim1d": "no-admitted-recipe",
+        "family:libdkim1d": "candidate-configure-failure",
         "family:libdkimpp": "no-admitted-recipe",
         "family:libdnf-plugin-subscription-manager": "no-admitted-recipe",
         "family:libdroplet": "no-admitted-recipe",
         "family:libdrpm0": "no-admitted-recipe",
         "family:libduo3": "no-admitted-recipe",
-        "family:libeac3": "no-admitted-recipe",
+        "family:libeac3": "none",
         "family:libeckit0d": "no-admitted-recipe",
         "family:libecore-con1": "no-admitted-recipe",
         "family:libeet1": "no-admitted-recipe",
         "family:libeiskaltdcpp2.4": "no-admitted-recipe",
         "family:libemile1": "no-admitted-recipe",
-        "family:libengine-gost-openssl": "no-admitted-recipe",
-        "family:libengine-pkcs11-openssl": "no-admitted-recipe",
-        "family:libesmtp": "no-admitted-recipe",
+        "family:libengine-gost-openssl": "authority-baseline-limited",
+        "family:libengine-pkcs11-openssl": "none",
+        "family:libesmtp": "authority-baseline-limited",
         "family:libevent": "none",
-        "family:libevent-openssl-2.1-7": "no-admitted-recipe",
-        "family:libevhtp": "no-admitted-recipe",
-        "family:libewf": "no-admitted-recipe",
+        "family:libevent-openssl-2.1-7": "none",
+        "family:libevhtp": "authority-baseline-limited",
+        "family:libewf": "candidate-link-failure",
         "family:libexosip2": "no-admitted-recipe",
         "family:libfaifa0": "no-admitted-recipe",
         "family:libfalcosecurity0": "no-admitted-recipe",
         "family:libfastrtps2.9": "no-admitted-recipe",
-        "family:libfreefare0": "no-admitted-recipe",
+        "family:libfreefare0": "authority-baseline-limited",
         "family:libfreeradius3": "no-admitted-recipe",
         "family:libfreerdp2-2": "no-admitted-recipe",
-        "family:libfsapfs-utils": "no-admitted-recipe",
-        "family:libfsapfs1": "no-admitted-recipe",
-        "family:libfsverity": "no-admitted-recipe",
+        "family:libfsapfs-utils": "candidate-link-failure",
+        "family:libfsapfs1": "none",
+        "family:libfsverity": "none",
         "family:libgambit4": "no-admitted-recipe",
         "family:libgda5-sqlcipher": "no-admitted-recipe",
         "family:libgdal32": "no-admitted-recipe",
         "family:libgdcm3.0": "no-admitted-recipe",
         "family:libgearman": "no-admitted-recipe",
         "family:libgenomicsdb0": "no-admitted-recipe",
-        "family:libgetdns10": "no-admitted-recipe",
+        "family:libgetdns10": "authority-baseline-limited",
         "family:libgfapi0": "no-admitted-recipe",
         "family:libgfarm1": "no-admitted-recipe",
         "family:libgfchangelog0": "no-admitted-recipe",
@@ -1077,103 +1106,103 @@
         "family:libghc-haxr-dev": "no-admitted-recipe",
         "family:libghc-hookup-dev": "no-admitted-recipe",
         "family:libghc-hsopenssl-dev": "no-admitted-recipe",
-        "family:libgit2": "no-admitted-recipe",
+        "family:libgit2": "authority-baseline-limited",
         "family:libglusterfs0": "no-admitted-recipe",
         "family:libimobiledevice": "no-admitted-recipe",
-        "family:libjose": "no-admitted-recipe",
+        "family:libjose": "authority-baseline-limited",
         "family:libks": "no-admitted-recipe",
         "family:libloc": "no-admitted-recipe",
-        "family:libmongocrypt": "no-admitted-recipe",
-        "family:libnetconf2": "no-admitted-recipe",
+        "family:libmongocrypt": "authority-baseline-limited",
+        "family:libnetconf2": "authority-baseline-limited",
         "family:libnvme": "no-admitted-recipe",
-        "family:liboauth2": "no-admitted-recipe",
-        "family:libpaho-mqtt": "no-admitted-recipe",
+        "family:liboauth2": "authority-baseline-limited",
+        "family:libpaho-mqtt": "authority-baseline-limited",
         "family:libpq": "no-admitted-recipe",
-        "family:librabbitmq": "no-admitted-recipe",
+        "family:librabbitmq": "authority-baseline-limited",
         "family:librados2": "no-admitted-recipe",
         "family:librbd1": "no-admitted-recipe",
         "family:librdkafka": "none",
-        "family:libre": "no-admitted-recipe",
-        "family:librelp": "no-admitted-recipe",
+        "family:libre": "none",
+        "family:librelp": "none",
         "family:librepo": "no-admitted-recipe",
         "family:libretls": "none",
         "family:librgw2": "no-admitted-recipe",
-        "family:libshout": "no-admitted-recipe",
-        "family:libssh": "recipe-build-system-unsupported",
-        "family:libstrophe": "no-admitted-recipe",
-        "family:libtins": "no-admitted-recipe",
+        "family:libshout": "candidate-runtime-failure",
+        "family:libssh": "authority-baseline-limited",
+        "family:libstrophe": "authority-baseline-limited",
+        "family:libtins": "authority-baseline-limited",
         "family:libtorrent": "no-admitted-recipe",
         "family:libtorrent-rasterbar": "no-admitted-recipe",
-        "family:libtpms": "no-admitted-recipe",
-        "family:libu2f-server": "no-admitted-recipe",
-        "family:libwebsockets": "no-admitted-recipe",
-        "family:libxmlsec1": "no-admitted-recipe",
-        "family:libzip": "no-admitted-recipe",
+        "family:libtpms": "none",
+        "family:libu2f-server": "none",
+        "family:libwebsockets": "authority-baseline-limited",
+        "family:libxmlsec1": "none",
+        "family:libzip": "authority-baseline-limited",
         "family:libzypp": "no-admitted-recipe",
-        "family:lighttpd": "recipe-build-system-unsupported",
+        "family:lighttpd": "none",
         "family:links": "none",
-        "family:lua-cqueues": "no-admitted-recipe",
-        "family:lua-luaossl": "no-admitted-recipe",
-        "family:lua-sec": "no-admitted-recipe",
+        "family:lua-cqueues": "none",
+        "family:lua-luaossl": "none",
+        "family:lua-sec": "none",
         "family:lua5.1-cqueues": "no-admitted-recipe",
         "family:lua5.1-sec": "no-admitted-recipe",
         "family:lxc": "no-admitted-recipe",
-        "family:lynx": "no-admitted-recipe",
-        "family:makepasswd": "no-admitted-recipe",
+        "family:lynx": "none",
+        "family:makepasswd": "none",
         "family:mariadb": "no-admitted-recipe",
         "family:mariadb-backup": "no-admitted-recipe",
         "family:mariadb-client": "no-admitted-recipe",
         "family:mariadb-connector-c": "no-admitted-recipe",
         "family:mariadb-embedded": "no-admitted-recipe",
         "family:mariadb-server": "no-admitted-recipe",
-        "family:medusa": "no-admitted-recipe",
-        "family:megatools": "no-admitted-recipe",
-        "family:memcached": "no-admitted-recipe",
+        "family:medusa": "candidate-load-failure",
+        "family:megatools": "authority-baseline-limited",
+        "family:memcached": "none",
         "family:mender-artifact": "no-admitted-recipe",
-        "family:mini-httpd": "no-admitted-recipe",
-        "family:minizip-ng": "no-admitted-recipe",
-        "family:mktorrent": "no-admitted-recipe",
-        "family:mokutil": "no-admitted-recipe",
+        "family:mini-httpd": "none",
+        "family:minizip-ng": "authority-baseline-limited",
+        "family:mktorrent": "none",
+        "family:mokutil": "none",
         "family:mold": "no-admitted-recipe",
         "family:monero": "no-admitted-recipe",
         "family:mongo-c-driver": "no-admitted-recipe",
         "family:monit": "none",
-        "family:monitoring-plugins": "no-admitted-recipe",
-        "family:mosh": "no-admitted-recipe",
+        "family:monitoring-plugins": "none",
+        "family:mosh": "no-fixture",
         "family:mosquitto": "none",
         "family:mstflint": "no-admitted-recipe",
         "family:mtxclient": "no-admitted-recipe",
         "family:mumble": "no-admitted-recipe",
-        "family:mumble-server": "no-admitted-recipe",
+        "family:mumble-server": "authority-baseline-limited",
         "family:mupdf": "no-admitted-recipe",
-        "family:mutt": "no-admitted-recipe",
+        "family:mutt": "none",
         "family:myproxy": "no-admitted-recipe",
         "family:myproxy-voms": "no-admitted-recipe",
         "family:mysql": "no-admitted-recipe",
         "family:nagios": "no-admitted-recipe",
-        "family:nagios-plugins-http": "no-admitted-recipe",
-        "family:nagios-plugins-ldap": "no-admitted-recipe",
-        "family:nagios-plugins-smtp": "no-admitted-recipe",
+        "family:nagios-plugins-http": "none",
+        "family:nagios-plugins-ldap": "candidate-configure-failure",
+        "family:nagios-plugins-smtp": "none",
         "family:nagios-plugins-snmp": "no-admitted-recipe",
-        "family:nagios-plugins-tcp": "no-admitted-recipe",
-        "family:ncrack": "no-admitted-recipe",
+        "family:nagios-plugins-tcp": "none",
+        "family:ncrack": "none",
         "family:neomutt": "no-admitted-recipe",
-        "family:neon": "no-admitted-recipe",
-        "family:net-snmp": "no-admitted-recipe",
+        "family:neon": "authority-baseline-limited",
+        "family:net-snmp": "none",
         "family:netatalk": "no-admitted-recipe",
         "family:netdata": "no-admitted-recipe",
         "family:netsurf-fb": "no-admitted-recipe",
         "family:networkmanager-l2tp": "no-admitted-recipe",
         "family:nextcloud-client": "no-admitted-recipe",
-        "family:nghttp2": "no-admitted-recipe",
+        "family:nghttp2": "authority-baseline-limited",
         "family:nginx": "none",
         "family:nheko": "no-admitted-recipe",
         "family:nix": "no-admitted-recipe",
-        "family:njs": "no-admitted-recipe",
+        "family:njs": "none",
         "family:nmail": "no-admitted-recipe",
-        "family:nmap": "no-admitted-recipe",
-        "family:nmap-ncat": "no-admitted-recipe",
-        "family:nmh": "no-admitted-recipe",
+        "family:nmap": "none",
+        "family:nmap-ncat": "none",
+        "family:nmh": "none",
         "family:nodejs": "no-admitted-recipe",
         "family:nordugrid-arc-arex": "no-admitted-recipe",
         "family:nordugrid-arc-client": "no-admitted-recipe",
@@ -1182,78 +1211,78 @@
         "family:nordugrid-arc-plugins-arcrest": "no-admitted-recipe",
         "family:nordugrid-arc-plugins-lcas-lcmaps": "no-admitted-recipe",
         "family:nordugrid-arc-plugins-needed": "no-admitted-recipe",
-        "family:nrpe": "no-admitted-recipe",
-        "family:nsca-ng-client": "no-admitted-recipe",
-        "family:nsca-ng-server": "no-admitted-recipe",
-        "family:nsd": "no-admitted-recipe",
+        "family:nrpe": "none",
+        "family:nsca-ng-client": "none",
+        "family:nsca-ng-server": "none",
+        "family:nsd": "none",
         "family:ntpsec": "no-admitted-recipe",
         "family:nushell": "no-admitted-recipe",
         "family:nut": "no-admitted-recipe",
-        "family:nzbget": "no-admitted-recipe",
+        "family:nzbget": "candidate-configure-failure",
         "family:omniorb": "no-admitted-recipe",
         "family:open-iscsi": "no-admitted-recipe",
         "family:open-isns": "no-admitted-recipe",
         "family:open-vm-tools": "no-admitted-recipe",
         "family:opencryptoki": "no-admitted-recipe",
-        "family:opendkim": "no-admitted-recipe",
-        "family:openfortivpn": "no-admitted-recipe",
-        "family:openiked": "no-admitted-recipe",
+        "family:opendkim": "none",
+        "family:openfortivpn": "candidate-configure-failure",
+        "family:openiked": "authority-baseline-limited",
         "family:openipmi-lanserv": "no-admitted-recipe",
         "family:openipmi-libs": "no-admitted-recipe",
-        "family:openldap": "no-admitted-recipe",
+        "family:openldap": "none",
         "family:opensc": "no-admitted-recipe",
         "family:openssh": "none",
-        "family:openssh-client": "no-admitted-recipe",
-        "family:openssh-server": "no-admitted-recipe",
+        "family:openssh-client": "none",
+        "family:openssh-server": "none",
         "family:openvpn": "none",
         "family:openvswitch": "no-admitted-recipe",
-        "family:ophcrack": "no-admitted-recipe",
+        "family:ophcrack": "authority-baseline-limited",
         "family:opusfile": "no-admitted-recipe",
-        "family:osslsigncode": "no-admitted-recipe",
+        "family:osslsigncode": "authority-baseline-limited",
         "family:ostree": "no-admitted-recipe",
         "family:ovn": "no-admitted-recipe",
         "family:ovn-central": "no-admitted-recipe",
         "family:ovn-host": "no-admitted-recipe",
         "family:pam-u2f": "no-admitted-recipe",
         "family:pamu2fcfg": "no-admitted-recipe",
-        "family:partclone": "no-admitted-recipe",
-        "family:partimage": "no-admitted-recipe",
+        "family:partclone": "none",
+        "family:partimage": "authority-baseline-limited",
         "family:passenger": "no-admitted-recipe",
         "family:pcp": "no-admitted-recipe",
         "family:pcp-testsuite": "no-admitted-recipe",
         "family:pdal": "no-admitted-recipe",
-        "family:pdns": "no-admitted-recipe",
+        "family:pdns": "authority-baseline-limited",
         "family:pdns-ixfrdist": "no-admitted-recipe",
-        "family:pdns-recursor": "no-admitted-recipe",
-        "family:perdition": "no-admitted-recipe",
+        "family:pdns-recursor": "authority-baseline-limited",
+        "family:perdition": "candidate-configure-failure",
         "family:perf": "no-admitted-recipe",
-        "family:perl-crypt-openssl-aes": "no-admitted-recipe",
-        "family:perl-crypt-openssl-bignum": "no-admitted-recipe",
-        "family:perl-crypt-openssl-dsa": "no-admitted-recipe",
-        "family:perl-crypt-openssl-random": "no-admitted-recipe",
-        "family:perl-crypt-openssl-rsa": "no-admitted-recipe",
-        "family:perl-crypt-openssl-x509": "no-admitted-recipe",
-        "family:perl-crypt-smime": "no-admitted-recipe",
-        "family:perl-crypt-ssleay": "no-admitted-recipe",
-        "family:perl-net-dns-sec": "no-admitted-recipe",
-        "family:perl-net-ssleay": "no-admitted-recipe",
-        "family:pev": "no-admitted-recipe",
+        "family:perl-crypt-openssl-aes": "none",
+        "family:perl-crypt-openssl-bignum": "none",
+        "family:perl-crypt-openssl-dsa": "none",
+        "family:perl-crypt-openssl-random": "none",
+        "family:perl-crypt-openssl-rsa": "none",
+        "family:perl-crypt-openssl-x509": "none",
+        "family:perl-crypt-smime": "none",
+        "family:perl-crypt-ssleay": "candidate-configure-failure",
+        "family:perl-net-dns-sec": "candidate-functional-failure",
+        "family:perl-net-ssleay": "none",
+        "family:pev": "none",
         "family:pgbackrest": "no-admitted-recipe",
         "family:pgbouncer": "no-admitted-recipe",
         "family:pgloader": "no-admitted-recipe",
-        "family:php": "no-admitted-recipe",
+        "family:php": "none",
         "family:picolisp": "no-admitted-recipe",
         "family:pipewire": "no-admitted-recipe",
         "family:pjproject": "no-admitted-recipe",
         "family:pkcs11-dump": "no-admitted-recipe",
         "family:pkcs11-helper": "no-admitted-recipe",
-        "family:poco": "no-admitted-recipe",
+        "family:poco": "authority-baseline-limited",
         "family:podofo": "no-admitted-recipe",
         "family:poedit": "no-admitted-recipe",
-        "family:postfix": "no-admitted-recipe",
+        "family:postfix": "none",
         "family:ppp": "no-admitted-recipe",
-        "family:proftpd": "no-admitted-recipe",
-        "family:prosody": "no-admitted-recipe",
+        "family:proftpd": "none",
+        "family:prosody": "none",
         "family:proxygen": "no-admitted-recipe",
         "family:proxytunnel": "none",
         "family:psi-plus-plugins": "no-admitted-recipe",
@@ -1266,35 +1295,35 @@
         "family:python3-awscrt": "no-admitted-recipe",
         "family:python3-cryptography": "no-admitted-recipe",
         "family:python3-grpcio": "no-admitted-recipe",
-        "family:python3-m2crypto": "no-admitted-recipe",
-        "family:python3-scrypt": "no-admitted-recipe",
+        "family:python3-m2crypto": "authority-baseline-limited",
+        "family:python3-scrypt": "authority-baseline-limited",
         "family:python3-uamqp": "no-admitted-recipe",
         "family:qbittorrent": "no-admitted-recipe",
         "family:qbittorrent-nox": "no-admitted-recipe",
-        "family:qpdf": "no-admitted-recipe",
+        "family:qpdf": "authority-baseline-limited",
         "family:qt5-qtbase": "no-admitted-recipe",
         "family:qt6-qtbase": "no-admitted-recipe",
         "family:qterm": "no-admitted-recipe",
-        "family:rabbitmq-c": "no-admitted-recipe",
-        "family:radsecproxy": "no-admitted-recipe",
+        "family:rabbitmq-c": "authority-baseline-limited",
+        "family:radsecproxy": "none",
         "family:rbd-mirror": "no-admitted-recipe",
         "family:redis": "none",
-        "family:rhash": "no-admitted-recipe",
+        "family:rhash": "none",
         "family:rizin": "no-admitted-recipe",
         "family:rng-tools": "no-admitted-recipe",
         "family:rpki-client": "no-admitted-recipe",
         "family:rpm": "no-admitted-recipe",
-        "family:rspamd": "no-admitted-recipe",
+        "family:rspamd": "authority-baseline-limited",
         "family:rsync": "none",
         "family:rsyslog-openssl": "no-admitted-recipe",
         "family:rtl_433": "no-admitted-recipe",
-        "family:ruby": "no-admitted-recipe",
+        "family:ruby": "none",
         "family:ruby-eventmachine": "no-admitted-recipe",
-        "family:s-nail": "no-admitted-recipe",
-        "family:s2n-tls": "no-admitted-recipe",
+        "family:s-nail": "none",
+        "family:s2n-tls": "authority-baseline-limited",
         "family:s3fs-fuse": "no-admitted-recipe",
         "family:samdump2": "no-admitted-recipe",
-        "family:sbsigntool": "no-admitted-recipe",
+        "family:sbsigntool": "authority-baseline-limited",
         "family:sccache": "no-admitted-recipe",
         "family:scryer-prolog": "no-admitted-recipe",
         "family:sendmail": "no-admitted-recipe",
@@ -1302,37 +1331,37 @@
         "family:serf": "no-admitted-recipe",
         "family:shairport-sync": "no-admitted-recipe",
         "family:sheldon": "no-admitted-recipe",
-        "family:shellinabox": "no-admitted-recipe",
+        "family:shellinabox": "none",
         "family:shibboleth-sp": "no-admitted-recipe",
-        "family:siege": "no-admitted-recipe",
-        "family:sipp": "no-admitted-recipe",
-        "family:sipsak": "no-admitted-recipe",
-        "family:slowhttptest": "no-admitted-recipe",
-        "family:slrn": "no-admitted-recipe",
+        "family:siege": "none",
+        "family:sipp": "authority-baseline-limited",
+        "family:sipsak": "none",
+        "family:slowhttptest": "none",
+        "family:slrn": "none",
         "family:snownews": "no-admitted-recipe",
         "family:socat": "none",
-        "family:sofia-sip": "no-admitted-recipe",
+        "family:sofia-sip": "none",
         "family:spice-glib": "no-admitted-recipe",
         "family:spice-server": "no-admitted-recipe",
         "family:springlobby": "no-admitted-recipe",
-        "family:sqlcipher": "no-admitted-recipe",
+        "family:sqlcipher": "candidate-configure-failure",
         "family:squeezelite": "no-admitted-recipe",
         "family:squid": "none",
         "family:srain": "no-admitted-recipe",
-        "family:srt": "no-admitted-recipe",
-        "family:srtp": "no-admitted-recipe",
-        "family:sscg": "no-admitted-recipe",
-        "family:ssldump": "no-admitted-recipe",
+        "family:srt": "authority-baseline-limited",
+        "family:srtp": "authority-baseline-limited",
+        "family:sscg": "authority-baseline-limited",
+        "family:ssldump": "authority-baseline-limited",
         "family:sslscan": "none",
-        "family:sslsplit": "no-admitted-recipe",
+        "family:sslsplit": "none",
         "family:ssmtp": "none",
         "family:sssd-common": "no-admitted-recipe",
         "family:sstp-client": "no-admitted-recipe",
-        "family:strongswan": "no-admitted-recipe",
-        "family:stubby": "no-admitted-recipe",
+        "family:strongswan": "none",
+        "family:stubby": "authority-baseline-limited",
         "family:stunnel": "none",
         "family:supertuxkart": "no-admitted-recipe",
-        "family:swtpm": "no-admitted-recipe",
+        "family:swtpm": "none",
         "family:sylpheed": "no-admitted-recipe",
         "family:synergy": "no-admitted-recipe",
         "family:syslog-ng": "no-admitted-recipe",
@@ -1341,9 +1370,9 @@
         "family:systemd-resolved": "no-admitted-recipe",
         "family:tarantool": "no-admitted-recipe",
         "family:tboot": "no-admitted-recipe",
-        "family:tcl-tls": "no-admitted-recipe",
-        "family:tcpdump": "no-admitted-recipe",
-        "family:tcpflow": "no-admitted-recipe",
+        "family:tcl-tls": "none",
+        "family:tcpdump": "none",
+        "family:tcpflow": "authority-baseline-limited",
         "family:telegram-desktop": "no-admitted-recipe",
         "family:thc-ipv6": "no-admitted-recipe",
         "family:thrift": "no-admitted-recipe",
@@ -1357,7 +1386,7 @@
         "family:tor": "no-admitted-recipe",
         "family:tpm-tools": "no-admitted-recipe",
         "family:tpm-tools-pkcs11": "no-admitted-recipe",
-        "family:tpm2-tools": "no-admitted-recipe",
+        "family:tpm2-tools": "authority-baseline-limited",
         "family:tpm2-tss-engine": "no-admitted-recipe",
         "family:trafficserver": "no-admitted-recipe",
         "family:transmission-cli": "no-admitted-recipe",
@@ -1365,53 +1394,53 @@
         "family:transmission-gtk": "no-admitted-recipe",
         "family:transmission-qt": "no-admitted-recipe",
         "family:trojan": "no-admitted-recipe",
-        "family:trousers": "no-admitted-recipe",
+        "family:trousers": "no-fixture",
         "family:trunk": "no-admitted-recipe",
         "family:tss2": "no-admitted-recipe",
         "family:ttyd": "no-admitted-recipe",
         "family:u-boot-tools": "no-admitted-recipe",
-        "family:unbound": "no-admitted-recipe",
-        "family:unbound-anchor": "no-admitted-recipe",
+        "family:unbound": "authority-baseline-limited",
+        "family:unbound-anchor": "authority-baseline-limited",
         "family:unrealircd": "no-admitted-recipe",
         "family:uuu": "no-admitted-recipe",
         "family:uwsgi": "no-admitted-recipe",
         "family:uxplay": "no-admitted-recipe",
-        "family:vboot-utils": "no-admitted-recipe",
+        "family:vboot-utils": "candidate-configure-failure",
         "family:voms-mysql-plugin": "no-admitted-recipe",
         "family:voms-server": "no-admitted-recipe",
-        "family:vsftpd": "no-admitted-recipe",
-        "family:w3m": "no-admitted-recipe",
+        "family:vsftpd": "none",
+        "family:w3m": "none",
         "family:wangle": "no-admitted-recipe",
         "family:watchman": "no-admitted-recipe",
-        "family:weex": "no-admitted-recipe",
+        "family:weex": "candidate-configure-failure",
         "family:wesnoth": "no-admitted-recipe",
         "family:wpa_supplicant": "no-admitted-recipe",
-        "family:wrk": "no-admitted-recipe",
+        "family:wrk": "none",
         "family:x11vnc": "no-admitted-recipe",
         "family:x3270": "no-admitted-recipe",
-        "family:xar": "no-admitted-recipe",
+        "family:xar": "authority-baseline-limited",
         "family:xca": "no-admitted-recipe",
-        "family:xilinx-bootgen": "no-admitted-recipe",
+        "family:xilinx-bootgen": "candidate-runtime-failure",
         "family:xml-security-c": "no-admitted-recipe",
         "family:xmlrpc-c": "no-admitted-recipe",
         "family:xmrig": "no-admitted-recipe",
-        "family:xrdp": "no-admitted-recipe",
+        "family:xrdp": "authority-baseline-limited",
         "family:xrootd": "no-admitted-recipe",
-        "family:yadifa": "no-admitted-recipe",
-        "family:yafc": "no-admitted-recipe",
-        "family:yapet": "no-admitted-recipe",
-        "family:yara": "no-admitted-recipe",
+        "family:yadifa": "no-fixture",
+        "family:yafc": "candidate-configure-failure",
+        "family:yapet": "candidate-configure-failure",
+        "family:yara": "none",
         "family:yubico-piv-tool": "no-admitted-recipe",
         "family:zabbix": "no-admitted-recipe",
         "family:zabbix-agent": "no-admitted-recipe",
         "family:zabbix-agent2": "no-admitted-recipe",
         "family:zfs-fuse": "no-admitted-recipe",
-        "family:znc": "no-admitted-recipe"
+        "family:znc": "authority-baseline-limited"
       },
-      "partition_hash": "22ba6c469496542f530095fc5ba56c575cd794ad252f3d8fd06f8b50a4f4b330",
-      "recipe_backed_families": 35,
-      "recipe_less_families": 965,
-      "resolved_families": 33
+      "partition_hash": "412df51ec22538e27c1efd8ba40d69878d602d7c000386a3d6e76af324247e29",
+      "recipe_backed_families": 307,
+      "recipe_less_families": 697,
+      "resolved_families": 164
     },
     "before": {
       "captured_by": "forensics/tools/downstream_remediation.py --capture-baseline",
@@ -2491,15 +2520,170 @@
     },
     "counts": {
       "actions": 8,
-      "families_moved": 27,
-      "fix_actions": 5,
+      "families_moved": 297,
+      "fix_actions": 6,
       "new_recipes": 8,
       "new_recipes_linked": 8,
       "probe_admitted": 8,
       "probe_rejected": 14,
-      "still_blocked_actions": 2
+      "still_blocked_actions": 1
     },
     "family_movement": [
+      {
+        "after": "candidate-load-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:afflib"
+      },
+      {
+        "after": "candidate-load-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:afftools"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:aircrack-ng"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:apache2-bin"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:apache2-http2"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:apache2-ssl"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:apache2-utils"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:apk-tools"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:appx-util"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:apr-util"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:arm-trusted-firmware-tools"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:asterisk-srtp"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:atheme-services"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:axel"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:bannergrab"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:bibtexconv"
+      },
+      {
+        "after": "candidate-link-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:bind9"
+      },
+      {
+        "after": "no-fixture",
+        "before": "no-admitted-recipe",
+        "family_id": "family:bip"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:bruteforce-salted-openssl"
+      },
+      {
+        "after": "no-fixture",
+        "before": "no-admitted-recipe",
+        "family_id": "family:bruteforce-wallet"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:canl-c"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:canl-c-examples"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:carbon-c-relay"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:casync"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:charybdis"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:cjose"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:conserver-client"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:conserver-server"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:coturn"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:cowpatty"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:curl-minimal"
+      },
       {
         "after": "none",
         "before": "no-admitted-recipe",
@@ -2508,12 +2692,142 @@
       {
         "after": "none",
         "before": "no-admitted-recipe",
+        "family_id": "family:cyrus-sasl-digestmd5"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:cyrus-sasl-ntlm"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:cyrus-sasl-scram"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:davix"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:dcap-tunnel-ssl"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:dcmtk"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:dma"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:dmg2img"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:dnsdist"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:dnsperf"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
         "family_id": "family:dovecot"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:dsniff"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:duo_unix"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:efitools"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:eggdrop"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:elinks"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:encfs"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:epic4"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:epic5"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:epic5-lite"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:eurephia"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:ewf-tools"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:ewftools"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:exim"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:fastd"
+      },
+      {
+        "after": "candidate-functional-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:fdm"
       },
       {
         "after": "none",
         "before": "no-admitted-recipe",
         "family_id": "family:fetchmail"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:fido2"
       },
       {
         "after": "none",
@@ -2523,7 +2837,177 @@
       {
         "after": "none",
         "before": "no-admitted-recipe",
+        "family_id": "family:fsverity-utils"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:ftp-ssl"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:ftpd-ssl"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:galera-3"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:galera-4"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:gensio"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:getdns"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:gftp-text"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:git-crypt"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:globus-gsi-cert-utils"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:gmnisrv"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:gostsum"
+      },
+      {
+        "after": "recipe-build-system-unsupported",
+        "before": "no-admitted-recipe",
+        "family_id": "family:gridsite-clients"
+      },
+      {
+        "after": "no-fixture",
+        "before": "no-admitted-recipe",
+        "family_id": "family:gsocket"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:gss-ntlmssp"
+      },
+      {
+        "after": "no-fixture",
+        "before": "no-admitted-recipe",
+        "family_id": "family:gvpe"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:h2o"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:h2o-evloop0.13"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:hcxkeys"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:hcxtools"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
         "family_id": "family:hiredis-ssl"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:hitch"
+      },
+      {
+        "after": "no-fixture",
+        "before": "no-admitted-recipe",
+        "family_id": "family:hopm"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:httest"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:httpd"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:httperf"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:httping"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:hydra"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:i2pd"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:icecast2"
+      },
+      {
+        "after": "no-fixture",
+        "before": "no-admitted-recipe",
+        "family_id": "family:ike-scan"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:ima-evm-utils"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:imapfilter"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:imapproxy"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:imx-code-signing-tool"
       },
       {
         "after": "none",
@@ -2531,9 +3015,64 @@
         "family_id": "family:iperf3"
       },
       {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:ipmitool"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:ipmiutil"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:ircd-hybrid"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:ircii"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:irssi"
+      },
+      {
         "after": "none",
         "before": "no-fixture",
         "family_id": "family:isync"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:ixwebsocket-libs"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:jabberd2"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:jimtcl"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:jwt"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:kannel"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:kea"
       },
       {
         "after": "none",
@@ -2546,6 +3085,36 @@
         "family_id": "family:kmod"
       },
       {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:kore"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:krb5"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:krb5-k5tls"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:krb5-pkinit"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:lastpass-cli"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:lcmaps-plugins-verify-proxy"
+      },
+      {
         "after": "none",
         "before": "no-admitted-recipe",
         "family_id": "family:ldns"
@@ -2553,7 +3122,137 @@
       {
         "after": "none",
         "before": "no-admitted-recipe",
+        "family_id": "family:ldnsutils"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:lftp"
+      },
+      {
+        "after": "candidate-load-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libafflib0v5"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libaprutil1"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
         "family_id": "family:libarchive"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libcjose0"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libcoap"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libcpp-httplib0.11"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libcrypt-openssl-bignum-perl"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libcrypt-openssl-dsa-perl"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libcrypt-openssl-ec-perl"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libcrypt-openssl-pkcs10-perl"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libcrypt-openssl-random-perl"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libcrypt-openssl-rsa-perl"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libcrypt-openssl-x509-perl"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libcrypt-smime-perl"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libcrypt-ssleay-perl"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libcxxtools10"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libdcmtk17"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libddsc0debian"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libdigidoc-tools"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libdigidoc2"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libdkim1d"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libeac3"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libengine-gost-openssl"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libengine-pkcs11-openssl"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libesmtp"
       },
       {
         "after": "none",
@@ -2563,12 +3262,147 @@
       {
         "after": "none",
         "before": "no-admitted-recipe",
+        "family_id": "family:libevent-openssl-2.1-7"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libevhtp"
+      },
+      {
+        "after": "candidate-link-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libewf"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libfreefare0"
+      },
+      {
+        "after": "candidate-link-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libfsapfs-utils"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libfsapfs1"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libfsverity"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libgetdns10"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libgit2"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libjose"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libmongocrypt"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libnetconf2"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:liboauth2"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libpaho-mqtt"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:librabbitmq"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
         "family_id": "family:librdkafka"
       },
       {
         "after": "none",
         "before": "no-admitted-recipe",
+        "family_id": "family:libre"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:librelp"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
         "family_id": "family:libretls"
+      },
+      {
+        "after": "candidate-runtime-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libshout"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "recipe-build-system-unsupported",
+        "family_id": "family:libssh"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libstrophe"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libtins"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libtpms"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libu2f-server"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libwebsockets"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libxmlsec1"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:libzip"
+      },
+      {
+        "after": "none",
+        "before": "recipe-build-system-unsupported",
+        "family_id": "family:lighttpd"
       },
       {
         "after": "none",
@@ -2578,12 +3412,322 @@
       {
         "after": "none",
         "before": "no-admitted-recipe",
+        "family_id": "family:lua-cqueues"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:lua-luaossl"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:lua-sec"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:lynx"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:makepasswd"
+      },
+      {
+        "after": "candidate-load-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:medusa"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:megatools"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:memcached"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:mini-httpd"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:minizip-ng"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:mktorrent"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:mokutil"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:monitoring-plugins"
+      },
+      {
+        "after": "no-fixture",
+        "before": "no-admitted-recipe",
+        "family_id": "family:mosh"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
         "family_id": "family:mosquitto"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:mumble-server"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:mutt"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:nagios-plugins-http"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:nagios-plugins-ldap"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:nagios-plugins-smtp"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:nagios-plugins-tcp"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:ncrack"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:neon"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:net-snmp"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:nghttp2"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:njs"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:nmap"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:nmap-ncat"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:nmh"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:nrpe"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:nsca-ng-client"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:nsca-ng-server"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:nsd"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:nzbget"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:opendkim"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:openfortivpn"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:openiked"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:openldap"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:openssh-client"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:openssh-server"
       },
       {
         "after": "none",
         "before": "recipe-build-dependency-missing",
         "family_id": "family:openvpn"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:ophcrack"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:osslsigncode"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:partclone"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:partimage"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:pdns"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:pdns-recursor"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:perdition"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:perl-crypt-openssl-aes"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:perl-crypt-openssl-bignum"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:perl-crypt-openssl-dsa"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:perl-crypt-openssl-random"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:perl-crypt-openssl-rsa"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:perl-crypt-openssl-x509"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:perl-crypt-smime"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:perl-crypt-ssleay"
+      },
+      {
+        "after": "candidate-functional-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:perl-net-dns-sec"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:perl-net-ssleay"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:pev"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:php"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:poco"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:postfix"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:proftpd"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:prosody"
       },
       {
         "after": "none",
@@ -2596,9 +3740,94 @@
         "family_id": "family:pure-ftpd"
       },
       {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:python3-m2crypto"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:python3-scrypt"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:qpdf"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:rabbitmq-c"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:radsecproxy"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:rhash"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:rspamd"
+      },
+      {
         "after": "none",
         "before": "no-admitted-recipe",
         "family_id": "family:rsync"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:ruby"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:s-nail"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:s2n-tls"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:sbsigntool"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:shellinabox"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:siege"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:sipp"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:sipsak"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:slowhttptest"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:slrn"
       },
       {
         "after": "none",
@@ -2608,7 +3837,37 @@
       {
         "after": "none",
         "before": "no-admitted-recipe",
+        "family_id": "family:sofia-sip"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:sqlcipher"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
         "family_id": "family:squid"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:srt"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:srtp"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:sscg"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:ssldump"
       },
       {
         "after": "none",
@@ -2618,12 +3877,47 @@
       {
         "after": "none",
         "before": "no-admitted-recipe",
+        "family_id": "family:sslsplit"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
         "family_id": "family:ssmtp"
       },
       {
         "after": "none",
         "before": "no-admitted-recipe",
+        "family_id": "family:strongswan"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:stubby"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
         "family_id": "family:stunnel"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:swtpm"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:tcl-tls"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:tcpdump"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:tcpflow"
       },
       {
         "after": "none",
@@ -2634,53 +3928,138 @@
         "after": "none",
         "before": "no-admitted-recipe",
         "family_id": "family:tnftp"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:tpm2-tools"
+      },
+      {
+        "after": "no-fixture",
+        "before": "no-admitted-recipe",
+        "family_id": "family:trousers"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:unbound"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:unbound-anchor"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:vboot-utils"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:vsftpd"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:w3m"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:weex"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:wrk"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:xar"
+      },
+      {
+        "after": "candidate-runtime-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:xilinx-bootgen"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:xrdp"
+      },
+      {
+        "after": "no-fixture",
+        "before": "no-admitted-recipe",
+        "family_id": "family:yadifa"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:yafc"
+      },
+      {
+        "after": "candidate-configure-failure",
+        "before": "no-admitted-recipe",
+        "family_id": "family:yapet"
+      },
+      {
+        "after": "none",
+        "before": "no-admitted-recipe",
+        "family_id": "family:yara"
+      },
+      {
+        "after": "authority-baseline-limited",
+        "before": "no-admitted-recipe",
+        "family_id": "family:znc"
       }
     ],
     "movement": {
       "authority-baseline-limited": {
-        "after": 0,
+        "after": 90,
         "before": 0,
-        "delta": 0
+        "delta": 90
       },
       "candidate-configure-failure": {
-        "after": 0,
+        "after": 28,
         "before": 0,
-        "delta": 0
+        "delta": 28
       },
       "candidate-functional-failure": {
-        "after": 0,
+        "after": 2,
         "before": 0,
-        "delta": 0
+        "delta": 2
       },
       "candidate-link-failure": {
-        "after": 0,
+        "after": 3,
         "before": 0,
-        "delta": 0
+        "delta": 3
       },
       "candidate-load-failure": {
-        "after": 0,
+        "after": 4,
         "before": 0,
-        "delta": 0
+        "delta": 4
       },
       "candidate-runtime-failure": {
-        "after": 0,
+        "after": 2,
         "before": 0,
-        "delta": 0
+        "delta": 2
       },
       "no-admitted-recipe": {
-        "after": 965,
+        "after": 697,
         "before": 988,
-        "delta": -23
+        "delta": -291
       },
       "no-fixture": {
-        "after": 0,
+        "after": 9,
         "before": 2,
-        "delta": -2
+        "delta": 7
       },
       "none": {
-        "after": 33,
+        "after": 164,
         "before": 6,
-        "delta": 27
+        "delta": 158
       },
       "out-of-scope": {
         "after": 0,
@@ -2693,9 +4072,9 @@
         "delta": -2
       },
       "recipe-build-system-unsupported": {
-        "after": 2,
+        "after": 1,
         "before": 2,
-        "delta": 0
+        "delta": -1
       }
     },
     "new_recipes": [
@@ -2823,12 +4202,12 @@
     "non_claims": [
       "a bounded, deterministic admission batch is not an attempt at all 988 recipe-less families: it is the subset this subphase built and measured, and it makes no claim about the rest",
       "a build/link is not a functional proof: a newly-admitted family that reached L4-linked has compiled and linked, not behaved, and one with no admitted local workload is `no-fixture`",
-      "a still-blocked class is a measurement of the fixed venue, not of the project: libssh needs cmake and lighttpd needs autotools/cmake/meson, none of which this venue admits",
+      "a still-blocked class is a measurement of the fixed venue, not of the project: libssh needs cmake, which this venue does not admit (its authority and candidate both stop at L1-admitted-source); lighttpd's absent generated configure is a recipe gap the pinned-toolchain recipe closes, so its L7-functional/DROP_IN_PASS is a recipe fix and not a project claim",
       "the before figures are a preserved measurement of the pre-remediation planes, recorded once and carried forward like 24.11's holdout first_run, not re-derived from planes that no longer exist",
       "a deterministic local fixture is one exercise of the program's OpenSSL path on loopback, not a statement that every consumer works or that the library is safe"
     ],
     "rule": {
-      "actions": "the exact recipe/flag/fixture each repair applied, with the family it targets and the class it names; a resolving action must show the family moved, and a still-blocked action must show it did not",
+      "actions": "the exact recipe/flag/fixture each repair applied, with the family it targets and the class it names; a resolving action must show its named families reached the resolving class (`none`, DROP_IN_PASS) in the re-measured planes, and a still-blocked action must show none of them did, cite the rung the family stopped at, and name the missing tool",
       "admission_criterion": "a recipe is admissible when its pinned release tarball ships a build entry point the venue can execute (a generated `configure`, or a plain `Makefile`) and needs no tool the venue lacks; the batch is bounded and deterministic, and the candidates the venue could not build are recorded with the reason",
       "after": "the blocker partition re-derived from the committed (re-measured) Phase-24 planes through 24.16's own code path, so the record cannot drift from the analysis",
       "before": "the 24.16 blocker partition of the pre-remediation planes, captured once (before the re-measurement) and committed as `forensics/downstream/blocker-remediation-baseline.json`; the planes it measured are superseded by the re-measurement, so it is a preserved measured input rather than a re-derivation from planes that no longer exist",
@@ -2842,13 +4221,13 @@
       "name": "the biggest-mover remediation record"
     }
   },
-  "body_hash": "b681608ebda4c0919c0ae169a2ad03aacc37465f09e0438d93d12db0e8308fa6",
+  "body_hash": "a41ee43dda478fc98148a5cc9be4652e044c60a35dccf02150e047eff97acd4a",
   "generator": "forensics/tools/downstream_remediation.py",
   "inputs": [
     {
       "name": "shared-blockers",
       "path": "forensics/downstream/shared-blockers.json",
-      "sha256": "5be7f3c03774287eea38b30a03d2c986b3983f8e35dcbf9df63423ac491ef807"
+      "sha256": "6e4ce979a4536c0b878569c95939a703f0698238e2c07342e0916bfe3f1ff0ba"
     },
     {
       "name": "blocker-remediation-baseline",
@@ -2863,12 +4242,12 @@
     {
       "name": "runtime-functional-atlas",
       "path": "forensics/downstream/runtime-functional-atlas.json",
-      "sha256": "42be6e38fe004fdb0740949fa7baf73d603f7538e4fbd598e7c4336874de3dab"
+      "sha256": "608f984a6fef1163f51c6ba338db4ede4ad80e4a2305d07b7601a0f07ef19374"
     },
     {
       "name": "p1000-run",
       "path": "forensics/downstream/p1000-run.json",
-      "sha256": "725e137ee5165531a4c3550d7cd374a0642575171e5454526cab6aac6a2eb947"
+      "sha256": "ee24745db2ff029c0338d4cff275c3a6d050338aa3a3766a9187b4ac9d23e8d4"
     },
     {
       "name": "family-freeze",
@@ -2883,7 +4262,7 @@
     {
       "name": "downstream-remediation",
       "path": "forensics/tools/downstream_remediation.py",
-      "sha256": "99de9b8a896ebb3a351ee135606c6a7631eb2a5aa09d465ba4fd7ad480f4ec04"
+      "sha256": "237e43ca1696708b0130840d0ccce2d0ee121c85bd0e0b1280e93472c91d5649"
     },
     {
       "name": "downstream-blockers",

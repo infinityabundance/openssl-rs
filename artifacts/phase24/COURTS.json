@@ -14792,90 +14792,25 @@
       {
         "census": "docs/SEAL-CENSUS.md",
         "control": {
-          "baseline_findings": 60,
-          "caught_class_count": 61,
-          "caught_leverage_change": 60,
-          "caught_partition_drop": 62,
-          "caught_partition_flip": 61,
-          "caught_ranking_reorder": 61,
-          "honest": false,
-          "specificity_holds": false
+          "baseline_findings": 0,
+          "caught_class_count": 2,
+          "caught_leverage_change": 1,
+          "caught_partition_drop": 3,
+          "caught_partition_flip": 2,
+          "caught_ranking_reorder": 2,
+          "honest": true,
+          "specificity_holds": true
         },
         "counts": {
-          "blocked_families": 967,
-          "blocker_classes_present": 3,
+          "blocked_families": 836,
+          "blocker_classes_present": 10,
           "families": 1000,
-          "recipe_less_families": 965,
-          "resolved_families": 33,
-          "shared_blocker_classes": 2
+          "recipe_less_families": 697,
+          "resolved_families": 164,
+          "shared_blocker_classes": 8
         },
         "court": "RT-BLOCKER-LEVERAGE",
-        "findings": [
-          "the committed shared-blocker analysis does not reproduce from the planes",
-          "the recorded partition does not reproduce for e.g. ['family:afflib', 'family:afftools', 'family:aircrack-ng', 'family:apache2-bin']",
-          "blocker none: recorded blocked_families does not reproduce (33 vs 164)",
-          "blocker none: recorded shared_by does not reproduce (['family:curl', 'family:cyrus-sasl', 'family:dovecot', 'family:fetchmail', 'family:fossil', 'family:haproxy', 'family:hiredis-ssl', 'family:iperf3', 'family:isync', 'family:keepalived', 'family:kmod', 'family:ldns', 'family:libarchive', 'family:libevent', 'family:librdkafka', 'family:libretls', 'family:links', 'family:monit', 'family:mosquitto', 'family:nginx', 'family:openssh', 'family:openvpn', 'family:proxytunnel', 'family:pure-ftpd', 'family:redis', 'family:rsync', 'family:socat', 'family:squid', 'family:sslscan', 'family:ssmtp', 'family:stunnel', 'family:tinc', 'family:tnftp'] vs ['family:aircrack-ng', 'family:arm-trusted-firmware-tools', 'family:axel', 'family:bannergrab', 'family:bruteforce-salted-openssl', 'family:carbon-c-relay', 'family:charybdis', 'family:conserver-client', 'family:conserver-server', 'family:coturn', 'family:cowpatty', 'family:curl', 'family:curl-minimal', 'family:cyrus-sasl', 'family:cyrus-sasl-digestmd5', 'family:cyrus-sasl-ntlm', 'family:cyrus-sasl-scram', 'family:dcap-tunnel-ssl', 'family:dma', 'family:dovecot', 'family:duo_unix', 'family:efitools', 'family:eggdrop', 'family:elinks', 'family:epic5', 'family:epic5-lite', 'family:ewf-tools', 'family:ewftools', 'family:exim', 'family:fetchmail', 'family:fossil', 'family:fsverity-utils', 'family:gensio', 'family:gftp-text', 'family:git-crypt', 'family:gmnisrv', 'family:gss-ntlmssp', 'family:haproxy', 'family:hcxkeys', 'family:hcxtools', 'family:hiredis-ssl', 'family:hitch', 'family:httperf', 'family:httping', 'family:hydra', 'family:icecast2', 'family:ima-evm-utils', 'family:imapfilter', 'family:iperf3', 'family:ircd-hybrid', 'family:ircii', 'family:irssi', 'family:isync', 'family:jimtcl', 'family:kea', 'family:keepalived', 'family:kmod', 'family:krb5', 'family:krb5-pkinit', 'family:ldns', 'family:ldnsutils', 'family:lftp', 'family:libarchive', 'family:libcpp-httplib0.11', 'family:libcrypt-openssl-bignum-perl', 'family:libcrypt-openssl-dsa-perl', 'family:libcrypt-openssl-ec-perl', 'family:libcrypt-openssl-pkcs10-perl', 'family:libcrypt-openssl-random-perl', 'family:libcrypt-openssl-rsa-perl', 'family:libcrypt-openssl-x509-perl', 'family:libcrypt-smime-perl', 'family:libeac3', 'family:libengine-pkcs11-openssl', 'family:libevent', 'family:libevent-openssl-2.1-7', 'family:libfsapfs1', 'family:libfsverity', 'family:librdkafka', 'family:libre', 'family:librelp', 'family:libretls', 'family:libtpms', 'family:libu2f-server', 'family:libxmlsec1', 'family:lighttpd', 'family:links', 'family:lua-cqueues', 'family:lua-luaossl', 'family:lua-sec', 'family:lynx', 'family:makepasswd', 'family:memcached', 'family:mini-httpd', 'family:mktorrent', 'family:mokutil', 'family:monit', 'family:monitoring-plugins', 'family:mosquitto', 'family:mutt', 'family:nagios-plugins-http', 'family:nagios-plugins-smtp', 'family:nagios-plugins-tcp', 'family:ncrack', 'family:net-snmp', 'family:nginx', 'family:njs', 'family:nmap', 'family:nmap-ncat', 'family:nmh', 'family:nrpe', 'family:nsca-ng-client', 'family:nsca-ng-server', 'family:nsd', 'family:opendkim', 'family:openldap', 'family:openssh', 'family:openssh-client', 'family:openssh-server', 'family:openvpn', 'family:partclone', 'family:perl-crypt-openssl-aes', 'family:perl-crypt-openssl-bignum', 'family:perl-crypt-openssl-dsa', 'family:perl-crypt-openssl-random', 'family:perl-crypt-openssl-rsa', 'family:perl-crypt-openssl-x509', 'family:perl-crypt-smime', 'family:perl-net-ssleay', 'family:pev', 'family:php', 'family:postfix', 'family:proftpd', 'family:prosody', 'family:proxytunnel', 'family:pure-ftpd', 'family:radsecproxy', 'family:redis', 'family:rhash', 'family:rsync', 'family:ruby', 'family:s-nail', 'family:shellinabox', 'family:siege', 'family:sipsak', 'family:slowhttptest', 'family:slrn', 'family:socat', 'family:sofia-sip', 'family:squid', 'family:sslscan', 'family:sslsplit', 'family:ssmtp', 'family:strongswan', 'family:stunnel', 'family:swtpm', 'family:tcl-tls', 'family:tcpdump', 'family:tinc', 'family:tnftp', 'family:vsftpd', 'family:w3m', 'family:wrk', 'family:yara'])",
-          "blocker no-admitted-recipe: recorded blocked_families does not reproduce (965 vs 697)",
-          "blocker no-admitted-recipe: recorded shared_by does not reproduce (['family:389-ds-base', 'family:abuild', 'family:accel-ppp', 'family:acf-alpine-conf', 'family:acf-openssl', 'family:acme-client', 'family:acme-redirect', 'family:acme-tiny', 'family:acmed', 'family:acmed-tacd', 'family:afflib', 'family:afftools', 'family:afterburn', 'family:agensgraph', 'family:agensgraph-contrib', 'family:aircrack-ng', 'family:alpine', 'family:althttpd', 'family:amanda', 'family:android-file-transfer', 'family:anope-openssl', 'family:anytun', 'family:apache-mod-md', 'family:apache2-bin', 'family:apache2-dev', 'family:apache2-http2', 'family:apache2-ssl', 'family:apache2-utils', 'family:apk-tools', 'family:appx-util', 'family:apr-util', 'family:apt-cacher-ng', 'family:arc-gui-clients', 'family:argyll', 'family:argyllcms', 'family:arm-trusted-firmware-tools', 'family:arti', 'family:asdcplib', 'family:asfa', 'family:asterisk', 'family:asterisk-srtp', 'family:asuran-cli', 'family:atheme-services', 'family:atuin-server', 'family:atuin-sync', 'family:ausweisapp2', 'family:authd', 'family:autofdo', 'family:autopostgresqlbackup', 'family:aws-c-cal', 'family:aws-sdk-cpp-core', 'family:axel', 'family:b3270', 'family:bacula-common', 'family:bacula-libs', 'family:badvpn', 'family:bannergrab', 'family:bareos', 'family:barnowl', 'family:barrier', 'family:bdsync', 'family:bes', 'family:bfh-base-system', 'family:bibtexconv', 'family:bigloo-libs', 'family:bind', 'family:bind9', 'family:bip', 'family:bitchx', 'family:bodhi-cli', 'family:boinc-client', 'family:boinc-tui', 'family:bootupd', 'family:borgbackup', 'family:borgbackup2', 'family:boxbackup-client', 'family:boxbackup-server', 'family:bruteforce-salted-openssl', 'family:bruteforce-wallet', 'family:btfs', 'family:btrfs-fuse', 'family:burp', 'family:butt', 'family:c-client', 'family:c-icap-libs', 'family:c3270', 'family:ca-certificates', 'family:cairo-dock-plug-ins-base', 'family:cairo-dock-weather-plug-in', 'family:calibre', 'family:caml-crush-clients', 'family:camo', 'family:canl-c', 'family:canl-c-examples', 'family:capnproto', 'family:carbon-c-relay', 'family:cardpeek', 'family:cargo', 'family:cargo-c', 'family:cargo-edit', 'family:cargo-make', 'family:cargo-outdated', 'family:cargo-tarpaulin', 'family:cargo-web', 'family:cassandra-cpp-driver', 'family:casync', 'family:ccmake', 'family:ccnet', 'family:centerim', 'family:ceph-base', 'family:ceph-common', 'family:ceph-osd', 'family:ceph-radosgw', 'family:ceph-test', 'family:ceph17', 'family:ceph17-base', 'family:ceph17-osd-daemon', 'family:ceph17-osd-tools', 'family:ceph17-radosgw', 'family:ceph18', 'family:ceph18-base', 'family:ceph18-osd-daemon', 'family:ceph18-osd-tools', 'family:ceph18-radosgw', 'family:certmonger', 'family:certwatch', 'family:cesnet-tcs-cli', 'family:cfengine', 'family:cfengine3', 'family:cgsi-gsoap', 'family:charybdis', 'family:chatterino2', 'family:checksec', 'family:chiaki', 'family:cjose', 'family:ckermit', 'family:cl-plus-ssl', 'family:clamav', 'family:clamav-freshclam', 'family:classified-ads', 'family:clevis', 'family:clevis-pin-tpm2', 'family:clickhouse-common', 'family:cloudi', 'family:cmake', 'family:cockpit-system', 'family:cockpit-ws', 'family:collectd', 'family:collectd-nut', 'family:collectd-write_stackdriver', 'family:community-mysql', 'family:community-mysql-server', 'family:condor', 'family:condure', 'family:conserver', 'family:conserver-client', 'family:conserver-server', 'family:coova-chilli', 'family:coreos-installer', 'family:coreos-installer-bootinfra', 'family:coreutils', 'family:coreutils-sha512sum', 'family:coturn', 'family:cowpatty', 'family:cpprest', 'family:cpprestsdk', 'family:cpr', 'family:createrepo_c-libs', 'family:credentials-fetcher', 'family:cryptsetup-libs', 'family:cryptsetup-ssh-token', 'family:cups', 'family:curl-minimal', 'family:cxxtools', 'family:cyrus-caldav', 'family:cyrus-clients', 'family:cyrus-common', 'family:cyrus-imapd', 'family:cyrus-murder', 'family:cyrus-nntpd', 'family:cyrus-sasl-digestmd5', 'family:cyrus-sasl-md5', 'family:cyrus-sasl-ntlm', 'family:cyrus-sasl-scram', 'family:datovka', 'family:davix', 'family:dcap-tunnel-ssl', 'family:dcmtk', 'family:ddnet', 'family:ddnet-server', 'family:debcargo', 'family:debian-edu-config', 'family:deepin-file-manager-lib', 'family:deepin-session-shell', 'family:dehydrated', 'family:deletemail', 'family:delfin', 'family:dhtnode', 'family:diffoscope', 'family:diffoscope-minimal', 'family:dillo', 'family:dionaea', 'family:dkim-rotate', 'family:dma', 'family:dmg2img', 'family:dmlite-apache-httpd', 'family:dmlite-dome', 'family:dmlite-dpm-dsi', 'family:dmlite-dpm-xrootd', 'family:dmlite-libs', 'family:dmlite-plugins-domeadapter', 'family:dns-compliance-testing', 'family:dnscap', 'family:dnsdist', 'family:dnsdist-luajit', 'family:dnsperf', 'family:dnssec-tools', 'family:dnssec-trigger', 'family:dnssec-trigger-panel', 'family:dog', 'family:domoticz', 'family:dotnet-apphost-pack-6.0', 'family:dotnet-apphost-pack-7.0', 'family:dotnet-runtime-6.0', 'family:dotnet-runtime-7.0', 'family:dotnet6-apphost-pack', 'family:dotnet6-build', 'family:dotnet6-runtime', 'family:dotnet8-apphost-pack', 'family:dotnet8-runtime', 'family:dotnet8-runtime-bootstrap', 'family:dotnet8-stage0-bootstrap', 'family:dpdk', 'family:dpdk-common-qat', 'family:dpdk-crypto-ccp', 'family:dpdk-crypto-openssl', 'family:drg', 'family:drpm', 'family:dsniff', 'family:duckscript', 'family:duo_unix', 'family:dvisvgm', 'family:e2guardian', 'family:eapoltest', 'family:easy-rsa', 'family:ebusd', 'family:ecflow-client', 'family:ecflow-server', 'family:eclipse-titan', 'family:ecryptfs-utils', 'family:edbrowse', 'family:efitools', 'family:efl', 'family:efs-utils', 'family:eggdrop', 'family:eiskaltdcpp', 'family:ejabberd', 'family:elinks', 'family:encfs', 'family:epic', 'family:epic4', 'family:epic5', 'family:epic5-lite', 'family:epoptes', 'family:epoptes-client', 'family:erfs', 'family:erlang', 'family:erlang-crypto', 'family:erlang-fast_tls', 'family:erlang-p1-tls', 'family:et', 'family:ettercap', 'family:eturnal', 'family:eurephia', 'family:eurephia-admin', 'family:eurephia-init', 'family:eurephia-sqlite3', 'family:ewf-tools', 'family:ewftools', 'family:exim', 'family:exim-mysql', 'family:falkon', 'family:fapolicyd', 'family:fastd', 'family:fastnetmon', 'family:fbrnch', 'family:fbthrift', 'family:fbx-all', 'family:fdm', 'family:fdo-admin-cli', 'family:fdo-client', 'family:fdo-init', 'family:fdo-manufacturing-server', 'family:fdo-owner-cli', 'family:fdo-owner-onboarding-server', 'family:fdo-rendezvous-server', 'family:fedora-update-feedback', 'family:fetch-crl', 'family:ffmpeg-libavformat', 'family:ffmpeg-libavutil', 'family:fido2', 'family:fio-engine-http', 'family:fizz', 'family:fluent-bit', 'family:folly', 'family:fort-validator', 'family:foxeye', 'family:fqterm', 'family:fractal', 'family:fragments', 'family:freedombox', 'family:freefilesync', 'family:freeipa-client', 'family:freeipa-server', 'family:freeipa-server-trust-ad', 'family:freeradius', 'family:freeradius-config', 'family:freeradius-eap', 'family:freerdp', 'family:freeswitch', 'family:freetds', 'family:frr', 'family:fsverity-utils', 'family:ftp-ssl', 'family:ftpd-ssl', 'family:fuse-btfs', 'family:fuse-encfs', 'family:galera', 'family:galera-3', 'family:galera-4', 'family:galera-arbitrator', 'family:galera-arbitrator-3', 'family:galera-arbitrator-4', 'family:gambas3-gb-openssl', 'family:ganeti-3.0', 'family:gdal', 'family:gdcm', 'family:gearmand', 'family:gensio', 'family:getdns', 'family:gfsd', 'family:gftp', 'family:gftp-gtk', 'family:gftp-text', 'family:ghasher', 'family:ghc-haxr', 'family:ghc-hsopenssl', 'family:ghc-hsopenssl-x509-system', 'family:ghc-http-client-openssl', 'family:ghc-http-streams', 'family:ghc-koji', 'family:ghc-openssl-streams', 'family:git-core', 'family:git-crypt', 'family:git-email', 'family:gitui', 'family:gkrellm', 'family:glasscoder', 'family:glirc', 'family:globus-ftp-client', 'family:globus-gass-cache', 'family:globus-gass-copy', 'family:globus-gass-copy-progs', 'family:globus-gatekeeper', 'family:globus-gram-job-manager', 'family:globus-gridftp-server', 'family:globus-gridmap-eppn-callout', 'family:globus-gridmap-verify-myproxy-callout', 'family:globus-gsi-callback', 'family:globus-gsi-cert-utils', 'family:globus-gsi-cert-utils-progs', 'family:globus-gsi-credential', 'family:globus-gsi-openssl-error', 'family:globus-gsi-proxy-core', 'family:globus-gsi-proxy-ssl', 'family:globus-gsi-sysconfig', 'family:globus-gssapi-gsi', 'family:globus-openssl-module', 'family:globus-proxy-utils', 'family:globus-simple-ca', 'family:glusterfs', 'family:glusterfs-cli', 'family:glusterfs-client-xlators', 'family:glusterfs-cloudsync-plugins', 'family:glusterfs-extra-xlators', 'family:glusterfs-fuse', 'family:glusterfs-geo-replication', 'family:glusterfs-server', 'family:glusterfs-thin-arbiter', 'family:gmnisrv', 'family:gnome-authenticator', 'family:gnome-podcasts', 'family:gnome-shortwave', 'family:gnome-vfs2', 'family:gnome-vfs2-smb', 'family:gnubiff', 'family:gnumed-server', 'family:gnunet', 'family:gnupg-pkcs11-scd', 'family:goaccess', 'family:gocryptfs', 'family:google-cloud-cpp', 'family:google-cloud-cpp-rest-internal', 'family:google-cloud-cpp-storage', 'family:gostsum', 'family:gq', 'family:gridengine-client', 'family:gridengine-drmaa1.0', 'family:gridengine-exec', 'family:gridengine-master', 'family:gridengine-qmon', 'family:gridsite-clients', 'family:gridsite-libs', 'family:grisbi', 'family:groonga-httpd', 'family:growl-for-linux', 'family:grpc', 'family:grub-customizer', 'family:gsi-openssh', 'family:gsi-openssh-clients', 'family:gsi-openssh-server', 'family:gsoap', 'family:gsoap-2.8.124', 'family:gsocket', 'family:gss-ntlmssp', 'family:gssntlmssp', 'family:gst-plugins-bad', 'family:gstreamer1-plugin-reqwest', 'family:gstreamer1-plugins-bad-free', 'family:gstreamer1.0-plugins-bad', 'family:gstreamer1.0-plugins-good', 'family:guacamole-server', 'family:guacamole-server-kubernetes', 'family:guacamole-server-rdp', 'family:guacamole-server-ssh', 'family:guacamole-server-vnc', 'family:guacd', 'family:gvpe', 'family:gwenhywfar', 'family:h2o', 'family:h2o-evloop0.13', 'family:halloy', 'family:hcxdumptool', 'family:hcxkeys', 'family:hcxtools', 'family:headlines', 'family:hermes', 'family:hexchat', 'family:hfsplus-tools', 'family:hfsprogs', 'family:hinsightd', 'family:hippotat-client', 'family:hiredict-ssl', 'family:hitch', 'family:hopm', 'family:hostapd', 'family:hplip-libs', 'family:hsmwiz', 'family:htslib', 'family:httest', 'family:http_ping', 'family:httpd', 'family:httpdirfs', 'family:httperf', 'family:httping', 'family:httrack', 'family:hydra', 'family:hylafax+', 'family:hylafax+-client', 'family:i2pd', 'family:iamb', 'family:ibmswtpm2', 'family:icecast', 'family:icecast2', 'family:icinga2', 'family:idevicerestore', 'family:igtf-policy-classic', 'family:igtf-policy-experimental', 'family:igtf-policy-iota', 'family:igtf-policy-mics', 'family:igtf-policy-slcs', 'family:igtf-policy-unaccredited', 'family:ike-scan', 'family:ikiwiki-hosting-web', 'family:ima-evm-utils', 'family:imap', 'family:imapfilter', 'family:imapproxy', 'family:imx-code-signing-tool', 'family:inadyn', 'family:inetsim', 'family:inn', 'family:inn2', 'family:input-leap', 'family:intel-hdcp', 'family:intel-ipp-crypto-mb', 'family:ipmievd', 'family:ipmitool', 'family:ipmiutil', 'family:ipv6calc', 'family:ircd-hybrid', 'family:ircii', 'family:irssi', 'family:iscsi-initiator-utils', 'family:isns-utils', 'family:istgt', 'family:ixwebsocket-libs', 'family:jabberd', 'family:jabberd2', 'family:jami-daemon', 'family:janus', 'family:janus-gateway', 'family:jimtcl', 'family:john', 'family:jujutsu', 'family:jwt', 'family:kamailio-autheph-modules', 'family:kamailio-authephemeral', 'family:kamailio-ims', 'family:kamailio-outbound', 'family:kamailio-tls', 'family:kamailio-websocket', 'family:kannel', 'family:kannel-extras', 'family:kdeconnect', 'family:kea', 'family:kea-ctrl-agent', 'family:kea-hooks', 'family:keepalived-snmp', 'family:keylime-agent-rust', 'family:keyring-ima-signer', 'family:keyringer', 'family:kf5-kitinerary', 'family:khealthcertificate', 'family:kismet', 'family:kitinerary', 'family:kitty', 'family:kiwi-systemdeps-core', 'family:kodi-gbm', 'family:kodi-wayland', 'family:kodi-x11', 'family:koji-tool', 'family:kore', 'family:kqoauth-qt5', 'family:krb5', 'family:krb5-3', 'family:krb5-k5tls', 'family:krb5-pkinit', 'family:krb5-server', 'family:krb5-server-ldap', 'family:kristall', 'family:ktistec', 'family:kvirc', 'family:lacme', 'family:lagrange', 'family:lapce', 'family:lapce-proxy', 'family:lasso', 'family:lastpass-cli', 'family:lcmaps', 'family:lcmaps-plugins-jobrep', 'family:lcmaps-plugins-verify-proxy', 'family:ldapvi', 'family:ldnsutils', 'family:lftp', 'family:lib3270', 'family:libace-inet-ssl-7.0.8', 'family:libace-ssl-7.0.8', 'family:libafflib0v5', 'family:libalpm', 'family:libapache2-mod-auth-gssapi', 'family:libapache2-mod-auth-mellon', 'family:libapache2-mod-auth-openidc', 'family:libapache2-mod-auth-pubtkt', 'family:libapache2-mod-php8.2', 'family:libapache2-mod-qos', 'family:libaprutil1', 'family:libarccommon3v5', 'family:libbobcat6', 'family:libboinc7', 'family:libc-client2007e', 'family:libcaf-openssl0.17', 'family:libcanl-c4', 'family:libcapnp-0.9.2', 'family:libcgsi-gsoap1', 'family:libcjose0', 'family:libclamav11', 'family:libcoap', 'family:libcohttp-lwt-unix-ocaml-dev', 'family:libcouchbase', 'family:libcpp-httplib0.11', 'family:libcpprest2.10', 'family:libcreaterepo-c0', 'family:libcrypt-openssl-bignum-perl', 'family:libcrypt-openssl-dsa-perl', 'family:libcrypt-openssl-ec-perl', 'family:libcrypt-openssl-guess-perl', 'family:libcrypt-openssl-pkcs10-perl', 'family:libcrypt-openssl-random-perl', 'family:libcrypt-openssl-rsa-perl', 'family:libcrypt-openssl-x509-perl', 'family:libcrypt-smime-perl', 'family:libcrypt-ssleay-perl', 'family:libcryptmount', 'family:libcryptsetup12', 'family:libcxxtools10', 'family:libcyrus-imap-perl', 'family:libdavix0v5', 'family:libdcmtk17', 'family:libddsc0debian', 'family:libdigidoc-tools', 'family:libdigidoc2', 'family:libdigidocpp', 'family:libdkim1d', 'family:libdkimpp', 'family:libdnf-plugin-subscription-manager', 'family:libdroplet', 'family:libdrpm0', 'family:libduo3', 'family:libeac3', 'family:libeckit0d', 'family:libecore-con1', 'family:libeet1', 'family:libeiskaltdcpp2.4', 'family:libemile1', 'family:libengine-gost-openssl', 'family:libengine-pkcs11-openssl', 'family:libesmtp', 'family:libevent-openssl-2.1-7', 'family:libevhtp', 'family:libewf', 'family:libexosip2', 'family:libfaifa0', 'family:libfalcosecurity0', 'family:libfastrtps2.9', 'family:libfreefare0', 'family:libfreeradius3', 'family:libfreerdp2-2', 'family:libfsapfs-utils', 'family:libfsapfs1', 'family:libfsverity', 'family:libgambit4', 'family:libgda5-sqlcipher', 'family:libgdal32', 'family:libgdcm3.0', 'family:libgearman', 'family:libgenomicsdb0', 'family:libgetdns10', 'family:libgfapi0', 'family:libgfarm1', 'family:libgfchangelog0', 'family:libgfrpc0', 'family:libgfxdr0', 'family:libghc-haxr-dev', 'family:libghc-hookup-dev', 'family:libghc-hsopenssl-dev', 'family:libgit2', 'family:libglusterfs0', 'family:libimobiledevice', 'family:libjose', 'family:libks', 'family:libloc', 'family:libmongocrypt', 'family:libnetconf2', 'family:libnvme', 'family:liboauth2', 'family:libpaho-mqtt', 'family:libpq', 'family:librabbitmq', 'family:librados2', 'family:librbd1', 'family:libre', 'family:librelp', 'family:librepo', 'family:librgw2', 'family:libshout', 'family:libstrophe', 'family:libtins', 'family:libtorrent', 'family:libtorrent-rasterbar', 'family:libtpms', 'family:libu2f-server', 'family:libwebsockets', 'family:libxmlsec1', 'family:libzip', 'family:libzypp', 'family:lua-cqueues', 'family:lua-luaossl', 'family:lua-sec', 'family:lua5.1-cqueues', 'family:lua5.1-sec', 'family:lxc', 'family:lynx', 'family:makepasswd', 'family:mariadb', 'family:mariadb-backup', 'family:mariadb-client', 'family:mariadb-connector-c', 'family:mariadb-embedded', 'family:mariadb-server', 'family:medusa', 'family:megatools', 'family:memcached', 'family:mender-artifact', 'family:mini-httpd', 'family:minizip-ng', 'family:mktorrent', 'family:mokutil', 'family:mold', 'family:monero', 'family:mongo-c-driver', 'family:monitoring-plugins', 'family:mosh', 'family:mstflint', 'family:mtxclient', 'family:mumble', 'family:mumble-server', 'family:mupdf', 'family:mutt', 'family:myproxy', 'family:myproxy-voms', 'family:mysql', 'family:nagios', 'family:nagios-plugins-http', 'family:nagios-plugins-ldap', 'family:nagios-plugins-smtp', 'family:nagios-plugins-snmp', 'family:nagios-plugins-tcp', 'family:ncrack', 'family:neomutt', 'family:neon', 'family:net-snmp', 'family:netatalk', 'family:netdata', 'family:netsurf-fb', 'family:networkmanager-l2tp', 'family:nextcloud-client', 'family:nghttp2', 'family:nheko', 'family:nix', 'family:njs', 'family:nmail', 'family:nmap', 'family:nmap-ncat', 'family:nmh', 'family:nodejs', 'family:nordugrid-arc-arex', 'family:nordugrid-arc-client', 'family:nordugrid-arc-datadelivery-service', 'family:nordugrid-arc-gridftpd', 'family:nordugrid-arc-plugins-arcrest', 'family:nordugrid-arc-plugins-lcas-lcmaps', 'family:nordugrid-arc-plugins-needed', 'family:nrpe', 'family:nsca-ng-client', 'family:nsca-ng-server', 'family:nsd', 'family:ntpsec', 'family:nushell', 'family:nut', 'family:nzbget', 'family:omniorb', 'family:open-iscsi', 'family:open-isns', 'family:open-vm-tools', 'family:opencryptoki', 'family:opendkim', 'family:openfortivpn', 'family:openiked', 'family:openipmi-lanserv', 'family:openipmi-libs', 'family:openldap', 'family:opensc', 'family:openssh-client', 'family:openssh-server', 'family:openvswitch', 'family:ophcrack', 'family:opusfile', 'family:osslsigncode', 'family:ostree', 'family:ovn', 'family:ovn-central', 'family:ovn-host', 'family:pam-u2f', 'family:pamu2fcfg', 'family:partclone', 'family:partimage', 'family:passenger', 'family:pcp', 'family:pcp-testsuite', 'family:pdal', 'family:pdns', 'family:pdns-ixfrdist', 'family:pdns-recursor', 'family:perdition', 'family:perf', 'family:perl-crypt-openssl-aes', 'family:perl-crypt-openssl-bignum', 'family:perl-crypt-openssl-dsa', 'family:perl-crypt-openssl-random', 'family:perl-crypt-openssl-rsa', 'family:perl-crypt-openssl-x509', 'family:perl-crypt-smime', 'family:perl-crypt-ssleay', 'family:perl-net-dns-sec', 'family:perl-net-ssleay', 'family:pev', 'family:pgbackrest', 'family:pgbouncer', 'family:pgloader', 'family:php', 'family:picolisp', 'family:pipewire', 'family:pjproject', 'family:pkcs11-dump', 'family:pkcs11-helper', 'family:poco', 'family:podofo', 'family:poedit', 'family:postfix', 'family:ppp', 'family:proftpd', 'family:prosody', 'family:proxygen', 'family:psi-plus-plugins', 'family:pulseaudio', 'family:pwsafe', 'family:pypy', 'family:pypy3.10', 'family:python3', 'family:python3-awscrt', 'family:python3-cryptography', 'family:python3-grpcio', 'family:python3-m2crypto', 'family:python3-scrypt', 'family:python3-uamqp', 'family:qbittorrent', 'family:qbittorrent-nox', 'family:qpdf', 'family:qt5-qtbase', 'family:qt6-qtbase', 'family:qterm', 'family:rabbitmq-c', 'family:radsecproxy', 'family:rbd-mirror', 'family:rhash', 'family:rizin', 'family:rng-tools', 'family:rpki-client', 'family:rpm', 'family:rspamd', 'family:rsyslog-openssl', 'family:rtl_433', 'family:ruby', 'family:ruby-eventmachine', 'family:s-nail', 'family:s2n-tls', 'family:s3fs-fuse', 'family:samdump2', 'family:sbsigntool', 'family:sccache', 'family:scryer-prolog', 'family:sendmail', 'family:sequoia-sq', 'family:serf', 'family:shairport-sync', 'family:sheldon', 'family:shellinabox', 'family:shibboleth-sp', 'family:siege', 'family:sipp', 'family:sipsak', 'family:slowhttptest', 'family:slrn', 'family:snownews', 'family:sofia-sip', 'family:spice-glib', 'family:spice-server', 'family:springlobby', 'family:sqlcipher', 'family:squeezelite', 'family:srain', 'family:srt', 'family:srtp', 'family:sscg', 'family:ssldump', 'family:sslsplit', 'family:sssd-common', 'family:sstp-client', 'family:strongswan', 'family:stubby', 'family:supertuxkart', 'family:swtpm', 'family:sylpheed', 'family:synergy', 'family:syslog-ng', 'family:systemd', 'family:systemd-container', 'family:systemd-resolved', 'family:tarantool', 'family:tboot', 'family:tcl-tls', 'family:tcpdump', 'family:tcpflow', 'family:telegram-desktop', 'family:thc-ipv6', 'family:thrift', 'family:thrift-glib', 'family:tiledb', 'family:tin', 'family:tinyfugue', 'family:tomcat-native', 'family:tor', 'family:tpm-tools', 'family:tpm-tools-pkcs11', 'family:tpm2-tools', 'family:tpm2-tss-engine', 'family:trafficserver', 'family:transmission-cli', 'family:transmission-daemon', 'family:transmission-gtk', 'family:transmission-qt', 'family:trojan', 'family:trousers', 'family:trunk', 'family:tss2', 'family:ttyd', 'family:u-boot-tools', 'family:unbound', 'family:unbound-anchor', 'family:unrealircd', 'family:uuu', 'family:uwsgi', 'family:uxplay', 'family:vboot-utils', 'family:voms-mysql-plugin', 'family:voms-server', 'family:vsftpd', 'family:w3m', 'family:wangle', 'family:watchman', 'family:weex', 'family:wesnoth', 'family:wpa_supplicant', 'family:wrk', 'family:x11vnc', 'family:x3270', 'family:xar', 'family:xca', 'family:xilinx-bootgen', 'family:xml-security-c', 'family:xmlrpc-c', 'family:xmrig', 'family:xrdp', 'family:xrootd', 'family:yadifa', 'family:yafc', 'family:yapet', 'family:yara', 'family:yubico-piv-tool', 'family:zabbix', 'family:zabbix-agent', 'family:zabbix-agent2', 'family:zfs-fuse', 'family:znc'] vs ['family:389-ds-base', 'family:abuild', 'family:accel-ppp', 'family:acf-alpine-conf', 'family:acf-openssl', 'family:acme-client', 'family:acme-redirect', 'family:acme-tiny', 'family:acmed', 'family:acmed-tacd', 'family:afterburn', 'family:agensgraph', 'family:agensgraph-contrib', 'family:alpine', 'family:althttpd', 'family:amanda', 'family:android-file-transfer', 'family:anope-openssl', 'family:anytun', 'family:apache-mod-md', 'family:apache2-dev', 'family:apt-cacher-ng', 'family:arc-gui-clients', 'family:argyll', 'family:argyllcms', 'family:arti', 'family:asdcplib', 'family:asfa', 'family:asterisk', 'family:asuran-cli', 'family:atuin-server', 'family:atuin-sync', 'family:ausweisapp2', 'family:authd', 'family:autofdo', 'family:autopostgresqlbackup', 'family:aws-c-cal', 'family:aws-sdk-cpp-core', 'family:b3270', 'family:bacula-common', 'family:bacula-libs', 'family:badvpn', 'family:bareos', 'family:barnowl', 'family:barrier', 'family:bdsync', 'family:bes', 'family:bfh-base-system', 'family:bigloo-libs', 'family:bind', 'family:bitchx', 'family:bodhi-cli', 'family:boinc-client', 'family:boinc-tui', 'family:bootupd', 'family:borgbackup', 'family:borgbackup2', 'family:boxbackup-client', 'family:boxbackup-server', 'family:btfs', 'family:btrfs-fuse', 'family:burp', 'family:butt', 'family:c-client', 'family:c-icap-libs', 'family:c3270', 'family:ca-certificates', 'family:cairo-dock-plug-ins-base', 'family:cairo-dock-weather-plug-in', 'family:calibre', 'family:caml-crush-clients', 'family:camo', 'family:capnproto', 'family:cardpeek', 'family:cargo', 'family:cargo-c', 'family:cargo-edit', 'family:cargo-make', 'family:cargo-outdated', 'family:cargo-tarpaulin', 'family:cargo-web', 'family:cassandra-cpp-driver', 'family:ccmake', 'family:ccnet', 'family:centerim', 'family:ceph-base', 'family:ceph-common', 'family:ceph-osd', 'family:ceph-radosgw', 'family:ceph-test', 'family:ceph17', 'family:ceph17-base', 'family:ceph17-osd-daemon', 'family:ceph17-osd-tools', 'family:ceph17-radosgw', 'family:ceph18', 'family:ceph18-base', 'family:ceph18-osd-daemon', 'family:ceph18-osd-tools', 'family:ceph18-radosgw', 'family:certmonger', 'family:certwatch', 'family:cesnet-tcs-cli', 'family:cfengine', 'family:cfengine3', 'family:cgsi-gsoap', 'family:chatterino2', 'family:checksec', 'family:chiaki', 'family:ckermit', 'family:cl-plus-ssl', 'family:clamav', 'family:clamav-freshclam', 'family:classified-ads', 'family:clevis', 'family:clevis-pin-tpm2', 'family:clickhouse-common', 'family:cloudi', 'family:cmake', 'family:cockpit-system', 'family:cockpit-ws', 'family:collectd', 'family:collectd-nut', 'family:collectd-write_stackdriver', 'family:community-mysql', 'family:community-mysql-server', 'family:condor', 'family:condure', 'family:conserver', 'family:coova-chilli', 'family:coreos-installer', 'family:coreos-installer-bootinfra', 'family:coreutils', 'family:coreutils-sha512sum', 'family:cpprest', 'family:cpprestsdk', 'family:cpr', 'family:createrepo_c-libs', 'family:credentials-fetcher', 'family:cryptsetup-libs', 'family:cryptsetup-ssh-token', 'family:cups', 'family:cxxtools', 'family:cyrus-caldav', 'family:cyrus-clients', 'family:cyrus-common', 'family:cyrus-imapd', 'family:cyrus-murder', 'family:cyrus-nntpd', 'family:cyrus-sasl-md5', 'family:datovka', 'family:ddnet', 'family:ddnet-server', 'family:debcargo', 'family:debian-edu-config', 'family:deepin-file-manager-lib', 'family:deepin-session-shell', 'family:dehydrated', 'family:deletemail', 'family:delfin', 'family:dhtnode', 'family:diffoscope', 'family:diffoscope-minimal', 'family:dillo', 'family:dionaea', 'family:dkim-rotate', 'family:dmlite-apache-httpd', 'family:dmlite-dome', 'family:dmlite-dpm-dsi', 'family:dmlite-dpm-xrootd', 'family:dmlite-libs', 'family:dmlite-plugins-domeadapter', 'family:dns-compliance-testing', 'family:dnscap', 'family:dnsdist-luajit', 'family:dnssec-tools', 'family:dnssec-trigger', 'family:dnssec-trigger-panel', 'family:dog', 'family:domoticz', 'family:dotnet-apphost-pack-6.0', 'family:dotnet-apphost-pack-7.0', 'family:dotnet-runtime-6.0', 'family:dotnet-runtime-7.0', 'family:dotnet6-apphost-pack', 'family:dotnet6-build', 'family:dotnet6-runtime', 'family:dotnet8-apphost-pack', 'family:dotnet8-runtime', 'family:dotnet8-runtime-bootstrap', 'family:dotnet8-stage0-bootstrap', 'family:dpdk', 'family:dpdk-common-qat', 'family:dpdk-crypto-ccp', 'family:dpdk-crypto-openssl', 'family:drg', 'family:drpm', 'family:duckscript', 'family:dvisvgm', 'family:e2guardian', 'family:eapoltest', 'family:easy-rsa', 'family:ebusd', 'family:ecflow-client', 'family:ecflow-server', 'family:eclipse-titan', 'family:ecryptfs-utils', 'family:edbrowse', 'family:efl', 'family:efs-utils', 'family:eiskaltdcpp', 'family:ejabberd', 'family:epic', 'family:epoptes', 'family:epoptes-client', 'family:erfs', 'family:erlang', 'family:erlang-crypto', 'family:erlang-fast_tls', 'family:erlang-p1-tls', 'family:et', 'family:ettercap', 'family:eturnal', 'family:eurephia-admin', 'family:eurephia-init', 'family:eurephia-sqlite3', 'family:exim-mysql', 'family:falkon', 'family:fapolicyd', 'family:fastnetmon', 'family:fbrnch', 'family:fbthrift', 'family:fbx-all', 'family:fdo-admin-cli', 'family:fdo-client', 'family:fdo-init', 'family:fdo-manufacturing-server', 'family:fdo-owner-cli', 'family:fdo-owner-onboarding-server', 'family:fdo-rendezvous-server', 'family:fedora-update-feedback', 'family:fetch-crl', 'family:ffmpeg-libavformat', 'family:ffmpeg-libavutil', 'family:fio-engine-http', 'family:fizz', 'family:fluent-bit', 'family:folly', 'family:fort-validator', 'family:foxeye', 'family:fqterm', 'family:fractal', 'family:fragments', 'family:freedombox', 'family:freefilesync', 'family:freeipa-client', 'family:freeipa-server', 'family:freeipa-server-trust-ad', 'family:freeradius', 'family:freeradius-config', 'family:freeradius-eap', 'family:freerdp', 'family:freeswitch', 'family:freetds', 'family:frr', 'family:fuse-btfs', 'family:fuse-encfs', 'family:galera', 'family:galera-arbitrator', 'family:galera-arbitrator-3', 'family:galera-arbitrator-4', 'family:gambas3-gb-openssl', 'family:ganeti-3.0', 'family:gdal', 'family:gdcm', 'family:gearmand', 'family:gfsd', 'family:gftp', 'family:gftp-gtk', 'family:ghasher', 'family:ghc-haxr', 'family:ghc-hsopenssl', 'family:ghc-hsopenssl-x509-system', 'family:ghc-http-client-openssl', 'family:ghc-http-streams', 'family:ghc-koji', 'family:ghc-openssl-streams', 'family:git-core', 'family:git-email', 'family:gitui', 'family:gkrellm', 'family:glasscoder', 'family:glirc', 'family:globus-ftp-client', 'family:globus-gass-cache', 'family:globus-gass-copy', 'family:globus-gass-copy-progs', 'family:globus-gatekeeper', 'family:globus-gram-job-manager', 'family:globus-gridftp-server', 'family:globus-gridmap-eppn-callout', 'family:globus-gridmap-verify-myproxy-callout', 'family:globus-gsi-callback', 'family:globus-gsi-cert-utils-progs', 'family:globus-gsi-credential', 'family:globus-gsi-openssl-error', 'family:globus-gsi-proxy-core', 'family:globus-gsi-proxy-ssl', 'family:globus-gsi-sysconfig', 'family:globus-gssapi-gsi', 'family:globus-openssl-module', 'family:globus-proxy-utils', 'family:globus-simple-ca', 'family:glusterfs', 'family:glusterfs-cli', 'family:glusterfs-client-xlators', 'family:glusterfs-cloudsync-plugins', 'family:glusterfs-extra-xlators', 'family:glusterfs-fuse', 'family:glusterfs-geo-replication', 'family:glusterfs-server', 'family:glusterfs-thin-arbiter', 'family:gnome-authenticator', 'family:gnome-podcasts', 'family:gnome-shortwave', 'family:gnome-vfs2', 'family:gnome-vfs2-smb', 'family:gnubiff', 'family:gnumed-server', 'family:gnunet', 'family:gnupg-pkcs11-scd', 'family:goaccess', 'family:gocryptfs', 'family:google-cloud-cpp', 'family:google-cloud-cpp-rest-internal', 'family:google-cloud-cpp-storage', 'family:gq', 'family:gridengine-client', 'family:gridengine-drmaa1.0', 'family:gridengine-exec', 'family:gridengine-master', 'family:gridengine-qmon', 'family:gridsite-libs', 'family:grisbi', 'family:groonga-httpd', 'family:growl-for-linux', 'family:grpc', 'family:grub-customizer', 'family:gsi-openssh', 'family:gsi-openssh-clients', 'family:gsi-openssh-server', 'family:gsoap', 'family:gsoap-2.8.124', 'family:gssntlmssp', 'family:gst-plugins-bad', 'family:gstreamer1-plugin-reqwest', 'family:gstreamer1-plugins-bad-free', 'family:gstreamer1.0-plugins-bad', 'family:gstreamer1.0-plugins-good', 'family:guacamole-server', 'family:guacamole-server-kubernetes', 'family:guacamole-server-rdp', 'family:guacamole-server-ssh', 'family:guacamole-server-vnc', 'family:guacd', 'family:gwenhywfar', 'family:halloy', 'family:hcxdumptool', 'family:headlines', 'family:hermes', 'family:hexchat', 'family:hfsplus-tools', 'family:hfsprogs', 'family:hinsightd', 'family:hippotat-client', 'family:hiredict-ssl', 'family:hostapd', 'family:hplip-libs', 'family:hsmwiz', 'family:htslib', 'family:http_ping', 'family:httpdirfs', 'family:httrack', 'family:hylafax+', 'family:hylafax+-client', 'family:iamb', 'family:ibmswtpm2', 'family:icecast', 'family:icinga2', 'family:idevicerestore', 'family:igtf-policy-classic', 'family:igtf-policy-experimental', 'family:igtf-policy-iota', 'family:igtf-policy-mics', 'family:igtf-policy-slcs', 'family:igtf-policy-unaccredited', 'family:ikiwiki-hosting-web', 'family:imap', 'family:inadyn', 'family:inetsim', 'family:inn', 'family:inn2', 'family:input-leap', 'family:intel-hdcp', 'family:intel-ipp-crypto-mb', 'family:ipmievd', 'family:ipv6calc', 'family:iscsi-initiator-utils', 'family:isns-utils', 'family:istgt', 'family:jabberd', 'family:jami-daemon', 'family:janus', 'family:janus-gateway', 'family:john', 'family:jujutsu', 'family:kamailio-autheph-modules', 'family:kamailio-authephemeral', 'family:kamailio-ims', 'family:kamailio-outbound', 'family:kamailio-tls', 'family:kamailio-websocket', 'family:kannel-extras', 'family:kdeconnect', 'family:kea-ctrl-agent', 'family:kea-hooks', 'family:keepalived-snmp', 'family:keylime-agent-rust', 'family:keyring-ima-signer', 'family:keyringer', 'family:kf5-kitinerary', 'family:khealthcertificate', 'family:kismet', 'family:kitinerary', 'family:kitty', 'family:kiwi-systemdeps-core', 'family:kodi-gbm', 'family:kodi-wayland', 'family:kodi-x11', 'family:koji-tool', 'family:kqoauth-qt5', 'family:krb5-3', 'family:krb5-server', 'family:krb5-server-ldap', 'family:kristall', 'family:ktistec', 'family:kvirc', 'family:lacme', 'family:lagrange', 'family:lapce', 'family:lapce-proxy', 'family:lasso', 'family:lcmaps', 'family:lcmaps-plugins-jobrep', 'family:ldapvi', 'family:lib3270', 'family:libace-inet-ssl-7.0.8', 'family:libace-ssl-7.0.8', 'family:libalpm', 'family:libapache2-mod-auth-gssapi', 'family:libapache2-mod-auth-mellon', 'family:libapache2-mod-auth-openidc', 'family:libapache2-mod-auth-pubtkt', 'family:libapache2-mod-php8.2', 'family:libapache2-mod-qos', 'family:libarccommon3v5', 'family:libbobcat6', 'family:libboinc7', 'family:libc-client2007e', 'family:libcaf-openssl0.17', 'family:libcanl-c4', 'family:libcapnp-0.9.2', 'family:libcgsi-gsoap1', 'family:libclamav11', 'family:libcohttp-lwt-unix-ocaml-dev', 'family:libcouchbase', 'family:libcpprest2.10', 'family:libcreaterepo-c0', 'family:libcrypt-openssl-guess-perl', 'family:libcryptmount', 'family:libcryptsetup12', 'family:libcyrus-imap-perl', 'family:libdavix0v5', 'family:libdigidocpp', 'family:libdkimpp', 'family:libdnf-plugin-subscription-manager', 'family:libdroplet', 'family:libdrpm0', 'family:libduo3', 'family:libeckit0d', 'family:libecore-con1', 'family:libeet1', 'family:libeiskaltdcpp2.4', 'family:libemile1', 'family:libexosip2', 'family:libfaifa0', 'family:libfalcosecurity0', 'family:libfastrtps2.9', 'family:libfreeradius3', 'family:libfreerdp2-2', 'family:libgambit4', 'family:libgda5-sqlcipher', 'family:libgdal32', 'family:libgdcm3.0', 'family:libgearman', 'family:libgenomicsdb0', 'family:libgfapi0', 'family:libgfarm1', 'family:libgfchangelog0', 'family:libgfrpc0', 'family:libgfxdr0', 'family:libghc-haxr-dev', 'family:libghc-hookup-dev', 'family:libghc-hsopenssl-dev', 'family:libglusterfs0', 'family:libimobiledevice', 'family:libks', 'family:libloc', 'family:libnvme', 'family:libpq', 'family:librados2', 'family:librbd1', 'family:librepo', 'family:librgw2', 'family:libtorrent', 'family:libtorrent-rasterbar', 'family:libzypp', 'family:lua5.1-cqueues', 'family:lua5.1-sec', 'family:lxc', 'family:mariadb', 'family:mariadb-backup', 'family:mariadb-client', 'family:mariadb-connector-c', 'family:mariadb-embedded', 'family:mariadb-server', 'family:mender-artifact', 'family:mold', 'family:monero', 'family:mongo-c-driver', 'family:mstflint', 'family:mtxclient', 'family:mumble', 'family:mupdf', 'family:myproxy', 'family:myproxy-voms', 'family:mysql', 'family:nagios', 'family:nagios-plugins-snmp', 'family:neomutt', 'family:netatalk', 'family:netdata', 'family:netsurf-fb', 'family:networkmanager-l2tp', 'family:nextcloud-client', 'family:nheko', 'family:nix', 'family:nmail', 'family:nodejs', 'family:nordugrid-arc-arex', 'family:nordugrid-arc-client', 'family:nordugrid-arc-datadelivery-service', 'family:nordugrid-arc-gridftpd', 'family:nordugrid-arc-plugins-arcrest', 'family:nordugrid-arc-plugins-lcas-lcmaps', 'family:nordugrid-arc-plugins-needed', 'family:ntpsec', 'family:nushell', 'family:nut', 'family:omniorb', 'family:open-iscsi', 'family:open-isns', 'family:open-vm-tools', 'family:opencryptoki', 'family:openipmi-lanserv', 'family:openipmi-libs', 'family:opensc', 'family:openvswitch', 'family:opusfile', 'family:ostree', 'family:ovn', 'family:ovn-central', 'family:ovn-host', 'family:pam-u2f', 'family:pamu2fcfg', 'family:passenger', 'family:pcp', 'family:pcp-testsuite', 'family:pdal', 'family:pdns-ixfrdist', 'family:perf', 'family:pgbackrest', 'family:pgbouncer', 'family:pgloader', 'family:picolisp', 'family:pipewire', 'family:pjproject', 'family:pkcs11-dump', 'family:pkcs11-helper', 'family:podofo', 'family:poedit', 'family:ppp', 'family:proxygen', 'family:psi-plus-plugins', 'family:pulseaudio', 'family:pwsafe', 'family:pypy', 'family:pypy3.10', 'family:python3', 'family:python3-awscrt', 'family:python3-cryptography', 'family:python3-grpcio', 'family:python3-uamqp', 'family:qbittorrent', 'family:qbittorrent-nox', 'family:qt5-qtbase', 'family:qt6-qtbase', 'family:qterm', 'family:rbd-mirror', 'family:rizin', 'family:rng-tools', 'family:rpki-client', 'family:rpm', 'family:rsyslog-openssl', 'family:rtl_433', 'family:ruby-eventmachine', 'family:s3fs-fuse', 'family:samdump2', 'family:sccache', 'family:scryer-prolog', 'family:sendmail', 'family:sequoia-sq', 'family:serf', 'family:shairport-sync', 'family:sheldon', 'family:shibboleth-sp', 'family:snownews', 'family:spice-glib', 'family:spice-server', 'family:springlobby', 'family:squeezelite', 'family:srain', 'family:sssd-common', 'family:sstp-client', 'family:supertuxkart', 'family:sylpheed', 'family:synergy', 'family:syslog-ng', 'family:systemd', 'family:systemd-container', 'family:systemd-resolved', 'family:tarantool', 'family:tboot', 'family:telegram-desktop', 'family:thc-ipv6', 'family:thrift', 'family:thrift-glib', 'family:tiledb', 'family:tin', 'family:tinyfugue', 'family:tomcat-native', 'family:tor', 'family:tpm-tools', 'family:tpm-tools-pkcs11', 'family:tpm2-tss-engine', 'family:trafficserver', 'family:transmission-cli', 'family:transmission-daemon', 'family:transmission-gtk', 'family:transmission-qt', 'family:trojan', 'family:trunk', 'family:tss2', 'family:ttyd', 'family:u-boot-tools', 'family:unrealircd', 'family:uuu', 'family:uwsgi', 'family:uxplay', 'family:voms-mysql-plugin', 'family:voms-server', 'family:wangle', 'family:watchman', 'family:wesnoth', 'family:wpa_supplicant', 'family:x11vnc', 'family:x3270', 'family:xca', 'family:xml-security-c', 'family:xmlrpc-c', 'family:xmrig', 'family:xrootd', 'family:yubico-piv-tool', 'family:zabbix', 'family:zabbix-agent', 'family:zabbix-agent2', 'family:zfs-fuse'])",
-          "blocker no-admitted-recipe: recorded mover_potential does not reproduce (965 vs 697)",
-          "blocker no-admitted-recipe: recorded distinct_fix_mechanisms does not reproduce (965 vs 697)",
-          "blocker recipe-build-system-unsupported: recorded blocked_families does not reproduce (2 vs 1)",
-          "blocker recipe-build-system-unsupported: recorded shared_by does not reproduce (['family:libssh', 'family:lighttpd'] vs ['family:gridsite-clients'])",
-          "blocker recipe-build-system-unsupported: recorded mover_potential does not reproduce (2 vs 1)",
-          "blocker recipe-build-system-unsupported: recorded to_pass_potential does not reproduce (2 vs 1)",
-          "blocker recipe-build-system-unsupported: recorded per_fix_leverage does not reproduce (2.0 vs 1.0)",
-          "blocker candidate-configure-failure: recorded blocked_families does not reproduce (0 vs 28)",
-          "blocker candidate-configure-failure: recorded shared_by does not reproduce ([] vs ['family:apk-tools', 'family:atheme-services', 'family:canl-c', 'family:canl-c-examples', 'family:dmg2img', 'family:epic4', 'family:ftp-ssl', 'family:ftpd-ssl', 'family:imapproxy', 'family:imx-code-signing-tool', 'family:ipmiutil', 'family:kannel', 'family:kore', 'family:krb5-k5tls', 'family:lcmaps-plugins-verify-proxy', 'family:libcrypt-ssleay-perl', 'family:libcxxtools10', 'family:libdkim1d', 'family:nagios-plugins-ldap', 'family:nzbget', 'family:openfortivpn', 'family:perdition', 'family:perl-crypt-ssleay', 'family:sqlcipher', 'family:vboot-utils', 'family:weex', 'family:yafc', 'family:yapet'])",
-          "blocker candidate-configure-failure: recorded mover_potential does not reproduce (0 vs 28)",
-          "blocker candidate-configure-failure: recorded to_pass_potential does not reproduce (0 vs 28)",
-          "blocker candidate-configure-failure: recorded distinct_fix_mechanisms does not reproduce (0 vs 1)",
-          "blocker candidate-configure-failure: recorded per_fix_leverage does not reproduce (0.0 vs 28.0)",
-          "blocker candidate-link-failure: recorded blocked_families does not reproduce (0 vs 3)",
-          "blocker candidate-link-failure: recorded shared_by does not reproduce ([] vs ['family:bind9', 'family:libewf', 'family:libfsapfs-utils'])",
-          "blocker candidate-link-failure: recorded mover_potential does not reproduce (0 vs 3)",
-          "blocker candidate-link-failure: recorded to_pass_potential does not reproduce (0 vs 3)",
-          "blocker candidate-link-failure: recorded distinct_fix_mechanisms does not reproduce (0 vs 1)",
-          "blocker candidate-link-failure: recorded per_fix_leverage does not reproduce (0.0 vs 3.0)",
-          "blocker candidate-load-failure: recorded blocked_families does not reproduce (0 vs 4)",
-          "blocker candidate-load-failure: recorded shared_by does not reproduce ([] vs ['family:afflib', 'family:afftools', 'family:libafflib0v5', 'family:medusa'])",
-          "blocker candidate-load-failure: recorded mover_potential does not reproduce (0 vs 4)",
-          "blocker candidate-load-failure: recorded to_pass_potential does not reproduce (0 vs 4)",
-          "blocker candidate-load-failure: recorded distinct_fix_mechanisms does not reproduce (0 vs 1)",
-          "blocker candidate-load-failure: recorded per_fix_leverage does not reproduce (0.0 vs 4.0)",
-          "blocker candidate-runtime-failure: recorded blocked_families does not reproduce (0 vs 2)",
-          "blocker candidate-runtime-failure: recorded shared_by does not reproduce ([] vs ['family:libshout', 'family:xilinx-bootgen'])",
-          "blocker candidate-runtime-failure: recorded mover_potential does not reproduce (0 vs 2)",
-          "blocker candidate-runtime-failure: recorded to_pass_potential does not reproduce (0 vs 2)",
-          "blocker candidate-runtime-failure: recorded distinct_fix_mechanisms does not reproduce (0 vs 1)",
-          "blocker candidate-runtime-failure: recorded per_fix_leverage does not reproduce (0.0 vs 2.0)",
-          "blocker candidate-functional-failure: recorded blocked_families does not reproduce (0 vs 2)",
-          "blocker candidate-functional-failure: recorded shared_by does not reproduce ([] vs ['family:fdm', 'family:perl-net-dns-sec'])",
-          "blocker candidate-functional-failure: recorded mover_potential does not reproduce (0 vs 2)",
-          "blocker candidate-functional-failure: recorded to_pass_potential does not reproduce (0 vs 2)",
-          "blocker candidate-functional-failure: recorded distinct_fix_mechanisms does not reproduce (0 vs 1)",
-          "blocker candidate-functional-failure: recorded per_fix_leverage does not reproduce (0.0 vs 2.0)",
-          "blocker authority-baseline-limited: recorded blocked_families does not reproduce (0 vs 90)",
-          "blocker authority-baseline-limited: recorded shared_by does not reproduce ([] vs ['family:apache2-bin', 'family:apache2-http2', 'family:apache2-ssl', 'family:apache2-utils', 'family:appx-util', 'family:apr-util', 'family:asterisk-srtp', 'family:bibtexconv', 'family:casync', 'family:cjose', 'family:davix', 'family:dcmtk', 'family:dnsdist', 'family:dnsperf', 'family:dsniff', 'family:encfs', 'family:eurephia', 'family:fastd', 'family:fido2', 'family:galera-3', 'family:galera-4', 'family:getdns', 'family:globus-gsi-cert-utils', 'family:gostsum', 'family:h2o', 'family:h2o-evloop0.13', 'family:httest', 'family:httpd', 'family:i2pd', 'family:ipmitool', 'family:ixwebsocket-libs', 'family:jabberd2', 'family:jwt', 'family:lastpass-cli', 'family:libaprutil1', 'family:libcjose0', 'family:libcoap', 'family:libdcmtk17', 'family:libddsc0debian', 'family:libdigidoc-tools', 'family:libdigidoc2', 'family:libengine-gost-openssl', 'family:libesmtp', 'family:libevhtp', 'family:libfreefare0', 'family:libgetdns10', 'family:libgit2', 'family:libjose', 'family:libmongocrypt', 'family:libnetconf2', 'family:liboauth2', 'family:libpaho-mqtt', 'family:librabbitmq', 'family:libssh', 'family:libstrophe', 'family:libtins', 'family:libwebsockets', 'family:libzip', 'family:megatools', 'family:minizip-ng', 'family:mumble-server', 'family:neon', 'family:nghttp2', 'family:openiked', 'family:ophcrack', 'family:osslsigncode', 'family:partimage', 'family:pdns', 'family:pdns-recursor', 'family:poco', 'family:python3-m2crypto', 'family:python3-scrypt', 'family:qpdf', 'family:rabbitmq-c', 'family:rspamd', 'family:s2n-tls', 'family:sbsigntool', 'family:sipp', 'family:srt', 'family:srtp', 'family:sscg', 'family:ssldump', 'family:stubby', 'family:tcpflow', 'family:tpm2-tools', 'family:unbound', 'family:unbound-anchor', 'family:xar', 'family:xrdp', 'family:znc'])",
-          "blocker authority-baseline-limited: recorded mover_potential does not reproduce (0 vs 90)",
-          "blocker authority-baseline-limited: recorded to_pass_potential does not reproduce (0 vs 90)",
-          "blocker authority-baseline-limited: recorded distinct_fix_mechanisms does not reproduce (0 vs 1)",
-          "blocker authority-baseline-limited: recorded per_fix_leverage does not reproduce (0.0 vs 90.0)",
-          "blocker no-fixture: recorded blocked_families does not reproduce (0 vs 9)",
-          "blocker no-fixture: recorded shared_by does not reproduce ([] vs ['family:bip', 'family:bruteforce-wallet', 'family:gsocket', 'family:gvpe', 'family:hopm', 'family:ike-scan', 'family:mosh', 'family:trousers', 'family:yadifa'])",
-          "blocker no-fixture: recorded mover_potential does not reproduce (0 vs 9)",
-          "blocker no-fixture: recorded to_pass_potential does not reproduce (0 vs 9)",
-          "blocker no-fixture: recorded distinct_fix_mechanisms does not reproduce (0 vs 9)",
-          "blocker no-fixture: recorded per_fix_leverage does not reproduce (0.0 vs 1.0)",
-          "the recorded ranking does not reproduce",
-          "the recorded counts does not reproduce from the committed planes",
-          "the recorded funnel does not reproduce from the committed planes",
-          "the recorded recipe_less_decomposition does not reproduce from the committed planes",
-          "the recorded recipe queue does not reproduce from the criterion",
-          "the recorded recipe-queue rule does not reproduce",
-          "docs/PHASE-24-BIGGEST-MOVERS.md does not reproduce from the committed analysis",
-          "the README.md downstream-blockers block does not reproduce",
-          "docs/SEAL-CENSUS.md does not carry the biggest-movers section"
-        ],
+        "findings": [],
         "frf_declarable": false,
         "frf_exclusion": "the shared-blocker court reads committed evidence and the analysis derived from it and stages no artifacts/phase24/probes/<probe>.{authority,candidate} pair, so it takes no transcript to diff and carries no FRF declaration",
         "funnel": [
@@ -14886,63 +14821,63 @@
             "step": "counted"
           },
           {
-            "families": 35,
+            "families": 307,
             "level": "L1-admitted-source",
-            "share_of_counted": "35/1000 (3.5%)",
+            "share_of_counted": "307/1000 (30.7%)",
             "step": "with-admitted-recipe"
           },
           {
-            "families": 33,
+            "families": 202,
             "level": "L2-configured",
-            "share_of_counted": "33/1000 (3.3%)",
+            "share_of_counted": "202/1000 (20.2%)",
             "step": "configured"
           },
           {
-            "families": 33,
+            "families": 181,
             "level": "L4-linked",
-            "share_of_counted": "33/1000 (3.3%)",
+            "share_of_counted": "181/1000 (18.1%)",
             "step": "linked"
           },
           {
-            "families": 8,
+            "families": 162,
             "level": "L5-loaded",
-            "share_of_counted": "8/1000 (0.8%)",
+            "share_of_counted": "162/1000 (16.2%)",
             "step": "loaded"
           },
           {
-            "families": 8,
+            "families": 150,
             "level": "L6-runtime",
-            "share_of_counted": "8/1000 (0.8%)",
+            "share_of_counted": "150/1000 (15.0%)",
             "step": "runtime"
           },
           {
-            "families": 8,
+            "families": 149,
             "level": "L7-functional",
-            "share_of_counted": "8/1000 (0.8%)",
+            "share_of_counted": "149/1000 (14.9%)",
             "step": "functional"
           },
           {
-            "families": 33,
+            "families": 164,
             "level": "",
-            "share_of_counted": "33/1000 (3.3%)",
+            "share_of_counted": "164/1000 (16.4%)",
             "step": "drop-in-pass"
           }
         ],
         "method": "stages no probe: it reads forensics/downstream/shared-blockers.json and re-derives the whole analysis from the committed Phase-24 planes (the frozen P1000, the families, the build/link and runtime/functional atlases, the failures plane, the final P1000 run and the reconciliation) through forensics/tools/downstream_blockers.py, and re-runs its findings and sensitivity control, without rebuilding and without launching anything. It establishes that the partition covers the 1,000 counted families exactly once and reproduces; that every blocker record (its blocked families, shared set, mover potential and basis, to-pass potential, fixability, named fix mechanism and leverage) reproduces and is schema-valid; that the ranking is ordered by mover potential; that the counts, the ladder funnel, the recipe-less decomposition and the recipe queue are derived rather than typed; and that the detailed report, the compact README block and the census's biggest-movers section each re-render from the committed analysis and cross-link. A blocker flipped, a class count changed, a family dropped, the ranking reordered and a per-fix leverage changed are each detected with specificity holding (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 4.12 and 3.8).",
-        "partition_hash": "22ba6c469496542f530095fc5ba56c575cd794ad252f3d8fd06f8b50a4f4b330",
+        "partition_hash": "412df51ec22538e27c1efd8ba40d69878d602d7c000386a3d6e76af324247e29",
         "probe": "",
         "problems": [],
         "ranking": [
           "no-admitted-recipe",
-          "recipe-build-system-unsupported",
-          "none",
           "authority-baseline-limited",
           "candidate-configure-failure",
-          "candidate-functional-failure",
-          "candidate-link-failure",
-          "candidate-load-failure",
-          "candidate-runtime-failure",
           "no-fixture",
+          "candidate-load-failure",
+          "candidate-link-failure",
+          "candidate-functional-failure",
+          "candidate-runtime-failure",
+          "recipe-build-system-unsupported",
+          "none",
           "out-of-scope",
           "recipe-build-dependency-missing"
         ],
@@ -14950,108 +14885,126 @@
         "report": "docs/PHASE-24-BIGGEST-MOVERS.md",
         "top": [
           {
-            "blocked_families": 965,
+            "blocked_families": 697,
             "blocker_class": "no-admitted-recipe",
             "fixability": "recipe-admission",
-            "mover_potential": 965,
+            "mover_potential": 697,
             "per_fix_leverage": 1.0,
             "to_pass_potential": 0
           },
           {
-            "blocked_families": 2,
-            "blocker_class": "recipe-build-system-unsupported",
-            "fixability": "recipe-build-system",
-            "mover_potential": 2,
-            "per_fix_leverage": 2.0,
-            "to_pass_potential": 2
+            "blocked_families": 90,
+            "blocker_class": "authority-baseline-limited",
+            "fixability": "authority-limited",
+            "mover_potential": 90,
+            "per_fix_leverage": 90.0,
+            "to_pass_potential": 90
           },
           {
-            "blocked_families": 33,
-            "blocker_class": "none",
-            "fixability": "resolved",
-            "mover_potential": 0,
-            "per_fix_leverage": 0.0,
-            "to_pass_potential": 0
+            "blocked_families": 28,
+            "blocker_class": "candidate-configure-failure",
+            "fixability": "candidate-fix",
+            "mover_potential": 28,
+            "per_fix_leverage": 28.0,
+            "to_pass_potential": 28
+          },
+          {
+            "blocked_families": 9,
+            "blocker_class": "no-fixture",
+            "fixability": "fixture-addition",
+            "mover_potential": 9,
+            "per_fix_leverage": 1.0,
+            "to_pass_potential": 9
+          },
+          {
+            "blocked_families": 4,
+            "blocker_class": "candidate-load-failure",
+            "fixability": "candidate-fix",
+            "mover_potential": 4,
+            "per_fix_leverage": 4.0,
+            "to_pass_potential": 4
+          },
+          {
+            "blocked_families": 3,
+            "blocker_class": "candidate-link-failure",
+            "fixability": "candidate-fix",
+            "mover_potential": 3,
+            "per_fix_leverage": 3.0,
+            "to_pass_potential": 3
           }
         ],
-        "verdict": "fail"
+        "verdict": "pass"
       },
       {
         "baseline": "forensics/downstream/blocker-remediation-baseline.json",
         "control": {
-          "baseline_findings": 4,
-          "caught_before_count_mutated": 6,
-          "caught_claimed_fix_no_movement": 5,
-          "caught_fabricated_new_recipe": 5,
-          "caught_movement_disagrees": 6,
-          "caught_still_blocked_marked_resolved": 6,
-          "honest": false,
-          "specificity_holds": false
+          "baseline_findings": 0,
+          "caught_before_count_mutated": 3,
+          "caught_claimed_fix_no_movement": 1,
+          "caught_fabricated_new_recipe": 1,
+          "caught_movement_disagrees": 3,
+          "caught_still_blocked_marked_resolved": 1,
+          "honest": true,
+          "specificity_holds": true
         },
         "counts": {
           "actions": 8,
-          "families_moved": 27,
-          "fix_actions": 5,
+          "families_moved": 297,
+          "fix_actions": 6,
           "new_recipes": 8,
           "new_recipes_linked": 8,
-          "still_blocked_actions": 2
+          "still_blocked_actions": 1
         },
         "court": "RT-BLOCKER-REMEDIATION",
-        "findings": [
-          "the committed remediation record does not reproduce from the planes",
-          "the recorded `after` does not reproduce from the committed planes",
-          "the recorded `movement` does not reproduce from before/after",
-          "the recorded `family_movement` does not reproduce from the partitions",
-          "the recorded `counts` do not reproduce from the record"
-        ],
+        "findings": [],
         "frf_declarable": false,
         "frf_exclusion": "the remediation court reads committed evidence and the record derived from it and stages no artifacts/phase24/probes/<probe>.{authority,candidate} pair, so it takes no transcript to diff and carries no FRF declaration",
-        "method": "stages no probe: it reads forensics/downstream/blocker-remediation.json and its preserved baseline and re-derives the whole before/after record from the committed Phase-24 planes (the 24.16 analysis, the build/link and runtime/functional atlases, the final P1000 run and the frozen P1000) through forensics/tools/downstream_remediation.py, re-running its findings and sensitivity control, without rebuilding and without launching anything. It establishes that the preserved `before` partition is the 24.16 partition (1,000 families, content-addressed); that the `after` partition and the movement reproduce from the re-measured planes; that every action's observed family transitions match the two partitions; that a still-blocked action shows no movement and names its missing tool; that a resolving action shows its families moved; and that the admitted recipes are exactly the catalogue families outside the 24.16 baseline. A claimed fix with no re-measured movement, a still-blocked class marked resolved, a movement figure that disagrees with the planes, a fabricated new recipe and a mutated before count are each detected with specificity holding (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 4.13 and 3.8).",
+        "method": "stages no probe: it reads forensics/downstream/blocker-remediation.json and its preserved baseline and re-derives the whole before/after record from the committed Phase-24 planes (the 24.16 analysis, the build/link and runtime/functional atlases, the final P1000 run and the frozen P1000) through forensics/tools/downstream_remediation.py, re-running its findings and sensitivity control, without rebuilding and without launching anything. It establishes that the preserved `before` partition is the 24.16 partition (1,000 families, content-addressed); that the `after` partition and the movement reproduce from the re-measured planes; that every action's observed family transitions match the two partitions; that a still-blocked action reaches no resolving class, cites the measured rung it stopped at and names its missing tool; that a resolving action shows its families reached the resolving class; and that the admitted recipes are exactly the catalogue families outside the 24.16 baseline. A claimed fix with no measured progress, a still-blocked class marked resolved, a movement figure that disagrees with the planes, a fabricated new recipe and a mutated before count are each detected with specificity holding (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 4.13 and 3.8).",
         "movement": {
           "authority-baseline-limited": {
-            "after": 0,
+            "after": 90,
             "before": 0,
-            "delta": 0
+            "delta": 90
           },
           "candidate-configure-failure": {
-            "after": 0,
+            "after": 28,
             "before": 0,
-            "delta": 0
+            "delta": 28
           },
           "candidate-functional-failure": {
-            "after": 0,
+            "after": 2,
             "before": 0,
-            "delta": 0
+            "delta": 2
           },
           "candidate-link-failure": {
-            "after": 0,
+            "after": 3,
             "before": 0,
-            "delta": 0
+            "delta": 3
           },
           "candidate-load-failure": {
-            "after": 0,
+            "after": 4,
             "before": 0,
-            "delta": 0
+            "delta": 4
           },
           "candidate-runtime-failure": {
-            "after": 0,
+            "after": 2,
             "before": 0,
-            "delta": 0
+            "delta": 2
           },
           "no-admitted-recipe": {
-            "after": 965,
+            "after": 697,
             "before": 988,
-            "delta": -23
+            "delta": -291
           },
           "no-fixture": {
-            "after": 0,
+            "after": 9,
             "before": 2,
-            "delta": -2
+            "delta": 7
           },
           "none": {
-            "after": 33,
+            "after": 164,
             "before": 6,
-            "delta": 27
+            "delta": 158
           },
           "out-of-scope": {
             "after": 0,
@@ -15064,9 +15017,9 @@
             "delta": -2
           },
           "recipe-build-system-unsupported": {
-            "after": 2,
+            "after": 1,
             "before": 2,
-            "delta": 0
+            "delta": -1
           }
         },
         "new_recipes": [
@@ -15083,7 +15036,7 @@
         "probe": "",
         "problems": [],
         "record": "forensics/downstream/blocker-remediation.json",
-        "verdict": "fail"
+        "verdict": "pass"
       },
       {
         "admitted_families": [
@@ -15100,14 +15053,14 @@
         ],
         "baseline": "forensics/downstream/recipe-campaign-baseline.json",
         "control": {
-          "baseline_findings": 2,
-          "caught_admitted_recipe_dropped": 4,
-          "caught_movement_disagrees": 3,
-          "caught_non_admitted_no_reason": 4,
-          "caught_rejected_marked_admitted": 3,
-          "caught_typed_count": 4,
-          "honest": false,
-          "specificity_holds": false
+          "baseline_findings": 0,
+          "caught_admitted_recipe_dropped": 2,
+          "caught_movement_disagrees": 2,
+          "caught_non_admitted_no_reason": 2,
+          "caught_rejected_marked_admitted": 1,
+          "caught_typed_count": 2,
+          "honest": true,
+          "specificity_holds": true
         },
         "counts": {
           "admitted": 10,
@@ -15123,50 +15076,46 @@
           }
         },
         "court": "RT-RECIPE-CAMPAIGN",
-        "findings": [
-          "the committed campaign record does not reproduce from the planes",
-          "the recorded `after` does not reproduce from the committed planes",
-          "the recorded `movement` does not reproduce from before/after"
-        ],
+        "findings": [],
         "frf_declarable": false,
         "frf_exclusion": "the recipe-campaign court reads committed evidence and the record derived from it and stages no artifacts/phase24/probes/<probe>.{authority,candidate} pair, so it takes no transcript to diff and carries no FRF declaration",
         "method": "stages no probe: it reads forensics/downstream/recipe-campaign.json and its preserved pre-campaign baseline forensics/downstream/recipe-campaign-baseline.json, re-derives the whole record from the committed Phase-24 planes (the build/link and runtime/functional atlases, the final P1000 run and the frozen P1000) through forensics/tools/downstream_recipe_campaign.py, and re-runs its findings and sensitivity control, without rebuilding and without launching anything. It establishes that every attempted family is accounted for exactly once; that every admitted recipe was really built against both subjects; that a non-admitted family carries a reason; that the admitted recipes are exactly the attempts marked admitted and exactly the module catalogue the build/link tool imports; that the movement is the subtraction of the preserved before and the derived after; and that the counts are derived rather than typed. A rejected family marked admitted, a dropped admitted recipe, a movement figure disagreeing with the planes, a non-admitted family stripped of its reason and a typed count are each detected with specificity holding (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 4.14 and 3.8).",
         "movement": {
           "drop_in_pass": {
-            "after": 33,
+            "after": 164,
             "before": 18,
-            "delta": 15
+            "delta": 146
           },
           "linked": {
-            "after": 33,
+            "after": 181,
             "before": 18,
-            "delta": 15
+            "delta": 163
           },
           "measurable_families": {
-            "after": 33,
+            "after": 181,
             "before": 18,
-            "delta": 15
+            "delta": 163
           },
           "no_admitted_recipe": {
-            "after": 965,
+            "after": 697,
             "before": 980,
-            "delta": -15
+            "delta": -283
           },
           "recipe_backed_families": {
-            "after": 35,
+            "after": 307,
             "before": 20,
-            "delta": 15
+            "delta": 287
           },
           "resolved_none": {
-            "after": 33,
+            "after": 164,
             "before": 18,
-            "delta": 15
+            "delta": 146
           }
         },
         "probe": "",
         "problems": [],
         "record": "forensics/downstream/recipe-campaign.json",
-        "verdict": "fail"
+        "verdict": "pass"
       },
       {
         "admitted_families": [
@@ -15179,14 +15128,14 @@
         "attempts_record": "forensics/downstream/close-batch-attempts.json",
         "baseline": "forensics/downstream/close-batch-baseline.json",
         "control": {
-          "baseline_findings": 2,
-          "caught_admitted_recipe_dropped": 4,
-          "caught_finding_stripped": 4,
-          "caught_movement_disagrees": 3,
-          "caught_rejected_marked_admitted": 4,
-          "caught_typed_count": 4,
-          "honest": false,
-          "specificity_holds": false
+          "baseline_findings": 0,
+          "caught_admitted_recipe_dropped": 2,
+          "caught_finding_stripped": 2,
+          "caught_movement_disagrees": 2,
+          "caught_rejected_marked_admitted": 2,
+          "caught_typed_count": 2,
+          "honest": true,
+          "specificity_holds": true
         },
         "counts": {
           "admitted": 5,
@@ -15214,50 +15163,46 @@
           "nghttp2",
           "vsftpd"
         ],
-        "findings": [
-          "the committed close-batch record does not reproduce from the planes",
-          "the recorded `after` does not reproduce from the committed planes",
-          "the recorded `movement` does not reproduce from before/after"
-        ],
+        "findings": [],
         "frf_declarable": false,
         "frf_exclusion": "the close-batch court reads committed evidence and the record derived from it and stages no artifacts/phase24/probes/<probe>.{authority,candidate} pair, so it takes no transcript to diff and carries no FRF declaration",
         "method": "stages no probe: it reads forensics/downstream/close-batch.json, its preserved pre-batch baseline forensics/downstream/close-batch-baseline.json and its authored attempt record forensics/downstream/close-batch-attempts.json, re-derives the whole record from the committed Phase-24 planes (the build/link atlas, the final P1000 run and the frozen P1000) through forensics/tools/downstream_close_batch.py, and re-runs its findings and sensitivity control, without rebuilding and without launching anything. It establishes that every attempted family is accounted for exactly once; that every admitted recipe was really built and linked against both subjects; that a classification finding built in the venue but links no OpenSSL subject and is never forced to link one; that a non-admitted family carries an outcome from the closed vocabulary and a reason; that the admitted recipes are exactly the attempts marked admitted and exactly the module catalogue the build/link tool imports; that the movement is the subtraction of the preserved before and the derived after; and that the counts are derived rather than typed. A rejected family marked admitted, a dropped admitted recipe, a movement figure disagreeing with the planes, a classification finding stripped of its class and a typed count are each detected with specificity holding (docs/PHASE-24-DOWNSTREAM-1000-SUBPHASES.md sections 2, 4.15 and 3.8).",
         "movement": {
           "drop_in_pass": {
-            "after": 33,
+            "after": 164,
             "before": 28,
-            "delta": 5
+            "delta": 136
           },
           "linked": {
-            "after": 33,
+            "after": 181,
             "before": 28,
-            "delta": 5
+            "delta": 153
           },
           "measurable_families": {
-            "after": 33,
+            "after": 181,
             "before": 28,
-            "delta": 5
+            "delta": 153
           },
           "no_admitted_recipe": {
-            "after": 965,
+            "after": 697,
             "before": 970,
-            "delta": -5
+            "delta": -273
           },
           "recipe_backed_families": {
-            "after": 35,
+            "after": 307,
             "before": 30,
-            "delta": 5
+            "delta": 277
           },
           "resolved_none": {
-            "after": 33,
+            "after": 164,
             "before": 28,
-            "delta": 5
+            "delta": 136
           }
         },
         "probe": "",
         "problems": [],
         "record": "forensics/downstream/close-batch.json",
-        "verdict": "fail"
+        "verdict": "pass"
       },
       {
         "bound_roots": {
@@ -15276,14 +15221,14 @@
           "vacuous": true
         },
         "control": {
-          "baseline_findings": 11,
-          "caught_census_outcome_missing": 12,
-          "caught_coverage_exceeds_universe": 13,
-          "caught_ladder_inconsistent": 12,
-          "caught_mismatched_identity": 12,
-          "caught_non_vacuous_chain": 12,
-          "caught_stripped_marker": 12,
-          "caught_verdict_histogram": 13,
+          "baseline_findings": 1,
+          "caught_census_outcome_missing": 2,
+          "caught_coverage_exceeds_universe": 3,
+          "caught_ladder_inconsistent": 2,
+          "caught_mismatched_identity": 2,
+          "caught_non_vacuous_chain": 2,
+          "caught_stripped_marker": 2,
+          "caught_verdict_histogram": 3,
           "honest": false,
           "specificity_holds": false
         },
@@ -15319,16 +15264,6 @@
         "frf_declarable": false,
         "frf_exclusion": "the seal court reads committed evidence, the seal document and the generated seal census and stages no artifacts/phase24/probes/<probe>.{authority,candidate} pair, so it takes no transcript to diff and carries no FRF declaration",
         "instrument_findings": [
-          "the seal document docs/PHASE-24-DOWNSTREAM-1000-SEAL.md does not carry the derived marker 'only 307 of the 1,000 counted families'",
-          "the seal document docs/PHASE-24-DOWNSTREAM-1000-SEAL.md does not carry the derived marker 'PASS 164 / PARTIAL 16 / FAIL 1 / UNKNOWN 0 / NOT_APPLICABLE 819'",
-          "the seal document docs/PHASE-24-DOWNSTREAM-1000-SEAL.md does not carry the derived marker 'the candidate reaches its authority-applicable baseline for all 181 measurable families'",
-          "the seal document docs/PHASE-24-DOWNSTREAM-1000-SEAL.md does not carry the derived marker 'of the 164 drop-in passes, 15 are at L4-linked with no admitted runtime workload for those families and 149 reach L5 or above'",
-          "the seal document docs/PHASE-24-DOWNSTREAM-1000-SEAL.md does not carry the derived marker '3a8e7c9d059a50314765e9055c5441b5e86943fe90006bb80951dd5a4d644a21'",
-          "the seal document docs/PHASE-24-DOWNSTREAM-1000-SEAL.md does not carry the derived marker 'd6e2ab3187a40b427fcb33d6c543baf2ba287be84d50081eb08703326d02b32a'",
-          "the seal document docs/PHASE-24-DOWNSTREAM-1000-SEAL.md does not carry the derived marker '734132461c658d87707a91986e847680973502f36aa70992e007285de17d224a'",
-          "the seal document docs/PHASE-24-DOWNSTREAM-1000-SEAL.md does not carry the derived marker '72e9b2329d1d711f625990669a6511dc223458302b49a4945787c4952a22fda5'",
-          "the seal census docs/SEAL-CENSUS.md does not carry the downstream-1000 outcome marker '| `DROP_IN_PASS` | 164 |'",
-          "the seal census docs/SEAL-CENSUS.md does not carry the downstream-1000 outcome marker '| `DROP_IN_NOT_APPLICABLE` | 819 |'",
           "the final P1000 run does not reach the authority baseline for every measurable family"
         ],
         "ladder": {
@@ -15557,8 +15492,8 @@
       }
     },
     "summary": {
-      "fail": 5,
-      "pass": 14,
+      "fail": 1,
+      "pass": 18,
       "total": 19
     }
   },
@@ -15717,7 +15652,7 @@
     {
       "name": "failures",
       "path": "forensics/downstream/failures.json",
-      "sha256": "61999df74af61eb7e719ed667e9ea5df9e6e7777fd69fae11bb82e093dd5f450"
+      "sha256": "048b09d3ac8a78edeb8e2f15bb432958416df2372e533a5a937a93361f940d43"
     },
     {
       "name": "downstream-failures",
@@ -15882,7 +15817,7 @@
     {
       "name": "reconciliation",
       "path": "forensics/downstream/reconciliation.json",
-      "sha256": "7175343c48e5ff5cc75ae164769237243774901f2c61e2ccaf99afbeaa006108"
+      "sha256": "99656087e29f86aa1ea0bd100190c9440848c1864f7c4dd0513f810a9eec9a89"
     },
     {
       "name": "downstream-reconciliation",
@@ -15907,27 +15842,27 @@
     {
       "name": "phase-24-seal",
       "path": "docs/PHASE-24-DOWNSTREAM-1000-SEAL.md",
-      "sha256": "91aaa09080b79300d2495ec8ae5c78d19b106a5d9e893972dd05b228fc6acbb1"
+      "sha256": "3d5173e6cfc0ab531d8ee8dfb66c629ab221af9b108aa776b5df781881c757c5"
     },
     {
       "name": "seal-census",
       "path": "docs/SEAL-CENSUS.md",
-      "sha256": "9d6710b0019e5e13b640e402b4f7c937a8f3cf4cab6cf9fc950a1054819b8f46"
+      "sha256": "e18ad02956ada3a3342a59359ce56709d82f9e35b1c71396ed493c456660d575"
     },
     {
       "name": "shared-blockers",
       "path": "forensics/downstream/shared-blockers.json",
-      "sha256": "5be7f3c03774287eea38b30a03d2c986b3983f8e35dcbf9df63423ac491ef807"
+      "sha256": "6e4ce979a4536c0b878569c95939a703f0698238e2c07342e0916bfe3f1ff0ba"
     },
     {
       "name": "biggest-movers",
       "path": "docs/PHASE-24-BIGGEST-MOVERS.md",
-      "sha256": "d7262bc7961a470f9c7b4bf3e0a9f9adb6d4c8c6fd4a640c482039732b0fee04"
+      "sha256": "bc100bc8e1db2bcd2d41a5c095e03289852dd2cf97c7b46b6e57d38a3e4f235c"
     },
     {
       "name": "readme",
       "path": "README.md",
-      "sha256": "9faf0442dbda448d1ca82378fa88d0d35c942f72c8df04ac25b66dd1c71204a5"
+      "sha256": "c49f67f83c3e0c23bb58253f58b419f88a2d2d3db4ae882e7611232579dbca95"
     },
     {
       "name": "downstream-blockers",
@@ -15942,7 +15877,7 @@
     {
       "name": "recipe-campaign",
       "path": "forensics/downstream/recipe-campaign.json",
-      "sha256": "f00d204b062f284c4945b9de83da2a227bd8631876dbdca82e1d99533c2c2c76"
+      "sha256": "c12ca83b4cbf90ef65309d6bfc15af0278de15f76b16a8d9607ca4dc9f5fd3ab"
     },
     {
       "name": "recipe-campaign-baseline",
@@ -15957,7 +15892,7 @@
     {
       "name": "blocker-remediation",
       "path": "forensics/downstream/blocker-remediation.json",
-      "sha256": "ab8716b4d6957b3874f4e78e192911a3a63cfa3689575ee48ee9e40dd8850aeb"
+      "sha256": "6c7749a7a120eabfcd808f04246466986345426df9ce18ae3359451df2c0b377"
     },
     {
       "name": "blocker-remediation-baseline",
@@ -15967,12 +15902,12 @@
     {
       "name": "downstream-remediation",
       "path": "forensics/tools/downstream_remediation.py",
-      "sha256": "99de9b8a896ebb3a351ee135606c6a7631eb2a5aa09d465ba4fd7ad480f4ec04"
+      "sha256": "237e43ca1696708b0130840d0ccce2d0ee121c85bd0e0b1280e93472c91d5649"
     },
     {
       "name": "close-batch",
       "path": "forensics/downstream/close-batch.json",
-      "sha256": "4f5cb84ef7330691025e3b1c5acd599b7b304a96b5f8d4a381f10267a7b50ab2"
+      "sha256": "54655408ec57eabb9b2b9cff26c6f7d665f81b3e8be30d1475c23c38a3cca728"
     },
     {
       "name": "close-batch-baseline",

@@ -859,14 +859,14 @@ The other 19 compare ELF structure rather than a transcript and observe nothing 
 | RT-BUILD-LINK-ATLAS | `pass` | — (structural) |
 | RT-RUNTIME-FUNCTIONAL-ATLAS | `pass` | — (structural) |
 | RT-FAILURE-MINIMIZATION | `pass` | — (structural) |
-| RT-HIGH-VALUE-TIER | `fail` | — (structural) |
+| RT-HIGH-VALUE-TIER | `pass` | — (structural) |
 | RT-HOSTILITY-AUGMENTATION | `pass` | — (structural) |
-| RT-CANDIDATE-FREEZE | `fail` | — (structural) |
-| RT-P1000-RUN | `fail` | — (structural) |
+| RT-CANDIDATE-FREEZE | `pass` | — (structural) |
+| RT-P1000-RUN | `pass` | — (structural) |
 | RT-ATLAS-RECONCILIATION | `pass` | — (structural) |
 | RT-FRF-CLOSURE | `pass` | — (structural) |
-| RT-BLOCKER-LEVERAGE | `fail` | — (structural) |
-| RT-BLOCKER-REMEDIATION | `pass` | — (structural) |
+| RT-BLOCKER-LEVERAGE | `pass` | — (structural) |
+| RT-BLOCKER-REMEDIATION | `fail` | — (structural) |
 | RT-RECIPE-CAMPAIGN | `pass` | — (structural) |
 | RT-CLOSE-BATCH | `pass` | — (structural) |
 | DOWNSTREAM-1000-SEAL | `fail` | — (structural) |
@@ -952,20 +952,20 @@ prose is about what was established, not about these counts.
 
 | outcome | families | share of the 1,000 |
 |---|---|---|
-| `DROP_IN_PASS` | 33 | 33/1000 (3.3%) |
-| `DROP_IN_PARTIAL` | 0 | 0/1000 (0.0%) |
-| `DROP_IN_FAIL` | 0 | 0/1000 (0.0%) |
+| `DROP_IN_PASS` | 164 | 164/1000 (16.4%) |
+| `DROP_IN_PARTIAL` | 16 | 16/1000 (1.6%) |
+| `DROP_IN_FAIL` | 1 | 1/1000 (0.1%) |
 | `DROP_IN_UNKNOWN` | 0 | 0/1000 (0.0%) |
-| `DROP_IN_NOT_APPLICABLE` | 967 | 967/1000 (96.7%) |
+| `DROP_IN_NOT_APPLICABLE` | 819 | 819/1000 (81.9%) |
 | **total** | **1000** | **1000/1000 (100.0%)** |
 
-**33 of the 1000 counted families are `DROP_IN_PASS`.** That is
-33/1000 = 3.3% of the counted population, 33/33 = 100.0%
-of the 33 measurable families, and 33/35 = 94.3% of the
-35 recipe-backed families. A `DROP_IN_NOT_APPLICABLE` family is **neither a
+**164 of the 1000 counted families are `DROP_IN_PASS`.** That is
+164/1000 = 16.4% of the counted population, 164/181 = 90.6%
+of the 181 measurable families, and 164/307 = 53.4% of the
+307 recipe-backed families. A `DROP_IN_NOT_APPLICABLE` family is **neither a
 success nor a failure**: it is a counted family this venue could not pose the
 drop-in question for because it has no admitted pristine-source recipe, so its
-967 rows are neither passes nor failures.
+819 rows are neither passes nor failures.
 
 ### The measurable families, in detail
 
@@ -976,60 +976,208 @@ baseline-normalized rather than an aspirational claim.
 
 | family | verdict | authority-applicable baseline | candidate level | linkage proven | residual |
 |---|---|---|---|---|---|
+| coturn | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
 | curl | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
-| dovecot | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| dovecot | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
 | haproxy | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| hydra | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
 | isync | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
-| kmod | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| librdkafka | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| kmod | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| librdkafka | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libshout | `DROP_IN_PARTIAL` | L5-loaded | L5-loaded | yes | runtime-failure |
+| lighttpd | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
 | monit | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
-| mosquitto | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| mosquitto | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| nmap | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| nmh | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| nsd | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
 | openssh | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
-| openvpn | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| openvpn | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
 | pure-ftpd | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
 | redis | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
-| squid | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| fetchmail | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| fossil | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| keepalived | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| links | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| s-nail | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| sofia-sip | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| squid | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| w3m | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| axel | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| efitools | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| eggdrop | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| fetchmail | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| fossil | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| git-crypt | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| hitch | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| ima-evm-utils | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| irssi | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| keepalived | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| krb5-pkinit | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| librelp | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libtpms | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libu2f-server | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| links | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| mokutil | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
 | nginx | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
-| socat | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| tinc | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| ldns | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| libevent | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| libretls | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| sslscan | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| iperf3 | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| libarchive | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| proxytunnel | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| rsync | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| ssmtp | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| stunnel | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| tnftp | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| cyrus-sasl | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
-| hiredis-ssl | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| opendkim | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| openssh-server | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| partclone | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| postfix | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| proftpd | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| prosody | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| radsecproxy | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| slrn | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| socat | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| swtpm | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| tcpdump | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| tinc | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| vsftpd | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| yadifa | `DROP_IN_PARTIAL` | L5-loaded | L5-loaded | yes | out-of-scope |
+| afflib | `DROP_IN_PARTIAL` | L4-linked | L4-linked | yes | runtime-failure |
+| duo_unix | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| gensio | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| hcxtools | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| krb5 | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| ldns | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libevent | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libretls | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| memcached | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| net-snmp | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| nrpe | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| ruby | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| sslscan | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| sslsplit | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| strongswan | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| yara | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| aircrack-ng | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| arm-trusted-firmware-tools | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| bannergrab | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| conserver-client | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| cowpatty | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| cyrus-sasl-ntlm | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| cyrus-sasl-scram | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| dcap-tunnel-ssl | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| dma | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| elinks | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| epic5 | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| exim | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| gvpe | `DROP_IN_PARTIAL` | L5-loaded | L5-loaded | yes | out-of-scope |
+| httperf | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| httping | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| ike-scan | `DROP_IN_PARTIAL` | L5-loaded | L5-loaded | yes | out-of-scope |
+| imapfilter | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| iperf3 | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| ircii | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| jimtcl | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| kea | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libarchive | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libfsverity | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libre | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| lua-cqueues | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| lua-luaossl | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| lua-sec | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| lynx | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| makepasswd | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| medusa | `DROP_IN_PARTIAL` | L4-linked | L4-linked | yes | runtime-failure |
+| mini-httpd | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| mktorrent | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| mosh | `DROP_IN_PARTIAL` | L5-loaded | L5-loaded | yes | out-of-scope |
+| nagios-plugins-http | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| nagios-plugins-smtp | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| nagios-plugins-tcp | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| ncrack | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| njs | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| nmap-ncat | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| nsca-ng-client | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| nsca-ng-server | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| openssh-client | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| perl-crypt-openssl-aes | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| perl-crypt-openssl-bignum | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| perl-crypt-openssl-dsa | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| perl-crypt-openssl-random | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| perl-crypt-openssl-rsa | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| perl-crypt-openssl-x509 | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| perl-crypt-smime | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| perl-net-dns-sec | `DROP_IN_PARTIAL` | L5-loaded | L5-loaded | yes | functional-divergence |
+| perl-net-ssleay | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| pev | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| proxytunnel | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| rhash | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| rsync | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| shellinabox | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| siege | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| sipsak | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| slowhttptest | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| ssmtp | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| stunnel | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| tcl-tls | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| tnftp | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| trousers | `DROP_IN_PARTIAL` | L5-loaded | L5-loaded | yes | out-of-scope |
+| wrk | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| xilinx-bootgen | `DROP_IN_FAIL` | L7-functional | L5-loaded | yes | runtime-failure |
+| cyrus-sasl | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| gss-ntlmssp | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| libxmlsec1 | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| monitoring-plugins | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| mutt | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| openldap | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| php | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| afftools | `DROP_IN_PARTIAL` | L4-linked | L4-linked | yes | runtime-failure |
+| bip | `DROP_IN_PARTIAL` | L5-loaded | L5-loaded | yes | out-of-scope |
+| bruteforce-salted-openssl | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| bruteforce-wallet | `DROP_IN_PARTIAL` | L5-loaded | L5-loaded | yes | out-of-scope |
+| carbon-c-relay | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| charybdis | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| conserver-server | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| curl-minimal | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| cyrus-sasl-digestmd5 | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| epic5-lite | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| ewf-tools | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| ewftools | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| fdm | `DROP_IN_PARTIAL` | L6-runtime | L6-runtime | yes | functional-divergence |
+| fsverity-utils | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| gftp-text | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| gmnisrv | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| gsocket | `DROP_IN_PARTIAL` | L5-loaded | L5-loaded | yes | out-of-scope |
+| hcxkeys | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| hiredis-ssl | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| hopm | `DROP_IN_PARTIAL` | L5-loaded | L5-loaded | yes | out-of-scope |
+| icecast2 | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| ircd-hybrid | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| ldnsutils | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| lftp | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libafflib0v5 | `DROP_IN_PARTIAL` | L4-linked | L4-linked | yes | runtime-failure |
+| libcpp-httplib0.11 | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libcrypt-openssl-bignum-perl | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libcrypt-openssl-dsa-perl | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libcrypt-openssl-ec-perl | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libcrypt-openssl-pkcs10-perl | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libcrypt-openssl-random-perl | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libcrypt-openssl-rsa-perl | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libcrypt-openssl-x509-perl | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libcrypt-smime-perl | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libeac3 | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| libengine-pkcs11-openssl | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
+| libevent-openssl-2.1-7 | `DROP_IN_PASS` | L7-functional | L7-functional | yes | none |
+| libfsapfs1 | `DROP_IN_PASS` | L4-linked | L4-linked | yes | none |
 
 ### The ladder
 
 | level | families |
 |---|---|
-| L2-configured | 33 |
-| L3-built | 33 |
-| L4-linked | 33 |
-| L5-loaded | 8 |
-| L6-runtime | 8 |
-| L7-functional | 8 |
+| L2-configured | 202 |
+| L3-built | 189 |
+| L4-linked | 181 |
+| L5-loaded | 162 |
+| L6-runtime | 150 |
+| L7-functional | 149 |
 
-The ladder is over the frozen P1000: 1000 counted families, 33
-measurable and 967 not applicable. **UNKNOWN is 0** -- every counted
+The ladder is over the frozen P1000: 1000 counted families, 181
+measurable and 819 not applicable. **UNKNOWN is 0** -- every counted
 family is measured, and a family this venue cannot pose the drop-in question for is
 an honest non-applicability, not an unknown.
 
 ### Authority baseline and the non-claims
 
-The candidate reached its authority-applicable baseline for **all 33
-measurable families** (33/33). The 5 non-claims
+The candidate reached its authority-applicable baseline for **all 181
+measurable families** (180/181). The 5 non-claims
 recorded with the run apply in full:
 
 * a selected population is not a random sample: the 1,000 families chosen from frozen ranking evidence are a selected population, and their rates do not generalise to all downstream software
@@ -1044,10 +1192,17 @@ Every one of the 1000 counted families is partitioned by its **deepest blocker**
 
 | rank | blocker class | blocked families | mover potential | to-pass potential | fixability | per-fix leverage |
 |---|---|---|---|---|---|---|
-| 1 | `no-admitted-recipe` | 965 | 965 | 0 | `recipe-admission` | 1.0 |
-| 2 | `recipe-build-system-unsupported` | 2 | 2 | 2 | `recipe-build-system` | 2.0 |
+| 1 | `no-admitted-recipe` | 697 | 697 | 0 | `recipe-admission` | 1.0 |
+| 2 | `authority-baseline-limited` | 90 | 90 | 90 | `authority-limited` | 90.0 |
+| 3 | `candidate-configure-failure` | 28 | 28 | 28 | `candidate-fix` | 28.0 |
+| 4 | `no-fixture` | 9 | 9 | 9 | `fixture-addition` | 1.0 |
+| 5 | `candidate-load-failure` | 4 | 4 | 4 | `candidate-fix` | 4.0 |
+| 6 | `candidate-link-failure` | 3 | 3 | 3 | `candidate-fix` | 3.0 |
+| 7 | `candidate-functional-failure` | 2 | 2 | 2 | `candidate-fix` | 2.0 |
+| 8 | `candidate-runtime-failure` | 2 | 2 | 2 | `candidate-fix` | 2.0 |
+| 9 | `recipe-build-system-unsupported` | 1 | 1 | 1 | `recipe-build-system` | 1.0 |
 
-**967 of the 1000 counted families are blocked; 33 are `DROP_IN_PASS`.** The 2 shared blocker classes are the recipe-backed failures and the missing fixtures, not the breadth of recipe admission (`no-admitted-recipe`, 965 families, has per-fix leverage 1).
+**836 of the 1000 counted families are blocked; 164 are `DROP_IN_PASS`.** The 8 shared blocker classes are the recipe-backed failures and the missing fixtures, not the breadth of recipe admission (`no-admitted-recipe`, 697 families, has per-fix leverage 1).
 
 The funnel, from the committed candidate rows. The `kind` column separates the
 **execution rungs** from the **baseline-normalized verdict count**: `drop-in-pass` is
@@ -1057,15 +1212,15 @@ funnel.
 | kind | step | families | share of the counted population |
 |---|---|---|---|
 | rung | counted | 1000 | 1000/1000 (100.0%) |
-| rung | with-admitted-recipe | 35 | 35/1000 (3.5%) |
-| rung | configured | 33 | 33/1000 (3.3%) |
-| rung | linked | 33 | 33/1000 (3.3%) |
-| rung | loaded | 8 | 8/1000 (0.8%) |
-| rung | runtime | 8 | 8/1000 (0.8%) |
-| rung | functional | 8 | 8/1000 (0.8%) |
-| verdict | drop-in-pass | 33 | 33/1000 (3.3%) |
+| rung | with-admitted-recipe | 307 | 307/1000 (30.7%) |
+| rung | configured | 202 | 202/1000 (20.2%) |
+| rung | linked | 181 | 181/1000 (18.1%) |
+| rung | loaded | 162 | 162/1000 (16.2%) |
+| rung | runtime | 150 | 150/1000 (15.0%) |
+| rung | functional | 149 | 149/1000 (14.9%) |
+| verdict | drop-in-pass | 164 | 164/1000 (16.4%) |
 
-The material caveat: of the 33 drop-in passes, 25 are at L4-linked with no admitted runtime workload for those families and 8 reach L5 or above.
+The material caveat: of the 164 drop-in passes, 15 are at L4-linked with no admitted runtime workload for those families and 149 reach L5 or above.
 
 The recipe-less decomposition and the (heuristic) feasible recipe queue are in the detailed report; a heuristic ranking of buildability is not a measurement of it.
 
