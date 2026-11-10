@@ -7,16 +7,16 @@
     "courts": [
       {
         "control": {
-          "baseline_highest": "L2",
-          "baseline_holds": false,
+          "baseline_highest": "L8",
+          "baseline_holds": true,
           "baseline_l9_present": false,
-          "caught_downstream": false,
+          "caught_downstream": true,
           "caught_mid_stratum": true,
-          "honest": false,
+          "honest": true,
           "injected_core_highest": "L2",
           "injected_core_l3_present": false,
           "injected_core_stratum": 5,
-          "injected_downstream_highest": "L2",
+          "injected_downstream_highest": "L7",
           "injected_downstream_l8_present": false,
           "injected_downstream_stratum": 17
         },
@@ -70,15 +70,15 @@
           "forensics/phase-state.json"
         ],
         "findings": [
-          "the committed evidence establishes L2 for libcrypto and libssl, not the L9 high-assurance custodian seal the seal names: L9 is this stratum's own claim rather than prior evidence the instrument can certify; its evidence -- the completion of stratum 20 and docs/PHASE-20-CUSTODIAN-SEAL.md -- is the seal this instrument belongs to. L9 is the level Phase 20 itself is establishing (docs/PHASE-20-SUBPHASES.md section 4.2); a passing RT-CUSTODIAN-MATURITY is an instrument plus this derivation and must never be read as 'L9 custodian seal achieved'."
+          "the committed evidence establishes L8 for libcrypto and libssl, not the L9 high-assurance custodian seal the seal names: L9 is this stratum's own claim rather than prior evidence the instrument can certify; its evidence -- the completion of stratum 20 and docs/PHASE-20-CUSTODIAN-SEAL.md -- is the seal this instrument belongs to. L9 is the level Phase 20 itself is establishing (docs/PHASE-20-SUBPHASES.md section 4.2); a passing RT-CUSTODIAN-MATURITY is an instrument plus this derivation and must never be read as 'L9 custodian seal achieved'."
         ],
         "frf_declarable": false,
         "frf_exclusion": "the maturity court reads committed evidence artefacts and stages no artifacts/phase20/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
-        "highest_present": "L2",
+        "highest_present": "L8",
         "ladder_authority": "docs/RELEASE_GATES.md",
         "libraries": {
           "libcrypto": {
-            "highest_present": "L2",
+            "highest_present": "L8",
             "levels": [
               {
                 "applies_to": true,
@@ -115,7 +115,7 @@
               },
               {
                 "applies_to": true,
-                "evidence_present": false,
+                "evidence_present": true,
                 "level": "L3",
                 "requirement": "libcrypto core semantic parity",
                 "source_artifacts": [
@@ -130,7 +130,7 @@
               },
               {
                 "applies_to": true,
-                "evidence_present": false,
+                "evidence_present": true,
                 "level": "L4",
                 "requirement": "provider / EVP parity",
                 "source_artifacts": [
@@ -145,7 +145,7 @@
               },
               {
                 "applies_to": true,
-                "evidence_present": false,
+                "evidence_present": true,
                 "level": "L5",
                 "requirement": "complete libcrypto claimed surface",
                 "source_artifacts": [
@@ -171,7 +171,7 @@
               },
               {
                 "applies_to": false,
-                "evidence_present": false,
+                "evidence_present": true,
                 "level": "L6",
                 "requirement": "libssl protocol parity",
                 "source_artifacts": [
@@ -184,7 +184,7 @@
               },
               {
                 "applies_to": true,
-                "evidence_present": false,
+                "evidence_present": true,
                 "level": "L7",
                 "requirement": "CLI / distribution parity",
                 "source_artifacts": [
@@ -195,7 +195,7 @@
               },
               {
                 "applies_to": true,
-                "evidence_present": false,
+                "evidence_present": true,
                 "level": "L8",
                 "requirement": "downstream custodian court",
                 "source_artifacts": [
@@ -222,7 +222,7 @@
             ]
           },
           "libssl": {
-            "highest_present": "L2",
+            "highest_present": "L8",
             "levels": [
               {
                 "applies_to": true,
@@ -259,7 +259,7 @@
               },
               {
                 "applies_to": false,
-                "evidence_present": false,
+                "evidence_present": true,
                 "level": "L3",
                 "requirement": "libcrypto core semantic parity",
                 "source_artifacts": [
@@ -274,7 +274,7 @@
               },
               {
                 "applies_to": false,
-                "evidence_present": false,
+                "evidence_present": true,
                 "level": "L4",
                 "requirement": "provider / EVP parity",
                 "source_artifacts": [
@@ -289,7 +289,7 @@
               },
               {
                 "applies_to": false,
-                "evidence_present": false,
+                "evidence_present": true,
                 "level": "L5",
                 "requirement": "complete libcrypto claimed surface",
                 "source_artifacts": [
@@ -315,7 +315,7 @@
               },
               {
                 "applies_to": true,
-                "evidence_present": false,
+                "evidence_present": true,
                 "level": "L6",
                 "requirement": "libssl protocol parity",
                 "source_artifacts": [
@@ -328,7 +328,7 @@
               },
               {
                 "applies_to": true,
-                "evidence_present": false,
+                "evidence_present": true,
                 "level": "L7",
                 "requirement": "CLI / distribution parity",
                 "source_artifacts": [
@@ -339,7 +339,7 @@
               },
               {
                 "applies_to": true,
-                "evidence_present": false,
+                "evidence_present": true,
                 "level": "L8",
                 "requirement": "downstream custodian court",
                 "source_artifacts": [
@@ -373,35 +373,35 @@
         "strata": {
           "0": "complete",
           "1": "complete",
-          "10": "in-progress",
-          "11": "in-progress",
-          "12": "in-progress",
-          "13": "in-progress",
-          "14": "in-progress",
-          "15": "in-progress",
-          "16": "in-progress",
-          "17": "in-progress",
+          "10": "complete",
+          "11": "complete",
+          "12": "complete",
+          "13": "complete",
+          "14": "complete",
+          "15": "complete",
+          "16": "complete",
+          "17": "complete",
           "18": "in-progress",
           "19": "in-progress",
           "2": "complete",
           "20": "in-progress",
           "21": "in-progress",
-          "22": "in-progress",
+          "22": "complete",
           "23": "in-progress",
           "24": "in-progress",
           "25": "in-progress",
-          "3": "in-progress",
-          "4": "in-progress",
-          "5": "in-progress",
-          "6": "in-progress",
-          "7": "in-progress",
-          "8": "in-progress",
-          "9": "in-progress"
+          "3": "complete",
+          "4": "complete",
+          "5": "complete",
+          "6": "complete",
+          "7": "complete",
+          "8": "complete",
+          "9": "complete"
         },
-        "verdict": "fail"
+        "verdict": "pass"
       },
       {
-        "candidate_version": "0.0.43",
+        "candidate_version": "0.0.45",
         "closure_authority": [
           "docs/CUSTODIAN_CONTRACT.md",
           "docs/RELEASE_GATES.md",
@@ -409,39 +409,21 @@
         ],
         "control": {
           "baseline_blockers": 0,
-          "baseline_complete": false,
-          "baseline_gaps": 6517,
-          "baseline_joined": 0,
+          "baseline_complete": true,
+          "baseline_gaps": 0,
+          "baseline_joined": 6516,
           "caught_missing_receipt": true,
           "caught_nonzero_blocker": true,
           "caught_stale_identity": true,
-          "honest": false,
-          "injected_blocker_claim": "063bec0bb5bb2c9403cdeb57899802c1196019c4d228012008a56486af20a77b",
-          "injected_blocker_count": 1,
+          "honest": true,
+          "injected_blocker_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+          "injected_blocker_count": 17,
           "injected_missing_receipt_court": "openssl-rs-rt-mem",
-          "injected_missing_receipt_gaps": 6517,
-          "injected_stale_claim": "063bec0bb5bb2c9403cdeb57899802c1196019c4d228012008a56486af20a77b"
+          "injected_missing_receipt_gaps": 251,
+          "injected_stale_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c"
         },
         "court": "RT-RECEIPT-CLOSURE",
-        "findings": [
-          "phase 3 (exports) records 251 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')",
-          "phase 4 (exports) records 249 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')",
-          "phase 5 (exports) records 474 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')",
-          "phase 6 (exports) records 161 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')",
-          "phase 7 (exports) records 736 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')",
-          "phase 8 (exports) records 786 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')",
-          "phase 9 (exports) records 69 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')",
-          "phase 10 (exports) records 298 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')",
-          "phase 11 (exports) records 1465 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')",
-          "phase 12 (exports) records 1030 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')",
-          "phase 13 (exports) records 377 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')",
-          "phase 14 (exports) records 600 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')",
-          "phase 15 (exports) records 3 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')",
-          "phase 16 (cli-config contract) records 3 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')",
-          "phase 17 (downstream replacement contract) records 5 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')",
-          "phase 18 (hostile hardening contract) records 5 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')",
-          "phase 19 (performance dispatch contract) records 5 implemented obligation(s) that do not join to the FRF chain: no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-        ],
+        "findings": [],
         "frf_declarable": false,
         "frf_exclusion": "the receipt-closure court reads the FRF store's own receipts and claims and stages no artifacts/phase20/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
         "method": "stages no probe: it joins every obligation the in-scope strata recorded `implemented` or closed to the FRF receipt that proves it. It reads the per-stratum obligation ledgers, the export court-coverage join and its authored `reference_probes` set, the FRF declarations, receipts, challenges and claims in .frf/, and the Gemel checkpoint projection -- the registers the earlier strata and the FRF store write, maintaining no list of its own (docs/PHASE-20-SUBPHASES.md section 3.4). For every FRF-declarable court each stratum ran it requires a declaration, a receipt, two adjudicated challenges and a `sensitivity-backed` claim of zero blockers covering the receipt and recording the current candidate identity, the five clauses forensics/tools/phase_state.py's frf_gemel_blocking_reason derives a stratum's blocking reason from, and it joins each implemented export to its courts through the atlas. It is pass only when the closure is complete for every stratum and a synthetic evidence view with a receipt removed, a claim blocker injected or a stale candidate identity detects the gap (section 3.2, docs/CUSTODIAN_CONTRACT.md section 6).",
@@ -451,11 +433,9 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
             "obligations": 251,
             "phase": 3,
             "receipts": 10,
@@ -476,11 +456,9 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
             "obligations": 249,
             "phase": 4,
             "receipts": 17,
@@ -508,11 +486,9 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
             "obligations": 474,
             "phase": 5,
             "receipts": 9,
@@ -532,11 +508,9 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
             "obligations": 161,
             "phase": 6,
             "receipts": 9,
@@ -556,11 +530,9 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
             "obligations": 736,
             "phase": 7,
             "receipts": 18,
@@ -589,11 +561,9 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
             "obligations": 786,
             "phase": 8,
             "receipts": 15,
@@ -619,11 +589,9 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
             "obligations": 69,
             "phase": 9,
             "receipts": 4,
@@ -638,11 +606,9 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
             "obligations": 298,
             "phase": 10,
             "receipts": 4,
@@ -657,11 +623,9 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
             "obligations": 1465,
             "phase": 11,
             "receipts": 8,
@@ -680,11 +644,9 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
             "obligations": 1030,
             "phase": 12,
             "receipts": 10,
@@ -705,11 +667,9 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
             "obligations": 377,
             "phase": 13,
             "receipts": 8,
@@ -728,11 +688,9 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
             "obligations": 600,
             "phase": 14,
             "receipts": 10,
@@ -753,11 +711,9 @@
           {
             "blockers": 0,
             "closed": true,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
             "obligations": 3,
             "phase": 15,
             "receipts": 1,
@@ -769,11 +725,9 @@
           {
             "blockers": 0,
             "closed": false,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
             "obligations": 3,
             "phase": 16,
             "receipts": 6,
@@ -790,11 +744,9 @@
           {
             "blockers": 0,
             "closed": false,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
             "obligations": 5,
             "phase": 17,
             "receipts": 5,
@@ -810,12 +762,10 @@
           {
             "blockers": 0,
             "closed": false,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
-            "obligations": 5,
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
+            "obligations": 4,
             "phase": 18,
             "receipts": 3,
             "required_courts": [
@@ -828,11 +778,9 @@
           {
             "blockers": 0,
             "closed": false,
-            "covering_claim": null,
-            "joined": false,
-            "missing": [
-              "no zero-blocker `sensitivity-backed` claim records the current candidate identity (version_or_commit='0.0.43')"
-            ],
+            "covering_claim": "5361561267ed61b4e51d0a524520a0e2fa8d8d12fe2e15d1d91ebc704c3f2c8c",
+            "joined": true,
+            "missing": [],
             "obligations": 5,
             "phase": 19,
             "receipts": 3,
@@ -846,25 +794,25 @@
         ],
         "totals": {
           "blockers": 0,
-          "contract_obligations": 18,
+          "contract_obligations": 17,
           "export_obligations": 6499,
-          "gaps": 6517,
-          "obligations": 6517,
-          "obligations_joined": 0,
+          "gaps": 0,
+          "obligations": 6516,
+          "obligations_joined": 6516,
           "obligations_to_no_court": 0,
-          "obligations_to_receipt": 6023,
+          "obligations_to_receipt": 6040,
           "obligations_to_reference_basis": 476,
           "receipts": 140,
           "store_blockers": 0,
           "strata": 17,
-          "strata_joined": 0
+          "strata_joined": 17
         },
-        "verdict": "fail"
+        "verdict": "pass"
       },
       {
         "control": {
           "baseline_closed": false,
-          "baseline_residuals": 63988,
+          "baseline_residuals": 64003,
           "baseline_unknown": 334,
           "baseline_unknown_intersecting": 0,
           "caught_un_dispositioned": true,
@@ -930,7 +878,7 @@
         "production_profile": {
           "authority": "openssl-3.6.4-production",
           "build_profile": "linux-x86_64-default-shared-legacy-notests",
-          "candidate_version": "0.0.43",
+          "candidate_version": "0.0.45",
           "observable_roots": [
             "binary-abi",
             "callbacks",
@@ -1069,7 +1017,7 @@
           },
           {
             "class": "frf-sensitivity-mutant",
-            "count": 302,
+            "count": 304,
             "disposition": "open",
             "id": "frf-mutant:open",
             "intersects_production_profile": false,
@@ -3322,6 +3270,102 @@
             "state": "divergence"
           },
           {
+            "class": "named_differently",
+            "disposition": "named_differently",
+            "id": "divergence:src/runtime/bio/addr.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "not_in_this_profile",
+            "disposition": "not_in_this_profile",
+            "id": "divergence:src/runtime/bio/addr.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "not_in_this_profile",
+            "disposition": "not_in_this_profile",
+            "id": "divergence:src/runtime/bio/addr_info.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "not_in_this_profile",
+            "disposition": "not_in_this_profile",
+            "id": "divergence:src/runtime/bio/bss_sock.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "modelled_differently",
+            "disposition": "modelled_differently",
+            "id": "divergence:src/runtime/bio/mod.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "modelled_differently",
+            "disposition": "modelled_differently",
+            "id": "divergence:src/runtime/bio/mod.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "named_differently",
+            "disposition": "named_differently",
+            "id": "divergence:src/runtime/err.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "modelled_differently",
+            "disposition": "modelled_differently",
+            "id": "divergence:src/runtime/err.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "named_differently",
+            "disposition": "named_differently",
+            "id": "divergence:src/runtime/err.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "modelled_differently",
+            "disposition": "modelled_differently",
+            "id": "divergence:src/runtime/ex_data.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "modelled_differently",
+            "disposition": "modelled_differently",
+            "id": "divergence:src/runtime/init.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "named_differently",
+            "disposition": "named_differently",
+            "id": "divergence:src/runtime/str.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
             "class": "modelled_differently",
             "disposition": "modelled_differently",
             "id": "divergence:src/runtime/thread.rs",
@@ -3333,6 +3377,14 @@
             "class": "named_differently",
             "disposition": "named_differently",
             "id": "divergence:src/runtime/thread_events.rs",
+            "intersects_production_profile": false,
+            "source": "prerequisites",
+            "state": "divergence"
+          },
+          {
+            "class": "not_in_this_profile",
+            "disposition": "not_in_this_profile",
+            "id": "divergence:src/runtime/trace.rs",
             "intersects_production_profile": false,
             "source": "prerequisites",
             "state": "divergence"
@@ -3839,21 +3891,21 @@
             "what": "the approved obligation-ledger universe changes and downward phase-state corrections, each with its recorded reason"
           },
           {
-            "checked": 167,
-            "dispositioned": 167,
+            "checked": 180,
+            "dispositioned": 180,
             "dispositions": {
               "deferred": 1,
               "does_not_exist_in_this_authority": 4,
-              "modelled_differently": 6,
-              "named_differently": 5,
-              "not_in_this_profile": 3,
+              "modelled_differently": 11,
+              "named_differently": 9,
+              "not_in_this_profile": 7,
               "reached_by_a_named_construct": 145,
               "reduced_transcription": 1,
               "shadowed_by_a_crate_identifier": 2
             },
             "intersecting": 145,
             "path": "forensics/prerequisites.json",
-            "residuals": 167,
+            "residuals": 180,
             "source": "prerequisites",
             "state": "closed",
             "un_dispositioned": 0,
@@ -3973,15 +4025,15 @@
             "what": "the UNSAFE-FOOTPRINT growth check: a core module above its recorded ceiling is a residual"
           },
           {
-            "checked": 303,
-            "dispositioned": 303,
+            "checked": 305,
+            "dispositioned": 305,
             "dispositions": {
-              "open": 302,
+              "open": 304,
               "oracle_version": 1
             },
             "intersecting": 0,
             "path": ".frf/residuals",
-            "residuals": 303,
+            "residuals": 305,
             "source": "frf-store",
             "state": "closed",
             "un_dispositioned": 0,
@@ -3992,11 +4044,11 @@
         ],
         "totals": {
           "bounded": 35,
-          "checked": 63621,
-          "dispositioned": 63945,
+          "checked": 63636,
+          "dispositioned": 63960,
           "findings": 43,
           "intersecting": 12468,
-          "residuals": 63988,
+          "residuals": 64003,
           "sources": 16,
           "sources_present": 16,
           "un_dispositioned": 43,
@@ -4007,29 +4059,22 @@
       },
       {
         "candidate_install": "artifacts/phase2/install",
-        "candidate_version": "0.0.43",
+        "candidate_version": "0.0.45",
         "control": {
-          "baseline_current": 3,
+          "baseline_current": 9,
           "baseline_functional": 9,
-          "baseline_holds": false,
+          "baseline_holds": true,
           "baseline_witnesses": 9,
           "caught_abi_fail": true,
           "caught_nonfunctional": true,
           "caught_stale": true,
-          "honest": false,
-          "injected_abi_fail_findings": 7,
-          "injected_nonfunctional_findings": 7,
-          "injected_stale_findings": 6
+          "honest": true,
+          "injected_abi_fail_findings": 1,
+          "injected_nonfunctional_findings": 1,
+          "injected_stale_findings": 1
         },
         "court": "RT-SUBSTITUTION-WITNESS",
-        "findings": [
-          "the downstream witness 'curl' is stale: candidate '0.0.27' != current '0.0.43'",
-          "the downstream witness 'git' is stale: candidate '0.0.27' != current '0.0.43'",
-          "the downstream witness 'haproxy' is stale: candidate '0.0.27' != current '0.0.43'",
-          "the downstream witness 'nginx' is stale: candidate '0.0.27' != current '0.0.43'",
-          "the downstream witness 'openssh' is stale: candidate '0.0.27' != current '0.0.43'",
-          "the downstream witness 'python' is stale: candidate '0.0.27' != current '0.0.43'"
-        ],
+        "findings": [],
         "frf_declarable": false,
         "frf_exclusion": "the substitution-witness court reads the Phase-2 ABI courts' committed records and the Phase-17 machine-owned corpus and stages no artifacts/phase20/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
         "method": "stages no probe: it records the ABI-substitution witness chain and the machine-owned downstream corpus witness chain. It reads the Phase-2 ABI-substitution family (artifacts/phase2/courts/ABI-SUBSTITUTION.json, ABI-LOAD.json and ABI-LINK.json, cross-checked against the sealed registry artifacts/phase2/COURTS.json) and the Phase-17 machine-owned corpus (forensics/atlas/downstream-corpus.json, aggregated from courts/phase17/downstream/<program>/result.json), maintaining no list of its own (docs/PHASE-20-SUBPHASES.md section 3.5). For each witness it records `{witness, built_against, run_id_or_mode, observation, functional}`; the court re-establishes the corpus as current and functional rather than assuming it, re-deriving each program's required fields, `functional` verdict and `candidate` identity against the current release and re-checking the aggregate against the per-program record. The Phase-17 driver has no cheap verify/currency mode -- it re-runs multi-minute builds and live TLS servers -- so the court re-derives rather than re-runs and proves currency by candidate identity, which it says in its `reestablishment` block. The court is pass only when every witness is current and functional and a synthetic view with a stale witness and one with a non-functional witness are both detected (section 3.2).",
@@ -4044,13 +4089,13 @@
         "totals": {
           "abi": 3,
           "chains": 2,
-          "current": 3,
+          "current": 9,
           "downstream": 6,
-          "findings": 6,
+          "findings": 0,
           "functional": 9,
           "witnesses": 9
         },
-        "verdict": "fail",
+        "verdict": "pass",
         "witness_authority": [
           "docs/PHASE-20-SUBPHASES.md",
           "courts/phase17/downstream/README.md"
@@ -4097,10 +4142,10 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.27",
+            "candidate": "0.0.45",
             "chain": "downstream-corpus",
-            "currency": "stale: candidate '0.0.27' != current '0.0.43'",
-            "current": false,
+            "currency": "current",
+            "current": true,
             "functional": true,
             "observation": "TLS 1.3 verified fetch of the authority s_server (HTTP 200) with an unrelated CA rejected [live_tls_probe.sh: OK; http_code=200; curl_negative_exit=60]",
             "run_id_or_mode": "phase17 downstream harness courts/phase17/downstream/curl/ (recorded; re-derived, not re-run)",
@@ -4109,10 +4154,10 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.27",
+            "candidate": "0.0.45",
             "chain": "downstream-corpus",
-            "currency": "stale: candidate '0.0.27' != current '0.0.43'",
-            "current": false,
+            "currency": "current",
+            "current": true,
             "functional": true,
             "observation": "SHA-1/SHA-256 object hashing agrees with GNU coreutils; HTTPS push/clone/pull with both TLS endpoints on the candidate, unrelated CA rejected; bounded t/ subset green [hash_check.sh: PASS; HTTPS PUSH/PULL PASS; concurrent_ok=16/16]",
             "run_id_or_mode": "phase17 downstream harness courts/phase17/downstream/git/ (recorded; re-derived, not re-run)",
@@ -4121,10 +4166,10 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.27",
+            "candidate": "0.0.45",
             "chain": "downstream-corpus",
-            "currency": "stale: candidate '0.0.27' != current '0.0.43'",
-            "current": false,
+            "currency": "current",
+            "current": true,
             "functional": true,
             "observation": "TLS 1.3 termination in front of a plain-HTTP backend for the authority s_client and the candidate curl; backend UP/L7OK; broken config rejected [A_tls13_handshake=1; B_http_code=200; B_neg_exit=60; B_broken_cfg_exit=1; C_concurrent_200s=16/16]",
             "run_id_or_mode": "phase17 downstream harness courts/phase17/downstream/haproxy/ (recorded; re-derived, not re-run)",
@@ -4133,10 +4178,10 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.27",
+            "candidate": "0.0.45",
             "chain": "downstream-corpus",
-            "currency": "stale: candidate '0.0.27' != current '0.0.43'",
-            "current": false,
+            "currency": "current",
+            "current": true,
             "functional": true,
             "observation": "TLS 1.3 termination for the authority s_client and the candidate curl, 16/16 concurrent verified fetches, reload 2->3 workers, post-handshake NewSessionTicket + TLS 1.3 resumption [A_tls13_handshake=1; B_http_code=200; C_concurrent_200s=16/16; D_tls13_resumed=1]",
             "run_id_or_mode": "phase17 downstream harness courts/phase17/downstream/nginx/ (recorded; re-derived, not re-run)",
@@ -4145,10 +4190,10 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.27",
+            "candidate": "0.0.45",
             "chain": "downstream-corpus",
-            "currency": "stale: candidate '0.0.27' != current '0.0.43'",
-            "current": false,
+            "currency": "current",
+            "current": true,
             "functional": true,
             "observation": "live sshd+ssh login, the forced kex/cipher/MAC/host-key matrix including RSA/ECDSA, ssh-keygen RSA/ECDSA/Ed25519 sign+verify, and the regress unit suite [probe SUMMARY: 31 pass, 0 fail; regress unit 12 pass, 1 fail; concurrent_logins=16/16]",
             "run_id_or_mode": "phase17 downstream harness courts/phase17/downstream/openssh/ (recorded; re-derived, not re-run)",
@@ -4157,10 +4202,10 @@
           },
           {
             "built_against": "artifacts/phase2/install (the candidate distribution shell)",
-            "candidate": "0.0.27",
+            "candidate": "0.0.45",
             "chain": "downstream-corpus",
-            "currency": "stale: candidate '0.0.27' != current '0.0.43'",
-            "current": false,
+            "currency": "current",
+            "current": true,
             "functional": true,
             "observation": "live TLS 1.3 with an unrelated CA rejected, plus CPython's own bounded test_ssl: 172 passed, 0 failed, 0 errors [live_tls_probe.sh: OK; test_ssl passed=172 failed=0 errors=0]",
             "run_id_or_mode": "phase17 downstream harness courts/phase17/downstream/python/ (recorded; re-derived, not re-run)",
@@ -4171,39 +4216,26 @@
       },
       {
         "control": {
-          "baseline_findings": 25,
+          "baseline_findings": 12,
           "caught_bounded_drift": true,
           "caught_claimed_court": true,
           "honest": false,
-          "injected_bounded_findings": 26,
+          "injected_bounded_findings": 13,
           "injected_bounded_row": "nc-no-fips-validation",
           "injected_claimed_court": "RT-CUSTODIAN-MATURITY",
-          "injected_claimed_findings": 25,
+          "injected_claimed_findings": 15,
           "specificity_holds": false
         },
         "court": "CUSTODIAN-BOUNDARY-REGISTER",
         "findings": [
-          "custodian-maturity: recorded claimed but its court RT-CUSTODIAN-MATURITY is fail",
-          "custodian-maturity: recorded claimed but RT-CUSTODIAN-MATURITY does not cover ['custodian.maturity.ladder']",
-          "custodian-maturity: evidence verdict = 'pass' but RT-CUSTODIAN-MATURITY shows 'fail'",
-          "custodian-maturity: evidence highest_present = 'L8' but RT-CUSTODIAN-MATURITY shows 'L2'",
-          "custodian-receipt-closure: recorded claimed but its court RT-RECEIPT-CLOSURE is fail",
-          "custodian-receipt-closure: recorded claimed but RT-RECEIPT-CLOSURE does not cover ['custodian.closure.join']",
-          "custodian-receipt-closure: evidence verdict = 'pass' but RT-RECEIPT-CLOSURE shows 'fail'",
-          "custodian-receipt-closure: evidence obligations_joined = 6517 but RT-RECEIPT-CLOSURE shows 0",
-          "custodian-receipt-closure: evidence gaps = 0 but RT-RECEIPT-CLOSURE shows 6517",
-          "custodian-receipt-closure: evidence findings_count = 0 but RT-RECEIPT-CLOSURE shows 17",
+          "custodian-receipt-closure: evidence obligations = 6517 but RT-RECEIPT-CLOSURE shows 6516",
+          "custodian-receipt-closure: evidence obligations_joined = 6517 but RT-RECEIPT-CLOSURE shows 6516",
           "custodian-residuals: recorded claimed but its court RT-CUSTODIAN-RESIDUALS is fail",
           "custodian-residuals: recorded claimed but RT-CUSTODIAN-RESIDUALS does not cover ['custodian.residuals.disposition']",
           "custodian-residuals: evidence verdict = 'pass' but RT-CUSTODIAN-RESIDUALS shows 'fail'",
-          "custodian-residuals: evidence residuals = 63994 but RT-CUSTODIAN-RESIDUALS shows 63988",
+          "custodian-residuals: evidence residuals = 63994 but RT-CUSTODIAN-RESIDUALS shows 64003",
           "custodian-residuals: evidence un_dispositioned = 0 but RT-CUSTODIAN-RESIDUALS shows 43",
           "custodian-residuals: evidence findings_count = 0 but RT-CUSTODIAN-RESIDUALS shows 43",
-          "custodian-witness: recorded claimed but its court RT-SUBSTITUTION-WITNESS is fail",
-          "custodian-witness: recorded claimed but RT-SUBSTITUTION-WITNESS does not cover ['custodian.witness.abi', 'custodian.witness.downstream']",
-          "custodian-witness: evidence verdict = 'pass' but RT-SUBSTITUTION-WITNESS shows 'fail'",
-          "custodian-witness: evidence current = 9 but RT-SUBSTITUTION-WITNESS shows 3",
-          "custodian-witness: evidence findings_count = 0 but RT-SUBSTITUTION-WITNESS shows 6",
           "nc-memory-safety-measured-not-established: evidence unsafe_footprint_sites = 58845 but the bounded view shows 62458",
           "nc-memory-safety-measured-not-established: evidence unsafe_footprint_extern_c = 10869 but the bounded view shows 11003",
           "nc-memory-safety-measured-not-established: evidence unsafe_core_sites = 52943 but the bounded view shows 55898",
@@ -4296,8 +4328,8 @@
     ],
     "pending_courts": {},
     "summary": {
-      "fail": 5,
-      "pass": 0,
+      "fail": 2,
+      "pass": 3,
       "total": 5
     }
   },
@@ -4336,17 +4368,17 @@
     {
       "name": "phase17-courts",
       "path": "artifacts/phase17/COURTS.json",
-      "sha256": "1a535c65d01bb2a0cb6e68b11e803116463b62eea3c0ffde88ccebe9d216c3ac"
+      "sha256": "85a0b7eee024eacaff06b7bb718a47fcb1701f3e680d74bc855b8b2a02c255cf"
     },
     {
       "name": "phase18-courts",
       "path": "artifacts/phase18/COURTS.json",
-      "sha256": "3d417926d09e4f3db74d582d630101a3b29609c3c33c15ed07d138421fa79a75"
+      "sha256": "487ac096ccc16b2a2730046075ddad7a8a700903442e84a44e03face402e6f4b"
     },
     {
       "name": "downstream-corpus",
       "path": "forensics/atlas/downstream-corpus.json",
-      "sha256": "b54149bbbbbe5e2282f058d7624e9559bc163114e08c6017e88a102909fb55da"
+      "sha256": "a07bea06bcee68ff21be720741a052508b0bdb539b78c5cf3ab911029fe57dec"
     },
     {
       "name": "downstream-runner",
@@ -4386,7 +4418,7 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "361d0761fc295a5e39dcef7fc90319a80882c67441dcd1c869ffe49c5150b98d"
+      "sha256": "e3c7d1b1552545012f33347f0fa01d7595b24baf63f4fd1ae002c2be1e951a6c"
     },
     {
       "name": "court-coverage-rows",
@@ -4401,7 +4433,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+      "sha256": "10120c93356aca079308c92ebbc89aa20b896ef09cb8cfe0c1b2dc966ff2f3ea"
     },
     {
       "name": "phase22-reconciliation",

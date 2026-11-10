@@ -1,0 +1,282 @@
+{
+ "receipt": "element7-capabilities-sites",
+ "kind": "element-7-target-bounded-resolution",
+ "date": "2026-11-04",
+ "subphase": "B53 element-7 capabilities follow-up",
+ "source_identity": {
+  "repository": "/mnt/1tb_kingston/openssl-rs",
+  "branch": "stage/p25/element7-s2b",
+  "repository_head": "9faa63d4dd9e685a26d036fb39420131f02f3556",
+  "tracked_tree_dirty": true,
+  "dirty_note": "Only forensics/tools/consumer_closure.py is modified (uncommitted). src/, Cargo.toml, Cargo.lock and build.rs are unchanged from the b53 candidate, and the install artifact is byte-identical to the b53 measured artifact.",
+  "candidate_artifact": {
+   "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+   "sha256": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3"
+  },
+  "consumers": {
+   "ssh": {
+    "path": "court/tmp/openssh-closure/client-b53/openssh-9.9p1/ssh",
+    "sha256": "926975c81fe8d56297196a703a8a7b0f5eb0fae1644bbfa4643d4cd517f22ba0"
+   },
+   "sshd": {
+    "path": "court/tmp/openssh-closure/server-b53/openssh-9.9p1/sshd",
+    "sha256": "0d3f5e924ff361cba290fb150b89e85806adf69c3a9de9440c4b8a6c09803ce2"
+   }
+  },
+  "verifier": {
+   "path": "forensics/tools/consumer_closure.py",
+   "sha256": "5e5fb7affef2cb0c25bd8a612c7a82ba7fef1136098d663832dc52effe66597e",
+   "note": "Uncommitted verifier-only change; the repository tool is byte-identical before and after the mutation control."
+  }
+ },
+ "sites": [
+  {
+   "offset": "0x87",
+   "address": "0x4305e7",
+   "function": "openssl_rs::provider::capabilities::ossl_prov_get_capabilities",
+   "operand": "%rbx",
+   "argument": "third argument (System V %rdx; zero-based parameter index 2, `cb`)",
+   "provenance": "(c) caller/application-supplied pointer from the public API",
+   "walk": "TLS-GROUP loop (PARAM_GROUP_LIST)",
+   "binary": "mov rbx,rdx at 0x430574; call rbx at 0x4305e7"
+  },
+  {
+   "offset": "0x117",
+   "address": "0x430677",
+   "function": "openssl_rs::provider::capabilities::ossl_prov_get_capabilities",
+   "operand": "%rbx",
+   "argument": "third argument (System V %rdx; zero-based parameter index 2, `cb`)",
+   "provenance": "(c) caller/application-supplied pointer from the public API",
+   "walk": "TLS-SIGALG first row (PARAM_SIGALG_LIST[0])",
+   "binary": "mov rbx,rdx at 0x430574; call rbx at 0x430677"
+  },
+  {
+   "offset": "0x127",
+   "address": "0x430687",
+   "function": "openssl_rs::provider::capabilities::ossl_prov_get_capabilities",
+   "operand": "%rbx",
+   "argument": "third argument (System V %rdx; zero-based parameter index 2, `cb`)",
+   "provenance": "(c) caller/application-supplied pointer from the public API",
+   "walk": "TLS-SIGALG second row (PARAM_SIGALG_LIST[1])",
+   "binary": "mov rbx,rdx at 0x430574; call rbx at 0x430687"
+  },
+  {
+   "offset": "0x13c",
+   "address": "0x43069c",
+   "function": "openssl_rs::provider::capabilities::ossl_prov_get_capabilities",
+   "operand": "%rbx",
+   "argument": "third argument (System V %rdx; zero-based parameter index 2, `cb`)",
+   "provenance": "(c) caller/application-supplied pointer from the public API",
+   "walk": "TLS-SIGALG third row (PARAM_SIGALG_LIST[2])",
+   "binary": "mov rbx,rdx at 0x430574; call rbx at 0x43069c"
+  }
+ ],
+ "binary_confirmation": {
+  "function_start": "0x430560",
+  "prologue": "mov r14,rcx (0x430571) and mov rbx,rdx (0x430574); System V argument registers are rdi=provctx, rsi=capability, rdx=cb, rcx=arg",
+  "four_calls": [
+   "0x4305e7: call rbx",
+   "0x430677: call rbx",
+   "0x430687: call rbx",
+   "0x43069c: call rbx"
+  ],
+  "no_fetch_call": "The function contains no call to an EVP fetch; the only indirect calls are the four cb invocations.",
+  "exported_dispatcher": "OSSL_PROVIDER_get_capabilities at 0x3e2880: `mov rax,[rdi+0x88]` (OsslProvider.get_capabilities), `test rax,rax`, `mov rdi,[rdi+0xd8]` (provctx), `jmp rax`. The tail jump leaves %rsi (capability), %rdx (cb) and %rcx (arg) unchanged, so %rdx at the provider entry is the application's cb.",
+  "provider_binding": "src/provider/digest.rs:2629-2631 publishes ossl_prov_get_capabilities at FUNC_PROVIDER_GET_CAPABILITIES in DEFLT_DISPATCH; src/provider/mod.rs:2660 forwards cb to ossl_provider_get_capabilities; src/provider/activate.rs:1369 calls the provider slot with cb."
+ },
+ "classification": {
+  "chosen": "EXTERNAL ABI CONTRACT",
+  "reason": "The callback is not drawn from a finite source-identifiable set in this crate: it is the `cb` parameter of the exported OSSL_PROVIDER_get_capabilities, declared as OSSL_CALLBACK * in the public header, and the crate forwards that exact value through the provider dispatch. The target set is unbounded by the C ABI, so CLOSED SET is false; the forwarding chain is documented and checkable, so UNPROVED is too weak.",
+  "not_closed_set": "The public API admits any application callback, and the exported symbol is in .dynsym; the in-image callers (ssl/t1_lib.c, apps/list.c) contribute a finite subset, not the whole set.",
+  "b46_b47_distinction": "This is not the B46/B47 shape. B46/B47 claimed a documented caller duty (cross-thread exclusivity of SSL_CONF_CTX) that the authority did not actually document; the statements were advisory and the verifier could not check the duty from the crate's code. Here the obligation is the declared C parameter type of an exported function, and the verifier checks the crate's own side: the four operands are exactly that parameter, forwarded unchanged across the dispatch, with no in-image writer substituting a target. This is the same shape as the already-admitted ABI_CONTRACT_EXPORT_CALLBACK class (47 sites), one dispatch hop further from the C ABI."
+ },
+ "contract": {
+  "documents": [
+   {
+    "document": "include/openssl/provider.h",
+    "lines": "42-45",
+    "text": "int OSSL_PROVIDER_get_capabilities(const OSSL_PROVIDER *prov, const char *capability, OSSL_CALLBACK *cb, void *arg);"
+   },
+   {
+    "document": "include/openssl/core.h",
+    "lines": "218",
+    "text": "typedef int(OSSL_CALLBACK)(const OSSL_PARAM params[], void *arg);"
+   },
+   {
+    "document": "include/openssl/core_dispatch.h",
+    "lines": "251",
+    "text": "OSSL_CORE_MAKE_FUNC(int, provider_get_capabilities, (void *provctx, const char *capability, OSSL_CALLBACK *cb, void *arg))"
+   },
+   {
+    "document": "doc/man3/OSSL_PROVIDER.pod",
+    "lines": "203-210",
+    "text": "OSSL_PROVIDER_get_capabilities() provides information about the capabilities supported by the provider specified in I<prov> with the capability name I<capability>. For each capability of that name supported by the provider it will call the callback I<cb> and supply a set of L<OSSL_PARAM(3)>s describing the capability. It will also pass back the argument I<arg>."
+   },
+   {
+    "document": "doc/man7/provider-base.pod",
+    "lines": "456-464",
+    "text": "The provider_get_capabilities() function should call the callback I<cb> passing it a set of L<OSSL_PARAM(3)>s and the caller supplied argument I<arg>. ... If a provider supports multiple capabilities with the given name then it may call the callback multiple times (one for each capability). ... It should return 1 on success or 0 on error."
+   }
+  ],
+  "type_obligation": "The application supplies a valid OSSL_CALLBACK function pointer (int (const OSSL_PARAM params[], void *arg)).",
+  "lifetime_obligation": "The documents do not state a lifetime beyond the call; the C ABI requires the pointer to be valid when the provider invokes it, which happens synchronously inside OSSL_PROVIDER_get_capabilities. The crate does not retain cb.",
+  "invocation_obligation": "The provider calls cb once per capability (TLS-GROUP: one row per group; TLS-SIGALG: one row per signature algorithm), passing the caller's arg unchanged and stopping at the first zero return.",
+  "verifier_check": "The per-call-site witness proves: (1) each of the four operands is exactly parameter 2; (2) the function is the default provider's FUNC_PROVIDER_GET_CAPABILITIES entry; (3) the exported OSSL_PROVIDER_get_capabilities is in .dynsym with parameter 2 declared OSSL_CALLBACK; (4) src/provider/mod.rs and src/provider/activate.rs forward cb unchanged. Any missing link refuses the witness and the site stays target-bounded.",
+  "null_case": "The authority calls cb with no NULL guard; the crate returns 0 on NULL. This is a recorded compatibility divergence (a C-invalid input in the authority), not a target bound."
+ },
+ "rule": {
+  "class": "ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK",
+  "witness": "provider_capabilities_callback_witness",
+  "scope": "Per call site: the function must be exactly ossl_prov_get_capabilities and the site operand must be exactly parameter 2. There is no name-only or shape-only absorption.",
+  "conditions": [
+   "function identity ends with provider12capabilities26ossl_prov_get_capabilities",
+   "site operand provenance is parameter index 2 (cb)",
+   "ossl_prov_get_capabilities is defined in this image",
+   "OSSL_PROVIDER_get_capabilities is exported in .dynsym",
+   "include/openssl/provider.h declares parameter 2 as OSSL_CALLBACK",
+   "src/provider/digest.rs binds the function to FUNC_PROVIDER_GET_CAPABILITIES",
+   "src/provider/mod.rs forwards cb to ossl_provider_get_capabilities",
+   "src/provider/activate.rs forwards cb to the provider slot"
+  ]
+ },
+ "controls": {
+  "mutation": {
+   "method": "Temporary copy of consumer_closure.py with the provider-capabilities witness call replaced by `(None, None)`; the repository tool was not modified.",
+   "measured": "target_bounded 66 -> 70, contract_bounded 65 -> 61, ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK 4 -> 0",
+   "four_sites": [
+    "0x4305e7: materialised / reg-value-partial[int] / UNRESOLVED",
+    "0x430677: materialised / reg-value-partial[int] / UNRESOLVED",
+    "0x430687: materialised / reg-value-partial[int] / UNRESOLVED",
+    "0x43069c: materialised / reg-value-partial[int] / UNRESOLVED"
+   ],
+   "restoration": "The repository tool's sha256 is 5e5fb7affef2cb0c25bd8a612c7a82ba7fef1136098d663832dc52effe66597e both before and after the control, byte-identically."
+  },
+  "negative": {
+   "self_test_fixtures": [
+    "wrong_fn=True (same call operand, different function) -> refused",
+    "param=False (operand is a constant, not parameter 2) -> refused",
+    "exported=False (export absent from .dynsym) -> refused",
+    "header_cb=False (header declares void *cb) -> refused",
+    "dispatch=False (no FUNC_PROVIDER_GET_CAPABILITIES binding) -> refused",
+    "forward=False (source forwarding passes NULL) -> refused"
+   ],
+   "real_artifact": "The new class contains exactly four sites, all at the four named addresses in ossl_prov_get_capabilities; no other indirect site was absorbed."
+  },
+  "self_test": "python3 forensics/tools/consumer_closure.py --self-test -> self-test ok (includes the S2b positive, refusal and mutation controls)."
+ },
+ "measured": {
+  "before": {
+   "basis": "evidence/closure-ssh-b53-e7fix-r2.json and evidence/inventory-sshd-b53-e7fix-r2.json at 194341af2",
+   "reachable_unresolved_sites": 131,
+   "target_bounded_unresolved_sites": 70,
+   "contract_bounded_sites": 61,
+   "contract_bounded_by_class": {
+    "ABI_CONTRACT_EXPORT_CALLBACK": 47,
+    "ABI_CONTRACT_PROVIDER": 14
+   }
+  },
+  "after": {
+   "ssh": "evidence/closure-ssh-b53-e7cap.json",
+   "sshd": "evidence/inventory-sshd-b53-e7cap.json",
+   "reachable_unresolved_sites": 131,
+   "target_bounded_unresolved_sites": 66,
+   "contract_bounded_sites": 65,
+   "contract_bounded_by_class": {
+    "ABI_CONTRACT_EXPORT_CALLBACK": 47,
+    "ABI_CONTRACT_PROVIDER": 14,
+    "ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK": 4
+   },
+   "indirect_sites": 51918,
+   "resolved_sites": 51741,
+   "unresolved_sites": 177,
+   "unclassified_reachable_sites": 0,
+   "obligations": {
+    "total": 378,
+    "DISCHARGED": 186,
+    "BLOCKED": 192,
+    "UNKNOWN": 0
+   },
+   "verdict": "ACCEPTED (both families)"
+  },
+  "element_7": {
+   "status": "FAIL",
+   "established": false,
+   "total_target_bounded_remaining": 66,
+   "zero": false,
+   "why": "The four capabilities sites are resolved to contract-bounded, but 66 other reachable target-bounded sites remain; element 7 can pass only when every reachable target-bounded site is resolved (count zero)."
+  }
+ },
+ "outputs": {
+  "evidence": [
+   "evidence/closure-ssh-b53-e7cap.json",
+   "evidence/inventory-sshd-b53-e7cap.json"
+  ],
+  "report": [
+   "atlas-refresh/element7-capabilities-sites.json",
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/element7-capabilities-sites.json"
+  ],
+  "verifier_change": "forensics/tools/consumer_closure.py (uncommitted)"
+ },
+ "non_claims": [
+  "The four sites are contract-bounded, not resolved to a finite target set; their target sets remain unbounded by the C ABI.",
+  "This does not make element 7 PASS: 66 reachable target-bounded sites remain.",
+  "The application's callback behaviour and lifetime are the application's obligation; the crate only proves it forwards the parameter unchanged.",
+  "No obligation status changed: the queue remains 378 / 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN.",
+  "The NULL-cb difference is a recorded compatibility divergence (authority faults; crate returns 0), not a safety improvement claim.",
+  "The mutation control is a tool-level negative control, not a library soundness result."
+ ],
+ "review": {
+  "reviewer": "independent adversarial adjudicator (session 79e93005-a098-496f-82d8-4cfaee83215b); transcribed verbatim",
+  "verdict": "APPROVE",
+  "applied": false,
+  "date": "2026-11-03",
+  "verdict_text": "APPROVE",
+  "why_different_from_b46_b47": "B46/B47 failed because cross-thread exclusivity was advisory prose with no external witness or enforcement. Here the callback type is declared in the exported ABI (include/openssl/provider.h:42-45, byte-identical to the pinned authority) and the forwarding is a checkable dataflow (operand = parameter 2, mov %rdx,%rbx, four call *%rbx).",
+  "confirmed": [
+   "provenance from the binary",
+   "contract is category (i), not documented duty",
+   "witness requires all eight conditions and no unrelated indirect call can satisfy them",
+   "six single-link refusals are load-bearing",
+   "mutation reverts exactly the four",
+   "closures 66/65/131 with 378/186/192/0",
+   "element 7 remains FAIL with 66 target-bounded"
+  ]
+ },
+ "element7_state": {
+  "target_bounded_before": 70,
+  "target_bounded_after": 66,
+  "contract_bounded_before": 61,
+  "contract_bounded_after": 65,
+  "reachable_unresolved": 131,
+  "passes": false,
+  "note": "These four sites were never the whole gap. 66 reachable target-bounded sites remain, so element 7 still FAILS and this change alone cannot move it to PASS.",
+  "reviewed": true
+ },
+ "residuals": [
+  {
+   "id": "E7CAP-R1",
+   "state": "OPEN",
+   "why": "the export->activate->slot forwarding is checked from source text, not from the binary call graph; the 0x3e2880 tail-jump is reported prose, not witness-enforced."
+  },
+  {
+   "id": "E7CAP-R2",
+   "state": "OPEN",
+   "why": "the witness does not prove the default-provider dispatch slot holds ossl_prov_get_capabilities at run time; that binding is a source-line check (src/provider/digest.rs:2630-2631)."
+  },
+  {
+   "id": "E7CAP-R3",
+   "state": "OPEN",
+   "why": "the shared _header_callback_param typedef-pattern edit can affect other ABI classes. Class totals 47/14 are empirically unchanged here, but this needs its own BOUNDARY note and a regression control."
+  },
+  {
+   "id": "E7CAP-R4",
+   "state": "CLOSED",
+   "why": "the report counted 85 contract-bounded including 20 unreachable sites; the reachable figure is 65 and is used here."
+  },
+  {
+   "id": "E7CAP-R5",
+   "state": "OPEN",
+   "why": "element-7 completion still needs a plan for the remaining 66 target-bounded sites, not more contract classes."
+  }
+ ]
+}

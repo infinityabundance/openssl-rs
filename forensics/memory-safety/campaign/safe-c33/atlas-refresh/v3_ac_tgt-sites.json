@@ -1,0 +1,85 @@
+{
+ "schema": "safe-c33/atlas-refresh/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "b52-gap-v3_ac_tgt-sites",
+ "subphase": "safe-c33/ownership-enumeration-b52-gap",
+ "date": "2026-11-03T00:00:00Z",
+ "candidate": {
+  "base_commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+  "base_head": "a175602f4f74e8f492fd32eb3ff90df9385c1d9c"
+ },
+ "scope": "The 6 admitted X509_VERIFY_POLICY production obligation(s) in src/x509/v3_ac_tgt.rs that the enumerated SSH closure reports as reachable but without an owning boundary receipt are enumerated here for ownership only, at their census coordinates, with a hazard read from each function. This receipt claims no discharge, no contract and no new reachability finding.",
+ "non_claims": [
+  "This receipt does not discharge any site, and no site may be treated as discharged on its authority.",
+  "This receipt does not contract any site; the hazard notes are enumeration notes, not established contracts.",
+  "This receipt does not assert reachability; reachability is taken from the enumerated closure and is not re-established here."
+ ],
+ "boundaries": [
+  {
+   "id": "B52GAP::src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_ISSUER_SERIAL",
+   "file": "src/x509/v3_ac_tgt.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ISSUER_SERIAL",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 624,
+   "line_current": 624,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "Raw OSSL_ISSUER_SERIAL is dereferenced; issuer and issuerUID pointers are forwarded to print helpers and serial is passed by address, all under the caller's liveness contract."
+  },
+  {
+   "id": "B52GAP::src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_OBJECT_DIGEST_INFO",
+   "file": "src/x509/v3_ac_tgt.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_OBJECT_DIGEST_INFO",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 688,
+   "line_current": 688,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "Raw OSSL_OBJECT_DIGEST_INFO is cast and dereferenced only after a null check; its enumerated and object values are read through ASN.1 helpers, and malformed input aborts the print."
+  },
+  {
+   "id": "B52GAP::src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_TARGET_CERT",
+   "file": "src/x509/v3_ac_tgt.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_TARGET_CERT",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 825,
+   "line_current": 825,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "Raw OSSL_TARGET_CERT is dereferenced and its targetCertificate, targetName and certDigestInfo members are forwarded to other raw printers when non-NULL."
+  },
+  {
+   "id": "B52GAP::src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_TARGET",
+   "file": "src/x509/v3_ac_tgt.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_TARGET",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 889,
+   "line_current": 889,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "Raw OSSL_TARGET is dereferenced and the selector type_ chooses a union member passed to a raw printer; an unknown selector prints nothing and still returns 1."
+  },
+  {
+   "id": "B52GAP::src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_TARGETS",
+   "file": "src/x509/v3_ac_tgt.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_TARGETS",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 934,
+   "line_current": 934,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "Raw STACK_OF(OSSL_TARGET) is iterated and each element forwarded to i2r_TARGET; stack liveness and element type are caller obligations."
+  },
+  {
+   "id": "B52GAP::src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_TARGETING_INFORMATION",
+   "file": "src/x509/v3_ac_tgt.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_TARGETING_INFORMATION",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 962,
+   "line_current": 962,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "Raw STACK_OF(OSSL_TARGETS) is iterated and each element forwarded to i2r_TARGETS; stack liveness and element type are caller obligations."
+  }
+ ]
+}

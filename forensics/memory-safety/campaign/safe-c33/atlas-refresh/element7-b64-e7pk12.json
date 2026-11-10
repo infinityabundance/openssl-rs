@@ -1,0 +1,153 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/element7-witness-batch/v1",
+  "kind": "candidate-bound-measurement-with-witness",
+  "generated_utc": "2026-11-08T13:06:09Z",
+  "batch": "b64-e7pk12",
+  "purpose": "Record the second resolved element-7 batch: the two finite PKCS12 parameter sites are resolved by a source-backed private-parameter assignment-set witness. Element 7 is still FAIL on the remaining 10 target-bounded sites.",
+  "source_identity": {
+    "repository_head": "e769ea3005a23fbcdf6df3deaed38d974577a241",
+    "branch": "stage/p25/element7-s2b",
+    "tracked_tree_dirty": false,
+    "artifact_build_S": "b8bba955503014c8fd86303314c6deebaea093b0",
+    "build_relevant_tree_identical": true,
+    "rebuild_performed": false,
+    "rebuild_justification": "git diff b8bba9555..e769ea30 -- src Cargo.toml Cargo.lock build.rs rust-toolchain.toml is empty; the frozen B53 artifacts are the build of this candidate's build-relevant inputs and the three artifact hashes are unchanged."
+  },
+  "tool": {
+    "path": "forensics/tools/consumer_closure.py",
+    "version": 5,
+    "sha256": "6c54d8bf0739e1a2d30f00d3bc37f2d0f88793007cbab05c00d513730becf985"
+  },
+  "artifacts": {
+    "libcrypto_so_3_sha256": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3",
+    "ssh_sha256": "926975c81fe8d56297196a703a8a7b0f5eb0fae1644bbfa4643d4cd517f22ba0",
+    "sshd_sha256": "0d3f5e924ff361cba290fb150b89e85806adf69c3a9de9440c4b8a6c09803ce2"
+  },
+  "receipts": {
+    "ssh": {
+      "path": "evidence/closure-ssh-b64-e7pk12.json",
+      "sha256": "0727fa5c86b390f607aef4c7c7e3c0cf48c54658b70c2d8a679b2034a71e2ead",
+      "bytes": 11873527,
+      "generated_utc": "2026-11-08T12:25:43Z"
+    },
+    "sshd": {
+      "path": "evidence/inventory-sshd-b64-e7pk12.json",
+      "sha256": "73d218a720e455d6b059f4163c22f28a4646e9d9bff4f4e5877690fb391aa809",
+      "bytes": 11721461,
+      "generated_utc": "2026-11-08T13:06:09Z"
+    }
+  },
+  "measured": {
+    "ssh": {
+      "obligations": {"total": 378, "DISCHARGED": 186, "BLOCKED": 192, "UNKNOWN": 0},
+      "verdict": {"state": "ACCEPTED", "refusals": 0, "safe_compatible": false},
+      "precision": {
+        "indirect_sites": 51918,
+        "resolved_sites": 51743,
+        "unresolved_sites": 175,
+        "reachable_unresolved_sites": 129,
+        "target_bounded_unresolved_sites": 10,
+        "contract_bounded_sites": 119,
+        "unclassified_reachable_sites": 0
+      }
+    },
+    "sshd": {
+      "obligations": {"total": 378, "DISCHARGED": 186, "BLOCKED": 192, "UNKNOWN": 0},
+      "verdict": {"state": "ACCEPTED", "refusals": 0, "safe_compatible": false},
+      "precision": {
+        "indirect_sites": 51918,
+        "resolved_sites": 51743,
+        "unresolved_sites": 175,
+        "reachable_unresolved_sites": 129,
+        "target_bounded_unresolved_sites": 10,
+        "contract_bounded_sites": 119,
+        "unclassified_reachable_sites": 0
+      }
+    }
+  },
+  "resolved_sites": [
+    {
+      "call_site": "0x5314aa",
+      "operand": "call *%r15",
+      "function": "pkcs12::p12_mutl::pkcs12_gen_mac",
+      "witness": "private_parameter_assignment_witness",
+      "resolution_kind": "private_parameter_assignment_set",
+      "parameter": {"index": 7, "name": "pkcs12_key_gen", "slot": "0x10", "reload": "0x531307"},
+      "null_guard": {"test": "0x531462", "branch": "0x5315d8"},
+      "targets": ["0x531fe0"],
+      "target_symbol": "pkcs12_pbmac1_pbkdf2_key_gen",
+      "callers": [
+        "PKCS12_gen_mac 0x51b4d8 -> None",
+        "PKCS12_newpass 0x51bbb1 -> None",
+        "PKCS12_set_mac 0x51c7ee -> None",
+        "PKCS12_set_pbmac1_pbkdf2 0x51cdc2 -> 0x531fe0",
+        "PKCS12_verify_mac 0x51d14d -> None",
+        "PKCS12_verify_mac 0x51d3a7 -> None"
+      ],
+      "evidence_kind": "source-backed complete assignment set: a private function's incoming parameter, every in-image caller enumerated, each passing None or one in-image function start"
+    },
+    {
+      "call_site": "0x531586",
+      "operand": "call *%r15",
+      "function": "pkcs12::p12_mutl::pkcs12_gen_mac",
+      "witness": "private_parameter_assignment_witness",
+      "resolution_kind": "private_parameter_assignment_set",
+      "parameter": {"index": 7, "name": "pkcs12_key_gen", "slot": "0x10", "reload": "0x531307"},
+      "null_guard": {"test": "0x531539", "branch": "0x5315e1"},
+      "targets": ["0x531fe0"],
+      "target_symbol": "pkcs12_pbmac1_pbkdf2_key_gen",
+      "callers": "same closed 6-site set as 0x5314aa",
+      "evidence_kind": "source-backed complete assignment set"
+    }
+  ],
+  "delta_12_to_10": {
+    "target_bounded_unresolved_sites": "12 -> 10",
+    "contract_bounded_sites": "119 -> 119",
+    "reachable_unresolved_sites": "131 -> 129",
+    "unresolved_sites": "177 -> 175",
+    "resolved_sites": "51741 -> 51743",
+    "obligations": "378 = 186 / 192 / 0 unchanged",
+    "other_sites_changed": 0,
+    "residual_site_diff": "exactly the two resolved call sites removed; none added"
+  },
+  "remaining": {
+    "target_bounded_unresolved_sites": 10,
+    "groups": {
+      "store_loader_object_table": 4,
+      "pbe_registry_row": 3,
+      "conf_module_registry_row": 2,
+      "exported_callback_param": 1
+    },
+    "classification": {
+      "finite_source_backed": [
+        "0x179c85 EVP_PBE_CipherInit_ex keygen_ex -> 5 in-image targets (conditional on GOT binding to the in-image EVP_PBE_find_ex)",
+        "0x17c408 PKCS5_v2_PBE_keyivgen_ex kdf -> 2 in-image targets (same GOT caveat)"
+      ],
+      "external_abi_required": [
+        "0x179a0d EVP_PBE_CipherInit_ex keygen -> application EVP_PBE_alg_add_type registry",
+        "0x1c21a8/0x1c229d/0x1c2768 OSSL_STORE_open_ex legacy loader -> application OSSL_STORE_register_loader registry",
+        "0x1c2528 OSSL_STORE_open_ex provider p_close -> OSSL_STORE_LOADER_fetch provider dispatch",
+        "0x2e111a/0x2e1532 CONF_modules_load init/finish -> CONF_module_add / DSO-bound OPENSSL_init/OPENSSL_finish",
+        "0x4fa4c6 do_pk8pkey cb -> exported PEM_write_bio_PKCS8PrivateKey callback parameter"
+      ]
+    }
+  },
+  "witness_residuals": {
+    "local_copy_taxonomy": "a caller forwarding its own parameter through a local copy refuses as local-non-function, not local-param-forward; both refuse, taxonomy imprecise",
+    "indirect_targets_resolved_only": "indirect_targets inspects only resolved sites; soundness rests on the separately verified no-address-escape fact",
+    "cfg_closure_underapproximates": "the CFG-closure/dominance proof under-approximates undecoded indirect jumps; open_reach is empty and both switches are bounded-decoded here, so it holds, but the witness does not assert closure itself",
+    "candidate_bound_address_gate": "the witness fires only for the exact pkcs12_gen_mac sites on this candidate and returns None elsewhere; re-derive at every re-freeze"
+  },
+  "independent_review": {
+    "adjudication": "ACCEPT",
+    "checks": "target set computed (0x531fe0 appears in no production code; an injected second caller widened the computed set); caller set independently complete (6/6, no tail jump, no address escape, no dynsym); both NULL guards dominating; full residual diff exactly two sites; ten external sites unchanged; controls load-bearing; source evidence mandatory after the first review",
+    "fixes_after_first_review": "source evidence made mandatory (local-source-unavailable / local-source-not-a-callback); committed self-test now positively exercises both sites"
+  },
+  "non_claims": [
+    "element 7 is still FAIL: 10 reachable target-bounded unresolved sites remain",
+    "both families remain safe_compatible=false; obligations are unchanged at 378 = 186 / 192 / 0 and no mechanism is discharged",
+    "resolving indirect-call sites is precision evidence, not a memory-safety proof",
+    "the witness is candidate-bound and must be re-derived at every re-freeze",
+    "this batch does not touch the 192 BLOCKED obligation rows, B46/B47/B48, or any compatibility court"
+  ]
+}

@@ -1,0 +1,120 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/element7-current-truth/v1",
+  "kind": "candidate-bound-measurement",
+  "generated_utc": "2026-11-07T19:56:57Z",
+  "purpose": "Record the element-7 and obligation counts measured at the current source candidate, replacing the previously documented 15 (which stopped at 363a3168d). This is a measurement receipt, not a discharge: element 7 is still FAIL.",
+  "source_identity": {
+    "repository_head": "b95b7814cb6e845728aeca9a6fd5975b823df85c",
+    "branch": "stage/p25/element7-s2b",
+    "tracked_tree_dirty": false,
+    "build_relevant_tree_identical_to": "b8bba955503014c8fd86303314c6deebaea093b0",
+    "build_relevant_check": "git diff b8bba9555..b95b7814 -- src Cargo.toml Cargo.lock build.rs rust-toolchain.toml is empty"
+  },
+  "tool": {
+    "path": "forensics/tools/consumer_closure.py",
+    "version": 5,
+    "sha256": "86fc09b14b7d876795126b49dd9624f26294a5174cbc4c76d48c72f0a4906fb6"
+  },
+  "artifact_build_S": {
+    "commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+    "freeze_receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b53-candidate-freeze.json",
+    "census": "court/freeze-b53/census-b53.json",
+    "build_commit": "fdfdfc4565a337aca369efabf215171a71a04261",
+    "libcrypto_so_3_sha256": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3",
+    "ssh_sha256": "926975c81fe8d56297196a703a8a7b0f5eb0fae1644bbfa4643d4cd517f22ba0",
+    "sshd_sha256": "0d3f5e924ff361cba290fb150b89e85806adf69c3a9de9440c4b8a6c09803ce2"
+  },
+  "receipts": {
+    "ssh": {
+      "path": "evidence/closure-ssh-b62-element7.json",
+      "sha256": "e7aa8ae4e43165d84ac123ee75e947a96327c8c5d5435cac47c548ad27fce18a",
+      "bytes": 11871940,
+      "generated_utc": "2026-11-07T19:13:01Z",
+      "artifact_path": "court/tmp/openssh-closure/client-b53/openssh-9.9p1/ssh",
+      "artifact_sha256": "926975c81fe8d56297196a703a8a7b0f5eb0fae1644bbfa4643d4cd517f22ba0",
+      "runtime_seconds": 2775,
+      "exit": 0
+    },
+    "sshd": {
+      "path": "evidence/inventory-sshd-b62-element7.json",
+      "sha256": "e206b9fa606aa7c52e9076004d3996c65b1aae12c19f92eeb612e441ec25afda",
+      "bytes": 11720033,
+      "generated_utc": "2026-11-07T19:56:57Z",
+      "artifact_path": "court/tmp/openssh-closure/server-b53/openssh-9.9p1/sshd",
+      "artifact_sha256": "0d3f5e924ff361cba290fb150b89e85806adf69c3a9de9440c4b8a6c09803ce2",
+      "runtime_seconds": 2460,
+      "exit": 0
+    }
+  },
+  "measured": {
+    "ssh": {
+      "obligations": {"total": 378, "DISCHARGED": 186, "BLOCKED": 192, "UNKNOWN": 0},
+      "reachable_files": 629,
+      "reachable_functions": 8735,
+      "verdict": {"state": "ACCEPTED", "refusals": 0, "safe_compatible": false},
+      "precision": {
+        "indirect_sites": 51918,
+        "resolved_sites": 51739,
+        "unresolved_sites": 179,
+        "reachable_unresolved_sites": 133,
+        "target_bounded_unresolved_sites": 14,
+        "contract_bounded_sites": 119,
+        "unclassified_reachable_sites": 0
+      }
+    },
+    "sshd": {
+      "obligations": {"total": 378, "DISCHARGED": 186, "BLOCKED": 192, "UNKNOWN": 0},
+      "reachable_files": 628,
+      "reachable_functions": 8701,
+      "verdict": {"state": "ACCEPTED", "refusals": 0, "safe_compatible": false},
+      "precision": {
+        "indirect_sites": 51918,
+        "resolved_sites": 51739,
+        "unresolved_sites": 179,
+        "reachable_unresolved_sites": 133,
+        "target_bounded_unresolved_sites": 14,
+        "contract_bounded_sites": 119,
+        "unclassified_reachable_sites": 0
+      }
+    }
+  },
+  "element7": {
+    "status": "FAIL",
+    "established": false,
+    "target_bounded_unresolved_sites": 14,
+    "contract_bounded_sites": 119,
+    "reachable_unresolved_sites": 133,
+    "unclassified_reachable_sites": 0,
+    "contract_bounded_by_class": {
+      "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+      "ABI_CONTRACT_EXPORT_CALLBACK": 62,
+      "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+      "ABI_CONTRACT_PROVIDER": 16,
+      "ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK": 4,
+      "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+      "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+      "ABI_CONTRACT_SLH_METHOD_TABLE": 6
+    },
+    "delta_from_previous_documented": {
+      "previous": {"target_bounded": 15, "contract_bounded": 118, "at": "363a3168d"},
+      "current": {"target_bounded": 14, "contract_bounded": 119, "at": "b95b7814c"},
+      "change": "the registration-ABI witness for the OPENSSL_cleanup atexit handler (one site, commit 091c6e78) moved one site from target-bounded to contract-bounded; reachable_unresolved stayed 133 and unclassified stayed 0"
+    }
+  },
+  "identity_residual": {
+    "class": "receipt_provenance_gap",
+    "detail": "both b62 receipts record artifact_identity.build_provenance = null and ledger_record.artifact_matches_this_build = false, so the receipt's own tie to b8bba9555 is not self-contained; it is established by the B53 freeze receipt and census. Recorded, not treated as a passing identity claim.",
+    "closure_condition": "a build record (or a receipt that embeds the build's source commit and compiler identity) must be produced before a SEAL identity is asserted for this artifact set"
+  },
+  "superseded_identity": {
+    "class": "stale_ledger_line_corrected",
+    "detail": "CAMPAIGN-STATUS.json previously named S = a8716b4f2 with libcrypto ececbd98 / ssh 560652df / sshd 51f00033 while citing b53 receipts whose artifacts are 1c03ec0a / 926975c8 / 0d3f5e92. The a8716b4f2 triple is the B52 lineage (atlas-refresh/b52-candidate-freeze.json). The ledger line was corrected to the receipt-bound B53 identity; the B52 hashes were not overwritten in their own freeze receipt."
+  },
+  "non_claims": [
+    "this receipt does not pass element 7: 14 reachable target-bounded unresolved sites remain, so element 7 is FAIL and both families remain safe_compatible=false",
+    "an ACCEPTED verdict means no refusal condition fired on this universe; it does not mean the 192 BLOCKED obligations are safe",
+    "no mechanism is discharged mechanism-wide by this measurement",
+    "the counts are bound to source b95b7814c and artifacts built at b8bba9555; they must not be carried forward to a different source or artifact identity",
+    "the measurement does not establish the safety of any deployment; see the separate CVE-2026-123158 court for the OpenSSH authentication-security axis"
+  ]
+}

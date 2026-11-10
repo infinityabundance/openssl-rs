@@ -10602,7 +10602,7 @@
           ]
         },
         "findings": [
-          "the frozen candidate identity does not reproduce from the committed install: recorded identity_hash 'fe1db3e5e2a84059fa7a670ae2cf013901f8319e617e4e5f4b059d672e698d4e' vs derived 'de120fb66261a6c70888a1b5bda4f3362adc1206eebe1d9daaf6f04c00f042fa'"
+          "the frozen candidate identity does not reproduce from the committed install: recorded identity_hash 'fe1db3e5e2a84059fa7a670ae2cf013901f8319e617e4e5f4b059d672e698d4e' vs derived '575dd7f035e7aaa391d42261550fc9778107de8246dd80c0b4cc8e116681e90c'"
         ],
         "frf_declarable": false,
         "frf_exclusion": "the candidate-freeze court reads committed artefacts and brings no artifacts/phase24/probes/ pair, so it takes no transcript to diff and carries no FRF declaration",
@@ -13485,7 +13485,7 @@
     {
       "name": "phase22-implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "35d8a754bf4a256612a198c1e8cc0b9f9d24c0b5e9702f57ede87ea3323d5f51"
+      "sha256": "dcdfd203d40d862a0f22b3ae3e7d4a9a6cdd314a3e6285e45eaa6e593d06320c"
     },
     {
       "name": "hostility-probe/cms.c",
@@ -13625,7 +13625,7 @@
     {
       "name": "readme",
       "path": "README.md",
-      "sha256": "fbd0984c27c68a1115733897418eef7f4be5f8fa24731204291d9a393e85ce14"
+      "sha256": "9faf0442dbda448d1ca82378fa88d0d35c942f72c8df04ac25b66dd1c71204a5"
     },
     {
       "name": "downstream-blockers",

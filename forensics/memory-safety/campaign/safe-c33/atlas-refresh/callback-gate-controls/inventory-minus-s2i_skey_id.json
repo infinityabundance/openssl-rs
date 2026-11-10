@@ -1,0 +1,3425 @@
+{
+ "control_only": true,
+ "family": "openssh",
+ "note": "Synthetic post-enrolment inventory used only by the gate controls; it is not an applied census and must not be used for a graduation claim.",
+ "obligations": [
+  {
+   "file": "src/apps/ciphers.rs",
+   "item": "dummy_psk",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 93,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/asn1/asn_mstbl.rs",
+   "item": "stbl_module_finish",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 261,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_asn.rs",
+   "item": "itav_new",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1691,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_asn.rs",
+   "item": "itav_free",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1697,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_asn.rs",
+   "item": "rootcakeyupdate_new",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1703,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_asn.rs",
+   "item": "rootcakeyupdate_free",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1709,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_asn.rs",
+   "item": "certreqtemplate_new",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1715,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_asn.rs",
+   "item": "crlstatus_new",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1721,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_asn.rs",
+   "item": "OSSL_CMP_CERTREPMESSAGE_new",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1742,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_asn.rs",
+   "item": "OSSL_CMP_REVREPCONTENT_new",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1748,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_asn.rs",
+   "item": "OSSL_CMP_ERRORMSGCONTENT_new",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1754,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_asn.rs",
+   "item": "OSSL_CMP_CERTIFIEDKEYPAIR_new",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1760,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_asn.rs",
+   "item": "OSSL_CMP_REVDETAILS_new",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1766,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_asn.rs",
+   "item": "OSSL_CMP_CERTSTATUS_new",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1781,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_asn.rs",
+   "item": "OSSL_CMP_CERTRESPONSE_new",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1796,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_asn.rs",
+   "item": "OSSL_CMP_POLLREQ_new",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1811,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_asn.rs",
+   "item": "OSSL_CMP_POLLREP_new",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1826,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "x509_name_dup_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 350,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "x509_name_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 354,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "asn1_integer_dup_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 358,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "asn1_integer_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 362,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "x509_req_dup_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 366,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "x509_req_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 370,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "x509_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 376,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "evp_pkey_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 380,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "evp_md_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 384,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "octet_string_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 388,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "general_name_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 392,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "x509_extension_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 396,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "utf8_string_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 400,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "x509_store_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 404,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "itav_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 408,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "policy_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 412,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cmp/cmp_ctx.rs",
+   "item": "cmp_ctx_set_md",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 427,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/cms/cms_asn1.rs",
+   "item": "cms_ec_cb",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 523,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/cms/cms_asn1.rs",
+   "item": "cms_rek_cb",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 539,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/cms/cms_asn1.rs",
+   "item": "cms_kari_cb",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 556,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/cms/cms_asn1.rs",
+   "item": "cms_kemri_cb",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 585,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/cms/cms_asn1.rs",
+   "item": "cms_ri_cb",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 617,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/cms/cms_asn1.rs",
+   "item": "cms_cb",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 668,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/cms/cms_lib.rs",
+   "item": "x509_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1378,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/cms/cms_lib.rs",
+   "item": "x509_crl_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1384,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/context/namemap.rs",
+   "item": "get_legacy_cipher_names",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 298,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/context/namemap.rs",
+   "item": "get_legacy_md_names",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 308,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/decoder_lib.rs",
+   "item": "decoder_free_thunk",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1080,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/decoder_pkey.rs",
+   "item": "decoder_instance_dup_thunk",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 561,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/decoder_pkey.rs",
+   "item": "decoder_instance_free_thunk",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 567,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/digest/sha2.rs",
+   "item": "sha512_224_init",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 393,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/encoder_meth.rs",
+   "item": "encoder_instance_free_thunk",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1240,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/engine/eng_dyn.rs",
+   "item": "dynamic_data_ctx_free_func",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 401,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/engine/eng_fat.rs",
+   "item": "push_cstr_or_null",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 197,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/engine/eng_list.rs",
+   "item": "engine_list_cleanup",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 97,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/engine/tb_asnmth.rs",
+   "item": "engine_unregister_all_pkey_asn1_meths",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 79,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/engine/tb_cipher.rs",
+   "item": "engine_unregister_all_ciphers",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 62,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/engine/tb_dh.rs",
+   "item": "engine_unregister_all_dh",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 58,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/engine/tb_digest.rs",
+   "item": "engine_unregister_all_digests",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 73,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/engine/tb_dsa.rs",
+   "item": "engine_unregister_all_dsa",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 58,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/engine/tb_eckey.rs",
+   "item": "engine_unregister_all_ec",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 58,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/engine/tb_pkmeth.rs",
+   "item": "engine_unregister_all_pkey_meths",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 60,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/engine/tb_rand.rs",
+   "item": "engine_unregister_all_rand",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 58,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/engine/tb_rsa.rs",
+   "item": "engine_unregister_all_rsa",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 59,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/e_rc2.rs",
+   "item": "rc2_magic_to_meth",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 348,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/evp/legacy_blake2.rs",
+   "item": "blake2b_int_update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 243,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_blake2.rs",
+   "item": "blake2b_int_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 260,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_blake2.rs",
+   "item": "blake2s_int_update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 299,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_blake2.rs",
+   "item": "blake2s_int_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 315,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_md4.rs",
+   "item": "md4_update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 191,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_md4.rs",
+   "item": "md4_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 198,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_md5.rs",
+   "item": "md5_update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 216,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_md5.rs",
+   "item": "md5_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 223,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_md5.rs",
+   "item": "md5_sha1_int_init",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 234,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_md5.rs",
+   "item": "md5_sha1_int_update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 240,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_md5.rs",
+   "item": "md5_sha1_int_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 250,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_md5.rs",
+   "item": "md5_sha1_int_ctrl",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 258,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_mdc2.rs",
+   "item": "mdc2_update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 197,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_mdc2.rs",
+   "item": "mdc2_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 204,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_ripemd.rs",
+   "item": "ripe_update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 192,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_ripemd.rs",
+   "item": "ripe_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 199,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_sha.rs",
+   "item": "sha1_update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 262,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_sha.rs",
+   "item": "sha1_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 269,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_sha.rs",
+   "item": "sha1_int_ctrl",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 277,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_sha.rs",
+   "item": "sha224_update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 324,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_sha.rs",
+   "item": "sha224_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 330,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_sha.rs",
+   "item": "sha256_update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 360,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_sha.rs",
+   "item": "sha256_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 366,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_sha.rs",
+   "item": "sha384_update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 396,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_sha.rs",
+   "item": "sha384_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 402,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_sha.rs",
+   "item": "sha512_update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 432,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_sha.rs",
+   "item": "sha512_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 438,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_sha.rs",
+   "item": "sha512_224_int_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 471,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_sha.rs",
+   "item": "sha512_256_int_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 501,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_sha3.rs",
+   "item": "sha3_int_update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 277,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_sha3.rs",
+   "item": "sha3_int_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 289,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_sha3.rs",
+   "item": "shake_ctrl",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 332,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_wp.rs",
+   "item": "wp_update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 194,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/evp/legacy_wp.rs",
+   "item": "wp_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 201,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/ml_kem/key.rs",
+   "item": "raise_fixed",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 272,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/pkcs7/pk7_asn1.rs",
+   "item": "ri_cb",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 607,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/property/store.rs",
+   "item": "unused_up_ref",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1600,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/cipher.rs",
+   "item": "rc4_hmac_md5_newctx",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 22193,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/conf.rs",
+   "item": "provider_free_thunk",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 234,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/decode_pvk2key.rs",
+   "item": "extern \"C\"",
+   "kind": "UNSAFE_EXTERN_BLOCK",
+   "line": 54,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "dupctx",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 647,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "copyctx",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 658,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "internal_init",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 670,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "internal_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 682,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 700,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "get_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 705,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "dupctx",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 959,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "copyctx",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 970,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "get_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1019,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "dupctx",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1154,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "copyctx",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1165,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "internal_init",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1177,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "internal_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1189,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1207,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "get_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1214,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "dupctx",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1337,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "copyctx",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1348,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "init",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1360,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1371,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "keccak_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1377,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "shake_squeeze",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1403,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "shake_get_ctx_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1481,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "dupctx",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1885,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "copyctx",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1898,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "set_ctx_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1912,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "get_ctx_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1948,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "internal_init",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1975,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 2000,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "internal_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 2013,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "item": "get_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 2039,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/ec_kmgmt.rs",
+   "item": "ec_query_operation_name",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 238,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/ec_kmgmt.rs",
+   "item": "sm2_query_operation_name",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 247,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/ec_kmgmt.rs",
+   "item": "ec_imexport_types",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 910,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/ec_kmgmt.rs",
+   "item": "ec_import_types",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 929,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/ec_kmgmt.rs",
+   "item": "ec_export_types",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 935,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/ec_kmgmt.rs",
+   "item": "ec_gettable_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1231,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/ec_kmgmt.rs",
+   "item": "sm2_gettable_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1254,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/ec_kmgmt.rs",
+   "item": "ec_settable_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1271,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/ec_kmgmt.rs",
+   "item": "sm2_settable_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1279,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/ec_kmgmt.rs",
+   "item": "ec_gen_settable_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1881,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/ec_kmgmt.rs",
+   "item": "ec_gen_gettable_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1894,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/ecx_kmgmt.rs",
+   "item": "x25519_gettable_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 901,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/ecx_kmgmt.rs",
+   "item": "x448_gettable_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 906,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/ecx_kmgmt.rs",
+   "item": "x25519_settable_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1089,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/eddsa_sig.rs",
+   "item": "ed25519_sigalg_query_key_types",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 940,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/eddsa_sig.rs",
+   "item": "ed448_sigalg_query_key_types",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 951,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "item": "dupctx",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 323,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "item": "copyctx",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 336,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "item": "internal_init",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 349,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "item": "internal_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 360,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "item": "update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 378,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "item": "get_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 387,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "item": "dupctx",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 531,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "item": "copyctx",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 544,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "item": "internal_init",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 556,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "item": "internal_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 564,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "item": "update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 582,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "item": "get_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 587,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/provider/mac_legacy_kmgmt.rs",
+   "item": "mac_imexport_types",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 653,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/mac_legacy_kmgmt.rs",
+   "item": "cmac_imexport_types",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 670,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/mac_legacy_kmgmt.rs",
+   "item": "mac_gettable_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 691,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/mac_legacy_kmgmt.rs",
+   "item": "cmac_gettable_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 705,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/mac_legacy_kmgmt.rs",
+   "item": "mac_settable_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 736,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/mac_legacy_kmgmt.rs",
+   "item": "mac_gen_settable_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 904,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/mac_legacy_kmgmt.rs",
+   "item": "cmac_gen_settable_params",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 920,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/provider/mlx_kmgmt.rs",
+   "item": "mlx_kem_have_prvkey",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 128,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/rand/rand_lib.rs",
+   "item": "ossl_rand_ctx_new",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 426,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/rand/rand_lib.rs",
+   "item": "ossl_rand_ctx_free",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 468,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/rand/rand_lib.rs",
+   "item": "ossl_rand_cleanup_int",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 535,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/rand/rand_lib.rs",
+   "item": "drbg_status",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 2032,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/runtime/bio/bf_readbuff.rs",
+   "item": "readbuffer_write",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 231,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/runtime/bio/bf_readbuff.rs",
+   "item": "readbuffer_puts",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 237,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/runtime/conf/lib.rs",
+   "item": "default_is_number",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 698,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/runtime/conf/lib.rs",
+   "item": "default_to_int",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 703,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/runtime/confmod/asn1.rs",
+   "item": "oid_module_finish",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 255,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/runtime/confmod/mod.rs",
+   "item": "module_free_thunk",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 397,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/runtime/thread.rs",
+   "item": "free_lock",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 531,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/runtime/thread.rs",
+   "item": "free_lock",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 544,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrs_set_layer_address",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 119,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrs_set_tree_address",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 128,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrs_set_type_and_clear",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 134,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrs_set_keypair_address",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 147,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrs_copy_keypair_address",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 154,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrs_set_chain_address",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 166,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrs_set_hash_address",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 172,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrs_zero",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 178,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrs_copy",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 184,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrsc_set_layer_address",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 193,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrsc_set_tree_address",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 200,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrsc_set_type_and_clear",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 207,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrsc_set_keypair_address",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 221,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrsc_copy_keypair_address",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 228,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrsc_set_chain_address",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 241,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrsc_set_hash_address",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 248,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrsc_zero",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 254,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "slh_adrsc_copy",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 260,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/adrs.rs",
+   "item": "ossl_slh_get_adrs_fn",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 269,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/hash.rs",
+   "item": "slh_hmsg_shake",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 179,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/hash.rs",
+   "item": "slh_prf_shake",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 212,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/hash.rs",
+   "item": "slh_prf_msg_shake",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 240,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/hash.rs",
+   "item": "slh_f_shake",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 272,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/hash.rs",
+   "item": "slh_h_shake",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 301,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/hash.rs",
+   "item": "slh_t_shake",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 332,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/hash.rs",
+   "item": "slh_hmsg_sha2",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 392,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/hash.rs",
+   "item": "slh_prf_msg_sha2",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 442,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/hash.rs",
+   "item": "slh_prf_sha2",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 531,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/hash.rs",
+   "item": "slh_f_sha2",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 558,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/hash.rs",
+   "item": "slh_h_sha2",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 586,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/hash.rs",
+   "item": "slh_t_sha2",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 618,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/slh_dsa/hash.rs",
+   "item": "ossl_slh_get_hash_fn",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 649,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/sm3/legacy_sm3.rs",
+   "item": "sm3_int_update",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 198,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/sm3/legacy_sm3.rs",
+   "item": "sm3_int_final",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 209,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/ssl/ssl_ciph.rs",
+   "item": "update_cipher_list_by_id",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 741,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/ssl/ssl_ciph.rs",
+   "item": "set_ciphersuites",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 851,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/ssl/ssl_conf.rs",
+   "item": "ssl_match_option",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 240,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/ssl/ssl_conf.rs",
+   "item": "ssl_set_option_list",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 274,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/ssl/ssl_conf.rs",
+   "item": "min_max_proto",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 379,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/ssl/ssl_conf.rs",
+   "item": "cmd_Protocol",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 438,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/ssl/ssl_conf.rs",
+   "item": "cmd_Options",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 455,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/ssl/ssl_conf.rs",
+   "item": "cmd_VerifyMode",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 511,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/ssl/ssl_conf.rs",
+   "item": "cmd_CipherString",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 537,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/ssl/ssl_conf.rs",
+   "item": "cmd_Ciphersuites",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 552,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/ssl/ssl_conf.rs",
+   "item": "cmd_MinProtocol",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 567,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/ssl/ssl_conf.rs",
+   "item": "cmd_MaxProtocol",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 573,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/ssl/ssl_lib.rs",
+   "item": "ct_permissive",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 8845,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/ssl/ssl_rsa.rs",
+   "item": "serverinfoex_srv_parse_cb",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1007,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/ssl/ssl_rsa.rs",
+   "item": "serverinfo_srv_parse_cb",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1033,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/ssl/ssl_rsa.rs",
+   "item": "serverinfoex_srv_add_cb",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1046,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/ui/ui_util.rs",
+   "item": "ui_free_method_data",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 197,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/ui/ui_util.rs",
+   "item": "ui_method_data_index_init",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 217,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_aaa.rs",
+   "item": "i2r_ALLOWED_ATTRIBUTES_CHOICE",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 382,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_aaa.rs",
+   "item": "i2r_ALLOWED_ATTRIBUTES_ITEM",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 452,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_aaa.rs",
+   "item": "i2r_ALLOWED_ATTRIBUTES_SYNTAX",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 500,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_akid.rs",
+   "item": "akid_i2v",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 182,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_akid.rs",
+   "item": "akid_v2i",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 193,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_asid.rs",
+   "item": "i2r_ASIdentifierChoice",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 686,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_asid.rs",
+   "item": "as_identifier_choice_canonize",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1263,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_asid.rs",
+   "item": "v2i_ASIdentifiers",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1453,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_audit_id.rs",
+   "item": "audit_i2s",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 30,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_audit_id.rs",
+   "item": "audit_s2i",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 37,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_battcons.rs",
+   "item": "i2v_OSSL_BASIC_ATTR_CONSTRAINTS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 191,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_battcons.rs",
+   "item": "v2i_OSSL_BASIC_ATTR_CONSTRAINTS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 208,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_bcons.rs",
+   "item": "i2v_BASIC_CONSTRAINTS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 192,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_bcons.rs",
+   "item": "v2i_BASIC_CONSTRAINTS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 209,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_bitst.rs",
+   "item": "bitst_i2v",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 349,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_bitst.rs",
+   "item": "bitst_v2i",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 360,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_cpols.rs",
+   "item": "i2r_certpol",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1366,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_enum.rs",
+   "item": "enum_i2s",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 120,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_extku.rs",
+   "item": "i2v_EXTENDED_KEY_USAGE",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 184,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_extku.rs",
+   "item": "v2i_EXTENDED_KEY_USAGE",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 212,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_group_ac.rs",
+   "item": "i2r_GROUP_AC",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 33,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_group_ac.rs",
+   "item": "r2i_GROUP_AC",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 54,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_group_ac.rs",
+   "item": "i2s_GROUP_AC",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 64,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_group_ac.rs",
+   "item": "s2i_GROUP_AC",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 87,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_ia5.rs",
+   "item": "ia5_i2s",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 180,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_ia5.rs",
+   "item": "ia5_s2i",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 197,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_ind_iss.rs",
+   "item": "i2r_INDIRECT_ISSUER",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 33,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_ind_iss.rs",
+   "item": "r2i_INDIRECT_ISSUER",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 54,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_ind_iss.rs",
+   "item": "i2s_INDIRECT_ISSUER",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 64,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_ind_iss.rs",
+   "item": "s2i_INDIRECT_ISSUER",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 87,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_info.rs",
+   "item": "i2v_AUTHORITY_INFO_ACCESS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 323,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_info.rs",
+   "item": "v2i_AUTHORITY_INFO_ACCESS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 414,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_int.rs",
+   "item": "int_i2s",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 29,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_int.rs",
+   "item": "s2i_asn1_int",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 51,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_iobo.rs",
+   "item": "i2r_ISSUED_ON_BEHALF_OF",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 42,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_ist.rs",
+   "item": "v2i_issuer_sign_tool",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 246,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_ist.rs",
+   "item": "i2r_issuer_sign_tool",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 331,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_lib.rs",
+   "item": "ext_list_free",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 604,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_no_ass.rs",
+   "item": "i2r_NO_ASSERTION",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 36,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_no_ass.rs",
+   "item": "r2i_NO_ASSERTION",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 58,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_no_ass.rs",
+   "item": "i2s_NO_ASSERTION",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 72,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_no_ass.rs",
+   "item": "s2i_NO_ASSERTION",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 96,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "item": "i2r_NO_REV_AVAIL",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 33,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "item": "r2i_NO_REV_AVAIL",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 54,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "item": "i2s_NO_REV_AVAIL",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 64,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "item": "s2i_NO_REV_AVAIL",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 87,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_pcons.rs",
+   "item": "i2v_POLICY_CONSTRAINTS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 154,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_pcons.rs",
+   "item": "v2i_POLICY_CONSTRAINTS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 179,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_pku.rs",
+   "item": "i2r_PKEY_USAGE_PERIOD",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 164,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_pmaps.rs",
+   "item": "i2v_POLICY_MAPPINGS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 200,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_pmaps.rs",
+   "item": "v2i_POLICY_MAPPINGS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 229,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_san.rs",
+   "item": "san_i2v",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1163,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_san.rs",
+   "item": "san_v2i",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1174,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_san.rs",
+   "item": "san_v2i_issuer",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1184,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_sda.rs",
+   "item": "i2r_ATTRIBUTES_SYNTAX",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 140,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_single_use.rs",
+   "item": "i2r_SINGLE_USE",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 34,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_single_use.rs",
+   "item": "r2i_SINGLE_USE",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 55,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_single_use.rs",
+   "item": "i2s_SINGLE_USE",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 65,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_single_use.rs",
+   "item": "s2i_SINGLE_USE",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 88,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_skid.rs",
+   "item": "skid_i2s",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 249,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_soa_id.rs",
+   "item": "i2r_SOA_IDENTIFIER",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 33,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_soa_id.rs",
+   "item": "r2i_SOA_IDENTIFIER",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 54,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_soa_id.rs",
+   "item": "i2s_SOA_IDENTIFIER",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 64,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_soa_id.rs",
+   "item": "s2i_SOA_IDENTIFIER",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 87,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_sxnet.rs",
+   "item": "sxnet_i2r",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 332,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_sxnet.rs",
+   "item": "sxnet_v2i",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 420,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_timespec.rs",
+   "item": "i2r_OSSL_DAY_TIME",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1390,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_timespec.rs",
+   "item": "i2r_OSSL_DAY_TIME_BAND",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1419,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_timespec.rs",
+   "item": "print_int_month",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1475,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_timespec.rs",
+   "item": "print_bit_week",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1526,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_timespec.rs",
+   "item": "print_day_of_week",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1549,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_timespec.rs",
+   "item": "print_int_day_of_week",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1572,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_timespec.rs",
+   "item": "i2r_OSSL_PERIOD",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1603,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_timespec.rs",
+   "item": "i2r_OSSL_TIME_SPEC_TIME",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1993,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_timespec.rs",
+   "item": "i2r_OSSL_TIME_SPEC",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 2047,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_tlsf.rs",
+   "item": "i2v_TLS_FEATURE",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 173,
+   "partition": "production",
+   "status": "BLOCKED"
+  },
+  {
+   "file": "src/x509/v3_tlsf.rs",
+   "item": "v2i_TLS_FEATURE",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 208,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_usernotice.rs",
+   "item": "i2r_USER_NOTICE_SYNTAX",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 287,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_utf8.rs",
+   "item": "utf8_i2s",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 164,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "file": "src/x509/v3_utf8.rs",
+   "item": "utf8_s2i",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 182,
+   "partition": "production",
+   "status": "DISCHARGED"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/ct/ct_sct.rs",
+   "id": "V1:src/ct/ct_sct.rs:247:UNSAFE_FN_DEF",
+   "item": "SCT_LIST_free",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 247,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/ct/ct_sct.rs::UNSAFE_FN_DEF::SCT_LIST_free",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/ct/ct_x509v3.rs",
+   "id": "V1:src/ct/ct_x509v3.rs:59:UNSAFE_FN_DEF",
+   "item": "i2s_poison",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 59,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::i2s_poison",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/ct/ct_x509v3.rs",
+   "id": "V1:src/ct/ct_x509v3.rs:70:UNSAFE_FN_DEF",
+   "item": "s2i_poison",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 70,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::s2i_poison",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/ct/ct_x509v3.rs",
+   "id": "V1:src/ct/ct_x509v3.rs:84:UNSAFE_FN_DEF",
+   "item": "i2r_SCT_LIST",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 84,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::i2r_SCT_LIST",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "id": "V1:src/ocsp/v3_ocsp.rs:122:UNSAFE_FN_DEF",
+   "item": "i2r_ocsp_crlid",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 122,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/ocsp/v3_ocsp.rs::UNSAFE_FN_DEF::i2r_ocsp_crlid",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "id": "V1:src/ocsp/v3_ocsp.rs:187:UNSAFE_FN_DEF",
+   "item": "i2r_ocsp_acutoff",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 187,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/ocsp/v3_ocsp.rs::UNSAFE_FN_DEF::i2r_ocsp_acutoff",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "id": "V1:src/ocsp/v3_ocsp.rs:325:UNSAFE_FN_DEF",
+   "item": "ocsp_nonce_free",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 325,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/ocsp/v3_ocsp.rs::UNSAFE_FN_DEF::ocsp_nonce_free",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "id": "V1:src/ocsp/v3_ocsp.rs:344:UNSAFE_FN_DEF",
+   "item": "i2r_ocsp_nonce",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 344,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/ocsp/v3_ocsp.rs::UNSAFE_FN_DEF::i2r_ocsp_nonce",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "id": "V1:src/ocsp/v3_ocsp.rs:406:UNSAFE_FN_DEF",
+   "item": "i2r_ocsp_serviceloc",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 406,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/ocsp/v3_ocsp.rs::UNSAFE_FN_DEF::i2r_ocsp_serviceloc",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_ac_tgt.rs",
+   "id": "V1:src/x509/v3_ac_tgt.rs:624:UNSAFE_FN_DEF",
+   "item": "i2r_ISSUER_SERIAL",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 624,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_ISSUER_SERIAL",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_ac_tgt.rs",
+   "id": "V1:src/x509/v3_ac_tgt.rs:688:UNSAFE_FN_DEF",
+   "item": "i2r_OBJECT_DIGEST_INFO",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 688,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_OBJECT_DIGEST_INFO",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_ac_tgt.rs",
+   "id": "V1:src/x509/v3_ac_tgt.rs:825:UNSAFE_FN_DEF",
+   "item": "i2r_TARGET_CERT",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 825,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_TARGET_CERT",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_ac_tgt.rs",
+   "id": "V1:src/x509/v3_ac_tgt.rs:889:UNSAFE_FN_DEF",
+   "item": "i2r_TARGET",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 889,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_TARGET",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_ac_tgt.rs",
+   "id": "V1:src/x509/v3_ac_tgt.rs:934:UNSAFE_FN_DEF",
+   "item": "i2r_TARGETS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 934,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_TARGETS",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_ac_tgt.rs",
+   "id": "V1:src/x509/v3_ac_tgt.rs:962:UNSAFE_FN_DEF",
+   "item": "i2r_TARGETING_INFORMATION",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 962,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_TARGETING_INFORMATION",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_addr.rs",
+   "id": "V1:src/x509/v3_addr.rs:921:UNSAFE_FN_DEF",
+   "item": "i2r_IPAddrBlocks",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 921,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_addr.rs::UNSAFE_FN_DEF::i2r_IPAddrBlocks",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_addr.rs",
+   "id": "V1:src/x509/v3_addr.rs:2241:UNSAFE_FN_DEF",
+   "item": "v2i_IPAddrBlocks",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 2241,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_addr.rs::UNSAFE_FN_DEF::v2i_IPAddrBlocks",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_admis.rs",
+   "id": "V1:src/x509/v3_admis.rs:557:UNSAFE_FN_DEF",
+   "item": "i2r_NAMING_AUTHORITY",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 557,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_admis.rs::UNSAFE_FN_DEF::i2r_NAMING_AUTHORITY",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_admis.rs",
+   "id": "V1:src/x509/v3_admis.rs:640:UNSAFE_FN_DEF",
+   "item": "i2r_ADMISSION_SYNTAX",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 640,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_admis.rs::UNSAFE_FN_DEF::i2r_ADMISSION_SYNTAX",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_akid.rs",
+   "id": "V1:src/x509/v3_akid.rs:231:UNSAFE_FN_DEF",
+   "item": "i2v_AUTHORITY_KEYID",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 231,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_akid.rs::UNSAFE_FN_DEF::i2v_AUTHORITY_KEYID",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_akid.rs",
+   "id": "V1:src/x509/v3_akid.rs:359:UNSAFE_FN_DEF",
+   "item": "v2i_AUTHORITY_KEYID",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 359,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_akid.rs::UNSAFE_FN_DEF::v2i_AUTHORITY_KEYID",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_asid.rs",
+   "id": "V1:src/x509/v3_asid.rs:817:UNSAFE_FN_DEF",
+   "item": "i2r_ASIdentifiers",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 817,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_asid.rs::UNSAFE_FN_DEF::i2r_ASIdentifiers",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_attrdesc.rs",
+   "id": "V1:src/x509/v3_attrdesc.rs:637:UNSAFE_FN_DEF",
+   "item": "i2r_HASH",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 637,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_HASH",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_attrdesc.rs",
+   "id": "V1:src/x509/v3_attrdesc.rs:699:UNSAFE_FN_DEF",
+   "item": "i2r_INFO_SYNTAX_POINTER",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 699,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_INFO_SYNTAX_POINTER",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_attrdesc.rs",
+   "id": "V1:src/x509/v3_attrdesc.rs:738:UNSAFE_FN_DEF",
+   "item": "i2r_OSSL_INFO_SYNTAX",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 738,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_INFO_SYNTAX",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_attrdesc.rs",
+   "id": "V1:src/x509/v3_attrdesc.rs:794:UNSAFE_FN_DEF",
+   "item": "i2r_OSSL_PRIVILEGE_POLICY_ID",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 794,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_PRIVILEGE_POLICY_ID",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_attrdesc.rs",
+   "id": "V1:src/x509/v3_attrdesc.rs:850:UNSAFE_FN_DEF",
+   "item": "i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 850,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_attrmap.rs",
+   "id": "V1:src/x509/v3_attrmap.rs:576:UNSAFE_FN_DEF",
+   "item": "i2r_ATTRIBUTE_MAPPING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 576,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_attrmap.rs::UNSAFE_FN_DEF::i2r_ATTRIBUTE_MAPPING",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_attrmap.rs",
+   "id": "V1:src/x509/v3_attrmap.rs:653:UNSAFE_FN_DEF",
+   "item": "i2r_ATTRIBUTE_MAPPINGS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 653,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_attrmap.rs::UNSAFE_FN_DEF::i2r_ATTRIBUTE_MAPPINGS",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_authattid.rs",
+   "id": "V1:src/x509/v3_authattid.rs:164:UNSAFE_FN_DEF",
+   "item": "i2r_ISSUER_SERIAL",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 164,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_authattid.rs::UNSAFE_FN_DEF::i2r_ISSUER_SERIAL",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_authattid.rs",
+   "id": "V1:src/x509/v3_authattid.rs:229:UNSAFE_FN_DEF",
+   "item": "i2r_auth_attr_id",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 229,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_authattid.rs::UNSAFE_FN_DEF::i2r_auth_attr_id",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_bitst.rs",
+   "id": "V1:src/x509/v3_bitst.rs:234:UNSAFE_FN_DEF",
+   "item": "i2v_ASN1_BIT_STRING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 234,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_bitst.rs::UNSAFE_FN_DEF::i2v_ASN1_BIT_STRING",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_bitst.rs",
+   "id": "V1:src/x509/v3_bitst.rs:288:UNSAFE_FN_DEF",
+   "item": "v2i_ASN1_BIT_STRING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 288,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_bitst.rs::UNSAFE_FN_DEF::v2i_ASN1_BIT_STRING",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_cpols.rs",
+   "id": "V1:src/x509/v3_cpols.rs:1247:UNSAFE_FN_DEF",
+   "item": "r2i_certpol",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1247,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_cpols.rs::UNSAFE_FN_DEF::r2i_certpol",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_crld.rs",
+   "id": "V1:src/x509/v3_crld.rs:1325:UNSAFE_FN_DEF",
+   "item": "v2i_crld",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1325,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_crld.rs::UNSAFE_FN_DEF::v2i_crld",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_crld.rs",
+   "id": "V1:src/x509/v3_crld.rs:1471:UNSAFE_FN_DEF",
+   "item": "i2r_idp",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1471,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_crld.rs::UNSAFE_FN_DEF::i2r_idp",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_crld.rs",
+   "id": "V1:src/x509/v3_crld.rs:1554:UNSAFE_FN_DEF",
+   "item": "v2i_idp",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1554,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_crld.rs::UNSAFE_FN_DEF::v2i_idp",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_crld.rs",
+   "id": "V1:src/x509/v3_crld.rs:1638:UNSAFE_FN_DEF",
+   "item": "i2r_crldp",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1638,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_crld.rs::UNSAFE_FN_DEF::i2r_crldp",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_crld.rs",
+   "id": "V1:src/x509/v3_crld.rs:1685:UNSAFE_FN_DEF",
+   "item": "i2r_crl_invdate",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1685,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_crld.rs::UNSAFE_FN_DEF::i2r_crl_invdate",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_crld.rs",
+   "id": "V1:src/x509/v3_crld.rs:1710:UNSAFE_FN_DEF",
+   "item": "i2r_object",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1710,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_crld.rs::UNSAFE_FN_DEF::i2r_object",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_crld.rs",
+   "id": "V1:src/x509/v3_crld.rs:1913:UNSAFE_FN_DEF",
+   "item": "v2i_aaidp",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1913,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_crld.rs::UNSAFE_FN_DEF::v2i_aaidp",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_crld.rs",
+   "id": "V1:src/x509/v3_crld.rs:2003:UNSAFE_FN_DEF",
+   "item": "i2r_aaidp",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 2003,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_crld.rs::UNSAFE_FN_DEF::i2r_aaidp",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_enum.rs",
+   "id": "V1:src/x509/v3_enum.rs:156:UNSAFE_FN_DEF",
+   "item": "i2s_ASN1_ENUMERATED_TABLE",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 156,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_enum.rs::UNSAFE_FN_DEF::i2s_ASN1_ENUMERATED_TABLE",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_ia5.rs",
+   "id": "V1:src/x509/v3_ia5.rs:77:UNSAFE_FN_DEF",
+   "item": "i2s_ASN1_IA5STRING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 77,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_ia5.rs::UNSAFE_FN_DEF::i2s_ASN1_IA5STRING",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_ia5.rs",
+   "id": "V1:src/x509/v3_ia5.rs:113:UNSAFE_FN_DEF",
+   "item": "s2i_ASN1_IA5STRING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 113,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_ia5.rs::UNSAFE_FN_DEF::s2i_ASN1_IA5STRING",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_ncons.rs",
+   "id": "V1:src/x509/v3_ncons.rs:390:UNSAFE_FN_DEF",
+   "item": "v2i_NAME_CONSTRAINTS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 390,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_ncons.rs::UNSAFE_FN_DEF::v2i_NAME_CONSTRAINTS",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_ncons.rs",
+   "id": "V1:src/x509/v3_ncons.rs:588:UNSAFE_FN_DEF",
+   "item": "i2r_NAME_CONSTRAINTS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 588,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_ncons.rs::UNSAFE_FN_DEF::i2r_NAME_CONSTRAINTS",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_pci.rs",
+   "id": "V1:src/x509/v3_pci.rs:581:UNSAFE_FN_DEF",
+   "item": "i2r_pci",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 581,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_pci.rs::UNSAFE_FN_DEF::i2r_pci",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_pci.rs",
+   "id": "V1:src/x509/v3_pci.rs:647:UNSAFE_FN_DEF",
+   "item": "r2i_pci",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 647,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_pci.rs::UNSAFE_FN_DEF::r2i_pci",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_rolespec.rs",
+   "id": "V1:src/x509/v3_rolespec.rs:297:UNSAFE_FN_DEF",
+   "item": "i2r_OSSL_ROLE_SPEC_CERT_ID",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 297,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_rolespec.rs::UNSAFE_FN_DEF::i2r_OSSL_ROLE_SPEC_CERT_ID",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_rolespec.rs",
+   "id": "V1:src/x509/v3_rolespec.rs:392:UNSAFE_FN_DEF",
+   "item": "i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 392,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_rolespec.rs::UNSAFE_FN_DEF::i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_san.rs",
+   "id": "V1:src/x509/v3_san.rs:317:UNSAFE_FN_DEF",
+   "item": "i2v_GENERAL_NAMES",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 317,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::i2v_GENERAL_NAMES",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_san.rs",
+   "id": "V1:src/x509/v3_san.rs:356:UNSAFE_FN_DEF",
+   "item": "i2v_GENERAL_NAME",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 356,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::i2v_GENERAL_NAME",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_san.rs",
+   "id": "V1:src/x509/v3_san.rs:1058:UNSAFE_FN_DEF",
+   "item": "v2i_GENERAL_NAME_ex",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1058,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAME_ex",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_san.rs",
+   "id": "V1:src/x509/v3_san.rs:1115:UNSAFE_FN_DEF",
+   "item": "v2i_GENERAL_NAME",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1115,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAME",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_san.rs",
+   "id": "V1:src/x509/v3_san.rs:1131:UNSAFE_FN_DEF",
+   "item": "v2i_GENERAL_NAMES",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1131,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAMES",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_san.rs",
+   "id": "V1:src/x509/v3_san.rs:1231:UNSAFE_FN_DEF",
+   "item": "v2i_issuer_alt",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1231,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_issuer_alt",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_san.rs",
+   "id": "V1:src/x509/v3_san.rs:1355:UNSAFE_FN_DEF",
+   "item": "v2i_subject_alt",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1355,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_subject_alt",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_skid.rs",
+   "id": "V1:src/x509/v3_skid.rs:73:UNSAFE_FN_DEF",
+   "item": "i2s_ASN1_OCTET_STRING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 73,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_skid.rs::UNSAFE_FN_DEF::i2s_ASN1_OCTET_STRING",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_skid.rs",
+   "id": "V1:src/x509/v3_skid.rs:90:UNSAFE_FN_DEF",
+   "item": "s2i_ASN1_OCTET_STRING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 90,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_skid.rs::UNSAFE_FN_DEF::s2i_ASN1_OCTET_STRING",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_utf8.rs",
+   "id": "V1:src/x509/v3_utf8.rs:74:UNSAFE_FN_DEF",
+   "item": "i2s_ASN1_UTF8STRING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 74,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_utf8.rs::UNSAFE_FN_DEF::i2s_ASN1_UTF8STRING",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_utf8.rs",
+   "id": "V1:src/x509/v3_utf8.rs:114:UNSAFE_FN_DEF",
+   "item": "s2i_ASN1_UTF8STRING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 114,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_utf8.rs::UNSAFE_FN_DEF::s2i_ASN1_UTF8STRING",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_utl.rs",
+   "id": "V1:src/x509/v3_utl.rs:501:UNSAFE_FN_DEF",
+   "item": "i2s_ASN1_ENUMERATED",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 501,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_utl.rs::UNSAFE_FN_DEF::i2s_ASN1_ENUMERATED",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_utl.rs",
+   "id": "V1:src/x509/v3_utl.rs:535:UNSAFE_FN_DEF",
+   "item": "i2s_ASN1_INTEGER",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 535,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_utl.rs::UNSAFE_FN_DEF::i2s_ASN1_INTEGER",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  },
+  {
+   "contract": "contracted",
+   "contract_basis": "control inventory: post-enrolment state",
+   "file": "src/x509/v3_utl.rs",
+   "id": "V1:src/x509/v3_utl.rs:573:UNSAFE_FN_DEF",
+   "item": "s2i_ASN1_INTEGER",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 573,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "stable_id": "src/x509/v3_utl.rs::UNSAFE_FN_DEF::s2i_ASN1_INTEGER",
+   "status": "BLOCKED",
+   "status_reason": "control-only enrolment; not an applied ledger row"
+  }
+ ],
+ "schema": "openssl-rs/campaign/safe-c33/consumer-closure/v2",
+ "source_identity": {
+  "branch": "stage/p25/element7-s2b",
+  "inventory_is_ancestor_or_equal": true,
+  "inventory_path": "court/freeze-b52/census-b52.json",
+  "inventory_source_head": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+  "note": "the admitted install is the V1 frozen candidate; the working tree may be a descendant, so obligations are joined to the inventory at the inventory's own source head, not the working tree",
+  "repository_head": "7e06780c0f3df607ff388451a4d61b58c8e45e7b",
+  "span_source_binding": "git-blob",
+  "span_source_commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+  "tracked_tree_dirty": false
+ }
+}

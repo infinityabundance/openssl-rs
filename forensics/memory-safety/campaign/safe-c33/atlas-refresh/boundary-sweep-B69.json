@@ -1,0 +1,486 @@
+{
+ "receipt": "boundary-sweep-B69",
+ "kind": "site-enumerating-boundary-receipt",
+ "date": "2026-11-09",
+ "campaign": "safe-c33",
+ "subphase": "B69",
+ "candidate": {
+  "source_head": "04acfb7ea03a2713ab69bf10a4b331c6ae65a29d",
+  "branch": "stage/p25/element7-s2b",
+  "tool": "forensics/tools/consumer_closure.py",
+  "tool_sha256": "b13ebd6e5fa4afc1acdc4a477b2b9a556e7182d6e34bb744f655809159b04039",
+  "source_state": "src/ is not edited by this receipt. src/rand/rand_lib.rs is sha256 ee19112d10a5a9c96d39db3b6d466044acb4185479149810a0585ad520a7c5e5 at HEAD 04acfb7ea03a2713ab69bf10a4b331c6ae65a29d and is byte-identical at the inventory/span source head b8bba955503014c8fd86303314c6deebaea093b0. The repository files this subphase adds or changes are the receipt, the CAMPAIGN-STATUS row, the external C probe courts/phase25/rt_rand_lifecycle_control.c and the closure evidence evidence/closure-ssh-b69-rand.json; no src/ file changes.",
+  "files": [
+   "src/rand/rand_lib.rs",
+   "courts/phase25/rt_rand_lifecycle_control.c"
+  ],
+  "files_sha256": {
+   "src/rand/rand_lib.rs": "ee19112d10a5a9c96d39db3b6d466044acb4185479149810a0585ad520a7c5e5",
+   "courts/phase25/rt_rand_lifecycle_control.c": "b45af4e1860f46c5aa19f43cbf87024ec5133735b50abc3a37e0bd66753d7bff"
+  },
+  "admitted_install": {
+   "prefix": "artifacts/phase2/install",
+   "libcrypto_so_3_sha256": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3"
+  }
+ },
+ "authority": {
+  "id": "openssl-3.6.4",
+  "source": "forensics/authorities/src/openssl-3.6.4/crypto/rand/rand_lib.c, crypto/rand/rand_meth.c",
+  "ctx_new": "rand_lib.c:511-545 (OPENSSL_zalloc, OPENSSL_init_crypto, OPENSSL_strdup, CRYPTO_THREAD_lock_new; err1/err0 release the name and the block)",
+  "ctx_free": "rand_lib.c:547-570 (NULL no-op; lock, primary, seed, seven names, then the block)",
+  "drbg_status": "rand_meth.c:32-40 (`RAND_get0_primary(NULL)`, NULL -> 0, else `EVP_RAND_get_state(...) == EVP_RAND_STATE_READY`)"
+ },
+ "mechanism": {
+  "id": "RAND_CMS_STORE_KEYFMT",
+  "state_before": "OWNERSHIP_RECONSTRUCTED",
+  "state_after": "OWNERSHIP_RECONSTRUCTED",
+  "state_source": "state.json#/mechanisms[id=RAND_CMS_STORE_KEYFMT]",
+  "discharge": "none mechanism-wide; this receipt discharges only the three named boundaries (site-scoped)"
+ },
+ "obligations": [
+  {
+   "id": "V1:src/rand/rand_lib.rs:426:UNSAFE_FN_DEF",
+   "stable_id": "src/rand/rand_lib.rs::UNSAFE_FN_DEF::ossl_rand_ctx_new",
+   "file": "src/rand/rand_lib.rs",
+   "line": 426,
+   "kind": "UNSAFE_FN_DEF",
+   "item": "ossl_rand_ctx_new",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+   "status_before": "BLOCKED",
+   "status_after": "DISCHARGED (boundary RAND-CTX-001)"
+  },
+  {
+   "id": "V1:src/rand/rand_lib.rs:468:UNSAFE_FN_DEF",
+   "stable_id": "src/rand/rand_lib.rs::UNSAFE_FN_DEF::ossl_rand_ctx_free",
+   "file": "src/rand/rand_lib.rs",
+   "line": 468,
+   "kind": "UNSAFE_FN_DEF",
+   "item": "ossl_rand_ctx_free",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+   "status_before": "BLOCKED",
+   "status_after": "DISCHARGED (boundary RAND-CTX-002)"
+  },
+  {
+   "id": "V1:src/rand/rand_lib.rs:2032:UNSAFE_FN_DEF",
+   "stable_id": "src/rand/rand_lib.rs::UNSAFE_FN_DEF::drbg_status",
+   "file": "src/rand/rand_lib.rs",
+   "line": 2032,
+   "kind": "UNSAFE_FN_DEF",
+   "item": "drbg_status",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+   "status_before": "BLOCKED",
+   "status_after": "DISCHARGED (boundary RAND-CTX-003)"
+  }
+ ],
+ "boundaries": [
+  {
+   "id": "RAND-CTX-001",
+   "file": "src/rand/rand_lib.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_rand_ctx_new",
+   "line": 426,
+   "line_current": 426,
+   "inventory_line": 426,
+   "span_start_line": 426,
+   "span_end_line": 465,
+   "span_sha256": "232c98ca33e79818c46dff8f5857876c778484213f069315127c2497e8b05186",
+   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_schema": "safe-c33/operation-span-sha256/v1",
+   "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "signature": "pub(crate) unsafe extern \"C\" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void",
+   "body": "pub(crate) unsafe extern \"C\" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void {\n    let Some(dgbl) = RawGlobal::new() else {\n        return ptr::null_mut();\n    };\n\n    // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist\n    // before this object does.\n    crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null());\n\n    // SAFETY: `RANDOM_PROVIDER_FIPS_NAME` is a NUL-terminated literal and the answer is this\n    // call's own fresh block or NULL.\n    let name = unsafe {\n        OwnedStr::adopt(\n            CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME),\n            FILE_SEAM,\n            L_CTX_ERR_PROVIDER_NAME,\n        )\n    };\n    // The authority's first failure arm frees the block alone (`:543`), which `RawGlobal`'s `Drop`\n    // performs; the name was never acquired.\n    let Some(name) = name else {\n        return ptr::null_mut();\n    };\n\n    let lock = CRYPTO_THREAD_lock_new();\n    if lock.is_null() {\n        // The authority's second failure arm frees the name (`:541`) and then the block (`:543`);\n        // `name` drops before `dgbl` because it is declared later.\n        return ptr::null_mut();\n    }\n\n    let p = dgbl.as_ptr();\n    // SAFETY: `p` is this call's own fresh block, published nowhere yet.\n    unsafe {\n        (*p).random_provider_name = name.into_raw();\n        (*p).lock = lock;\n    }\n\n    dgbl.finish().cast::<c_void>()\n}",
+   "precondition_set": [],
+   "disposition": "SAFETY_DISCHARGED: src/rand/rand_lib.rs:426 \u2014 ossl_rand_ctx_new has no parameter precondition because _libctx is never read. The body allocates its own record, fills only that fresh private block, and returns it or NULL. Every unsafe operation in the span has a stated validity contract, and no safe Rust caller can cause UB through the safe interfaces it uses.",
+   "contract": "C ABI: `void *(OSSL_LIB_CTX *)`. There is NO caller precondition on _libctx: it is bound with an underscore and the body never reads, compares, dereferences or forwards it, so NULL, dangling, unaligned or arbitrary values are all inert. The return value is either NULL (every failure arm) or a fully constructed, uniquely owned `RAND_GLOBAL` the caller becomes responsible for handing to the slot. The two stores are writes into the fresh block `RawGlobal::new` allocated for this call and published nowhere before `finish`.",
+   "established": [
+    "`_libctx` is never read: the parameter is `_libctx` and no expression in lines 426-465 mentions it.",
+    "`RawGlobal::new()` is a safe wrapper over `CRYPTO_zalloc(size_of::<RandGlobal>(), FILE, 513)`; it answers `Some(NonNull)` for a fresh, zeroed, correctly aligned, whole-block allocation or `None` for NULL (src/rand/rand_lib.rs:383-394).",
+    "A zeroed `RandGlobal` is a valid value: `unsafe impl CtxDestroy for RandGlobal` establishes obligation (b) (all-zero record of raw pointers; each releaser is NULL-tolerant), and the constructor's failure path runs only `RawGlobal::drop`, which frees the block alone and never runs `destroy_body` (src/rand/rand_lib.rs:320-371, 409-416).",
+    "The name is `CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, ...)` where the source is a NUL-terminated static literal (`c\"fips\"`); `OwnedStr::adopt` receives that call's own fresh seam block, so provenance, whole-block identity, alignment, NUL-termination, exclusive ownership and the plain `CRYPTO_free` release site are all established by the allocation call and the literal (src/runtime/owned_str.rs:135-165; src/rand/rand_lib.rs:435-443).",
+    "The two stores at :459-462 dereference `p = dgbl.as_ptr()`, the block `RawGlobal::new` allocated in this same frame; the block is zeroed and word-aligned, holds no Rust references, and has not been published, so no alias exists and every field is writable.",
+    "`dgbl.finish()` forgets the wrapper and returns the block pointer; ownership transfers exactly once to the caller (src/rand/rand_lib.rs:401-406).",
+    "Every failure arm returns NULL after releasing exactly what was acquired: first-arm `dgbl` drops the block alone (name never acquired); second-arm `name` drops the name and `dgbl` drops the block; the lock arm returns with `lock == NULL` and performs no free of a lock it did not acquire (authority's err1 `CRYPTO_THREAD_lock_free(NULL)` is a no-op)."
+   ],
+   "external_abi": [
+    "The slot-constructor convention is the authority's `context_init` convention: a non-NULL return is stored once as slot 5; NULL is the initialisation failure. `context_init` NULL-checks this result before publishing it (src/context/mod.rs:463-469). That is a caller-side obligation of the slot protocol, not a precondition of this function."
+   ],
+   "unsafe_operations": [
+    {
+     "line": 426,
+     "kind": "unsafe_fn_definition",
+     "operation": "ossl_rand_ctx_new",
+     "contract": "No parameter precondition (see above). Marking the fn `unsafe` transfers no unstated obligation: the body's unsafe operations are each independently contracted below."
+    },
+    {
+     "line": 437,
+     "kind": "unsafe_block",
+     "operations": [
+      "CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, 526)",
+      "OwnedStr::adopt(raw, FILE_SEAM, 541)"
+     ],
+     "contract": "The source is a static NUL-terminated literal; the answer is this call's own fresh seam block or NULL; the adopted block is the whole allocation and this handle is its single release. NULL is `None` and releases nothing."
+    },
+    {
+     "line": 459,
+     "kind": "unsafe_block",
+     "operations": [
+      "raw write (*p).random_provider_name = name.into_raw()",
+      "raw write (*p).lock = lock"
+     ],
+     "contract": "`p` is the fresh, zeroed, aligned block allocated in this frame and not yet published; no reference or alias to it exists. The name is transferred exactly once (the `RawGlobal` failure path cannot run after `finish`), and the lock is the live lock this frame just created or the block is released before publication."
+    }
+   ],
+   "caller_closure": {
+    "callers": [
+     {
+      "file": "src/context/mod.rs",
+      "line": 463,
+      "function": "context_init",
+      "guard": "if drbg.is_null() { context_deinit(ctx); return false; } then `(*ctx).drbg = drbg`",
+      "obligation": "stores the returned pointer once as slot 5 only when non-NULL"
+     }
+    ],
+    "other_references": "A grep over src/ finds the definition at rand_lib.rs:426, its doc comment at :422-425, the module prose at :44 and the slot-constructor note in context/mod.rs:150-151; there is no #[no_mangle], #[export_name], address-of or second call.",
+    "export_status": "not exported: no #[no_mangle]/#[export_name]; `nm -D` on the admitted libcrypto.so.3 lists no ossl_rand_ctx_new symbol.",
+    "reachability": "reached from the public OSSL_LIB_CTX_new() -> context_init path; the probe exercises 1000 new/free cycles through that public API."
+   },
+   "residuals": [
+    "The allocation seam itself (`CRYPTO_zalloc`, `CRYPTO_strdup`, `CRYPTO_free`) remains a separate audited allocator boundary; this receipt relies on its stated provenance/alignment/NULL contracts and does not re-derive them."
+   ],
+   "non_claims": [
+    "No claim about any other site in rand_lib.rs, including ossl_rand_cleanup_int:535.",
+    "No mechanism-wide RAND_CMS_STORE_KEYFMT discharge and no SAFE_COMPATIBLE consumer promotion."
+   ],
+   "tests": [
+    "courts/phase25/rt_rand_lifecycle_control.c (OSSL_LIB_CTX_new/free x1000 through the admitted install; plain and ASan/LSan)"
+   ],
+   "authority_derived": [
+    "rand_lib.c:511-545 allocates `dgbl` first, calls `OPENSSL_init_crypto`, duplicates the FIPS name, creates the lock, and on failure frees the name (if acquired) and the block; the Rust body preserves that order and those release arms."
+   ]
+  },
+  {
+   "id": "RAND-CTX-002",
+   "file": "src/rand/rand_lib.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_rand_ctx_free",
+   "line": 468,
+   "line_current": 468,
+   "inventory_line": 468,
+   "span_start_line": 468,
+   "span_end_line": 474,
+   "span_sha256": "2dad9e575165dc5ed7e81dd1bf441bd84aeffe8f8f53e0e0abfa115f7dcc9bdf",
+   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_schema": "safe-c33/operation-span-sha256/v1",
+   "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "signature": "pub(crate) unsafe fn ossl_rand_ctx_free(vdgbl: *mut c_void)",
+   "body": "pub(crate) unsafe fn ossl_rand_ctx_free(vdgbl: *mut c_void) {\n    // SAFETY: `vdgbl` is NULL or the live `RAND_GLOBAL` this slot was handed, released exactly\n    // once, here; `Drop` runs the authority's own free body and its single block release.\n    drop(unsafe {\n        OwnedCtx::<RandGlobal>::from_raw_at(vdgbl.cast::<RandGlobal>(), FILE_SEAM, L_CTX_FREE)\n    });\n}",
+   "precondition_set": [
+    "`vdgbl` is NULL or a live RAND_GLOBAL this slot was handed, not already freed, and not concurrently in use."
+   ],
+   "disposition": "SAFETY_DISCHARGED: src/rand/rand_lib.rs:468 \u2014 ossl_rand_ctx_free delegates to OwnedCtx::<RandGlobal>::from_raw_at, which tolerates NULL and checks alignment, and the live in-crate caller (context_deinit_objs) guards non-NULL and re-NULLs the slot immediately. The second release path (release_default_drbg_ctx) is reachability-dead through the uncalled ossl_rand_cleanup_int (rand_lib.rs:562), which remains BLOCKED. The remaining 'not in use / not already freed' condition is the documented OSSL_LIB_CTX_free application contract, recorded as an external ABI obligation rather than a library-established fact.",
+   "contract": "C-internal ABI: `void (void *)`. `vdgbl` NULL is a no-op. A non-NULL value must be the exact slot-5 block `ossl_rand_ctx_new` handed out, still live, aligned (it is, because the allocator seam returns aligned storage), not already released, and not concurrently in use. The live in-crate caller (context_deinit_objs) establishes non-NULL liveness of the object it owns and re-NULLs the slot before returning; the second caller (release_default_drbg_ctx) is reachability-dead through the uncalled and BLOCKED ossl_rand_cleanup_int and is not part of the live set. The external OSSL_LIB_CTX_free contract establishes that the context is not in use while it is freed. `OwnedCtx::Drop` runs `RandGlobal::destroy_body` (lock, primary, seed, seven names; each releaser NULL-tolerant) and then releases the block exactly once through the same seam.",
+   "established": [
+    "`OwnedCtx::<RandGlobal>::from_raw_at` accepts NULL (`NonNull::new` -> `None`, dropped as a no-op) and refuses a misaligned non-NULL pointer by answering `None` rather than adopting it (src/runtime/bio/owned.rs:186-209).",
+    "`OwnedCtx`'s `Drop` calls `T::destroy_body` once and then `CRYPTO_free` once; it never double-releases and never releases the enclosing block from the body (src/runtime/bio/owned.rs:218-247).",
+    "`RandGlobal::destroy_body` is the authority's own free body for the members only: NULL-tolerant lock release, NULL-tolerant primary/seed release, and seven owned name releases; it never frees the block (src/rand/rand_lib.rs:320-371).",
+    "The block was allocated by `RawGlobal::new` through `CRYPTO_zalloc(..., 513)` and its single release is `CRYPTO_free(..., 567)`; the constructor's provenance/whole-block obligation is discharged at that same function, so the reclaim site's release coordinates match the allocation source.",
+    "In-crate live caller: `context_deinit_objs` (src/context/mod.rs:722-727) tests `!(*ctx).drbg.is_null()`, calls this function, and immediately stores NULL.",
+    "In-crate reachability-dead caller: `release_default_drbg_ctx` (src/context/mod.rs:1542-1554) loads the global default's slot, tests non-NULL, calls this function, and immediately stores NULL; it is called only from `ossl_rand_cleanup_int` at src/rand/rand_lib.rs:562, which is uncalled and unexported and remains BLOCKED, so this second release site is reachability-dead and is not part of the live caller set.",
+    "The live caller's exclusivity is the external `OSSL_LIB_CTX_free` application contract, not a library guarantee: the documented contract requires the caller not to free a context that is still in use. `context_deinit_objs` runs during that documented teardown; the receipt does not claim the library enforces the application's compliance."
+   ],
+   "external_abi": [
+    "The documented `OSSL_LIB_CTX_free` contract is the source of the 'not in use / not already freed' condition: OpenSSL documents that the argument may be NULL (nothing is done), that the default context is not freed, and that a calling thread must not free a library context that is still in use (including as the default at the start of an unfinished async job). This receipt cites that application contract; it does not claim the library proves it."
+   ],
+   "unsafe_operations": [
+    {
+     "line": 468,
+     "kind": "unsafe_fn_definition",
+     "operation": "ossl_rand_ctx_free",
+     "contract": "The three retained caller obligations (live-or-NULL, not already freed, not in use) are stated above; NULL is accepted, and the live in-crate caller context_deinit_objs establishes the ownership preconditions; release_default_drbg_ctx is reachability-dead through the BLOCKED ossl_rand_cleanup_int."
+    },
+    {
+     "line": 471,
+     "kind": "unsafe_block",
+     "operations": [
+      "OwnedCtx::<RandGlobal>::from_raw_at(vdgbl.cast::<RandGlobal>(), FILE_SEAM, 567)"
+     ],
+     "contract": "The pointer is NULL or the live slot-5 block allocated by ossl_rand_ctx_new; it is the whole block, aligned, not published to any other owner, and this call is its single release. `from_raw_at` re-checks NULL and alignment."
+    }
+   ],
+   "caller_closure": {
+    "callers": [
+     {
+      "file": "src/context/mod.rs",
+      "line": 724,
+      "function": "context_deinit_objs",
+      "live": true,
+      "guard": "if !(*ctx).drbg.is_null() { ossl_rand_ctx_free((*ctx).drbg); (*ctx).drbg = NULL; }",
+      "obligation": "slot is live and owned by this teardown; re-NULLed immediately"
+     }
+    ],
+    "reachability_dead_callers": [
+     {
+      "file": "src/context/mod.rs",
+      "line": 1550,
+      "function": "release_default_drbg_ctx",
+      "live": false,
+      "guard": "let drbg = (*global_default()).drbg; if !drbg.is_null() { ossl_rand_ctx_free(drbg); (*global_default()).drbg = NULL; }",
+      "dead_because": "release_default_drbg_ctx is called only from ossl_rand_cleanup_int at src/rand/rand_lib.rs:562; that function has no production caller and is not exported, and its V1 obligation (src/rand/rand_lib.rs:535) remains BLOCKED, so this release site is reachability-dead and excluded from the live caller set."
+     }
+    ],
+    "live_caller_count": 1,
+    "other_references": "A grep over src/ finds the definition at rand_lib.rs:468, the live call at context/mod.rs:724, the reachability-dead call at context/mod.rs:1550, the doc comment at :467, and prose references at :320/:326/:375/:410; there is no #[no_mangle], #[export_name], address-of or other call.",
+    "export_status": "not exported: no #[no_mangle]/#[export_name]; `nm -D` on the admitted libcrypto.so.3 lists no ossl_rand_ctx_free symbol.",
+    "reachability": "one live release site: public OSSL_LIB_CTX_free -> context_deinit -> context_deinit_objs; the probe frees 1000 contexts, each exercising this path.",
+    "external_reachability": "the second release path (context/mod.rs:1550) is reachability-dead: release_default_drbg_ctx is called only from the uncalled, unexported ossl_rand_cleanup_int (rand_lib.rs:562), which remains BLOCKED and is not part of this discharge."
+   },
+   "residuals": [
+    "External ABI obligation retained and NOT discharged here: an application must not free a context still in use or already freed; `OSSL_LIB_CTX_free` documents the NULL/default/in-use conditions.",
+    "`release_default_drbg_ctx` is not a live caller: it is called only from `ossl_rand_cleanup_int` (:562), which is uncalled, unexported and retained BLOCKED because it carries an application method-table-liveness precondition; this receipt does not make that path load-bearing."
+   ],
+   "non_claims": [
+    "No claim that the library establishes the external not-in-use/not-already-freed contract; it is recorded as an application obligation.",
+    "No claim about `ossl_rand_cleanup_int` (:535), which remains BLOCKED and is not a boundary of this receipt.",
+    "No mechanism-wide RAND_CMS_STORE_KEYFMT discharge and no SAFE_COMPATIBLE consumer promotion."
+   ],
+   "tests": [
+    "courts/phase25/rt_rand_lifecycle_control.c (1000 OSSL_LIB_CTX_new/free cycles and OSSL_LIB_CTX_free(NULL); plain and ASan/LSan)"
+   ],
+   "authority_derived": [
+    "rand_lib.c:547-570 starts with `if (dgbl == NULL) return;`, then releases the lock, primary, seed, the seven names and the block; the Rust `destroy_body` + `OwnedCtx::Drop` preserves that release set and order."
+   ]
+  },
+  {
+   "id": "RAND-CTX-003",
+   "file": "src/rand/rand_lib.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "drbg_status",
+   "line": 2032,
+   "line_current": 2032,
+   "inventory_line": 2032,
+   "span_start_line": 2032,
+   "span_end_line": 2040,
+   "span_sha256": "7540f25f21c9ef26a46be39101749afb1719ae9c3d0d75b16473345952bb4755",
+   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_schema": "safe-c33/operation-span-sha256/v1",
+   "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "signature": "unsafe extern \"C\" fn drbg_status() -> c_int",
+   "body": "unsafe extern \"C\" fn drbg_status() -> c_int {\n    // SAFETY: the module's own entry point.\n    let drbg = unsafe { RAND_get0_primary(ptr::null_mut()) };\n    if drbg.is_null() {\n        return 0;\n    }\n    // SAFETY: `drbg` is live.\n    c_int::from(unsafe { EVP_RAND_get_state(drbg) } == EVP_RAND_STATE_READY)\n}",
+   "precondition_set": [],
+   "disposition": "SAFETY_DISCHARGED: src/rand/rand_lib.rs:2032 \u2014 drbg_status has no parameters and therefore no caller precondition. `RAND_get0_primary(NULL)` is a documented NULL-or-live entry point that returns NULL or a live primary context, and the `is_null` guard then establishes liveness for `EVP_RAND_get_state`. The operation is reachable through the public OSSL_RAND_METH.status slot.",
+   "contract": "C ABI: `int (void)`. The function has no arguments, so there is no parameter to validate. `RAND_get0_primary(NULL)` accepts NULL by its own `# Safety` contract (`ctx` NULL or live) and resolves the thread-default context; it answers NULL or a live, stored primary. The NULL test then establishes the `EVP_RAND_get_state` precondition (`ctx` must be live). No condition is left to the caller.",
+   "established": [
+    "`RAND_get0_primary` declares `ctx` NULL or live (src/rand/rand_lib.rs:1385-1397); NULL selects the default library context, which is process-lifetime, and the function either returns NULL or a live `EVP_RAND_CTX` it created/stored under the context lock.",
+    "`drbg_status` tests `drbg.is_null()` and returns 0 before the `EVP_RAND_get_state` call, so the latter's `ctx` must be live precondition is established on every path that reaches it (src/rand/rand_lib.rs:2034-2039).",
+    "`EVP_RAND_get_state` initialises its output to `EVP_RAND_STATE_ERROR` and answers that constant on a failed parameter read, so a provider failure yields 0, not a stale or uninitialised value (src/evp/rand.rs:1753-1767).",
+    "The function owns no allocation, releases nothing and mutates no global or thread state; it only reads the process-global primary state through the documented API.",
+    "`OSSL_RAND_METH.status` is `Some(drbg_status)` at src/rand/rand_lib.rs:2071, and `RAND_OpenSSL()` returns that stable table address (src/rand/rand_lib.rs:2074-2085); `RAND_get_rand_method()` returns the same table in a fresh process."
+   ],
+   "external_abi": [
+    "`RAND_METHOD.status` is a public `int (*status)(void)` slot in `include/openssl/rand.h`; an external caller may invoke it after obtaining the table from `RAND_get_rand_method()`/`RAND_OpenSSL()`. The C type has no argument to establish.",
+    "`RAND_get0_primary(NULL)`'s NULL-or-live contract is the documented public entry point; the default context is never freed by `OSSL_LIB_CTX_free`, so the resolved context stays live."
+   ],
+   "unsafe_operations": [
+    {
+     "line": 2032,
+     "kind": "unsafe_fn_definition",
+     "operation": "drbg_status",
+     "contract": "No parameters and no caller precondition; the body's two unsafe calls are contracted below."
+    },
+    {
+     "line": 2034,
+     "kind": "unsafe_block",
+     "operations": [
+      "RAND_get0_primary(ptr::null_mut())"
+     ],
+     "contract": "`ctx` is NULL, which the callee's own contract explicitly permits; the result is NULL or a live context."
+    },
+    {
+     "line": 2039,
+     "kind": "unsafe_block",
+     "operations": [
+      "EVP_RAND_get_state(drbg)"
+     ],
+     "contract": "`drbg` has been tested non-NULL on this path and is therefore the live primary `RAND_get0_primary` returned/stored."
+    }
+   ],
+   "caller_closure": {
+    "registration": "OSSL_RAND_METH.status = Some(drbg_status) at src/rand/rand_lib.rs:2071 (the only writer); the table is installed through RAND_OpenSSL()/RAND_get_rand_method().",
+    "callers": [
+     {
+      "file": "src/rand/rand_lib.rs",
+      "line": 2071,
+      "function": "OSSL_RAND_METH initialiser",
+      "obligation": "stores the function pointer in the status slot; the table is fully initialised at compile time and never written"
+     },
+     {
+      "file": "src/rand/rand_lib.rs",
+      "line": 865,
+      "function": "RAND_status (custom-method arm)",
+      "obligation": "invokes `(*meth).status` only for a non-default installed table; the default table's arm queries the primary directly"
+     }
+    ],
+    "other_references": "A grep over src/ finds the definition at :2032, the static slot at :2071, and the doc comment/prose at :123/:2031; no address-of, export or second assignment exists.",
+    "export_status": "not exported: the static callback has no #[no_mangle]/#[export_name]; `nm -D` on the admitted libcrypto.so.3 lists no drbg_status symbol. Its public reachability is the method-table slot.",
+    "reachability": "public: RAND_get_rand_method()/RAND_OpenSSL() return the table whose `status` field is this function; the probe obtains the table and invokes the slot directly."
+   },
+   "residuals": [
+    "Concurrent use of the process-global default context is governed by the documented OSSL_LIB_CTX_free contract (the default is not freed) and is not a new obligation of this function.",
+    "A provider/DRBG that cannot answer the state query yields EVP_RAND_STATE_ERROR and therefore 0; that is the authority's intended answer, not a safety residual."
+   ],
+   "non_claims": [
+    "No claim about the other OSSL_RAND_METH slots (seed/bytes/cleanup/add/pseudorand), which are separate boundaries.",
+    "No claim that drbg_status is exported; it is reachable only through the method table.",
+    "No mechanism-wide RAND_CMS_STORE_KEYFMT discharge and no SAFE_COMPATIBLE consumer promotion."
+   ],
+   "tests": [
+    "courts/phase25/rt_rand_lifecycle_control.c (RAND_status vs RAND_get0_primary/EVP_RAND_get_state; RAND_get_rand_method()->status() == RAND_status(); plain and ASan/LSan)"
+   ],
+   "authority_derived": [
+    "rand_meth.c:32-40 is the same body: `r = RAND_get0_primary(NULL); if (r == NULL) return 0; return EVP_RAND_get_state(r) == EVP_RAND_STATE_READY;` (the authority spells the final comparison as a return of the boolean value)."
+   ]
+  }
+ ],
+ "caller_closure": {
+  "summary": "The three operations have one live in-crate constructor caller (context_init), one live in-crate release caller (context_deinit_objs), one reachability-dead release path (release_default_drbg_ctx, called only from the uncalled and BLOCKED ossl_rand_cleanup_int), and one method-table registration (OSSL_RAND_METH.status). None is exported; all are pub(crate) or private.",
+  "constructor_callers": [
+   {
+    "file": "src/context/mod.rs",
+    "line": 463,
+    "function": "context_init"
+   }
+  ],
+  "release_callers": [
+   {
+    "file": "src/context/mod.rs",
+    "line": 724,
+    "function": "context_deinit_objs",
+    "live": true
+   }
+  ],
+  "reachability_dead_release_callers": [
+   {
+    "file": "src/context/mod.rs",
+    "line": 1550,
+    "function": "release_default_drbg_ctx",
+    "live": false,
+    "dead_because": "called only from ossl_rand_cleanup_int (src/rand/rand_lib.rs:562), which is uncalled, unexported and retained BLOCKED (V1:src/rand/rand_lib.rs:535:UNSAFE_FN_DEF)"
+   }
+  ],
+  "method_table_writers": [
+   {
+    "file": "src/rand/rand_lib.rs",
+    "line": 2071,
+    "slot": "OSSL_RAND_METH.status"
+   }
+  ],
+  "exports": [],
+  "no_other_export_or_writer": true
+ },
+ "negative_control": {
+  "id": "B69-C1",
+  "name": "public libctx lifecycle plus default RAND method status slot",
+  "kind": "external C probe against the admitted install (no src change)",
+  "source": "courts/phase25/rt_rand_lifecycle_control.c",
+  "source_sha256": "b45af4e1860f46c5aa19f43cbf87024ec5133735b50abc3a37e0bd66753d7bff",
+  "binary": "court/tmp/closure-b69-rand/rt_rand_lifecycle_control",
+  "binary_sha256": "2cbaad1903ce920a6b546f152a1920c40fc7d9d1e4c465e96d8011362d7a8c93",
+  "build": "cc -std=c11 -O1 -Wall -Wextra -Wno-deprecated-declarations -I artifacts/phase2/install/include -o court/tmp/closure-b69-rand/rt_rand_lifecycle_control courts/phase25/rt_rand_lifecycle_control.c -L artifacts/phase2/install/lib -lcrypto -Wl,-rpath,/work/artifacts/phase2/install/lib",
+  "run": "court/tmp/closure-b69-rand/rt_rand_lifecycle_control",
+  "observed": "PASS rand lifecycle: libctx_new_free=1000 free_null_noop=1 rand_status=1 primary_state=1 primary_ready=1 method_is_default=1 status_slot_present=1 method_status=1 method_status_eq_rand_status=1",
+  "exit_code": 0,
+  "result": "PASS",
+  "mutation_sensitive": "A NULL OSSL_LIB_CTX_new, a crash or double-release in the 1000 new/free cycles, a non-no-op OSSL_LIB_CTX_free(NULL), a status disagreement, a NULL or replaced status slot, or a default method pointer different from RAND_OpenSSL() makes the probe exit non-zero.",
+  "reachability_note": "All four symbols are present in the admitted ABI: OSSL_LIB_CTX_new/free, RAND_status, RAND_get0_primary, EVP_RAND_get_state, RAND_get_rand_method and RAND_OpenSSL (nm -D OPENSSL_3.0.0). No sub-check is NOT_RUN."
+ },
+ "negative_control_asan": {
+  "id": "B69-C2",
+  "binary": "court/tmp/closure-b69-rand/rt_rand_lifecycle_control_asan",
+  "binary_sha256": "55e648508aed58353e40e02eaa87c40230a30a8f5b038b91fd2372278c7082ed",
+  "build": "cc -std=c11 -O1 -g -Wall -Wextra -Wno-deprecated-declarations -fsanitize=address -fno-omit-frame-pointer -I artifacts/phase2/install/include -o court/tmp/closure-b69-rand/rt_rand_lifecycle_control_asan courts/phase25/rt_rand_lifecycle_control.c -L artifacts/phase2/install/lib -lcrypto -Wl,-rpath,/work/artifacts/phase2/install/lib",
+  "run": "ASAN_OPTIONS=detect_leaks=1:abort_on_error=1 court/tmp/closure-b69-rand/rt_rand_lifecycle_control_asan",
+  "observed": "PASS rand lifecycle: libctx_new_free=1000 free_null_noop=1 rand_status=1 primary_state=1 primary_ready=1 method_is_default=1 status_slot_present=1 method_status=1 method_status_eq_rand_status=1",
+  "exit_code": 0,
+  "result": "PASS",
+  "coverage": "AddressSanitizer + LeakSanitizer over the probe's 1000 libctx new/free cycles and the RAND method/status reads. The admitted libcrypto.so.3 is not ASan-instrumented, so this is a runtime-interposition/sanitizer-runtime run over the exact DSO, not an instrumented rebuild.",
+  "environment_note": "The ASan shadow reservation needs a larger RLIMIT_DATA than the court's default per-process cap; the run was executed through the court script with OPENSSL_RS_COURT_DATA enlarged to 17179869184 KiB. That is an ASan address-space requirement, not a property of the probe or the candidate."
+ },
+ "supersedes": [],
+ "supersession_search": {
+  "rule": "a supersedes entry is required for any older boundary or p25-* receipt that records the same (file, kind, operation) with a non-discharging disposition",
+  "scanned": "every *.json under forensics/memory-safety/campaign/safe-c33/ with a boundaries array, plus the atlas-refresh p25-* receipts",
+  "matches": [],
+  "finding": "No older receipt records any of the three (src/rand/rand_lib.rs, UNSAFE_FN_DEF, ossl_rand_ctx_new|ossl_rand_ctx_free|drbg_status) identities. The only prior src/rand/rand_lib.rs boundary is OSSH-DIS-087/OSSH-R3-035 for rand_set_rand_method_internal, a different operation. No supersession is therefore declared."
+ },
+ "not_run": [
+  {
+   "item": "ossl_rand_cleanup_int (src/rand/rand_lib.rs:535)",
+   "state": "BLOCKED (retained; NOT part of this receipt)",
+   "reason": "It is uncalled in this crate and is not exported; its authority caller is OPENSSL_cleanup, and it carries an application method-table-liveness precondition (default_RAND_meth.cleanup must be live). No production caller exists and no load-bearing negative control can be built, so it cannot be discharged and is not included as a boundary.",
+   "stale_reachability_evidence": "artifacts/phase25/exposure.json records 'ossl_rand_cleanup_int @ src/rand/rand_lib.rs:458' at body.buffer_operations.tables.pointer_origin[25328]; the true definition is :535. That coordinate is stale and must not be used as reachability evidence.",
+   "gate": "the subphase that lands the OPENSSL_cleanup RAND arm"
+  },
+  {
+   "item": "Miri / authority differential",
+   "state": "NOT_RUN",
+   "reason": "this is a site-scoped FAST/BATCH probe over an unchanged src/ candidate; no Miri or differential run was requested or performed",
+   "gate": "BOUNDARY/SEAL when the mechanism is independently adjudicated"
+  },
+  {
+   "item": "Rust library ASan build",
+   "state": "NOT_RUN",
+   "reason": "src/ is unchanged and the ASan/LSan run is over the external C probe against the admitted (uninstrumented) DSO",
+   "gate": "SEAL when the candidate is rebuilt with sanitizers"
+  }
+ ],
+ "residuals": [
+  "RAND_CMS_STORE_KEYFMT remains OWNERSHIP_RECONSTRUCTED mechanism-wide; this receipt is site-scoped and does not graduate the mechanism or any consumer family.",
+  "The external OSSL_LIB_CTX_free application contract (NULL/default/not-in-use/already-freed) is recorded, not discharged by the library.",
+  "ossl_rand_cleanup_int (:535) stays BLOCKED and is not a boundary of this receipt.",
+  "The live release-caller set for ossl_rand_ctx_free is one site (context_deinit_objs). release_default_drbg_ctx is reachability-dead through the uncalled, unexported and BLOCKED ossl_rand_cleanup_int (rand_lib.rs:562).",
+  "artifacts/phase25/exposure.json records a stale ossl_rand_cleanup_int coordinate (:458); the true definition is :535, and the stale record is not used as reachability evidence.",
+  "The allocator seam's own contracts (provenance, alignment, exact release site) are reused, not re-derived.",
+  "ASan/LSan covered the external probe and the admitted DSO's malloc interposition; it did not instrument the Rust library."
+ ],
+ "non_claims": [
+  "No SAFETY_DISCHARGED claim beyond the three named boundaries.",
+  "No mechanism-wide or consumer-family (SAFE_COMPATIBLE) claim.",
+  "No claim that the three operations are exported; only drbg_status is publicly reachable through the method-table slot.",
+  "No cryptographic/constant-time claim: these operations make no secret-dependent control decision.",
+  "No claim about any other rand_lib.rs site, including ossl_rand_cleanup_int:535.",
+  "The receipt is adjudicated APPROVE_WITH_CONDITIONS with the three conditions recorded in `review`; the ledger row is adjudicated=true with matching review_history."
+ ],
+ "stale_reachability_evidence": [
+  {
+   "artifact": "artifacts/phase25/exposure.json",
+   "stale_entry": "body.buffer_operations.tables.pointer_origin[25328] = \"ossl_rand_cleanup_int @ src/rand/rand_lib.rs:458\"",
+   "stale_coordinate": 458,
+   "true_coordinate": 535,
+   "reason": "ossl_rand_cleanup_int is defined at src/rand/rand_lib.rs:535; the exposure record's :458 coordinate is stale and must not be used as reachability evidence. This receipt uses :535 and treats the function as BLOCKED."
+  }
+ ],
+ "review": {
+  "status": "APPROVED_WITH_CONDITIONS",
+  "verdict": "APPROVE_WITH_CONDITIONS",
+  "date": "2026-11-09",
+  "reviewer": "independent adversarial adjudicator (separate agent; not the author)",
+  "verdict_text": "Independent adjudication: APPROVE_WITH_CONDITIONS.",
+  "conditions": [
+   "Correct the caller closure: the live release-caller set is ONE site (context_deinit_objs); release_default_drbg_ctx is reachability-dead through the uncalled ossl_rand_cleanup_int.",
+   "Replace the 'exclusive teardown' phrase with wording naming the external OSSL_LIB_CTX_free application contract, not a library guarantee.",
+   "Record that artifacts/phase25/exposure.json has a stale ossl_rand_cleanup_int coordinate (458 vs 535) and must not be used as reachability evidence."
+  ],
+  "conditions_met": "Conditions 1-3 are recorded in boundaries[RAND-CTX-002].caller_closure, boundaries[RAND-CTX-002].established, caller_closure and stale_reachability_evidence; adjudicated=true in this receipt and in the CAMPAIGN-STATUS boundary-sweep-B69 row.",
+  "adjudicated": true
+ },
+ "adjudicated": true
+}

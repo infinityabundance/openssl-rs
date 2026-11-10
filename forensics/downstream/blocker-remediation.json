@@ -2848,7 +2848,7 @@
     {
       "name": "shared-blockers",
       "path": "forensics/downstream/shared-blockers.json",
-      "sha256": "284df5f57ad1433dd8f0ae33c7c5dae66692ba02bfda98faf5d3cb719fcfc556"
+      "sha256": "5be7f3c03774287eea38b30a03d2c986b3983f8e35dcbf9df63423ac491ef807"
     },
     {
       "name": "blocker-remediation-baseline",

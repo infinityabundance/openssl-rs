@@ -84,6 +84,20 @@ unsafe extern "C" fn i2s_INDIRECT_ISSUER(
 }
 
 /// `static void *s2i_INDIRECT_ISSUER(...)` — `crypto/x509/v3_ind_iss.c:35-40`.
+///
+/// # Safety
+///
+/// The `s2i` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `do_ext_nconf`'s `s2i` arm (`src/x509/v3_conf.rs:1095`), which resolved `method` under the
+/// extension registry's read hold (held across the lookup, this callback and `do_ext_i2d`) and
+/// passes the caller's NUL-terminated configuration `value`; `ctx` is NULL or live. This
+/// callback reads no argument, so no further property is required. `method` stays live for the
+/// call, and `value` is borrowed, not freed or retained. The `ASN1_NULL` sentinel it returns
+/// belongs to the dispatcher, which encodes it with this row's `ASN1_NULL_it` and releases it
+/// once (`src/x509/v3_conf.rs:1126-1132`).
+///
+/// Authority-derived: `crypto/x509/v3_ind_iss.c:35-40` returns `ASN1_NULL_new()` and reads no
+/// argument.
 unsafe extern "C" fn s2i_INDIRECT_ISSUER(
     _method: *const X509V3ExtMethod,
     _ctx: *mut c_void,

@@ -1,0 +1,1 @@
+{"authority":"openssl-rt-3.6.4-r2","blocks_claims":["rt-evp-mac exit parity"],"disposition":"open","kind":"exit","magnitude":"class-change","next_court":"cli-exit-minimize","residual_id":"14004d11c5767c8666b642ac0d725411731174cd3cb3cdf701688503d5689c42","schema_version":"frf-token-v1","scope":"rt-evp-mac","surface":"exit-class","token":"exit/exit-class/class-change/open"}

@@ -1,0 +1,59 @@
+{
+ "receipt": "element7-chain-reland",
+ "kind": "element7-rule-extension",
+ "date": "2026-11-03",
+ "subphase": "B55",
+ "state": "IMPLEMENTED — 12 sites (4 reachable), accounting exact; independent review pending",
+ "supersedes": "element7-export-callback-chains.json (REJECTED and reverted)",
+ "what_was_changed": "Chain provenance added to the existing ABI_CONTRACT_EXPORT_CALLBACK witness: the call operand may be traced back through the entry parameter, 64-bit register copies of it, frame spill/reload pairs of it, and loop phis whose every incoming value satisfies the same rule. Call results, immediates, arithmetic, lea, rip-relative loads, truncated moves and overwritten spill slots refuse.",
+ "forbidden_functions_untouched": {
+  "verified_by": "git diff -U0 -- forensics/tools/consumer_closure.py | grep -E '_strip_preprocessor|_documented_export_fallback|A2_FUNCTIONS|_header_callback_param|allow_fallback|_in_image_fallback|_null_test_guards'",
+  "result": "no match (exit 1)",
+  "means": "no header-gate rewrite, no in-image fallback arm, no A2 or precedence change; the defect that caused the previous rejection is absent"
+ },
+ "accounting": {
+  "gained": 12,
+  "reachable": 4,
+  "unreachable": 8,
+  "per_step": {
+   "copy_decisive": 8,
+   "spill_decisive": 1,
+   "entry_stack_argument": 1,
+   "copy_plus_spill": 2,
+   "phi_required_by": 12
+  },
+  "mutation_per_step": {
+   "remove_copy": "10 revert",
+   "remove_spill": "4 revert",
+   "remove_phi": "12 revert (back to 60/71/131)"
+  },
+  "remainder": "10 + 4 - 2 overlap = 12, remainder 0"
+ },
+ "class_changes": {
+  "reachable": ["CRYPTO_cbc128_decrypt 0x16c33d (param 5 block)", "CRYPTO_ofb128_encrypt 0x16ec28 (param 6 block, entry stack arg 6)", "CRYPTO_ccm128_decrypt_ccm64 0x4574cd (param 4 stream)", "CRYPTO_ccm128_encrypt_ccm64 0x457dca (param 4 stream)"],
+  "unreachable": ["CRYPTO_cts128_* 0x16dd53/0x16dd7d/0x16e2a3", "CRYPTO_nistcts128_* 0x16e4c0/0x16e4e9/0x16e91f", "OPENSSL_LH_doall_arg_thunk 0x324078", "ASN1_sign 0x493a62"],
+  "note": "no provider::cipher::cts128_* site moved; the six reachable cts functions that the previous attempt wrongly labelled collateral are untouched"
+ },
+ "controls": {
+  "mixed_arm_phi": "fixture: arm A mov %rcx,%r11 (param 3), arm B mov %rax,%r11 where %rax is a call result, both -> call *%r11. Observed: no witness, site stays target-bounded. Positive twin with both arms as parameters accepts. This is the control the previous review found missing.",
+  "other_refusals": ["two different params", "lea arm", "rip-relative", "immediate", "add", "call result", "overwritten spill"],
+  "self_test": "ok"
+ },
+ "measurement": {
+  "element7_before": {"target_bounded": 60, "contract_bounded": 71, "unresolved": 131},
+  "element7_after": {"target_bounded": 56, "contract_bounded": 75, "unresolved": 131},
+  "obligations": "378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN",
+  "verdicts": "ssh and sshd ACCEPTED, 0 refusals",
+  "edges": "CONTRACT_BOUNDED 91->103, UNRESOLVED 638->626, PROVED_TARGET_SET 51189 unchanged, defects 0",
+  "passes": false
+ },
+ "still_refused": [
+  "pem_pk8::do_pk8pkey: push-forwarded argument; blocked on E7CB-R1",
+  "p12_mutl::pkcs12_gen_mac both paths: push $0x0 and lea in-image keygen; constants, permanently unattributable"
+ ],
+ "non_claims": [
+  "Element 7 remains FAIL with 56 target-bounded sites.",
+  "The eight unreachable class moves are not element-7 precision.",
+  "No obligation status changed; no Rust, manifest or build input changed."
+ ]
+}

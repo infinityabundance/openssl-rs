@@ -1581,16 +1581,18 @@ mod tests {
     use super::*;
     use crate::runtime::err::{ERR_clear_error, ERR_get_error};
     use crate::runtime::obj::{
-        NID_basic_att_constraints, NID_basic_constraints, NID_ext_key_usage, NID_info_access,
-        NID_issuerSignTool, NID_policy_constraints, NID_policy_mappings, NID_sbgp_autonomousSysNum,
-        NID_sxnet, NID_tlsfeature, OBJ_obj2nid,
+        NID_basic_att_constraints, NID_basic_constraints, NID_ext_key_usage, NID_group_ac,
+        NID_indirect_issuer, NID_info_access, NID_inhibit_any_policy, NID_issuerSignTool,
+        NID_netscape_comment, NID_no_assertion, NID_no_rev_avail, NID_policy_constraints,
+        NID_policy_mappings, NID_sbgp_autonomousSysNum, NID_single_use, NID_soa_identifier,
+        NID_subjectSignTool, NID_sxnet, NID_tlsfeature, OBJ_obj2nid,
     };
     use crate::x509::v3_lib::{
         X509V3ExtMethod, X509V3_EXT_add, X509V3_EXT_cleanup, X509V3_EXT_d2i,
     };
     use crate::x509::x509_v3::X509_EXTENSION_get_data;
 
-    use core::sync::atomic::{AtomicBool, Ordering};
+    use core::sync::atomic::{AtomicBool, AtomicI32, AtomicPtr, Ordering};
 
     use crate::asn1::layout::Asn1Item;
     use crate::runtime::obj::OBJ_create;
@@ -1600,8 +1602,46 @@ mod tests {
 
     /// Set by [`hold_probe_v2i`] to whether the callback ran under the registry read hold.
     static HOLD_SEEN_IN_V2I: AtomicBool = AtomicBool::new(false);
+    /// Set by [`hold_probe_s2i`] to whether the callback ran under the registry read hold.
+    static HOLD_SEEN_IN_S2I: AtomicBool = AtomicBool::new(false);
     /// Set by [`hold_probe_it`] to whether the row's `it` accessor ran under the hold.
     static HOLD_SEEN_IN_IT: AtomicBool = AtomicBool::new(false);
+    /// Set by [`reentrant_write_v2i`] to whether it observed the registry read hold.
+    static WRITER_HOLD_SEEN: AtomicBool = AtomicBool::new(false);
+    /// Set by [`reentrant_write_v2i`] to the value the re-entrant `X509V3_EXT_add` returned.
+    static WRITER_RESULT: AtomicI32 = AtomicI32::new(-1);
+    /// The row [`reentrant_write_v2i`] tries to add, installed by the test that uses it.
+    static REENTRANT_TARGET: AtomicPtr<X509V3ExtMethod> = AtomicPtr::new(ptr::null_mut());
+
+    /// The B53 canary: a `v2i` callback that, while `do_ext_nconf` holds the registry
+    /// **read** hold on this same thread, requests the registry **write** hold through
+    /// [`X509V3_EXT_add`]. With the per-thread reader accounting `write_lock` refuses (0);
+    /// without it the calling thread waits for its own read and the dispatch never returns.
+    unsafe extern "C" fn reentrant_write_v2i(
+        _method: *const X509V3ExtMethod,
+        _ctx: *mut c_void,
+        _values: *mut OpenSslStack,
+    ) -> *mut c_void {
+        WRITER_HOLD_SEEN.store(
+            crate::x509::v3_lib::registry_read_held_on_this_thread(),
+            Ordering::SeqCst,
+        );
+        let target = REENTRANT_TARGET.load(Ordering::SeqCst);
+        // SAFETY: `target` is the leaked `'static` row the test installed before spawning the
+        // dispatch; the write request must be refused while this thread holds the read.
+        let result = unsafe { X509V3_EXT_add(target) };
+        WRITER_RESULT.store(result, Ordering::SeqCst);
+        BASIC_CONSTRAINTS_new().cast::<c_void>()
+    }
+
+    /// A `v2i` row wrapping [`reentrant_write_v2i`]; it still carries the encoder probe so the
+    /// dispatch builds a real extension through `do_ext_i2d`.
+    fn reentrant_write_row(nid: c_int) -> X509V3ExtMethod {
+        X509V3ExtMethod {
+            v2i: Some(reentrant_write_v2i),
+            ..hold_probe_row(nid)
+        }
+    }
 
     /// A `v2i` probe: it records the hold **on entry**, before anything else can take a read hold of
     /// its own, then builds a `BASIC_CONSTRAINTS` for the row's declared item.
@@ -1611,6 +1651,20 @@ mod tests {
         _values: *mut OpenSslStack,
     ) -> *mut c_void {
         HOLD_SEEN_IN_V2I.store(
+            crate::x509::v3_lib::registry_read_held_on_this_thread(),
+            Ordering::SeqCst,
+        );
+        BASIC_CONSTRAINTS_new().cast::<c_void>()
+    }
+
+    /// An `s2i` probe with the same recording rule as [`hold_probe_v2i`]. It is the B52 control's
+    /// slot: `do_ext_nconf`'s `s2i` arm is a distinct branch from the `v2i` arm B51 tested.
+    unsafe extern "C" fn hold_probe_s2i(
+        _method: *const X509V3ExtMethod,
+        _ctx: *mut c_void,
+        _value: *const c_char,
+    ) -> *mut c_void {
+        HOLD_SEEN_IN_S2I.store(
             crate::x509::v3_lib::registry_read_held_on_this_thread(),
             Ordering::SeqCst,
         );
@@ -1644,6 +1698,16 @@ mod tests {
             i2r: None,
             r2i: None,
             usr_data: ptr::null_mut(),
+        }
+    }
+
+    /// The `s2i` counterpart of [`hold_probe_row`]: same item and `it`, but the construction slot
+    /// is the `s2i` arm, so the dispatch reaches `:1095` rather than the `v2i` arm.
+    fn s2i_hold_probe_row(nid: c_int) -> X509V3ExtMethod {
+        X509V3ExtMethod {
+            s2i: Some(hold_probe_s2i),
+            v2i: None,
+            ..hold_probe_row(nid)
         }
     }
 
@@ -1696,6 +1760,22 @@ mod tests {
         (nid, row)
     }
 
+    /// Registers the `s2i` probe row under a fresh NID, with the same borrowed-row lifetime rule
+    /// as [`register_hold_probe`].
+    fn register_s2i_hold_probe(
+        oid: &CStr,
+        sn: &CStr,
+        ln: &CStr,
+    ) -> (c_int, &'static mut X509V3ExtMethod) {
+        let nid = fresh_nid(oid, sn, ln);
+        let row = Box::leak(Box::new(s2i_hold_probe_row(nid)));
+        // SAFETY: `row` is a leaked `'static` row that outlives the registry entry; the call takes
+        // the write hold and stores the pointer without taking ownership.
+        let added = unsafe { X509V3_EXT_add(row as *mut X509V3ExtMethod) };
+        assert_eq!(added, 1, "the s2i probe row must register");
+        (nid, row)
+    }
+
     /// The B51 liveness canary: `do_ext_nconf` must hold the registry read lock from the row
     /// lookup, across the `v2i` callback that receives `method`, and on through the encoder that
     /// reads the row's `it`. Removing the guard makes both probes observe no hold and this test
@@ -1724,6 +1804,44 @@ mod tests {
         assert!(
             HOLD_SEEN_IN_V2I.load(Ordering::SeqCst),
             "the v2i callback ran without the registry read hold: do_ext_nconf released the row"
+        );
+        assert!(
+            HOLD_SEEN_IN_IT.load(Ordering::SeqCst),
+            "the encoder used the row after the registry read hold was released"
+        );
+        // SAFETY: `ext` is this frame's own.
+        unsafe { X509_EXTENSION_free(ext) };
+    }
+
+    /// The B52 liveness canary on the **`s2i` arm**. B51's hold was proven on the `v2i` arm only;
+    /// this drives the distinct `s2i` branch at `src/x509/v3_conf.rs:1095` through the same
+    /// `do_ext_nconf` guard, with a registered row so the callback is reached through the registry
+    /// and never called directly. Removing the guard makes both probes observe no hold and this
+    /// test fails deterministically (the probe is thread-local; no second thread is involved).
+    #[test]
+    fn the_s2i_dispatch_holds_the_registry_read_lock_across_the_callback() {
+        let _serial = crate::test_support::lock_global_state();
+        HOLD_SEEN_IN_S2I.store(false, Ordering::SeqCst);
+        HOLD_SEEN_IN_IT.store(false, Ordering::SeqCst);
+        // Neutral control: outside any dispatch this thread must not already hold the registry
+        // read lock, otherwise a probe observing `false` below would prove nothing.
+        assert!(
+            !crate::x509::v3_lib::registry_read_held_on_this_thread(),
+            "the neutral control must observe no registry read hold outside a dispatch"
+        );
+        let (nid, _row) =
+            register_s2i_hold_probe(c"1.3.6.1.4.1.57264.52.1", c"b52-hold-s2i", c"B52 hold s2i");
+        // SAFETY: the value is NUL-terminated; NULL `conf`/`ctx` are what the contract allows.
+        let ext = unsafe {
+            X509V3_EXT_nconf_nid(ptr::null_mut(), ptr::null_mut(), nid, c"ignored".as_ptr())
+        };
+        // SAFETY: no pointer arguments; cleanup retires this test's registry entry. The row is
+        // caller-owned, so cleanup does not release it.
+        unsafe { X509V3_EXT_cleanup() };
+        assert!(!ext.is_null(), "the probe row must build an extension");
+        assert!(
+            HOLD_SEEN_IN_S2I.load(Ordering::SeqCst),
+            "the s2i callback ran without the registry read hold: do_ext_nconf released the row"
         );
         assert!(
             HOLD_SEEN_IN_IT.load(Ordering::SeqCst),
@@ -1785,6 +1903,105 @@ mod tests {
             BASIC_CONSTRAINTS_free(decoded.cast());
             X509_EXTENSION_free(ext);
         }
+    }
+
+    /// B53: a registry **writer** requested from inside a dispatcher callback that runs under the
+    /// registry **read** hold must be refused, not waited on. The dispatch runs on a spawned thread
+    /// so the harness can bound the wait; a self-deadlock reports "timed out — deadlock" and aborts
+    /// rather than leaving the process alive with a thread wedged on its own read (which would hang
+    /// every later registry user in the same test process).
+    #[test]
+    fn a_registry_writer_requested_under_a_read_hold_is_refused_not_deadlocked() {
+        let _serial = crate::test_support::lock_global_state();
+        WRITER_RESULT.store(-1, Ordering::SeqCst);
+        WRITER_HOLD_SEEN.store(false, Ordering::SeqCst);
+
+        // The row the callback tries to add. With the refusal it is never published, so it must
+        // remain caller-owned; if the write were admitted it would change the row count below.
+        let target_nid = fresh_nid(
+            c"1.3.6.1.4.1.57264.53.2",
+            c"b53-write-target",
+            c"B53 write target",
+        );
+        let target: &'static mut X509V3ExtMethod = Box::leak(Box::new(hold_probe_row(target_nid)));
+        REENTRANT_TARGET.store(target as *mut X509V3ExtMethod, Ordering::SeqCst);
+
+        let nid = fresh_nid(
+            c"1.3.6.1.4.1.57264.53.1",
+            c"b53-reentrant-write",
+            c"B53 reentrant write",
+        );
+        let row = Box::leak(Box::new(reentrant_write_row(nid)));
+        // SAFETY: `row` is a leaked `'static` row and no registry read is held on this thread here.
+        assert_eq!(unsafe { X509V3_EXT_add(row as *mut X509V3ExtMethod) }, 1);
+
+        let before = crate::x509::v3_lib::registry_row_count();
+        assert!(
+            before >= 1,
+            "the dispatcher row must be registered before the dispatch"
+        );
+
+        let (tx, rx) = std::sync::mpsc::channel::<bool>();
+        let worker = std::thread::spawn(move || {
+            // SAFETY: the value is NUL-terminated; NULL `conf`/`ctx` are what the contract allows.
+            let ext = unsafe {
+                X509V3_EXT_nconf_nid(ptr::null_mut(), ptr::null_mut(), nid, c"ignored".as_ptr())
+            };
+            let built = !ext.is_null();
+            if built {
+                // SAFETY: `ext` is this thread's own extension.
+                unsafe { X509_EXTENSION_free(ext) };
+            }
+            // A closed receiver is fine: the main thread may already have timed out.
+            let _ = tx.send(built);
+        });
+
+        // Bounded wait: a self-deadlock must surface as this explicit failure, not as a hung
+        // harness. `assert!` is the failing outcome here; the worker (still holding the read and
+        // blocked requesting the write) is left detached, so the process terminates once the
+        // harness writes its summary instead of waiting on the wedged thread.
+        let (completed, failure) = match rx.recv_timeout(std::time::Duration::from_secs(5)) {
+            Ok(built) => (
+                built,
+                "the re-entrant v2i callback must still build the extension",
+            ),
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => (
+                false,
+                "timed out — deadlock: write_lock waited on the caller's own read hold",
+            ),
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                (false, "the dispatch thread exited without reporting")
+            }
+        };
+        assert!(completed, "{failure}");
+        assert!(
+            worker.join().is_ok(),
+            "the dispatch thread must finish without panicking"
+        );
+
+        assert!(
+            WRITER_HOLD_SEEN.load(Ordering::SeqCst),
+            "the callback ran without the registry read hold: do_ext_nconf released the row"
+        );
+        assert_eq!(
+            WRITER_RESULT.load(Ordering::SeqCst),
+            0,
+            "X509V3_EXT_add must report the refusal (0) instead of waiting"
+        );
+        assert_eq!(
+            crate::x509::v3_lib::registry_row_count(),
+            before,
+            "a refused writer must leave the registry unchanged"
+        );
+
+        // SAFETY: no pointer arguments; cleanup retires the dispatcher row. The target row was
+        // never added, so it stays caller-owned and the leaks are bounded by the test process.
+        unsafe { X509V3_EXT_cleanup() };
+        assert_eq!(
+            crate::x509::v3_lib::registry_row_count(),
+            0,
+            "cleanup must empty the registry after the refusal"
+        );
     }
 
     /// One `(nid, config value)` pair per `v2i` decoder B51 discharges. Each value is accepted by
@@ -1875,5 +2092,72 @@ mod tests {
         };
         assert!(ext.is_null(), "an empty value must not reach the v2i slot");
         assert_ne!(ERR_get_error(), 0, "the refusal must raise");
+    }
+
+    /// One `(nid, config value)` pair per `s2i` callback B52 discharges. Each row carries no
+    /// `v2i`, so `do_ext_nconf` reaches the `s2i` arm and a non-NULL, correctly tagged extension
+    /// can be produced only by the callback under test. The five `ASN1_NULL` rows ignore the
+    /// value; `ia5_s2i`, `s2i_asn1_int` and `utf8_s2i` parse it.
+    const S2I_ACCEPT: [(c_int, &core::ffi::CStr); 9] = [
+        (NID_group_ac, c"ignored"),
+        (NID_netscape_comment, c"example.test"),
+        (NID_indirect_issuer, c"ignored"),
+        (NID_inhibit_any_policy, c"1"),
+        (NID_no_assertion, c"ignored"),
+        (NID_no_rev_avail, c"ignored"),
+        (NID_single_use, c"ignored"),
+        (NID_soa_identifier, c"ignored"),
+        (NID_subjectSignTool, c"signing-tool"),
+    ];
+
+    /// Every discharged `s2i` decoder builds its object end-to-end through the real dispatcher.
+    /// `X509V3_EXT_nconf_nid` resolves each standard row and calls its `s2i` slot; the row has no
+    /// `v2i`, so nothing else can construct the value.
+    #[test]
+    fn s2i_callbacks_build_end_to_end() {
+        ERR_clear_error();
+        for &(nid, value) in S2I_ACCEPT.iter() {
+            // SAFETY: `value` is NUL-terminated; NULL `conf`/`ctx` are what the contract allows.
+            let ext = unsafe {
+                X509V3_EXT_nconf_nid(ptr::null_mut(), ptr::null_mut(), nid, value.as_ptr())
+            };
+            assert!(
+                !ext.is_null(),
+                "nid {nid} must build an extension through its s2i callback"
+            );
+            // SAFETY: `ext` is live and this frame owns it.
+            unsafe {
+                let obj = X509_EXTENSION_get_object(ext);
+                assert_eq!(OBJ_obj2nid(obj), nid, "nid {nid} must tag the extension");
+                let data = X509_EXTENSION_get_data(ext);
+                assert!(!data.is_null(), "nid {nid} must carry encoded data");
+                assert!((*data).length > 0, "nid {nid} must carry non-empty DER");
+                X509_EXTENSION_free(ext);
+            }
+        }
+    }
+
+    /// `s2i_asn1_int`'s failure path, reached through the real dispatcher: the parse consumes no
+    /// complete number, the callback frees its partial `BIGNUM`/`ASN1_INTEGER`, and `do_ext_nconf`
+    /// answers NULL before the encoder. Removing that failure handling would return a partially
+    /// built integer instead of NULL.
+    #[test]
+    fn s2i_asn1_int_callback_rejects_a_bad_value() {
+        ERR_clear_error();
+        // SAFETY: the value is NUL-terminated; NULL `conf`/`ctx` are what the contract allows.
+        let ext = unsafe {
+            X509V3_EXT_nconf_nid(
+                ptr::null_mut(),
+                ptr::null_mut(),
+                NID_inhibit_any_policy,
+                c"12x".as_ptr(),
+            )
+        };
+        assert!(
+            ext.is_null(),
+            "a bad integer must be refused by the s2i callback"
+        );
+        assert_ne!(ERR_get_error(), 0, "the refusal must raise");
+        ERR_clear_error();
     }
 }

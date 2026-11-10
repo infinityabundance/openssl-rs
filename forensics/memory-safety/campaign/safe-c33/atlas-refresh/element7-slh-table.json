@@ -1,0 +1,235 @@
+{
+ "receipt": "element7-slh-table",
+ "kind": "element7-target-set-evidence",
+ "date": "2026-11-03",
+ "subphase": "B54",
+ "state": "RULE WIRED \u2014 measurements complete, independent review pending",
+ "group": "slh_adrs_static_table",
+ "sites": [
+  {
+   "call_site": "0x2621ee",
+   "module": "src/slh_dsa/hypertree.rs",
+   "indirection": "call *0x48(%rdx)"
+  },
+  {
+   "call_site": "0x262599",
+   "module": "src/slh_dsa/hypertree.rs",
+   "indirection": "call *0x48(%rdx)"
+  },
+  {
+   "call_site": "0x482467",
+   "module": "src/slh_dsa/fors.rs",
+   "indirection": "call *0x50(%rax)"
+  },
+  {
+   "call_site": "0x48273f",
+   "module": "src/slh_dsa/fors.rs",
+   "indirection": "call *0x50(%rcx)"
+  },
+  {
+   "call_site": "0x4829c1",
+   "module": "src/slh_dsa/fors.rs",
+   "indirection": "call *0x50(%rcx)"
+  },
+  {
+   "call_site": "0x4830ad",
+   "module": "src/slh_dsa/fors.rs",
+   "indirection": "call *0x28(%rax)"
+  }
+ ],
+ "correction_to_triage": "The triage described all six as selecting `key.adrs_func@0xa8`. They are not one slot: the call sites go through different method-struct offsets (0x48, 0x50, 0x28), i.e. different fields of the SLH-DSA method tables, and at least one site (0x4830ad, offset 0x28) reaches a different table field than the others. The group is 'SLH-DSA method-table dispatch', not a single slot. The target set is still finite, but the enumeration must be per field, not per key field.",
+ "writer_set": {
+  "count": 1,
+  "writer_function": "src/slh_dsa/hash_ctx.rs slh_dsa_key_hash_init",
+  "assignments": [
+   "src/slh_dsa/hash_ctx.rs:252  (*key).adrs_func = ossl_slh_get_adrs_fn(c_int::from(is_shake == 0));",
+   "src/slh_dsa/hash_ctx.rs:253  (*key).hash_func = ossl_slh_get_hash_fn(is_shake);"
+  ],
+  "evidence": "src-wide grep for `\\.adrs_func\\s*=` and `\\.hash_func\\s*=` finds only these two lines (the unrelated hits in src/runtime/obj.rs and src/rsa/mod.rs are different types).",
+  "falsifier": "any third store site, any store reachable from outside slh_dsa_key_hash_init, or a runtime-selected table (a value not produced by the two selectors)."
+ },
+ "selectors": [
+  {
+   "function": "src/slh_dsa/adrs.rs:269 ossl_slh_get_adrs_fn(is_compressed: c_int)",
+   "tables": 2,
+   "form": "const METHODS: [SlhAdrsFunc; 2]; returns &METHODS[0] when is_compressed == 0 else &METHODS[1]",
+   "fields_per_table": 11,
+   "field_names": [
+    "set_layer_address",
+    "set_tree_address",
+    "set_type_and_clear",
+    "set_keypair_address",
+    "copy_keypair_address",
+    "set_chain_address",
+    "set_tree_height",
+    "set_hash_address",
+    "set_tree_index",
+    "zero",
+    "copy"
+   ],
+   "table0_prefix": "slh_adrs_*",
+   "table1_prefix": "slh_adrsc_*"
+  },
+  {
+   "function": "src/slh_dsa/hash.rs:649 ossl_slh_get_hash_fn(is_shake: c_int)",
+   "tables": 2,
+   "form": "const METHODS: [SlhHashFunc; 2]; returns &METHODS[0] when is_shake != 0 else &METHODS[1]",
+   "fields_per_table": 6
+  }
+ ],
+ "complete_target_set": {
+  "per_site": "for a site whose indirection reads field F of a method struct, the complete target set is { METHODS[0][F], METHODS[1][F] } of the selector that produced the struct pointer",
+  "bound": 2,
+  "why_complete": "one writer, two closed selectors, two const tables each, no other store and no runtime table construction",
+  "not_claimed": "this evidence does not by itself change the element-7 classification; the verifier must be given the per-field pair and must refuse if any of the five conditions fails"
+ },
+ "rule_input_required": {
+  "conditions": [
+   "the containing function is one of the six enumerated sites",
+   "the loaded base is the method-struct pointer produced by the single writer",
+   "the writer set for that key field is exactly one function",
+   "the selector is one of the two enumerated selectors and the table count is exactly two",
+   "both table entries for the read field resolve to in-image symbols"
+  ],
+  "refusal": "any mismatch -> existing `None` + reason; the site stays target-bounded",
+  "warning": "the triage's earlier refusals for this group were `ctx-not-proven-parameter`, `writer-set-incomplete` and `no-pointee-layout`; this artifact supplies the writer set and the pointee layout per field, which is precisely what those refusals asked for"
+ },
+ "status": {
+  "element7_before": {
+   "target_bounded": 66,
+   "contract_bounded": 65,
+   "unresolved": 131
+  },
+  "element7_after": {
+   "target_bounded": 60,
+   "contract_bounded": 71,
+   "unresolved": 131
+  },
+  "obligations": "378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN",
+  "verdicts": "ssh and sshd ACCEPTED, 0 refusals",
+  "review": "APPROVE with five residuals (SLH-R1..R5); the address binding makes the claim DSO-specific"
+ },
+ "non_claims": [
+  "No element-7 progress is claimed.",
+  "No obligation status changed; the queue remains 378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN.",
+  "The six sites remain target-bounded until the rule is wired and its mutation and negative controls are observed."
+ ],
+ "rule": {
+  "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+  "witness": "slh_method_table_witness (consumer_closure.py ~L11098)",
+  "dispatch": "apply_evidence_classes ~L11876, after the export-callback witness",
+  "conditions": [
+   "containing function+address is one of the six enumerated sites",
+   "read base is the method struct from (*ctx).key adrs_func@0xa8 / hash_func@0xb0, with the ctx parameter proven",
+   "source-wide writer set for the field is exactly {slh_dsa_key_hash_init}",
+   "selector is ossl_slh_get_adrs_fn / ossl_slh_get_hash_fn, an inlined select over exactly two tables",
+   "the read field resolves to an in-image function start in BOTH tables"
+  ]
+ },
+ "per_site_targets": [
+  {
+   "site": "0x2621ee",
+   "function": "ht_sign",
+   "field": "adrs@0x48",
+   "targets": [
+    "slh_adrs_zero",
+    "slh_adrsc_zero"
+   ]
+  },
+  {
+   "site": "0x262599",
+   "function": "ht_verify",
+   "field": "adrs@0x48",
+   "targets": [
+    "slh_adrs_zero",
+    "slh_adrsc_zero"
+   ]
+  },
+  {
+   "site": "0x482467",
+   "function": "fors_node",
+   "field": "adrs@0x50",
+   "targets": [
+    "slh_adrs_copy",
+    "slh_adrsc_copy"
+   ]
+  },
+  {
+   "site": "0x48273f",
+   "function": "fors_sign",
+   "field": "adrs@0x50",
+   "targets": [
+    "slh_adrs_copy",
+    "slh_adrsc_copy"
+   ]
+  },
+  {
+   "site": "0x4829c1",
+   "function": "fors_sign",
+   "field": "adrs@0x50",
+   "targets": [
+    "slh_adrs_copy",
+    "slh_adrsc_copy"
+   ]
+  },
+  {
+   "site": "0x4830ad",
+   "function": "fors_pk_from_sig",
+   "field": "hash@0x28",
+   "targets": [
+    "slh_t_sha2",
+    "slh_t_shake"
+   ]
+  }
+ ],
+ "controls": {
+  "restoration": "exactly the six move to ABI_CONTRACT_SLH_METHOD_TABLE, no other change (changed=6, added=0, removed=0)",
+  "mutation": "witness disabled returns ssh to target 66 / contract 65; diff versus before = 0; tool restored byte-identically (sha256 2821313c...)",
+  "negative": [
+   "site 0x4830ad with provenance forced to adrs_func@0xa8 while hash_func@0xb0 is required -> method-struct-field-mismatch",
+   "site 0x2621ee with three lea tables -> selector-table-count-not-two (table_count=3)"
+  ]
+ },
+ "review": {
+  "reviewer": "independent adversarial adjudicator (session 83613009-5bf4-4e14-bca2-357a0b13879b); transcribed verbatim",
+  "verdict": "APPROVE",
+  "applied": false,
+  "date": "2026-11-03",
+  "verdict_text": "APPROVE (no widening found; residuals below)",
+  "confirmed": [
+   "site set is hard-coded to six absolute addresses: maximally narrow, cannot generalise, and fails closed on any miss",
+   "writer set is computed by source regex and must equal exactly {slh_dsa_key_hash_init}; a second match refuses",
+   "both tables enumerated; a field resolving in only one table refuses; targets must be two distinct in-image starts",
+   "collateral exactly six; both closures share libcrypto 1c03ec0a and ssh 926975, so the delta is the tool alone",
+   "mutation restores byte-identically at 2821313c, which equals HEAD tool sha256",
+   "obligations 378/186/192/0, 0 refusals, both ACCEPTED; 60 target-bounded remain and nothing implies near pass"
+  ]
+ },
+ "residuals": [
+  {
+   "id": "SLH-R1",
+   "state": "OPEN",
+   "why": "the six sites are matched by absolute call-site address, so the recognition is binary-bound and rebuild-fragile. A layout-shifting rebuild silently lapses the effect back to 66 sites. Fail-closed, but the claim is valid only for DSO 1c03ec0a."
+  },
+  {
+   "id": "SLH-R2",
+   "state": "OPEN",
+   "why": "condition 4 proves lea cardinality and table closure; that the selector is one of the two named functions is inferred from field offset and source, not proven in-image."
+  },
+  {
+   "id": "SLH-R3",
+   "state": "OPEN",
+   "why": "writer detection is a source regex over assignment form; a struct-literal, ptr::write or transmute writer would not refuse. None exists today."
+  },
+  {
+   "id": "SLH-R4",
+   "state": "OPEN",
+   "why": "the evidence was generated with tracked_tree_dirty true at 904c3dfd rather than a clean candidate commit; a clean re-measurement is required before it is cited beyond the measurement."
+  },
+  {
+   "id": "SLH-R5",
+   "state": "OPEN",
+   "why": "gate outputs (fmt/clippy/tests) are absent from these tool-only runs and must be supplied before citation."
+  }
+ ]
+}

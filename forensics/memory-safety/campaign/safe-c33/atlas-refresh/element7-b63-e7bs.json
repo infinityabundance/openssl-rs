@@ -1,0 +1,140 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/element7-witness-batch/v1",
+  "kind": "candidate-bound-measurement-with-witness",
+  "generated_utc": "2026-11-08T06:08:02Z",
+  "batch": "b63-e7bs",
+  "purpose": "Record the first resolved element-7 batch: the two reachable base-slot-partial sites are now resolved by source-backed per-call-site witnesses. Element 7 is still FAIL on the remaining 12 target-bounded sites.",
+  "source_identity": {
+    "repository_head": "9b8b35999b20523a1b105e9821ed6f356bbfeadb",
+    "branch": "stage/p25/element7-s2b",
+    "tracked_tree_dirty": false,
+    "artifact_build_S": "b8bba955503014c8fd86303314c6deebaea093b0",
+    "build_relevant_tree_identical": true,
+    "rebuild_performed": false,
+    "rebuild_justification": "git diff b8bba9555..9b8b3599 -- src Cargo.toml Cargo.lock build.rs rust-toolchain.toml is empty, so the frozen B53 artifacts are the build of this candidate's build-relevant inputs. No new build was produced; the three artifact hashes are unchanged."
+  },
+  "tool": {
+    "path": "forensics/tools/consumer_closure.py",
+    "version": 5,
+    "sha256": "fb4121c9b703b80aec1511ec5d1354def55c69ed390a7f4c36fae6b1c2dff31d"
+  },
+  "artifacts": {
+    "libcrypto_so_3_sha256": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3",
+    "ssh_sha256": "926975c81fe8d56297196a703a8a7b0f5eb0fae1644bbfa4643d4cd517f22ba0",
+    "sshd_sha256": "0d3f5e924ff361cba290fb150b89e85806adf69c3a9de9440c4b8a6c09803ce2"
+  },
+  "receipts": {
+    "ssh": {
+      "path": "evidence/closure-ssh-b63-e7bs.json",
+      "sha256": "55b882b55a350e550ce76b7215a4709b7f0a710451fca2b4d6dd668e76e304ae",
+      "bytes": 11859330,
+      "generated_utc": "2026-11-08T05:27:36Z"
+    },
+    "sshd": {
+      "path": "evidence/inventory-sshd-b63-e7bs.json",
+      "sha256": "267162b2e2dfe31c1d16e135c32fcad7c3cfdb0bd17b443e42335ef7c6c73a61",
+      "bytes": 11707264,
+      "generated_utc": "2026-11-08T06:08:02Z"
+    }
+  },
+  "measured": {
+    "ssh": {
+      "obligations": {"total": 378, "DISCHARGED": 186, "BLOCKED": 192, "UNKNOWN": 0},
+      "verdict": {"state": "ACCEPTED", "refusals": 0, "safe_compatible": false},
+      "precision": {
+        "indirect_sites": 51918,
+        "resolved_sites": 51741,
+        "unresolved_sites": 177,
+        "reachable_unresolved_sites": 131,
+        "target_bounded_unresolved_sites": 12,
+        "contract_bounded_sites": 119,
+        "unclassified_reachable_sites": 0,
+        "e7bs_resolved_sites": 2,
+        "e7bs_refused_sites": 0,
+        "e7bs_proved_empty_sites": 1
+      }
+    },
+    "sshd": {
+      "obligations": {"total": 378, "DISCHARGED": 186, "BLOCKED": 192, "UNKNOWN": 0},
+      "verdict": {"state": "ACCEPTED", "refusals": 0, "safe_compatible": false},
+      "precision": {
+        "indirect_sites": 51918,
+        "resolved_sites": 51741,
+        "unresolved_sites": 177,
+        "reachable_unresolved_sites": 131,
+        "target_bounded_unresolved_sites": 12,
+        "contract_bounded_sites": 119,
+        "unclassified_reachable_sites": 0,
+        "e7bs_resolved_sites": 2,
+        "e7bs_refused_sites": 0,
+        "e7bs_proved_empty_sites": 1
+      }
+    }
+  },
+  "resolved_sites": [
+    {
+      "call_site": "0x204890",
+      "operand": "call *0x18(%rax)",
+      "function": "provider::decode_msblob2key::msblob2key_decode",
+      "witness": "pointer_slot_instance_witness",
+      "resolution_kind": "internal_closed_descriptor_table",
+      "proved_empty": false,
+      "slot": "Msblob2keyCtx.desc@0x8 -> KeytypeDesc.read_private_key@0x18",
+      "instances": ["MSTYPE2DSA_DESC -> dsa_decode_void 0x2044b0", "MSTYPE2RSA_DESC -> rsa_decode_void 0x2044c0"],
+      "targets": ["0x2044b0", "0x2044c0"],
+      "evidence_kind": "source-backed complete target set (internal closed descriptor table, not an external ABI contract)",
+      "receipt_section": "precision.e7bs_witnesses"
+    },
+    {
+      "call_site": "0x22df88",
+      "operand": "call *(%rbx)",
+      "function": "runtime::rcu::ossl_synchronize_rcu",
+      "witness": "internal_closed_writer_list_witness",
+      "resolution_kind": "internal_closed_writer_list",
+      "proved_empty": true,
+      "slot": "RcuCbItem.func@0x0",
+      "targets": [],
+      "evidence_kind": "source-backed proved-empty target set: sole writer/publication ossl_rcu_call stores its cb parameter unchanged and is absent from this image with no production caller; the list is only ever NULL-cleared, so the loop body is unreachable",
+      "receipt_section": "precision.e7bs_witnesses"
+    }
+  ],
+  "delta_14_to_12": {
+    "target_bounded_unresolved_sites": "14 -> 12",
+    "contract_bounded_sites": "119 -> 119",
+    "reachable_unresolved_sites": "133 -> 131",
+    "unresolved_sites": "179 -> 177",
+    "resolved_sites": "51739 -> 51741",
+    "obligations": "378 = 186 / 192 / 0 unchanged",
+    "other_sites_changed": 0,
+    "residual_site_diff": "exactly the two resolved call sites removed; none added"
+  },
+  "remaining": {
+    "target_bounded_unresolved_sites": 12,
+    "groups": {
+      "store_loader_object_table": 4,
+      "pbe_registry_row": 3,
+      "exported_callback_param": 3,
+      "conf_module_registry_row": 2
+    },
+    "reason": "all 12 are the reg-top shape (call *%rax after materialisation); none is contract-bounded and element 7 remains FAIL"
+  },
+  "witness_residuals": {
+    "candidate_bound_address_gate": "both witnesses fire only at the exact (function, call address) shape on this candidate and return None elsewhere, keeping the conservative fallback; they must be re-derived at every re-freeze",
+    "rcu_inlining_and_icf": "the witness proves the source writer is absent from the image and has no production caller; it does not separately exclude an inlined or identical-code-folded copy",
+    "rcu_scan_scope": "the writer/publication and textual caller scans cover src/runtime/rcu.rs; an out-of-module writer or an indirect/macro caller would not be enumerated",
+    "msblob_writer_scope": "desc-writer completeness is source/module-scoped, not an image-wide owner-qualified writer index",
+    "unmodelled_forms_refused": "any other KeytypeDesc declaration form (second macro, static mut, extra literal) and any store to desc@0x8 outside the closed constructor set now refuse rather than under-approximate"
+  },
+  "independent_review": {
+    "adjudication": "rcu ACCEPT; msblob ACCEPT-WITH-RECORDED-RESIDUALS",
+    "blocking_defect_fixed": "_edge_disposition demoted an empty target set to UNRESOLVED while unresolved_by_func removed it; a narrow proved-empty gate now keeps both layers in agreement, and every unwitnessed/cleared empty set still demotes",
+    "reviewer_checks": "computed (not hardcoded) target sets; gate narrowness; persistence in edge records and precision.e7bs_witnesses; 11 load-bearing controls; full residual diff; unlisted counterexamples (Option::None member, writable-section static, foreign same-displacement owner)"
+  },
+  "non_claims": [
+    "element 7 is still FAIL: 12 reachable target-bounded unresolved sites remain",
+    "both families remain safe_compatible=false; the obligations are unchanged at 378 = 186 / 192 / 0 and no mechanism is discharged",
+    "resolving two indirect-call sites is precision evidence, not a memory-safety proof",
+    "the witnesses are candidate-bound and must be re-derived at every re-freeze",
+    "this batch does not touch the 192 BLOCKED obligation rows, B46/B47/B48, or any compatibility court"
+  ]
+}

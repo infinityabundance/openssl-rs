@@ -1,0 +1,112 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/element7-witness-batch/v1",
+  "kind": "candidate-bound-measurement-with-witness",
+  "generated_utc": "2026-11-08T19:38:17Z",
+  "batch": "b66-e7pbe",
+  "purpose": "Record the element-7 PASS at one exact candidate. Every reachable unresolved indirect site is now either resolved by a source-backed witness or bounded by a per-call-site external ABI contract. This does NOT graduate the consumer: 192 safety obligations remain BLOCKED and safe_compatible is false.",
+  "element7_result": {
+    "established": true,
+    "status": "PASS (contract-bounded)",
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 127,
+    "reachable_unresolved_sites": 127,
+    "unclassified_reachable_sites": 0,
+    "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+    "both_families": "ssh and sshd agree exactly"
+  },
+  "source_identity": {
+    "repository_head": "b5ff19ce788518e25478df5dced1e03600c616d0",
+    "branch": "stage/p25/element7-s2b",
+    "tracked_tree_dirty": false,
+    "artifact_build_S": "b8bba955503014c8fd86303314c6deebaea093b0",
+    "build_relevant_tree_identical": true,
+    "rebuild_performed": false
+  },
+  "tool": {"path": "forensics/tools/consumer_closure.py", "version": 5, "sha256": "4c4f6e9c950dd32539f3c76c10416f17c5c33488b0e4e169c137287092a7d01b"},
+  "artifacts": {
+    "libcrypto_so_3_sha256": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3",
+    "ssh_sha256": "926975c81fe8d56297196a703a8a7b0f5eb0fae1644bbfa4643d4cd517f22ba0",
+    "sshd_sha256": "0d3f5e924ff361cba290fb150b89e85806adf69c3a9de9440c4b8a6c09803ce2"
+  },
+  "receipts": {
+    "ssh": {"path": "evidence/closure-ssh-b66-e7pbe.json", "sha256": "1597da56e268cf672ef726be848fb33f8e27416b5e9166007b5cbbf0a122a077", "bytes": 12003141, "generated_utc": "2026-11-08T18:58:27Z"},
+    "sshd": {"path": "evidence/inventory-sshd-b66-e7pbe.json", "sha256": "2134a29b6e0255d8badee83dcd2062244822774116cde3efe30794d1838d6426", "bytes": 11851075, "generated_utc": "2026-11-08T19:38:17Z"}
+  },
+  "measured": {
+    "ssh": {
+      "obligations": {"total": 378, "DISCHARGED": 186, "BLOCKED": 192, "UNKNOWN": 0},
+      "verdict": {"state": "ACCEPTED", "refusals": 0, "safe_compatible": false},
+      "precision": {"indirect_sites": 51918, "resolved_sites": 51745, "unresolved_sites": 173, "target_bounded_unresolved_sites": 0, "contract_bounded_sites": 127, "reachable_unresolved_sites": 127, "unclassified_reachable_sites": 0}
+    },
+    "sshd": {
+      "obligations": {"total": 378, "DISCHARGED": 186, "BLOCKED": 192, "UNKNOWN": 0},
+      "verdict": {"state": "ACCEPTED", "refusals": 0, "safe_compatible": false},
+      "precision": {"indirect_sites": 51918, "resolved_sites": 51745, "unresolved_sites": 173, "target_bounded_unresolved_sites": 0, "contract_bounded_sites": 127, "reachable_unresolved_sites": 127, "unclassified_reachable_sites": 0}
+    }
+  },
+  "resolved_this_batch": [
+    {
+      "call_site": "0x179c85",
+      "function": "EVP_PBE_CipherInit_ex",
+      "witness": "pbe_outparam_instance_witness",
+      "resolution_kind": "pbe_outparam_builtin_table",
+      "slot": "keygen_ex out-parameter of EVP_PBE_find_ex (frame slot -0x78, argument 5 %r9)",
+      "selection": "all BUILTIN_PBE rows (conservative superset; the call passes EVP_PBE_TYPE_OUTER)",
+      "targets": ["0x17c200", "0x199140", "0x254a30", "0x35e3f0", "0x49b8b0"],
+      "target_symbols": ["PKCS5_v2_PBE_keyivgen_ex", "PKCS5_v2_PBKDF2_keyivgen_ex", "PKCS12_PBE_keyivgen_ex", "PKCS5_PBE_keyivgen_ex", "PKCS5_v2_scrypt_keyivgen_ex"]
+    },
+    {
+      "call_site": "0x17c408",
+      "function": "PKCS5_v2_PBE_keyivgen_ex",
+      "witness": "pbe_outparam_instance_witness",
+      "resolution_kind": "pbe_outparam_builtin_table",
+      "slot": "keygen_ex out-parameter of EVP_PBE_find_ex (frame slot -0xe0, argument 5 %r9)",
+      "selection": "EVP_PBE_TYPE_KDF rows only",
+      "targets": ["0x199140", "0x49b8b0"],
+      "target_symbols": ["PKCS5_v2_PBKDF2_keyivgen_ex", "PKCS5_v2_scrypt_keyivgen_ex"]
+    }
+  ],
+  "got_binding_caveat": "EVP_PBE_find_ex is reached through an R_X86_64_GLOB_DAT GOT relocation; the image declares no DF_SYMBOLIC or DF_BIND_NOW, so the finite set holds only under the tool's in-image GOT-binding policy. A preempting interposer outside this image is outside this witness. Recorded in the witness, residuals and receipt.",
+  "delta_2_to_0": {
+    "target_bounded_unresolved_sites": "2 -> 0",
+    "contract_bounded_sites": "127 -> 127",
+    "reachable_unresolved_sites": "129 -> 127",
+    "unresolved_sites": "175 -> 173",
+    "resolved_sites": "51743 -> 51745",
+    "obligations": "378 = 186 / 192 / 0 unchanged",
+    "residual_site_diff": "exactly the two PBE out-parameter sites removed; none added"
+  },
+  "element7_witness_ledger": {
+    "resolved_sites": 6,
+    "resolved_proofs": 5,
+    "resolved_sites_list": ["0x204890 (msblob descriptor table)", "0x22df88 (rcu proved-empty writer list)", "0x5314aa (PKCS12 private parameter)", "0x531586 (PKCS12 private parameter, shared proof)", "0x179c85 (PBE builtin keygen_ex)", "0x17c408 (PBE builtin KDF keygen_ex)"],
+    "contract_bounded_sites": 127,
+    "contract_classes": {"ABI_CONTRACT_CONF_MODULE": 2, "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3, "ABI_CONTRACT_EXPORT_CALLBACK": 62, "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1, "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2, "ABI_CONTRACT_PBE_REGISTRY": 1, "ABI_CONTRACT_PROVIDER": 17, "ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK": 4, "ABI_CONTRACT_PROVIDER_HW_TABLE": 25, "ABI_CONTRACT_REGISTRATION_ATEXIT": 1, "ABI_CONTRACT_SLH_METHOD_TABLE": 6, "ABI_CONTRACT_STORE_LOADER": 3}
+  },
+  "remaining_graduation_blockers": {
+    "safe_compatible": false,
+    "discharged": 186,
+    "blocked": 192,
+    "unknown": 0,
+    "reason": "element 7 PASS closes only the indirect-call precision predicate. The consumer still has 192 safety-relevant obligations in BLOCKED state; no mechanism is discharged mechanism-wide; B46/B47/B48 re-review, the 192-obligation closure, the evidence-pipeline repair and the exact-candidate L7/SEAL verification remain open.",
+    "requires": [
+      "close or prove every BLOCKED obligation with exact site coverage, caller closure, an independent review and a preserved residual record",
+      "re-review B46/B47 (SSL_CONF_CTX exclusivity) and B48 (legacy digest callback surface) against repaired implementations",
+      "repair and re-run the FRF/forensic pipeline and deterministic regeneration",
+      "re-run the library, ABI, downstream, differential, adversarial, sanitizer and BOUNDARY/SEAL checks at this exact candidate",
+      "remeasure OpenSSH L7 against this exact converted implementation"
+    ]
+  },
+  "independent_review": {
+    "adjudication": "ACCEPT on the exact candidate after two remediations",
+    "remediations": "4-byte zero-store/reload width (slot-width-is-not-64-bit); partial overlapping store into the slot (slot-overlap-store), each with a committed load-bearing fixture",
+    "checks": "target sets computed from .rela.dyn (not hardcoded; perturbing a relocation changes the set); slot/argument/success-edge proof; registry cannot supply keygen_ex; KDF subset selection; GOT caveat recorded; non-widening (0x179a0d and all 8 b65 ABI sites unchanged); persistence in edge records and the receipt"
+  },
+  "non_claims": [
+    "element 7 PASS is a precision result about indirect-call targets; it is not a memory-safety proof and does not discharge any obligation",
+    "the 127 contract-bounded sites rest on documented external interfaces; an application-supplied callback is not thereby proven memory safe",
+    "safe_compatible remains false for both families: 192 BLOCKED obligations remain and no mechanism is discharged",
+    "the finite PBE sets depend on the in-image GOT-binding policy; a preempting interposer is outside the witness",
+    "all witnesses are candidate-bound and must be re-derived at every re-freeze"
+  ]
+}

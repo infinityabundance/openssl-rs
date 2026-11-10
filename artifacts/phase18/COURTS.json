@@ -1623,8 +1623,8 @@
           "core module 'ec' grew extern_c_fns: 545 -> 546 (recorded bound 545); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'encoder_meth' grew unsafe_sites: 134 -> 138 (recorded bound 134); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'encoder_pkey' grew unsafe_sites: 43 -> 45 (recorded bound 43); the boundary layer may grow, a parser/algorithm module may not",
-          "core module 'evp' grew unsafe_sites: 8029 -> 8652 (recorded bound 8029); the boundary layer may grow, a parser/algorithm module may not",
-          "core module 'evp' grew extern_c_fns: 1646 -> 1674 (recorded bound 1646); the boundary layer may grow, a parser/algorithm module may not",
+          "core module 'evp' grew unsafe_sites: 8029 -> 8798 (recorded bound 8029); the boundary layer may grow, a parser/algorithm module may not",
+          "core module 'evp' grew extern_c_fns: 1646 -> 1675 (recorded bound 1646); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'ffc' grew unsafe_sites: 328 -> 336 (recorded bound 328); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'hpke' grew unsafe_sites: 414 -> 447 (recorded bound 414); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'mac' grew unsafe_sites: 228 -> 233 (recorded bound 228); the boundary layer may grow, a parser/algorithm module may not",
@@ -1642,20 +1642,21 @@
           "core module 'pkcs7' grew unsafe_sites: 931 -> 959 (recorded bound 931); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'pkcs7' grew extern_c_fns: 126 -> 128 (recorded bound 126); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'property' grew unsafe_sites: 389 -> 406 (recorded bound 389); the boundary layer may grow, a parser/algorithm module may not",
-          "core module 'provider' grew unsafe_sites: 6092 -> 6542 (recorded bound 6092); the boundary layer may grow, a parser/algorithm module may not",
+          "core module 'provider' grew unsafe_sites: 6092 -> 6546 (recorded bound 6092); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'provider' grew extern_c_fns: 1600 -> 1607 (recorded bound 1600); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'rand' grew unsafe_sites: 492 -> 500 (recorded bound 492); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'rsa' grew unsafe_sites: 1397 -> 1440 (recorded bound 1397); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'rsa' grew extern_c_fns: 220 -> 223 (recorded bound 220); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'selftest' grew unsafe_sites: 37 -> 44 (recorded bound 37); the boundary layer may grow, a parser/algorithm module may not",
-          "core module 'sm3' grew unsafe_sites: 9 -> 23 (recorded bound 9); the boundary layer may grow, a parser/algorithm module may not",
+          "core module 'sm3' grew unsafe_sites: 9 -> 25 (recorded bound 9); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'sm4' grew unsafe_sites: 13 -> 14 (recorded bound 13); the boundary layer may grow, a parser/algorithm module may not",
-          "core module 'ssl' grew unsafe_sites: 3503 -> 4317 (recorded bound 3503); the boundary layer may grow, a parser/algorithm module may not",
+          "core module 'ssl' grew unsafe_sites: 3503 -> 4407 (recorded bound 3503); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'ssl' grew extern_c_fns: 698 -> 727 (recorded bound 698); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'store' grew unsafe_sites: 652 -> 692 (recorded bound 652); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'ts' grew unsafe_sites: 1125 -> 1130 (recorded bound 1125); the boundary layer may grow, a parser/algorithm module may not",
           "core module 'txt_db' grew unsafe_sites: 122 -> 124 (recorded bound 122); the boundary layer may grow, a parser/algorithm module may not",
-          "core module 'x509' grew unsafe_sites: 7830 -> 8024 (recorded bound 7830); the boundary layer may grow, a parser/algorithm module may not"
+          "core module 'x509' grew unsafe_sites: 7830 -> 8123 (recorded bound 7830); the boundary layer may grow, a parser/algorithm module may not",
+          "core module 'x509' grew extern_c_fns: 1678 -> 1681 (recorded bound 1678); the boundary layer may grow, a parser/algorithm module may not"
         ],
         "provenance": {
           "findings": [],
@@ -1928,11 +1929,11 @@
             "sha256": "e7c63098c60ad7cdfbfdc90bc51da50882fa6731a1b7591896d2059f34d43872"
           },
           "measured": {
-            "boundary_unsafe_sites": 6560,
-            "core_extern_c_fns": 9863,
-            "core_unsafe_sites": 55898,
-            "extern_c_fns": 11003,
-            "unsafe_sites": 62458
+            "boundary_unsafe_sites": 6585,
+            "core_extern_c_fns": 9873,
+            "core_unsafe_sites": 56239,
+            "extern_c_fns": 11013,
+            "unsafe_sites": 62824
           }
         },
         "verdict": "fail"

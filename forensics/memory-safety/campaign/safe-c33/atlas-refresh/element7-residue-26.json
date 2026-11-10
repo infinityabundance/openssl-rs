@@ -1,0 +1,62 @@
+{
+ "receipt": "element7-residue-26",
+ "kind": "element7-residue-classification",
+ "date": "2026-11-03",
+ "subphase": "B56",
+ "state": "MEASURED — classification only; no rule change, no progress claimed",
+ "candidate": "ad62073c9",
+ "source_closure": "evidence/closure-ssh-b53-e7ld-r2.json",
+ "resident_total": 26,
+ "result": "26 target-bounded sites remain across 16 functions. Six groups closed (SLH 6, hw 25, legacy 2, decoder 3, export-callback 4 reachable, capabilities 4) reducing element 7 from 67 to 26. What remains is not uniform: it splits into three different evidence problems plus three permanently unattributable sites.",
+ "buckets": [
+  {
+   "bucket": "export-callback blocked on the header/parameter question",
+   "sites": 9,
+   "functions": ["OPENSSL_sk_deep_copy (2)", "OPENSSL_sk_pop_free (1)", "PEM_ASN1_read_bio (1)", "OBJ_bsearch_ex_ (2)", "OPENSSL_LH_doall (1)", "ASN1_i2d_bio (2)"],
+   "why_open": "These were among the thirteen claimed by the rejected chain batch. That batch's own mutation showed eight of them depended on an undisclosed header-gate rewrite (_strip_preprocessor), not on chain provenance. The chain-only re-land correctly closed the four that do depend on chain steps and left these.",
+   "evidence_needed": "a legitimate resolution of why the header/parameter check does not accept them: either the check is wrong (fix it, with a fixture per case) or the operand genuinely is not an exported parameter (keep refusing). This must not be solved by rewriting the header gate without disclosure again.",
+   "risk": "medium — the previous attempt to close these was rejected for exactly this"
+  },
+  {
+   "bucket": "registry / object-slot stores",
+   "sites": 11,
+   "functions": ["EVP_PBE_CipherInit_ex (2)", "PKCS5_v2_PBE_keyivgen_ex (1)", "OSSL_STORE_open_ex (4)", "CONF_modules_load (2)", "ossl_synchronize_rcu (1)", "OPENSSL_cleanup (1)"],
+   "why_open": "an exported registration API, a DSO or a provider fills a stored slot. A static target set is incomplete by construction (the application can register), and parameter forwarding cannot see a store.",
+   "evidence_needed": "a store-witness instrument: for each slot, prove the set of writers reachable from the consumer, or bind the slot to a declared registration ABI with the registration entry point checked. This is a new mechanism and needs BOUNDARY review, mutation controls and a negative control where a registered slot is genuinely open.",
+   "risk": "high — the target set is open by design, so any acceptance must be an ABI-contract argument, not a finite enumeration"
+  },
+  {
+   "bucket": "merged call sites",
+   "sites": 2,
+   "functions": ["evp_kem_init (2)"],
+   "why_open": "compiler-merged: one indirect call serves two slots because the branches converge, so the operand has two reaching definitions and the provenance rule refuses multi-definition origins.",
+   "evidence_needed": "the merged-site witness already drafted (every reaching definition independently justified, all offsets table-declared, union of slot ids recorded) with its three controls and a BOUNDARY review.",
+   "risk": "low-medium — the shape is understood; the risk is in the phi-equivalent rule"
+  },
+  {
+   "bucket": "permanently unattributable",
+   "sites": 3,
+   "functions": ["do_pk8pkey (1)", "pkcs12_gen_mac (2)"],
+   "why_open": "the value is push $0x0 or lea of an in-image function through a stack argument; it is a constant, not an exported entry parameter. The pk8 case is additionally blocked by the argument model not handling push (E7CB-R1).",
+   "evidence_needed": "none for the two pkcs12 paths: they should stay refused permanently and be recorded as such. The pk8 path becomes attributable only if the push model is fixed, and even then it must satisfy the entry-parameter requirement.",
+   "risk": "none (two permanent) / low (pk8, contingent on E7CB-R1)"
+  },
+  {
+   "bucket": "unclassified remainder",
+   "sites": 1,
+   "functions": ["msblob2key_decode (1)"],
+   "why_open": "not yet analysed; base-slot-partial at call *0x18(%rax).",
+   "evidence_needed": "triage first: what fills that slot and from where.",
+   "risk": "unknown"
+  }
+ ],
+ "correction_to_triage": {
+  "triage_said": "closeable 52 after the KEM revision, hard core 14.",
+  "now": "of the 26 remaining, 9 are blocked on a tool-correctness question rather than a missing enumeration, 11 need a new store instrument, 2 need a merged-site mechanism, 3 are permanent, 1 is untriaged. The triage's 'closeable by enumerating a static set' category is now empty for this residue."
+ },
+ "non_claims": [
+  "No element-7 progress: the count is 26 before and after this artifact.",
+  "No rule changed and no closure regenerated.",
+  "This does not assert that any of these sites is unsafe."
+ ]
+}

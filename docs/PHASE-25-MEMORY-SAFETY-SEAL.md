@@ -5,7 +5,7 @@ committed Phase-25 evidence planes; it is not hand-written, so it cannot drift f
 `forensics/tools/evidence_determinism.py` re-runs `ms_seal.py` and byte-compares this file.
 The stratum's obligation ledger is
 `forensics/phase25-obligations.json` — `owned` 22, `implemented`
-22, `open_in_this_stratum` 0; the
+15, `open_in_this_stratum` 7; the
 seal is the last of its twenty-two contract units and the `MS-SEAL` court row is the last of
 `artifacts/phase25/COURTS.json`.
 
@@ -28,15 +28,15 @@ carry (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.8). This seal records
   from their committed planes: **18 pass, 3 fail**.
   The failing courts are `MS-SOURCE-CENSUS`, `MS-NON-RUST-TCB`, `MS-MIRI`.
   The runner's registry `artifacts/phase25/COURTS.json` records **22 court
-  rows, 19 pass and 3 fail**; it is not this seal's
+  rows, 15 pass and 7 fail**; it is not this seal's
   input (the runner deletes and rewrites it), so the two records disagree and this seal
   records the disagreement rather than adopting the registry's verdicts. **The seal therefore
   records `passed = false`.** No court is FRF-declarable: each reads
   committed evidence and stages no
   `artifacts/phase25/probes/<probe>.{authority,candidate}` pair.
 - Obligation ledger: `forensics/phase25-obligations.json` — `owned` 22,
-  `implemented` 22, `open_in_this_stratum`
-  0. Its unit is `memory-safety contract`, a non-export unit.
+  `implemented` 15, `open_in_this_stratum`
+  7. Its unit is `memory-safety contract`, a non-export unit.
 - Derived state: `forensics/phase-state.json`, phase 25, from artefact existence. It owns no
   exported symbol, so its `atlas_owned` count is 0 and it registers no provider row.
 

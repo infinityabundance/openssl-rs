@@ -1,0 +1,52 @@
+{
+ "schema": "safe-c33/atlas-refresh/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "b52-gap-ct_x509v3-sites",
+ "subphase": "safe-c33/ownership-enumeration-b52-gap",
+ "date": "2026-11-03T00:00:00Z",
+ "candidate": {
+  "base_commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+  "base_head": "a175602f4f74e8f492fd32eb3ff90df9385c1d9c"
+ },
+ "scope": "The 3 admitted X509_VERIFY_POLICY production obligation(s) in src/ct/ct_x509v3.rs that the enumerated SSH closure reports as reachable but without an owning boundary receipt are enumerated here for ownership only, at their census coordinates, with a hazard read from each function. This receipt claims no discharge, no contract and no new reachability finding.",
+ "non_claims": [
+  "This receipt does not discharge any site, and no site may be treated as discharged on its authority.",
+  "This receipt does not contract any site; the hazard notes are enumeration notes, not established contracts.",
+  "This receipt does not assert reachability; reachability is taken from the enumerated closure and is not re-established here."
+ ],
+ "boundaries": [
+  {
+   "id": "B52GAP::src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::i2s_poison",
+   "file": "src/ct/ct_x509v3.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_poison",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 59,
+   "line_current": 59,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "Returns a CRYPTO_strdup of the static string \"NULL\"; the fresh block's ownership passes to X509V3_EXT_print, and allocation failure yields NULL."
+  },
+  {
+   "id": "B52GAP::src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::s2i_poison",
+   "file": "src/ct/ct_x509v3.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_poison",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 70,
+   "line_current": 70,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "Ignores all three arguments and returns a fresh ASN1_NULL; ownership of the returned object passes to the caller, and allocation failure yields NULL."
+  },
+  {
+   "id": "B52GAP::src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::i2r_SCT_LIST",
+   "file": "src/ct/ct_x509v3.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_SCT_LIST",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 84,
+   "line_current": 84,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "Raw STACK_OF(SCT) and BIO pointers are forwarded to SCT_LIST_print; both liveness and the element types are caller obligations, and the return is hard-coded 1."
+  }
+ ]
+}

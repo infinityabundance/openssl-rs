@@ -1,0 +1,50 @@
+{
+ "receipt": "element7-fetched-provider-merged-sites",
+ "kind": "element7-mechanism-finding",
+ "date": "2026-11-03",
+ "subphase": "B55",
+ "state": "OPEN — needs a new reviewed mechanism; the planned slot-table extension was a no-op",
+ "group": "fetched_provider_method",
+ "sites": [
+  {"call_site": "0x2c2e6a", "function": "openssl_rs::evp::kem::evp_kem_init", "operand": "call *%r8", "reaching_defs": ["0x2c2e31 mov 0x80(%r13),%r8 -> EvpKem.auth_encapsulate_init (OSSL_FUNC_KEM_AUTH_ENCAPSULATE_INIT)", "0x2c2e4c mov 0x88(%r13),%r8 -> EvpKem.auth_decapsulate_init (OSSL_FUNC_KEM_AUTH_DECAPSULATE_INIT)"]},
+  {"call_site": "0x2c2ea7", "function": "openssl_rs::evp::kem::evp_kem_init", "operand": "call *%rcx", "reaching_defs": ["0x2c2e7b mov 0x30(%r13),%rcx -> EvpKem.encapsulate_init (OSSL_FUNC_KEM_ENCAPSULATE_INIT)", "0x2c2e98 mov 0x40(%r13),%rcx -> EvpKem.decapsulate_init (OSSL_FUNC_KEM_DECAPSULATE_INIT)"]}
+ ],
+ "correction_to_triage": {
+  "triage_said": "'fetched_provider_method': add per-slot OSSL_FUNC_KEM_* witness entries naming the fetch writer; widening risk very low; 2 sites closeable.",
+  "measured": "The four offsets and their OSSL_FUNC_KEM_* identifiers are ALREADY in FETCH_FAMILIES (consumer_closure.py:4970-4989, present since 7aec281b4). Extending the table is a no-op: the diff is 0 lines.",
+  "real_blocker": "_reg_origin refuses when a site has more than one reaching definition (len(defs) != 1, :4381, 'never unioned'), so fetch_slot_witness bails at :5160-5162 before it ever consults the slot table.",
+  "why": "These are compiler-merged call sites: one indirect call serves two distinct slots because the two branches converge on a single call instruction. The operand therefore has two reaching loads, both from the same fetch-produced EvpKem value."
+ },
+ "what_is_established": [
+  "Both call sites read fields of the single EvpKem value produced by the fetch path: writers are evp_kem_from_algorithm (src/evp/kem.rs:314-332) and the only writes to the base register are the two fetch returns at 0x2c28cf and 0x2c2aab.",
+  "Every reaching load is a distinct, table-declared slot with a distinct OSSL_FUNC_KEM_* identifier.",
+  "The negative controls hold: offset 0x20 (refcnt) is not in the table, and 0x80 on a different family names a different function, so the family binding is not widened by offset alone."
+ ],
+ "proposed_mechanism": {
+  "name": "merged-site witness",
+  "accepts_only_when": [
+   "every reaching definition at the call site is a single-offset load from the SAME base value",
+   "that base is the one produced by the already-accepted fetch binding (exactly one family writer)",
+   "every offset is declared in the existing slot table for that family",
+   "the union of slot identifiers is recorded per site, not a single identifier"
+  ],
+  "refuses_when": "any reaching definition fails any of the above; the site then keeps its current class",
+  "why_it_is_not_a_relaxation": "it replaces 'exactly one definition' with 'every definition is independently justified', which strengthens rather than weakens the requirement per reaching def; it does not accept a unioned target set without per-def justification"
+ },
+ "required_before_implementation": [
+  "BOUNDARY review of the mechanism (the campaign requires independent review for a new proof rule), including a mutation control that removes one reaching-def justification and requires the site to revert",
+  "a negative control where two reaching defs come from different base values (must refuse)",
+  "a negative control where one reaching def is a load from an undeclared offset (must refuse)",
+  "a recorded decision on whether the evidence records a set of target identities or a union bound"
+ ],
+ "impact_on_the_plan": {
+  "closeable": "54 -> 52 (these two move from closeable-by-table-edit to needing this mechanism)",
+  "hard_core": "12 -> 14 unless the merged-site mechanism is approved and works for other merged sites too",
+  "note": "the rest of the triage ranking is unaffected; the other closeable groups do not depend on merged-site handling"
+ },
+ "non_claims": [
+  "No element-7 progress: the count remains 60 target-bounded / 71 contract-bounded / 131 unresolved.",
+  "No rule was changed and no closure was regenerated; the tool is byte-identical (2821313c...).",
+  "This does not claim the two sites are unsafe, only that the planned evidence route does not reach them."
+ ]
+}

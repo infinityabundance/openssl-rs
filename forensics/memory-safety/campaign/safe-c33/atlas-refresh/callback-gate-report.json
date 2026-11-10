@@ -1,0 +1,2089 @@
+{
+ "basis_counts": {
+  "dispatcher-row-binding": 7,
+  "edge-witness": 38,
+  "module-name-match": 104,
+  "unique-name-match": 0
+ },
+ "callback_basis_counts": {
+  "dispatcher-row-binding": 7,
+  "edge-witness": 37,
+  "module-name-match": 91,
+  "unique-name-match": 0
+ },
+ "classification": {
+  "PROVEN_EXCLUDED": 0,
+  "REACHABLE_BOUND": 135,
+  "UNRESOLVED": 0
+ },
+ "classification_labels": {
+  "reachable": "REACHABLE_BOUND",
+  "reachable_bases": [
+   "edge-witness",
+   "module-name-match",
+   "unique-name-match",
+   "dispatcher-row-binding"
+  ],
+  "reachable_is_proof": false
+ },
+ "closure": {
+  "family": "openssh",
+  "path": "evidence/closure-ssh-b52-applied.json",
+  "sha256": "40d25c558c48962d9df7b17f344c01aae4c22f6781fec75b9e3653c563f47e94"
+ },
+ "enrolment": {
+  "count": 66,
+  "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json"
+ },
+ "excluded_without_assumption": [],
+ "excluded_without_assumption_count": 0,
+ "exit_code": 1,
+ "false_positive_check": {
+  "inventory_matched_reported_missing": 0,
+  "names": []
+ },
+ "gate": "callback-enumeration-completeness",
+ "inventory": {
+  "obligation_count": 312,
+  "path": "evidence/closure-ssh-b52-applied.json",
+  "sha256": "40d25c558c48962d9df7b17f344c01aae4c22f6781fec75b9e3653c563f47e94",
+  "unsafe_fn_identity_count": 286
+ },
+ "inventory_accounting": {
+  "inventory_callbacks_accounted": 69,
+  "slot_prefix_inventory_not_seen": [],
+  "slot_prefix_inventory_without_source_definition": [],
+  "unaccounted": [],
+  "unit": "distinct inventory callbacks accounted for by the source enumeration; entries are file-qualified"
+ },
+ "inventory_matched_callbacks": 69,
+ "manifest": {
+  "bytes": 101250,
+  "parts": {
+   "callbacks.json": {
+    "bytes": 103318,
+    "count": 135,
+    "path": "callback-registration-manifest/callbacks.json",
+    "sha256": "a8641bb0c4394465d85b583598a258a71f50001547c6c91ba3fff487c8ddd4bd"
+   },
+   "registrations.d2i.json": {
+    "bytes": 4671,
+    "count": 3,
+    "path": "callback-registration-manifest/registrations.d2i.json",
+    "sha256": "26a8a3269ef47199ae726ee066d8806433b16995ff2ae4a5db3d2854be574840"
+   },
+   "registrations.ext_free.json": {
+    "bytes": 10651,
+    "count": 3,
+    "path": "callback-registration-manifest/registrations.ext_free.json",
+    "sha256": "1c8690c2548cb5394fb2d54e42d3909a43794c5882dcf51b59b54df4ca9ce46e"
+   },
+   "registrations.ext_new.json": {
+    "bytes": 1672,
+    "count": 1,
+    "path": "callback-registration-manifest/registrations.ext_new.json",
+    "sha256": "4865aaeca6ca887d664e736f2b5a65340f2fe178b62a6bd0d06ccac4581b7d7b"
+   },
+   "registrations.i2d.json": {
+    "bytes": 4435,
+    "count": 3,
+    "path": "callback-registration-manifest/registrations.i2d.json",
+    "sha256": "080a2408f8eb7a4ac023dc463602db5a2b03828be8323f7c9a938bfc8111342c"
+   },
+   "registrations.i2r.json": {
+    "bytes": 115307,
+    "count": 56,
+    "path": "callback-registration-manifest/registrations.i2r.json",
+    "sha256": "d076f0dd87e0a69ceaf7c198923a1c977de96c7ee67d2e5e0f2312b804b9e20d"
+   },
+   "registrations.i2s.json": {
+    "bytes": 49533,
+    "count": 22,
+    "path": "callback-registration-manifest/registrations.i2s.json",
+    "sha256": "59f013b5af02d4648629295aa7f2af7caea53e8dbed45a371384c12f2b29efdb"
+   },
+   "registrations.i2v.json": {
+    "bytes": 35934,
+    "count": 17,
+    "path": "callback-registration-manifest/registrations.i2v.json",
+    "sha256": "f1846213a32a324678eaa83c0e7c6593f45d08bf1237fba885f067500de4a173"
+   },
+   "registrations.it.part1.json": {
+    "bytes": 146857,
+    "count": 43,
+    "path": "callback-registration-manifest/registrations.it.part1.json",
+    "sha256": "542ab64fc7b5efbe6a009ab92d0e3fef18f76591bca40c36ba42094ac8874ce4"
+   },
+   "registrations.it.part2.json": {
+    "bytes": 73553,
+    "count": 20,
+    "path": "callback-registration-manifest/registrations.it.part2.json",
+    "sha256": "facc32d91669de21c5f971d4d3b6666b3992ea6335e821c25422f5bfcc2b6afc"
+   },
+   "registrations.r2i.json": {
+    "bytes": 13629,
+    "count": 8,
+    "path": "callback-registration-manifest/registrations.r2i.json",
+    "sha256": "9178aed6a8bd0814d2799b543a1508959855754712fe541918450faf40ae3476"
+   },
+   "registrations.s2i.json": {
+    "bytes": 38713,
+    "count": 18,
+    "path": "callback-registration-manifest/registrations.s2i.json",
+    "sha256": "9d6ec75cdf805cb7e52654bf0f08cc99804562f7851b33e7ce6cb9fd6e128c84"
+   },
+   "registrations.v2i.json": {
+    "bytes": 62077,
+    "count": 31,
+    "path": "callback-registration-manifest/registrations.v2i.json",
+    "sha256": "f3ab445f998362d2d0375d719d35d2b5d2bc39ed0df6b0ed650248a12534170a"
+   }
+  },
+  "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-registration-manifest.json",
+  "sha256": "e34d1e92179959acb215f047f77cc161345fd012c22f666459a770525ce2bdcb",
+  "split": true
+ },
+ "missing": [
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness",
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "SCT_LIST_free",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/ct/ct_sct.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 247,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ct/ct_sct.rs::SCT_LIST_free::ossl_v3_ct_scts[0]::ext_free",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[0]",
+     "slot": "ext_free"
+    },
+    {
+     "registration_id": "src/ct/ct_sct.rs::SCT_LIST_free::ossl_v3_ct_scts[2]::ext_free",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[2]",
+     "slot": "ext_free"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2s_poison",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/ct/ct_x509v3.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 59,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ct/ct_x509v3.rs::i2s_poison::ossl_v3_ct_scts[1]::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[1]",
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "s2i_poison",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/ct/ct_x509v3.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 70,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ct/ct_x509v3.rs::s2i_poison::ossl_v3_ct_scts[1]::s2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[1]",
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match",
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_SCT_LIST",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/ct/ct_x509v3.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 84,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ct/ct_x509v3.rs::i2r_SCT_LIST::ossl_v3_ct_scts[0]::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[0]",
+     "slot": "i2r"
+    },
+    {
+     "registration_id": "src/ct/ct_x509v3.rs::i2r_SCT_LIST::ossl_v3_ct_scts[2]::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[2]",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_ocsp_crlid",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 122,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_crlid::ossl_v3_ocsp_crlid::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_crlid",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_ocsp_acutoff",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 187,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_acutoff::ossl_v3_ocsp_acutoff::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_acutoff",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "ocsp_nonce_free",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 325,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::ocsp_nonce_free::ossl_v3_ocsp_nonce::ext_free",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_nonce",
+     "slot": "ext_free"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_ocsp_nonce",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 344,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_nonce::ossl_v3_ocsp_nonce::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_nonce",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_ocsp_serviceloc",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 406,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_serviceloc::ossl_v3_ocsp_serviceloc::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_serviceloc",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_ISSUER_SERIAL",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 624,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_ISSUER_SERIAL::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_OBJECT_DIGEST_INFO",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 688,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_OBJECT_DIGEST_INFO::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_TARGET_CERT",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 825,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGET_CERT::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_TARGET",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 889,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGET::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_TARGETS",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 934,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGETS::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_TARGETING_INFORMATION",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 962,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGETING_INFORMATION::ossl_v3_targeting_information::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_targeting_information",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_IPAddrBlocks",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_addr.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 921,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_addr.rs::i2r_IPAddrBlocks::ossl_v3_addr::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_addr",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "v2i_IPAddrBlocks",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_addr.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 2241,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_addr.rs::v2i_IPAddrBlocks::ossl_v3_addr::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_addr",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_NAMING_AUTHORITY",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_admis.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 557,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_admis.rs::i2r_NAMING_AUTHORITY::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_ADMISSION_SYNTAX",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_admis.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 640,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_admis.rs::i2r_ADMISSION_SYNTAX::ossl_v3_ext_admission::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ext_admission",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2v_AUTHORITY_KEYID",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_akid.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 231,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_akid.rs::i2v_AUTHORITY_KEYID::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "v2i_AUTHORITY_KEYID",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_akid.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 359,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_akid.rs::v2i_AUTHORITY_KEYID::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_ASIdentifiers",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_asid.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 817,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_asid.rs::i2r_ASIdentifiers::ossl_v3_asid::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_asid",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_HASH",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_attrdesc.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 637,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrdesc.rs::i2r_HASH::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_INFO_SYNTAX_POINTER",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_attrdesc.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 699,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrdesc.rs::i2r_INFO_SYNTAX_POINTER::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_OSSL_INFO_SYNTAX",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_attrdesc.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 738,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrdesc.rs::i2r_OSSL_INFO_SYNTAX::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_OSSL_PRIVILEGE_POLICY_ID",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_attrdesc.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 794,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrdesc.rs::i2r_OSSL_PRIVILEGE_POLICY_ID::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_attrdesc.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 850,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrdesc.rs::i2r_OSSL_ATTRIBUTE_DESCRIPTOR::ossl_v3_attribute_descriptor::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_attribute_descriptor",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_ATTRIBUTE_MAPPING",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_attrmap.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 576,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrmap.rs::i2r_ATTRIBUTE_MAPPING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_ATTRIBUTE_MAPPINGS",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_attrmap.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 653,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrmap.rs::i2r_ATTRIBUTE_MAPPINGS::ossl_v3_attribute_mappings::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_attribute_mappings",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_ISSUER_SERIAL",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_authattid.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 164,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_authattid.rs::i2r_ISSUER_SERIAL::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_auth_attr_id",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_authattid.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 229,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_authattid.rs::i2r_auth_attr_id::ossl_v3_authority_attribute_identifier::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_authority_attribute_identifier",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2v_ASN1_BIT_STRING",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_bitst.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 234,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_bitst.rs::i2v_ASN1_BIT_STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "v2i_ASN1_BIT_STRING",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_bitst.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 288,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_bitst.rs::v2i_ASN1_BIT_STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "r2i_certpol",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_cpols.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1247,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_cpols.rs::r2i_certpol::ossl_v3_cpols::r2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_cpols",
+     "slot": "r2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match",
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "v2i_crld",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1325,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::v2i_crld::ossl_v3_crld::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crld",
+     "slot": "v2i"
+    },
+    {
+     "registration_id": "src/x509/v3_crld.rs::v2i_crld::ossl_v3_freshest_crl::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_freshest_crl",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_idp",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1471,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_idp::ossl_v3_idp::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_idp",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "v2i_idp",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1554,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::v2i_idp::ossl_v3_idp::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_idp",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match",
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_crldp",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1638,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_crldp::ossl_v3_crld::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crld",
+     "slot": "i2r"
+    },
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_crldp::ossl_v3_freshest_crl::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_freshest_crl",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "dispatcher-row-binding"
+   ],
+   "basis": "dispatcher-row-binding",
+   "callback": "i2r_crl_invdate",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1685,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_crl_invdate::ossl_v3_crl_invdate::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crl_invdate",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_object",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1710,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_object::ossl_v3_crl_hold::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crl_hold",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "v2i_aaidp",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1913,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::v2i_aaidp::ossl_v3_aa_issuing_dist_point::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_aa_issuing_dist_point",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_aaidp",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 2003,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_aaidp::ossl_v3_aa_issuing_dist_point::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_aa_issuing_dist_point",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2s_ASN1_ENUMERATED_TABLE",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_enum.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 156,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_enum.rs::i2s_ASN1_ENUMERATED_TABLE::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2s_ASN1_IA5STRING",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ia5.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 77,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ia5.rs::i2s_ASN1_IA5STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "s2i_ASN1_IA5STRING",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ia5.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 113,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ia5.rs::s2i_ASN1_IA5STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match",
+    "module-name-match",
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "v2i_NAME_CONSTRAINTS",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ncons.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 390,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ncons.rs::v2i_NAME_CONSTRAINTS::ossl_v3_name_constraints::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_name_constraints",
+     "slot": "v2i"
+    },
+    {
+     "registration_id": "src/x509/v3_ncons.rs::v2i_NAME_CONSTRAINTS::ossl_v3_holder_name_constraints::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_holder_name_constraints",
+     "slot": "v2i"
+    },
+    {
+     "registration_id": "src/x509/v3_ncons.rs::v2i_NAME_CONSTRAINTS::ossl_v3_delegated_name_constraints::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_delegated_name_constraints",
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match",
+    "module-name-match",
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_NAME_CONSTRAINTS",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND",
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_ncons.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 588,
+   "registration_kinds": [
+    "slot-registration",
+    "slot-registration",
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_name_constraints::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_name_constraints",
+     "slot": "i2r"
+    },
+    {
+     "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_holder_name_constraints::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_holder_name_constraints",
+     "slot": "i2r"
+    },
+    {
+     "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_delegated_name_constraints::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_delegated_name_constraints",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_pci",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_pci.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 581,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_pci.rs::i2r_pci::ossl_v3_pci::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_pci",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "r2i_pci",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_pci.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 647,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_pci.rs::r2i_pci::ossl_v3_pci::r2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_pci",
+     "slot": "r2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2r_OSSL_ROLE_SPEC_CERT_ID",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_rolespec.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 297,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_rolespec.rs::i2r_OSSL_ROLE_SPEC_CERT_ID::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_rolespec.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 392,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_rolespec.rs::i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX::ossl_v3_role_spec_cert_identifier::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_role_spec_cert_identifier",
+     "slot": "i2r"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2v_GENERAL_NAMES",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 317,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::i2v_GENERAL_NAMES::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2v_GENERAL_NAME",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 356,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::i2v_GENERAL_NAME::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2v"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "v2i_GENERAL_NAME_ex",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1058,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_GENERAL_NAME_ex::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "v2i_GENERAL_NAME",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1115,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_GENERAL_NAME::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "v2i_GENERAL_NAMES",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1131,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_GENERAL_NAMES::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "v2i_issuer_alt",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1231,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_issuer_alt::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "v2i_subject_alt",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 1355,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_subject_alt::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2s_ASN1_OCTET_STRING",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_skid.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 73,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_skid.rs::i2s_ASN1_OCTET_STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "s2i_ASN1_OCTET_STRING",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_skid.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 90,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_skid.rs::s2i_ASN1_OCTET_STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "module-name-match"
+   ],
+   "basis": "module-name-match",
+   "callback": "s2i_skey_id",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_skid.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 206,
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_skid.rs::s2i_skey_id::ossl_v3_skey_id::s2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_skey_id",
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2s_ASN1_UTF8STRING",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_utf8.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 74,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utf8.rs::i2s_ASN1_UTF8STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "s2i_ASN1_UTF8STRING",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_utf8.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 114,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utf8.rs::s2i_ASN1_UTF8STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "s2i"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2s_ASN1_ENUMERATED",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_utl.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 501,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utl.rs::i2s_ASN1_ENUMERATED::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "i2s_ASN1_INTEGER",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_utl.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 535,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utl.rs::i2s_ASN1_INTEGER::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ]
+  },
+  {
+   "assumptions": [],
+   "bases": [
+    "edge-witness"
+   ],
+   "basis": "edge-witness",
+   "callback": "s2i_ASN1_INTEGER",
+   "classification": "REACHABLE_BOUND",
+   "classifications": [
+    "REACHABLE_BOUND"
+   ],
+   "file": "src/x509/v3_utl.rs",
+   "in_inventory": false,
+   "inventory_rows": [],
+   "line": 573,
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utl.rs::s2i_ASN1_INTEGER::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "s2i"
+    }
+   ]
+  }
+ ],
+ "missing_count": 66,
+ "missing_count_unit": "entries are per file-qualified callback definition; distinct_names counts callback names",
+ "missing_distinct_name_count": 65,
+ "missing_entry_count": 66,
+ "non_claims": [
+  "The gate proves inventory-vs-source agreement for the registrations this parser can see; it does not prove that every registration in the source was parsed (macro-generated rows and build-script-generated source are outside the parser).",
+  "REACHABLE_BOUND is a bound, not a proof. edge-witness records a concrete source call-graph edge from a caller that is itself reachable-bound; module-name-match and unique-name-match rest only on the closure's converged MAY-bound reachable_functions set (unresolved-site-bound/v1, whose own contract says monotonicity is not completeness); dispatcher-row-binding records a STANDARD_EXTS row plus a reachable dispatcher and states that no callback symbol was found in the reachable set.",
+  "PROVEN_EXCLUDED carries the written closed-world assumption CE-1; it is a scoped reachability claim about the pinned consumer family, not a property of the callback in general.",
+  "The gate does not adjudicate whether an inventoried callback is safe, and it does not change any obligation status."
+ ],
+ "overrides": {
+  "present": false,
+  "sha256": null,
+  "test_only": false
+ },
+ "pass": false,
+ "reconciliation": {
+  "ext_free_callbacks_absent_from_queue": 2,
+  "gate_missing_distinct_definitions": 66,
+  "gate_missing_distinct_names": 65,
+  "gate_missing_entries": 66,
+  "note": "name-prefix matching is not the enumeration; these counts reconcile the six-prefix definition census with the slot-driven manifest and explain why the gate's missing set differs from a raw prefix grep",
+  "prefix_definitions_absent_and_definition_only": 34,
+  "prefix_definitions_absent_and_registered": 30,
+  "prefix_definitions_absent_from_queue": 64,
+  "prefix_definitions_distinct": 114,
+  "prefix_definitions_in_queue_inventory": 51,
+  "prefix_definitions_not_registered_in_any_slot": 36,
+  "prefix_definitions_registered_in_a_slot": 79,
+  "prefix_definitions_total": 115,
+  "registered_callbacks_with_non_prefix_names": 20
+ },
+ "registration_classification": {
+  "PROVEN_EXCLUDED": 0,
+  "REACHABLE_BOUND": 149,
+  "UNRESOLVED": 0
+ },
+ "schema": "openssl-rs/campaign/safe-c33/callback-gate-report/v1",
+ "source_identity": {
+  "instrument": {
+   "path": "forensics/tools/callback_enumeration_gate.py",
+   "sha256": "648ecd9b00d9941746a73558f96d3ea60fc9b01142a54eda92b0367ed12966a6"
+  },
+  "inventory_source_head": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+  "repository_head": "f2a8110cdc7dc94cc6cf5a3af92bd7c3c234a04f",
+  "source_mode": "worktree",
+  "src_tree_unchanged_vs_inventory_head": true
+ },
+ "summary": {
+  "aux_registrations_by_slot": {
+   "d2i": 3,
+   "i2d": 3
+  },
+  "aux_registrations_recorded_not_gated": 6,
+  "definition_only_by_slot": {
+   "i2r": 15,
+   "i2s": 6,
+   "i2v": 4,
+   "s2i": 4,
+   "v2i": 7
+  },
+  "definition_only_callbacks_gated": 36,
+  "distinct_aux_callbacks": 5,
+  "distinct_definition_only_callbacks": 36,
+  "distinct_gated_callbacks": 135,
+  "distinct_slot_registered_callbacks": 99,
+  "gate_scope_note": "gated = six extension slots + ext_free, source-defined `unsafe fn`, production only; safe extern item functions and imported/macro targets are recorded but are not census-eligible",
+  "imported_or_macro_callbacks_not_gated": 19,
+  "registrations_total": 225,
+  "rows_parsed": 72,
+  "safe_extern_callbacks_not_gated": 34,
+  "slot_prefix_definitions": 115,
+  "slot_registrations_by_slot": {
+   "ext_free": 3,
+   "i2r": 39,
+   "i2s": 15,
+   "i2v": 13,
+   "r2i": 8,
+   "s2i": 12,
+   "v2i": 23
+  },
+  "slot_registrations_gated": 113,
+  "standard_exts_entries": 73,
+  "test_only_registrations_excluded": 8
+ },
+ "unresolved": [],
+ "unresolved_count": 0
+}

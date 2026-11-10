@@ -1,0 +1,1925 @@
+{
+ "blockers": [
+  {
+   "file": "src/ct/ct_sct.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/ct/ct_sct.rs:247:UNSAFE_FN_DEF",
+   "item": "SCT_LIST_free",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 247,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ct/ct_sct.rs::SCT_LIST_free::ossl_v3_ct_scts[0]::ext_free",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[0]",
+     "slot": "ext_free"
+    },
+    {
+     "registration_id": "src/ct/ct_sct.rs::SCT_LIST_free::ossl_v3_ct_scts[2]::ext_free",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[2]",
+     "slot": "ext_free"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/ct/ct_sct.rs::UNSAFE_FN_DEF::SCT_LIST_free"
+  },
+  {
+   "file": "src/ct/ct_x509v3.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/ct/ct_x509v3.rs:59:UNSAFE_FN_DEF",
+   "item": "i2s_poison",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 59,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ct/ct_x509v3.rs::i2s_poison::ossl_v3_ct_scts[1]::i2s",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[1]",
+     "slot": "i2s"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::i2s_poison"
+  },
+  {
+   "file": "src/ct/ct_x509v3.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/ct/ct_x509v3.rs:70:UNSAFE_FN_DEF",
+   "item": "s2i_poison",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 70,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ct/ct_x509v3.rs::s2i_poison::ossl_v3_ct_scts[1]::s2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[1]",
+     "slot": "s2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::s2i_poison"
+  },
+  {
+   "file": "src/ct/ct_x509v3.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/ct/ct_x509v3.rs:84:UNSAFE_FN_DEF",
+   "item": "i2r_SCT_LIST",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 84,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ct/ct_x509v3.rs::i2r_SCT_LIST::ossl_v3_ct_scts[0]::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[0]",
+     "slot": "i2r"
+    },
+    {
+     "registration_id": "src/ct/ct_x509v3.rs::i2r_SCT_LIST::ossl_v3_ct_scts[2]::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ct_scts[2]",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::i2r_SCT_LIST"
+  },
+  {
+   "file": "src/ocsp/v3_ocsp.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/ocsp/v3_ocsp.rs:122:UNSAFE_FN_DEF",
+   "item": "i2r_ocsp_crlid",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 122,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_crlid::ossl_v3_ocsp_crlid::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_crlid",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/ocsp/v3_ocsp.rs::UNSAFE_FN_DEF::i2r_ocsp_crlid"
+  },
+  {
+   "file": "src/ocsp/v3_ocsp.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/ocsp/v3_ocsp.rs:187:UNSAFE_FN_DEF",
+   "item": "i2r_ocsp_acutoff",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 187,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_acutoff::ossl_v3_ocsp_acutoff::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_acutoff",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/ocsp/v3_ocsp.rs::UNSAFE_FN_DEF::i2r_ocsp_acutoff"
+  },
+  {
+   "file": "src/ocsp/v3_ocsp.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/ocsp/v3_ocsp.rs:325:UNSAFE_FN_DEF",
+   "item": "ocsp_nonce_free",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 325,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::ocsp_nonce_free::ossl_v3_ocsp_nonce::ext_free",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_nonce",
+     "slot": "ext_free"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/ocsp/v3_ocsp.rs::UNSAFE_FN_DEF::ocsp_nonce_free"
+  },
+  {
+   "file": "src/ocsp/v3_ocsp.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/ocsp/v3_ocsp.rs:344:UNSAFE_FN_DEF",
+   "item": "i2r_ocsp_nonce",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 344,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_nonce::ossl_v3_ocsp_nonce::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_nonce",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/ocsp/v3_ocsp.rs::UNSAFE_FN_DEF::i2r_ocsp_nonce"
+  },
+  {
+   "file": "src/ocsp/v3_ocsp.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/ocsp/v3_ocsp.rs:406:UNSAFE_FN_DEF",
+   "item": "i2r_ocsp_serviceloc",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 406,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_serviceloc::ossl_v3_ocsp_serviceloc::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ocsp_serviceloc",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/ocsp/v3_ocsp.rs::UNSAFE_FN_DEF::i2r_ocsp_serviceloc"
+  },
+  {
+   "file": "src/x509/v3_ac_tgt.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_ac_tgt.rs:624:UNSAFE_FN_DEF",
+   "item": "i2r_ISSUER_SERIAL",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 624,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_ISSUER_SERIAL::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_ISSUER_SERIAL"
+  },
+  {
+   "file": "src/x509/v3_ac_tgt.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_ac_tgt.rs:688:UNSAFE_FN_DEF",
+   "item": "i2r_OBJECT_DIGEST_INFO",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 688,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_OBJECT_DIGEST_INFO::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_OBJECT_DIGEST_INFO"
+  },
+  {
+   "file": "src/x509/v3_ac_tgt.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_ac_tgt.rs:825:UNSAFE_FN_DEF",
+   "item": "i2r_TARGET_CERT",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 825,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGET_CERT::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_TARGET_CERT"
+  },
+  {
+   "file": "src/x509/v3_ac_tgt.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_ac_tgt.rs:889:UNSAFE_FN_DEF",
+   "item": "i2r_TARGET",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 889,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGET::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_TARGET"
+  },
+  {
+   "file": "src/x509/v3_ac_tgt.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_ac_tgt.rs:934:UNSAFE_FN_DEF",
+   "item": "i2r_TARGETS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 934,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGETS::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_TARGETS"
+  },
+  {
+   "file": "src/x509/v3_ac_tgt.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_ac_tgt.rs:962:UNSAFE_FN_DEF",
+   "item": "i2r_TARGETING_INFORMATION",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 962,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGETING_INFORMATION::ossl_v3_targeting_information::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_targeting_information",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_TARGETING_INFORMATION"
+  },
+  {
+   "file": "src/x509/v3_addr.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_addr.rs:921:UNSAFE_FN_DEF",
+   "item": "i2r_IPAddrBlocks",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 921,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_addr.rs::i2r_IPAddrBlocks::ossl_v3_addr::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_addr",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_addr.rs::UNSAFE_FN_DEF::i2r_IPAddrBlocks"
+  },
+  {
+   "file": "src/x509/v3_addr.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_addr.rs:2241:UNSAFE_FN_DEF",
+   "item": "v2i_IPAddrBlocks",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 2241,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_addr.rs::v2i_IPAddrBlocks::ossl_v3_addr::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_addr",
+     "slot": "v2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_addr.rs::UNSAFE_FN_DEF::v2i_IPAddrBlocks"
+  },
+  {
+   "file": "src/x509/v3_admis.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_admis.rs:557:UNSAFE_FN_DEF",
+   "item": "i2r_NAMING_AUTHORITY",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 557,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_admis.rs::i2r_NAMING_AUTHORITY::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_admis.rs::UNSAFE_FN_DEF::i2r_NAMING_AUTHORITY"
+  },
+  {
+   "file": "src/x509/v3_admis.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_admis.rs:640:UNSAFE_FN_DEF",
+   "item": "i2r_ADMISSION_SYNTAX",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 640,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_admis.rs::i2r_ADMISSION_SYNTAX::ossl_v3_ext_admission::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_ext_admission",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_admis.rs::UNSAFE_FN_DEF::i2r_ADMISSION_SYNTAX"
+  },
+  {
+   "file": "src/x509/v3_akid.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_akid.rs:231:UNSAFE_FN_DEF",
+   "item": "i2v_AUTHORITY_KEYID",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 231,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_akid.rs::i2v_AUTHORITY_KEYID::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2v"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_akid.rs::UNSAFE_FN_DEF::i2v_AUTHORITY_KEYID"
+  },
+  {
+   "file": "src/x509/v3_akid.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_akid.rs:359:UNSAFE_FN_DEF",
+   "item": "v2i_AUTHORITY_KEYID",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 359,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_akid.rs::v2i_AUTHORITY_KEYID::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_akid.rs::UNSAFE_FN_DEF::v2i_AUTHORITY_KEYID"
+  },
+  {
+   "file": "src/x509/v3_asid.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_asid.rs:817:UNSAFE_FN_DEF",
+   "item": "i2r_ASIdentifiers",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 817,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_asid.rs::i2r_ASIdentifiers::ossl_v3_asid::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_asid",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_asid.rs::UNSAFE_FN_DEF::i2r_ASIdentifiers"
+  },
+  {
+   "file": "src/x509/v3_attrdesc.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_attrdesc.rs:637:UNSAFE_FN_DEF",
+   "item": "i2r_HASH",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 637,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrdesc.rs::i2r_HASH::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_HASH"
+  },
+  {
+   "file": "src/x509/v3_attrdesc.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_attrdesc.rs:699:UNSAFE_FN_DEF",
+   "item": "i2r_INFO_SYNTAX_POINTER",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 699,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrdesc.rs::i2r_INFO_SYNTAX_POINTER::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_INFO_SYNTAX_POINTER"
+  },
+  {
+   "file": "src/x509/v3_attrdesc.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_attrdesc.rs:738:UNSAFE_FN_DEF",
+   "item": "i2r_OSSL_INFO_SYNTAX",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 738,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrdesc.rs::i2r_OSSL_INFO_SYNTAX::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_INFO_SYNTAX"
+  },
+  {
+   "file": "src/x509/v3_attrdesc.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_attrdesc.rs:794:UNSAFE_FN_DEF",
+   "item": "i2r_OSSL_PRIVILEGE_POLICY_ID",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 794,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrdesc.rs::i2r_OSSL_PRIVILEGE_POLICY_ID::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_PRIVILEGE_POLICY_ID"
+  },
+  {
+   "file": "src/x509/v3_attrdesc.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_attrdesc.rs:850:UNSAFE_FN_DEF",
+   "item": "i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 850,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrdesc.rs::i2r_OSSL_ATTRIBUTE_DESCRIPTOR::ossl_v3_attribute_descriptor::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_attribute_descriptor",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_ATTRIBUTE_DESCRIPTOR"
+  },
+  {
+   "file": "src/x509/v3_attrmap.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_attrmap.rs:576:UNSAFE_FN_DEF",
+   "item": "i2r_ATTRIBUTE_MAPPING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 576,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrmap.rs::i2r_ATTRIBUTE_MAPPING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_attrmap.rs::UNSAFE_FN_DEF::i2r_ATTRIBUTE_MAPPING"
+  },
+  {
+   "file": "src/x509/v3_attrmap.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_attrmap.rs:653:UNSAFE_FN_DEF",
+   "item": "i2r_ATTRIBUTE_MAPPINGS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 653,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_attrmap.rs::i2r_ATTRIBUTE_MAPPINGS::ossl_v3_attribute_mappings::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_attribute_mappings",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_attrmap.rs::UNSAFE_FN_DEF::i2r_ATTRIBUTE_MAPPINGS"
+  },
+  {
+   "file": "src/x509/v3_authattid.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_authattid.rs:164:UNSAFE_FN_DEF",
+   "item": "i2r_ISSUER_SERIAL",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 164,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_authattid.rs::i2r_ISSUER_SERIAL::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_authattid.rs::UNSAFE_FN_DEF::i2r_ISSUER_SERIAL"
+  },
+  {
+   "file": "src/x509/v3_authattid.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_authattid.rs:229:UNSAFE_FN_DEF",
+   "item": "i2r_auth_attr_id",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 229,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_authattid.rs::i2r_auth_attr_id::ossl_v3_authority_attribute_identifier::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_authority_attribute_identifier",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_authattid.rs::UNSAFE_FN_DEF::i2r_auth_attr_id"
+  },
+  {
+   "file": "src/x509/v3_bitst.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_bitst.rs:234:UNSAFE_FN_DEF",
+   "item": "i2v_ASN1_BIT_STRING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 234,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_bitst.rs::i2v_ASN1_BIT_STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2v"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_bitst.rs::UNSAFE_FN_DEF::i2v_ASN1_BIT_STRING"
+  },
+  {
+   "file": "src/x509/v3_bitst.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_bitst.rs:288:UNSAFE_FN_DEF",
+   "item": "v2i_ASN1_BIT_STRING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 288,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_bitst.rs::v2i_ASN1_BIT_STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_bitst.rs::UNSAFE_FN_DEF::v2i_ASN1_BIT_STRING"
+  },
+  {
+   "file": "src/x509/v3_cpols.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_cpols.rs:1247:UNSAFE_FN_DEF",
+   "item": "r2i_certpol",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1247,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_cpols.rs::r2i_certpol::ossl_v3_cpols::r2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_cpols",
+     "slot": "r2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_cpols.rs::UNSAFE_FN_DEF::r2i_certpol"
+  },
+  {
+   "file": "src/x509/v3_crld.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_crld.rs:1325:UNSAFE_FN_DEF",
+   "item": "v2i_crld",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1325,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::v2i_crld::ossl_v3_crld::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crld",
+     "slot": "v2i"
+    },
+    {
+     "registration_id": "src/x509/v3_crld.rs::v2i_crld::ossl_v3_freshest_crl::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_freshest_crl",
+     "slot": "v2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_crld.rs::UNSAFE_FN_DEF::v2i_crld"
+  },
+  {
+   "file": "src/x509/v3_crld.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_crld.rs:1471:UNSAFE_FN_DEF",
+   "item": "i2r_idp",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1471,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_idp::ossl_v3_idp::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_idp",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_crld.rs::UNSAFE_FN_DEF::i2r_idp"
+  },
+  {
+   "file": "src/x509/v3_crld.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_crld.rs:1554:UNSAFE_FN_DEF",
+   "item": "v2i_idp",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1554,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::v2i_idp::ossl_v3_idp::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_idp",
+     "slot": "v2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_crld.rs::UNSAFE_FN_DEF::v2i_idp"
+  },
+  {
+   "file": "src/x509/v3_crld.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_crld.rs:1638:UNSAFE_FN_DEF",
+   "item": "i2r_crldp",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1638,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_crldp::ossl_v3_crld::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crld",
+     "slot": "i2r"
+    },
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_crldp::ossl_v3_freshest_crl::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_freshest_crl",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_crld.rs::UNSAFE_FN_DEF::i2r_crldp"
+  },
+  {
+   "file": "src/x509/v3_crld.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_crld.rs:1685:UNSAFE_FN_DEF",
+   "item": "i2r_crl_invdate",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1685,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_crl_invdate::ossl_v3_crl_invdate::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crl_invdate",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_crld.rs::UNSAFE_FN_DEF::i2r_crl_invdate"
+  },
+  {
+   "file": "src/x509/v3_crld.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_crld.rs:1710:UNSAFE_FN_DEF",
+   "item": "i2r_object",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1710,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_object::ossl_v3_crl_hold::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_crl_hold",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_crld.rs::UNSAFE_FN_DEF::i2r_object"
+  },
+  {
+   "file": "src/x509/v3_crld.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_crld.rs:1913:UNSAFE_FN_DEF",
+   "item": "v2i_aaidp",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1913,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::v2i_aaidp::ossl_v3_aa_issuing_dist_point::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_aa_issuing_dist_point",
+     "slot": "v2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_crld.rs::UNSAFE_FN_DEF::v2i_aaidp"
+  },
+  {
+   "file": "src/x509/v3_crld.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_crld.rs:2003:UNSAFE_FN_DEF",
+   "item": "i2r_aaidp",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 2003,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_crld.rs::i2r_aaidp::ossl_v3_aa_issuing_dist_point::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_aa_issuing_dist_point",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_crld.rs::UNSAFE_FN_DEF::i2r_aaidp"
+  },
+  {
+   "file": "src/x509/v3_enum.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_enum.rs:156:UNSAFE_FN_DEF",
+   "item": "i2s_ASN1_ENUMERATED_TABLE",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 156,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_enum.rs::i2s_ASN1_ENUMERATED_TABLE::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_enum.rs::UNSAFE_FN_DEF::i2s_ASN1_ENUMERATED_TABLE"
+  },
+  {
+   "file": "src/x509/v3_ia5.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_ia5.rs:77:UNSAFE_FN_DEF",
+   "item": "i2s_ASN1_IA5STRING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 77,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ia5.rs::i2s_ASN1_IA5STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_ia5.rs::UNSAFE_FN_DEF::i2s_ASN1_IA5STRING"
+  },
+  {
+   "file": "src/x509/v3_ia5.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_ia5.rs:113:UNSAFE_FN_DEF",
+   "item": "s2i_ASN1_IA5STRING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 113,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ia5.rs::s2i_ASN1_IA5STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "s2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_ia5.rs::UNSAFE_FN_DEF::s2i_ASN1_IA5STRING"
+  },
+  {
+   "file": "src/x509/v3_ncons.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_ncons.rs:390:UNSAFE_FN_DEF",
+   "item": "v2i_NAME_CONSTRAINTS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 390,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ncons.rs::v2i_NAME_CONSTRAINTS::ossl_v3_name_constraints::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_name_constraints",
+     "slot": "v2i"
+    },
+    {
+     "registration_id": "src/x509/v3_ncons.rs::v2i_NAME_CONSTRAINTS::ossl_v3_holder_name_constraints::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_holder_name_constraints",
+     "slot": "v2i"
+    },
+    {
+     "registration_id": "src/x509/v3_ncons.rs::v2i_NAME_CONSTRAINTS::ossl_v3_delegated_name_constraints::v2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_delegated_name_constraints",
+     "slot": "v2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_ncons.rs::UNSAFE_FN_DEF::v2i_NAME_CONSTRAINTS"
+  },
+  {
+   "file": "src/x509/v3_ncons.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_ncons.rs:588:UNSAFE_FN_DEF",
+   "item": "i2r_NAME_CONSTRAINTS",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 588,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_name_constraints::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_name_constraints",
+     "slot": "i2r"
+    },
+    {
+     "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_holder_name_constraints::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_holder_name_constraints",
+     "slot": "i2r"
+    },
+    {
+     "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_delegated_name_constraints::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_delegated_name_constraints",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_ncons.rs::UNSAFE_FN_DEF::i2r_NAME_CONSTRAINTS"
+  },
+  {
+   "file": "src/x509/v3_pci.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_pci.rs:581:UNSAFE_FN_DEF",
+   "item": "i2r_pci",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 581,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_pci.rs::i2r_pci::ossl_v3_pci::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_pci",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_pci.rs::UNSAFE_FN_DEF::i2r_pci"
+  },
+  {
+   "file": "src/x509/v3_pci.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_pci.rs:647:UNSAFE_FN_DEF",
+   "item": "r2i_pci",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 647,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_pci.rs::r2i_pci::ossl_v3_pci::r2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_pci",
+     "slot": "r2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_pci.rs::UNSAFE_FN_DEF::r2i_pci"
+  },
+  {
+   "file": "src/x509/v3_rolespec.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_rolespec.rs:297:UNSAFE_FN_DEF",
+   "item": "i2r_OSSL_ROLE_SPEC_CERT_ID",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 297,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_rolespec.rs::i2r_OSSL_ROLE_SPEC_CERT_ID::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_rolespec.rs::UNSAFE_FN_DEF::i2r_OSSL_ROLE_SPEC_CERT_ID"
+  },
+  {
+   "file": "src/x509/v3_rolespec.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_rolespec.rs:392:UNSAFE_FN_DEF",
+   "item": "i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 392,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_rolespec.rs::i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX::ossl_v3_role_spec_cert_identifier::i2r",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_role_spec_cert_identifier",
+     "slot": "i2r"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_rolespec.rs::UNSAFE_FN_DEF::i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX"
+  },
+  {
+   "file": "src/x509/v3_san.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_san.rs:317:UNSAFE_FN_DEF",
+   "item": "i2v_GENERAL_NAMES",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 317,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::i2v_GENERAL_NAMES::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2v"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::i2v_GENERAL_NAMES"
+  },
+  {
+   "file": "src/x509/v3_san.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_san.rs:356:UNSAFE_FN_DEF",
+   "item": "i2v_GENERAL_NAME",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 356,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::i2v_GENERAL_NAME::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2v"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::i2v_GENERAL_NAME"
+  },
+  {
+   "file": "src/x509/v3_san.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_san.rs:1058:UNSAFE_FN_DEF",
+   "item": "v2i_GENERAL_NAME_ex",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1058,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_GENERAL_NAME_ex::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAME_ex"
+  },
+  {
+   "file": "src/x509/v3_san.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_san.rs:1115:UNSAFE_FN_DEF",
+   "item": "v2i_GENERAL_NAME",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1115,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_GENERAL_NAME::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAME"
+  },
+  {
+   "file": "src/x509/v3_san.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_san.rs:1131:UNSAFE_FN_DEF",
+   "item": "v2i_GENERAL_NAMES",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1131,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_GENERAL_NAMES::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAMES"
+  },
+  {
+   "file": "src/x509/v3_san.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_san.rs:1231:UNSAFE_FN_DEF",
+   "item": "v2i_issuer_alt",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1231,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_issuer_alt::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_issuer_alt"
+  },
+  {
+   "file": "src/x509/v3_san.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_san.rs:1355:UNSAFE_FN_DEF",
+   "item": "v2i_subject_alt",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 1355,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_san.rs::v2i_subject_alt::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "v2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_subject_alt"
+  },
+  {
+   "file": "src/x509/v3_skid.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_skid.rs:73:UNSAFE_FN_DEF",
+   "item": "i2s_ASN1_OCTET_STRING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 73,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_skid.rs::i2s_ASN1_OCTET_STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_skid.rs::UNSAFE_FN_DEF::i2s_ASN1_OCTET_STRING"
+  },
+  {
+   "file": "src/x509/v3_skid.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_skid.rs:90:UNSAFE_FN_DEF",
+   "item": "s2i_ASN1_OCTET_STRING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 90,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_skid.rs::s2i_ASN1_OCTET_STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "s2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_skid.rs::UNSAFE_FN_DEF::s2i_ASN1_OCTET_STRING"
+  },
+  {
+   "file": "src/x509/v3_skid.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_skid.rs:206:UNSAFE_FN_DEF",
+   "item": "s2i_skey_id",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 206,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "slot-registration"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_skid.rs::s2i_skey_id::ossl_v3_skey_id::s2i",
+     "registration_kind": "slot-registration",
+     "row": "ossl_v3_skey_id",
+     "slot": "s2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_skid.rs::UNSAFE_FN_DEF::s2i_skey_id"
+  },
+  {
+   "file": "src/x509/v3_utf8.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_utf8.rs:74:UNSAFE_FN_DEF",
+   "item": "i2s_ASN1_UTF8STRING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 74,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utf8.rs::i2s_ASN1_UTF8STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_utf8.rs::UNSAFE_FN_DEF::i2s_ASN1_UTF8STRING"
+  },
+  {
+   "file": "src/x509/v3_utf8.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_utf8.rs:114:UNSAFE_FN_DEF",
+   "item": "s2i_ASN1_UTF8STRING",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 114,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utf8.rs::s2i_ASN1_UTF8STRING::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "s2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_utf8.rs::UNSAFE_FN_DEF::s2i_ASN1_UTF8STRING"
+  },
+  {
+   "file": "src/x509/v3_utl.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_utl.rs:501:UNSAFE_FN_DEF",
+   "item": "i2s_ASN1_ENUMERATED",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 501,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utl.rs::i2s_ASN1_ENUMERATED::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_utl.rs::UNSAFE_FN_DEF::i2s_ASN1_ENUMERATED"
+  },
+  {
+   "file": "src/x509/v3_utl.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_utl.rs:535:UNSAFE_FN_DEF",
+   "item": "i2s_ASN1_INTEGER",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 535,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utl.rs::i2s_ASN1_INTEGER::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "i2s"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_utl.rs::UNSAFE_FN_DEF::i2s_ASN1_INTEGER"
+  },
+  {
+   "file": "src/x509/v3_utl.rs",
+   "gate_provenance": {
+    "classification": "REACHABLE_BOUND",
+    "gate": "callback-enumeration-completeness"
+   },
+   "id": "V1:src/x509/v3_utl.rs:573:UNSAFE_FN_DEF",
+   "item": "s2i_ASN1_INTEGER",
+   "kind": "UNSAFE_FN_DEF",
+   "line": 573,
+   "mechanism": "X509_VERIFY_POLICY",
+   "partition": "production",
+   "queue_status": "absent",
+   "reason": "extension-slot callback is REACHABLE_BOUND from the pinned consumer family and absent from the obligation queue (neither DISCHARGED nor BLOCKED); enrolled BLOCKED pending site-scoped adjudication (callback-enumeration-gate)",
+   "registration_kinds": [
+    "definition-only"
+   ],
+   "registrations": [
+    {
+     "registration_id": "src/x509/v3_utl.rs::s2i_ASN1_INTEGER::<definition-only>",
+     "registration_kind": "definition-only",
+     "row": null,
+     "slot": "s2i"
+    }
+   ],
+   "requested_status": "BLOCKED",
+   "stable_id": "src/x509/v3_utl.rs::UNSAFE_FN_DEF::s2i_ASN1_INTEGER"
+  }
+ ],
+ "closure": {
+  "family": "openssh",
+  "path": "evidence/closure-ssh-b52-applied.json",
+  "sha256": "40d25c558c48962d9df7b17f344c01aae4c22f6781fec75b9e3653c563f47e94"
+ },
+ "count": 66,
+ "count_unit": "entries are per file-qualified callback definition; distinct_name_count counts callback names",
+ "distinct_name_count": 65,
+ "plug_in": {
+  "note": "enrol these records before the next census/closure run; do not hand-edit the applied ledger",
+  "requested_status": "BLOCKED",
+  "shape": "{file,line,kind,item,partition,reason}",
+  "target": "contracts.blockers in the V1 census consumed by forensics/tools/consumer_closure.py:obligation_candidates"
+ },
+ "schema": "openssl-rs/campaign/safe-c33/callback-enrolment/v1",
+ "source_identity": {
+  "instrument": {
+   "path": "forensics/tools/callback_enumeration_gate.py",
+   "sha256": "648ecd9b00d9941746a73558f96d3ea60fc9b01142a54eda92b0367ed12966a6"
+  },
+  "inventory_source_head": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+  "repository_head": "f2a8110cdc7dc94cc6cf5a3af92bd7c3c234a04f",
+  "source_mode": "worktree",
+  "src_tree_unchanged_vs_inventory_head": true
+ }
+}

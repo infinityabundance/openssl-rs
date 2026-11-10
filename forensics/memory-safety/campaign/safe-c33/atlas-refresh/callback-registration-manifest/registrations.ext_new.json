@@ -1,0 +1,64 @@
+{
+ "chunk": 0,
+ "chunks": 1,
+ "part": "registrations",
+ "registrations": [
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "ocsp_nonce_new",
+   "callback_file": "src/ocsp/v3_ocsp.rs",
+   "callback_line": 212,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/ocsp/v3_ocsp.rs",
+    "may_bound": true,
+    "module": "v3_ocsp",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x1a1960:_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14ocsp_nonce_new"
+    ]
+   },
+   "definition_key": [
+    "src/ocsp/v3_ocsp.rs",
+    212,
+    "ocsp_nonce_new"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_d2i",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:395 &crate::ocsp::v3_ocsp::ossl_v3_ocsp_nonce",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": false,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/ocsp/v3_ocsp.rs::ocsp_nonce_new::ossl_v3_ocsp_nonce::ext_new",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_ocsp_nonce",
+   "row_file": "src/ocsp/v3_ocsp.rs",
+   "row_instances": [
+    {
+     "file": "src/ocsp/v3_ocsp.rs",
+     "index": null,
+     "line": 498,
+     "name": "ossl_v3_ocsp_nonce"
+    }
+   ],
+   "row_line": 498,
+   "slot": "ext_new",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": false
+  }
+ ],
+ "schema": "openssl-rs/campaign/safe-c33/callback-registration-manifest/v1/part",
+ "slot": "ext_new"
+}

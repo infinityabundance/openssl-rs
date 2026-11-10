@@ -1,0 +1,5755 @@
+{
+ "artifact": {
+  "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+  "sha256": "ececbd98bea39f0f6efaab16331d0c2cfdfe7b8bb70acea4ad9dc11a544ba497",
+  "size": 16858288
+ },
+ "extractor": {
+  "excluded_non_row_objects": [
+   {
+    "elements": 12,
+    "identifier": "SIGALG_LOOKUP_TBL",
+    "plausible_elements": 7,
+    "reason": "not every 104-byte element has a plausible ext_nid/ext_flags",
+    "size": 1248,
+    "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs3ssl6t1_lib17SIGALG_LOOKUP_TBL"
+   },
+   {
+    "elements": 5,
+    "identifier": "KBKDF_SETTABLE_CTX_PARAMS",
+    "plausible_elements": 3,
+    "reason": "not every 104-byte element has a plausible ext_nid/ext_flags",
+    "size": 520,
+    "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider3kdf25KBKDF_SETTABLE_CTX_PARAMS"
+   },
+   {
+    "elements": 5,
+    "identifier": "X942_SETTABLE_CTX_PARAMS",
+    "plausible_elements": 3,
+    "reason": "not every 104-byte element has a plausible ext_nid/ext_flags",
+    "size": 520,
+    "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider3kdf24X942_SETTABLE_CTX_PARAMS"
+   },
+   {
+    "elements": 5,
+    "identifier": "ARGON2_SETTABLE_CTX_PARAMS",
+    "plausible_elements": 3,
+    "reason": "not every 104-byte element has a plausible ext_nid/ext_flags",
+    "size": 520,
+    "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider3kdf26ARGON2_SETTABLE_CTX_PARAMS"
+   },
+   {
+    "elements": 5,
+    "identifier": "DH_ALL_TYPES",
+    "plausible_elements": 3,
+    "reason": "not every 104-byte element has a plausible ext_nid/ext_flags",
+    "size": 520,
+    "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider7keymgmt12DH_ALL_TYPES"
+   },
+   {
+    "elements": 10,
+    "identifier": "SSL_SESSION_ASN1_TT",
+    "plausible_elements": 8,
+    "reason": "not every 104-byte element has a plausible ext_nid/ext_flags",
+    "size": 1040,
+    "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs3ssl8ssl_asn119SSL_SESSION_ASN1_TT"
+   },
+   {
+    "elements": 5,
+    "identifier": "EC_DOM_PARAMETERS_TYPES",
+    "plausible_elements": 3,
+    "reason": "not every 104-byte element has a plausible ext_nid/ext_flags",
+    "size": 520,
+    "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs8provider8ec_kmgmt23EC_DOM_PARAMETERS_TYPES"
+   },
+   {
+    "elements": 6,
+    "identifier": "anon.dad0ac93f5125ec67e2499504f00f2a2.919",
+    "plausible_elements": 4,
+    "reason": "not every 104-byte element has a plausible ext_nid/ext_flags",
+    "size": 624,
+    "symbol": "anon.dad0ac93f5125ec67e2499504f00f2a2.919.llvm.3354624500555079721"
+   },
+   {
+    "elements": 9,
+    "identifier": "anon.dad0ac93f5125ec67e2499504f00f2a2.966",
+    "plausible_elements": 6,
+    "reason": "not every 104-byte element has a plausible ext_nid/ext_flags",
+    "size": 936,
+    "symbol": "anon.dad0ac93f5125ec67e2499504f00f2a2.966.llvm.3354624500555079721"
+   },
+   {
+    "elements": 8,
+    "identifier": "SLH_DSA_PARAMS",
+    "plausible_elements": 4,
+    "reason": "not every 104-byte element has a plausible ext_nid/ext_flags",
+    "size": 832,
+    "symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs7slh_dsa6params14SLH_DSA_PARAMS"
+   }
+  ],
+  "gated_slots": [
+   "ext_free",
+   "i2s",
+   "s2i",
+   "i2v",
+   "v2i",
+   "i2r",
+   "r2i"
+  ],
+  "method": "STANDARD_EXTS symbol + structural static-row objects; slot targets from .rela.dyn (RELATIVE addend / symbol) named from .symtab with .dynsym fallback; all aliases kept",
+  "resolution_methods": {
+   "null": 601,
+   "relocation:RELATIVE": 141,
+   "relocation:symbol": 72
+  },
+  "row_objects": 63,
+  "row_size": 104,
+  "rows_total": 74,
+  "slot_offsets": {
+   "d2i": 32,
+   "ext_free": 24,
+   "ext_new": 16,
+   "i2d": 40,
+   "i2r": 80,
+   "i2s": 48,
+   "i2v": 64,
+   "it": 8,
+   "r2i": 88,
+   "s2i": 56,
+   "v2i": 72
+  },
+  "table_entries": 73,
+  "table_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_lib13STANDARD_EXTS.llvm.1937630888965643119",
+  "table_symbol_table": ".symtab"
+ },
+ "gate": {
+  "basis": [
+   "every populated slot resolves to a named function or is null",
+   "every compiled target address has an alias the manifest accounts for",
+   "every compiled (row, slot) registration matches the manifest",
+   "every manifest registration matches a compiled registration",
+   "no manifest callback is dead in the artifact"
+  ],
+  "classification": "PASS",
+  "exit_code": 0,
+  "pass": true
+ },
+ "reconciliation": {
+  "compiled_registrations_unaccounted": {
+   "count": 0,
+   "first_10": []
+  },
+  "compiled_targets_not_in_manifest": {
+   "count": 0,
+   "first_10": []
+  },
+  "counts": {
+   "compiled_distinct_targets": 103,
+   "compiled_records": 136,
+   "compiled_registrations_unaccounted": 0,
+   "compiled_rows": 73,
+   "compiled_targets_not_in_manifest": 0,
+   "factory_ambiguities": 0,
+   "factory_mapped_compiled_rows": 16,
+   "manifest_dead_targets": 0,
+   "manifest_not_compiled": 0,
+   "manifest_registrations_in_scope": 115,
+   "manifest_registrations_total": 225,
+   "manifest_rows_factory": 5,
+   "manifest_rows_static": 57,
+   "refusals": 0
+  },
+  "factory_ambiguities": [],
+  "factory_row_map": {
+   "ossl_v3_acc_cert_policies": "fn:ext_key_usage_row",
+   "ossl_v3_acc_priv_policies": "fn:ext_key_usage_row",
+   "ossl_v3_associated_info": "fn:attributes_syntax_row",
+   "ossl_v3_ext_ku": "fn:ext_key_usage_row",
+   "ossl_v3_info": "fn:info_access_row",
+   "ossl_v3_ns_ia5_list[0]": "fn:ext_ia5string",
+   "ossl_v3_ns_ia5_list[1]": "fn:ext_ia5string",
+   "ossl_v3_ns_ia5_list[2]": "fn:ext_ia5string",
+   "ossl_v3_ns_ia5_list[3]": "fn:ext_ia5string",
+   "ossl_v3_ns_ia5_list[4]": "fn:ext_ia5string",
+   "ossl_v3_ns_ia5_list[5]": "fn:ext_ia5string",
+   "ossl_v3_ns_ia5_list[6]": "fn:ext_ia5string",
+   "ossl_v3_ocsp_accresp": "fn:ext_key_usage_row",
+   "ossl_v3_sinfo": "fn:info_access_row",
+   "ossl_v3_subj_dir_attrs": "fn:attributes_syntax_row",
+   "ossl_v3_utf8_list": "fn:ext_utf8string"
+  },
+  "manifest": {
+   "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-registration-manifest.json",
+   "registration_count": 225,
+   "schema": "openssl-rs/campaign/safe-c33/callback-registration-manifest/v1",
+   "scope": {
+    "registration_kind": "slot-registration",
+    "slots": [
+     "ext_free",
+     "i2s",
+     "s2i",
+     "i2v",
+     "v2i",
+     "i2r",
+     "r2i"
+    ],
+    "test_only": false
+   },
+   "sha256": "e34d1e92179959acb215f047f77cc161345fd012c22f666459a770525ce2bdcb"
+  },
+  "manifest_dead_targets": {
+   "count": 0,
+   "first_10": []
+  },
+  "manifest_not_compiled": {
+   "count": 0,
+   "first_10": []
+  },
+  "pass": true
+ },
+ "records_parts": [
+  {
+   "path": "callback-artifact-crosscheck.part01.json",
+   "records": 100,
+   "sha256": "4ce9327c69a319732a21490cf33a576c85ead4acffeb90036ca5f5ce77f76d9b"
+  },
+  {
+   "path": "callback-artifact-crosscheck.part02.json",
+   "records": 100,
+   "sha256": "52585214ec11f9c363bc185b1db9f56110c4c2fad3d9bbcb114b294314d33fbe"
+  },
+  {
+   "path": "callback-artifact-crosscheck.part03.json",
+   "records": 13,
+   "sha256": "2c80f8bc27d36ee7cb7bbfd6e5ce0ce2efd7ef931d50316227606bad39f07289"
+  }
+ ],
+ "records_split": true,
+ "refusals": [],
+ "rows": [
+  {
+   "ext_flags": 0,
+   "ext_nid": 88,
+   "row": "ossl_v3_crl_num",
+   "row_address": "0x7c1d58",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int15ossl_v3_crl_num",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a23d0",
+     "target_identifiers": [
+      "int_i2s"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int7int_i2s",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int7int_i2s"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867b0",
+     "target_identifiers": [
+      "ASN1_INTEGER_it"
+     ],
+     "target_symbol": "ASN1_INTEGER_it",
+     "target_symbols": [
+      "ASN1_INTEGER_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 103,
+   "row": "ossl_v3_crld",
+   "row_address": "0x7c1dc0",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld12ossl_v3_crld",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a4010",
+     "target_identifiers": [
+      "i2r_crldp"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9i2r_crldp",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9i2r_crldp"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x171be0",
+     "target_identifiers": [
+      "CRL_DIST_POINTS_it"
+     ],
+     "target_symbol": "CRL_DIST_POINTS_it",
+     "target_symbols": [
+      "CRL_DIST_POINTS_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a3940",
+     "target_identifiers": [
+      "v2i_crld"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld8v2i_crld",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld8v2i_crld"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 140,
+   "row": "ossl_v3_delta_crl",
+   "row_address": "0x7c1e28",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int17ossl_v3_delta_crl",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a23d0",
+     "target_identifiers": [
+      "int_i2s"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int7int_i2s",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int7int_i2s"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867b0",
+     "target_identifiers": [
+      "ASN1_INTEGER_it"
+     ],
+     "target_symbol": "ASN1_INTEGER_it",
+     "target_symbols": [
+      "ASN1_INTEGER_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 142,
+   "row": "ossl_v3_crl_invdate",
+   "row_address": "0x7c1e90",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld19ossl_v3_crl_invdate",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a1a10",
+     "target_identifiers": [
+      "i2r_crl_invdate",
+      "i2r_ocsp_acutoff"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16i2r_ocsp_acutoff",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16i2r_ocsp_acutoff",
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld15i2r_crl_invdate"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x486780",
+     "target_identifiers": [
+      "ASN1_GENERALIZEDTIME_it"
+     ],
+     "target_symbol": "ASN1_GENERALIZEDTIME_it",
+     "target_symbols": [
+      "ASN1_GENERALIZEDTIME_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 366,
+   "row": "ossl_v3_ocsp_nonce",
+   "row_address": "0x7c1ef8",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp18ossl_v3_ocsp_nonce",
+   "slots": {
+    "d2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a1560",
+     "target_identifiers": [
+      "d2i_ocsp_nonce"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14d2i_ocsp_nonce",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14d2i_ocsp_nonce"
+     ]
+    },
+    "ext_free": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a1990",
+     "target_identifiers": [
+      "ocsp_nonce_free"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp15ocsp_nonce_free",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp15ocsp_nonce_free"
+     ]
+    },
+    "ext_new": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a1960",
+     "target_identifiers": [
+      "ocsp_nonce_new"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14ocsp_nonce_new",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14ocsp_nonce_new"
+     ]
+    },
+    "i2d": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a1690",
+     "target_identifiers": [
+      "i2d_ocsp_nonce"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14i2d_ocsp_nonce.llvm.108797047066052405",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14i2d_ocsp_nonce.llvm.108797047066052405"
+     ]
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a1910",
+     "target_identifiers": [
+      "i2r_ocsp_nonce"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14i2r_ocsp_nonce",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14i2r_ocsp_nonce"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 367,
+   "row": "ossl_v3_ocsp_crlid",
+   "row_address": "0x7c1f60",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp18ossl_v3_ocsp_crlid",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a16d0",
+     "target_identifiers": [
+      "i2r_ocsp_crlid"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14i2r_ocsp_crlid",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14i2r_ocsp_crlid"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x2d53c0",
+     "target_identifiers": [
+      "OCSP_CRLID_it"
+     ],
+     "target_symbol": "OCSP_CRLID_it",
+     "target_symbols": [
+      "OCSP_CRLID_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 369,
+   "row": "ossl_v3_ocsp_nocheck",
+   "row_address": "0x7c1fc8",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp20ossl_v3_ocsp_nocheck",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a1a70",
+     "target_identifiers": [
+      "i2r_ocsp_nocheck"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16i2r_ocsp_nocheck.llvm.108797047066052405",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16i2r_ocsp_nocheck.llvm.108797047066052405"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867c0",
+     "target_identifiers": [
+      "ASN1_NULL_it"
+     ],
+     "target_symbol": "ASN1_NULL_it",
+     "target_symbols": [
+      "ASN1_NULL_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a1a80",
+     "target_identifiers": [
+      "s2i_ocsp_nocheck"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16s2i_ocsp_nocheck",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16s2i_ocsp_nocheck"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 370,
+   "row": "ossl_v3_ocsp_acutoff",
+   "row_address": "0x7c2030",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp20ossl_v3_ocsp_acutoff",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a1a10",
+     "target_identifiers": [
+      "i2r_crl_invdate",
+      "i2r_ocsp_acutoff"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16i2r_ocsp_acutoff",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16i2r_ocsp_acutoff",
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld15i2r_crl_invdate"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x486780",
+     "target_identifiers": [
+      "ASN1_GENERALIZEDTIME_it"
+     ],
+     "target_symbol": "ASN1_GENERALIZEDTIME_it",
+     "target_symbols": [
+      "ASN1_GENERALIZEDTIME_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 371,
+   "row": "ossl_v3_ocsp_serviceloc",
+   "row_address": "0x7c2098",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp23ossl_v3_ocsp_serviceloc",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a1a90",
+     "target_identifiers": [
+      "i2r_ocsp_serviceloc"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp19i2r_ocsp_serviceloc",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp19i2r_ocsp_serviceloc"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x2d5fd0",
+     "target_identifiers": [
+      "OCSP_SERVICELOC_it"
+     ],
+     "target_symbol": "OCSP_SERVICELOC_it",
+     "target_symbols": [
+      "OCSP_SERVICELOC_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 430,
+   "row": "ossl_v3_crl_hold",
+   "row_address": "0x7c2100",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld16ossl_v3_crl_hold",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a29a0",
+     "target_identifiers": [
+      "i2r_object"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld10i2r_object",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld10i2r_object"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867d0",
+     "target_identifiers": [
+      "ASN1_OBJECT_it"
+     ],
+     "target_symbol": "ASN1_OBJECT_it",
+     "target_symbols": [
+      "ASN1_OBJECT_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 748,
+   "row": "ossl_v3_inhibit_anyp",
+   "row_address": "0x7c2168",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int20ossl_v3_inhibit_anyp",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a23d0",
+     "target_identifiers": [
+      "int_i2s"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int7int_i2s",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int7int_i2s"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867b0",
+     "target_identifiers": [
+      "ASN1_INTEGER_it"
+     ],
+     "target_symbol": "ASN1_INTEGER_it",
+     "target_symbols": [
+      "ASN1_INTEGER_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a23c0",
+     "target_identifiers": [
+      "s2i_asn1_int"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int12s2i_asn1_int",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int12s2i_asn1_int"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 4,
+   "ext_nid": 770,
+   "row": "ossl_v3_idp",
+   "row_address": "0x7c21d0",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld11ossl_v3_idp",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a35e0",
+     "target_identifiers": [
+      "i2r_idp"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld7i2r_idp",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld7i2r_idp"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x172960",
+     "target_identifiers": [
+      "ISSUING_DIST_POINT_it"
+     ],
+     "target_symbol": "ISSUING_DIST_POINT_it",
+     "target_symbols": [
+      "ISSUING_DIST_POINT_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a3700",
+     "target_identifiers": [
+      "v2i_idp"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld7v2i_idp",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld7v2i_idp"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 857,
+   "row": "ossl_v3_freshest_crl",
+   "row_address": "0x7c2238",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld20ossl_v3_freshest_crl",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a4010",
+     "target_identifiers": [
+      "i2r_crldp"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9i2r_crldp",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9i2r_crldp"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x171be0",
+     "target_identifiers": [
+      "CRL_DIST_POINTS_it"
+     ],
+     "target_symbol": "CRL_DIST_POINTS_it",
+     "target_symbols": [
+      "CRL_DIST_POINTS_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a3940",
+     "target_identifiers": [
+      "v2i_crld"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld8v2i_crld",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld8v2i_crld"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1007,
+   "row": "ossl_v3_utf8_list",
+   "row_address": "0x7c22a0",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_utf817ossl_v3_utf8_list",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a5130",
+     "target_identifiers": [
+      "utf8_i2s"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_utf88utf8_i2s",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_utf88utf8_i2s"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x486cb0",
+     "target_identifiers": [
+      "ASN1_UTF8STRING_it"
+     ],
+     "target_symbol": "ASN1_UTF8STRING_it",
+     "target_symbols": [
+      "ASN1_UTF8STRING_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a51b0",
+     "target_identifiers": [
+      "utf8_s2i"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_utf88utf8_s2i",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_utf88utf8_s2i"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 4,
+   "ext_nid": 1008,
+   "row": "ossl_v3_issuer_sign_tool",
+   "row_address": "0x7c2308",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ist24ossl_v3_issuer_sign_tool",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a2440",
+     "target_identifiers": [
+      "i2r_issuer_sign_tool"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ist20i2r_issuer_sign_tool",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ist20i2r_issuer_sign_tool"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x1728f0",
+     "target_identifiers": [
+      "ISSUER_SIGN_TOOL_it"
+     ],
+     "target_symbol": "ISSUER_SIGN_TOOL_it",
+     "target_symbols": [
+      "ISSUER_SIGN_TOOL_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a25c0",
+     "target_identifiers": [
+      "v2i_issuer_sign_tool"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ist20v2i_issuer_sign_tool",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ist20v2i_issuer_sign_tool"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 4,
+   "ext_nid": 1300,
+   "row": "ossl_v3_attribute_descriptor",
+   "row_address": "0x7c2370",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_attrdesc28ossl_v3_attribute_descriptor",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a1ed0",
+     "target_identifiers": [
+      "i2r_OSSL_ATTRIBUTE_DESCRIPTOR"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_attrdesc29i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_attrdesc29i2r_OSSL_ATTRIBUTE_DESCRIPTOR"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x173eb0",
+     "target_identifiers": [
+      "OSSL_ATTRIBUTE_DESCRIPTOR_it"
+     ],
+     "target_symbol": "OSSL_ATTRIBUTE_DESCRIPTOR_it",
+     "target_symbols": [
+      "OSSL_ATTRIBUTE_DESCRIPTOR_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1307,
+   "row": "ossl_v3_aa_issuing_dist_point",
+   "row_address": "0x7c23d8",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld29ossl_v3_aa_issuing_dist_point",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a3e10",
+     "target_identifiers": [
+      "i2r_aaidp"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9i2r_aaidp",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9i2r_aaidp"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x173e40",
+     "target_identifiers": [
+      "OSSL_AA_DIST_POINT_it"
+     ],
+     "target_symbol": "OSSL_AA_DIST_POINT_it",
+     "target_symbols": [
+      "OSSL_AA_DIST_POINT_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x1a4160",
+     "target_identifiers": [
+      "v2i_aaidp"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9v2i_aaidp",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9v2i_aaidp"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 287,
+   "row": "ossl_v3_audit_identity",
+   "row_address": "0x7d0a38",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_audit_id22ossl_v3_audit_identity",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x222af0",
+     "target_identifiers": [
+      "audit_i2s"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_audit_id9audit_i2s",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_audit_id9audit_i2s"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867f0",
+     "target_identifiers": [
+      "ASN1_OCTET_STRING_it"
+     ],
+     "target_symbol": "ASN1_OCTET_STRING_it",
+     "target_symbols": [
+      "ASN1_OCTET_STRING_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x222b00",
+     "target_identifiers": [
+      "audit_s2i"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_audit_id9audit_s2i",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_audit_id9audit_s2i"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1301,
+   "row": "ossl_v3_user_notice",
+   "row_address": "0x7d0aa0",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_usernotice19ossl_v3_user_notice",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x222b10",
+     "target_identifiers": [
+      "i2r_USER_NOTICE_SYNTAX"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_usernotice22i2r_USER_NOTICE_SYNTAX",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_usernotice22i2r_USER_NOTICE_SYNTAX"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x20c3e0",
+     "target_identifiers": [
+      "OSSL_USER_NOTICE_SYNTAX_it"
+     ],
+     "target_symbol": "OSSL_USER_NOTICE_SYNTAX_it",
+     "target_symbols": [
+      "OSSL_USER_NOTICE_SYNTAX_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 85,
+   "row": "ossl_v3_alt[0]",
+   "row_address": "0x7d5678",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san11ossl_v3_alt",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x24d590",
+     "target_identifiers": [
+      "san_i2v"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_i2v",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_i2v"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x235aa0",
+     "target_identifiers": [
+      "GENERAL_NAMES_it"
+     ],
+     "target_symbol": "GENERAL_NAMES_it",
+     "target_symbols": [
+      "GENERAL_NAMES_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x24d650",
+     "target_identifiers": [
+      "san_v2i"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_v2i",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_v2i"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 86,
+   "row": "ossl_v3_alt[1]",
+   "row_address": "0x7d56e0",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san11ossl_v3_alt",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x24d590",
+     "target_identifiers": [
+      "san_i2v"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_i2v",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_i2v"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x235aa0",
+     "target_identifiers": [
+      "GENERAL_NAMES_it"
+     ],
+     "target_symbol": "GENERAL_NAMES_it",
+     "target_symbols": [
+      "GENERAL_NAMES_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x24d100",
+     "target_identifiers": [
+      "san_v2i_issuer"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san14san_v2i_issuer",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san14san_v2i_issuer"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 771,
+   "row": "ossl_v3_alt[2]",
+   "row_address": "0x7d5748",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san11ossl_v3_alt",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x24d590",
+     "target_identifiers": [
+      "san_i2v"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_i2v",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_i2v"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x235aa0",
+     "target_identifiers": [
+      "GENERAL_NAMES_it"
+     ],
+     "target_symbol": "GENERAL_NAMES_it",
+     "target_symbols": [
+      "GENERAL_NAMES_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 290,
+   "row": "ossl_v3_addr",
+   "row_address": "0x7d57b0",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_addr12ossl_v3_addr",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x24e400",
+     "target_identifiers": [
+      "i2r_IPAddrBlocks"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_addr16i2r_IPAddrBlocks",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_addr16i2r_IPAddrBlocks"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x24e230",
+     "target_identifiers": [
+      "IPAddrBlocks_it"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_addr15IPAddrBlocks_it.llvm.13447920157231050637",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_addr15IPAddrBlocks_it.llvm.13447920157231050637"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x24e7a0",
+     "target_identifiers": [
+      "v2i_IPAddrBlocks"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_addr16v2i_IPAddrBlocks",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_addr16v2i_IPAddrBlocks"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 291,
+   "row": "ossl_v3_asid",
+   "row_address": "0x7d5818",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_asid12ossl_v3_asid",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x250660",
+     "target_identifiers": [
+      "i2r_ASIdentifiers"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_asid17i2r_ASIdentifiers",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_asid17i2r_ASIdentifiers"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x231b70",
+     "target_identifiers": [
+      "ASIdentifiers_it"
+     ],
+     "target_symbol": "ASIdentifiers_it",
+     "target_symbols": [
+      "ASIdentifiers_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x2506b0",
+     "target_identifiers": [
+      "v2i_ASIdentifiers"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_asid17v2i_ASIdentifiers",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_asid17v2i_ASIdentifiers"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 403,
+   "row": "ossl_v3_no_rev_avail",
+   "row_address": "0x7d5880",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail20ossl_v3_no_rev_avail",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x24cb80",
+     "target_identifiers": [
+      "i2r_NO_REV_AVAIL"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16i2r_NO_REV_AVAIL.llvm.13447920157231050637",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16i2r_NO_REV_AVAIL.llvm.13447920157231050637"
+     ]
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x24cb90",
+     "target_identifiers": [
+      "i2s_NO_REV_AVAIL"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16i2s_NO_REV_AVAIL",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16i2s_NO_REV_AVAIL"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867c0",
+     "target_identifiers": [
+      "ASN1_NULL_it"
+     ],
+     "target_symbol": "ASN1_NULL_it",
+     "target_symbols": [
+      "ASN1_NULL_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x24cbb0",
+     "target_identifiers": [
+      "r2i_NO_REV_AVAIL",
+      "s2i_NO_REV_AVAIL"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16r2i_NO_REV_AVAIL",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16r2i_NO_REV_AVAIL",
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16s2i_NO_REV_AVAIL"
+     ]
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x24cbb0",
+     "target_identifiers": [
+      "r2i_NO_REV_AVAIL",
+      "s2i_NO_REV_AVAIL"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16r2i_NO_REV_AVAIL",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16r2i_NO_REV_AVAIL",
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16s2i_NO_REV_AVAIL"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 666,
+   "row": "ossl_v3_name_constraints",
+   "row_address": "0x7d58e8",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons24ossl_v3_name_constraints",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x2529b0",
+     "target_identifiers": [
+      "i2r_NAME_CONSTRAINTS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20i2r_NAME_CONSTRAINTS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20i2r_NAME_CONSTRAINTS"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x2371a0",
+     "target_identifiers": [
+      "NAME_CONSTRAINTS_it"
+     ],
+     "target_symbol": "NAME_CONSTRAINTS_it",
+     "target_symbols": [
+      "NAME_CONSTRAINTS_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x252a20",
+     "target_identifiers": [
+      "v2i_NAME_CONSTRAINTS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20v2i_NAME_CONSTRAINTS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20v2i_NAME_CONSTRAINTS"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 4,
+   "ext_nid": 769,
+   "row": "ossl_v3_subj_dir_attrs",
+   "row_address": "0x7d5950",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_sda22ossl_v3_subj_dir_attrs",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x24d800",
+     "target_identifiers": [
+      "i2r_ATTRIBUTES_SYNTAX"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_sda21i2r_ATTRIBUTES_SYNTAX",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_sda21i2r_ATTRIBUTES_SYNTAX"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x237fd0",
+     "target_identifiers": [
+      "OSSL_ATTRIBUTES_SYNTAX_it"
+     ],
+     "target_symbol": "OSSL_ATTRIBUTES_SYNTAX_it",
+     "target_symbols": [
+      "OSSL_ATTRIBUTES_SYNTAX_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1298,
+   "row": "ossl_v3_delegated_name_constraints",
+   "row_address": "0x7d59b8",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons34ossl_v3_delegated_name_constraints",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x2529b0",
+     "target_identifiers": [
+      "i2r_NAME_CONSTRAINTS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20i2r_NAME_CONSTRAINTS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20i2r_NAME_CONSTRAINTS"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x2371a0",
+     "target_identifiers": [
+      "NAME_CONSTRAINTS_it"
+     ],
+     "target_symbol": "NAME_CONSTRAINTS_it",
+     "target_symbols": [
+      "NAME_CONSTRAINTS_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x252a20",
+     "target_identifiers": [
+      "v2i_NAME_CONSTRAINTS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20v2i_NAME_CONSTRAINTS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20v2i_NAME_CONSTRAINTS"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 4,
+   "ext_nid": 1312,
+   "row": "ossl_v3_attribute_mappings",
+   "row_address": "0x7d5a20",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_attrmap26ossl_v3_attribute_mappings",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x24c930",
+     "target_identifiers": [
+      "i2r_ATTRIBUTE_MAPPINGS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_attrmap22i2r_ATTRIBUTE_MAPPINGS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_attrmap22i2r_ATTRIBUTE_MAPPINGS"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x238040",
+     "target_identifiers": [
+      "OSSL_ATTRIBUTE_MAPPINGS_it"
+     ],
+     "target_symbol": "OSSL_ATTRIBUTE_MAPPINGS_it",
+     "target_symbols": [
+      "OSSL_ATTRIBUTE_MAPPINGS_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1313,
+   "row": "ossl_v3_holder_name_constraints",
+   "row_address": "0x7d5a88",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons31ossl_v3_holder_name_constraints",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x2529b0",
+     "target_identifiers": [
+      "i2r_NAME_CONSTRAINTS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20i2r_NAME_CONSTRAINTS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20i2r_NAME_CONSTRAINTS"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x2371a0",
+     "target_identifiers": [
+      "NAME_CONSTRAINTS_it"
+     ],
+     "target_symbol": "NAME_CONSTRAINTS_it",
+     "target_symbols": [
+      "NAME_CONSTRAINTS_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x252a20",
+     "target_identifiers": [
+      "v2i_NAME_CONSTRAINTS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20v2i_NAME_CONSTRAINTS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20v2i_NAME_CONSTRAINTS"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 4,
+   "ext_nid": 1319,
+   "row": "ossl_v3_associated_info",
+   "row_address": "0x7d5af0",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_sda23ossl_v3_associated_info",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x24d800",
+     "target_identifiers": [
+      "i2r_ATTRIBUTES_SYNTAX"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_sda21i2r_ATTRIBUTES_SYNTAX",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_sda21i2r_ATTRIBUTES_SYNTAX"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x237fd0",
+     "target_identifiers": [
+      "OSSL_ATTRIBUTES_SYNTAX_it"
+     ],
+     "target_symbol": "OSSL_ATTRIBUTES_SYNTAX_it",
+     "target_symbols": [
+      "OSSL_ATTRIBUTES_SYNTAX_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 4,
+   "ext_nid": 90,
+   "row": "ossl_v3_akey_id",
+   "row_address": "0x7f6448",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_akid15ossl_v3_akey_id",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x290750",
+     "target_identifiers": [
+      "akid_i2v"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_akid8akid_i2v",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_akid8akid_i2v"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x487a80",
+     "target_identifiers": [
+      "AUTHORITY_KEYID_it"
+     ],
+     "target_symbol": "AUTHORITY_KEYID_it",
+     "target_symbols": [
+      "AUTHORITY_KEYID_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x290a60",
+     "target_identifiers": [
+      "akid_v2i"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_akid8akid_v2i",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_akid8akid_v2i"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1302,
+   "row": "ossl_v3_soa_identifier",
+   "row_address": "0x7f64b0",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id22ossl_v3_soa_identifier",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x2915f0",
+     "target_identifiers": [
+      "i2r_SOA_IDENTIFIER"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18i2r_SOA_IDENTIFIER.llvm.5705049292224334029",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18i2r_SOA_IDENTIFIER.llvm.5705049292224334029"
+     ]
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x291600",
+     "target_identifiers": [
+      "i2s_SOA_IDENTIFIER"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18i2s_SOA_IDENTIFIER",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18i2s_SOA_IDENTIFIER"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867c0",
+     "target_identifiers": [
+      "ASN1_NULL_it"
+     ],
+     "target_symbol": "ASN1_NULL_it",
+     "target_symbols": [
+      "ASN1_NULL_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x291620",
+     "target_identifiers": [
+      "r2i_SOA_IDENTIFIER",
+      "s2i_SOA_IDENTIFIER"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18r2i_SOA_IDENTIFIER",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18r2i_SOA_IDENTIFIER",
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18s2i_SOA_IDENTIFIER"
+     ]
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x291620",
+     "target_identifiers": [
+      "r2i_SOA_IDENTIFIER",
+      "s2i_SOA_IDENTIFIER"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18r2i_SOA_IDENTIFIER",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18r2i_SOA_IDENTIFIER",
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18s2i_SOA_IDENTIFIER"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 82,
+   "row": "ossl_v3_skey_id",
+   "row_address": "0x7ffd50",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_skid15ossl_v3_skey_id",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x2f2650",
+     "target_identifiers": [
+      "skid_i2s"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_skid8skid_i2s",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_skid8skid_i2s"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867f0",
+     "target_identifiers": [
+      "ASN1_OCTET_STRING_it"
+     ],
+     "target_symbol": "ASN1_OCTET_STRING_it",
+     "target_symbols": [
+      "ASN1_OCTET_STRING_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x2f20e0",
+     "target_identifiers": [
+      "s2i_skey_id"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_skid11s2i_skey_id",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_skid11s2i_skey_id"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 141,
+   "row": "ossl_v3_crl_reason",
+   "row_address": "0x7ffdb8",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_enum18ossl_v3_crl_reason",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x2f2020",
+     "target_identifiers": [
+      "enum_i2s",
+      "i2s_ASN1_ENUMERATED_TABLE"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_enum8enum_i2s",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_enum8enum_i2s",
+      "i2s_ASN1_ENUMERATED_TABLE"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x486760",
+     "target_identifiers": [
+      "ASN1_ENUMERATED_it"
+     ],
+     "target_symbol": "ASN1_ENUMERATED_it",
+     "target_symbols": [
+      "ASN1_ENUMERATED_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1020,
+   "row": "ossl_v3_tls_feature",
+   "row_address": "0x7ffe20",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_tlsf19ossl_v3_tls_feature",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x2f2670",
+     "target_identifiers": [
+      "i2v_TLS_FEATURE"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_tlsf15i2v_TLS_FEATURE",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_tlsf15i2v_TLS_FEATURE"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x2f2660",
+     "target_identifiers": [
+      "tls_feature_it"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_tlsf14tls_feature_it.llvm.868859625765045373",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_tlsf14tls_feature_it.llvm.868859625765045373"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x2f2750",
+     "target_identifiers": [
+      "v2i_TLS_FEATURE"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_tlsf15v2i_TLS_FEATURE",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_tlsf15v2i_TLS_FEATURE"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1093,
+   "row": "ossl_v3_ext_admission",
+   "row_address": "0x7ffe88",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_admis21ossl_v3_ext_admission",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x2f2a60",
+     "target_identifiers": [
+      "i2r_ADMISSION_SYNTAX"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_admis20i2r_ADMISSION_SYNTAX",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_admis20i2r_ADMISSION_SYNTAX"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x2d2d90",
+     "target_identifiers": [
+      "ADMISSION_SYNTAX_it"
+     ],
+     "target_symbol": "ADMISSION_SYNTAX_it",
+     "target_symbols": [
+      "ADMISSION_SYNTAX_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1305,
+   "row": "ossl_v3_indirect_issuer",
+   "row_address": "0x7ffef0",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_ind_iss23ossl_v3_indirect_issuer",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x2f1fe0",
+     "target_identifiers": [
+      "i2r_INDIRECT_ISSUER"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_ind_iss19i2r_INDIRECT_ISSUER.llvm.868859625765045373",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_ind_iss19i2r_INDIRECT_ISSUER.llvm.868859625765045373"
+     ]
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x2f1ff0",
+     "target_identifiers": [
+      "i2s_INDIRECT_ISSUER"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_ind_iss19i2s_INDIRECT_ISSUER",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_ind_iss19i2s_INDIRECT_ISSUER"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867c0",
+     "target_identifiers": [
+      "ASN1_NULL_it"
+     ],
+     "target_symbol": "ASN1_NULL_it",
+     "target_symbols": [
+      "ASN1_NULL_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x2f2010",
+     "target_identifiers": [
+      "r2i_INDIRECT_ISSUER",
+      "s2i_INDIRECT_ISSUER"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_ind_iss19r2i_INDIRECT_ISSUER",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_ind_iss19r2i_INDIRECT_ISSUER",
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_ind_iss19s2i_INDIRECT_ISSUER"
+     ]
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x2f2010",
+     "target_identifiers": [
+      "r2i_INDIRECT_ISSUER",
+      "s2i_INDIRECT_ISSUER"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_ind_iss19r2i_INDIRECT_ISSUER",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_ind_iss19r2i_INDIRECT_ISSUER",
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_ind_iss19s2i_INDIRECT_ISSUER"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1310,
+   "row": "ossl_v3_group_ac",
+   "row_address": "0x809418",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_group_ac16ossl_v3_group_ac",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x332ed0",
+     "target_identifiers": [
+      "i2r_GROUP_AC"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_group_ac12i2r_GROUP_AC.llvm.13767219952292958872",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_group_ac12i2r_GROUP_AC.llvm.13767219952292958872"
+     ]
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x332ee0",
+     "target_identifiers": [
+      "i2s_GROUP_AC"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_group_ac12i2s_GROUP_AC",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_group_ac12i2s_GROUP_AC"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867c0",
+     "target_identifiers": [
+      "ASN1_NULL_it"
+     ],
+     "target_symbol": "ASN1_NULL_it",
+     "target_symbols": [
+      "ASN1_NULL_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x332f00",
+     "target_identifiers": [
+      "r2i_GROUP_AC",
+      "s2i_GROUP_AC"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_group_ac12r2i_GROUP_AC",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_group_ac12r2i_GROUP_AC",
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_group_ac12s2i_GROUP_AC"
+     ]
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x332f00",
+     "target_identifiers": [
+      "r2i_GROUP_AC",
+      "s2i_GROUP_AC"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_group_ac12r2i_GROUP_AC",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_group_ac12r2i_GROUP_AC",
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_group_ac12s2i_GROUP_AC"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 4,
+   "ext_nid": 1299,
+   "row": "ossl_v3_time_specification",
+   "row_address": "0x820a70",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_timespec26ossl_v3_time_specification",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x353580",
+     "target_identifiers": [
+      "i2r_OSSL_TIME_SPEC"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_timespec18i2r_OSSL_TIME_SPEC",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_timespec18i2r_OSSL_TIME_SPEC"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x347ca0",
+     "target_identifiers": [
+      "OSSL_TIME_SPEC_it"
+     ],
+     "target_symbol": "OSSL_TIME_SPEC_it",
+     "target_symbols": [
+      "OSSL_TIME_SPEC_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1306,
+   "row": "ossl_v3_no_assertion",
+   "row_address": "0x820ad8",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_no_ass20ossl_v3_no_assertion",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x3569e0",
+     "target_identifiers": [
+      "i2r_NO_ASSERTION"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_no_ass16i2r_NO_ASSERTION.llvm.3354624500555079721",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_no_ass16i2r_NO_ASSERTION.llvm.3354624500555079721"
+     ]
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x3569f0",
+     "target_identifiers": [
+      "i2s_NO_ASSERTION"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_no_ass16i2s_NO_ASSERTION",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_no_ass16i2s_NO_ASSERTION"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867c0",
+     "target_identifiers": [
+      "ASN1_NULL_it"
+     ],
+     "target_symbol": "ASN1_NULL_it",
+     "target_symbols": [
+      "ASN1_NULL_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x356a10",
+     "target_identifiers": [
+      "r2i_NO_ASSERTION",
+      "s2i_NO_ASSERTION"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_no_ass16r2i_NO_ASSERTION",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_no_ass16r2i_NO_ASSERTION",
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_no_ass16s2i_NO_ASSERTION"
+     ]
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x356a10",
+     "target_identifiers": [
+      "r2i_NO_ASSERTION",
+      "s2i_NO_ASSERTION"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_no_ass16r2i_NO_ASSERTION",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_no_ass16r2i_NO_ASSERTION",
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_no_ass16s2i_NO_ASSERTION"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1308,
+   "row": "ossl_v3_issued_on_behalf_of",
+   "row_address": "0x820b40",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_iobo27ossl_v3_issued_on_behalf_of",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x356980",
+     "target_identifiers": [
+      "i2r_ISSUED_ON_BEHALF_OF"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_iobo23i2r_ISSUED_ON_BEHALF_OF",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_iobo23i2r_ISSUED_ON_BEHALF_OF"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x235eb0",
+     "target_identifiers": [
+      "GENERAL_NAME_it",
+      "general_name_it"
+     ],
+     "target_symbol": "GENERAL_NAME_it",
+     "target_symbols": [
+      "GENERAL_NAME_it",
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_genn15general_name_it.llvm.13447920157231050637"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 84,
+   "row": "ossl_v3_pkey_usage_period",
+   "row_address": "0x837198",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_pku25ossl_v3_pkey_usage_period",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x38ed40",
+     "target_identifiers": [
+      "i2r_PKEY_USAGE_PERIOD"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_pku21i2r_PKEY_USAGE_PERIOD",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_pku21i2r_PKEY_USAGE_PERIOD"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x37f7d0",
+     "target_identifiers": [
+      "PKEY_USAGE_PERIOD_it"
+     ],
+     "target_symbol": "PKEY_USAGE_PERIOD_it",
+     "target_symbols": [
+      "PKEY_USAGE_PERIOD_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 747,
+   "row": "ossl_v3_policy_mappings",
+   "row_address": "0x837200",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_pmaps23ossl_v3_policy_mappings",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x38ee10",
+     "target_identifiers": [
+      "i2v_POLICY_MAPPINGS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_pmaps19i2v_POLICY_MAPPINGS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_pmaps19i2v_POLICY_MAPPINGS"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x37f820",
+     "target_identifiers": [
+      "POLICY_MAPPINGS_it"
+     ],
+     "target_symbol": "POLICY_MAPPINGS_it",
+     "target_symbols": [
+      "POLICY_MAPPINGS_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x38ef20",
+     "target_identifiers": [
+      "v2i_POLICY_MAPPINGS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_pmaps19v2i_POLICY_MAPPINGS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_pmaps19v2i_POLICY_MAPPINGS"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 71,
+   "row": "ossl_v3_nscert",
+   "row_address": "0x83db48",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bitst14ossl_v3_nscert",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x3f2960",
+     "target_identifiers": [
+      "bitst_i2v",
+      "i2v_ASN1_BIT_STRING"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bitst9bitst_i2v",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bitst9bitst_i2v",
+      "i2v_ASN1_BIT_STRING"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x486730",
+     "target_identifiers": [
+      "ASN1_BIT_STRING_it"
+     ],
+     "target_symbol": "ASN1_BIT_STRING_it",
+     "target_symbols": [
+      "ASN1_BIT_STRING_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x3f2a10",
+     "target_identifiers": [
+      "bitst_v2i"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bitst9bitst_v2i",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bitst9bitst_v2i"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 83,
+   "row": "ossl_v3_key_usage",
+   "row_address": "0x83dbb0",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bitst17ossl_v3_key_usage",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x3f2960",
+     "target_identifiers": [
+      "bitst_i2v",
+      "i2v_ASN1_BIT_STRING"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bitst9bitst_i2v",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bitst9bitst_i2v",
+      "i2v_ASN1_BIT_STRING"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x486730",
+     "target_identifiers": [
+      "ASN1_BIT_STRING_it"
+     ],
+     "target_symbol": "ASN1_BIT_STRING_it",
+     "target_symbols": [
+      "ASN1_BIT_STRING_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x3f2a10",
+     "target_identifiers": [
+      "bitst_v2i"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bitst9bitst_v2i",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bitst9bitst_v2i"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 89,
+   "row": "ossl_v3_cpols",
+   "row_address": "0x83dc18",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_cpols13ossl_v3_cpols",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x3f2a20",
+     "target_identifiers": [
+      "i2r_certpol"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_cpols11i2r_certpol",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_cpols11i2r_certpol"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x3c2190",
+     "target_identifiers": [
+      "CERTIFICATEPOLICIES_it"
+     ],
+     "target_symbol": "CERTIFICATEPOLICIES_it",
+     "target_symbols": [
+      "CERTIFICATEPOLICIES_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x3f2c20",
+     "target_identifiers": [
+      "r2i_certpol"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_cpols11r2i_certpol",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_cpols11r2i_certpol"
+     ]
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1297,
+   "row": "ossl_v3_battcons",
+   "row_address": "0x83dc80",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_battcons16ossl_v3_battcons",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x3f2750",
+     "target_identifiers": [
+      "i2v_OSSL_BASIC_ATTR_CONSTRAINTS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_battcons31i2v_OSSL_BASIC_ATTR_CONSTRAINTS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_battcons31i2v_OSSL_BASIC_ATTR_CONSTRAINTS"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x3ccb80",
+     "target_identifiers": [
+      "OSSL_BASIC_ATTR_CONSTRAINTS_it"
+     ],
+     "target_symbol": "OSSL_BASIC_ATTR_CONSTRAINTS_it",
+     "target_symbols": [
+      "OSSL_BASIC_ATTR_CONSTRAINTS_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x3f27d0",
+     "target_identifiers": [
+      "v2i_OSSL_BASIC_ATTR_CONSTRAINTS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_battcons31v2i_OSSL_BASIC_ATTR_CONSTRAINTS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_battcons31v2i_OSSL_BASIC_ATTR_CONSTRAINTS"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 663,
+   "row": "ossl_v3_pci",
+   "row_address": "0x85c7f0",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_pci11ossl_v3_pci",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x408a90",
+     "target_identifiers": [
+      "i2r_pci"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_pci7i2r_pci",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_pci7i2r_pci"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4d12c0",
+     "target_identifiers": [
+      "PROXY_CERT_INFO_EXTENSION_it"
+     ],
+     "target_symbol": "PROXY_CERT_INFO_EXTENSION_it",
+     "target_symbols": [
+      "PROXY_CERT_INFO_EXTENSION_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x408b60",
+     "target_identifiers": [
+      "r2i_pci"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_pci7r2i_pci",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_pci7r2i_pci"
+     ]
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1309,
+   "row": "ossl_v3_single_use",
+   "row_address": "0x85c858",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_single_use18ossl_v3_single_use",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x408380",
+     "target_identifiers": [
+      "i2r_SINGLE_USE"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_single_use14i2r_SINGLE_USE.llvm.10488837169643996939",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_single_use14i2r_SINGLE_USE.llvm.10488837169643996939"
+     ]
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x408390",
+     "target_identifiers": [
+      "i2s_SINGLE_USE"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_single_use14i2s_SINGLE_USE",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_single_use14i2s_SINGLE_USE"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867c0",
+     "target_identifiers": [
+      "ASN1_NULL_it"
+     ],
+     "target_symbol": "ASN1_NULL_it",
+     "target_symbols": [
+      "ASN1_NULL_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4083b0",
+     "target_identifiers": [
+      "r2i_SINGLE_USE",
+      "s2i_SINGLE_USE"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_single_use14r2i_SINGLE_USE",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_single_use14r2i_SINGLE_USE",
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_single_use14s2i_SINGLE_USE"
+     ]
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4083b0",
+     "target_identifiers": [
+      "r2i_SINGLE_USE",
+      "s2i_SINGLE_USE"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_single_use14r2i_SINGLE_USE",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_single_use14r2i_SINGLE_USE",
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_single_use14s2i_SINGLE_USE"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 4,
+   "ext_nid": 1296,
+   "row": "ossl_v3_role_spec_cert_identifier",
+   "row_address": "0x867500",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_rolespec33ossl_v3_role_spec_cert_identifier",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x47c980",
+     "target_identifiers": [
+      "i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_rolespec33i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_rolespec33i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x45c640",
+     "target_identifiers": [
+      "OSSL_ROLE_SPEC_CERT_ID_SYNTAX_it"
+     ],
+     "target_symbol": "OSSL_ROLE_SPEC_CERT_ID_SYNTAX_it",
+     "target_symbols": [
+      "OSSL_ROLE_SPEC_CERT_ID_SYNTAX_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 951,
+   "row": "ossl_v3_ct_scts[0]",
+   "row_address": "0x869330",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v315ossl_v3_ct_scts",
+   "slots": {
+    "d2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4a5f40",
+     "target_identifiers": [
+      "x509_ext_d2i_SCT_LIST"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v321x509_ext_d2i_SCT_LIST",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v321x509_ext_d2i_SCT_LIST"
+     ]
+    },
+    "ext_free": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x2dcce0",
+     "target_identifiers": [
+      "SCT_LIST_free"
+     ],
+     "target_symbol": "SCT_LIST_free",
+     "target_symbols": [
+      "SCT_LIST_free"
+     ]
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x2fc8b0",
+     "target_identifiers": [
+      "i2d_SCT_LIST"
+     ],
+     "target_symbol": "i2d_SCT_LIST",
+     "target_symbols": [
+      "i2d_SCT_LIST"
+     ]
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4a5da0",
+     "target_identifiers": [
+      "i2r_SCT_LIST"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v312i2r_SCT_LIST",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v312i2r_SCT_LIST"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 952,
+   "row": "ossl_v3_ct_scts[1]",
+   "row_address": "0x869398",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v315ossl_v3_ct_scts",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4a5d70",
+     "target_identifiers": [
+      "i2s_poison"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v310i2s_poison",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v310i2s_poison"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867c0",
+     "target_identifiers": [
+      "ASN1_NULL_it"
+     ],
+     "target_symbol": "ASN1_NULL_it",
+     "target_symbols": [
+      "ASN1_NULL_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4a5d90",
+     "target_identifiers": [
+      "s2i_poison"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v310s2i_poison",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v310s2i_poison"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 954,
+   "row": "ossl_v3_ct_scts[2]",
+   "row_address": "0x869400",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v315ossl_v3_ct_scts",
+   "slots": {
+    "d2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4a5e60",
+     "target_identifiers": [
+      "ocsp_ext_d2i_SCT_LIST"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v321ocsp_ext_d2i_SCT_LIST",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v321ocsp_ext_d2i_SCT_LIST"
+     ]
+    },
+    "ext_free": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x2dcce0",
+     "target_identifiers": [
+      "SCT_LIST_free"
+     ],
+     "target_symbol": "SCT_LIST_free",
+     "target_symbols": [
+      "SCT_LIST_free"
+     ]
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x2fc8b0",
+     "target_identifiers": [
+      "i2d_SCT_LIST"
+     ],
+     "target_symbol": "i2d_SCT_LIST",
+     "target_symbols": [
+      "i2d_SCT_LIST"
+     ]
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4a5da0",
+     "target_identifiers": [
+      "i2r_SCT_LIST"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v312i2r_SCT_LIST",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v312i2r_SCT_LIST"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1311,
+   "row": "ossl_v3_allowed_attribute_assignments",
+   "row_address": "0x86b6c0",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_aaa37ossl_v3_allowed_attribute_assignments",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2620",
+     "target_identifiers": [
+      "i2r_ALLOWED_ATTRIBUTES_SYNTAX"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_aaa29i2r_ALLOWED_ATTRIBUTES_SYNTAX",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_aaa29i2r_ALLOWED_ATTRIBUTES_SYNTAX"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x495740",
+     "target_identifiers": [
+      "OSSL_ALLOWED_ATTRIBUTES_SYNTAX_it"
+     ],
+     "target_symbol": "OSSL_ALLOWED_ATTRIBUTES_SYNTAX_it",
+     "target_symbols": [
+      "OSSL_ALLOWED_ATTRIBUTES_SYNTAX_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 72,
+   "row": "ossl_v3_ns_ia5_list[0]",
+   "row_address": "0x86b728",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia519ossl_v3_ns_ia5_list",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2ad0",
+     "target_identifiers": [
+      "ia5_i2s"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_i2s",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_i2s"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867a0",
+     "target_identifiers": [
+      "ASN1_IA5STRING_it"
+     ],
+     "target_symbol": "ASN1_IA5STRING_it",
+     "target_symbols": [
+      "ASN1_IA5STRING_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2b30",
+     "target_identifiers": [
+      "ia5_s2i"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_s2i",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_s2i"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 73,
+   "row": "ossl_v3_ns_ia5_list[1]",
+   "row_address": "0x86b790",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia519ossl_v3_ns_ia5_list",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2ad0",
+     "target_identifiers": [
+      "ia5_i2s"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_i2s",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_i2s"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867a0",
+     "target_identifiers": [
+      "ASN1_IA5STRING_it"
+     ],
+     "target_symbol": "ASN1_IA5STRING_it",
+     "target_symbols": [
+      "ASN1_IA5STRING_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2b30",
+     "target_identifiers": [
+      "ia5_s2i"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_s2i",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_s2i"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 74,
+   "row": "ossl_v3_ns_ia5_list[2]",
+   "row_address": "0x86b7f8",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia519ossl_v3_ns_ia5_list",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2ad0",
+     "target_identifiers": [
+      "ia5_i2s"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_i2s",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_i2s"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867a0",
+     "target_identifiers": [
+      "ASN1_IA5STRING_it"
+     ],
+     "target_symbol": "ASN1_IA5STRING_it",
+     "target_symbols": [
+      "ASN1_IA5STRING_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2b30",
+     "target_identifiers": [
+      "ia5_s2i"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_s2i",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_s2i"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 75,
+   "row": "ossl_v3_ns_ia5_list[3]",
+   "row_address": "0x86b860",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia519ossl_v3_ns_ia5_list",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2ad0",
+     "target_identifiers": [
+      "ia5_i2s"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_i2s",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_i2s"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867a0",
+     "target_identifiers": [
+      "ASN1_IA5STRING_it"
+     ],
+     "target_symbol": "ASN1_IA5STRING_it",
+     "target_symbols": [
+      "ASN1_IA5STRING_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2b30",
+     "target_identifiers": [
+      "ia5_s2i"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_s2i",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_s2i"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 76,
+   "row": "ossl_v3_ns_ia5_list[4]",
+   "row_address": "0x86b8c8",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia519ossl_v3_ns_ia5_list",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2ad0",
+     "target_identifiers": [
+      "ia5_i2s"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_i2s",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_i2s"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867a0",
+     "target_identifiers": [
+      "ASN1_IA5STRING_it"
+     ],
+     "target_symbol": "ASN1_IA5STRING_it",
+     "target_symbols": [
+      "ASN1_IA5STRING_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2b30",
+     "target_identifiers": [
+      "ia5_s2i"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_s2i",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_s2i"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 77,
+   "row": "ossl_v3_ns_ia5_list[5]",
+   "row_address": "0x86b930",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia519ossl_v3_ns_ia5_list",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2ad0",
+     "target_identifiers": [
+      "ia5_i2s"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_i2s",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_i2s"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867a0",
+     "target_identifiers": [
+      "ASN1_IA5STRING_it"
+     ],
+     "target_symbol": "ASN1_IA5STRING_it",
+     "target_symbols": [
+      "ASN1_IA5STRING_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2b30",
+     "target_identifiers": [
+      "ia5_s2i"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_s2i",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_s2i"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 78,
+   "row": "ossl_v3_ns_ia5_list[6]",
+   "row_address": "0x86b998",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia519ossl_v3_ns_ia5_list",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2ad0",
+     "target_identifiers": [
+      "ia5_i2s"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_i2s",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_i2s"
+     ]
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4867a0",
+     "target_identifiers": [
+      "ASN1_IA5STRING_it"
+     ],
+     "target_symbol": "ASN1_IA5STRING_it",
+     "target_symbols": [
+      "ASN1_IA5STRING_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2b30",
+     "target_identifiers": [
+      "ia5_s2i"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_s2i",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia57ia5_s2i"
+     ]
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": -1,
+   "row": "ossl_v3_ns_ia5_list[7]",
+   "row_address": "0x86ba00",
+   "row_source": "static-row-object",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ia519ossl_v3_ns_ia5_list",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 4,
+   "ext_nid": 177,
+   "row": "ossl_v3_info",
+   "row_address": "0x86bd58",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_info12ossl_v3_info",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2eb0",
+     "target_identifiers": [
+      "i2v_AUTHORITY_INFO_ACCESS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_info25i2v_AUTHORITY_INFO_ACCESS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_info25i2v_AUTHORITY_INFO_ACCESS"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x487a10",
+     "target_identifiers": [
+      "AUTHORITY_INFO_ACCESS_it"
+     ],
+     "target_symbol": "AUTHORITY_INFO_ACCESS_it",
+     "target_symbols": [
+      "AUTHORITY_INFO_ACCESS_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b30f0",
+     "target_identifiers": [
+      "v2i_AUTHORITY_INFO_ACCESS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_info25v2i_AUTHORITY_INFO_ACCESS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_info25v2i_AUTHORITY_INFO_ACCESS"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 4,
+   "ext_nid": 398,
+   "row": "ossl_v3_sinfo",
+   "row_address": "0x86bdc0",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_info13ossl_v3_sinfo",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b2eb0",
+     "target_identifiers": [
+      "i2v_AUTHORITY_INFO_ACCESS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_info25i2v_AUTHORITY_INFO_ACCESS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_info25i2v_AUTHORITY_INFO_ACCESS"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x487a10",
+     "target_identifiers": [
+      "AUTHORITY_INFO_ACCESS_it"
+     ],
+     "target_symbol": "AUTHORITY_INFO_ACCESS_it",
+     "target_symbols": [
+      "AUTHORITY_INFO_ACCESS_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4b30f0",
+     "target_identifiers": [
+      "v2i_AUTHORITY_INFO_ACCESS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_info25v2i_AUTHORITY_INFO_ACCESS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_info25v2i_AUTHORITY_INFO_ACCESS"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 87,
+   "row": "ossl_v3_bcons",
+   "row_address": "0x87fed0",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bcons13ossl_v3_bcons",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4ed3f0",
+     "target_identifiers": [
+      "i2v_BASIC_CONSTRAINTS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bcons21i2v_BASIC_CONSTRAINTS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bcons21i2v_BASIC_CONSTRAINTS"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4c1ea0",
+     "target_identifiers": [
+      "BASIC_CONSTRAINTS_it"
+     ],
+     "target_symbol": "BASIC_CONSTRAINTS_it",
+     "target_symbols": [
+      "BASIC_CONSTRAINTS_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4ed470",
+     "target_identifiers": [
+      "v2i_BASIC_CONSTRAINTS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bcons21v2i_BASIC_CONSTRAINTS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_bcons21v2i_BASIC_CONSTRAINTS"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 126,
+   "row": "ossl_v3_ext_ku",
+   "row_address": "0x87ff38",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku14ossl_v3_ext_ku",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4ed5d0",
+     "target_identifiers": [
+      "i2v_EXTENDED_KEY_USAGE"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22i2v_EXTENDED_KEY_USAGE",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22i2v_EXTENDED_KEY_USAGE"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4cb830",
+     "target_identifiers": [
+      "EXTENDED_KEY_USAGE_it"
+     ],
+     "target_symbol": "EXTENDED_KEY_USAGE_it",
+     "target_symbols": [
+      "EXTENDED_KEY_USAGE_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4ed6a0",
+     "target_identifiers": [
+      "v2i_EXTENDED_KEY_USAGE"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22v2i_EXTENDED_KEY_USAGE",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22v2i_EXTENDED_KEY_USAGE"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 368,
+   "row": "ossl_v3_ocsp_accresp",
+   "row_address": "0x87ffa0",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku20ossl_v3_ocsp_accresp",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4ed5d0",
+     "target_identifiers": [
+      "i2v_EXTENDED_KEY_USAGE"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22i2v_EXTENDED_KEY_USAGE",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22i2v_EXTENDED_KEY_USAGE"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4cb830",
+     "target_identifiers": [
+      "EXTENDED_KEY_USAGE_it"
+     ],
+     "target_symbol": "EXTENDED_KEY_USAGE_it",
+     "target_symbols": [
+      "EXTENDED_KEY_USAGE_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4ed6a0",
+     "target_identifiers": [
+      "v2i_EXTENDED_KEY_USAGE"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22v2i_EXTENDED_KEY_USAGE",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22v2i_EXTENDED_KEY_USAGE"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 402,
+   "row": "ossl_v3_targeting_information",
+   "row_address": "0x880008",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_ac_tgt29ossl_v3_targeting_information",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4ed7b0",
+     "target_identifiers": [
+      "i2r_TARGETING_INFORMATION"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_ac_tgt25i2r_TARGETING_INFORMATION",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_ac_tgt25i2r_TARGETING_INFORMATION"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4cfb80",
+     "target_identifiers": [
+      "OSSL_TARGETING_INFORMATION_it"
+     ],
+     "target_symbol": "OSSL_TARGETING_INFORMATION_it",
+     "target_symbols": [
+      "OSSL_TARGETING_INFORMATION_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 4,
+   "ext_nid": 1295,
+   "row": "ossl_v3_authority_attribute_identifier",
+   "row_address": "0x880070",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50912v3_authattid38ossl_v3_authority_attribute_identifier",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4ec810",
+     "target_identifiers": [
+      "i2r_auth_attr_id"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50912v3_authattid16i2r_auth_attr_id",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50912v3_authattid16i2r_auth_attr_id"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4cb900",
+     "target_identifiers": [
+      "OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX_it"
+     ],
+     "target_symbol": "OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX_it",
+     "target_symbols": [
+      "OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "null",
+     "target_symbol": null
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1303,
+   "row": "ossl_v3_acc_cert_policies",
+   "row_address": "0x8800d8",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku25ossl_v3_acc_cert_policies",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4ed5d0",
+     "target_identifiers": [
+      "i2v_EXTENDED_KEY_USAGE"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22i2v_EXTENDED_KEY_USAGE",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22i2v_EXTENDED_KEY_USAGE"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4cb830",
+     "target_identifiers": [
+      "EXTENDED_KEY_USAGE_it"
+     ],
+     "target_symbol": "EXTENDED_KEY_USAGE_it",
+     "target_symbols": [
+      "EXTENDED_KEY_USAGE_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4ed6a0",
+     "target_identifiers": [
+      "v2i_EXTENDED_KEY_USAGE"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22v2i_EXTENDED_KEY_USAGE",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22v2i_EXTENDED_KEY_USAGE"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 1304,
+   "row": "ossl_v3_acc_priv_policies",
+   "row_address": "0x880140",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku25ossl_v3_acc_priv_policies",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4ed5d0",
+     "target_identifiers": [
+      "i2v_EXTENDED_KEY_USAGE"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22i2v_EXTENDED_KEY_USAGE",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22i2v_EXTENDED_KEY_USAGE"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x4cb830",
+     "target_identifiers": [
+      "EXTENDED_KEY_USAGE_it"
+     ],
+     "target_symbol": "EXTENDED_KEY_USAGE_it",
+     "target_symbols": [
+      "EXTENDED_KEY_USAGE_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x4ed6a0",
+     "target_identifiers": [
+      "v2i_EXTENDED_KEY_USAGE"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22v2i_EXTENDED_KEY_USAGE",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22v2i_EXTENDED_KEY_USAGE"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 4,
+   "ext_nid": 143,
+   "row": "ossl_v3_sxnet",
+   "row_address": "0x88d7e8",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_sxnet13ossl_v3_sxnet",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x563f40",
+     "target_identifiers": [
+      "sxnet_i2r"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_sxnet9sxnet_i2r",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_sxnet9sxnet_i2r"
+     ]
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x53f3d0",
+     "target_identifiers": [
+      "SXNET_it"
+     ],
+     "target_symbol": "SXNET_it",
+     "target_symbols": [
+      "SXNET_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x5641d0",
+     "target_identifiers": [
+      "sxnet_v2i"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_sxnet9sxnet_v2i",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_sxnet9sxnet_v2i"
+     ]
+    }
+   }
+  },
+  {
+   "ext_flags": 0,
+   "ext_nid": 401,
+   "row": "ossl_v3_policy_constraints",
+   "row_address": "0x88d850",
+   "row_source": "standard_exts",
+   "row_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_pcons26ossl_v3_policy_constraints",
+   "slots": {
+    "d2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_free": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "ext_new": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2d": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2r": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2s": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "i2v": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x563d50",
+     "target_identifiers": [
+      "i2v_POLICY_CONSTRAINTS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_pcons22i2v_POLICY_CONSTRAINTS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_pcons22i2v_POLICY_CONSTRAINTS"
+     ]
+    },
+    "it": {
+     "resolution": "relocation:symbol",
+     "target_address": "0x53cb30",
+     "target_identifiers": [
+      "POLICY_CONSTRAINTS_it"
+     ],
+     "target_symbol": "POLICY_CONSTRAINTS_it",
+     "target_symbols": [
+      "POLICY_CONSTRAINTS_it"
+     ]
+    },
+    "r2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "s2i": {
+     "resolution": "null",
+     "target_symbol": null
+    },
+    "v2i": {
+     "resolution": "relocation:RELATIVE",
+     "target_address": "0x563da0",
+     "target_identifiers": [
+      "v2i_POLICY_CONSTRAINTS"
+     ],
+     "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_pcons22v2i_POLICY_CONSTRAINTS",
+     "target_symbols": [
+      "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_pcons22v2i_POLICY_CONSTRAINTS"
+     ]
+    }
+   }
+  }
+ ],
+ "schema": "openssl-rs/campaign/safe-c33/callback-artifact-crosscheck/v1"
+}

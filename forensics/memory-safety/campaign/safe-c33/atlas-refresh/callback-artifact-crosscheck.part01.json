@@ -1,0 +1,1519 @@
+{
+ "records": [
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_crl_num",
+   "row_address": "0x7c1d58",
+   "slot": "it",
+   "slot_address": "0x7c1d60",
+   "target_address": "0x4867b0",
+   "target_identifiers": [
+    "ASN1_INTEGER_it"
+   ],
+   "target_symbol": "ASN1_INTEGER_it",
+   "target_symbols": [
+    "ASN1_INTEGER_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_crl_num",
+   "row_address": "0x7c1d58",
+   "slot": "i2s",
+   "slot_address": "0x7c1d88",
+   "target_address": "0x1a23d0",
+   "target_identifiers": [
+    "int_i2s"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int7int_i2s",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int7int_i2s"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_crld",
+   "row_address": "0x7c1dc0",
+   "slot": "it",
+   "slot_address": "0x7c1dc8",
+   "target_address": "0x171be0",
+   "target_identifiers": [
+    "CRL_DIST_POINTS_it"
+   ],
+   "target_symbol": "CRL_DIST_POINTS_it",
+   "target_symbols": [
+    "CRL_DIST_POINTS_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_crld",
+   "row_address": "0x7c1dc0",
+   "slot": "v2i",
+   "slot_address": "0x7c1e08",
+   "target_address": "0x1a3940",
+   "target_identifiers": [
+    "v2i_crld"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld8v2i_crld",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld8v2i_crld"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_crld",
+   "row_address": "0x7c1dc0",
+   "slot": "i2r",
+   "slot_address": "0x7c1e10",
+   "target_address": "0x1a4010",
+   "target_identifiers": [
+    "i2r_crldp"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9i2r_crldp",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9i2r_crldp"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_delta_crl",
+   "row_address": "0x7c1e28",
+   "slot": "it",
+   "slot_address": "0x7c1e30",
+   "target_address": "0x4867b0",
+   "target_identifiers": [
+    "ASN1_INTEGER_it"
+   ],
+   "target_symbol": "ASN1_INTEGER_it",
+   "target_symbols": [
+    "ASN1_INTEGER_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_delta_crl",
+   "row_address": "0x7c1e28",
+   "slot": "i2s",
+   "slot_address": "0x7c1e58",
+   "target_address": "0x1a23d0",
+   "target_identifiers": [
+    "int_i2s"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int7int_i2s",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int7int_i2s"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_crl_invdate",
+   "row_address": "0x7c1e90",
+   "slot": "it",
+   "slot_address": "0x7c1e98",
+   "target_address": "0x486780",
+   "target_identifiers": [
+    "ASN1_GENERALIZEDTIME_it"
+   ],
+   "target_symbol": "ASN1_GENERALIZEDTIME_it",
+   "target_symbols": [
+    "ASN1_GENERALIZEDTIME_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_crl_invdate",
+   "row_address": "0x7c1e90",
+   "slot": "i2r",
+   "slot_address": "0x7c1ee0",
+   "target_address": "0x1a1a10",
+   "target_identifiers": [
+    "i2r_crl_invdate",
+    "i2r_ocsp_acutoff"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16i2r_ocsp_acutoff",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16i2r_ocsp_acutoff",
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld15i2r_crl_invdate"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_ocsp_nonce",
+   "row_address": "0x7c1ef8",
+   "slot": "ext_new",
+   "slot_address": "0x7c1f08",
+   "target_address": "0x1a1960",
+   "target_identifiers": [
+    "ocsp_nonce_new"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14ocsp_nonce_new",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14ocsp_nonce_new"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_ocsp_nonce",
+   "row_address": "0x7c1ef8",
+   "slot": "ext_free",
+   "slot_address": "0x7c1f10",
+   "target_address": "0x1a1990",
+   "target_identifiers": [
+    "ocsp_nonce_free"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp15ocsp_nonce_free",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp15ocsp_nonce_free"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_ocsp_nonce",
+   "row_address": "0x7c1ef8",
+   "slot": "d2i",
+   "slot_address": "0x7c1f18",
+   "target_address": "0x1a1560",
+   "target_identifiers": [
+    "d2i_ocsp_nonce"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14d2i_ocsp_nonce",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14d2i_ocsp_nonce"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_ocsp_nonce",
+   "row_address": "0x7c1ef8",
+   "slot": "i2d",
+   "slot_address": "0x7c1f20",
+   "target_address": "0x1a1690",
+   "target_identifiers": [
+    "i2d_ocsp_nonce"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14i2d_ocsp_nonce.llvm.108797047066052405",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14i2d_ocsp_nonce.llvm.108797047066052405"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_ocsp_nonce",
+   "row_address": "0x7c1ef8",
+   "slot": "i2r",
+   "slot_address": "0x7c1f48",
+   "target_address": "0x1a1910",
+   "target_identifiers": [
+    "i2r_ocsp_nonce"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14i2r_ocsp_nonce",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14i2r_ocsp_nonce"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_ocsp_crlid",
+   "row_address": "0x7c1f60",
+   "slot": "it",
+   "slot_address": "0x7c1f68",
+   "target_address": "0x2d53c0",
+   "target_identifiers": [
+    "OCSP_CRLID_it"
+   ],
+   "target_symbol": "OCSP_CRLID_it",
+   "target_symbols": [
+    "OCSP_CRLID_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_ocsp_crlid",
+   "row_address": "0x7c1f60",
+   "slot": "i2r",
+   "slot_address": "0x7c1fb0",
+   "target_address": "0x1a16d0",
+   "target_identifiers": [
+    "i2r_ocsp_crlid"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14i2r_ocsp_crlid",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14i2r_ocsp_crlid"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_ocsp_nocheck",
+   "row_address": "0x7c1fc8",
+   "slot": "it",
+   "slot_address": "0x7c1fd0",
+   "target_address": "0x4867c0",
+   "target_identifiers": [
+    "ASN1_NULL_it"
+   ],
+   "target_symbol": "ASN1_NULL_it",
+   "target_symbols": [
+    "ASN1_NULL_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_ocsp_nocheck",
+   "row_address": "0x7c1fc8",
+   "slot": "s2i",
+   "slot_address": "0x7c2000",
+   "target_address": "0x1a1a80",
+   "target_identifiers": [
+    "s2i_ocsp_nocheck"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16s2i_ocsp_nocheck",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16s2i_ocsp_nocheck"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_ocsp_nocheck",
+   "row_address": "0x7c1fc8",
+   "slot": "i2r",
+   "slot_address": "0x7c2018",
+   "target_address": "0x1a1a70",
+   "target_identifiers": [
+    "i2r_ocsp_nocheck"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16i2r_ocsp_nocheck.llvm.108797047066052405",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16i2r_ocsp_nocheck.llvm.108797047066052405"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_ocsp_acutoff",
+   "row_address": "0x7c2030",
+   "slot": "it",
+   "slot_address": "0x7c2038",
+   "target_address": "0x486780",
+   "target_identifiers": [
+    "ASN1_GENERALIZEDTIME_it"
+   ],
+   "target_symbol": "ASN1_GENERALIZEDTIME_it",
+   "target_symbols": [
+    "ASN1_GENERALIZEDTIME_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_ocsp_acutoff",
+   "row_address": "0x7c2030",
+   "slot": "i2r",
+   "slot_address": "0x7c2080",
+   "target_address": "0x1a1a10",
+   "target_identifiers": [
+    "i2r_crl_invdate",
+    "i2r_ocsp_acutoff"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16i2r_ocsp_acutoff",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16i2r_ocsp_acutoff",
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld15i2r_crl_invdate"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_ocsp_serviceloc",
+   "row_address": "0x7c2098",
+   "slot": "it",
+   "slot_address": "0x7c20a0",
+   "target_address": "0x2d5fd0",
+   "target_identifiers": [
+    "OCSP_SERVICELOC_it"
+   ],
+   "target_symbol": "OCSP_SERVICELOC_it",
+   "target_symbols": [
+    "OCSP_SERVICELOC_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_ocsp_serviceloc",
+   "row_address": "0x7c2098",
+   "slot": "i2r",
+   "slot_address": "0x7c20e8",
+   "target_address": "0x1a1a90",
+   "target_identifiers": [
+    "i2r_ocsp_serviceloc"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp19i2r_ocsp_serviceloc",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp19i2r_ocsp_serviceloc"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_crl_hold",
+   "row_address": "0x7c2100",
+   "slot": "it",
+   "slot_address": "0x7c2108",
+   "target_address": "0x4867d0",
+   "target_identifiers": [
+    "ASN1_OBJECT_it"
+   ],
+   "target_symbol": "ASN1_OBJECT_it",
+   "target_symbols": [
+    "ASN1_OBJECT_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_crl_hold",
+   "row_address": "0x7c2100",
+   "slot": "i2r",
+   "slot_address": "0x7c2150",
+   "target_address": "0x1a29a0",
+   "target_identifiers": [
+    "i2r_object"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld10i2r_object",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld10i2r_object"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_inhibit_anyp",
+   "row_address": "0x7c2168",
+   "slot": "it",
+   "slot_address": "0x7c2170",
+   "target_address": "0x4867b0",
+   "target_identifiers": [
+    "ASN1_INTEGER_it"
+   ],
+   "target_symbol": "ASN1_INTEGER_it",
+   "target_symbols": [
+    "ASN1_INTEGER_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_inhibit_anyp",
+   "row_address": "0x7c2168",
+   "slot": "i2s",
+   "slot_address": "0x7c2198",
+   "target_address": "0x1a23d0",
+   "target_identifiers": [
+    "int_i2s"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int7int_i2s",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int7int_i2s"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_inhibit_anyp",
+   "row_address": "0x7c2168",
+   "slot": "s2i",
+   "slot_address": "0x7c21a0",
+   "target_address": "0x1a23c0",
+   "target_identifiers": [
+    "s2i_asn1_int"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int12s2i_asn1_int",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_int12s2i_asn1_int"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_idp",
+   "row_address": "0x7c21d0",
+   "slot": "it",
+   "slot_address": "0x7c21d8",
+   "target_address": "0x172960",
+   "target_identifiers": [
+    "ISSUING_DIST_POINT_it"
+   ],
+   "target_symbol": "ISSUING_DIST_POINT_it",
+   "target_symbols": [
+    "ISSUING_DIST_POINT_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_idp",
+   "row_address": "0x7c21d0",
+   "slot": "v2i",
+   "slot_address": "0x7c2218",
+   "target_address": "0x1a3700",
+   "target_identifiers": [
+    "v2i_idp"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld7v2i_idp",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld7v2i_idp"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_idp",
+   "row_address": "0x7c21d0",
+   "slot": "i2r",
+   "slot_address": "0x7c2220",
+   "target_address": "0x1a35e0",
+   "target_identifiers": [
+    "i2r_idp"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld7i2r_idp",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld7i2r_idp"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_freshest_crl",
+   "row_address": "0x7c2238",
+   "slot": "it",
+   "slot_address": "0x7c2240",
+   "target_address": "0x171be0",
+   "target_identifiers": [
+    "CRL_DIST_POINTS_it"
+   ],
+   "target_symbol": "CRL_DIST_POINTS_it",
+   "target_symbols": [
+    "CRL_DIST_POINTS_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_freshest_crl",
+   "row_address": "0x7c2238",
+   "slot": "v2i",
+   "slot_address": "0x7c2280",
+   "target_address": "0x1a3940",
+   "target_identifiers": [
+    "v2i_crld"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld8v2i_crld",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld8v2i_crld"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_freshest_crl",
+   "row_address": "0x7c2238",
+   "slot": "i2r",
+   "slot_address": "0x7c2288",
+   "target_address": "0x1a4010",
+   "target_identifiers": [
+    "i2r_crldp"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9i2r_crldp",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9i2r_crldp"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_utf8_list",
+   "row_address": "0x7c22a0",
+   "slot": "it",
+   "slot_address": "0x7c22a8",
+   "target_address": "0x486cb0",
+   "target_identifiers": [
+    "ASN1_UTF8STRING_it"
+   ],
+   "target_symbol": "ASN1_UTF8STRING_it",
+   "target_symbols": [
+    "ASN1_UTF8STRING_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_utf8_list",
+   "row_address": "0x7c22a0",
+   "slot": "i2s",
+   "slot_address": "0x7c22d0",
+   "target_address": "0x1a5130",
+   "target_identifiers": [
+    "utf8_i2s"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_utf88utf8_i2s",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_utf88utf8_i2s"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_utf8_list",
+   "row_address": "0x7c22a0",
+   "slot": "s2i",
+   "slot_address": "0x7c22d8",
+   "target_address": "0x1a51b0",
+   "target_identifiers": [
+    "utf8_s2i"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_utf88utf8_s2i",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_utf88utf8_s2i"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_issuer_sign_tool",
+   "row_address": "0x7c2308",
+   "slot": "it",
+   "slot_address": "0x7c2310",
+   "target_address": "0x1728f0",
+   "target_identifiers": [
+    "ISSUER_SIGN_TOOL_it"
+   ],
+   "target_symbol": "ISSUER_SIGN_TOOL_it",
+   "target_symbols": [
+    "ISSUER_SIGN_TOOL_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_issuer_sign_tool",
+   "row_address": "0x7c2308",
+   "slot": "v2i",
+   "slot_address": "0x7c2350",
+   "target_address": "0x1a25c0",
+   "target_identifiers": [
+    "v2i_issuer_sign_tool"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ist20v2i_issuer_sign_tool",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ist20v2i_issuer_sign_tool"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_issuer_sign_tool",
+   "row_address": "0x7c2308",
+   "slot": "i2r",
+   "slot_address": "0x7c2358",
+   "target_address": "0x1a2440",
+   "target_identifiers": [
+    "i2r_issuer_sign_tool"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ist20i2r_issuer_sign_tool",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ist20i2r_issuer_sign_tool"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_attribute_descriptor",
+   "row_address": "0x7c2370",
+   "slot": "it",
+   "slot_address": "0x7c2378",
+   "target_address": "0x173eb0",
+   "target_identifiers": [
+    "OSSL_ATTRIBUTE_DESCRIPTOR_it"
+   ],
+   "target_symbol": "OSSL_ATTRIBUTE_DESCRIPTOR_it",
+   "target_symbols": [
+    "OSSL_ATTRIBUTE_DESCRIPTOR_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_attribute_descriptor",
+   "row_address": "0x7c2370",
+   "slot": "i2r",
+   "slot_address": "0x7c23c0",
+   "target_address": "0x1a1ed0",
+   "target_identifiers": [
+    "i2r_OSSL_ATTRIBUTE_DESCRIPTOR"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_attrdesc29i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_attrdesc29i2r_OSSL_ATTRIBUTE_DESCRIPTOR"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_aa_issuing_dist_point",
+   "row_address": "0x7c23d8",
+   "slot": "it",
+   "slot_address": "0x7c23e0",
+   "target_address": "0x173e40",
+   "target_identifiers": [
+    "OSSL_AA_DIST_POINT_it"
+   ],
+   "target_symbol": "OSSL_AA_DIST_POINT_it",
+   "target_symbols": [
+    "OSSL_AA_DIST_POINT_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_aa_issuing_dist_point",
+   "row_address": "0x7c23d8",
+   "slot": "v2i",
+   "slot_address": "0x7c2420",
+   "target_address": "0x1a4160",
+   "target_identifiers": [
+    "v2i_aaidp"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9v2i_aaidp",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9v2i_aaidp"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_aa_issuing_dist_point",
+   "row_address": "0x7c23d8",
+   "slot": "i2r",
+   "slot_address": "0x7c2428",
+   "target_address": "0x1a3e10",
+   "target_identifiers": [
+    "i2r_aaidp"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9i2r_aaidp",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9i2r_aaidp"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_audit_identity",
+   "row_address": "0x7d0a38",
+   "slot": "it",
+   "slot_address": "0x7d0a40",
+   "target_address": "0x4867f0",
+   "target_identifiers": [
+    "ASN1_OCTET_STRING_it"
+   ],
+   "target_symbol": "ASN1_OCTET_STRING_it",
+   "target_symbols": [
+    "ASN1_OCTET_STRING_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_audit_identity",
+   "row_address": "0x7d0a38",
+   "slot": "i2s",
+   "slot_address": "0x7d0a68",
+   "target_address": "0x222af0",
+   "target_identifiers": [
+    "audit_i2s"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_audit_id9audit_i2s",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_audit_id9audit_i2s"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_audit_identity",
+   "row_address": "0x7d0a38",
+   "slot": "s2i",
+   "slot_address": "0x7d0a70",
+   "target_address": "0x222b00",
+   "target_identifiers": [
+    "audit_s2i"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_audit_id9audit_s2i",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_audit_id9audit_s2i"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_user_notice",
+   "row_address": "0x7d0aa0",
+   "slot": "it",
+   "slot_address": "0x7d0aa8",
+   "target_address": "0x20c3e0",
+   "target_identifiers": [
+    "OSSL_USER_NOTICE_SYNTAX_it"
+   ],
+   "target_symbol": "OSSL_USER_NOTICE_SYNTAX_it",
+   "target_symbols": [
+    "OSSL_USER_NOTICE_SYNTAX_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_user_notice",
+   "row_address": "0x7d0aa0",
+   "slot": "i2r",
+   "slot_address": "0x7d0af0",
+   "target_address": "0x222b10",
+   "target_identifiers": [
+    "i2r_USER_NOTICE_SYNTAX"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_usernotice22i2r_USER_NOTICE_SYNTAX",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_usernotice22i2r_USER_NOTICE_SYNTAX"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_alt[0]",
+   "row_address": "0x7d5678",
+   "slot": "it",
+   "slot_address": "0x7d5680",
+   "target_address": "0x235aa0",
+   "target_identifiers": [
+    "GENERAL_NAMES_it"
+   ],
+   "target_symbol": "GENERAL_NAMES_it",
+   "target_symbols": [
+    "GENERAL_NAMES_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_alt[0]",
+   "row_address": "0x7d5678",
+   "slot": "i2v",
+   "slot_address": "0x7d56b8",
+   "target_address": "0x24d590",
+   "target_identifiers": [
+    "san_i2v"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_i2v",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_i2v"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_alt[0]",
+   "row_address": "0x7d5678",
+   "slot": "v2i",
+   "slot_address": "0x7d56c0",
+   "target_address": "0x24d650",
+   "target_identifiers": [
+    "san_v2i"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_v2i",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_v2i"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_alt[1]",
+   "row_address": "0x7d56e0",
+   "slot": "it",
+   "slot_address": "0x7d56e8",
+   "target_address": "0x235aa0",
+   "target_identifiers": [
+    "GENERAL_NAMES_it"
+   ],
+   "target_symbol": "GENERAL_NAMES_it",
+   "target_symbols": [
+    "GENERAL_NAMES_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_alt[1]",
+   "row_address": "0x7d56e0",
+   "slot": "i2v",
+   "slot_address": "0x7d5720",
+   "target_address": "0x24d590",
+   "target_identifiers": [
+    "san_i2v"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_i2v",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_i2v"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_alt[1]",
+   "row_address": "0x7d56e0",
+   "slot": "v2i",
+   "slot_address": "0x7d5728",
+   "target_address": "0x24d100",
+   "target_identifiers": [
+    "san_v2i_issuer"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san14san_v2i_issuer",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san14san_v2i_issuer"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_alt[2]",
+   "row_address": "0x7d5748",
+   "slot": "it",
+   "slot_address": "0x7d5750",
+   "target_address": "0x235aa0",
+   "target_identifiers": [
+    "GENERAL_NAMES_it"
+   ],
+   "target_symbol": "GENERAL_NAMES_it",
+   "target_symbols": [
+    "GENERAL_NAMES_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_alt[2]",
+   "row_address": "0x7d5748",
+   "slot": "i2v",
+   "slot_address": "0x7d5788",
+   "target_address": "0x24d590",
+   "target_identifiers": [
+    "san_i2v"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_i2v",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_san7san_i2v"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_addr",
+   "row_address": "0x7d57b0",
+   "slot": "it",
+   "slot_address": "0x7d57b8",
+   "target_address": "0x24e230",
+   "target_identifiers": [
+    "IPAddrBlocks_it"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_addr15IPAddrBlocks_it.llvm.13447920157231050637",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_addr15IPAddrBlocks_it.llvm.13447920157231050637"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_addr",
+   "row_address": "0x7d57b0",
+   "slot": "v2i",
+   "slot_address": "0x7d57f8",
+   "target_address": "0x24e7a0",
+   "target_identifiers": [
+    "v2i_IPAddrBlocks"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_addr16v2i_IPAddrBlocks",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_addr16v2i_IPAddrBlocks"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_addr",
+   "row_address": "0x7d57b0",
+   "slot": "i2r",
+   "slot_address": "0x7d5800",
+   "target_address": "0x24e400",
+   "target_identifiers": [
+    "i2r_IPAddrBlocks"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_addr16i2r_IPAddrBlocks",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_addr16i2r_IPAddrBlocks"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_asid",
+   "row_address": "0x7d5818",
+   "slot": "it",
+   "slot_address": "0x7d5820",
+   "target_address": "0x231b70",
+   "target_identifiers": [
+    "ASIdentifiers_it"
+   ],
+   "target_symbol": "ASIdentifiers_it",
+   "target_symbols": [
+    "ASIdentifiers_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_asid",
+   "row_address": "0x7d5818",
+   "slot": "v2i",
+   "slot_address": "0x7d5860",
+   "target_address": "0x2506b0",
+   "target_identifiers": [
+    "v2i_ASIdentifiers"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_asid17v2i_ASIdentifiers",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_asid17v2i_ASIdentifiers"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_asid",
+   "row_address": "0x7d5818",
+   "slot": "i2r",
+   "slot_address": "0x7d5868",
+   "target_address": "0x250660",
+   "target_identifiers": [
+    "i2r_ASIdentifiers"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_asid17i2r_ASIdentifiers",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_asid17i2r_ASIdentifiers"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_no_rev_avail",
+   "row_address": "0x7d5880",
+   "slot": "it",
+   "slot_address": "0x7d5888",
+   "target_address": "0x4867c0",
+   "target_identifiers": [
+    "ASN1_NULL_it"
+   ],
+   "target_symbol": "ASN1_NULL_it",
+   "target_symbols": [
+    "ASN1_NULL_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_no_rev_avail",
+   "row_address": "0x7d5880",
+   "slot": "i2s",
+   "slot_address": "0x7d58b0",
+   "target_address": "0x24cb90",
+   "target_identifiers": [
+    "i2s_NO_REV_AVAIL"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16i2s_NO_REV_AVAIL",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16i2s_NO_REV_AVAIL"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_no_rev_avail",
+   "row_address": "0x7d5880",
+   "slot": "s2i",
+   "slot_address": "0x7d58b8",
+   "target_address": "0x24cbb0",
+   "target_identifiers": [
+    "r2i_NO_REV_AVAIL",
+    "s2i_NO_REV_AVAIL"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16r2i_NO_REV_AVAIL",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16r2i_NO_REV_AVAIL",
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16s2i_NO_REV_AVAIL"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_no_rev_avail",
+   "row_address": "0x7d5880",
+   "slot": "i2r",
+   "slot_address": "0x7d58d0",
+   "target_address": "0x24cb80",
+   "target_identifiers": [
+    "i2r_NO_REV_AVAIL"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16i2r_NO_REV_AVAIL.llvm.13447920157231050637",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16i2r_NO_REV_AVAIL.llvm.13447920157231050637"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_no_rev_avail",
+   "row_address": "0x7d5880",
+   "slot": "r2i",
+   "slot_address": "0x7d58d8",
+   "target_address": "0x24cbb0",
+   "target_identifiers": [
+    "r2i_NO_REV_AVAIL",
+    "s2i_NO_REV_AVAIL"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16r2i_NO_REV_AVAIL",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16r2i_NO_REV_AVAIL",
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16s2i_NO_REV_AVAIL"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_name_constraints",
+   "row_address": "0x7d58e8",
+   "slot": "it",
+   "slot_address": "0x7d58f0",
+   "target_address": "0x2371a0",
+   "target_identifiers": [
+    "NAME_CONSTRAINTS_it"
+   ],
+   "target_symbol": "NAME_CONSTRAINTS_it",
+   "target_symbols": [
+    "NAME_CONSTRAINTS_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_name_constraints",
+   "row_address": "0x7d58e8",
+   "slot": "v2i",
+   "slot_address": "0x7d5930",
+   "target_address": "0x252a20",
+   "target_identifiers": [
+    "v2i_NAME_CONSTRAINTS"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20v2i_NAME_CONSTRAINTS",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20v2i_NAME_CONSTRAINTS"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_name_constraints",
+   "row_address": "0x7d58e8",
+   "slot": "i2r",
+   "slot_address": "0x7d5938",
+   "target_address": "0x2529b0",
+   "target_identifiers": [
+    "i2r_NAME_CONSTRAINTS"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20i2r_NAME_CONSTRAINTS",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20i2r_NAME_CONSTRAINTS"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_subj_dir_attrs",
+   "row_address": "0x7d5950",
+   "slot": "it",
+   "slot_address": "0x7d5958",
+   "target_address": "0x237fd0",
+   "target_identifiers": [
+    "OSSL_ATTRIBUTES_SYNTAX_it"
+   ],
+   "target_symbol": "OSSL_ATTRIBUTES_SYNTAX_it",
+   "target_symbols": [
+    "OSSL_ATTRIBUTES_SYNTAX_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_subj_dir_attrs",
+   "row_address": "0x7d5950",
+   "slot": "i2r",
+   "slot_address": "0x7d59a0",
+   "target_address": "0x24d800",
+   "target_identifiers": [
+    "i2r_ATTRIBUTES_SYNTAX"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_sda21i2r_ATTRIBUTES_SYNTAX",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_sda21i2r_ATTRIBUTES_SYNTAX"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_delegated_name_constraints",
+   "row_address": "0x7d59b8",
+   "slot": "it",
+   "slot_address": "0x7d59c0",
+   "target_address": "0x2371a0",
+   "target_identifiers": [
+    "NAME_CONSTRAINTS_it"
+   ],
+   "target_symbol": "NAME_CONSTRAINTS_it",
+   "target_symbols": [
+    "NAME_CONSTRAINTS_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_delegated_name_constraints",
+   "row_address": "0x7d59b8",
+   "slot": "v2i",
+   "slot_address": "0x7d5a00",
+   "target_address": "0x252a20",
+   "target_identifiers": [
+    "v2i_NAME_CONSTRAINTS"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20v2i_NAME_CONSTRAINTS",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20v2i_NAME_CONSTRAINTS"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_delegated_name_constraints",
+   "row_address": "0x7d59b8",
+   "slot": "i2r",
+   "slot_address": "0x7d5a08",
+   "target_address": "0x2529b0",
+   "target_identifiers": [
+    "i2r_NAME_CONSTRAINTS"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20i2r_NAME_CONSTRAINTS",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20i2r_NAME_CONSTRAINTS"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_attribute_mappings",
+   "row_address": "0x7d5a20",
+   "slot": "it",
+   "slot_address": "0x7d5a28",
+   "target_address": "0x238040",
+   "target_identifiers": [
+    "OSSL_ATTRIBUTE_MAPPINGS_it"
+   ],
+   "target_symbol": "OSSL_ATTRIBUTE_MAPPINGS_it",
+   "target_symbols": [
+    "OSSL_ATTRIBUTE_MAPPINGS_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_attribute_mappings",
+   "row_address": "0x7d5a20",
+   "slot": "i2r",
+   "slot_address": "0x7d5a70",
+   "target_address": "0x24c930",
+   "target_identifiers": [
+    "i2r_ATTRIBUTE_MAPPINGS"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_attrmap22i2r_ATTRIBUTE_MAPPINGS",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_attrmap22i2r_ATTRIBUTE_MAPPINGS"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_holder_name_constraints",
+   "row_address": "0x7d5a88",
+   "slot": "it",
+   "slot_address": "0x7d5a90",
+   "target_address": "0x2371a0",
+   "target_identifiers": [
+    "NAME_CONSTRAINTS_it"
+   ],
+   "target_symbol": "NAME_CONSTRAINTS_it",
+   "target_symbols": [
+    "NAME_CONSTRAINTS_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_holder_name_constraints",
+   "row_address": "0x7d5a88",
+   "slot": "v2i",
+   "slot_address": "0x7d5ad0",
+   "target_address": "0x252a20",
+   "target_identifiers": [
+    "v2i_NAME_CONSTRAINTS"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20v2i_NAME_CONSTRAINTS",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20v2i_NAME_CONSTRAINTS"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_holder_name_constraints",
+   "row_address": "0x7d5a88",
+   "slot": "i2r",
+   "slot_address": "0x7d5ad8",
+   "target_address": "0x2529b0",
+   "target_identifiers": [
+    "i2r_NAME_CONSTRAINTS"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20i2r_NAME_CONSTRAINTS",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20i2r_NAME_CONSTRAINTS"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_associated_info",
+   "row_address": "0x7d5af0",
+   "slot": "it",
+   "slot_address": "0x7d5af8",
+   "target_address": "0x237fd0",
+   "target_identifiers": [
+    "OSSL_ATTRIBUTES_SYNTAX_it"
+   ],
+   "target_symbol": "OSSL_ATTRIBUTES_SYNTAX_it",
+   "target_symbols": [
+    "OSSL_ATTRIBUTES_SYNTAX_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_associated_info",
+   "row_address": "0x7d5af0",
+   "slot": "i2r",
+   "slot_address": "0x7d5b40",
+   "target_address": "0x24d800",
+   "target_identifiers": [
+    "i2r_ATTRIBUTES_SYNTAX"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_sda21i2r_ATTRIBUTES_SYNTAX",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_sda21i2r_ATTRIBUTES_SYNTAX"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_akey_id",
+   "row_address": "0x7f6448",
+   "slot": "it",
+   "slot_address": "0x7f6450",
+   "target_address": "0x487a80",
+   "target_identifiers": [
+    "AUTHORITY_KEYID_it"
+   ],
+   "target_symbol": "AUTHORITY_KEYID_it",
+   "target_symbols": [
+    "AUTHORITY_KEYID_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_akey_id",
+   "row_address": "0x7f6448",
+   "slot": "i2v",
+   "slot_address": "0x7f6488",
+   "target_address": "0x290750",
+   "target_identifiers": [
+    "akid_i2v"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_akid8akid_i2v",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_akid8akid_i2v"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_akey_id",
+   "row_address": "0x7f6448",
+   "slot": "v2i",
+   "slot_address": "0x7f6490",
+   "target_address": "0x290a60",
+   "target_identifiers": [
+    "akid_v2i"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_akid8akid_v2i",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_akid8akid_v2i"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_soa_identifier",
+   "row_address": "0x7f64b0",
+   "slot": "it",
+   "slot_address": "0x7f64b8",
+   "target_address": "0x4867c0",
+   "target_identifiers": [
+    "ASN1_NULL_it"
+   ],
+   "target_symbol": "ASN1_NULL_it",
+   "target_symbols": [
+    "ASN1_NULL_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_soa_identifier",
+   "row_address": "0x7f64b0",
+   "slot": "i2s",
+   "slot_address": "0x7f64e0",
+   "target_address": "0x291600",
+   "target_identifiers": [
+    "i2s_SOA_IDENTIFIER"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18i2s_SOA_IDENTIFIER",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18i2s_SOA_IDENTIFIER"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_soa_identifier",
+   "row_address": "0x7f64b0",
+   "slot": "s2i",
+   "slot_address": "0x7f64e8",
+   "target_address": "0x291620",
+   "target_identifiers": [
+    "r2i_SOA_IDENTIFIER",
+    "s2i_SOA_IDENTIFIER"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18r2i_SOA_IDENTIFIER",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18r2i_SOA_IDENTIFIER",
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18s2i_SOA_IDENTIFIER"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_soa_identifier",
+   "row_address": "0x7f64b0",
+   "slot": "i2r",
+   "slot_address": "0x7f6500",
+   "target_address": "0x2915f0",
+   "target_identifiers": [
+    "i2r_SOA_IDENTIFIER"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18i2r_SOA_IDENTIFIER.llvm.5705049292224334029",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18i2r_SOA_IDENTIFIER.llvm.5705049292224334029"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_soa_identifier",
+   "row_address": "0x7f64b0",
+   "slot": "r2i",
+   "slot_address": "0x7f6508",
+   "target_address": "0x291620",
+   "target_identifiers": [
+    "r2i_SOA_IDENTIFIER",
+    "s2i_SOA_IDENTIFIER"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18r2i_SOA_IDENTIFIER",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18r2i_SOA_IDENTIFIER",
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18s2i_SOA_IDENTIFIER"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_skey_id",
+   "row_address": "0x7ffd50",
+   "slot": "it",
+   "slot_address": "0x7ffd58",
+   "target_address": "0x4867f0",
+   "target_identifiers": [
+    "ASN1_OCTET_STRING_it"
+   ],
+   "target_symbol": "ASN1_OCTET_STRING_it",
+   "target_symbols": [
+    "ASN1_OCTET_STRING_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_skey_id",
+   "row_address": "0x7ffd50",
+   "slot": "i2s",
+   "slot_address": "0x7ffd80",
+   "target_address": "0x2f2650",
+   "target_identifiers": [
+    "skid_i2s"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_skid8skid_i2s",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_skid8skid_i2s"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_skey_id",
+   "row_address": "0x7ffd50",
+   "slot": "s2i",
+   "slot_address": "0x7ffd88",
+   "target_address": "0x2f20e0",
+   "target_identifiers": [
+    "s2i_skey_id"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_skid11s2i_skey_id",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_skid11s2i_skey_id"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_crl_reason",
+   "row_address": "0x7ffdb8",
+   "slot": "it",
+   "slot_address": "0x7ffdc0",
+   "target_address": "0x486760",
+   "target_identifiers": [
+    "ASN1_ENUMERATED_it"
+   ],
+   "target_symbol": "ASN1_ENUMERATED_it",
+   "target_symbols": [
+    "ASN1_ENUMERATED_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_crl_reason",
+   "row_address": "0x7ffdb8",
+   "slot": "i2s",
+   "slot_address": "0x7ffde8",
+   "target_address": "0x2f2020",
+   "target_identifiers": [
+    "enum_i2s",
+    "i2s_ASN1_ENUMERATED_TABLE"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_enum8enum_i2s",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_enum8enum_i2s",
+    "i2s_ASN1_ENUMERATED_TABLE"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_tls_feature",
+   "row_address": "0x7ffe20",
+   "slot": "it",
+   "slot_address": "0x7ffe28",
+   "target_address": "0x2f2660",
+   "target_identifiers": [
+    "tls_feature_it"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_tlsf14tls_feature_it.llvm.868859625765045373",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_tlsf14tls_feature_it.llvm.868859625765045373"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_tls_feature",
+   "row_address": "0x7ffe20",
+   "slot": "i2v",
+   "slot_address": "0x7ffe60",
+   "target_address": "0x2f2670",
+   "target_identifiers": [
+    "i2v_TLS_FEATURE"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_tlsf15i2v_TLS_FEATURE",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_tlsf15i2v_TLS_FEATURE"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_tls_feature",
+   "row_address": "0x7ffe20",
+   "slot": "v2i",
+   "slot_address": "0x7ffe68",
+   "target_address": "0x2f2750",
+   "target_identifiers": [
+    "v2i_TLS_FEATURE"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_tlsf15v2i_TLS_FEATURE",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_tlsf15v2i_TLS_FEATURE"
+   ]
+  }
+ ],
+ "schema": "openssl-rs/campaign/safe-c33/callback-artifact-crosscheck/v1/part"
+}

@@ -1,0 +1,6 @@
+{
+ "src/x509/v3_skid.rs::s2i_skey_id": {
+  "assumption": "",
+  "classification": "PROVEN_EXCLUDED"
+ }
+}
