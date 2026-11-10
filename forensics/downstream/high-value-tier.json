@@ -8007,8 +8007,8 @@
     "authority_prefix": "forensics/authorities/prefix/openssl-3.6.4-production",
     "candidate_identity": {
       "install_prefix": "artifacts/phase2/install",
-      "libcrypto_so_3_sha256": "33f6210e368c968a46d3ddeab3184f636bd36215ff929672864a387303b9e4c8",
-      "libssl_so_3_sha256": "0f3834cad97351a47bee807b85c628882e6722b188104cbc1d26c88d1464c038"
+      "libcrypto_so_3_sha256": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3",
+      "libssl_so_3_sha256": "d2165444b16ea37649e415c314cfb304ac9da75a5623383adf69cc0746d040b9"
     },
     "counts": {
       "accounting": {
@@ -8151,6 +8151,7 @@
     "runs": [
       {
         "authority_applicable_level": "L7-functional",
+        "aux_bundles": null,
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "curl",
@@ -8193,12 +8194,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "2636520:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "2636520:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "2636520:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "2636520:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "2636520:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "2636520:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "240977:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "240977:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "240977:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "240977:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "240977:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "240977:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -8288,10 +8289,10 @@
           "how to fix it, please visit the webpage mentioned above.",
           "== s_server ==",
           "exit=0",
-          "804BF1FFA97F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
-          "804BF1FFA97F0000:error:0A000418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:918:SSL alert number 48"
+          "803B56D0EF7F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
+          "803B56D0EF7F0000:error:0A000418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:918:SSL alert number 48"
         ],
-        "transcript_sha256": "4ec467e57b9c9f4977f26d0bd9f8a78f26fa59eb2d370799d810c2bdc9ff6161",
+        "transcript_sha256": "3e96c65368905846c4413fe8d2c79113e747126066d0858f6084b1ee84f7b9c9",
         "variant_id": "variant:curl:8.10.1:pristine",
         "workload": "curl: verified TLS1.3 fetch + unrelated-CA reject",
         "workload_result": {
@@ -8303,6 +8304,7 @@
       },
       {
         "authority_applicable_level": "L7-functional",
+        "aux_bundles": null,
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "curl",
@@ -8345,12 +8347,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "2636536:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "2636536:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "2636536:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "2636536:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "2636536:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "2636536:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "240998:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "240998:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "240998:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "240998:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "240998:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "240998:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -8440,10 +8442,10 @@
           "how to fix it, please visit the webpage mentioned above.",
           "== s_server ==",
           "exit=0",
-          "802B6B6D717F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
-          "802B6B6D717F0000:error:0A000418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:918:SSL alert number 48"
+          "800BE3466E7F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
+          "800BE3466E7F0000:error:0A000418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:918:SSL alert number 48"
         ],
-        "transcript_sha256": "6e1debdef0606c2cc38ebff5f4bc60820089723367aa19db67b5c1f60a3c126b",
+        "transcript_sha256": "494f9c219bef8ed83963f62c2ad81b6a1f4c32b9f8b9320c921acd5c40b6e33a",
         "variant_id": "variant:curl:8.10.1:pristine",
         "workload": "curl: verified TLS1.3 fetch + unrelated-CA reject",
         "workload_result": {
@@ -8455,6 +8457,7 @@
       },
       {
         "authority_applicable_level": "L7-functional",
+        "aux_bundles": null,
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "git-core",
@@ -8491,9 +8494,9 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "2730495:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "2730495:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "2730495:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "327464:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "327464:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "327464:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -8542,7 +8545,7 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:git-core",
-        "source_root_hash": "b6f52059a7b817960afac772944f50c08a52cc2d2cb19668fc25bb2f1ae05fc1",
+        "source_root_hash": "ed1f7d4ad864b1b2f8f9f35c52045e2302a5229abc047b81f9c5c8b609c37853",
         "source_sha256": "26c56c296b38c0695b26fa95f475f1d01704d2d38e73465ca30b0b2f5dc789d3",
         "source_url": "https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.56.0.tar.xz",
         "specimen_id": "specimen:git-core:2.56.0",
@@ -8588,6 +8591,7 @@
       },
       {
         "authority_applicable_level": "L7-functional",
+        "aux_bundles": null,
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "git-core",
@@ -8624,9 +8628,9 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "2766469:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "2766469:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "2766469:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "363457:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "363457:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "363457:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -8675,7 +8679,7 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:git-core",
-        "source_root_hash": "878c2003ee5ea2e8b969e82e286b5ad270655f9dfb29bfe0d382ee13796ae0b4",
+        "source_root_hash": "9adcb31e84e4f2d58acb1a72359cf099734abaef86c2a3c16a925a77a3565325",
         "source_sha256": "26c56c296b38c0695b26fa95f475f1d01704d2d38e73465ca30b0b2f5dc789d3",
         "source_url": "https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.56.0.tar.xz",
         "specimen_id": "specimen:git-core:2.56.0",
@@ -8721,6 +8725,7 @@
       },
       {
         "authority_applicable_level": "L7-functional",
+        "aux_bundles": null,
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "haproxy",
@@ -8763,12 +8768,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "2637677:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "2637677:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "2637677:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "2637677:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "2637677:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "2637677:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "242144:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "242144:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "242144:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "242144:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "242144:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "242144:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -8839,7 +8844,7 @@
           "HAProxy version 3.0.6-c2c0090 2024/11/07 - https://haproxy.org/",
           "Status: long-term supported branch - will stop receiving fixes around Q2 2029.",
           "Known bugs: http://www.haproxy.org/bugs/bugs-3.0.6.html",
-          "Running on: Linux 7.2.8-1-cachyos #1 SMP PREEMPT_DYNAMIC Sat, 26 Sep 2026 {clock} +0000 x86_64",
+          "Running on: Linux 7.3.3-1-cachyos #1 SMP PREEMPT_DYNAMIC Sat, 07 Nov 2026 {clock} +0000 x86_64",
           "== workload ==",
           "exit=0",
           "== haproxy -c ==",
@@ -8870,7 +8875,7 @@
           "depth=0 CN={addr}",
           "verify return:1"
         ],
-        "transcript_sha256": "0bfc7c509c47cf7349103da1b44612ea75dc4cc68a2452fa2da5686a8dbd38bb",
+        "transcript_sha256": "eb80a973cf57f387d86458ac7da061469dd1102b3e97e7e46a87124c85db075b",
         "variant_id": "variant:haproxy:3.0.6:pristine",
         "workload": "haproxy: TLS terminator with a verified response",
         "workload_result": {
@@ -8882,6 +8887,7 @@
       },
       {
         "authority_applicable_level": "L7-functional",
+        "aux_bundles": null,
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "haproxy",
@@ -8924,12 +8930,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "2637713:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "2637713:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "2637713:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "2637713:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "2637713:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "2637713:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "242185:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "242185:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "242185:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "242185:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "242185:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "242185:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -9000,7 +9006,7 @@
           "HAProxy version 3.0.6-c2c0090 2024/11/07 - https://haproxy.org/",
           "Status: long-term supported branch - will stop receiving fixes around Q2 2029.",
           "Known bugs: http://www.haproxy.org/bugs/bugs-3.0.6.html",
-          "Running on: Linux 7.2.8-1-cachyos #1 SMP PREEMPT_DYNAMIC Sat, 26 Sep 2026 {clock} +0000 x86_64",
+          "Running on: Linux 7.3.3-1-cachyos #1 SMP PREEMPT_DYNAMIC Sat, 07 Nov 2026 {clock} +0000 x86_64",
           "== workload ==",
           "exit=0",
           "== haproxy -c ==",
@@ -9031,7 +9037,7 @@
           "depth=0 CN={addr}",
           "verify return:1"
         ],
-        "transcript_sha256": "1fe527b24e8a5bfbeadf544c8d1f93fa264dc08e9cbdfde718b6b2014b02aead",
+        "transcript_sha256": "63fc668e293f1dc9d999f44e8c586bcdebe6218f6e912d4fecf327dde529dfb0",
         "variant_id": "variant:haproxy:3.0.6:pristine",
         "workload": "haproxy: TLS terminator with a verified response",
         "workload_result": {
@@ -9043,6 +9049,7 @@
       },
       {
         "authority_applicable_level": "L7-functional",
+        "aux_bundles": null,
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "monit",
@@ -9085,12 +9092,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "2654859:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "2654859:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "2654859:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "2654859:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "2654859:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "2654859:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "257184:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "257184:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "257184:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "257184:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "257184:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "257184:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -9156,28 +9163,21 @@
         "steps": [],
         "subject": "authority",
         "transcript_excerpt": [
-          "Copyright (C) 2001-2024 Tildeslash Ltd. All Rights Reserved.",
-          "== workload ==",
-          "exit=0",
-          "== monit -t ==",
-          "exit=0",
-          "Control file syntax OK",
-          "== authority s_client -brief ==",
-          "exit=0",
           "Connecting to {addr}",
           "CONNECTION ESTABLISHED",
-          "Protocol version: TLSv1.3",
-          "Ciphersuite: TLS_AES_256_GCM_SHA384",
+          "Protocol version: TLSv1.2",
+          "Ciphersuite: ECDHE-RSA-AES256-GCM-SHA384",
           "Peer certificate: CN={addr}",
           "Hash used: SHA256",
           "Signature type: rsa_pss_rsae_sha256",
           "Verification: OK",
+          "Supported Elliptic Curve Point Formats: uncompressed",
           "Peer Temp Key: ECDH, prime256v1, 256 bits",
           "DONE",
-          "== authority s_client GET ==",
+          "== authority s_client GET tls1_2 ==",
           "exit=0",
           "HTTP/1.0 401 Unauthorized",
-          "Date: Thu, 08 Oct 2026 {clock} GMT",
+          "Date: Tue, 10 Nov 2026 {clock} GMT",
           "Server: monit 5.34.3",
           "Content-Length: 361",
           "Connection: close",
@@ -9195,20 +9195,28 @@
           "depth=1 CN=runtime test CA",
           "verify return:1",
           "depth=0 CN={addr}",
-          "verify return:1"
+          "verify return:1",
+          "== authority s_client unrelated-ca (must fail) ==",
+          "exit=1",
+          "Connecting to {addr}",
+          "depth=0 CN={addr}",
+          "verify error:num=20:unable to get local issuer certificate",
+          "803BE39C217F0000:error:0A000086:SSL routines:tls_post_process_server_certificate:certificate verify failed:../../src/openssl-3.6.4/ssl/statem/statem_clnt.c:2125:",
+          "803BE39C217F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:"
         ],
-        "transcript_sha256": "45743f643119702fba6ee448bcfd8c53a9d1ae9eb7b9d78eb9631d4985322f43",
+        "transcript_sha256": "e6f891ef9beefa24122de263f1a272f78c1f1890eeb58029b53a9065845df8e5",
         "variant_id": "variant:monit:5.34.3:pristine",
-        "workload": "monit: TLS httpd handshake + HTTP response",
+        "workload": "monit: TLS httpd handshake + HTTP response over TLS 1.3 and TLS 1.2 + unrelated-CA reject",
         "workload_result": {
           "functional_ok": true,
           "local_only": true,
-          "name": "monit: TLS httpd handshake + HTTP response",
+          "name": "monit: TLS httpd handshake + HTTP response over TLS 1.3 and TLS 1.2 + unrelated-CA reject",
           "runtime_ok": true
         }
       },
       {
         "authority_applicable_level": "L7-functional",
+        "aux_bundles": null,
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "monit",
@@ -9251,12 +9259,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "2654877:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "2654877:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "2654877:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "2654877:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "2654877:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "2654877:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "257210:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "257210:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "257210:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "257210:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "257210:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "257210:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -9322,28 +9330,21 @@
         "steps": [],
         "subject": "candidate",
         "transcript_excerpt": [
-          "Copyright (C) 2001-2024 Tildeslash Ltd. All Rights Reserved.",
-          "== workload ==",
-          "exit=0",
-          "== monit -t ==",
-          "exit=0",
-          "Control file syntax OK",
-          "== authority s_client -brief ==",
           "exit=0",
           "Connecting to {addr}",
           "CONNECTION ESTABLISHED",
-          "Protocol version: TLSv1.3",
-          "Ciphersuite: TLS_AES_256_GCM_SHA384",
+          "Protocol version: TLSv1.2",
+          "Ciphersuite: ECDHE-RSA-AES256-GCM-SHA384",
           "Peer certificate: CN={addr}",
           "Hash used: SHA256",
-          "Signature type: rsa_pss_rsae_sha256",
+          "Signature type: rsa_pkcs1_sha256",
           "Verification: OK",
           "Peer Temp Key: X25519, 253 bits",
           "DONE",
-          "== authority s_client GET ==",
+          "== authority s_client GET tls1_2 ==",
           "exit=0",
           "HTTP/1.0 401 Unauthorized",
-          "Date: Thu, 08 Oct 2026 {clock} GMT",
+          "Date: Tue, 10 Nov 2026 {clock} GMT",
           "Server: monit 5.34.3",
           "Content-Length: 361",
           "Connection: close",
@@ -9361,20 +9362,28 @@
           "depth=1 CN=runtime test CA",
           "verify return:1",
           "depth=0 CN={addr}",
-          "verify return:1"
+          "verify return:1",
+          "== authority s_client unrelated-ca (must fail) ==",
+          "exit=1",
+          "Connecting to {addr}",
+          "depth=0 CN={addr}",
+          "verify error:num=20:unable to get local issuer certificate",
+          "80DB62408E7F0000:error:0A000086:SSL routines:tls_post_process_server_certificate:certificate verify failed:../../src/openssl-3.6.4/ssl/statem/statem_clnt.c:2125:",
+          "80DB62408E7F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:"
         ],
-        "transcript_sha256": "0c1e10d9b841a2f4e47cfb7f743c204574e6e414b056458d0dceb85aa8c12feb",
+        "transcript_sha256": "a21904bdd2fff3899c7cda6a98c5a7f93b122b5975c5af2d215f568638567041",
         "variant_id": "variant:monit:5.34.3:pristine",
-        "workload": "monit: TLS httpd handshake + HTTP response",
+        "workload": "monit: TLS httpd handshake + HTTP response over TLS 1.3 and TLS 1.2 + unrelated-CA reject",
         "workload_result": {
           "functional_ok": true,
           "local_only": true,
-          "name": "monit: TLS httpd handshake + HTTP response",
+          "name": "monit: TLS httpd handshake + HTTP response over TLS 1.3 and TLS 1.2 + unrelated-CA reject",
           "runtime_ok": true
         }
       },
       {
         "authority_applicable_level": "L7-functional",
+        "aux_bundles": null,
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "openssh",
@@ -9412,14 +9421,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "2670157:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
-            "2670157:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
-            "2670157:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
-            "2670157:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libcrypto.so.3",
-            "2670157:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
-            "2670157:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
-            "2670157:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libcrypto.so.3",
-            "2670157:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libcrypto.so.3"
+            "272498:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "272498:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "272498:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "272498:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "272498:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "272498:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "272498:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libcrypto.so.3",
+            "272498:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libcrypto.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -9519,9 +9528,9 @@
           "Write signature to msg.sig",
           "== ssh-keygen -Y verify ==",
           "exit=0",
-          "Good \"file\" signature for runtime with ED25519 key SHA256:I3NwMZXaqC+dP4o57xXgd8hsrrFLn+wreSiHOEaB4+Y"
+          "Good \"file\" signature for runtime with ED25519 key SHA256:/9miV5zJU+eY3YxXzULldf2kMkgNHRBSzF5P/Qx4cq4"
         ],
-        "transcript_sha256": "dcf49dcc403f91bc9753b49cace5b3239cb04f12f55cc078f30504ade9fa3e7a",
+        "transcript_sha256": "2ae7a90636a22e2f1111eefb5d756876c84e47bb42c7ac7baf6a176b9634fb06",
         "variant_id": "variant:openssh:9.9p1:pristine",
         "workload": "openssh: ssh-keygen Ed25519 sign/verify (libcrypto)",
         "workload_result": {
@@ -9533,6 +9542,7 @@
       },
       {
         "authority_applicable_level": "L7-functional",
+        "aux_bundles": null,
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "openssh",
@@ -9570,14 +9580,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "2670181:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
-            "2670181:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
-            "2670181:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
-            "2670181:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libcrypto.so.3",
-            "2670181:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
-            "2670181:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
-            "2670181:\t  trying file=/work/artifacts/phase2/install/lib/tls/libcrypto.so.3",
-            "2670181:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libcrypto.so.3"
+            "272522:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "272522:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "272522:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "272522:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "272522:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "272522:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "272522:\t  trying file=/work/artifacts/phase2/install/lib/tls/libcrypto.so.3",
+            "272522:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libcrypto.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -9677,9 +9687,9 @@
           "Write signature to msg.sig",
           "== ssh-keygen -Y verify ==",
           "exit=0",
-          "Good \"file\" signature for runtime with ED25519 key SHA256:gM8Th+xEcLOej+qMvFnKcdZGJDl564WAzWHVv1AVhP8"
+          "Good \"file\" signature for runtime with ED25519 key SHA256:nWL6r7uk47Vtcs55hPdHFsSQrQq+W2Z8sYYmf2v9kpQ"
         ],
-        "transcript_sha256": "72bac827201298d59d0c99b50a40441fcda07920cae46d10e713745c235fef25",
+        "transcript_sha256": "859362915361760a3b7afb872b93fc883d76b7bf874db27c5b43eadfc5b99a3b",
         "variant_id": "variant:openssh:9.9p1:pristine",
         "workload": "openssh: ssh-keygen Ed25519 sign/verify (libcrypto)",
         "workload_result": {
@@ -9691,6 +9701,7 @@
       },
       {
         "authority_applicable_level": "L7-functional",
+        "aux_bundles": null,
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "pure-ftpd",
@@ -9733,14 +9744,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "2678581:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
-            "2678581:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
-            "2678581:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
-            "2678581:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libssl.so.3",
-            "2678581:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
-            "2678581:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
-            "2678581:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libssl.so.3",
-            "2678581:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libssl.so.3"
+            "280922:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "280922:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "280922:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "280922:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libssl.so.3",
+            "280922:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "280922:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "280922:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libssl.so.3",
+            "280922:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libssl.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -9806,59 +9817,60 @@
         "steps": [],
         "subject": "authority",
         "transcript_excerpt": [
-          "-N\t--natmode\t",
-          "-p\t--passiveportrange\t<opt>",
-          "-P\t--forcepassiveip\t<opt>",
-          "-r\t--autorename\t",
-          "-R\t--nochmod\t",
-          "-s\t--antiwarez\t",
-          "-S\t--bind\t<opt>",
-          "-U\t--umask\t<opt>",
-          "-u\t--minuid\t<opt>",
-          "-w\t--allowuserfxp\t",
-          "-W\t--allowanonymousfxp\t",
-          "-x\t--prohibitdotfileswrite\t",
-          "-X\t--prohibitdotfilesread\t",
-          "-Y\t--tls\t<opt>",
-          "-J\t--tlsciphersuite\t<opt>",
-          "-z\t--allowdotfiles\t",
-          "-Z\t--customerproof\t",
-          "== workload ==",
-          "exit=0",
-          "== authority s_client -starttls ftp (USER/PASS/PWD/QUIT) ==",
-          "exit=1",
+          "Secure Renegotiation IS supported",
+          "Compression: NONE",
+          "Expansion: NONE",
+          "No ALPN negotiated",
+          "SSL-Session:",
+          "    Protocol  : TLSv1.2",
+          "    Cipher    : ECDHE-RSA-CHACHA20-POLY1305",
+          "    Session-ID: 0412709A7B022449B2079247E9FAE41707C3EC8814B9E58B09331479691DE89B",
+          "    Session-ID-ctx: ",
+          "    Master-Key: 00C106067939879A1A851E999B4D9ED790A3570D9E6BE47E211F5A1B38138D2C865BC121263EA1F050870B46F51014C2",
+          "    PSK identity: None",
+          "    PSK identity hint: None",
+          "    SRP username: None",
+          "    Start Time: 1794290382",
+          "    Timeout   : 7200 (sec)",
+          "    Verify return code: 0 (ok)",
+          "    Extended master secret: yes",
+          "---",
           "331 User p24ftps OK. Password required",
           "230 OK. Current directory is {scratch}/ftphome",
           "257 \"{scratch}/ftphome\" is your current location",
           "221-Goodbye. You uploaded 0 and downloaded 0 kbytes.",
           "221 Logout.",
           "Connecting to {addr}",
-          "CONNECTION ESTABLISHED",
-          "Protocol version: TLSv1.3",
-          "Ciphersuite: TLS_AES_256_GCM_SHA384",
-          "Peer certificate: CN={addr}",
-          "Hash used: SHA256",
-          "Signature type: rsa_pss_rsae_sha256",
-          "Verification: OK",
-          "Negotiated TLS1.3 group: X25519MLKEM768",
+          "depth=1 CN=runtime test CA",
+          "verify return:1",
+          "depth=0 CN={addr}",
+          "verify return:1",
           "220 You will be disconnected after 15 minutes of inactivity.",
-          "80CB1E2CBC7F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
-          "80CB1E2CBC7F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
+          "80BB1EEA2F7F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
+          "80BB1EEA2F7F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
+          "== authority s_client unrelated-ca (must fail) ==",
+          "exit=1",
+          "Connecting to {addr}",
+          "depth=0 CN={addr}",
+          "verify error:num=20:unable to get local issuer certificate",
+          "802BAEFC037F0000:error:0A000086:SSL routines:tls_post_process_server_certificate:certificate verify failed:../../src/openssl-3.6.4/ssl/statem/statem_clnt.c:2125:",
+          "802BAEFC037F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
           "== pure-ftpd ==",
           "exit=0"
         ],
-        "transcript_sha256": "9260311a3537cf75310fa927cf599df4f638317ecb7161d20964aac22006982a",
+        "transcript_sha256": "9d0ecf689f7b1d3b7fd02ba99fdedba7b5c33b87c59234fda7c0cfa58a9da3d5",
         "variant_id": "variant:pure-ftpd:1.0.52:pristine",
-        "workload": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS",
+        "workload": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS 1.3 and TLS 1.2 + unrelated-CA reject",
         "workload_result": {
           "functional_ok": true,
           "local_only": true,
-          "name": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS",
+          "name": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS 1.3 and TLS 1.2 + unrelated-CA reject",
           "runtime_ok": true
         }
       },
       {
         "authority_applicable_level": "L7-functional",
+        "aux_bundles": null,
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "pure-ftpd",
@@ -9901,14 +9913,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "2678601:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
-            "2678601:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
-            "2678601:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
-            "2678601:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libssl.so.3",
-            "2678601:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
-            "2678601:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
-            "2678601:\t  trying file=/work/artifacts/phase2/install/lib/tls/libssl.so.3",
-            "2678601:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libssl.so.3"
+            "280963:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "280963:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "280963:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "280963:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libssl.so.3",
+            "280963:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "280963:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "280963:\t  trying file=/work/artifacts/phase2/install/lib/tls/libssl.so.3",
+            "280963:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libssl.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -9974,59 +9986,60 @@
         "steps": [],
         "subject": "candidate",
         "transcript_excerpt": [
-          "-N\t--natmode\t",
-          "-p\t--passiveportrange\t<opt>",
-          "-P\t--forcepassiveip\t<opt>",
-          "-r\t--autorename\t",
-          "-R\t--nochmod\t",
-          "-s\t--antiwarez\t",
-          "-S\t--bind\t<opt>",
-          "-U\t--umask\t<opt>",
-          "-u\t--minuid\t<opt>",
-          "-w\t--allowuserfxp\t",
-          "-W\t--allowanonymousfxp\t",
-          "-x\t--prohibitdotfileswrite\t",
-          "-X\t--prohibitdotfilesread\t",
-          "-Y\t--tls\t<opt>",
-          "-J\t--tlsciphersuite\t<opt>",
-          "-z\t--allowdotfiles\t",
-          "-Z\t--customerproof\t",
-          "== workload ==",
-          "exit=0",
-          "== authority s_client -starttls ftp (USER/PASS/PWD/QUIT) ==",
-          "exit=1",
+          "    Session-ID: 9D87D989C82DEF1B20249C26DC4A99ACBD3369D725445857D0865127C4C0CBDA",
+          "    Session-ID-ctx: ",
+          "    Master-Key: 83F4314F01DC2A3B1F16D79295C7FBAD0194AFC289D6D362D483BA10733ED81AFB0ADF8406F9F39E83340D8198E9E85A",
+          "    PSK identity: None",
+          "    PSK identity hint: None",
+          "    SRP username: None",
+          "    TLS session ticket lifetime hint: 3600 (seconds)",
+          "    TLS session ticket:",
+          "    0000 - a2 53 da 31 a1 b6 c0 79-b7 90 65 a3 0c 07 80 e4   .S.1...y..e.....",
+          "    0010 - 0a f2 b1 cc 17 2b 98 b3-74 98 94 9c 8c d8 4e 76   .....+..t.....Nv",
+          "    0020 - 1a e3 db 7a d5 ff f8 6d-b5 cb 0c cc f6 88 ce 0a   ...z...m........",
+          "    0030 - 37 08 cb 72 c9 6c 04 2e-27 a1 ad 4b 90 39 4b 6b   7..r.l..'..K.9Kk",
+          "",
+          "    Start Time: 1794290382",
+          "    Timeout   : 7200 (sec)",
+          "    Verify return code: 0 (ok)",
+          "    Extended master secret: no",
+          "---",
           "331 User p24ftps OK. Password required",
           "230 OK. Current directory is {repo}/court/phase24-runtime/run/pure-ftpd/authority/ftphome",
           "257 \"{repo}/court/phase24-runtime/run/pure-ftpd/authority/ftphome\" is your current location",
           "221-Goodbye. You uploaded 0 and downloaded 0 kbytes.",
           "221 Logout.",
           "Connecting to {addr}",
-          "CONNECTION ESTABLISHED",
-          "Protocol version: TLSv1.3",
-          "Ciphersuite: TLS_AES_256_GCM_SHA384",
-          "Peer certificate: CN={addr}",
-          "Hash used: SHA256",
-          "Signature type: rsa_pss_rsae_sha256",
-          "Verification: OK",
-          "Peer Temp Key: X25519, 253 bits",
+          "depth=1 CN=runtime test CA",
+          "verify return:1",
+          "depth=0 CN={addr}",
+          "verify return:1",
           "220 You will be disconnected after 15 minutes of inactivity.",
-          "809B770CDF7F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
-          "809B770CDF7F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
+          "80DB88B6BF7F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
+          "80DB88B6BF7F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
+          "== authority s_client unrelated-ca (must fail) ==",
+          "exit=1",
+          "Connecting to {addr}",
+          "depth=0 CN={addr}",
+          "verify error:num=20:unable to get local issuer certificate",
+          "80BB2A74597F0000:error:0A000086:SSL routines:tls_post_process_server_certificate:certificate verify failed:../../src/openssl-3.6.4/ssl/statem/statem_clnt.c:2125:",
+          "80BB2A74597F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
           "== pure-ftpd ==",
           "exit=0"
         ],
-        "transcript_sha256": "53c9b293dae3aa57fdfd15489d682298e621e832d588ca5f0aa59cbc566e74be",
+        "transcript_sha256": "6c4257adaed21e9a22b47fa7b259e1295d350a36e6b7f49612b528d3d5f54875",
         "variant_id": "variant:pure-ftpd:1.0.52:pristine",
-        "workload": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS",
+        "workload": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS 1.3 and TLS 1.2 + unrelated-CA reject",
         "workload_result": {
           "functional_ok": true,
           "local_only": true,
-          "name": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS",
+          "name": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS 1.3 and TLS 1.2 + unrelated-CA reject",
           "runtime_ok": true
         }
       },
       {
         "authority_applicable_level": "L7-functional",
+        "aux_bundles": null,
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "python",
@@ -10069,12 +10082,12 @@
           "all_under_prefix": true,
           "artifact": "court/phase24-high-value/python/authority/Python-3.12.15/Modules/_ssl.cpython-312-x86_64-linux-gnu.so",
           "dynamic_load_trace": [
-            "2774811:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "2774811:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "2774811:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "2774811:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "2774811:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "2774811:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "371799:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "371799:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "371799:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "371799:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "371799:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "371799:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -10128,7 +10141,7 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:python",
-        "source_root_hash": "e675f1a737b85322621c4b70d143e7a72dff399afbd4489a2847019ab70d1d69",
+        "source_root_hash": "2e6601fc39df5551a0194498f30cab4b772a264c030a0b410c75fa96bf37ff7d",
         "source_sha256": "c2c4321961fab0fb999d66e0cecf521c2ab3994c7992873ea99e306c1094fd5a",
         "source_url": "https://www.python.org/ftp/python/3.12.15/Python-3.12.15.tar.xz",
         "specimen_id": "specimen:python:3.12.15",
@@ -10154,10 +10167,10 @@
           "unrelated_rejected=1",
           "== s_server ==",
           "exit=0",
-          "80CB6A251E7F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
-          "80CB6A251E7F0000:error:0A000418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:918:SSL alert number 48"
+          "807BA75F787F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
+          "807BA75F787F0000:error:0A000418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:918:SSL alert number 48"
         ],
-        "transcript_sha256": "174fdd7e5dbc6103979d05ccc607444addd2136d6b6ecd0840d476a587220094",
+        "transcript_sha256": "98a9f64081eaf90eae98b3215f82a8df39d71c95ac74c11de92c12882cde400d",
         "variant_id": "variant:python:3.12.15:pristine",
         "workload": "python: verified TLS1.3 fetch + unrelated-CA reject (CPython _ssl)",
         "workload_result": {
@@ -10169,6 +10182,7 @@
       },
       {
         "authority_applicable_level": "L7-functional",
+        "aux_bundles": null,
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "python",
@@ -10211,12 +10225,12 @@
           "all_under_prefix": true,
           "artifact": "court/phase24-high-value/python/candidate/Python-3.12.15/Modules/_ssl.cpython-312-x86_64-linux-gnu.so",
           "dynamic_load_trace": [
-            "2783155:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "2783155:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "2783155:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "2783155:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "2783155:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "2783155:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "380148:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "380148:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "380148:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "380148:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "380148:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "380148:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -10270,7 +10284,7 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:python",
-        "source_root_hash": "8aaddddd592cd17c323197c6615e2f30eb457529249e574e1dcf1563bc8ba1da",
+        "source_root_hash": "ae9937c11add0c41019308eb696b0d3bfdf5cddf3ea5a0aab53affa200d9286c",
         "source_sha256": "c2c4321961fab0fb999d66e0cecf521c2ab3994c7992873ea99e306c1094fd5a",
         "source_url": "https://www.python.org/ftp/python/3.12.15/Python-3.12.15.tar.xz",
         "specimen_id": "specimen:python:3.12.15",
@@ -10296,10 +10310,10 @@
           "unrelated_rejected=1",
           "== s_server ==",
           "exit=0",
-          "805B2E783C7F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
-          "805B2E783C7F0000:error:0A000418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:918:SSL alert number 48"
+          "80AB3AF7217F0000:error:0A000126:SSL routines::unexpected eof while reading:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:698:",
+          "80AB3AF7217F0000:error:0A000418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca:../../src/openssl-3.6.4/ssl/record/rec_layer_s3.c:918:SSL alert number 48"
         ],
-        "transcript_sha256": "2a838cc4ac56f60fa340f7827e13f24e3c753b586925f7107ecf1c2c5b9ab276",
+        "transcript_sha256": "8e3f74458ecd3a77b523eaad23d790be72b92c976c9820007dd7f0f7e92e0127",
         "variant_id": "variant:python:3.12.15:pristine",
         "workload": "python: verified TLS1.3 fetch + unrelated-CA reject (CPython _ssl)",
         "workload_result": {
@@ -10311,6 +10325,7 @@
       },
       {
         "authority_applicable_level": "L7-functional",
+        "aux_bundles": null,
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "redis",
@@ -10353,12 +10368,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "2689047:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "2689047:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "2689047:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "2689047:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "2689047:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "2689047:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "291420:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "291420:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "291420:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "291420:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "291420:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "291420:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -10424,14 +10439,6 @@
         "steps": [],
         "subject": "authority",
         "transcript_excerpt": [
-          "== launch ==",
-          "exit=0",
-          "Redis server v=7.4.1 sha=2eb6a8e8:0 malloc=jemalloc-5.3.0 bits=64 build=4caad29ca5f84438",
-          "== workload ==",
-          "exit=0",
-          "== authority s_client -brief ==",
-          "exit=0",
-          "Connecting to {addr}",
           "CONNECTION ESTABLISHED",
           "Protocol version: TLSv1.3",
           "Ciphersuite: TLS_AES_256_GCM_SHA384",
@@ -10451,21 +10458,41 @@
           "verify return:1",
           "",
           "TIMEOUT after 25s",
+          "== authority s_client SET/GET ==",
+          "exit=-1",
+          "+OK",
+          "$13",
+          "phase24-value",
+          "Connecting to {addr}",
+          "depth=1 CN=runtime test CA",
+          "verify return:1",
+          "depth=0 CN={addr}",
+          "verify return:1",
+          "",
+          "TIMEOUT after 25s",
+          "== authority s_client unrelated-ca (must fail) ==",
+          "exit=1",
+          "Connecting to {addr}",
+          "depth=1 CN=runtime test CA",
+          "verify error:num=19:self-signed certificate in certificate chain",
+          "802BE3F6567F0000:error:0A000086:SSL routines:tls_post_process_server_certificate:certificate verify failed:../../src/openssl-3.6.4/ssl/statem/statem_clnt.c:2125:",
+          "802BE3F6567F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
           "== redis-server ==",
           "exit=0"
         ],
-        "transcript_sha256": "87381898a227d5e1cb3da35a67b8454d09c40a4f4ba2622237d825a25c892670",
+        "transcript_sha256": "6457700fe8185f501473dd432ebef17006cd194881548bc3b2deb718c80e8ed6",
         "variant_id": "variant:redis:7.4.1:pristine",
-        "workload": "redis: TLS handshake + encrypted PING/+PONG",
+        "workload": "redis: TLS handshake + encrypted PING/+PONG + SET/GET round trip + unrelated-CA reject",
         "workload_result": {
           "functional_ok": true,
           "local_only": true,
-          "name": "redis: TLS handshake + encrypted PING/+PONG",
+          "name": "redis: TLS handshake + encrypted PING/+PONG + SET/GET round trip + unrelated-CA reject",
           "runtime_ok": true
         }
       },
       {
         "authority_applicable_level": "L7-functional",
+        "aux_bundles": null,
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "redis",
@@ -10508,12 +10535,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "2689068:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "2689068:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "2689068:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "2689068:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "2689068:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "2689068:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "291448:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "291448:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "291448:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "291448:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "291448:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "291448:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -10579,14 +10606,6 @@
         "steps": [],
         "subject": "candidate",
         "transcript_excerpt": [
-          "== launch ==",
-          "exit=0",
-          "Redis server v=7.4.1 sha=2eb6a8e8:0 malloc=jemalloc-5.3.0 bits=64 build=92b9e4884d3da01f",
-          "== workload ==",
-          "exit=0",
-          "== authority s_client -brief ==",
-          "exit=0",
-          "Connecting to {addr}",
           "CONNECTION ESTABLISHED",
           "Protocol version: TLSv1.3",
           "Ciphersuite: TLS_AES_256_GCM_SHA384",
@@ -10606,16 +10625,35 @@
           "verify return:1",
           "",
           "TIMEOUT after 25s",
+          "== authority s_client SET/GET ==",
+          "exit=-1",
+          "+OK",
+          "$13",
+          "phase24-value",
+          "Connecting to {addr}",
+          "depth=1 CN=runtime test CA",
+          "verify return:1",
+          "depth=0 CN={addr}",
+          "verify return:1",
+          "",
+          "TIMEOUT after 25s",
+          "== authority s_client unrelated-ca (must fail) ==",
+          "exit=1",
+          "Connecting to {addr}",
+          "depth=0 CN={addr}",
+          "verify error:num=20:unable to get local issuer certificate",
+          "800BD38FAC7F0000:error:0A000086:SSL routines:tls_post_process_server_certificate:certificate verify failed:../../src/openssl-3.6.4/ssl/statem/statem_clnt.c:2125:",
+          "800BD38FAC7F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
           "== redis-server ==",
           "exit=0"
         ],
-        "transcript_sha256": "070a0a7ae1b78cf289d56e138157d77689f1820d918db60fb89a92311cc66740",
+        "transcript_sha256": "ab1040d5320aa5cec6762645eaede13e9db80641f4e7ef6fc88280656e0e738e",
         "variant_id": "variant:redis:7.4.1:pristine",
-        "workload": "redis: TLS handshake + encrypted PING/+PONG",
+        "workload": "redis: TLS handshake + encrypted PING/+PONG + SET/GET round trip + unrelated-CA reject",
         "workload_result": {
           "functional_ok": true,
           "local_only": true,
-          "name": "redis: TLS handshake + encrypted PING/+PONG",
+          "name": "redis: TLS handshake + encrypted PING/+PONG + SET/GET round trip + unrelated-CA reject",
           "runtime_ok": true
         }
       }
@@ -10629,7 +10667,7 @@
         ],
         "family_id": "family:git-core",
         "licence": "unknown",
-        "pristine_source_root_hash": "878c2003ee5ea2e8b969e82e286b5ad270655f9dfb29bfe0d382ee13796ae0b4",
+        "pristine_source_root_hash": "9adcb31e84e4f2d58acb1a72359cf099734abaef86c2a3c16a925a77a3565325",
         "pristine_source_sha256": "26c56c296b38c0695b26fa95f475f1d01704d2d38e73465ca30b0b2f5dc789d3",
         "specimen_id": "specimen:git-core:2.56.0",
         "upstream_ref": "https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.56.0.tar.xz",
@@ -10643,7 +10681,7 @@
         ],
         "family_id": "family:python",
         "licence": "unknown",
-        "pristine_source_root_hash": "8aaddddd592cd17c323197c6615e2f30eb457529249e574e1dcf1563bc8ba1da",
+        "pristine_source_root_hash": "ae9937c11add0c41019308eb696b0d3bfdf5cddf3ea5a0aab53affa200d9286c",
         "pristine_source_sha256": "c2c4321961fab0fb999d66e0cecf521c2ab3994c7992873ea99e306c1094fd5a",
         "specimen_id": "specimen:python:3.12.15",
         "upstream_ref": "https://www.python.org/ftp/python/3.12.15/Python-3.12.15.tar.xz",
@@ -10805,13 +10843,13 @@
       }
     ]
   },
-  "body_hash": "d6b97e7703fba09f262527fd8072c8ddd57209b6be7b0a5ec80219868cb5968a",
+  "body_hash": "2d4463b0bb3cd1383e7763c8bd4bdca1f201b0c13cced0de3ef24a0a3de9c0d9",
   "generator": "forensics/tools/downstream_high_value.py",
   "inputs": [
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "aaf393ce40475789ae824cb96cf63539cdceb9fccefc27bd9bbd738ade8dacac"
+      "sha256": "2c933674a7af44fbbd9fb4ce80d27d41bfe3e2b29a79b732a6d3627dc3f07381"
     },
     {
       "name": "families",
@@ -10826,12 +10864,12 @@
     {
       "name": "runtime-functional-atlas",
       "path": "forensics/downstream/runtime-functional-atlas.json",
-      "sha256": "5ffb3b7be6268f23ca206b14db902b1bbdb0a23c175c93fb26817952bd86c67e"
+      "sha256": "608f984a6fef1163f51c6ba338db4ede4ad80e4a2305d07b7601a0f07ef19374"
     },
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "edba5a53394093ec5e36cec2c88f1d34994bd418d266de5d59055daeeb70350c"
+      "sha256": "d2f93a4244ac02712cceac8c65efe67af7e28924e01d18fb2d26ce4b14cdb81c"
     },
     {
       "name": "downstream-high-value",
@@ -10841,17 +10879,17 @@
     {
       "name": "downstream-runtime",
       "path": "forensics/tools/downstream_runtime.py",
-      "sha256": "16816d86925743598732223d2374f85eabd2193bcee891e752f05a6f3bcfb3e9"
+      "sha256": "ed74e85f5aed79f46b033efc3a59abf08a4b9a7dd68cc4144603871c704a8975"
     },
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "bc10c361ba294d371b56983fbde06725df3f777e357c3729ac93e05d51c3fdf8"
+      "sha256": "0165c40201d9721d909140ec0d1c01231fccd41ecf8602bb85f9ec018f8e0776"
     },
     {
       "name": "downstream-census",
       "path": "forensics/tools/downstream_census.py",
-      "sha256": "025921fa1197d6e56d5c6e664b3685150bf31a270a7b3150f719c27d85807875"
+      "sha256": "cb297dc4e1a66b2fc7c31ad0d98518a2d1976e2c5527df6a88e61673e0b142f9"
     },
     {
       "name": "downstream-schemas",
@@ -10861,7 +10899,7 @@
     {
       "name": "phase24-guard",
       "path": "forensics/tools/phase24_guard.py",
-      "sha256": "94ea35a66565d01f3a82dc7113e571e7f59eb5c5f378911196c0783600b41192"
+      "sha256": "cb9c5d2949c9997f4d239514225330ffac5f91f295596f413bd8604d1052b026"
     },
     {
       "name": "phase-24-plan",
