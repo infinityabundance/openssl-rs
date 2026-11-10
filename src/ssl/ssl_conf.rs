@@ -2890,4 +2890,68 @@ mod tests {
         // SAFETY: the context is live and owned here; released exactly once.
         unsafe { SSL_CONF_CTX_free(cctx) };
     }
+
+    /// C10 control for cross-thread exclusion (B46-D2): the exclusion state is one atomic,
+    /// so an entry point entered from another thread while the context is held is refused
+    /// exactly as a same-thread re-entry is.
+    ///
+    /// The concurrent call is outside the public exclusive-access contract by construction;
+    /// the test pins the candidate's deterministic refusal. It is sound to run because the
+    /// refused path returns at `enter_use` and touches only the atomic `state`, never a
+    /// non-atomic field: no data race is introduced by the overlap itself.
+    #[test]
+    fn a_concurrent_entry_from_another_thread_is_refused() {
+        // SAFETY: no arguments; the returned context is owned here.
+        let cctx = unsafe { SSL_CONF_CTX_new() };
+        assert!(!cctx.is_null(), "SSL_CONF_CTX_new");
+        // SAFETY: `cctx` is live and exclusively ours; the context is idle.
+        let initial = unsafe { SSL_CONF_CTX_set_flags(cctx, t::SSL_CONF_FLAG_FILE as c_uint) };
+        assert_ne!(initial & t::SSL_CONF_FLAG_FILE as c_uint, 0);
+
+        let addr = cctx as usize;
+        let barrier = std::sync::Barrier::new(2);
+        let barrier = &barrier;
+        std::thread::scope(|scope| {
+            // The holder takes exactly the acquisition a public entry point performs.
+            let holder = scope.spawn(move || {
+                let cctx = addr as *mut SslConfCtx;
+                // SAFETY: the block outlives the scope and is not released here.
+                let guard = unsafe { enter_use(cctx) };
+                assert!(guard.is_some(), "the context was idle");
+                barrier.wait();
+                barrier.wait();
+                drop(guard);
+            });
+            barrier.wait();
+            // SAFETY: the other thread holds the context. This call is outside the public
+            // contract; the refusal path reads only the atomic state, so the overlap is not
+            // itself a data race and the assertion can observe the refusal.
+            let refused =
+                unsafe { SSL_CONF_CTX_set_flags(cctx, t::SSL_CONF_FLAG_SERVER as c_uint) };
+            assert_eq!(refused, 0, "a concurrent entry is refused");
+            // SAFETY: the holder is blocked at the second barrier, so it cannot have
+            // released the guard; the only concurrent access is the atomic load.
+            unsafe {
+                assert_eq!((*cctx).state.load(Ordering::Acquire), CTX_IN_USE);
+            }
+            barrier.wait();
+            holder.join().unwrap();
+        });
+        // SAFETY: the scope joined the holder, and the context is live and idle.
+        unsafe {
+            assert_eq!((*cctx).state.load(Ordering::Acquire), CTX_IDLE);
+            assert_eq!(
+                (*cctx).flags & t::SSL_CONF_FLAG_SERVER as c_uint,
+                0,
+                "the refused call wrote nothing"
+            );
+            let flags = SSL_CONF_CTX_set_flags(cctx, t::SSL_CONF_FLAG_SERVER as c_uint);
+            assert_ne!(
+                flags & t::SSL_CONF_FLAG_SERVER as c_uint,
+                0,
+                "the context works after the concurrent overlap"
+            );
+            SSL_CONF_CTX_free(cctx);
+        }
+    }
 }
