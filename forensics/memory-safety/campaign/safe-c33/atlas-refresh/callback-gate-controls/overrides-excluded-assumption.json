@@ -1,0 +1,6 @@
+{
+ "src/x509/v3_skid.rs::s2i_skey_id": {
+  "assumption": "C2 control assumption: s2i_skey_id is treated as unreachable for this control only; the assumption is load-bearing and the gate must reject its absence.",
+  "classification": "PROVEN_EXCLUDED"
+ }
+}

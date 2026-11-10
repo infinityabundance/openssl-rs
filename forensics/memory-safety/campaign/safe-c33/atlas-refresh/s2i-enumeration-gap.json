@@ -1,0 +1,233 @@
+{
+ "receipt": "s2i-enumeration-gap",
+ "kind": "instrument-finding",
+ "date": "2026-11-02",
+ "subphase": "B52",
+ "state": "OPEN — BLOCKS GRADUATION, does not block the B52 site-scoped discharge",
+ "finding": "The reachable-obligation queue does not enumerate every extension-slot callback in the reachable source. Measured at candidate a8716b4f2: 114 `unsafe extern \"C\" fn` slot callbacks (i2s/i2r/i2v/r2i/s2i/v2i) exist in `src/`, but only 51 appear in the 312-obligation set; 63 are absent entirely. An absent site is not DISCHARGED and not BLOCKED: it is invisible, so it can neither be discharged nor refused. That is incompatible with the graduation condition that no safety-relevant unknown remains.",
+ "strongest_case": {
+  "site": "s2i_skey_id",
+  "file": "src/x509/v3_skid.rs",
+  "line": 206,
+  "why_this_is_not_merely_unreachable": "v3_skid.rs is unambiguously reachable: B50 discharged `skid_i2s` in the same file (B50-I2S-009), and that site appears in the closure. The same extension row also installs `s2i_skey_id` as its s2i callback, yet that callback is absent from the queue. A file being reachable is not the same as every slot in it being enumerated, and here the difference is a specific reachable production callback.",
+  "second_case": {
+   "site": "s2i_poison",
+   "file": "src/ct/ct_x509v3.rs",
+   "line": 70,
+   "registration": "s2i: Some(s2i_poison) at src/ct/ct_x509v3.rs:266"
+  }
+ },
+ "measured_evidence": {
+  "candidate": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+  "closure": "evidence/closure-ssh-b52-baseline.json (312 obligations, 177 DISCHARGED / 135 BLOCKED / 0 UNKNOWN, both families)",
+  "scan": "grep -rnE 'unsafe extern \"C\" fn (s2i|i2s|i2r|i2v|r2i|v2i)_' src/ -> 114 definitions; 51 present in .obligations, 63 absent",
+  "absent_examples": [
+   "src/x509/v3_skid.rs:206 s2i_skey_id",
+   "src/ct/ct_x509v3.rs:70 s2i_poison",
+   "src/x509/v3_asid.rs:817 i2r_ASIdentifiers",
+   "src/x509/v3_crld.rs:1638 i2r_crldp",
+   "src/x509/v3_addr.rs:921 i2r_IPAddrBlocks",
+   "src/ct/ct_x509v3.rs:84 i2r_SCT_LIST"
+  ],
+  "not_claimed": "The 63 are NOT all claimed to be reachable. The claim is narrower and sufficient to block graduation: the queue does not enumerate them, and reachability has not been established per site. Some are plausibly unreachable from ssh/sshd; that must be shown, not assumed."
+ },
+ "why_it_matters_for_graduation": [
+  "`SAFE_COMPATIBLE` requires every applicable mechanism to be SAFETY_DISCHARGED and no safety-relevant unknown or blocked obligation to remain. A site absent from the queue is an unknown that the ledger cannot represent.",
+  "A discharge receipt for a family ('the s2i family', 'the i2r printers') cannot be complete if the family is defined by the queue rather than by the source.",
+  "The B52 review found this by comparing source registrations to the queue; that comparison is reproducible and must become a gate, not a one-off observation."
+ ],
+ "required_resolution": [
+  "Add an enumeration-completeness gate: for every reachable file, every extension-slot callback and every `#[no_mangle] extern \"C\"` definition must appear in the obligation set, or carry a recorded reachability exclusion with evidence (a caller-path argument, not an assertion).",
+  "Classify each of the 63 absent sites as REACHABLE (enrol it in the queue with a stable identity and BLOCKED status) or UNREACHABLE-FROM-THESE-CONSUMERS (record the caller-path evidence and the consumer identity it was established against).",
+  "Re-run both closures after the enrolment; counts will move, and that movement must be reported, not suppressed.",
+  "Independent adversarial review of the gate, including a negative control: remove one callback from the enumeration and confirm the gate fails.",
+  "Do not treat this finding as discharged by B52's approval: B52's nine sites are individually sound, but the family name must not be read as exhaustive."
+ ],
+ "non_claims": [
+  "This is not a defect in the nine B52 sites, all of which were verified at their coordinates with enforced liveness and a reproduced canary.",
+  "It is not a claim that all 63 absent sites are reachable, and it is not a claim that any specific absent site is unsafe.",
+  "It does not by itself change the applied ledger; the B52 row is site-scoped and names only its nine boundaries."
+ ],
+ "gate": {
+  "instrument": "forensics/tools/callback_enumeration_gate.py",
+  "instrument_sha256": "648ecd9b00d9941746a73558f96d3ea60fc9b01142a54eda92b0367ed12966a6",
+  "manifest_index": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-registration-manifest.json",
+  "manifest_parts_dir": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-registration-manifest/",
+  "report": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-report.json",
+  "enrolment": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json",
+  "controls": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/control-results.json",
+  "source_identity": {
+   "instrument": {
+    "path": "forensics/tools/callback_enumeration_gate.py",
+    "sha256": "648ecd9b00d9941746a73558f96d3ea60fc9b01142a54eda92b0367ed12966a6"
+   },
+   "inventory_source_head": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+   "repository_head": "f2a8110cdc7dc94cc6cf5a3af92bd7c3c234a04f",
+   "source_mode": "worktree",
+   "src_tree_unchanged_vs_inventory_head": true
+  },
+  "inventory": {
+   "obligation_count": 312,
+   "path": "evidence/closure-ssh-b52-applied.json",
+   "sha256": "40d25c558c48962d9df7b17f344c01aae4c22f6781fec75b9e3653c563f47e94",
+   "unsafe_fn_identity_count": 286
+  },
+  "state": "FAIL",
+  "exit_code": 1,
+  "pass": false,
+  "classification": {
+   "PROVEN_EXCLUDED": 0,
+   "REACHABLE_BOUND": 135,
+   "UNRESOLVED": 0
+  },
+  "classification_labels": {
+   "reachable": "REACHABLE_BOUND",
+   "reachable_bases": [
+    "edge-witness",
+    "module-name-match",
+    "unique-name-match",
+    "dispatcher-row-binding"
+   ],
+   "reachable_is_proof": false
+  },
+  "basis_counts": {
+   "dispatcher-row-binding": 7,
+   "edge-witness": 38,
+   "module-name-match": 104,
+   "unique-name-match": 0
+  },
+  "callback_basis_counts": {
+   "dispatcher-row-binding": 7,
+   "edge-witness": 37,
+   "module-name-match": 91,
+   "unique-name-match": 0
+  },
+  "inventory_matched_callbacks": 69,
+  "inventory_accounting": {
+   "inventory_callbacks_accounted": 69,
+   "slot_prefix_inventory_not_seen": [],
+   "slot_prefix_inventory_without_source_definition": [],
+   "unaccounted": [],
+   "unit": "distinct inventory callbacks accounted for by the source enumeration; entries are file-qualified"
+  },
+  "missing_entry_count": 66,
+  "missing_distinct_name_count": 65,
+  "missing_count_unit": "entries are per file-qualified callback definition; distinct_names counts callback names",
+  "missing_first_10": [
+   "src/ct/ct_sct.rs:247 SCT_LIST_free",
+   "src/ct/ct_x509v3.rs:59 i2s_poison",
+   "src/ct/ct_x509v3.rs:70 s2i_poison",
+   "src/ct/ct_x509v3.rs:84 i2r_SCT_LIST",
+   "src/ocsp/v3_ocsp.rs:122 i2r_ocsp_crlid",
+   "src/ocsp/v3_ocsp.rs:187 i2r_ocsp_acutoff",
+   "src/ocsp/v3_ocsp.rs:325 ocsp_nonce_free",
+   "src/ocsp/v3_ocsp.rs:344 i2r_ocsp_nonce",
+   "src/ocsp/v3_ocsp.rs:406 i2r_ocsp_serviceloc",
+   "src/x509/v3_ac_tgt.rs:624 i2r_ISSUER_SERIAL"
+  ],
+  "enrolment_count": 66,
+  "reconciliation": {
+   "ext_free_callbacks_absent_from_queue": 2,
+   "gate_missing_distinct_definitions": 66,
+   "gate_missing_distinct_names": 65,
+   "gate_missing_entries": 66,
+   "note": "name-prefix matching is not the enumeration; these counts reconcile the six-prefix definition census with the slot-driven manifest and explain why the gate's missing set differs from a raw prefix grep",
+   "prefix_definitions_absent_and_definition_only": 34,
+   "prefix_definitions_absent_and_registered": 30,
+   "prefix_definitions_absent_from_queue": 64,
+   "prefix_definitions_distinct": 114,
+   "prefix_definitions_in_queue_inventory": 51,
+   "prefix_definitions_not_registered_in_any_slot": 36,
+   "prefix_definitions_registered_in_a_slot": 79,
+   "prefix_definitions_total": 115,
+   "registered_callbacks_with_non_prefix_names": 20
+  },
+  "controls_summary": {
+   "C1": true,
+   "C2": true,
+   "C3": true,
+   "C4": true,
+   "C5": true,
+   "C6": true
+  },
+  "determinism": {
+   "identical": true,
+   "report_sha256": "b900e24e8db67b5221d3d3d290af930e4b85698903e680274b991a612aa33ef3",
+   "manifest_sha256": "e34d1e92179959acb215f047f77cc161345fd012c22f666459a770525ce2bdcb"
+  },
+  "interpretation": "REACHABLE_BOUND is a may-bound, not a proof. The gate accounts for all 114 six-prefix definitions (115 definitions) and 2 additional ext_free callbacks. Of the 63 distinct prefix-named definitions absent from the 312-obligation queue, 30 are slot registrations and 33 are definition-only helpers; all 63 are accounted for, and 2 ext_free callbacks are added, producing 66 file-qualified missing entries (65 distinct names). 69 registered callbacks are already inventoried, including 51 prefix-named definitions and 18 callbacks whose names do not match their slot prefix.",
+  "non_claims": "The gate proves inventory-vs-source agreement for its parsed registrations and for the six-prefix definition census; REACHABLE_BOUND rests on the closure's converged MAY-bound reachable_functions set unless the record carries an edge-witness, and dispatcher-row-binding is a table witness, not execution. Macro/build-script-generated rows are outside the parser.",
+  "layers": {
+   "source": {
+    "instrument": "forensics/tools/callback_enumeration_gate.py",
+    "state": "FAIL",
+    "exit_code": 1,
+    "scope": "authoritative applied closure evidence/closure-ssh-b52-applied.json",
+    "basis": "66 missing registrations remain unenrolled; this is the pre-existing open finding, not a regression",
+    "control_scope_note": "with callback-gate-controls/inventory-post-enrolment.json the source layer exits 0; that control fixture isolates the compiled layer in the negative control"
+   },
+   "compiled": {
+    "instrument": "forensics/tools/callback_artifact_crosscheck.py",
+    "state": "PASS",
+    "exit_code": 0,
+    "scope": "committed artifact vs committed manifest, both at candidate a8716b4f2",
+    "artifact": "artifacts/phase2/install/lib/libcrypto.so.3",
+    "artifact_sha256": "ececbd98bea39f0f6efaab16331d0c2cfdfe7b8bb70acea4ad9dc11a544ba497",
+    "standard_exts_entries": 73,
+    "rows_total": 74,
+    "gated_records": 136,
+    "counts": {
+     "compiled_targets_not_in_manifest": 0,
+     "compiled_registrations_unaccounted": 0,
+     "manifest_not_compiled": 0,
+     "manifest_dead_targets": 0,
+     "refusals": 0
+    }
+   },
+   "combined": {
+    "state": "FAIL",
+    "exit_code": 1,
+    "rule": "nonzero when either layer fails or refuses",
+    "basis": "the authoritative source layer still reports 66 missing registrations, so the combined gate is FAIL even though the compiled layer passes"
+   }
+  },
+  "compiled_crosscheck": {
+   "instrument": "forensics/tools/callback_artifact_crosscheck.py",
+   "instrument_sha256": "ee1c50d142607886fc8bb8c278225d3a8d5dfe7ae1d483614d23d9d7a6b8fb13",
+   "report": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-artifact-crosscheck.json",
+   "report_sha256": "11430e46ebfebeba708450ef38ad1c479181be64ff0589f0e35837392ae786c6",
+   "control_report": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-artifact-crosscheck-control.json",
+   "control_report_sha256": "084e0c5f6c18bbfba95d5677a4deef77a2d61bc8011b513e10f9c2a0eada863f",
+   "artifact": "artifacts/phase2/install/lib/libcrypto.so.3",
+   "artifact_sha256": "ececbd98bea39f0f6efaab16331d0c2cfdfe7b8bb70acea4ad9dc11a544ba497",
+   "manifest": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-registration-manifest.json",
+   "manifest_sha256": "e34d1e92179959acb215f047f77cc161345fd012c22f666459a770525ce2bdcb",
+   "standard_exts_entries": 73,
+   "row_objects": 63,
+   "rows_total": 74,
+   "gated_records": 136,
+   "records_total_all_slots": 213,
+   "resolution_methods": {
+    "null": 601,
+    "relocation:RELATIVE": 141,
+    "relocation:symbol": 72
+   },
+   "aliases_kept": true,
+   "factory_rows_mapped": 16,
+   "control": {
+    "kind": "macro-expanded registration invisible to the syntactic scanner",
+    "source_only_exit_code": 0,
+    "source_only_registrations_for_target": 0,
+    "compiled_exit_code": 1,
+    "combined_exit_code": 1,
+    "named_target": "callback_crosscheck_control",
+    "control_artifact_sha256": "24390f4dda476ededaa7fe805a4dffe25291430451a7e0ea4ba53fdfc91612c0",
+    "restored_artifact_sha256": "ececbd98bea39f0f6efaab16331d0c2cfdfe7b8bb70acea4ad9dc11a544ba497",
+    "restored_combined_exit_code": 0,
+    "source_only_rows_for_target": 0,
+    "source_only_observation": "FAIL-OPEN: the scanner sees neither the aliased row literal nor the callback; zero rows/registrations/callback entries involve the target"
+   },
+   "wiring": ".github/workflows/ci.yml: Callback artifact cross-check step adjacent to the source gate; missing artifact or manifest exits 1 rather than skipping"
+  }
+ }
+}

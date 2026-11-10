@@ -1,0 +1,1 @@
+{"authority":"openssl-rt-3.6.4-r2","blocks_claims":["rt-x509-pem exit parity"],"disposition":"open","kind":"exit","magnitude":"class-change","next_court":"cli-exit-minimize","residual_id":"2d58ebcb2e283e9ee66234b9ab5224a60d084bc7c7f9d7d71ac8d43582b6a3c2","schema_version":"frf-token-v1","scope":"rt-x509-pem","surface":"exit-class","token":"exit/exit-class/class-change/open"}

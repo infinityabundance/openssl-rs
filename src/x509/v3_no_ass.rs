@@ -93,6 +93,21 @@ unsafe extern "C" fn i2s_NO_ASSERTION(
 
 /// `static void *s2i_NO_ASSERTION(X509V3_EXT_METHOD *method, X509V3_CTX *ctx, const char *str)`
 /// — `crypto/x509/v3_no_ass.c:35-40`. The input is checked by nobody, as in the authority.
+///
+/// # Safety
+///
+/// The `s2i` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
+/// `do_ext_nconf`'s `s2i` arm (`src/x509/v3_conf.rs:1095`), which resolved `method` under the
+/// extension registry's read hold (held across the lookup, this callback and `do_ext_i2d`) and
+/// passes the caller's NUL-terminated configuration `value`; `ctx` is NULL or live. This
+/// callback reads no argument, so no further property is required; in particular it does not
+/// read `value`, matching the authority's unchecked input. `method` stays live for the call, and
+/// `value` is borrowed, not freed or retained. The `ASN1_NULL` sentinel it returns belongs to
+/// the dispatcher, which encodes it with this row's `ASN1_NULL_it` and releases it once
+/// (`src/x509/v3_conf.rs:1126-1132`).
+///
+/// Authority-derived: `crypto/x509/v3_no_ass.c:35-40` returns `ASN1_NULL_new()` and reads no
+/// argument.
 unsafe extern "C" fn s2i_NO_ASSERTION(
     _method: *const X509V3ExtMethod,
     _ctx: *mut c_void,

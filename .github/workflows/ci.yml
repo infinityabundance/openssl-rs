@@ -199,6 +199,70 @@ jobs:
           print("no dependencies declared (ok)")
           PY
 
+      # Extension-slot callbacks are enumerated by slot (never by name prefix)
+      # and compared with the obligation inventory. This is a blocking gate:
+      # the closure is a hard prerequisite, not a skip, and the gate exits
+      # non-zero until the measured enrolment step lands. The out-dir is a
+      # fresh RUNNER_TEMP path, which also exercises the gate's mkdir contract.
+      # The inventory this gate compares against is the ENUMERATED closure
+      # (378 obligations: 193 discharged / 185 blocked / 0 unknown at the
+      # current candidate), because the 66 admissions from this gate are part
+      # of the queue. The path is resolved from CAMPAIGN-STATUS
+      # current_applied_state.closure_receipts[0] rather than pinned: a fixed
+      # pin drifts as src/ advances and then fails on source-drift even when
+      # zero registrations are missing (the B52 pin did exactly that).
+      # The closure is ACCEPTED at this candidate. The gate above and the
+      # artifact cross-check below guard that state; they measure different
+      # properties, so neither replaces the closure's own verdict.
+      - name: Callback enumeration completeness (extension-slot registrations vs inventory)
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
+        run: |
+          set -euo pipefail
+          closure=$(python3 - <<'PY'
+          import json
+          d = json.load(open(
+              'forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json'))
+          print(d['current_applied_state']['closure_receipts'][0])
+          PY
+          )
+          if [ ! -f "$closure" ]; then
+            echo "::error::callback gate prerequisite missing: $closure"
+            exit 1
+          fi
+          python3 forensics/tools/callback_enumeration_gate.py \
+            --root . --closure "$closure" \
+            --out-dir "${RUNNER_TEMP}/callback-enumeration-gate"
+
+      # The gate above is syntactic: a row produced by a macro expansion, a
+      # const-fn instance, or a `..base` inherited slot is invisible to it.
+      # This step reads the committed built libcrypto.so.3 and fails when the
+      # compiled registration table contains a target the manifest does not
+      # account for (or a manifest registration is dead in the artifact).
+      # A missing artifact or manifest is a failure, never a skip.
+      - name: Callback artifact cross-check (compiled registration targets vs manifest)
+        if: >-
+          github.ref == 'refs/heads/main'
+          || github.event_name == 'pull_request'
+          || github.event_name == 'workflow_dispatch'
+        run: |
+          set -euo pipefail
+          artifact=artifacts/phase2/install/lib/libcrypto.so.3
+          manifest=forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-registration-manifest.json
+          if [ ! -f "$artifact" ]; then
+            echo "::error::callback artifact cross-check prerequisite missing: $artifact"
+            exit 1
+          fi
+          if [ ! -f "$manifest" ]; then
+            echo "::error::callback artifact cross-check prerequisite missing: $manifest"
+            exit 1
+          fi
+          python3 forensics/tools/callback_artifact_crosscheck.py \
+            --artifact "$artifact" --manifest "$manifest" \
+            --out "${RUNNER_TEMP}/callback-artifact-crosscheck.json"
+
       # Every generated artefact is a function of committed inputs, so
       # regenerating it must reproduce it. Build-product digests are normalised
       # and reported; everything else is compared exactly.

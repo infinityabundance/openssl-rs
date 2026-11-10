@@ -63,6 +63,16 @@
 //! failing. That is a documented divergence in the failure *mode*, not in the
 //! success path; a caller that acquires correctly sees identical behaviour.
 //!
+//! One additional case is detected rather than waited on: a thread that holds a
+//! **read** lock and asks for the write lock is answered `0` immediately. POSIX
+//! does not define a read→write upgrade, and glibc's `pthread_rwlock_wrlock` can
+//! block forever on the caller's own read hold (it returns `EDEADLK` only in
+//! some configurations). The authority would therefore deadlock (or, where
+//! `EDEADLK` applies, return failure); this implementation chooses the failure
+//! answer deterministically. That is a deliberate safety divergence recorded in
+//! the batch receipt, not a change to how a correctly-ordered caller behaves.
+//! Read→read nesting on one thread remains a count increment and is unchanged.
+//!
 //! Fairness is deliberately unspecified, as it is in POSIX. A stream of readers
 //! can delay a waiting writer; the authority's default glibc rwlock (prefer
 //! reader) behaves the same way.
@@ -109,10 +119,15 @@
 //!
 //! The internal `ossl_crypto_mutex_*` / `ossl_crypto_condvar_*` primitives remain
 //! `pub(crate)` Rust-owned `Box` representations and are not exported; they are
-//! outside this decision. `RwlockInner` itself contains only `Mutex`/`Condvar`, so
-//! the `Vec`-style secondary allocations the other opaque objects retain do not
-//! exist here. This still promotes nothing to `SAFETY_DISCHARGED`: the §7
-//! independent-check package is outstanding.
+//! outside this decision. `RwlockInner` itself contains only `Mutex`/`Condvar`,
+//! plus one lazily-created, Rust-allocator-owned table that records which threads
+//! hold read locks (see [`LockState::reader_ids`]). That table's allocation is
+//! deliberately *not* made through the `CRYPTO_*` seam: it is private metadata,
+//! and routing it through a caller-installed `CRYPTO_set_mem_functions` hook
+//! would make the hook observe allocations the authority never makes. It is
+//! created on the first read acquisition and released with the lock. This still
+//! promotes nothing to `SAFETY_DISCHARGED`: the §7 independent-check package is
+//! outstanding.
 
 use core::ffi::{c_int, c_long, c_uint, c_ulong, c_void};
 use core::sync::atomic::{AtomicI32, AtomicPtr, AtomicU64, Ordering};
@@ -174,10 +189,91 @@ pub type CryptoThreadId = c_ulong;
 /// The protected state. `writer_id` records *which* thread holds the write lock
 /// so that `CRYPTO_THREAD_unlock` can tell a write unlock from a read unlock and
 /// so that recursive write acquisition can fail rather than deadlock.
+///
+/// `reader_ids` records *which* threads hold read locks and how many each. It is
+/// what lets `write_lock` refuse a read→write upgrade instead of waiting for the
+/// caller's own read hold forever. The field is one pointer: the table lives on
+/// the Rust heap so `LockState`/`RwlockInner` still fit the authority-sized
+/// `CRYPTO_RWLOCK` block (see the compile-time asserts below).
 struct LockState {
     writer: bool,
     writer_id: Option<CryptoThreadId>,
     readers: usize,
+    reader_ids: Option<Box<ReaderTable>>,
+}
+
+/// Per-thread read-hold accounting for one lock. Each entry is the calling
+/// thread's identity and its outstanding read count; an entry is removed when
+/// its count reaches zero, so the table is empty exactly when `LockState::readers`
+/// is zero. A lock that has never been read, and any lock after its last reader
+/// releases, carries no table at all.
+#[derive(Default)]
+struct ReaderTable(Vec<(CryptoThreadId, usize)>);
+
+impl ReaderTable {
+    /// Record one read hold by `me`. Answers false, without recording anything,
+    /// when the entry cannot be allocated (the caller then reports the failure
+    /// value and does not count the read).
+    fn note(&mut self, me: CryptoThreadId) -> bool {
+        if let Some((_, count)) = self.0.iter_mut().find(|(id, _)| *id == me) {
+            let Some(next) = count.checked_add(1) else {
+                return false;
+            };
+            *count = next;
+            return true;
+        }
+        if self.0.try_reserve(1).is_err() {
+            return false;
+        }
+        self.0.push((me, 1));
+        true
+    }
+
+    /// Withdraw one read hold by `me`. Answers whether `me` had a recorded hold;
+    /// a refusal (a thread releasing a read it did not take) is the caller's own
+    /// contract violation and leaves the table unchanged.
+    fn release(&mut self, me: CryptoThreadId) -> bool {
+        let Some(pos) = self.0.iter().position(|(id, _)| *id == me) else {
+            return false;
+        };
+        if self.0[pos].1 > 1 {
+            self.0[pos].1 -= 1;
+        } else {
+            self.0.remove(pos);
+        }
+        true
+    }
+
+    /// Whether `me` currently holds at least one read on this lock.
+    fn holds(&self, me: CryptoThreadId) -> bool {
+        self.0.iter().any(|(id, _)| *id == me)
+    }
+}
+
+impl LockState {
+    /// Record one read hold by `me`, creating the table on first use. Answers
+    /// false, without touching `readers`, when the accounting cannot be
+    /// allocated; the caller then reports the authority's failure value.
+    fn note_reader(&mut self, me: CryptoThreadId) -> bool {
+        if self.reader_ids.is_none() {
+            let mut table = ReaderTable::default();
+            if table.0.try_reserve(1).is_err() {
+                return false;
+            }
+            self.reader_ids = Some(Box::new(table));
+        }
+        let Some(table) = self.reader_ids.as_mut() else {
+            return false;
+        };
+        table.note(me)
+    }
+
+    /// Whether `me` currently holds a read on this lock.
+    fn holds_read(&self, me: CryptoThreadId) -> bool {
+        self.reader_ids
+            .as_ref()
+            .is_some_and(|table| table.holds(me))
+    }
 }
 
 struct RwlockInner {
@@ -281,6 +377,7 @@ fn new_inner() -> RwlockInner {
             writer: false,
             writer_id: None,
             readers: 0,
+            reader_ids: None,
         }),
         cond: Condvar::new(),
     }
@@ -384,7 +481,13 @@ pub extern "C" fn CRYPTO_THREAD_lock_new() -> *mut CryptoRwlock {
 /// `int CRYPTO_THREAD_read_lock(CRYPTO_RWLOCK *lock)`
 ///
 /// Returns 1 on success, 0 if this thread already holds the write lock (the
-/// authority's `EDEADLK` case) or if `lock` is NULL.
+/// authority's `EDEADLK` case), if the per-thread read accounting cannot be
+/// allocated, or if `lock` is NULL.
+///
+/// A successful read is attributed to the calling thread, so a later
+/// [`CRYPTO_THREAD_write_lock`] from the same thread can answer 0 instead of
+/// waiting on that thread's own read. A read taken while this thread already
+/// holds a read is an ordinary count increment: read→read nesting is unchanged.
 ///
 /// # Safety
 /// `lock` must be NULL or a live lock returned by [`CRYPTO_THREAD_lock_new`] and
@@ -402,7 +505,14 @@ pub unsafe extern "C" fn CRYPTO_THREAD_read_lock(lock: *mut CryptoRwlock) -> c_i
                 let mut state = lock_state(inner);
                 loop {
                     if !state.writer {
-                        state.readers += 1;
+                        // Checked before recording so an overflow leaves no trace.
+                        let Some(next) = state.readers.checked_add(1) else {
+                            return 0;
+                        };
+                        if !state.note_reader(me) {
+                            return 0;
+                        }
+                        state.readers = next;
                         return 1;
                     }
                     if state.writer_id == Some(me) {
@@ -419,8 +529,16 @@ pub unsafe extern "C" fn CRYPTO_THREAD_read_lock(lock: *mut CryptoRwlock) -> c_i
 
 /// `int CRYPTO_THREAD_write_lock(CRYPTO_RWLOCK *lock)`
 ///
-/// Returns 1 on success, 0 if this thread already holds the write lock (the
-/// authority's `EDEADLK` case) or if `lock` is NULL.
+/// Returns 1 on success. Returns 0 if `lock` is NULL; if this thread already
+/// holds the write lock (the authority's `EDEADLK` case); or if this thread
+/// holds a **read** lock on the same lock.
+///
+/// The read→write refusal is deliberate: the authority's `pthread_rwlock_wrlock`
+/// is undefined for a thread that already holds the read lock and can block on
+/// the caller's own hold indefinitely. Refusing is a safety improvement (the C
+/// caller sees the failure value its own lock call already documents), and it is
+/// the only case where this lock returns 0 that the authority does not reliably
+/// return 0 for. No state is mutated on the refusal path.
 ///
 /// # Safety
 /// `lock` must be NULL or a live lock returned by [`CRYPTO_THREAD_lock_new`] and
@@ -436,15 +554,21 @@ pub unsafe extern "C" fn CRYPTO_THREAD_write_lock(lock: *mut CryptoRwlock) -> c_
             with_rwlock_inner(lock, |inner| {
                 let me = current_id();
                 let mut state = lock_state(inner);
-                while state.writer || state.readers > 0 {
-                    if state.writer_id == Some(me) {
+                loop {
+                    // Checked before waiting: a write request from this thread's own
+                    // write lock (recursive write) or from its own read hold (a
+                    // read→write upgrade) can never make progress. Returning here
+                    // leaves the state untouched.
+                    if state.writer_id == Some(me) || state.holds_read(me) {
                         return 0;
+                    }
+                    if !state.writer && state.readers == 0 {
+                        state.writer = true;
+                        state.writer_id = Some(me);
+                        return 1;
                     }
                     state = wait_state(inner, state);
                 }
-                state.writer = true;
-                state.writer_id = Some(me);
-                1
             })
         }
     })
@@ -456,10 +580,13 @@ pub unsafe extern "C" fn CRYPTO_THREAD_write_lock(lock: *mut CryptoRwlock) -> c_
 /// which — and returns 1 on success. Returns 0 when the lock is NULL, when this
 /// thread holds the write lock but not as the writer, or when no lock is held.
 ///
-/// Reader ownership is not attributed per thread: a read unlock by a thread that
-/// did not acquire one is the authority's own undefined case (a plain
-/// `pthread_rwlock_t` does not detect it either), and here it decrements the
-/// reader count. Every caller in the crate unlocks only what it acquired.
+/// A read unlock withdraws this thread's recorded hold. The reader **count** is
+/// still decremented by any caller, as it was before the per-thread accounting:
+/// a read unlock by a thread that did not acquire one is the authority's own
+/// undefined case (a plain `pthread_rwlock_t` does not detect it either). Every
+/// caller in the crate unlocks only what it acquired. When the count reaches
+/// zero the accounting table is discarded, so a foreign unlock cannot leave a
+/// stale per-thread entry behind once the lock is quiescent.
 ///
 /// # Safety
 /// `lock` must be NULL or a live lock returned by [`CRYPTO_THREAD_lock_new`] and
@@ -486,7 +613,15 @@ pub unsafe extern "C" fn CRYPTO_THREAD_unlock(lock: *mut CryptoRwlock) -> c_int 
                     return 0;
                 }
                 if state.readers > 0 {
+                    if let Some(table) = state.reader_ids.as_mut() {
+                        table.release(me);
+                    }
                     state.readers -= 1;
+                    if state.readers == 0 {
+                        // Release the accounting with the last reader. This also makes
+                        // the table impossible to leave stale after a foreign unlock.
+                        state.reader_ids = None;
+                    }
                     inner.cond.notify_all();
                     return 1;
                 }
@@ -1102,6 +1237,63 @@ mod tests {
         // NULL is a no-op.
         // SAFETY: NULL is explicitly allowed.
         unsafe { CRYPTO_THREAD_lock_free(core::ptr::null_mut()) };
+    }
+
+    /// A thread that holds a **read** and asks for the write lock must be answered
+    /// 0 immediately: waiting would block on its own read forever. The refusal
+    /// must leave the read hold intact and the lock usable.
+    #[test]
+    fn rwlock_write_while_holding_a_read_is_reported_not_deadlocked() {
+        let lock = CRYPTO_THREAD_lock_new();
+        assert!(!lock.is_null());
+
+        // SAFETY: `lock` is live and unheld.
+        assert_eq!(unsafe { CRYPTO_THREAD_read_lock(lock) }, 1);
+        // The authority's pthread rwlock may block on this thread's own read;
+        // this implementation refuses instead of waiting.
+        // SAFETY: this thread holds a read on `lock`.
+        assert_eq!(unsafe { CRYPTO_THREAD_write_lock(lock) }, 0);
+        // The refusal did not disturb the read hold: releasing it succeeds.
+        // SAFETY: this thread holds a read on `lock`.
+        assert_eq!(unsafe { CRYPTO_THREAD_unlock(lock) }, 1);
+        // With no reader left, the same thread can take the write lock.
+        // SAFETY: `lock` is live and unheld.
+        assert_eq!(unsafe { CRYPTO_THREAD_write_lock(lock) }, 1);
+        // SAFETY: this thread holds the write lock.
+        assert_eq!(unsafe { CRYPTO_THREAD_unlock(lock) }, 1);
+
+        // SAFETY: no user remains.
+        unsafe { CRYPTO_THREAD_lock_free(lock) };
+    }
+
+    /// Read→read nesting on one thread is unchanged: each read is a count
+    /// increment, the write request is refused while any of them stands, and the
+    /// lock becomes writable only after every nested read is released.
+    #[test]
+    fn rwlock_read_read_nesting_on_one_thread_is_unchanged() {
+        let lock = CRYPTO_THREAD_lock_new();
+        assert!(!lock.is_null());
+
+        // SAFETY: `lock` is live and unheld.
+        assert_eq!(unsafe { CRYPTO_THREAD_read_lock(lock) }, 1);
+        // SAFETY: this thread already holds a read; a second read nests.
+        assert_eq!(unsafe { CRYPTO_THREAD_read_lock(lock) }, 1);
+        // SAFETY: two reads are held by this thread.
+        assert_eq!(unsafe { CRYPTO_THREAD_write_lock(lock) }, 0);
+        // SAFETY: one nested read is still held after this release.
+        assert_eq!(unsafe { CRYPTO_THREAD_unlock(lock) }, 1);
+        // Still a reader, so the write request stays refused.
+        // SAFETY: one read remains held by this thread.
+        assert_eq!(unsafe { CRYPTO_THREAD_write_lock(lock) }, 0);
+        // SAFETY: the last nested read is released here.
+        assert_eq!(unsafe { CRYPTO_THREAD_unlock(lock) }, 1);
+        // SAFETY: no reader remains.
+        assert_eq!(unsafe { CRYPTO_THREAD_write_lock(lock) }, 1);
+        // SAFETY: this thread holds the write lock.
+        assert_eq!(unsafe { CRYPTO_THREAD_unlock(lock) }, 1);
+
+        // SAFETY: no user remains.
+        unsafe { CRYPTO_THREAD_lock_free(lock) };
     }
 
     /// Contended readers and writers on the measured option-B target. Writers

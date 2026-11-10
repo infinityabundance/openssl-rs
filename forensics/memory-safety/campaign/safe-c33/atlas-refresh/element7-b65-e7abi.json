@@ -1,0 +1,83 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/element7-witness-batch/v1",
+  "kind": "candidate-bound-measurement-with-witness",
+  "generated_utc": "2026-11-08T17:20:00Z",
+  "batch": "b65-e7abi",
+  "purpose": "Record the external-ABI-contract batch: the 8 registerable dispatch sites are carried as per-call-site ABI contracts (target_set=[], resolved=false), leaving 2 target-bounded sites. Element 7 is still FAIL.",
+  "source_identity": {
+    "repository_head": "62c71e256763c242730a3beb969bd9637c019217",
+    "branch": "stage/p25/element7-s2b",
+    "tracked_tree_dirty": false,
+    "artifact_build_S": "b8bba955503014c8fd86303314c6deebaea093b0",
+    "build_relevant_tree_identical": true,
+    "rebuild_performed": false
+  },
+  "tool": {"path": "forensics/tools/consumer_closure.py", "version": 5, "sha256": "bb722d3f0068097486cc15cf297ccc33e88df177741a22a0e6ed330e7d94c66f"},
+  "artifacts": {
+    "libcrypto_so_3_sha256": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3",
+    "ssh_sha256": "926975c81fe8d56297196a703a8a7b0f5eb0fae1644bbfa4643d4cd517f22ba0",
+    "sshd_sha256": "0d3f5e924ff361cba290fb150b89e85806adf69c3a9de9440c4b8a6c09803ce2"
+  },
+  "receipts": {
+    "ssh": {"path": "evidence/closure-ssh-b65-e7abi.json", "sha256": "3f18bb0cadbfc29f3e791358e25e830fd35f8de82979bedac18ba30295f57442", "bytes": 11950981, "generated_utc": "2026-11-08T16:54:03Z"},
+    "sshd": {"path": "evidence/inventory-sshd-b65-e7abi.json", "sha256": "c86967019a37b9e6f5f89999ae6f7a21e4fcf6e0e472c5f16df0253e6fb4ad51", "bytes": 11798915, "generated_utc": "2026-11-08T17:20:00Z"}
+  },
+  "measured": {
+    "ssh": {
+      "obligations": {"total": 378, "DISCHARGED": 186, "BLOCKED": 192, "UNKNOWN": 0},
+      "verdict": {"state": "ACCEPTED", "refusals": 0, "safe_compatible": false},
+      "precision": {"indirect_sites": 51918, "resolved_sites": 51743, "unresolved_sites": 175, "reachable_unresolved_sites": 129, "target_bounded_unresolved_sites": 2, "contract_bounded_sites": 127, "unclassified_reachable_sites": 0}
+    },
+    "sshd": {
+      "obligations": {"total": 378, "DISCHARGED": 186, "BLOCKED": 192, "UNKNOWN": 0},
+      "verdict": {"state": "ACCEPTED", "refusals": 0, "safe_compatible": false},
+      "precision": {"indirect_sites": 51918, "resolved_sites": 51743, "unresolved_sites": 175, "reachable_unresolved_sites": 129, "target_bounded_unresolved_sites": 2, "contract_bounded_sites": 127, "unclassified_reachable_sites": 0}
+    }
+  },
+  "contract_bounded_added": [
+    {"call_site": "0x179a0d", "class": "ABI_CONTRACT_PBE_REGISTRY", "slot": "EvpPbeCtl.keygen@0x10", "interface": "EVP_PBE_alg_add_type / EVP_PBE_alg_add", "target_set": [], "resolved": false},
+    {"call_site": "0x1c21a8", "class": "ABI_CONTRACT_STORE_LOADER", "slot": "OsslStoreLoader.open_ex@0x58", "interface": "OSSL_STORE_LOADER_set_open_ex via OSSL_STORE_register_loader", "target_set": [], "resolved": false},
+    {"call_site": "0x1c229d", "class": "ABI_CONTRACT_STORE_LOADER", "slot": "OsslStoreLoader.open@0x10", "interface": "OSSL_STORE_LOADER_set_open", "target_set": [], "resolved": false},
+    {"call_site": "0x1c2768", "class": "ABI_CONTRACT_STORE_LOADER", "slot": "OsslStoreLoader.closefn@0x50", "interface": "OSSL_STORE_LOADER_set_close", "target_set": [], "resolved": false},
+    {"call_site": "0x1c2528", "class": "ABI_CONTRACT_PROVIDER", "scope": "store-loader-p_close", "slot": "OsslStoreLoader.p_close@0xb8", "interface": "OSSL_FUNC_STORE_CLOSE from OSSL_STORE_LOADER_fetch", "target_set": [], "resolved": false},
+    {"call_site": "0x2e111a", "class": "ABI_CONTRACT_CONF_MODULE", "slot": "ConfModule.init@0x10", "interface": "CONF_module_add / DSO OPENSSL_init", "target_set": [], "resolved": false},
+    {"call_site": "0x2e1532", "class": "ABI_CONTRACT_CONF_MODULE", "slot": "ConfModule.finish@0x18", "interface": "CONF_module_add / DSO OPENSSL_finish", "target_set": [], "resolved": false},
+    {"call_site": "0x4fa4c6", "class": "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT", "slot": "exported PEM PKCS#8 writer cb parameter", "interface": "PEM_write_bio_PKCS8PrivateKey* with PEM_def_callback default 0x2b5720", "target_set": [], "resolved": false}
+  ],
+  "delta_10_to_2": {
+    "target_bounded_unresolved_sites": "10 -> 2",
+    "contract_bounded_sites": "119 -> 127",
+    "reachable_unresolved_sites": "129 -> 129",
+    "unresolved_sites": "175 -> 175",
+    "resolved_sites": "51743 -> 51743",
+    "obligations": "378 = 186 / 192 / 0 unchanged",
+    "residual_site_identity": "129 keys unchanged; exactly 8 class changes (reg-top -> external ABI contract); none added or removed"
+  },
+  "remaining": {
+    "target_bounded_unresolved_sites": 2,
+    "sites": [
+      {"call_site": "0x179c85", "function": "EVP_PBE_CipherInit_ex", "slot": "keygen_ex out-parameter of EVP_PBE_find_ex", "finite_targets": ["PKCS5_PBE_keyivgen_ex 0x35e3f0", "PKCS5_v2_PBKDF2_keyivgen_ex 0x199140", "PKCS12_PBE_keyivgen_ex 0x254a30", "PKCS5_v2_PBE_keyivgen_ex 0x17c200", "PKCS5_v2_scrypt_keyivgen_ex 0x49b8b0"], "caveat": "finite only if the GOT call to EVP_PBE_find_ex binds to the in-image symbol (no BIND_NOW/DF_SYMBOLIC)"},
+      {"call_site": "0x17c408", "function": "PKCS5_v2_PBE_keyivgen_ex", "slot": "KDF keygen_ex out-parameter of EVP_PBE_find_ex", "finite_targets": ["PKCS5_v2_PBKDF2_keyivgen_ex 0x199140", "PKCS5_v2_scrypt_keyivgen_ex 0x49b8b0"], "caveat": "same GOT-binding caveat"}
+    ]
+  },
+  "witness_residuals": {
+    "textual_source_scans": "the writer/registration/caller scans are source-text based, not a Rust parser; an opaque alias in code that never names the owner, a macro whose field name is a metavariable, and split-line forms beyond the joined cases are recorded per class",
+    "macro_field_metavariable": "a macro_rules! body with `(*$p).$f = $v` is not refused and no such macro exists in the candidate's owner-naming files (recorded in each class does_not_cover)",
+    "address_leaf_mismatch": "a mismatched function leaf falls through to target-bounded with no named refusal (recorded)",
+    "store_base_uniqueness": "site 0x1c2768's base uniqueness is source-guarded (fetched_loader == NULL / loader_ctx != NULL); the machine definition set also contains the failed-fetch zero",
+    "pbe_got_binding": "the two remaining sites are finite only under the tool's established GOT-binding policy"
+  },
+  "independent_review": {
+    "adjudication": "ACCEPT-WITH-RECORDED-RESIDUALS after remediation",
+    "first_pass": "REJECT: four executed false admissions (type alias, continuation-line writer, function-pointer/import-alias registration, PEM forwarded non-cb parameter) and no committed controls",
+    "second_pass": "REJECT (narrow): split-line use alias and macro-expanded slot store still admitted",
+    "final_pass": "ACCEPT-WITH-RECORDED-RESIDUALS: all counterexamples refuse and are mutation-load-bearing; the field-metavariable macro gap is recorded, not claimed refused"
+  },
+  "non_claims": [
+    "element 7 is still FAIL: 2 reachable target-bounded sites remain (the two PBE out-parameter sites)",
+    "an ABI contract bounds a site only within the stated interface; it is not a proof that an application-supplied callback is memory safe",
+    "both families remain safe_compatible=false; obligations are unchanged at 378 = 186 / 192 / 0 and no mechanism is discharged",
+    "the witnesses are candidate-bound and must be re-derived at every re-freeze",
+    "this batch does not touch the 192 BLOCKED obligation rows, B46/B47/B48, or any compatibility court"
+  ]
+}

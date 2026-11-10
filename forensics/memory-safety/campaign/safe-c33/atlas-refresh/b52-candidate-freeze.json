@@ -1,0 +1,334 @@
+{
+ "schema": "safe-c33/atlas-refresh/v1-candidate-freeze/v1",
+ "kind": "candidate-freeze",
+ "candidate_tag": "b52",
+ "generated_utc": "2026-11-03T01:52:36Z",
+ "candidate_S": {
+  "commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+  "commit_subject": "x509: s2i contracts and dispatcher tests (B52 candidate)",
+  "branch": "stage/p25/element7-s2b",
+  "source_tree": "cfad4041e6ec2b259e5e7a1a32892ad40b9ab330",
+  "tree_clean_at_session_start": true,
+  "tracked_source_clean_at_session_start": true,
+  "tree_clean_at_freeze": false,
+  "untracked_files_at_session_start": [],
+  "tree_state_note": "At this session's start the tracked tree was clean (git status --porcelain empty). At freeze time the only tracked modifications are the rebuild outputs of S (the six install artefacts, the install's development symlinks, artifacts/phase2/openssl and forensics/atlas/implemented-surface.json). No build-relevant source input differs from S. Those artefact modifications are the rebuilt outputs of S and are pending the orchestrator's commit; this freeze record is a new untracked evidence file.",
+  "post_rebuild_tracked_changes": [
+   "artifacts/phase2/install/bin/openssl",
+   "artifacts/phase2/install/lib/libcrypto.a",
+   "artifacts/phase2/install/lib/libcrypto.so",
+   "artifacts/phase2/install/lib/libcrypto.so.3",
+   "artifacts/phase2/install/lib/libssl.a",
+   "artifacts/phase2/install/lib/libssl.so",
+   "artifacts/phase2/install/lib/libssl.so.3",
+   "artifacts/phase2/install/lib/ossl-modules/legacy.so",
+   "artifacts/phase2/openssl",
+   "forensics/atlas/implemented-surface.json"
+  ]
+ },
+ "identity": {
+  "branch": "stage/p25/element7-s2b",
+  "source_head": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+  "source_head_subject": "x509: s2i contracts and dispatcher tests (B52 candidate)",
+  "source_commit": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+  "source_tree": "cfad4041e6ec2b259e5e7a1a32892ad40b9ab330",
+  "source_tree_digest": {
+   "count": 888,
+   "sha256": "1e1f092838c4f726f9ce6c5a6cc1dcb3eec062e6aea1f0fb0817ad681aae3014",
+   "rule": "sha256 over canonical JSON of sorted [relpath,size,sha256] for src/, Cargo.toml, Cargo.lock, build.rs (forensics/tools/phase7_courts.py::_source_tree_digest)"
+  },
+  "crate_version": "0.0.45",
+  "src_rs_files": 878,
+  "src_content_sha256": "e4efafddb4b0c5cf052d27300ea64ba517cf1a2dfaf39971c419abb7fe127f48",
+  "toolchain": {
+   "rustc_vv_first_4_lines": [
+    "rustc 1.98.1 (48a229cea 2026-09-01)",
+    "binary: rustc",
+    "commit-hash: 48a229ceaefd4985c50990b14116b6d856af0985",
+    "commit-date: 2026-09-01"
+   ],
+   "cargo_v": "cargo 1.98.1 (797e8a9bc 2026-08-05)"
+  },
+  "binary": {
+   "install_prefix": "artifacts/phase2/install",
+   "artefacts": {
+    "libcrypto.so.3": {
+     "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+     "sha256": "ececbd98bea39f0f6efaab16331d0c2cfdfe7b8bb70acea4ad9dc11a544ba497",
+     "size": 16858288
+    },
+    "libssl.so.3": {
+     "path": "artifacts/phase2/install/lib/libssl.so.3",
+     "sha256": "c8916466b2d4b79e38f53ca389386047670da4fc5c3c54e04bafac7bca9bcf0b",
+     "size": 16571360
+    },
+    "libcrypto.a": {
+     "path": "artifacts/phase2/install/lib/libcrypto.a",
+     "sha256": "7291204631710342bd3c9d5a7dc869b2ab06bc67d8a7de7a7be16432a365e6c8",
+     "size": 44427938
+    },
+    "libssl.a": {
+     "path": "artifacts/phase2/install/lib/libssl.a",
+     "sha256": "b105b4bab0be124327d63e29c1a5fac480d06ae09fe97b33aa5f791bd7963953",
+     "size": 44428490
+    },
+    "openssl": {
+     "path": "artifacts/phase2/install/bin/openssl",
+     "sha256": "daad5d2ff776acffe9499995df0eb3d7e9d62e0bc2ba229193eb630c1d18e632",
+     "size": 12375384
+    },
+    "legacy.so": {
+     "path": "artifacts/phase2/install/lib/ossl-modules/legacy.so",
+     "sha256": "004a42fa538f7b658a9b7afc49ac81c7a2aaebbe5253731ad943402381bbafe5",
+     "size": 16534272
+    }
+   },
+   "committed_blob_sha256": null,
+   "committed_install_matches_this_source": true,
+   "match_basis": "the install was rebuilt at S and is on disk; the artefacts are outputs of S but are not yet committed, so their digests bind the working-tree bytes rather than a committed blob. They become committed bytes when the orchestrator commits the candidate.",
+   "rebuild_output_copies": {
+    "artifacts/phase2/openssl": {
+     "path": "artifacts/phase2/openssl",
+     "sha256": "daad5d2ff776acffe9499995df0eb3d7e9d62e0bc2ba229193eb630c1d18e632",
+     "size": 12375384,
+     "note": "same bytes as artifacts/phase2/install/bin/openssl"
+    },
+    "forensics/atlas/implemented-surface.json": {
+     "path": "forensics/atlas/implemented-surface.json",
+     "sha256": "632fe87a3705d4b698d1bfa4abf268cc253b1afd192e69cc1ba4369e174efb25",
+     "size": 240654
+    }
+   },
+   "build_metadata": {
+    "rebuild_performed": true,
+    "rebuild_recipe": "bash forensics/tools/build_phase2.sh in the court container (CARGO_BUILD_JOBS=4)",
+    "rebuild_scope": "cargo release build -> implemented surface -> shell -> DSOs, archives, provider module, CLI, install layout -> Phase-2 ABI courts",
+    "rebuild_reproduced_across_two_runs": "NOT_RUN (no second rebuild in this step)",
+    "openssl_version_output": "OpenSSL 3.6.4 25 Aug 2026 (Library: OpenSSL 3.6.4 25 Aug 2026)",
+    "openssl_version_a_note": "`openssl version -a` is refused by this candidate: \"command 'version -<metadata>' is a Phase 16 boundary: its apps/version -<metadata>.c body is not landed\" (exit 1, observed at this freeze). `openssl version` and `openssl version -v` both print the line above."
+   }
+  }
+ },
+ "phase2_courts": {
+  "path": "artifacts/phase2/COURTS.json",
+  "sha256": "07ed4b78909ae394fc81ca3ddc321304e0c7219fb853da4e290cfbbfa137104e",
+  "all_pass": true,
+  "note": "artifacts/phase2/COURTS.json is unchanged by the S rebuild (it does not appear in the tracked change set); all 11 ABI courts pass"
+ },
+ "gate": {
+  "clippy_all_targets_deny_warnings": {
+   "command": "CARGO_BUILD_JOBS=4 cargo clippy --all-targets -- -D warnings",
+   "exit": 0,
+   "result": "PASS (observed at S from a dev-profile rebuild; log ends `Finished `dev` profile [unoptimized + debuginfo] target(s) in 19.73s`)"
+  },
+  "clippy_raw_capture": {
+   "command": "cargo clippy --lib --tests --message-format=json -- --cap-lints warn -W unsafe_code -W clippy::undocumented_unsafe_blocks -W clippy::missing_safety_doc",
+   "exit": 0,
+   "path": "court/freeze-b52/clippy-b52.jsonl",
+   "bytes": 279416145,
+   "sha256": "2f2b0bf4624341744a9faac3f2c2b82010ebef4455385bbf751422cb2028788e",
+   "stderr_path": "court/freeze-b52/clippy-b52.err",
+   "stderr_bytes": 113,
+   "stderr_sha256": "02b66f6741a683632ce56dad5167ec718d4722babba33ec7f283d2b9f5abced3",
+   "note": "This is the established census-input command recorded by v1p/v1q/c5/b49/b50/b51 (court/freeze-b52/census-clippy-b52.sh), not a literal --all-targets capture; the census delta is only comparable under the same compiler invocation. The -D warnings gate above is the separate --all-targets run."
+  },
+  "library_tests": {
+   "run": false,
+   "note": "No library test run was requested for this build-and-freeze step; this is NOT a test result."
+  }
+ },
+ "consumers": {
+  "openssh_version": "9.9p1",
+  "tarball": "court/tmp/openssh-closure/openssh-9.9p1.tar.gz",
+  "relink_script": {
+   "path": "court/freeze-b52/build-openssh-b52.sh",
+   "sha256": "45cfed71e61f81e57da3a0e964a80b01b638ff293217fa3cdd38b1268f643d57",
+   "derivation": "court/freeze-b51b/build-openssh-b51b.sh with b51b->b52 substituted throughout (OUT, client/server subdirectories, configure/make logs, privsep path, timings path); the install prefix and tarball paths are unchanged (the install was rebuilt in place)"
+  },
+  "ssh": {
+   "path": "court/tmp/openssh-closure/client-b52/openssh-9.9p1/ssh",
+   "sha256": "560652df8797675be5079f0aa562693c140dbf980aa14fddc013b768f282f61a",
+   "size": 3401744
+  },
+  "sshd": {
+   "path": "court/tmp/openssh-closure/server-b52/openssh-9.9p1/sshd",
+   "sha256": "51f00033002e44d432605399721a447e62e766cdeb91d38479a368b91a8da74c",
+   "size": 1763248
+  },
+  "consumer_digest_change_vs_b51b": {
+   "ssh_b51b_sha256": "ccba01c37f3442ef24e3830a9948b24b92699172d77736ea470531827778a6f0",
+   "sshd_b51b_sha256": "9ab4d8ac01995d381da2d554fc2561a9c53661cd5496c6e8d6138cd8f9c5404a",
+   "sizes_unchanged": true,
+   "cause": "the rebuilt binaries embed the per-subject build directory name (`client-b52` / `server-b52`), which differs from b51b purely because the freeze subdirectory was renamed; the source, configure flags and install are otherwise unchanged",
+   "evidence": "grep -a -o 'client-b52|server-b52' finds 2 occurrences in ssh and 3 in sshd"
+  },
+  "resolved_libcrypto": {
+   "soname": "libcrypto.so.3",
+   "path": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+   "sha256": "ececbd98bea39f0f6efaab16331d0c2cfdfe7b8bb70acea4ad9dc11a544ba497",
+   "matches_built_artefact": true,
+   "evidence": "ldd on both ssh and sshd reports `libcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3`; sha256 of that file equals identity.binary.artefacts['libcrypto.so.3'].sha256"
+  },
+  "build_timings": {
+   "path": "court/freeze-b52/openssh-build-timings.json",
+   "sha256": "d7f6319abc7287014031823f71ea63099ddbc8d2ee32aab5ada48500b203d8ee",
+   "bytes": 327
+  }
+ },
+ "census_identity": {
+  "regenerated_at_this_source": true,
+  "source_head": "a8716b4f2112bde03c97db5ff7bd1caf3a483c35",
+  "path": "court/freeze-b52/census-b52.json",
+  "sha256": "670973b75640040b78724457ea4c4776466b194f4bf8720a83de1e9ffb786347",
+  "bytes": 13507074,
+  "command": "python3 forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1_census.py --root /work --compiler-json court/freeze-b52/clippy-b52.jsonl --delta-vs court/freeze-b51b/census-b51b.json --out court/freeze-b52/census-b52.json",
+  "compiler_input": {
+   "path": "court/freeze-b52/clippy-b52.jsonl",
+   "bytes": 279416145,
+   "sha256": "2f2b0bf4624341744a9faac3f2c2b82010ebef4455385bbf751422cb2028788e",
+   "note": "captured at this exact source with the recorded clippy command, including -W unsafe_code; clippy exited 0 and the file has 141351 JSONL lines, of which the census counts 141344 raw diagnostics (the remainder are non-diagnostic cargo messages)"
+  },
+  "delta_base": {
+   "path": "court/freeze-b51b/census-b51b.json",
+   "source_head": "cb9c4c64c4749b796603cddf0736049d37ea12b0",
+   "sha256": "bc0edebe701862e20d6d4ef995ac082e9e5a068d920b81682e41fa816c532afa",
+   "bytes": 13505896
+  },
+  "delta_vs_lean_freeze_note": "`--delta-vs` against b51b-candidate-freeze.json is supported but degenerate here: the b51b freeze is the lean form and carries no per-file partition rows, so all 878 files read as added. The recorded census therefore uses court/freeze-b51b/census-b51b.json, which carries the per-file rows, as the delta base.",
+  "per_file_hash_self_check": {
+   "status": "PASS",
+   "files_checked": 878,
+   "working_tree_mismatches": [],
+   "all_match_working_tree": true,
+   "head_equivalence_basis": "git status --porcelain -- src Cargo.toml Cargo.lock build.rs is empty at freeze, so the working-tree bytes hashed here are the HEAD blobs; no separate git-blob pass was run",
+   "all_match_git_blobs_at_head": true
+  },
+  "census_history": "regenerated at S from a compiler capture taken at the same commit; nothing is carried from b51b beyond the --delta-vs comparison input"
+ },
+ "census_headline": {
+  "compiler_sites": 61736,
+  "lexical_ops": 72955,
+  "raw_diagnostics": 141344,
+  "src_rs_files": 878,
+  "files_with_unsafe_block": {
+   "compiler": 785,
+   "lexical": 786
+  },
+  "recorded_partition": {
+   "ZERO_UNSAFE": 92,
+   "BOUNDARY_COVERED": 18,
+   "PARTIAL": 761,
+   "TEST_ONLY": 6
+  },
+  "comparable_delta_vs_b51b": {
+   "ZERO_UNSAFE": 0,
+   "BOUNDARY_COVERED": 0,
+   "PARTIAL": 0
+  },
+  "comparable_delta_vs_normalized_recorded": {
+   "ZERO_UNSAFE": 0,
+   "BOUNDARY_COVERED": -1,
+   "PARTIAL": 2
+  },
+  "blockers": {
+   "production": 201,
+   "test_only": 226,
+   "allocator_seam": 0,
+   "total": 427
+  },
+  "changed_category": 9,
+  "changed_unsafe_blocks": 318,
+  "classification_change_count": 3,
+  "delta_vs_b51b_census": {
+   "files_added": 0,
+   "files_removed": 0,
+   "classification_change_count": 3,
+   "operation_count_change_count": 0
+  },
+  "note": "the recorded partition and every recomputed headline figure are numerically identical to b51b, so the +0/-1/+2 against the recorded attribution snapshot is the same label-normalization difference b51b recorded. The three classification changes are src/x509/{v3_ia5,v3_int,v3_utf8}.rs moving all_operations_contracted False->True within PARTIAL; the nine changed-category rows and 318 changed unsafe blocks are measured against the pinned attribution baseline and are the counts b51b also recorded. Inventory, not discharge; the census blind spots published in the document apply."
+ },
+ "delta_vs_previous": {
+  "previous": {
+   "tag": "b51b",
+   "path": "atlas-refresh/b51b-candidate-freeze.json",
+   "source_head": "cb9c4c64c4749b796603cddf0736049d37ea12b0",
+   "src_content_sha256": "ddb54a39b068ab206f22b6452b551c4c76c425a03801d9e93d5a7a1d719706fc",
+   "artefacts": {
+    "libcrypto.so.3": {
+     "sha256": "2a55e12185916309a9f9d25fa8c6d256a70f77300d84869ffb4cbd2fe60e0643",
+     "size": 16857400
+    },
+    "libssl.so.3": {
+     "sha256": "037857ca66f6891df7562f5557be302850c51bd90c75aca75c1b98387c3454f5",
+     "size": 16570472
+    },
+    "libcrypto.a": {
+     "sha256": "24ce053c042b0a4e13a1dff3b2fbc563c55d6dee3b9c0be267dcd754f7dc8201",
+     "size": 44426146
+    },
+    "libssl.a": {
+     "sha256": "8b3e751e77f98cbc0411df23ea777c702aee56fb821db245016fe1ed176f2bb5",
+     "size": 44426698
+    },
+    "openssl": {
+     "sha256": "7d95eab5e1deb2530f98672b077f35c500e2a7dde1a48ba9869a3ccd26e8d7d3",
+     "size": 12374216
+    },
+    "legacy.so": {
+     "sha256": "e03232a6aaa62ebe20f41bc4c2bbc29114a7a1cb2f29688f9bf70dd669b3fec7",
+     "size": 16533384
+    }
+   },
+   "consumers": {
+    "ssh_sha256": "ccba01c37f3442ef24e3830a9948b24b92699172d77736ea470531827778a6f0",
+    "sshd_sha256": "9ab4d8ac01995d381da2d554fc2561a9c53661cd5496c6e8d6138cd8f9c5404a"
+   }
+  },
+  "build_relevant_source_changes": [
+   "a8716b4f2 (B52 candidate): x509 v2i/s2i contract and dispatcher-test edits across src/x509/{v3_conf,v3_group_ac,v3_ia5,v3_ind_iss,v3_int,v3_lib,v3_no_ass,v3_no_rev_avail,v3_single_use,v3_soa_id,v3_utf8}.rs (11 files, +296/-5; not comment-only)"
+  ],
+  "install_rebuilt": true,
+  "install_rebuilt_note": "the install was rebuilt at S and is on disk; the artefacts are bound by digest above but are not yet committed",
+  "note": "the census records the classification changes it observed at this candidate: 3"
+ },
+ "finding": {
+  "summary": "b52 binds the source candidate a8716b4f2 to the install rebuilt from it, to both OpenSSH 9.9p1 consumers relinked against that install, and to a safety census regenerated at the same source. The predecessor is b51b; the source delta is the B52 x509 v2i/s2i contract and dispatcher-test work (11 files, +296/-5). Nothing is discharged by this document.",
+  "boundary_b52_status": "NOT_ADJUDICATED: the B52 boundary work is not assessed here; no scoped receipt is applied by this freeze."
+ },
+ "what_this_is_not": [
+  "No consumer closure ran at this candidate: no ssh/sshd obligation is re-adjudicated, discharged, reclassified or re-bound by this document.",
+  "No SAFE_COMPATIBLE or SAFETY_DISCHARGED claim is made for any mechanism or consumer family.",
+  "The six artefact digests bind the rebuilt working-tree bytes of S, not a committed blob; the orchestrator's commit is what makes them committed bytes.",
+  "The clippy -D warnings gate is a FAST-level gate observed at S; it is not a safety certificate.",
+  "The census is an inventory with published blind spots; it is not a discharge.",
+  "This document is a freeze record about S, not an evidence commit (E) and not an adjudication."
+ ],
+ "sources": {
+  "phase2_courts": {
+   "path": "artifacts/phase2/COURTS.json",
+   "sha256": "07ed4b78909ae394fc81ca3ddc321304e0c7219fb853da4e290cfbbfa137104e"
+  },
+  "clippy_gate_log": {
+   "path": "/tmp/clippy-gate-b52.log (court-local, not committed)",
+   "bytes": 113,
+   "sha256": "eeac4e6a38bf1500893ccb168252c8d0831e2dbfda9e2c37beb39906d525501b",
+   "exit": 0
+  },
+  "clippy_raw_capture": {
+   "path": "court/freeze-b52/clippy-b52.jsonl",
+   "bytes": 279416145,
+   "sha256": "2f2b0bf4624341744a9faac3f2c2b82010ebef4455385bbf751422cb2028788e",
+   "exit": 0
+  },
+  "census": {
+   "path": "court/freeze-b52/census-b52.json",
+   "bytes": 13507074,
+   "sha256": "670973b75640040b78724457ea4c4776466b194f4bf8720a83de1e9ffb786347"
+  },
+  "openssh_build_timings": {
+   "path": "court/freeze-b52/openssh-build-timings.json",
+   "sha256": "d7f6319abc7287014031823f71ea63099ddbc8d2ee32aab5ada48500b203d8ee",
+   "bytes": 327
+  }
+ }
+}

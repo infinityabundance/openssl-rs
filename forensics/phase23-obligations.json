@@ -124,19 +124,12 @@
       },
       {
         "closure": "the `RT-DOWNSTREAM-MULTITRACK` court passes",
-        "findings": [
-          "the Phase-17 candidate corpus records curl against candidate 0.0.27, not the current 0.0.43",
-          "the Phase-17 candidate corpus records git against candidate 0.0.27, not the current 0.0.43",
-          "the Phase-17 candidate corpus records haproxy against candidate 0.0.27, not the current 0.0.43",
-          "the Phase-17 candidate corpus records nginx against candidate 0.0.27, not the current 0.0.43",
-          "the Phase-17 candidate corpus records openssh against candidate 0.0.27, not the current 0.0.43",
-          "the Phase-17 candidate corpus records python against candidate 0.0.27, not the current 0.0.43"
-        ],
-        "findings_present": true,
-        "measurement_state": "not_measured",
-        "observation": "RT-DOWNSTREAM-MULTITRACK is fail",
+        "findings": [],
+        "findings_present": false,
+        "measurement_state": "complete",
+        "observation": "RT-DOWNSTREAM-MULTITRACK is pass",
         "property_status": "not_claimed",
-        "state": "open",
+        "state": "implemented",
         "surface": "artifacts/phase23/COURTS.json",
         "unit": "downstream-multitrack",
         "what": "at least one meaningful unmodified real downstream consumer per major compatibility epoch, exercised as this stratum's own multitrack court"
@@ -508,8 +501,8 @@
       "contract_units": 17,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 16,
-      "open_in_this_stratum": 1,
+      "implemented": 17,
+      "open_in_this_stratum": 0,
       "owned": 17,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -540,7 +533,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+      "sha256": "8791e2e2ecffb61fb2b70280bb455bbc26196d886abe8e904c24f44faea55562"
     },
     {
       "name": "phase-23-plan",
@@ -550,7 +543,7 @@
     {
       "name": "phase-23-courts",
       "path": "artifacts/phase23/COURTS.json",
-      "sha256": "94d9a578a66c9190b1868fb32dd2ff69761e49bc8d186357548933ab4f41f439"
+      "sha256": "9f4b613408096361b1c2731d67a3108f8143e6896cfb73932fe17f8da3dc4ad5"
     }
   ],
   "kind": "phase23-obligations",

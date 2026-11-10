@@ -237,7 +237,7 @@
             "named_source": "forensics/prerequisites.json",
             "named_source_shape": {
               "deferrals": 1,
-              "divergences": 14,
+              "divergences": 27,
               "units": 152
             },
             "plane": "prerequisite-units",
@@ -918,7 +918,7 @@
     {
       "name": "security-divergence-policy",
       "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-      "sha256": "6f28bf1e134f5b193810977cc9752b268d00556bfc2611616e9296e1f802e379"
+      "sha256": "7fa882ab8df922ad44acaa8305ffdd9e8eddcde6df3a5ab6ef0e8e84ad700c01"
     },
     {
       "name": "openssl-3.6.3-historical-symbols-libcrypto.json",
@@ -1018,7 +1018,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+      "sha256": "8791e2e2ecffb61fb2b70280bb455bbc26196d886abe8e904c24f44faea55562"
     },
     {
       "name": "candidate-ssl.h",
@@ -1033,7 +1033,7 @@
     {
       "name": "court-coverage",
       "path": "forensics/atlas/court-coverage.json",
-      "sha256": "361d0761fc295a5e39dcef7fc90319a80882c67441dcd1c869ffe49c5150b98d"
+      "sha256": "e3c7d1b1552545012f33347f0fa01d7595b24baf63f4fd1ae002c2be1e951a6c"
     },
     {
       "name": "symbol-ownership",

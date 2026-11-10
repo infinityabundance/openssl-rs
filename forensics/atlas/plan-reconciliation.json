@@ -8132,17 +8132,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "e35ed7372e861071f657011989e13552061f322dc155bd4df44d9c225c51166b"
+      "sha256": "dcdfd203d40d862a0f22b3ae3e7d4a9a6cdd314a3e6285e45eaa6e593d06320c"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "762f22132ba118fce046541f13b53914f3cb5aec04aa7a408065b667dcc74733"
+      "sha256": "0ac782750ec2b84686ed86192a3ce9b67a5ce9794eedfc9dc2774789ad21d11a"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
+      "sha256": "8791e2e2ecffb61fb2b70280bb455bbc26196d886abe8e904c24f44faea55562"
     },
     {
       "name": "source-manifest",
@@ -8152,7 +8152,7 @@
     {
       "name": "plan-PHASE-10-SUBPHASES",
       "path": "docs/PHASE-10-SUBPHASES.md",
-      "sha256": "2acd6b36f3853865589efd2cb28d18c3c0575e88c6d87c3a73e07a687df0a2fa"
+      "sha256": "6e59fcbdd4a5c75054b0e731273ce2340ba2deedeadf4cfec04a8aab5040dc5b"
     },
     {
       "name": "plan-PHASE-11-SUBPHASES",
@@ -8227,7 +8227,7 @@
     {
       "name": "plan-PHASE-25-MEMORY-SAFETY-SUBPHASES",
       "path": "docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md",
-      "sha256": "1b80484986e7a4cc3646ac88ced5ebecc7040a1ceaba1550a4cd628f4e5bfb02"
+      "sha256": "7653a39374155ec278d1bf13472c9f213bf5a51b6673fd884527e1038e0597f7"
     },
     {
       "name": "plan-PHASE-5-SUBPHASES",
@@ -8252,7 +8252,7 @@
     {
       "name": "plan-PHASE-9-SUBPHASES",
       "path": "docs/PHASE-9-SUBPHASES.md",
-      "sha256": "a02e4acf40fb51daa5332e7a2365b77fcdeff080c619d40869395858afddbc69"
+      "sha256": "b82029275a6ef2dc0c9ff10617c9e0f3c5370e01679b51730e2ecab7a45b2be4"
     }
   ],
   "kind": "plan-reconciliation",

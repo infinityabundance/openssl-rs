@@ -29,6 +29,73 @@ Regenerated at HEAD `e48a1b519` (`measurement_revision: 2`) by
 comment/literal-stripped source and exits 0. See `atlas-refresh/REPORT.md`; the
 generator is measurement-only and claims no discharge.
 
+### Current element-7 and obligation truth (2026-11-08)
+
+Measured at source `b5ff19ce7` with tool `consumer_closure.py` sha256
+`4c4f6e9c…`, against artifacts built at `b8bba9555` (libcrypto `1c03ec0a`,
+ssh `926975c8`, sshd `0d3f5e92`; no rebuild, because the build-relevant tree is
+byte-identical). Receipts:
+`evidence/closure-ssh-b66-e7pbe.json` and
+`evidence/inventory-sshd-b66-e7pbe.json`; compact record:
+`atlas-refresh/element7-b66-e7pbe.json`.
+
+- Obligations: **378 = 193 DISCHARGED / 185 BLOCKED / 0 UNKNOWN**, identical
+  for ssh and sshd; verdict `ACCEPTED` with 0 refusals; `safe_compatible`
+  false for both. B67 discharged the two BIO readbuffer callbacks
+  (`readbuffer_write`, `readbuffer_puts`): both ignore every argument and
+  return a constant 0, so their precondition set is empty. B69 discharged
+  three RAND lifecycle sites (`ossl_rand_ctx_new`, `ossl_rand_ctx_free`,
+  `drbg_status`) and retained the uncalled `ossl_rand_cleanup_int` BLOCKED.
+  B70 discharged the two CMS stack free thunks (`x509_free_void`,
+  `x509_crl_free_void`), the CRL one at contract/body level with its arm
+  NOT_RUN.
+- **Discharge instrument:** the disposition gate is now enforcing and
+  structured (`^\s*SAFETY_DISCHARGED\b`), measured at **0 withdrawals**. The
+  conflict detector is diagnostic-only and reports **72 unresolved
+  conflicts** (`B45 9 / B48 19 / B49 16 / B50 11 / B51 8 / B52 9`), preserved
+  in `atlas-refresh/b67-g1-conflict-finding.json`. Enabling enforcement would
+  withdraw those 72 until each receipt declares a reviewed `supersedes` entry;
+  the gate stays diagnostic rather than silently regressing the ledger.
+- **Element 7: PASS (contract-bounded) — 0 target-bounded sites**
+  (contract-bounded 127, reachable-unresolved 127, unclassified 0;
+  `established: true`). Four witness batches landed: the two base-slot sites
+  (msblob closed descriptor table; rcu internal closed writer list proved
+  empty), the two finite PKCS12 parameter sites (exactly `{0x531fe0}`), the
+  eight registerable dispatch sites carried as per-call-site external ABI
+  contracts (PBE keygen, three legacy store-loader slots, provider p_close,
+  CONF init/finish, exported PEM cb), and the two PBE out-parameter sites
+  resolved from `BUILTIN_PBE` relocations (5 keygen_ex targets; the 2 KDF
+  targets; in-image GOT-binding caveat recorded).
+- **Element 7 PASS does not graduate the consumer.** 185 safety-relevant
+  obligations remain BLOCKED (193 DISCHARGED / 185 BLOCKED / 0 UNKNOWN of 378),
+  no mechanism is discharged mechanism-wide, and B46/B47/B48, the evidence
+  pipeline and the exact-candidate L7/SEAL verification remain open. Both
+  families remain `safe_compatible: false`.
+- Witness residuals are recorded, not hidden: the candidate-bound address gate
+  must be re-derived at every re-freeze; RCU inlining/ICF and out-of-module
+  writers are not excluded; msblob writer completeness is source/module-scoped;
+  the PKCS12 witness records an imprecise forwarded-copy taxonomy, that
+  `indirect_targets` inspects only resolved sites, and that its CFG-closure
+  proof under-approximates undecoded indirect jumps (open_reach is empty here).
+  The external-ABI classes record that their writer/registration scans are
+  source-text based (opaque aliases in code that never names the owner, a macro
+  whose field name is a metavariable, and split-line forms beyond the joined
+  cases are not refused), that an address/leaf mismatch falls through to
+  target-bounded without a named refusal, and that site `0x1c2768`'s base
+  uniqueness is source-guarded. The PBE witness records that its finite set
+  depends on the in-image GOT-binding policy (no DF_SYMBOLIC/BIND_NOW), that
+  site `0x179c85` uses the whole table as a conservative superset (an OUTER call
+  cannot select KDF rows), and that runtime mutation of the link-time-constant
+  table is outside the witness.
+- Identity residual: the b66 receipts record `build_provenance: null` and
+  `artifact_matches_this_build: false`; the B53 freeze and census supply the
+  tie to `b8bba9555`. This is a recorded provenance gap, not a passing
+  identity claim.
+- `CAMPAIGN-STATUS.json` previously named the superseded B52 triple
+  (`ececbd98` / `560652df` / `51f00033` at `a8716b4f2`). It now carries the
+  receipt-bound identity above; the B52 line is preserved as an explicit
+  correction rather than silently overwritten.
+
 - Safe-33 closure: **628** files; **314** have a recognised ownership seam
   (**50.0%**); **0** files have fully discharged obligations; **0/33**
   consumers are `SAFE_COMPATIBLE`.
@@ -165,6 +232,28 @@ Independent verification: fmt clean, clippy `-D warnings` clean, **1218 passed /
 analogous underflow (it special-cases `n == 1`). The reference-count boundaries
 are now eligible for discharge work, subject to the §7 independent-check
 package.
+
+## Downstream security regression courts (not graduation evidence)
+
+These courts answer consumer-security questions that memory-safety graduation
+cannot answer, and must never be counted toward it.
+
+- **CVE-2026-123158 ("SSHole")** —
+  `courts/phase17/downstream/openssh/cve-2026-123158/`. An OpenSSH
+  authentication bypass (an account whose stored field is `*`, versus a musl
+  `crypt()` that returns `*` for an oversized password), fixed upstream in
+  **OpenSSH 10.6p2** by the `MIN_PASSWORD_HASH_LEN` (4) guard in
+  `auth-passwd.c`. It is **not** a libcrypto mechanism: `openssl-rs` is not
+  vulnerable, but an **unpatched `sshd` linked against it is**. The court runs
+  an isolated decision model with a firing positive control, a static patch
+  check (comments/literals stripped) and four checker fixtures of which two
+  are adversarial mutations. Observed in the court: **17 pass / 0 fail,
+  verdict PASS, real `crypt(3)` RUN**; `end_to_end_musl` and real-tree
+  inspection are recorded `NOT_RUN`, never as passes. Result:
+  `courts/phase17/downstream/openssh/cve-2026-123158/result.json`.
+  The campaign's OpenSSH L7 evidence was measured on **10.5p1**, which
+  predates this fix, and says nothing about the authentication code's
+  security.
 
 ## Landed batches
 

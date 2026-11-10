@@ -472,14 +472,14 @@
         "classification": "boundary",
         "extern_c_fns": 182,
         "files": 20,
-        "lines": 8025,
+        "lines": 8291,
         "module": "engine",
-        "safety_comments": 671,
-        "unsafe_blocks": 652,
+        "safety_comments": 675,
+        "unsafe_blocks": 656,
         "unsafe_externs": 155,
         "unsafe_fns": 45,
         "unsafe_impls": 3,
-        "unsafe_sites": 855,
+        "unsafe_sites": 859,
         "unsafe_traits": 0
       },
       {
@@ -498,16 +498,16 @@
       },
       {
         "classification": "core",
-        "extern_c_fns": 1674,
-        "files": 67,
-        "lines": 87332,
+        "extern_c_fns": 1675,
+        "files": 68,
+        "lines": 89787,
         "module": "evp",
-        "safety_comments": 6904,
-        "unsafe_blocks": 6744,
-        "unsafe_externs": 1502,
-        "unsafe_fns": 358,
+        "safety_comments": 7058,
+        "unsafe_blocks": 6885,
+        "unsafe_externs": 1503,
+        "unsafe_fns": 362,
         "unsafe_impls": 48,
-        "unsafe_sites": 8652,
+        "unsafe_sites": 8798,
         "unsafe_traits": 0
       },
       {
@@ -780,14 +780,14 @@
         "classification": "core",
         "extern_c_fns": 1607,
         "files": 81,
-        "lines": 138730,
+        "lines": 138805,
         "module": "provider",
-        "safety_comments": 4224,
-        "unsafe_blocks": 3856,
+        "safety_comments": 4228,
+        "unsafe_blocks": 3860,
         "unsafe_externs": 1560,
         "unsafe_fns": 1011,
         "unsafe_impls": 110,
-        "unsafe_sites": 6542,
+        "unsafe_sites": 6546,
         "unsafe_traits": 5
       },
       {
@@ -878,14 +878,14 @@
         "classification": "boundary",
         "extern_c_fns": 845,
         "files": 93,
-        "lines": 139201,
+        "lines": 139463,
         "module": "runtime",
-        "safety_comments": 4104,
-        "unsafe_blocks": 3932,
+        "safety_comments": 4124,
+        "unsafe_blocks": 3951,
         "unsafe_externs": 654,
-        "unsafe_fns": 383,
+        "unsafe_fns": 385,
         "unsafe_impls": 36,
-        "unsafe_sites": 5007,
+        "unsafe_sites": 5028,
         "unsafe_traits": 2
       },
       {
@@ -948,14 +948,14 @@
         "classification": "core",
         "extern_c_fns": 4,
         "files": 1,
-        "lines": 342,
+        "lines": 406,
         "module": "sm3",
-        "safety_comments": 18,
-        "unsafe_blocks": 17,
+        "safety_comments": 20,
+        "unsafe_blocks": 19,
         "unsafe_externs": 3,
         "unsafe_fns": 2,
         "unsafe_impls": 1,
-        "unsafe_sites": 23,
+        "unsafe_sites": 25,
         "unsafe_traits": 0
       },
       {
@@ -990,14 +990,14 @@
         "classification": "core",
         "extern_c_fns": 727,
         "files": 44,
-        "lines": 69765,
+        "lines": 71200,
         "module": "ssl",
-        "safety_comments": 3344,
-        "unsafe_blocks": 3150,
+        "safety_comments": 3431,
+        "unsafe_blocks": 3237,
         "unsafe_externs": 718,
-        "unsafe_fns": 439,
+        "unsafe_fns": 442,
         "unsafe_impls": 9,
-        "unsafe_sites": 4317,
+        "unsafe_sites": 4407,
         "unsafe_traits": 1
       },
       {
@@ -1086,47 +1086,47 @@
       },
       {
         "classification": "core",
-        "extern_c_fns": 1672,
+        "extern_c_fns": 1681,
         "files": 97,
-        "lines": 82961,
+        "lines": 85367,
         "module": "x509",
-        "safety_comments": 6373,
-        "unsafe_blocks": 6139,
-        "unsafe_externs": 1479,
-        "unsafe_fns": 370,
+        "safety_comments": 6460,
+        "unsafe_blocks": 6226,
+        "unsafe_externs": 1487,
+        "unsafe_fns": 374,
         "unsafe_impls": 36,
-        "unsafe_sites": 8024,
+        "unsafe_sites": 8123,
         "unsafe_traits": 0
       }
     ],
     "scan": {
-      "files": 877,
-      "lines": 887646,
+      "files": 878,
+      "lines": 894609,
       "root": "src",
-      "sources_sha256": "90860dc043309cf42831468f0b1a4a26944f1be20bb7bd823d14d69732549aee"
+      "sources_sha256": "79602e5824591f09c6c8b593fbe5a97d5d98d1187f7d26bd686a906565a5338f"
     },
     "totals": {
       "by_class": {
         "boundary": {
           "extern_c_fns": 1140,
           "modules": 6,
-          "unsafe_sites": 6560
+          "unsafe_sites": 6585
         },
         "core": {
-          "extern_c_fns": 9863,
+          "extern_c_fns": 9873,
           "modules": 70,
-          "unsafe_sites": 55898
+          "unsafe_sites": 56239
         }
       },
-      "extern_c_fns": 11003,
-      "files": 877,
-      "lines": 887646,
-      "safety_comments": 49753,
-      "unsafe_blocks": 47336,
-      "unsafe_externs": 10068,
-      "unsafe_fns": 4709,
+      "extern_c_fns": 11013,
+      "files": 878,
+      "lines": 894609,
+      "safety_comments": 50111,
+      "unsafe_blocks": 47680,
+      "unsafe_externs": 10077,
+      "unsafe_fns": 4722,
       "unsafe_impls": 336,
-      "unsafe_sites": 62458,
+      "unsafe_sites": 62824,
       "unsafe_traits": 9
     }
   },
@@ -1135,7 +1135,7 @@
     {
       "name": "crate-sources",
       "note": "sha256 over the sorted (repo-relative path, file sha256) pairs of every src/**/*.rs file; the crate source tree has no single path to hash, and this pins exactly the bytes the scan read",
-      "sha256": "90860dc043309cf42831468f0b1a4a26944f1be20bb7bd823d14d69732549aee"
+      "sha256": "79602e5824591f09c6c8b593fbe5a97d5d98d1187f7d26bd686a906565a5338f"
     }
   ],
   "kind": "unsafe-footprint",

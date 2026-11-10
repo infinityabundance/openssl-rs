@@ -1,0 +1,329 @@
+{
+ "receipt": "boundary-sweep-B70",
+ "kind": "site-enumerating-boundary-receipt",
+ "date": "2026-11-09",
+ "campaign": "safe-c33",
+ "subphase": "B70",
+ "candidate": {
+  "source_head": "c2597a87ade6ce155c6a104dd080ef1e902a63eb",
+  "branch": "stage/p25/element7-s2b",
+  "tool": "forensics/tools/consumer_closure.py",
+  "tool_sha256": "b13ebd6e5fa4afc1acdc4a477b2b9a556e7182d6e34bb744f655809159b04039",
+  "source_state": "src/ is not edited by this receipt. src/cms/cms_lib.rs is sha256 8262fd205418541f1ce08d20c49051f6c1e06305a031769193c526576ba7977e at HEAD c2597a87a and is byte-identical (git diff empty) at the inventory/span source head b8bba955503014c8fd86303314c6deebaea093b0. The repository files this subphase adds are the receipt, the CAMPAIGN-STATUS scoped row, the external C probe courts/phase25/rt_cms_stack_thunks.c and the closure evidence evidence/closure-ssh-b70-thunk.json; no src/ file changes.",
+  "files": [
+   "src/cms/cms_lib.rs",
+   "courts/phase25/rt_cms_stack_thunks.c"
+  ],
+  "files_sha256": {
+   "src/cms/cms_lib.rs": "8262fd205418541f1ce08d20c49051f6c1e06305a031769193c526576ba7977e",
+   "courts/phase25/rt_cms_stack_thunks.c": "4140d1bf3120431379e4798ced6ba304a2629f8bc1041c67ca5f00106318d760"
+  },
+  "admitted_install": {
+   "prefix": "artifacts/phase2/install",
+   "libcrypto_so_3_sha256": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3"
+  }
+ },
+ "authority": {
+  "id": "openssl-3.6.4",
+  "source": "forensics/authorities/src/openssl-3.6.4/crypto/stack/stack.c, crypto/cms/cms_lib.c, crypto/x509/x_x509.c, crypto/x509/x_crl.c",
+  "stack_contract": "stack.c OPENSSL_sk_pop_free drains the stack through the caller's `void (*)(void *)` freefunc and then frees the stack; the freefunc receives no length, count or type tag.",
+  "thunk_contract": "The authority's `sk_X509_pop_free(stack, X509_free)` / `sk_X509_CRL_pop_free(stack, X509_CRL_free)` expansions take exactly the shape of these thunks. X509_free and X509_CRL_free accept NULL."
+ },
+ "mechanism": {
+  "id": "RAND_CMS_STORE_KEYFMT",
+  "state_before": "OWNERSHIP_RECONSTRUCTED",
+  "state_after": "OWNERSHIP_RECONSTRUCTED",
+  "state_source": "state.json#/mechanisms[id=RAND_CMS_STORE_KEYFMT]",
+  "discharge": "none mechanism-wide; this receipt discharges only the two named boundaries (site-scoped)"
+ },
+ "obligations": [
+  {
+   "id": "V1:src/cms/cms_lib.rs:1378:UNSAFE_FN_DEF",
+   "stable_id": "src/cms/cms_lib.rs::UNSAFE_FN_DEF::x509_free_void",
+   "file": "src/cms/cms_lib.rs",
+   "line": 1378,
+   "kind": "UNSAFE_FN_DEF",
+   "item": "x509_free_void",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+   "status_before": "BLOCKED",
+   "status_after": "DISCHARGED (boundary CMS-FREE-001)"
+  },
+  {
+   "id": "V1:src/cms/cms_lib.rs:1384:UNSAFE_FN_DEF",
+   "stable_id": "src/cms/cms_lib.rs::UNSAFE_FN_DEF::x509_crl_free_void",
+   "file": "src/cms/cms_lib.rs",
+   "line": 1384,
+   "kind": "UNSAFE_FN_DEF",
+   "item": "x509_crl_free_void",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+   "status_before": "BLOCKED",
+   "status_after": "DISCHARGED (boundary CMS-FREE-002)"
+  }
+ ],
+ "boundaries": [
+  {
+   "id": "CMS-FREE-001",
+   "file": "src/cms/cms_lib.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "x509_free_void",
+   "line": 1378,
+   "line_current": 1378,
+   "inventory_line": 1378,
+   "span_start_line": 1378,
+   "span_end_line": 1381,
+   "span_sha256": "1237b76c964d4a55052b559f9f5fff0d7f1c944caff71895dacc3f37d8befef3",
+   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_schema": "safe-c33/operation-span-sha256/v1",
+   "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "signature": "unsafe extern \"C\" fn x509_free_void(p: *mut c_void)",
+   "body": "unsafe extern \"C\" fn x509_free_void(p: *mut c_void) {\n    // SAFETY: `p` is an `X509` per the stack's element type.\n    unsafe { X509_free(p.cast()) };\n}",
+   "precondition_set": [
+    "`p` is NULL or a live `X509` whose ownership is transferred to this call and which no other path releases concurrently."
+   ],
+   "disposition": "SAFETY_DISCHARGED: src/cms/cms_lib.rs:1378 \u2014 x509_free_void is a `void (*)(void *)` freefunc whose only operation is `X509_free(p.cast())`. `X509_free` accepts NULL (`ASN1_item_free` -> `item_embed_free` returns when the value is NULL), so the thunk is a no-op for a NULL element; for a live `X509` it releases exactly one reference through that type's own free. Its registration sites are the two CMS get1 stacks, whose declared element type is `X509`; no type tag is needed from the freefunc. The certificate failure arm was reached through the exported `CMS_get1_certs` path in the external probe.",
+   "contract": "C ABI `void (void *)`. `p` is NULL or a live `X509` owned by the stack registration site; ownership is transferred to this call and is not released by any other path. The object is released exactly once through `X509_free`; NULL is a no-op. The element type is established by each registration site's declared stack element type (`STACK_OF(X509)`), not by a tag the freefunc receives. The same contract is already recorded for this thunk shape in cms_smime.rs / p12_kiss.rs / store_result.rs / t_x509.rs and for the CMP thunk in OSSH-V1I-055.",
+   "established": [
+    "The whole body is the single expression `X509_free(p.cast())` (src/cms/cms_lib.rs:1378-1381); there is no other operation.",
+    "`X509_free` documents `a` as NULL-or-live and implements `ASN1_item_free(a, X509_it())` (src/x509/x_x509.rs:650-654); `item_embed_free` returns when the stored value is NULL (src/asn1/fre.rs:205-224).",
+    "The admitted libcrypto.so.3 (sha256 1c03ec0a...) keeps the private symbol `...cms7cms_lib14x509_free_void` at 0x194150; its body forms a pointer slot and calls `item_embed_free` with the `X509_ITEM` vtable (the inlined `X509_free` body). The same vtable is what `X509_free` selects.",
+    "Registration sites: `OPENSSL_sk_pop_free(*certs, Some(x509_free_void))` at src/cms/cms_lib.rs:1204 (failure arm of ossl_cms_get1_certs_ex) and :1579 (test reserve/append assertions). The stacks are built by `OPENSSL_sk_new_reserve` and hold only `X509` values that `X509_add_cert` up-ref'd and pushed.",
+    "In the failure arm only elements already pushed are drained and the output slot is set to NULL before return, so no element is released twice and no partially constructed element is freed (src/cms/cms_lib.rs:1195-1207).",
+    "The same thunk contract is already discharged/contracted in src/cms/cms_smime.rs:171, src/pkcs12/p12_kiss.rs:132, src/store/store_result.rs:279, src/x509/t_x509.rs:305 and src/cmp/cmp_ctx.rs:376 (OSSH-V1I-055); this receipt reuses that contract rather than inventing a new one."
+   ],
+   "unsafe_operations": [
+    {
+     "line": 1378,
+     "kind": "unsafe_fn_definition",
+     "operation": "x509_free_void",
+     "contract": "The parameter precondition is stated above; marking the fn `unsafe` transfers that obligation to the registration site, which establishes it from the stack's declared element type."
+    },
+    {
+     "line": 1380,
+     "kind": "unsafe_block",
+     "operations": ["X509_free(p.cast::<X509>())"],
+     "contract": "`p` is NULL or the live stack-owned `X509` per the fn contract; `X509_free` releases that reference exactly once and tolerates NULL."
+    }
+   ],
+   "caller_closure_ref": "shared caller_closure",
+   "tests": [
+    "courts/phase25/rt_cms_stack_thunks.c: the forced certificate failure arm returns NULL from CMS_get1_certs after the real thunk drains one live X509 (plain and LSan); success path, NULL element and direct NULL free also covered."
+   ]
+  },
+  {
+   "id": "CMS-FREE-002",
+   "file": "src/cms/cms_lib.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "x509_crl_free_void",
+   "line": 1384,
+   "line_current": 1384,
+   "inventory_line": 1384,
+   "span_start_line": 1384,
+   "span_end_line": 1387,
+   "span_sha256": "34fa55ae4b1134b15b2f936bae53f9d6143a769e6700ec4aaf7489835d47a0bc",
+   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_schema": "safe-c33/operation-span-sha256/v1",
+   "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "signature": "unsafe extern \"C\" fn x509_crl_free_void(p: *mut c_void)",
+   "body": "unsafe extern \"C\" fn x509_crl_free_void(p: *mut c_void) {\n    // SAFETY: `p` is an `X509_CRL` per the stack's element type.\n    unsafe { X509_CRL_free(p.cast()) };\n}",
+   "precondition_set": [
+    "`p` is NULL or a live `X509_CRL` whose ownership is transferred to this call and which no other path releases concurrently."
+   ],
+   "disposition": "SAFETY_DISCHARGED: src/cms/cms_lib.rs:1384 \u2014 x509_crl_free_void is a `void (*)(void *)` freefunc whose only operation is `X509_CRL_free(p.cast())`. `X509_CRL_free` accepts NULL (`ASN1_item_free` -> `item_embed_free` returns when the value is NULL), so the thunk is a no-op for a NULL element; for a live `X509_CRL` it releases exactly one reference through that type's own free. Its registration sites declare `STACK_OF(X509_CRL)`, so the element type is established by the stack, not by a tag. x509_crl_free_void was NEVER executed (tracer hit=0) and its failure arm is NOT_RUN; this CMS-FREE-002 discharge is contract/body-level only, established statically at the registration sites and by callee equivalence, not by runtime coverage of the thunk.",
+   "contract": "C ABI `void (void *)`. `p` is NULL or a live `X509_CRL` owned by the stack registration site; ownership is transferred to this call and is not released by any other path. The object is released exactly once through `X509_CRL_free`; NULL is a no-op. The element type is established by each registration site's declared stack element type (`STACK_OF(X509_CRL)`), not by a tag the freefunc receives. The same thunk shape and contract are recorded in cms_smime.rs and the CMP receipt (OSSH-V1I-055).",
+   "established": [
+    "The whole body is the single expression `X509_CRL_free(p.cast())` (src/cms/cms_lib.rs:1384-1387); there is no other operation.",
+    "`X509_CRL_free` documents `a` as NULL-or-live (src/x509/x_crl.rs:883); `ASN1_item_free` reaches `item_embed_free`, which returns when the stored value is NULL (src/asn1/fre.rs:205-224).",
+    "The admitted libcrypto.so.3 (sha256 1c03ec0a...) keeps the private symbol `...cms7cms_lib18x509_crl_free_void` at 0x1945b0; its body forms a pointer slot and calls `item_embed_free` with the `X509_CRL_ITEM` vtable (the inlined `X509_CRL_free` body).",
+    "Registration sites: `OPENSSL_sk_pop_free(*crls, Some(x509_crl_free_void))` at src/cms/cms_lib.rs:1264 (failure arm of ossl_cms_get1_crls_ex) and :1594 (test reserve/append assertions). The stacks are built by `OPENSSL_sk_new_reserve` and hold only `X509_CRL` values that `X509_CRL_up_ref` and the push installed.",
+    "In the failure arm only elements already pushed are drained and the output slot is set to NULL before return, so no element is released twice and no partially constructed element is freed (src/cms/cms_lib.rs:1255-1267).",
+    "The same thunk contract is already contracted in src/cms/cms_smime.rs:180 and discharged for the CMP thunk in OSSH-V1I-055; this receipt reuses that contract.",
+    "Runtime coverage: x509_crl_free_void was never executed (tracer hit=0); no reachable probe or test invokes the private thunk. The probe-local `X509_CRL_free` callback is a different function. This CMS-FREE-002 discharge is therefore contract/body-level only (registration-site establishment plus callee equivalence), not runtime coverage of the thunk."
+   ],
+   "unsafe_operations": [
+    {
+     "line": 1384,
+     "kind": "unsafe_fn_definition",
+     "operation": "x509_crl_free_void",
+     "contract": "The parameter precondition is stated above; marking the fn `unsafe` transfers that obligation to the registration site, which establishes it from the stack's declared element type."
+    },
+    {
+     "line": 1386,
+     "kind": "unsafe_block",
+     "operations": ["X509_CRL_free(p.cast::<X509Crl>())"],
+     "contract": "`p` is NULL or the live stack-owned `X509_CRL` per the fn contract; `X509_CRL_free` releases that reference exactly once and tolerates NULL."
+    }
+   ],
+   "caller_closure_ref": "shared caller_closure",
+   "tests": [
+    "courts/phase25/rt_cms_stack_thunks.c: the probe-local `X509_CRL_free` callback (NOT `x509_crl_free_void`) is exercised on the success path, a NULL element and a direct NULL call (plain and LSan). The private thunk was never executed (tracer hit=0); its failure arm is NOT_RUN; see not_run."
+   ]
+  }
+ ],
+ "caller_closure": {
+  "callers": [
+   {
+    "file": "src/cms/cms_lib.rs",
+    "line": 1204,
+    "function": "ossl_cms_get1_certs_ex",
+    "guard": "`X509_add_cert(*certs, ...) == 0` after at least one element may have been pushed",
+    "obligation": "frees the stack it built through x509_free_void; only already-pushed, up-ref'd X509 elements are drained; the slot is nulled"
+   },
+   {
+    "file": "src/cms/cms_lib.rs",
+    "line": 1264,
+    "function": "ossl_cms_get1_crls_ex",
+    "guard": "`X509_CRL_up_ref(...) == 0 || OPENSSL_sk_push(...) == 0` after at least one element may have been pushed",
+    "obligation": "frees the stack it built through x509_crl_free_void; only already-pushed, up-ref'd X509_CRL elements are drained; the slot is nulled"
+   },
+   {
+    "file": "src/cms/cms_lib.rs",
+    "line": 1579,
+    "function": "tests::both_get1_helpers_fill_their_reserved_stacks_at_capacity",
+    "guard": "test-owned stack returned by ossl_cms_get1_certs_ex",
+    "obligation": "releases the get1 references through x509_free_void"
+   },
+   {
+    "file": "src/cms/cms_lib.rs",
+    "line": 1594,
+    "function": "tests::both_get1_helpers_fill_their_reserved_stacks_at_capacity",
+    "guard": "test-owned stack returned by ossl_cms_get1_crls_ex",
+    "obligation": "releases the get1 references through x509_crl_free_void"
+   }
+  ],
+  "other_references": "A grep over src/ finds the two definitions at cms_lib.rs:1378/:1384, the doc comments at :1377/:1383 and the four call sites above. There is no #[no_mangle], #[export_name], address-of elsewhere or second writer.",
+  "export_status": "Not exported: `nm -D` on the admitted libcrypto.so.3 lists neither thunk; both are local (`t`) symbols in .symtab.",
+  "slot_writers": "None. The thunks are passed as the `Option<FreeFn>` argument of OPENSSL_sk_pop_free at the four sites; they are not stored in a table or a global.",
+  "reachability": "Reached from the public `CMS_get1_certs` / `CMS_get1_crls` exports (both `@@OPENSSL_3.0.0`), but only on a failure arm after a partial build. The certificate arm is forced deterministically by a type-0/NULL-datum certificate choice; the CRL arm needs an allocation failure (see not_run)."
+ },
+ "negative_control": {
+  "id": "B70-C1",
+  "name": "CMS get1 stack freefuncs free live and NULL elements without crash or leak",
+  "kind": "external C probe against the admitted install (no src change)",
+  "source": "courts/phase25/rt_cms_stack_thunks.c",
+  "source_sha256": "4140d1bf3120431379e4798ced6ba304a2629f8bc1041c67ca5f00106318d760",
+  "build_plain": "cc -std=c11 -O1 -Wall -Wextra -I artifacts/phase2/install/include -o court/tmp/closure-b70-cms/rt_cms_stack_thunks courts/phase25/rt_cms_stack_thunks.c -L artifacts/phase2/install/lib -lcrypto -Wl,-rpath,/work/artifacts/phase2/install/lib",
+  "binary_plain": "court/tmp/closure-b70-cms/rt_cms_stack_thunks",
+  "binary_plain_sha256": "a690b7856be3e028bda75151d67402c3cde415c5fab337e463c1866fba8d7d1e",
+  "run_plain": "court/tmp/closure-b70-cms/rt_cms_stack_thunks",
+  "observed_plain": "PASS cms stack thunks: success=1/1 cert_failure_arm=real_thunk crl_failure_arm=NOT_RUN(needs_push_alloc_failure; NULL datum faults in X509_CRL_up_ref) null_element=1 direct_null_free=1",
+  "exit_plain": 0,
+  "build_lsan": "cc -std=c11 -O1 -g -Wall -Wextra -fsanitize=leak -fno-omit-frame-pointer -I artifacts/phase2/install/include -o court/tmp/closure-b70-cms/rt_cms_stack_thunks_lsan courts/phase25/rt_cms_stack_thunks.c -L artifacts/phase2/install/lib -lcrypto -Wl,-rpath,/work/artifacts/phase2/install/lib",
+  "binary_lsan": "court/tmp/closure-b70-cms/rt_cms_stack_thunks_lsan",
+  "binary_lsan_sha256": "fd792891d948d5f72bc5bf0188a556f7ca79ba8b98353c748e9892822f759466",
+  "run_lsan": "LSAN_OPTIONS=exitcode=23 court/tmp/closure-b70-cms/rt_cms_stack_thunks_lsan",
+  "observed_lsan": "PASS cms stack thunks: success=1/1 cert_failure_arm=real_thunk crl_failure_arm=NOT_RUN(needs_push_alloc_failure; NULL datum faults in X509_CRL_up_ref) null_element=1 direct_null_free=1",
+  "exit_lsan": 0,
+  "result": "PASS (plain and LeakSanitizer)",
+  "mutation_sensitive": "The probe exits non-zero if either get1 success path is not a one-element stack, if the forced certificate failure arm does not return NULL (the real thunk did not run), if a NULL element crashes, or if a direct NULL free crashes. It observes the admitted DSO and mutates no source.",
+  "neutral_control": {
+   "id": "B70-N1",
+   "assertion": "The NULL failure-arm result is a property of the NULL datum, not of an inert CMS: the same CMS returns one-element stacks from both get1 helpers on the success path before the datum is overwritten.",
+   "observed": "CMS_get1_certs and CMS_get1_crls both returned a stack of count 1 and pop_freed cleanly; after the type-0/NULL-datum certificate choice, CMS_get1_certs returned NULL."
+  }
+ },
+ "adjudicated": true,
+ "review": {
+  "state": "APPROVED_WITH_CONDITIONS",
+  "verdict": "APPROVE_WITH_CONDITIONS",
+  "adjudicated": true,
+  "date": "2026-11-09",
+  "reviewer": "independent adversarial adjudicator (separate agent; not the author)",
+  "verdict_text": "APPROVE_WITH_CONDITIONS.",
+  "conditions": [
+   "C1: record that x509_crl_free_void was never executed (tracer hit=0) and its failure arm is NOT_RUN; the CMS-FREE-002 discharge is contract/body-level (static establishment at the registration sites plus callee equivalence), not runtime coverage. Correct the tests wording so it does not imply the thunk was exercised; the probe-local callback is not the thunk.",
+   "C2: record that the NULL-datum fault occurs inside X509_CRL_up_ref as authority-identical C-invalid opaque-layout misuse, not a B70 defect.",
+   "Record residual B70-R3: the CRL push-failure path leaves the up-ref'd CRL outside the stack and unfreed (one ref leak; authority-identical in release, OOM-only).",
+   "Record residual B70-R4: the closure attaches both disposition texts to each obligation (reporting artifact only; per-obligation discharge_boundary_id/status_reason are correct)."
+  ],
+  "conditions_met": "C1 is recorded in boundaries[CMS-FREE-002].disposition/established/tests and in not_run; C2 in B70-R2; B70-R3 and B70-R4 are added to residuals. Span hashes, the two boundaries and supersedes are unchanged.",
+  "review_history": [
+   {"verdict": "PENDING", "date": "2026-11-09", "note": "authoring state: receipt and ledger row added with adjudicated=false; the provisional ssh closure was not committed"},
+   {"verdict": "APPROVE_WITH_CONDITIONS", "date": "2026-11-09", "note": "independent adjudication; the four conditions were applied and recorded before the row was marked adjudicated"}
+  ]
+ },
+ "supersedes": [
+  {
+   "receipt": "p25-cms-freefunc-sites",
+   "ids": [
+    "P25-CMS-FREEFUNC-001",
+    "P25-CMS-FREEFUNC-002"
+   ],
+   "reason": "That receipt records the same two (file, kind, operation) boundaries with disposition BLOCKED. This receipt's site-scoped SAFETY_DISCHARGED is the operative disposition for x509_free_void and x509_crl_free_void; the older receipt is left unmodified so the prior record is preserved."
+  }
+ ],
+ "related_receipts": [
+  "p25-cms-freefunc-sites",
+  "openssh-v1i-sites"
+ ],
+ "instrument_gaps": [
+  {
+   "id": "B70-G1",
+   "detail": "consumer_closure.py accepts a scoped discharge on (file, kind, operation) identity plus the recorded span hash and the `^SAFETY_DISCHARGED\\b` disposition prefix. It does not re-audit the body, the contract text or the probe; those remain reviewer-established. The envelope of the two thunks, the caller closure and the disassembly were checked by the author, not enforced by the tool."
+  }
+ ],
+ "residuals": [
+  {
+   "id": "B70-R1",
+   "class": "registration_convention",
+   "detail": "The freefunc receives no type tag. The element type is a convention of each registration site (the stack's declared element type `STACK_OF(X509)` / `STACK_OF(X509_CRL)`), not a property the type system enforces. A new registration of either thunk on a stack of a different element type would violate the contract; no such registration exists in src/.",
+   "disposition": "open",
+   "owner": "atlas-maintainer"
+  },
+  {
+   "id": "B70-R2",
+   "class": "crl_failure_arm_not_run",
+   "detail": "The externally controllable trigger for the CRL failure arm (a type-0 choice with a NULL datum) faults inside `X509_CRL_up_ref(NULL)` before `x509_crl_free_void` is installed, because X509_CRL_up_ref dereferences its argument (src/x509/x_crl.rs:1308-1315). That is authority-identical behaviour for C-invalid opaque-layout misuse (constructing a type-0 revision choice with a NULL datum through `CMS_add0_RevocationInfoChoice`), not a B70 defect: a decoded type-0 revision choice always carries a live CRL. The only remaining trigger is an `OPENSSL_sk_push` allocation failure. This is a caller-side precondition of the failure arm, not a precondition of the freefunc, so it does not change CMS-FREE-002's contract; the arm is recorded NOT_RUN rather than claimed. x509_crl_free_void was never executed (tracer hit=0).",
+   "disposition": "open",
+   "owner": "atlas-maintainer"
+  },
+  {
+   "id": "B70-R3",
+   "class": "crl_push_failure_ref_leak",
+   "detail": "In ossl_cms_get1_crls_ex, when `X509_CRL_up_ref` succeeds but `OPENSSL_sk_push` fails, the failure arm drains only the stack: the up-ref'd CRL that failed to push is outside the stack and is not released, leaving one extra reference. This is authority-identical (cms_lib.c has the same short-circuit and the same drain-only cleanup), reachable only on allocation failure, and is not repaired here because src/ is out of scope for this batch.",
+   "disposition": "open",
+   "owner": "atlas-maintainer"
+  },
+  {
+   "id": "B70-R4",
+   "class": "closure_reporting_artifact",
+   "detail": "The closure attaches both boundaries' disposition texts to each of the two obligations (boundary_dispositions is the set over the file/operation); this is a reporting artifact only. The per-obligation discharge_boundary_id (CMS-FREE-001 / CMS-FREE-002) and status_reason are correct.",
+   "disposition": "open",
+   "owner": "closure-maintainer"
+  }
+ ],
+ "not_run": [
+  {
+   "gate": "CMS_get1_crls failure arm (real x509_crl_free_void invocation)",
+   "blocker": "NOT_RUN: the private thunk was never executed (tracer hit=0). Forcing the failure arm needs `OPENSSL_sk_push` to fail (allocation failure); the only deterministic external trigger, a NULL datum, faults in `X509_CRL_up_ref` first (authority-identical C-invalid opaque-layout misuse, not a B70 defect). The thunk body/callee are verified statically (disassembly at 0x1945b0); the callee is exercised through the exported pop_free path, NULL-element and direct-NULL cases, but that is not thunk coverage."
+  },
+  {
+   "gate": "AddressSanitizer",
+   "blocker": "NOT_RUN: the court enforces RLIMIT_DATA=4 GiB (soft and hard; cannot be raised without CAP_SYS_RESOURCE) and ASan cannot reserve its 15 TB shadow region (`ReserveShadowMemoryRange failed ... errno 12`). LeakSanitizer ran and passed in the same court."
+  },
+  {
+   "gate": "Miri (Stacked/Tree Borrows)",
+   "blocker": "not invoked; the two bodies contain one FFI call each and no Rust reference construction, but no Miri run is claimed."
+  },
+  {
+   "gate": "authority differential execution",
+   "blocker": "the pinned 3.6.4 source was read; no differential binary was executed."
+  },
+  {
+   "gate": "independent BOUNDARY adjudication",
+   "blocker": "PENDING by design; the author does not self-approve (adjudicated=false)."
+  }
+ ],
+ "non_claims": [
+  "Site-scoped to CMS-FREE-001 and CMS-FREE-002 only. RAND_CMS_STORE_KEYFMT remains OWNERSHIP_RECONSTRUCTED mechanism-wide; no mechanism-wide discharge is claimed.",
+  "No claim about any other x509_free_void / x509_crl_free_void definition in another file, nor about the rest of ossl_cms_get1_certs_ex / ossl_cms_get1_crls_ex ownership beyond the freefunc registration.",
+  "No claim that the CRL failure arm executes, or that x509_crl_free_void was ever executed (tracer hit=0); it is NOT_RUN and the CMS-FREE-002 discharge is contract/body-level.",
+  "No AddressSanitizer result; only plain and LeakSanitizer runs.",
+  "No SAFE_COMPATIBLE consumer graduation."
+ ]
+}

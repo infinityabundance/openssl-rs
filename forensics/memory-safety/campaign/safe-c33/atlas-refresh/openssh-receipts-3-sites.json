@@ -1083,6 +1083,17 @@
    "current_line": 1058,
    "current_kind": "UNSAFE_FN_DEF",
    "unsafe_operation_present": true
+  },
+  {
+   "id": "B52SITE::src/x509/v3_asid.rs::UNSAFE_FN_DEF::i2r_ASIdentifiers",
+   "file": "src/x509/v3_asid.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ASIdentifiers",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 817,
+   "line_current": 817,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "`ext` is cast to `AsIdentifiers` and its `asnum`/`rdi` choices printed by `i2r_ASIdentifierChoice`; struct validity and the live `out` BIO are caller assumptions."
   }
  ],
  "rebind": {

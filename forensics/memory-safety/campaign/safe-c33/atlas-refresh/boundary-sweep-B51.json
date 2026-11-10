@@ -831,11 +831,11 @@
   "C5_positive: v2i_callbacks_build_end_to_end and v2i_callbacks_reject_bad_values drive all ten standard rows through X509V3_EXT_nconf_nid.",
   "C6_scope: bitst_v2i is excluded by the B50 family taxonomy and remains BLOCKED; the ten claimed sites are the v2i-named BLOCKED obligations other than bitst_v2i."
  ],
- "applied": false,
+ "applied": true,
  "review": {
   "reviewer": "independent adversarial adjudicator (session b5cd6489-f5c3-410d-b557-c4dddbcce39c); transcribed verbatim by the orchestrator",
   "verdict": "APPROVE",
-  "applied": false,
+  "applied": true,
   "date": "2026-11-02",
   "verdict_text": "APPROVE, conditional on the text-only corrections in the new finding below.",
   "condition": "correct the correction-gate and schema strings to name S-prime as committed, and record the second REJECT in review_history. Text-only; no source change, no re-freeze, span bindings unchanged.",
@@ -845,7 +845,8 @@
    "B51-R5 no leak/ASan; B51-R6/R7/R8 retained",
    "B51-R9 stated ABI duty (read-then-write self-deadlock)"
   ],
-  "would_be_applied_delta": "X509_VERIFY_POLICY site-scoped: v2i 10 B -> 0 B; s2i 9 / i2v 7 / r2i 6 / print 4 / audit 2 / bitst 2 / non-method 2 unchanged; mechanism 42 B / 38 D -> 32 B / 48 D; closure 145 B / 167 D -> 135 B / 177 D."
+  "would_be_applied_delta": "X509_VERIFY_POLICY site-scoped: v2i 10 B -> 0 B; s2i 9 / i2v 7 / r2i 6 / print 4 / audit 2 / bitst 2 / non-method 2 unchanged; mechanism 42 B / 38 D -> 32 B / 48 D; closure 145 B / 167 D -> 135 B / 177 D.",
+  "applied_in_ledger": "CAMPAIGN-STATUS.json scoped_boundary_discharges[receipt=boundary-sweep-B51], base_head cb9c4c64c"
  },
  "schema_note": "Same shape as boundary-sweep-B50.json, plus scope.excluded, B51-R7 (brief discrepancy), the B51-C2 documented non-canaried negative result, the B51-H1..H3 hold-canary ids, and the corrections_applied ledger. `line` is the V1 census coordinate; `line_current` is advisory; span_sha256 is the acceptance binding.",
  "hold_canaries": [
@@ -1005,5 +1006,11 @@
    "finding": "B51-REJ-8",
    "change": "candidate no longer asserts a literally clean tree: authoring_untracked records evidence/closure-ssh-b51-baseline.json and evidence/inventory-sshd-b51-baseline.json, and working_delta records the uncommitted docs-only correction."
   }
- ]
+ ],
+ "reconciliation": {
+  "date": "2026-11-02",
+  "issue": "the receipt said applied=false while the ledger already carried an APPROVE row",
+  "resolution": "applied=true; review.applied=true; review_history and every REJECT preserved unchanged. The applied measurement is evidence/closure-ssh-b51-applied.json (177/135 -> measured), and the later b52 baseline (177/135) is consistent with it.",
+  "reviewed_by": "orchestrator transcription; no verdict changed"
+ }
 }

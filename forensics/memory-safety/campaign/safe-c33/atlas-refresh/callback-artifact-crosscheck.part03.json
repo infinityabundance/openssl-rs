@@ -1,0 +1,200 @@
+{
+ "records": [
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_authority_attribute_identifier",
+   "row_address": "0x880070",
+   "slot": "i2r",
+   "slot_address": "0x8800c0",
+   "target_address": "0x4ec810",
+   "target_identifiers": [
+    "i2r_auth_attr_id"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50912v3_authattid16i2r_auth_attr_id",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50912v3_authattid16i2r_auth_attr_id"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_acc_cert_policies",
+   "row_address": "0x8800d8",
+   "slot": "it",
+   "slot_address": "0x8800e0",
+   "target_address": "0x4cb830",
+   "target_identifiers": [
+    "EXTENDED_KEY_USAGE_it"
+   ],
+   "target_symbol": "EXTENDED_KEY_USAGE_it",
+   "target_symbols": [
+    "EXTENDED_KEY_USAGE_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_acc_cert_policies",
+   "row_address": "0x8800d8",
+   "slot": "i2v",
+   "slot_address": "0x880118",
+   "target_address": "0x4ed5d0",
+   "target_identifiers": [
+    "i2v_EXTENDED_KEY_USAGE"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22i2v_EXTENDED_KEY_USAGE",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22i2v_EXTENDED_KEY_USAGE"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_acc_cert_policies",
+   "row_address": "0x8800d8",
+   "slot": "v2i",
+   "slot_address": "0x880120",
+   "target_address": "0x4ed6a0",
+   "target_identifiers": [
+    "v2i_EXTENDED_KEY_USAGE"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22v2i_EXTENDED_KEY_USAGE",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22v2i_EXTENDED_KEY_USAGE"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_acc_priv_policies",
+   "row_address": "0x880140",
+   "slot": "it",
+   "slot_address": "0x880148",
+   "target_address": "0x4cb830",
+   "target_identifiers": [
+    "EXTENDED_KEY_USAGE_it"
+   ],
+   "target_symbol": "EXTENDED_KEY_USAGE_it",
+   "target_symbols": [
+    "EXTENDED_KEY_USAGE_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_acc_priv_policies",
+   "row_address": "0x880140",
+   "slot": "i2v",
+   "slot_address": "0x880180",
+   "target_address": "0x4ed5d0",
+   "target_identifiers": [
+    "i2v_EXTENDED_KEY_USAGE"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22i2v_EXTENDED_KEY_USAGE",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22i2v_EXTENDED_KEY_USAGE"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_acc_priv_policies",
+   "row_address": "0x880140",
+   "slot": "v2i",
+   "slot_address": "0x880188",
+   "target_address": "0x4ed6a0",
+   "target_identifiers": [
+    "v2i_EXTENDED_KEY_USAGE"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22v2i_EXTENDED_KEY_USAGE",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_extku22v2i_EXTENDED_KEY_USAGE"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_sxnet",
+   "row_address": "0x88d7e8",
+   "slot": "it",
+   "slot_address": "0x88d7f0",
+   "target_address": "0x53f3d0",
+   "target_identifiers": [
+    "SXNET_it"
+   ],
+   "target_symbol": "SXNET_it",
+   "target_symbols": [
+    "SXNET_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_sxnet",
+   "row_address": "0x88d7e8",
+   "slot": "v2i",
+   "slot_address": "0x88d830",
+   "target_address": "0x5641d0",
+   "target_identifiers": [
+    "sxnet_v2i"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_sxnet9sxnet_v2i",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_sxnet9sxnet_v2i"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_sxnet",
+   "row_address": "0x88d7e8",
+   "slot": "i2r",
+   "slot_address": "0x88d838",
+   "target_address": "0x563f40",
+   "target_identifiers": [
+    "sxnet_i2r"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_sxnet9sxnet_i2r",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_sxnet9sxnet_i2r"
+   ]
+  },
+  {
+   "resolution_method": "relocation:symbol",
+   "row": "ossl_v3_policy_constraints",
+   "row_address": "0x88d850",
+   "slot": "it",
+   "slot_address": "0x88d858",
+   "target_address": "0x53cb30",
+   "target_identifiers": [
+    "POLICY_CONSTRAINTS_it"
+   ],
+   "target_symbol": "POLICY_CONSTRAINTS_it",
+   "target_symbols": [
+    "POLICY_CONSTRAINTS_it"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_policy_constraints",
+   "row_address": "0x88d850",
+   "slot": "i2v",
+   "slot_address": "0x88d890",
+   "target_address": "0x563d50",
+   "target_identifiers": [
+    "i2v_POLICY_CONSTRAINTS"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_pcons22i2v_POLICY_CONSTRAINTS",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_pcons22i2v_POLICY_CONSTRAINTS"
+   ]
+  },
+  {
+   "resolution_method": "relocation:RELATIVE",
+   "row": "ossl_v3_policy_constraints",
+   "row_address": "0x88d850",
+   "slot": "v2i",
+   "slot_address": "0x88d898",
+   "target_address": "0x563da0",
+   "target_identifiers": [
+    "v2i_POLICY_CONSTRAINTS"
+   ],
+   "target_symbol": "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_pcons22v2i_POLICY_CONSTRAINTS",
+   "target_symbols": [
+    "_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_pcons22v2i_POLICY_CONSTRAINTS"
+   ]
+  }
+ ],
+ "schema": "openssl-rs/campaign/safe-c33/callback-artifact-crosscheck/v1/part"
+}

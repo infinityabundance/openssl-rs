@@ -316,6 +316,105 @@
     "same in-repo dispatch"
    ],
    "negative_control": "NC-14: the bad-type refusal exercises the v2i edge; the probe completes with exit 0."
+  },
+  {
+   "id": "B52SITE::src/x509/v3_akid.rs::UNSAFE_FN_DEF::i2v_AUTHORITY_KEYID",
+   "file": "src/x509/v3_akid.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2v_AUTHORITY_KEYID",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 231,
+   "line_current": 231,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "`akeyid` is dereferenced as `AuthorityKeyid` and its `keyid` adopted through `i2s_ASN1_OCTET_STRING`; the struct lifetime and the stack-ownership rule on the error tail are caller assumptions."
+  },
+  {
+   "id": "B52SITE::src/x509/v3_akid.rs::UNSAFE_FN_DEF::v2i_AUTHORITY_KEYID",
+   "file": "src/x509/v3_akid.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_AUTHORITY_KEYID",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 359,
+   "line_current": 359,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "`values` is walked with `OPENSSL_sk_num`/`OPENSSL_sk_value` and each `CONF_VALUE` name/value compared as NUL-terminated C strings; element type and lifetime are caller assumptions."
+  },
+  {
+   "id": "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::i2v_GENERAL_NAMES",
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2v_GENERAL_NAMES",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 317,
+   "line_current": 317,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "`gens` is walked with `OPENSSL_sk_num`/`OPENSSL_sk_value` and each element passed to `i2v_GENERAL_NAME`; stack element type and ownership of a caller-supplied `ret` are assumed."
+  },
+  {
+   "id": "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::i2v_GENERAL_NAME",
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2v_GENERAL_NAME",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 356,
+   "line_current": 356,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "`gen`'s tag selects a `GENERAL_NAME` union arm; each arm's string is read for `length` bytes into the caller's `CONF_VALUE` stack, so tag/union agreement is a caller assumption."
+  },
+  {
+   "id": "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAME_ex",
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_GENERAL_NAME_ex",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 1058,
+   "line_current": 1058,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "`cnf` name/value are compared as NUL-terminated C strings and `value` is parsed by `a2i_GENERAL_NAME` into a caller-supplied `out`; conf-value ownership and `out` validity are assumed."
+  },
+  {
+   "id": "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAME",
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_GENERAL_NAME",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 1115,
+   "line_current": 1115,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "Forwards `cnf` to `v2i_GENERAL_NAME_ex` with a null `out`; the `CONF_VALUE`'s lifetime and NUL termination are assumed."
+  },
+  {
+   "id": "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAMES",
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_GENERAL_NAMES",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 1131,
+   "line_current": 1131,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "`nval` is walked with `OPENSSL_sk_num`/`OPENSSL_sk_value` and each `CONF_VALUE` parsed into a fresh `GENERAL_NAMES`; stack element type and ownership are assumed."
+  },
+  {
+   "id": "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_issuer_alt",
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_issuer_alt",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 1231,
+   "line_current": 1231,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "`nval` is walked as `CONF_VALUE`s and `copy_issuer` moves issuer SAN entries into the new stack; source certificate/request lifetime and stack ownership are assumed."
+  },
+  {
+   "id": "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_subject_alt",
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_subject_alt",
+   "mechanism": "X509_VERIFY_POLICY",
+   "line": 1355,
+   "line_current": 1355,
+   "disposition": "RETAINED (BLOCKED) — enumerated, not discharged",
+   "hazard": "`nval` is walked as `CONF_VALUE`s and `copy_email` may move subject email entries into the new stack; source certificate/request lifetime and stack ownership are assumed."
   }
  ],
  "negative_controls": [

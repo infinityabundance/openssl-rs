@@ -1,0 +1,97 @@
+{
+ "authoritative": {
+  "enrolment_count": 66,
+  "exit_code": 1,
+  "inventory_matched_callbacks": 69,
+  "manifest_sha256": "e34d1e92179959acb215f047f77cc161345fd012c22f666459a770525ce2bdcb",
+  "missing_count": 66,
+  "pass": false,
+  "reconciliation": {
+   "ext_free_callbacks_absent_from_queue": 2,
+   "gate_missing_distinct_definitions": 66,
+   "gate_missing_distinct_names": 65,
+   "gate_missing_entries": 66,
+   "note": "name-prefix matching is not the enumeration; these counts reconcile the six-prefix definition census with the slot-driven manifest and explain why the gate's missing set differs from a raw prefix grep",
+   "prefix_definitions_absent_and_definition_only": 34,
+   "prefix_definitions_absent_and_registered": 30,
+   "prefix_definitions_absent_from_queue": 64,
+   "prefix_definitions_distinct": 114,
+   "prefix_definitions_in_queue_inventory": 51,
+   "prefix_definitions_not_registered_in_any_slot": 36,
+   "prefix_definitions_registered_in_a_slot": 79,
+   "prefix_definitions_total": 115,
+   "registered_callbacks_with_non_prefix_names": 20
+  },
+  "report_sha256": "b900e24e8db67b5221d3d3d290af930e4b85698903e680274b991a612aa33ef3",
+  "unresolved_count": 0
+ },
+ "commands": {
+  "C1_added": "/usr/bin/python3 /mnt/1tb_kingston/openssl-rs/forensics/tools/callback_enumeration_gate.py --root /mnt/1tb_kingston/openssl-rs --closure /mnt/1tb_kingston/openssl-rs/evidence/closure-ssh-b52-applied.json --out-dir /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/out-c1 --manifest-name manifest-c1-added.json --report-name report-c1-added.json --enrolment-name enrolment-c1-added.json --inventory /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/inventory-post-enrolment.json --allow-source-drift",
+  "C1_baseline": "/usr/bin/python3 /mnt/1tb_kingston/openssl-rs/forensics/tools/callback_enumeration_gate.py --root /mnt/1tb_kingston/openssl-rs --closure /mnt/1tb_kingston/openssl-rs/evidence/closure-ssh-b52-applied.json --out-dir /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/out-c1 --manifest-name manifest-c1-baseline.json --report-name report-c1-baseline.json --enrolment-name enrolment-c1-baseline.json --inventory /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/inventory-post-enrolment.json --allow-source-drift",
+  "C1_restored": "/usr/bin/python3 /mnt/1tb_kingston/openssl-rs/forensics/tools/callback_enumeration_gate.py --root /mnt/1tb_kingston/openssl-rs --closure /mnt/1tb_kingston/openssl-rs/evidence/closure-ssh-b52-applied.json --out-dir /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/out-c1 --manifest-name manifest-c1-restored.json --report-name report-c1-restored.json --enrolment-name enrolment-c1-restored.json --inventory /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/inventory-post-enrolment.json --allow-source-drift",
+  "C2_empty_assumption": "/usr/bin/python3 /mnt/1tb_kingston/openssl-rs/forensics/tools/callback_enumeration_gate.py --root /mnt/1tb_kingston/openssl-rs --closure /mnt/1tb_kingston/openssl-rs/evidence/closure-ssh-b52-applied.json --out-dir /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/out-c2 --manifest-name manifest-c2-empty.json --report-name report-c2-empty.json --enrolment-name enrolment-c2-empty.json --inventory /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/inventory-minus-s2i_skey_id.json --overrides /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/overrides-excluded-empty.json --allow-source-drift",
+  "C2_with_assumption": "/usr/bin/python3 /mnt/1tb_kingston/openssl-rs/forensics/tools/callback_enumeration_gate.py --root /mnt/1tb_kingston/openssl-rs --closure /mnt/1tb_kingston/openssl-rs/evidence/closure-ssh-b52-applied.json --out-dir /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/out-c2 --manifest-name manifest-c2-assumption.json --report-name report-c2-assumption.json --enrolment-name enrolment-c2-assumption.json --inventory /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/inventory-minus-s2i_skey_id.json --overrides /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/overrides-excluded-assumption.json --allow-source-drift",
+  "C3_unresolved": "/usr/bin/python3 /mnt/1tb_kingston/openssl-rs/forensics/tools/callback_enumeration_gate.py --root /mnt/1tb_kingston/openssl-rs --closure /mnt/1tb_kingston/openssl-rs/evidence/closure-ssh-b52-applied.json --out-dir /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/out-c3 --manifest-name manifest-c3-unresolved.json --report-name report-c3-unresolved.json --enrolment-name enrolment-c3-unresolved.json --inventory /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/inventory-minus-s2i_skey_id.json --overrides /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/overrides-unresolved.json --allow-source-drift",
+  "C4_authoritative": "/usr/bin/python3 /mnt/1tb_kingston/openssl-rs/forensics/tools/callback_enumeration_gate.py --root /mnt/1tb_kingston/openssl-rs --closure /mnt/1tb_kingston/openssl-rs/evidence/closure-ssh-b52-applied.json --out-dir /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh",
+  "C5_loss_inventory": "/usr/bin/python3 /mnt/1tb_kingston/openssl-rs/forensics/tools/callback_enumeration_gate.py --root /mnt/1tb_kingston/openssl-rs --closure /mnt/1tb_kingston/openssl-rs/evidence/closure-ssh-b52-applied.json --out-dir /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/out-c5-loss --manifest-name manifest-c5-loss.json --report-name report-c5-loss.json --enrolment-name enrolment-c5-loss.json --inventory /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/inventory-auth-minus-skid_i2s.json --allow-source-drift",
+  "C6_fresh_outdir": "/usr/bin/python3 /mnt/1tb_kingston/openssl-rs/forensics/tools/callback_enumeration_gate.py --root /mnt/1tb_kingston/openssl-rs --closure /mnt/1tb_kingston/openssl-rs/evidence/closure-ssh-b52-applied.json --out-dir /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/out-fresh-dir --manifest-name manifest-c6-fresh.json --report-name report-c6-fresh.json --enrolment-name enrolment-c6-fresh.json --inventory /mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/inventory-post-enrolment.json --allow-source-drift"
+ },
+ "controls": {
+  "C1": {
+   "added_exit_code": 1,
+   "added_named": true,
+   "baseline_pass": true,
+   "pass": true,
+   "restored_byte_identical": true,
+   "restored_pass": true
+  },
+  "C2": {
+   "empty_assumption_exit_code": 1,
+   "empty_assumption_flagged": true,
+   "pass": true,
+   "with_assumption_exit_code": 0,
+   "with_assumption_pass": true
+  },
+  "C3": {
+   "exit_code": 1,
+   "flagged": true,
+   "pass": true
+  },
+  "C4": {
+   "identical": true,
+   "pass": true
+  },
+  "C5": {
+   "expected_inventory_callbacks": 69,
+   "inventory_accounting": {
+    "inventory_callbacks_accounted": 69,
+    "slot_prefix_inventory_not_seen": [],
+    "slot_prefix_inventory_without_source_definition": [],
+    "unaccounted": [],
+    "unit": "distinct inventory callbacks accounted for by the source enumeration; entries are file-qualified"
+   },
+   "inventory_matched_callbacks": 69,
+   "loss_control_accounted": 68,
+   "loss_control_exit_code": 1,
+   "loss_detected": true,
+   "pass": true,
+   "prefix_definitions_in_queue_inventory": 51,
+   "reported_missing": 0
+  },
+  "C6": {
+   "exit_code": 0,
+   "fresh_dir": "/mnt/1tb_kingston/openssl-rs/forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-gate-controls/out-fresh-dir",
+   "pass": true,
+   "report_written": true
+  }
+ },
+ "determinism": {
+  "identical": true,
+  "manifest_sha256_run1": "e34d1e92179959acb215f047f77cc161345fd012c22f666459a770525ce2bdcb",
+  "manifest_sha256_run2": "e34d1e92179959acb215f047f77cc161345fd012c22f666459a770525ce2bdcb",
+  "pass": true,
+  "report_sha256_run1": "b900e24e8db67b5221d3d3d290af930e4b85698903e680274b991a612aa33ef3",
+  "report_sha256_run2": "b900e24e8db67b5221d3d3d290af930e4b85698903e680274b991a612aa33ef3"
+ },
+ "schema": "openssl-rs/campaign/safe-c33/callback-gate-controls/v1"
+}

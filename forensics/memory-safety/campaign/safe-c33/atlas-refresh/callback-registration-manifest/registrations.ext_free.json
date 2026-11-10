@@ -1,0 +1,419 @@
+{
+ "chunk": 0,
+ "chunks": 1,
+ "part": "registrations",
+ "registrations": [
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "SCT_LIST_free",
+   "callback_file": "src/ct/ct_sct.rs",
+   "callback_line": 247,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "witness": {
+     "callee": "SCT_LIST_free",
+     "callee_key": [
+      "src/ct/ct_sct.rs",
+      247,
+      "SCT_LIST_free"
+     ],
+     "caller": "x509_ext_d2i_SCT_LIST",
+     "caller_key": [
+      "src/ct/ct_x509v3.rs",
+      127,
+      "x509_ext_d2i_SCT_LIST"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/ct/ct_x509v3.rs",
+     "line": 138,
+     "site": "src/ct/ct_x509v3.rs:138"
+    },
+    "witnesses": [
+     {
+      "callee": "SCT_LIST_free",
+      "callee_key": [
+       "src/ct/ct_sct.rs",
+       247,
+       "SCT_LIST_free"
+      ],
+      "caller": "x509_ext_d2i_SCT_LIST",
+      "caller_key": [
+       "src/ct/ct_x509v3.rs",
+       127,
+       "x509_ext_d2i_SCT_LIST"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/ct/ct_x509v3.rs",
+      "line": 138,
+      "site": "src/ct/ct_x509v3.rs:138"
+     },
+     {
+      "callee": "SCT_LIST_free",
+      "callee_key": [
+       "src/ct/ct_sct.rs",
+       247,
+       "SCT_LIST_free"
+      ],
+      "caller": "ocsp_ext_d2i_SCT_LIST",
+      "caller_key": [
+       "src/ct/ct_x509v3.rs",
+       154,
+       "ocsp_ext_d2i_SCT_LIST"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/ct/ct_x509v3.rs",
+      "line": 165,
+      "site": "src/ct/ct_x509v3.rs:165"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/ct/ct_sct.rs",
+    247,
+    "SCT_LIST_free"
+   ],
+   "direct_callers": [
+    {
+     "callee": "SCT_LIST_free",
+     "callee_key": [
+      "src/ct/ct_sct.rs",
+      247,
+      "SCT_LIST_free"
+     ],
+     "caller": "o2i_sct_list_err",
+     "caller_key": null,
+     "caller_reachable": false,
+     "caller_reachable_call_bound": false,
+     "caller_reachable_closure_name": false,
+     "file": "src/ct/ct_oct.rs",
+     "line": 730,
+     "site": "src/ct/ct_oct.rs:730"
+    },
+    {
+     "callee": "SCT_LIST_free",
+     "callee_key": [
+      "src/ct/ct_sct.rs",
+      247,
+      "SCT_LIST_free"
+     ],
+     "caller": "x509_ext_d2i_SCT_LIST",
+     "caller_key": [
+      "src/ct/ct_x509v3.rs",
+      127,
+      "x509_ext_d2i_SCT_LIST"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/ct/ct_x509v3.rs",
+     "line": 138,
+     "site": "src/ct/ct_x509v3.rs:138"
+    },
+    {
+     "callee": "SCT_LIST_free",
+     "callee_key": [
+      "src/ct/ct_sct.rs",
+      247,
+      "SCT_LIST_free"
+     ],
+     "caller": "ocsp_ext_d2i_SCT_LIST",
+     "caller_key": [
+      "src/ct/ct_x509v3.rs",
+      154,
+      "ocsp_ext_d2i_SCT_LIST"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/ct/ct_x509v3.rs",
+     "line": 165,
+     "site": "src/ct/ct_x509v3.rs:165"
+    }
+   ],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:414 &crate::ct::ct_x509v3::ossl_v3_ct_scts[0]",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_d2i",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:414 &crate::ct::ct_x509v3::ossl_v3_ct_scts[0]",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/ct/ct_sct.rs::SCT_LIST_free::ossl_v3_ct_scts[0]::ext_free",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_ct_scts[0]",
+   "row_file": "src/ct/ct_x509v3.rs",
+   "row_instances": [
+    {
+     "file": "src/ct/ct_x509v3.rs",
+     "index": 0,
+     "line": 238,
+     "name": "ossl_v3_ct_scts"
+    }
+   ],
+   "row_line": 240,
+   "slot": "ext_free",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "SCT_LIST_free",
+   "callback_file": "src/ct/ct_sct.rs",
+   "callback_line": 247,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "witness": {
+     "callee": "SCT_LIST_free",
+     "callee_key": [
+      "src/ct/ct_sct.rs",
+      247,
+      "SCT_LIST_free"
+     ],
+     "caller": "x509_ext_d2i_SCT_LIST",
+     "caller_key": [
+      "src/ct/ct_x509v3.rs",
+      127,
+      "x509_ext_d2i_SCT_LIST"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/ct/ct_x509v3.rs",
+     "line": 138,
+     "site": "src/ct/ct_x509v3.rs:138"
+    },
+    "witnesses": [
+     {
+      "callee": "SCT_LIST_free",
+      "callee_key": [
+       "src/ct/ct_sct.rs",
+       247,
+       "SCT_LIST_free"
+      ],
+      "caller": "x509_ext_d2i_SCT_LIST",
+      "caller_key": [
+       "src/ct/ct_x509v3.rs",
+       127,
+       "x509_ext_d2i_SCT_LIST"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/ct/ct_x509v3.rs",
+      "line": 138,
+      "site": "src/ct/ct_x509v3.rs:138"
+     },
+     {
+      "callee": "SCT_LIST_free",
+      "callee_key": [
+       "src/ct/ct_sct.rs",
+       247,
+       "SCT_LIST_free"
+      ],
+      "caller": "ocsp_ext_d2i_SCT_LIST",
+      "caller_key": [
+       "src/ct/ct_x509v3.rs",
+       154,
+       "ocsp_ext_d2i_SCT_LIST"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/ct/ct_x509v3.rs",
+      "line": 165,
+      "site": "src/ct/ct_x509v3.rs:165"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/ct/ct_sct.rs",
+    247,
+    "SCT_LIST_free"
+   ],
+   "direct_callers": [
+    {
+     "callee": "SCT_LIST_free",
+     "callee_key": [
+      "src/ct/ct_sct.rs",
+      247,
+      "SCT_LIST_free"
+     ],
+     "caller": "o2i_sct_list_err",
+     "caller_key": null,
+     "caller_reachable": false,
+     "caller_reachable_call_bound": false,
+     "caller_reachable_closure_name": false,
+     "file": "src/ct/ct_oct.rs",
+     "line": 730,
+     "site": "src/ct/ct_oct.rs:730"
+    },
+    {
+     "callee": "SCT_LIST_free",
+     "callee_key": [
+      "src/ct/ct_sct.rs",
+      247,
+      "SCT_LIST_free"
+     ],
+     "caller": "x509_ext_d2i_SCT_LIST",
+     "caller_key": [
+      "src/ct/ct_x509v3.rs",
+      127,
+      "x509_ext_d2i_SCT_LIST"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/ct/ct_x509v3.rs",
+     "line": 138,
+     "site": "src/ct/ct_x509v3.rs:138"
+    },
+    {
+     "callee": "SCT_LIST_free",
+     "callee_key": [
+      "src/ct/ct_sct.rs",
+      247,
+      "SCT_LIST_free"
+     ],
+     "caller": "ocsp_ext_d2i_SCT_LIST",
+     "caller_key": [
+      "src/ct/ct_x509v3.rs",
+      154,
+      "ocsp_ext_d2i_SCT_LIST"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/ct/ct_x509v3.rs",
+     "line": 165,
+     "site": "src/ct/ct_x509v3.rs:165"
+    }
+   ],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:416 &crate::ct::ct_x509v3::ossl_v3_ct_scts[2]",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_d2i",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:416 &crate::ct::ct_x509v3::ossl_v3_ct_scts[2]",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/ct/ct_sct.rs::SCT_LIST_free::ossl_v3_ct_scts[2]::ext_free",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_ct_scts[2]",
+   "row_file": "src/ct/ct_x509v3.rs",
+   "row_instances": [
+    {
+     "file": "src/ct/ct_x509v3.rs",
+     "index": 2,
+     "line": 238,
+     "name": "ossl_v3_ct_scts"
+    }
+   ],
+   "row_line": 274,
+   "slot": "ext_free",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "ocsp_nonce_free",
+   "callback_file": "src/ocsp/v3_ocsp.rs",
+   "callback_line": 325,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/ocsp/v3_ocsp.rs",
+    "may_bound": true,
+    "module": "v3_ocsp",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x1a1990:_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp15ocsp_nonce_free"
+    ]
+   },
+   "definition_key": [
+    "src/ocsp/v3_ocsp.rs",
+    325,
+    "ocsp_nonce_free"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:395 &crate::ocsp::v3_ocsp::ossl_v3_ocsp_nonce",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_d2i",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:395 &crate::ocsp::v3_ocsp::ossl_v3_ocsp_nonce",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/ocsp/v3_ocsp.rs::ocsp_nonce_free::ossl_v3_ocsp_nonce::ext_free",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_ocsp_nonce",
+   "row_file": "src/ocsp/v3_ocsp.rs",
+   "row_instances": [
+    {
+     "file": "src/ocsp/v3_ocsp.rs",
+     "index": null,
+     "line": 498,
+     "name": "ossl_v3_ocsp_nonce"
+    }
+   ],
+   "row_line": 498,
+   "slot": "ext_free",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  }
+ ],
+ "schema": "openssl-rs/campaign/safe-c33/callback-registration-manifest/v1/part",
+ "slot": "ext_free"
+}

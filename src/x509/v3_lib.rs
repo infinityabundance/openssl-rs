@@ -208,6 +208,21 @@ pub type X509V3ExtR2i = X509V3ExtS2i;
 /// (`v3_conf.c:127-134`). On failure it returns NULL and releases any partial value it
 /// built. Input it cannot fully consume must be rejected, not partially encoded.
 ///
+/// ## `s2i`
+///
+/// `void *(*)(const X509V3_EXT_METHOD *method, X509V3_CTX *ctx, const char *str)`
+/// (`include/openssl/x509v3.h.in:56-57`). `do_ext_nconf` reaches this arm only when the row has
+/// no `v2i` (`crypto/x509/v3_conf.c:113-116`), so `str` is the configuration value itself, not
+/// a parsed `STACK_OF(CONF_VALUE)`. `str` is borrowed for the call: the callback may read it as
+/// a NUL-terminated C string but must not free or retain it. `ctx` is the caller's
+/// `X509V3_CTX`, borrowed for the call; the `s2i` arm does not check it
+/// (`crypto/x509/v3_conf.c:113-116`), so an implementation that reads it relies on the
+/// authority's `X509V3_EXT_nconf*` callers to supply one. On success the callback returns a
+/// new `ext_struc` of the row's ASN.1 item type; ownership transfers to the dispatcher, which
+/// encodes it and then frees it with `ASN1_item_free`/`ext_free`
+/// (`crypto/x509/v3_conf.c:127-134`). On failure it returns NULL and releases any partial value
+/// it built.
+///
 /// ## `r2i`
 ///
 /// `void *(*)(const X509V3_EXT_METHOD *method, X509V3_CTX *ctx, const char *str)`
@@ -532,6 +547,26 @@ mod read_hold_probe {
 #[cfg(test)]
 pub(crate) fn registry_read_held_on_this_thread() -> bool {
     read_hold_probe::held()
+}
+
+/// Test-only: the number of rows currently in the dynamic extension registry.
+///
+/// The count is taken under the registry **read** hold, so it cannot observe a
+/// concurrent mutation half-way. A caller that holds a read on this thread may
+/// call it (a nested read is a count increment); a caller that is the writer may
+/// not, because `read_lock` refuses a read while the write lock is held.
+#[cfg(test)]
+pub(crate) fn registry_row_count() -> usize {
+    let Some(_registry) = RegistryReadGuard::acquire() else {
+        return 0;
+    };
+    let list = EXT_LIST.load(Ordering::Acquire);
+    if list.is_null() {
+        return 0;
+    }
+    // SAFETY: `list` is the registry list this module built, and the read hold is
+    // held for this read.
+    usize::try_from(unsafe { OPENSSL_sk_num(list) }).unwrap_or(0)
 }
 
 /// A held registry **write** hold; dropping it unlocks. Private because every writer is here.

@@ -1,0 +1,4192 @@
+{
+ "chunk": 0,
+ "chunks": 1,
+ "part": "registrations",
+ "registrations": [
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_SCT_LIST",
+   "callback_file": "src/ct/ct_x509v3.rs",
+   "callback_line": 84,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/ct/ct_x509v3.rs",
+    "may_bound": true,
+    "module": "ct_x509v3",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x4a5da0:_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v312i2r_SCT_LIST"
+    ]
+   },
+   "definition_key": [
+    "src/ct/ct_x509v3.rs",
+    84,
+    "i2r_SCT_LIST"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:414 &crate::ct::ct_x509v3::ossl_v3_ct_scts[0]",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:414 &crate::ct::ct_x509v3::ossl_v3_ct_scts[0]",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/ct/ct_x509v3.rs::i2r_SCT_LIST::ossl_v3_ct_scts[0]::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_ct_scts[0]",
+   "row_file": "src/ct/ct_x509v3.rs",
+   "row_instances": [
+    {
+     "file": "src/ct/ct_x509v3.rs",
+     "index": 0,
+     "line": 238,
+     "name": "ossl_v3_ct_scts"
+    }
+   ],
+   "row_line": 240,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_SCT_LIST",
+   "callback_file": "src/ct/ct_x509v3.rs",
+   "callback_line": 84,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/ct/ct_x509v3.rs",
+    "may_bound": true,
+    "module": "ct_x509v3",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x4a5da0:_RNvNtNtCscx02WjRFd5b_10openssl_rs2ct9ct_x509v312i2r_SCT_LIST"
+    ]
+   },
+   "definition_key": [
+    "src/ct/ct_x509v3.rs",
+    84,
+    "i2r_SCT_LIST"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:416 &crate::ct::ct_x509v3::ossl_v3_ct_scts[2]",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:416 &crate::ct::ct_x509v3::ossl_v3_ct_scts[2]",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/ct/ct_x509v3.rs::i2r_SCT_LIST::ossl_v3_ct_scts[2]::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_ct_scts[2]",
+   "row_file": "src/ct/ct_x509v3.rs",
+   "row_instances": [
+    {
+     "file": "src/ct/ct_x509v3.rs",
+     "index": 2,
+     "line": 238,
+     "name": "ossl_v3_ct_scts"
+    }
+   ],
+   "row_line": 274,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_ocsp_crlid",
+   "callback_file": "src/ocsp/v3_ocsp.rs",
+   "callback_line": 122,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/ocsp/v3_ocsp.rs",
+    "may_bound": true,
+    "module": "v3_ocsp",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x1a16d0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14i2r_ocsp_crlid"
+    ]
+   },
+   "definition_key": [
+    "src/ocsp/v3_ocsp.rs",
+    122,
+    "i2r_ocsp_crlid"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:396 &crate::ocsp::v3_ocsp::ossl_v3_ocsp_crlid",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:396 &crate::ocsp::v3_ocsp::ossl_v3_ocsp_crlid",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_crlid::ossl_v3_ocsp_crlid::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_ocsp_crlid",
+   "row_file": "src/ocsp/v3_ocsp.rs",
+   "row_instances": [
+    {
+     "file": "src/ocsp/v3_ocsp.rs",
+     "index": null,
+     "line": 455,
+     "name": "ossl_v3_ocsp_crlid"
+    }
+   ],
+   "row_line": 455,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_ocsp_acutoff",
+   "callback_file": "src/ocsp/v3_ocsp.rs",
+   "callback_line": 187,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/ocsp/v3_ocsp.rs",
+    "may_bound": true,
+    "module": "v3_ocsp",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x1a1a10:_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16i2r_ocsp_acutoff"
+    ]
+   },
+   "definition_key": [
+    "src/ocsp/v3_ocsp.rs",
+    187,
+    "i2r_ocsp_acutoff"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:399 &crate::ocsp::v3_ocsp::ossl_v3_ocsp_acutoff",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:399 &crate::ocsp::v3_ocsp::ossl_v3_ocsp_acutoff",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_acutoff::ossl_v3_ocsp_acutoff::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_ocsp_acutoff",
+   "row_file": "src/ocsp/v3_ocsp.rs",
+   "row_instances": [
+    {
+     "file": "src/ocsp/v3_ocsp.rs",
+     "index": null,
+     "line": 476,
+     "name": "ossl_v3_ocsp_acutoff"
+    }
+   ],
+   "row_line": 476,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_ocsp_nonce",
+   "callback_file": "src/ocsp/v3_ocsp.rs",
+   "callback_line": 344,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/ocsp/v3_ocsp.rs",
+    "may_bound": true,
+    "module": "v3_ocsp",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x1a1910:_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp14i2r_ocsp_nonce"
+    ]
+   },
+   "definition_key": [
+    "src/ocsp/v3_ocsp.rs",
+    344,
+    "i2r_ocsp_nonce"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:395 &crate::ocsp::v3_ocsp::ossl_v3_ocsp_nonce",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:395 &crate::ocsp::v3_ocsp::ossl_v3_ocsp_nonce",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_nonce::ossl_v3_ocsp_nonce::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_ocsp_nonce",
+   "row_file": "src/ocsp/v3_ocsp.rs",
+   "row_instances": [
+    {
+     "file": "src/ocsp/v3_ocsp.rs",
+     "index": null,
+     "line": 498,
+     "name": "ossl_v3_ocsp_nonce"
+    }
+   ],
+   "row_line": 498,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_ocsp_nocheck",
+   "callback_file": "src/ocsp/v3_ocsp.rs",
+   "callback_line": 367,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/ocsp/v3_ocsp.rs",
+    "may_bound": true,
+    "module": "v3_ocsp",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x1a1a70:_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp16i2r_ocsp_nocheck.llvm.<hash>"
+    ]
+   },
+   "definition_key": [
+    "src/ocsp/v3_ocsp.rs",
+    367,
+    "i2r_ocsp_nocheck"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:398 &crate::ocsp::v3_ocsp::ossl_v3_ocsp_nocheck",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:398 &crate::ocsp::v3_ocsp::ossl_v3_ocsp_nocheck",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_nocheck::ossl_v3_ocsp_nocheck::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_ocsp_nocheck",
+   "row_file": "src/ocsp/v3_ocsp.rs",
+   "row_instances": [
+    {
+     "file": "src/ocsp/v3_ocsp.rs",
+     "index": null,
+     "line": 519,
+     "name": "ossl_v3_ocsp_nocheck"
+    }
+   ],
+   "row_line": 519,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": false
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_ocsp_serviceloc",
+   "callback_file": "src/ocsp/v3_ocsp.rs",
+   "callback_line": 406,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/ocsp/v3_ocsp.rs",
+    "may_bound": true,
+    "module": "v3_ocsp",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x1a1a90:_RNvNtNtCscx02WjRFd5b_10openssl_rs4ocsp7v3_ocsp19i2r_ocsp_serviceloc"
+    ]
+   },
+   "definition_key": [
+    "src/ocsp/v3_ocsp.rs",
+    406,
+    "i2r_ocsp_serviceloc"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:400 &crate::ocsp::v3_ocsp::ossl_v3_ocsp_serviceloc",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:400 &crate::ocsp::v3_ocsp::ossl_v3_ocsp_serviceloc",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/ocsp/v3_ocsp.rs::i2r_ocsp_serviceloc::ossl_v3_ocsp_serviceloc::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_ocsp_serviceloc",
+   "row_file": "src/ocsp/v3_ocsp.rs",
+   "row_instances": [
+    {
+     "file": "src/ocsp/v3_ocsp.rs",
+     "index": null,
+     "line": 540,
+     "name": "ossl_v3_ocsp_serviceloc"
+    }
+   ],
+   "row_line": 540,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "i2r_ALLOWED_ATTRIBUTES_CHOICE",
+   "callback_file": "src/x509/v3_aaa.rs",
+   "callback_line": 397,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "definition_only": true,
+    "witness": {
+     "callee": "i2r_ALLOWED_ATTRIBUTES_CHOICE",
+     "callee_key": [
+      "src/x509/v3_aaa.rs",
+      397,
+      "i2r_ALLOWED_ATTRIBUTES_CHOICE"
+     ],
+     "caller": "i2r_ALLOWED_ATTRIBUTES_ITEM",
+     "caller_key": [
+      "src/x509/v3_aaa.rs",
+      480,
+      "i2r_ALLOWED_ATTRIBUTES_ITEM"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
+     "file": "src/x509/v3_aaa.rs",
+     "line": 506,
+     "site": "src/x509/v3_aaa.rs:506"
+    },
+    "witnesses": [
+     {
+      "callee": "i2r_ALLOWED_ATTRIBUTES_CHOICE",
+      "callee_key": [
+       "src/x509/v3_aaa.rs",
+       397,
+       "i2r_ALLOWED_ATTRIBUTES_CHOICE"
+      ],
+      "caller": "i2r_ALLOWED_ATTRIBUTES_ITEM",
+      "caller_key": [
+       "src/x509/v3_aaa.rs",
+       480,
+       "i2r_ALLOWED_ATTRIBUTES_ITEM"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": false,
+      "file": "src/x509/v3_aaa.rs",
+      "line": 506,
+      "site": "src/x509/v3_aaa.rs:506"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_aaa.rs",
+    397,
+    "i2r_ALLOWED_ATTRIBUTES_CHOICE"
+   ],
+   "direct_callers": [
+    {
+     "callee": "i2r_ALLOWED_ATTRIBUTES_CHOICE",
+     "callee_key": [
+      "src/x509/v3_aaa.rs",
+      397,
+      "i2r_ALLOWED_ATTRIBUTES_CHOICE"
+     ],
+     "caller": "i2r_ALLOWED_ATTRIBUTES_ITEM",
+     "caller_key": [
+      "src/x509/v3_aaa.rs",
+      480,
+      "i2r_ALLOWED_ATTRIBUTES_ITEM"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
+     "file": "src/x509/v3_aaa.rs",
+     "line": 506,
+     "site": "src/x509/v3_aaa.rs:506"
+    }
+   ],
+   "dispatcher_bindings": [],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_aaa.rs",
+     "id": "V1:src/x509/v3_aaa.rs:382:UNSAFE_FN_DEF",
+     "line": 382,
+     "stable_id": "src/x509/v3_aaa.rs::UNSAFE_FN_DEF::i2r_ALLOWED_ATTRIBUTES_CHOICE",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_aaa.rs::i2r_ALLOWED_ATTRIBUTES_CHOICE::<definition-only>",
+   "registration_kind": "definition-only",
+   "row": null,
+   "row_file": "src/x509/v3_aaa.rs",
+   "row_instances": [],
+   "row_line": 397,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "i2r_ALLOWED_ATTRIBUTES_ITEM",
+   "callback_file": "src/x509/v3_aaa.rs",
+   "callback_line": 480,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "definition_only": true,
+    "witness": {
+     "callee": "i2r_ALLOWED_ATTRIBUTES_ITEM",
+     "callee_key": [
+      "src/x509/v3_aaa.rs",
+      480,
+      "i2r_ALLOWED_ATTRIBUTES_ITEM"
+     ],
+     "caller": "i2r_ALLOWED_ATTRIBUTES_SYNTAX",
+     "caller_key": [
+      "src/x509/v3_aaa.rs",
+      541,
+      "i2r_ALLOWED_ATTRIBUTES_SYNTAX"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_aaa.rs",
+     "line": 567,
+     "site": "src/x509/v3_aaa.rs:567"
+    },
+    "witnesses": [
+     {
+      "callee": "i2r_ALLOWED_ATTRIBUTES_ITEM",
+      "callee_key": [
+       "src/x509/v3_aaa.rs",
+       480,
+       "i2r_ALLOWED_ATTRIBUTES_ITEM"
+      ],
+      "caller": "i2r_ALLOWED_ATTRIBUTES_SYNTAX",
+      "caller_key": [
+       "src/x509/v3_aaa.rs",
+       541,
+       "i2r_ALLOWED_ATTRIBUTES_SYNTAX"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_aaa.rs",
+      "line": 567,
+      "site": "src/x509/v3_aaa.rs:567"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_aaa.rs",
+    480,
+    "i2r_ALLOWED_ATTRIBUTES_ITEM"
+   ],
+   "direct_callers": [
+    {
+     "callee": "i2r_ALLOWED_ATTRIBUTES_ITEM",
+     "callee_key": [
+      "src/x509/v3_aaa.rs",
+      480,
+      "i2r_ALLOWED_ATTRIBUTES_ITEM"
+     ],
+     "caller": "i2r_ALLOWED_ATTRIBUTES_SYNTAX",
+     "caller_key": [
+      "src/x509/v3_aaa.rs",
+      541,
+      "i2r_ALLOWED_ATTRIBUTES_SYNTAX"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_aaa.rs",
+     "line": 567,
+     "site": "src/x509/v3_aaa.rs:567"
+    }
+   ],
+   "dispatcher_bindings": [],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_aaa.rs",
+     "id": "V1:src/x509/v3_aaa.rs:452:UNSAFE_FN_DEF",
+     "line": 452,
+     "stable_id": "src/x509/v3_aaa.rs::UNSAFE_FN_DEF::i2r_ALLOWED_ATTRIBUTES_ITEM",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_aaa.rs::i2r_ALLOWED_ATTRIBUTES_ITEM::<definition-only>",
+   "registration_kind": "definition-only",
+   "row": null,
+   "row_file": "src/x509/v3_aaa.rs",
+   "row_instances": [],
+   "row_line": 480,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_ALLOWED_ATTRIBUTES_SYNTAX",
+   "callback_file": "src/x509/v3_aaa.rs",
+   "callback_line": 541,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_aaa.rs",
+    "may_bound": true,
+    "module": "v3_aaa",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x4b2620:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_aaa29i2r_ALLOWED_ATTRIBUTES_SYNTAX"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_aaa.rs",
+    541,
+    "i2r_ALLOWED_ATTRIBUTES_SYNTAX"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:437 &crate::x509::v3_aaa::ossl_v3_allowed_attribute_assignments",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:437 &crate::x509::v3_aaa::ossl_v3_allowed_attribute_assignments",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_aaa.rs",
+     "id": "V1:src/x509/v3_aaa.rs:500:UNSAFE_FN_DEF",
+     "line": 500,
+     "stable_id": "src/x509/v3_aaa.rs::UNSAFE_FN_DEF::i2r_ALLOWED_ATTRIBUTES_SYNTAX",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_aaa.rs::i2r_ALLOWED_ATTRIBUTES_SYNTAX::ossl_v3_allowed_attribute_assignments::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_allowed_attribute_assignments",
+   "row_file": "src/x509/v3_aaa.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_aaa.rs",
+     "index": null,
+     "line": 576,
+     "name": "ossl_v3_allowed_attribute_assignments"
+    }
+   ],
+   "row_line": 576,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "i2r_ISSUER_SERIAL",
+   "callback_file": "src/x509/v3_ac_tgt.rs",
+   "callback_line": 624,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "definition_only": true,
+    "witness": {
+     "callee": "i2r_ISSUER_SERIAL",
+     "callee_key": [
+      "src/x509/v3_ac_tgt.rs",
+      624,
+      "i2r_ISSUER_SERIAL"
+     ],
+     "caller": "i2r_TARGET_CERT",
+     "caller_key": [
+      "src/x509/v3_ac_tgt.rs",
+      825,
+      "i2r_TARGET_CERT"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
+     "file": "src/x509/v3_ac_tgt.rs",
+     "line": 840,
+     "site": "src/x509/v3_ac_tgt.rs:840"
+    },
+    "witnesses": [
+     {
+      "callee": "i2r_ISSUER_SERIAL",
+      "callee_key": [
+       "src/x509/v3_ac_tgt.rs",
+       624,
+       "i2r_ISSUER_SERIAL"
+      ],
+      "caller": "i2r_TARGET_CERT",
+      "caller_key": [
+       "src/x509/v3_ac_tgt.rs",
+       825,
+       "i2r_TARGET_CERT"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": false,
+      "file": "src/x509/v3_ac_tgt.rs",
+      "line": 840,
+      "site": "src/x509/v3_ac_tgt.rs:840"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_ac_tgt.rs",
+    624,
+    "i2r_ISSUER_SERIAL"
+   ],
+   "direct_callers": [
+    {
+     "callee": "i2r_ISSUER_SERIAL",
+     "callee_key": [
+      "src/x509/v3_ac_tgt.rs",
+      624,
+      "i2r_ISSUER_SERIAL"
+     ],
+     "caller": "i2r_TARGET_CERT",
+     "caller_key": [
+      "src/x509/v3_ac_tgt.rs",
+      825,
+      "i2r_TARGET_CERT"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
+     "file": "src/x509/v3_ac_tgt.rs",
+     "line": 840,
+     "site": "src/x509/v3_ac_tgt.rs:840"
+    }
+   ],
+   "dispatcher_bindings": [],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_ac_tgt.rs::i2r_ISSUER_SERIAL::<definition-only>",
+   "registration_kind": "definition-only",
+   "row": null,
+   "row_file": "src/x509/v3_ac_tgt.rs",
+   "row_instances": [],
+   "row_line": 624,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "i2r_OBJECT_DIGEST_INFO",
+   "callback_file": "src/x509/v3_ac_tgt.rs",
+   "callback_line": 688,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "definition_only": true,
+    "witness": {
+     "callee": "i2r_OBJECT_DIGEST_INFO",
+     "callee_key": [
+      "src/x509/v3_ac_tgt.rs",
+      688,
+      "i2r_OBJECT_DIGEST_INFO"
+     ],
+     "caller": "i2r_TARGET_CERT",
+     "caller_key": [
+      "src/x509/v3_ac_tgt.rs",
+      825,
+      "i2r_TARGET_CERT"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
+     "file": "src/x509/v3_ac_tgt.rs",
+     "line": 870,
+     "site": "src/x509/v3_ac_tgt.rs:870"
+    },
+    "witnesses": [
+     {
+      "callee": "i2r_OBJECT_DIGEST_INFO",
+      "callee_key": [
+       "src/x509/v3_ac_tgt.rs",
+       688,
+       "i2r_OBJECT_DIGEST_INFO"
+      ],
+      "caller": "i2r_TARGET_CERT",
+      "caller_key": [
+       "src/x509/v3_ac_tgt.rs",
+       825,
+       "i2r_TARGET_CERT"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": false,
+      "file": "src/x509/v3_ac_tgt.rs",
+      "line": 870,
+      "site": "src/x509/v3_ac_tgt.rs:870"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_ac_tgt.rs",
+    688,
+    "i2r_OBJECT_DIGEST_INFO"
+   ],
+   "direct_callers": [
+    {
+     "callee": "i2r_OBJECT_DIGEST_INFO",
+     "callee_key": [
+      "src/x509/v3_ac_tgt.rs",
+      688,
+      "i2r_OBJECT_DIGEST_INFO"
+     ],
+     "caller": "i2r_TARGET_CERT",
+     "caller_key": [
+      "src/x509/v3_ac_tgt.rs",
+      825,
+      "i2r_TARGET_CERT"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
+     "file": "src/x509/v3_ac_tgt.rs",
+     "line": 870,
+     "site": "src/x509/v3_ac_tgt.rs:870"
+    }
+   ],
+   "dispatcher_bindings": [],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_ac_tgt.rs::i2r_OBJECT_DIGEST_INFO::<definition-only>",
+   "registration_kind": "definition-only",
+   "row": null,
+   "row_file": "src/x509/v3_ac_tgt.rs",
+   "row_instances": [],
+   "row_line": 688,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "i2r_TARGET_CERT",
+   "callback_file": "src/x509/v3_ac_tgt.rs",
+   "callback_line": 825,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "definition_only": true,
+    "witness": {
+     "callee": "i2r_TARGET_CERT",
+     "callee_key": [
+      "src/x509/v3_ac_tgt.rs",
+      825,
+      "i2r_TARGET_CERT"
+     ],
+     "caller": "i2r_TARGET",
+     "caller_key": [
+      "src/x509/v3_ac_tgt.rs",
+      889,
+      "i2r_TARGET"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
+     "file": "src/x509/v3_ac_tgt.rs",
+     "line": 917,
+     "site": "src/x509/v3_ac_tgt.rs:917"
+    },
+    "witnesses": [
+     {
+      "callee": "i2r_TARGET_CERT",
+      "callee_key": [
+       "src/x509/v3_ac_tgt.rs",
+       825,
+       "i2r_TARGET_CERT"
+      ],
+      "caller": "i2r_TARGET",
+      "caller_key": [
+       "src/x509/v3_ac_tgt.rs",
+       889,
+       "i2r_TARGET"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": false,
+      "file": "src/x509/v3_ac_tgt.rs",
+      "line": 917,
+      "site": "src/x509/v3_ac_tgt.rs:917"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_ac_tgt.rs",
+    825,
+    "i2r_TARGET_CERT"
+   ],
+   "direct_callers": [
+    {
+     "callee": "i2r_TARGET_CERT",
+     "callee_key": [
+      "src/x509/v3_ac_tgt.rs",
+      825,
+      "i2r_TARGET_CERT"
+     ],
+     "caller": "i2r_TARGET",
+     "caller_key": [
+      "src/x509/v3_ac_tgt.rs",
+      889,
+      "i2r_TARGET"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
+     "file": "src/x509/v3_ac_tgt.rs",
+     "line": 917,
+     "site": "src/x509/v3_ac_tgt.rs:917"
+    }
+   ],
+   "dispatcher_bindings": [],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGET_CERT::<definition-only>",
+   "registration_kind": "definition-only",
+   "row": null,
+   "row_file": "src/x509/v3_ac_tgt.rs",
+   "row_instances": [],
+   "row_line": 825,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "i2r_TARGET",
+   "callback_file": "src/x509/v3_ac_tgt.rs",
+   "callback_line": 889,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "definition_only": true,
+    "witness": {
+     "callee": "i2r_TARGET",
+     "callee_key": [
+      "src/x509/v3_ac_tgt.rs",
+      889,
+      "i2r_TARGET"
+     ],
+     "caller": "i2r_TARGETS",
+     "caller_key": [
+      "src/x509/v3_ac_tgt.rs",
+      934,
+      "i2r_TARGETS"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
+     "file": "src/x509/v3_ac_tgt.rs",
+     "line": 950,
+     "site": "src/x509/v3_ac_tgt.rs:950"
+    },
+    "witnesses": [
+     {
+      "callee": "i2r_TARGET",
+      "callee_key": [
+       "src/x509/v3_ac_tgt.rs",
+       889,
+       "i2r_TARGET"
+      ],
+      "caller": "i2r_TARGETS",
+      "caller_key": [
+       "src/x509/v3_ac_tgt.rs",
+       934,
+       "i2r_TARGETS"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": false,
+      "file": "src/x509/v3_ac_tgt.rs",
+      "line": 950,
+      "site": "src/x509/v3_ac_tgt.rs:950"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_ac_tgt.rs",
+    889,
+    "i2r_TARGET"
+   ],
+   "direct_callers": [
+    {
+     "callee": "i2r_TARGET",
+     "callee_key": [
+      "src/x509/v3_ac_tgt.rs",
+      889,
+      "i2r_TARGET"
+     ],
+     "caller": "i2r_TARGETS",
+     "caller_key": [
+      "src/x509/v3_ac_tgt.rs",
+      934,
+      "i2r_TARGETS"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
+     "file": "src/x509/v3_ac_tgt.rs",
+     "line": 950,
+     "site": "src/x509/v3_ac_tgt.rs:950"
+    }
+   ],
+   "dispatcher_bindings": [],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGET::<definition-only>",
+   "registration_kind": "definition-only",
+   "row": null,
+   "row_file": "src/x509/v3_ac_tgt.rs",
+   "row_instances": [],
+   "row_line": 889,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "i2r_TARGETS",
+   "callback_file": "src/x509/v3_ac_tgt.rs",
+   "callback_line": 934,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "definition_only": true,
+    "witness": {
+     "callee": "i2r_TARGETS",
+     "callee_key": [
+      "src/x509/v3_ac_tgt.rs",
+      934,
+      "i2r_TARGETS"
+     ],
+     "caller": "i2r_TARGETING_INFORMATION",
+     "caller_key": [
+      "src/x509/v3_ac_tgt.rs",
+      962,
+      "i2r_TARGETING_INFORMATION"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_ac_tgt.rs",
+     "line": 978,
+     "site": "src/x509/v3_ac_tgt.rs:978"
+    },
+    "witnesses": [
+     {
+      "callee": "i2r_TARGETS",
+      "callee_key": [
+       "src/x509/v3_ac_tgt.rs",
+       934,
+       "i2r_TARGETS"
+      ],
+      "caller": "i2r_TARGETING_INFORMATION",
+      "caller_key": [
+       "src/x509/v3_ac_tgt.rs",
+       962,
+       "i2r_TARGETING_INFORMATION"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_ac_tgt.rs",
+      "line": 978,
+      "site": "src/x509/v3_ac_tgt.rs:978"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_ac_tgt.rs",
+    934,
+    "i2r_TARGETS"
+   ],
+   "direct_callers": [
+    {
+     "callee": "i2r_TARGETS",
+     "callee_key": [
+      "src/x509/v3_ac_tgt.rs",
+      934,
+      "i2r_TARGETS"
+     ],
+     "caller": "i2r_TARGETING_INFORMATION",
+     "caller_key": [
+      "src/x509/v3_ac_tgt.rs",
+      962,
+      "i2r_TARGETING_INFORMATION"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_ac_tgt.rs",
+     "line": 978,
+     "site": "src/x509/v3_ac_tgt.rs:978"
+    }
+   ],
+   "dispatcher_bindings": [],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGETS::<definition-only>",
+   "registration_kind": "definition-only",
+   "row": null,
+   "row_file": "src/x509/v3_ac_tgt.rs",
+   "row_instances": [],
+   "row_line": 934,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_TARGETING_INFORMATION",
+   "callback_file": "src/x509/v3_ac_tgt.rs",
+   "callback_line": 962,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_ac_tgt.rs",
+    "may_bound": true,
+    "module": "v3_ac_tgt",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x4ed7b0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_ac_tgt25i2r_TARGETING_INFORMATION"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_ac_tgt.rs",
+    962,
+    "i2r_TARGETING_INFORMATION"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:403 &crate::x509::v3_ac_tgt::ossl_v3_targeting_information",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:403 &crate::x509::v3_ac_tgt::ossl_v3_targeting_information",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_ac_tgt.rs::i2r_TARGETING_INFORMATION::ossl_v3_targeting_information::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_targeting_information",
+   "row_file": "src/x509/v3_ac_tgt.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_ac_tgt.rs",
+     "index": null,
+     "line": 992,
+     "name": "ossl_v3_targeting_information"
+    }
+   ],
+   "row_line": 992,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_IPAddrBlocks",
+   "callback_file": "src/x509/v3_addr.rs",
+   "callback_line": 921,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_addr.rs",
+    "may_bound": true,
+    "module": "v3_addr",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x24e400:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_addr16i2r_IPAddrBlocks"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_addr.rs",
+    921,
+    "i2r_IPAddrBlocks"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:393 &crate::x509::v3_addr::ossl_v3_addr",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:393 &crate::x509::v3_addr::ossl_v3_addr",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_addr.rs::i2r_IPAddrBlocks::ossl_v3_addr::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_addr",
+   "row_file": "src/x509/v3_addr.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_addr.rs",
+     "index": null,
+     "line": 2811,
+     "name": "ossl_v3_addr"
+    }
+   ],
+   "row_line": 2811,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "i2r_NAMING_AUTHORITY",
+   "callback_file": "src/x509/v3_admis.rs",
+   "callback_line": 557,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "definition_only": true,
+    "witness": {
+     "callee": "i2r_NAMING_AUTHORITY",
+     "callee_key": [
+      "src/x509/v3_admis.rs",
+      557,
+      "i2r_NAMING_AUTHORITY"
+     ],
+     "caller": "i2r_ADMISSION_SYNTAX",
+     "caller_key": [
+      "src/x509/v3_admis.rs",
+      640,
+      "i2r_ADMISSION_SYNTAX"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_admis.rs",
+     "line": 695,
+     "site": "src/x509/v3_admis.rs:695"
+    },
+    "witnesses": [
+     {
+      "callee": "i2r_NAMING_AUTHORITY",
+      "callee_key": [
+       "src/x509/v3_admis.rs",
+       557,
+       "i2r_NAMING_AUTHORITY"
+      ],
+      "caller": "i2r_ADMISSION_SYNTAX",
+      "caller_key": [
+       "src/x509/v3_admis.rs",
+       640,
+       "i2r_ADMISSION_SYNTAX"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_admis.rs",
+      "line": 695,
+      "site": "src/x509/v3_admis.rs:695"
+     },
+     {
+      "callee": "i2r_NAMING_AUTHORITY",
+      "callee_key": [
+       "src/x509/v3_admis.rs",
+       557,
+       "i2r_NAMING_AUTHORITY"
+      ],
+      "caller": "i2r_ADMISSION_SYNTAX",
+      "caller_key": [
+       "src/x509/v3_admis.rs",
+       640,
+       "i2r_ADMISSION_SYNTAX"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_admis.rs",
+      "line": 742,
+      "site": "src/x509/v3_admis.rs:742"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_admis.rs",
+    557,
+    "i2r_NAMING_AUTHORITY"
+   ],
+   "direct_callers": [
+    {
+     "callee": "i2r_NAMING_AUTHORITY",
+     "callee_key": [
+      "src/x509/v3_admis.rs",
+      557,
+      "i2r_NAMING_AUTHORITY"
+     ],
+     "caller": "i2r_ADMISSION_SYNTAX",
+     "caller_key": [
+      "src/x509/v3_admis.rs",
+      640,
+      "i2r_ADMISSION_SYNTAX"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_admis.rs",
+     "line": 695,
+     "site": "src/x509/v3_admis.rs:695"
+    },
+    {
+     "callee": "i2r_NAMING_AUTHORITY",
+     "callee_key": [
+      "src/x509/v3_admis.rs",
+      557,
+      "i2r_NAMING_AUTHORITY"
+     ],
+     "caller": "i2r_ADMISSION_SYNTAX",
+     "caller_key": [
+      "src/x509/v3_admis.rs",
+      640,
+      "i2r_ADMISSION_SYNTAX"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_admis.rs",
+     "line": 742,
+     "site": "src/x509/v3_admis.rs:742"
+    }
+   ],
+   "dispatcher_bindings": [],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_admis.rs::i2r_NAMING_AUTHORITY::<definition-only>",
+   "registration_kind": "definition-only",
+   "row": null,
+   "row_file": "src/x509/v3_admis.rs",
+   "row_instances": [],
+   "row_line": 557,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_ADMISSION_SYNTAX",
+   "callback_file": "src/x509/v3_admis.rs",
+   "callback_line": 640,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_admis.rs",
+    "may_bound": true,
+    "module": "v3_admis",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x2f2a60:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_admis20i2r_ADMISSION_SYNTAX"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_admis.rs",
+    640,
+    "i2r_ADMISSION_SYNTAX"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:420 &crate::x509::v3_admis::ossl_v3_ext_admission",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:420 &crate::x509::v3_admis::ossl_v3_ext_admission",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_admis.rs::i2r_ADMISSION_SYNTAX::ossl_v3_ext_admission::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_ext_admission",
+   "row_file": "src/x509/v3_admis.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_admis.rs",
+     "index": null,
+     "line": 1289,
+     "name": "ossl_v3_ext_admission"
+    }
+   ],
+   "row_line": 1289,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_ASIdentifiers",
+   "callback_file": "src/x509/v3_asid.rs",
+   "callback_line": 817,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_asid.rs",
+    "may_bound": true,
+    "module": "v3_asid",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x250660:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_asid17i2r_ASIdentifiers"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_asid.rs",
+    817,
+    "i2r_ASIdentifiers"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:394 &crate::x509::v3_asid::ossl_v3_asid",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:394 &crate::x509::v3_asid::ossl_v3_asid",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_asid.rs::i2r_ASIdentifiers::ossl_v3_asid::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_asid",
+   "row_file": "src/x509/v3_asid.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_asid.rs",
+     "index": null,
+     "line": 1801,
+     "name": "ossl_v3_asid"
+    }
+   ],
+   "row_line": 1801,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "i2r_HASH",
+   "callback_file": "src/x509/v3_attrdesc.rs",
+   "callback_line": 637,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "definition_only": true,
+    "witness": {
+     "callee": "i2r_HASH",
+     "callee_key": [
+      "src/x509/v3_attrdesc.rs",
+      637,
+      "i2r_HASH"
+     ],
+     "caller": "i2r_INFO_SYNTAX_POINTER",
+     "caller_key": [
+      "src/x509/v3_attrdesc.rs",
+      699,
+      "i2r_INFO_SYNTAX_POINTER"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
+     "file": "src/x509/v3_attrdesc.rs",
+     "line": 725,
+     "site": "src/x509/v3_attrdesc.rs:725"
+    },
+    "witnesses": [
+     {
+      "callee": "i2r_HASH",
+      "callee_key": [
+       "src/x509/v3_attrdesc.rs",
+       637,
+       "i2r_HASH"
+      ],
+      "caller": "i2r_INFO_SYNTAX_POINTER",
+      "caller_key": [
+       "src/x509/v3_attrdesc.rs",
+       699,
+       "i2r_INFO_SYNTAX_POINTER"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": false,
+      "file": "src/x509/v3_attrdesc.rs",
+      "line": 725,
+      "site": "src/x509/v3_attrdesc.rs:725"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_attrdesc.rs",
+    637,
+    "i2r_HASH"
+   ],
+   "direct_callers": [
+    {
+     "callee": "i2r_HASH",
+     "callee_key": [
+      "src/x509/v3_attrdesc.rs",
+      637,
+      "i2r_HASH"
+     ],
+     "caller": "i2r_INFO_SYNTAX_POINTER",
+     "caller_key": [
+      "src/x509/v3_attrdesc.rs",
+      699,
+      "i2r_INFO_SYNTAX_POINTER"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
+     "file": "src/x509/v3_attrdesc.rs",
+     "line": 725,
+     "site": "src/x509/v3_attrdesc.rs:725"
+    }
+   ],
+   "dispatcher_bindings": [],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_attrdesc.rs::i2r_HASH::<definition-only>",
+   "registration_kind": "definition-only",
+   "row": null,
+   "row_file": "src/x509/v3_attrdesc.rs",
+   "row_instances": [],
+   "row_line": 637,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "i2r_INFO_SYNTAX_POINTER",
+   "callback_file": "src/x509/v3_attrdesc.rs",
+   "callback_line": 699,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "definition_only": true,
+    "witness": {
+     "callee": "i2r_INFO_SYNTAX_POINTER",
+     "callee_key": [
+      "src/x509/v3_attrdesc.rs",
+      699,
+      "i2r_INFO_SYNTAX_POINTER"
+     ],
+     "caller": "i2r_OSSL_INFO_SYNTAX",
+     "caller_key": [
+      "src/x509/v3_attrdesc.rs",
+      738,
+      "i2r_OSSL_INFO_SYNTAX"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
+     "file": "src/x509/v3_attrdesc.rs",
+     "line": 777,
+     "site": "src/x509/v3_attrdesc.rs:777"
+    },
+    "witnesses": [
+     {
+      "callee": "i2r_INFO_SYNTAX_POINTER",
+      "callee_key": [
+       "src/x509/v3_attrdesc.rs",
+       699,
+       "i2r_INFO_SYNTAX_POINTER"
+      ],
+      "caller": "i2r_OSSL_INFO_SYNTAX",
+      "caller_key": [
+       "src/x509/v3_attrdesc.rs",
+       738,
+       "i2r_OSSL_INFO_SYNTAX"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": false,
+      "file": "src/x509/v3_attrdesc.rs",
+      "line": 777,
+      "site": "src/x509/v3_attrdesc.rs:777"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_attrdesc.rs",
+    699,
+    "i2r_INFO_SYNTAX_POINTER"
+   ],
+   "direct_callers": [
+    {
+     "callee": "i2r_INFO_SYNTAX_POINTER",
+     "callee_key": [
+      "src/x509/v3_attrdesc.rs",
+      699,
+      "i2r_INFO_SYNTAX_POINTER"
+     ],
+     "caller": "i2r_OSSL_INFO_SYNTAX",
+     "caller_key": [
+      "src/x509/v3_attrdesc.rs",
+      738,
+      "i2r_OSSL_INFO_SYNTAX"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
+     "file": "src/x509/v3_attrdesc.rs",
+     "line": 777,
+     "site": "src/x509/v3_attrdesc.rs:777"
+    }
+   ],
+   "dispatcher_bindings": [],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_attrdesc.rs::i2r_INFO_SYNTAX_POINTER::<definition-only>",
+   "registration_kind": "definition-only",
+   "row": null,
+   "row_file": "src/x509/v3_attrdesc.rs",
+   "row_instances": [],
+   "row_line": 699,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "i2r_OSSL_INFO_SYNTAX",
+   "callback_file": "src/x509/v3_attrdesc.rs",
+   "callback_line": 738,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "definition_only": true,
+    "witness": {
+     "callee": "i2r_OSSL_INFO_SYNTAX",
+     "callee_key": [
+      "src/x509/v3_attrdesc.rs",
+      738,
+      "i2r_OSSL_INFO_SYNTAX"
+     ],
+     "caller": "i2r_OSSL_PRIVILEGE_POLICY_ID",
+     "caller_key": [
+      "src/x509/v3_attrdesc.rs",
+      794,
+      "i2r_OSSL_PRIVILEGE_POLICY_ID"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
+     "file": "src/x509/v3_attrdesc.rs",
+     "line": 835,
+     "site": "src/x509/v3_attrdesc.rs:835"
+    },
+    "witnesses": [
+     {
+      "callee": "i2r_OSSL_INFO_SYNTAX",
+      "callee_key": [
+       "src/x509/v3_attrdesc.rs",
+       738,
+       "i2r_OSSL_INFO_SYNTAX"
+      ],
+      "caller": "i2r_OSSL_PRIVILEGE_POLICY_ID",
+      "caller_key": [
+       "src/x509/v3_attrdesc.rs",
+       794,
+       "i2r_OSSL_PRIVILEGE_POLICY_ID"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": false,
+      "file": "src/x509/v3_attrdesc.rs",
+      "line": 835,
+      "site": "src/x509/v3_attrdesc.rs:835"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_attrdesc.rs",
+    738,
+    "i2r_OSSL_INFO_SYNTAX"
+   ],
+   "direct_callers": [
+    {
+     "callee": "i2r_OSSL_INFO_SYNTAX",
+     "callee_key": [
+      "src/x509/v3_attrdesc.rs",
+      738,
+      "i2r_OSSL_INFO_SYNTAX"
+     ],
+     "caller": "i2r_OSSL_PRIVILEGE_POLICY_ID",
+     "caller_key": [
+      "src/x509/v3_attrdesc.rs",
+      794,
+      "i2r_OSSL_PRIVILEGE_POLICY_ID"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": false,
+     "file": "src/x509/v3_attrdesc.rs",
+     "line": 835,
+     "site": "src/x509/v3_attrdesc.rs:835"
+    }
+   ],
+   "dispatcher_bindings": [],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_attrdesc.rs::i2r_OSSL_INFO_SYNTAX::<definition-only>",
+   "registration_kind": "definition-only",
+   "row": null,
+   "row_file": "src/x509/v3_attrdesc.rs",
+   "row_instances": [],
+   "row_line": 738,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "i2r_OSSL_PRIVILEGE_POLICY_ID",
+   "callback_file": "src/x509/v3_attrdesc.rs",
+   "callback_line": 794,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "definition_only": true,
+    "witness": {
+     "callee": "i2r_OSSL_PRIVILEGE_POLICY_ID",
+     "callee_key": [
+      "src/x509/v3_attrdesc.rs",
+      794,
+      "i2r_OSSL_PRIVILEGE_POLICY_ID"
+     ],
+     "caller": "i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
+     "caller_key": [
+      "src/x509/v3_attrdesc.rs",
+      850,
+      "i2r_OSSL_ATTRIBUTE_DESCRIPTOR"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_attrdesc.rs",
+     "line": 939,
+     "site": "src/x509/v3_attrdesc.rs:939"
+    },
+    "witnesses": [
+     {
+      "callee": "i2r_OSSL_PRIVILEGE_POLICY_ID",
+      "callee_key": [
+       "src/x509/v3_attrdesc.rs",
+       794,
+       "i2r_OSSL_PRIVILEGE_POLICY_ID"
+      ],
+      "caller": "i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
+      "caller_key": [
+       "src/x509/v3_attrdesc.rs",
+       850,
+       "i2r_OSSL_ATTRIBUTE_DESCRIPTOR"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_attrdesc.rs",
+      "line": 939,
+      "site": "src/x509/v3_attrdesc.rs:939"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_attrdesc.rs",
+    794,
+    "i2r_OSSL_PRIVILEGE_POLICY_ID"
+   ],
+   "direct_callers": [
+    {
+     "callee": "i2r_OSSL_PRIVILEGE_POLICY_ID",
+     "callee_key": [
+      "src/x509/v3_attrdesc.rs",
+      794,
+      "i2r_OSSL_PRIVILEGE_POLICY_ID"
+     ],
+     "caller": "i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
+     "caller_key": [
+      "src/x509/v3_attrdesc.rs",
+      850,
+      "i2r_OSSL_ATTRIBUTE_DESCRIPTOR"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_attrdesc.rs",
+     "line": 939,
+     "site": "src/x509/v3_attrdesc.rs:939"
+    }
+   ],
+   "dispatcher_bindings": [],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_attrdesc.rs::i2r_OSSL_PRIVILEGE_POLICY_ID::<definition-only>",
+   "registration_kind": "definition-only",
+   "row": null,
+   "row_file": "src/x509/v3_attrdesc.rs",
+   "row_instances": [],
+   "row_line": 794,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
+   "callback_file": "src/x509/v3_attrdesc.rs",
+   "callback_line": 850,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_attrdesc.rs",
+    "may_bound": true,
+    "module": "v3_attrdesc",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x1a1ed0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_attrdesc29i2r_OSSL_ATTRIBUTE_DESCRIPTOR"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_attrdesc.rs",
+    850,
+    "i2r_OSSL_ATTRIBUTE_DESCRIPTOR"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:426 &crate::x509::v3_attrdesc::ossl_v3_attribute_descriptor",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:426 &crate::x509::v3_attrdesc::ossl_v3_attribute_descriptor",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_attrdesc.rs::i2r_OSSL_ATTRIBUTE_DESCRIPTOR::ossl_v3_attribute_descriptor::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_attribute_descriptor",
+   "row_file": "src/x509/v3_attrdesc.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_attrdesc.rs",
+     "index": null,
+     "line": 956,
+     "name": "ossl_v3_attribute_descriptor"
+    }
+   ],
+   "row_line": 956,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "i2r_ATTRIBUTE_MAPPING",
+   "callback_file": "src/x509/v3_attrmap.rs",
+   "callback_line": 576,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "definition_only": true,
+    "witness": {
+     "callee": "i2r_ATTRIBUTE_MAPPING",
+     "callee_key": [
+      "src/x509/v3_attrmap.rs",
+      576,
+      "i2r_ATTRIBUTE_MAPPING"
+     ],
+     "caller": "i2r_ATTRIBUTE_MAPPINGS",
+     "caller_key": [
+      "src/x509/v3_attrmap.rs",
+      653,
+      "i2r_ATTRIBUTE_MAPPINGS"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_attrmap.rs",
+     "line": 671,
+     "site": "src/x509/v3_attrmap.rs:671"
+    },
+    "witnesses": [
+     {
+      "callee": "i2r_ATTRIBUTE_MAPPING",
+      "callee_key": [
+       "src/x509/v3_attrmap.rs",
+       576,
+       "i2r_ATTRIBUTE_MAPPING"
+      ],
+      "caller": "i2r_ATTRIBUTE_MAPPINGS",
+      "caller_key": [
+       "src/x509/v3_attrmap.rs",
+       653,
+       "i2r_ATTRIBUTE_MAPPINGS"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_attrmap.rs",
+      "line": 671,
+      "site": "src/x509/v3_attrmap.rs:671"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_attrmap.rs",
+    576,
+    "i2r_ATTRIBUTE_MAPPING"
+   ],
+   "direct_callers": [
+    {
+     "callee": "i2r_ATTRIBUTE_MAPPING",
+     "callee_key": [
+      "src/x509/v3_attrmap.rs",
+      576,
+      "i2r_ATTRIBUTE_MAPPING"
+     ],
+     "caller": "i2r_ATTRIBUTE_MAPPINGS",
+     "caller_key": [
+      "src/x509/v3_attrmap.rs",
+      653,
+      "i2r_ATTRIBUTE_MAPPINGS"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_attrmap.rs",
+     "line": 671,
+     "site": "src/x509/v3_attrmap.rs:671"
+    }
+   ],
+   "dispatcher_bindings": [],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_attrmap.rs::i2r_ATTRIBUTE_MAPPING::<definition-only>",
+   "registration_kind": "definition-only",
+   "row": null,
+   "row_file": "src/x509/v3_attrmap.rs",
+   "row_instances": [],
+   "row_line": 576,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_ATTRIBUTE_MAPPINGS",
+   "callback_file": "src/x509/v3_attrmap.rs",
+   "callback_line": 653,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_attrmap.rs",
+    "may_bound": true,
+    "module": "v3_attrmap",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x24c930:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_attrmap22i2r_ATTRIBUTE_MAPPINGS"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_attrmap.rs",
+    653,
+    "i2r_ATTRIBUTE_MAPPINGS"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:438 &crate::x509::v3_attrmap::ossl_v3_attribute_mappings",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:438 &crate::x509::v3_attrmap::ossl_v3_attribute_mappings",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_attrmap.rs::i2r_ATTRIBUTE_MAPPINGS::ossl_v3_attribute_mappings::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_attribute_mappings",
+   "row_file": "src/x509/v3_attrmap.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_attrmap.rs",
+     "index": null,
+     "line": 691,
+     "name": "ossl_v3_attribute_mappings"
+    }
+   ],
+   "row_line": 691,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "i2r_ISSUER_SERIAL",
+   "callback_file": "src/x509/v3_authattid.rs",
+   "callback_line": 164,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "definition_only": true,
+    "witness": {
+     "callee": "i2r_ISSUER_SERIAL",
+     "callee_key": [
+      "src/x509/v3_authattid.rs",
+      164,
+      "i2r_ISSUER_SERIAL"
+     ],
+     "caller": "i2r_auth_attr_id",
+     "caller_key": [
+      "src/x509/v3_authattid.rs",
+      229,
+      "i2r_auth_attr_id"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_authattid.rs",
+     "line": 247,
+     "site": "src/x509/v3_authattid.rs:247"
+    },
+    "witnesses": [
+     {
+      "callee": "i2r_ISSUER_SERIAL",
+      "callee_key": [
+       "src/x509/v3_authattid.rs",
+       164,
+       "i2r_ISSUER_SERIAL"
+      ],
+      "caller": "i2r_auth_attr_id",
+      "caller_key": [
+       "src/x509/v3_authattid.rs",
+       229,
+       "i2r_auth_attr_id"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_authattid.rs",
+      "line": 247,
+      "site": "src/x509/v3_authattid.rs:247"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_authattid.rs",
+    164,
+    "i2r_ISSUER_SERIAL"
+   ],
+   "direct_callers": [
+    {
+     "callee": "i2r_ISSUER_SERIAL",
+     "callee_key": [
+      "src/x509/v3_authattid.rs",
+      164,
+      "i2r_ISSUER_SERIAL"
+     ],
+     "caller": "i2r_auth_attr_id",
+     "caller_key": [
+      "src/x509/v3_authattid.rs",
+      229,
+      "i2r_auth_attr_id"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_authattid.rs",
+     "line": 247,
+     "site": "src/x509/v3_authattid.rs:247"
+    }
+   ],
+   "dispatcher_bindings": [],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_authattid.rs::i2r_ISSUER_SERIAL::<definition-only>",
+   "registration_kind": "definition-only",
+   "row": null,
+   "row_file": "src/x509/v3_authattid.rs",
+   "row_instances": [],
+   "row_line": 164,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_auth_attr_id",
+   "callback_file": "src/x509/v3_authattid.rs",
+   "callback_line": 229,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_authattid.rs",
+    "may_bound": true,
+    "module": "v3_authattid",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x4ec810:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50912v3_authattid16i2r_auth_attr_id"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_authattid.rs",
+    229,
+    "i2r_auth_attr_id"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:421 &crate::x509::v3_authattid::ossl_v3_authority_attribute_identifier",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:421 &crate::x509::v3_authattid::ossl_v3_authority_attribute_identifier",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_authattid.rs::i2r_auth_attr_id::ossl_v3_authority_attribute_identifier::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_authority_attribute_identifier",
+   "row_file": "src/x509/v3_authattid.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_authattid.rs",
+     "index": null,
+     "line": 265,
+     "name": "ossl_v3_authority_attribute_identifier"
+    }
+   ],
+   "row_line": 265,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_certpol",
+   "callback_file": "src/x509/v3_cpols.rs",
+   "callback_line": 1380,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_cpols.rs",
+    "may_bound": true,
+    "module": "v3_cpols",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x3f2a20:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_cpols11i2r_certpol"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_cpols.rs",
+    1380,
+    "i2r_certpol"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:383 &crate::x509::v3_cpols::ossl_v3_cpols",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:383 &crate::x509::v3_cpols::ossl_v3_cpols",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_cpols.rs",
+     "id": "V1:src/x509/v3_cpols.rs:1366:UNSAFE_FN_DEF",
+     "line": 1366,
+     "stable_id": "src/x509/v3_cpols.rs::UNSAFE_FN_DEF::i2r_certpol",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_cpols.rs::i2r_certpol::ossl_v3_cpols::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_cpols",
+   "row_file": "src/x509/v3_cpols.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_cpols.rs",
+     "index": null,
+     "line": 1602,
+     "name": "ossl_v3_cpols"
+    }
+   ],
+   "row_line": 1602,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_crldp",
+   "callback_file": "src/x509/v3_crld.rs",
+   "callback_line": 1638,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_crld.rs",
+    "may_bound": true,
+    "module": "v3_crld",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x1a4010:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9i2r_crldp"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_crld.rs",
+    1638,
+    "i2r_crldp"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:385 &crate::x509::v3_crld::ossl_v3_crld",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:385 &crate::x509::v3_crld::ossl_v3_crld",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_crld.rs::i2r_crldp::ossl_v3_crld::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_crld",
+   "row_file": "src/x509/v3_crld.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_crld.rs",
+     "index": null,
+     "line": 2081,
+     "name": "ossl_v3_crld"
+    }
+   ],
+   "row_line": 2081,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_crldp",
+   "callback_file": "src/x509/v3_crld.rs",
+   "callback_line": 1638,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_crld.rs",
+    "may_bound": true,
+    "module": "v3_crld",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x1a4010:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9i2r_crldp"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_crld.rs",
+    1638,
+    "i2r_crldp"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:413 &crate::x509::v3_crld::ossl_v3_freshest_crl",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:413 &crate::x509::v3_crld::ossl_v3_freshest_crl",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_crld.rs::i2r_crldp::ossl_v3_freshest_crl::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_freshest_crl",
+   "row_file": "src/x509/v3_crld.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_crld.rs",
+     "index": null,
+     "line": 2102,
+     "name": "ossl_v3_freshest_crl"
+    }
+   ],
+   "row_line": 2102,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_idp",
+   "callback_file": "src/x509/v3_crld.rs",
+   "callback_line": 1471,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_crld.rs",
+    "may_bound": true,
+    "module": "v3_crld",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x1a35e0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld7i2r_idp"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_crld.rs",
+    1471,
+    "i2r_idp"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:411 &crate::x509::v3_crld::ossl_v3_idp",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:411 &crate::x509::v3_crld::ossl_v3_idp",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_crld.rs::i2r_idp::ossl_v3_idp::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_idp",
+   "row_file": "src/x509/v3_crld.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_crld.rs",
+     "index": null,
+     "line": 2123,
+     "name": "ossl_v3_idp"
+    }
+   ],
+   "row_line": 2123,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "dispatcher-row-binding",
+   "callback": "i2r_crl_invdate",
+   "callback_file": "src/x509/v3_crld.rs",
+   "callback_line": 1685,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "dispatcher-row-binding",
+   "classification_evidence": {
+    "bindings": [
+     {
+      "dispatcher": "X509V3_EXT_print",
+      "dispatcher_reachable": true,
+      "evidence": "src/x509/v3_lib.rs:389 &crate::x509::v3_crld::ossl_v3_crl_invdate",
+      "kind": "method-table",
+      "method_table": "STANDARD_EXTS"
+     }
+    ],
+    "callback_symbol_in_reachable_set": false,
+    "note": "table binding only; no callback symbol was found in the closure reachable set"
+   },
+   "definition_key": [
+    "src/x509/v3_crld.rs",
+    1685,
+    "i2r_crl_invdate"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:389 &crate::x509::v3_crld::ossl_v3_crl_invdate",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:389 &crate::x509::v3_crld::ossl_v3_crl_invdate",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_crld.rs::i2r_crl_invdate::ossl_v3_crl_invdate::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_crl_invdate",
+   "row_file": "src/x509/v3_crld.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_crld.rs",
+     "index": null,
+     "line": 2144,
+     "name": "ossl_v3_crl_invdate"
+    }
+   ],
+   "row_line": 2144,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_object",
+   "callback_file": "src/x509/v3_crld.rs",
+   "callback_line": 1710,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_crld.rs",
+    "may_bound": true,
+    "module": "v3_crld",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x1a29a0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld10i2r_object"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_crld.rs",
+    1710,
+    "i2r_object"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:405 &crate::x509::v3_crld::ossl_v3_crl_hold",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:405 &crate::x509::v3_crld::ossl_v3_crl_hold",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_crld.rs::i2r_object::ossl_v3_crl_hold::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_crl_hold",
+   "row_file": "src/x509/v3_crld.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_crld.rs",
+     "index": null,
+     "line": 2165,
+     "name": "ossl_v3_crl_hold"
+    }
+   ],
+   "row_line": 2165,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_aaidp",
+   "callback_file": "src/x509/v3_crld.rs",
+   "callback_line": 2003,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_crld.rs",
+    "may_bound": true,
+    "module": "v3_crld",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x1a3e10:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_crld9i2r_aaidp"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_crld.rs",
+    2003,
+    "i2r_aaidp"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:433 &crate::x509::v3_crld::ossl_v3_aa_issuing_dist_point",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:433 &crate::x509::v3_crld::ossl_v3_aa_issuing_dist_point",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_crld.rs::i2r_aaidp::ossl_v3_aa_issuing_dist_point::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_aa_issuing_dist_point",
+   "row_file": "src/x509/v3_crld.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_crld.rs",
+     "index": null,
+     "line": 2186,
+     "name": "ossl_v3_aa_issuing_dist_point"
+    }
+   ],
+   "row_line": 2186,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_GROUP_AC",
+   "callback_file": "src/x509/v3_group_ac.rs",
+   "callback_line": 44,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_group_ac.rs",
+    "may_bound": true,
+    "module": "v3_group_ac",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x332ed0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_group_ac12i2r_GROUP_AC.llvm.<hash>"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_group_ac.rs",
+    44,
+    "i2r_GROUP_AC"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:436 &crate::x509::v3_group_ac::ossl_v3_group_ac",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:436 &crate::x509::v3_group_ac::ossl_v3_group_ac",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_group_ac.rs",
+     "id": "V1:src/x509/v3_group_ac.rs:33:UNSAFE_FN_DEF",
+     "line": 33,
+     "stable_id": "src/x509/v3_group_ac.rs::UNSAFE_FN_DEF::i2r_GROUP_AC",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_group_ac.rs::i2r_GROUP_AC::ossl_v3_group_ac::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_group_ac",
+   "row_file": "src/x509/v3_group_ac.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_group_ac.rs",
+     "index": null,
+     "line": 110,
+     "name": "ossl_v3_group_ac"
+    }
+   ],
+   "row_line": 110,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_INDIRECT_ISSUER",
+   "callback_file": "src/x509/v3_ind_iss.rs",
+   "callback_line": 44,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_ind_iss.rs",
+    "may_bound": true,
+    "module": "v3_ind_iss",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x2f1fe0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50910v3_ind_iss19i2r_INDIRECT_ISSUER.llvm.<hash>"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_ind_iss.rs",
+    44,
+    "i2r_INDIRECT_ISSUER"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:431 &crate::x509::v3_ind_iss::ossl_v3_indirect_issuer",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:431 &crate::x509::v3_ind_iss::ossl_v3_indirect_issuer",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_ind_iss.rs",
+     "id": "V1:src/x509/v3_ind_iss.rs:33:UNSAFE_FN_DEF",
+     "line": 33,
+     "stable_id": "src/x509/v3_ind_iss.rs::UNSAFE_FN_DEF::i2r_INDIRECT_ISSUER",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_ind_iss.rs::i2r_INDIRECT_ISSUER::ossl_v3_indirect_issuer::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_indirect_issuer",
+   "row_file": "src/x509/v3_ind_iss.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_ind_iss.rs",
+     "index": null,
+     "line": 110,
+     "name": "ossl_v3_indirect_issuer"
+    }
+   ],
+   "row_line": 110,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_ISSUED_ON_BEHALF_OF",
+   "callback_file": "src/x509/v3_iobo.rs",
+   "callback_line": 55,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_iobo.rs",
+    "may_bound": true,
+    "module": "v3_iobo",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x356980:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5097v3_iobo23i2r_ISSUED_ON_BEHALF_OF"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_iobo.rs",
+    55,
+    "i2r_ISSUED_ON_BEHALF_OF"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:434 &crate::x509::v3_iobo::ossl_v3_issued_on_behalf_of",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:434 &crate::x509::v3_iobo::ossl_v3_issued_on_behalf_of",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_iobo.rs",
+     "id": "V1:src/x509/v3_iobo.rs:42:UNSAFE_FN_DEF",
+     "line": 42,
+     "stable_id": "src/x509/v3_iobo.rs::UNSAFE_FN_DEF::i2r_ISSUED_ON_BEHALF_OF",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_iobo.rs::i2r_ISSUED_ON_BEHALF_OF::ossl_v3_issued_on_behalf_of::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_issued_on_behalf_of",
+   "row_file": "src/x509/v3_iobo.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_iobo.rs",
+     "index": null,
+     "line": 77,
+     "name": "ossl_v3_issued_on_behalf_of"
+    }
+   ],
+   "row_line": 77,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_issuer_sign_tool",
+   "callback_file": "src/x509/v3_ist.rs",
+   "callback_line": 380,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_ist.rs",
+    "may_bound": true,
+    "module": "v3_ist",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x1a2440:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_ist20i2r_issuer_sign_tool"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_ist.rs",
+    380,
+    "i2r_issuer_sign_tool"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:418 &crate::x509::v3_ist::ossl_v3_issuer_sign_tool",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:418 &crate::x509::v3_ist::ossl_v3_issuer_sign_tool",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_ist.rs",
+     "id": "V1:src/x509/v3_ist.rs:331:UNSAFE_FN_DEF",
+     "line": 331,
+     "stable_id": "src/x509/v3_ist.rs::UNSAFE_FN_DEF::i2r_issuer_sign_tool",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_ist.rs::i2r_issuer_sign_tool::ossl_v3_issuer_sign_tool::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_issuer_sign_tool",
+   "row_file": "src/x509/v3_ist.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_ist.rs",
+     "index": null,
+     "line": 464,
+     "name": "ossl_v3_issuer_sign_tool"
+    }
+   ],
+   "row_line": 464,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_NAME_CONSTRAINTS",
+   "callback_file": "src/x509/v3_ncons.rs",
+   "callback_line": 588,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_ncons.rs",
+    "may_bound": true,
+    "module": "v3_ncons",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x2529b0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20i2r_NAME_CONSTRAINTS"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_ncons.rs",
+    588,
+    "i2r_NAME_CONSTRAINTS"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:407 &crate::x509::v3_ncons::ossl_v3_name_constraints",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:407 &crate::x509::v3_ncons::ossl_v3_name_constraints",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_name_constraints::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_name_constraints",
+   "row_file": "src/x509/v3_ncons.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_ncons.rs",
+     "index": null,
+     "line": 1512,
+     "name": "ossl_v3_name_constraints"
+    }
+   ],
+   "row_line": 1512,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_NAME_CONSTRAINTS",
+   "callback_file": "src/x509/v3_ncons.rs",
+   "callback_line": 588,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_ncons.rs",
+    "may_bound": true,
+    "module": "v3_ncons",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x2529b0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20i2r_NAME_CONSTRAINTS"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_ncons.rs",
+    588,
+    "i2r_NAME_CONSTRAINTS"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:439 &crate::x509::v3_ncons::ossl_v3_holder_name_constraints",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:439 &crate::x509::v3_ncons::ossl_v3_holder_name_constraints",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_holder_name_constraints::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_holder_name_constraints",
+   "row_file": "src/x509/v3_ncons.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_ncons.rs",
+     "index": null,
+     "line": 1532,
+     "name": "ossl_v3_holder_name_constraints"
+    }
+   ],
+   "row_line": 1532,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_NAME_CONSTRAINTS",
+   "callback_file": "src/x509/v3_ncons.rs",
+   "callback_line": 588,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_ncons.rs",
+    "may_bound": true,
+    "module": "v3_ncons",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x2529b0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_ncons20i2r_NAME_CONSTRAINTS"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_ncons.rs",
+    588,
+    "i2r_NAME_CONSTRAINTS"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:424 &crate::x509::v3_ncons::ossl_v3_delegated_name_constraints",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:424 &crate::x509::v3_ncons::ossl_v3_delegated_name_constraints",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS::ossl_v3_delegated_name_constraints::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_delegated_name_constraints",
+   "row_file": "src/x509/v3_ncons.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_ncons.rs",
+     "index": null,
+     "line": 1552,
+     "name": "ossl_v3_delegated_name_constraints"
+    }
+   ],
+   "row_line": 1552,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_NO_ASSERTION",
+   "callback_file": "src/x509/v3_no_ass.rs",
+   "callback_line": 47,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_no_ass.rs",
+    "may_bound": true,
+    "module": "v3_no_ass",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x3569e0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_no_ass16i2r_NO_ASSERTION.llvm.<hash>"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_no_ass.rs",
+    47,
+    "i2r_NO_ASSERTION"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:432 &crate::x509::v3_no_ass::ossl_v3_no_assertion",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:432 &crate::x509::v3_no_ass::ossl_v3_no_assertion",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_no_ass.rs",
+     "id": "V1:src/x509/v3_no_ass.rs:36:UNSAFE_FN_DEF",
+     "line": 36,
+     "stable_id": "src/x509/v3_no_ass.rs::UNSAFE_FN_DEF::i2r_NO_ASSERTION",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_no_ass.rs::i2r_NO_ASSERTION::ossl_v3_no_assertion::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_no_assertion",
+   "row_file": "src/x509/v3_no_ass.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_no_ass.rs",
+     "index": null,
+     "line": 123,
+     "name": "ossl_v3_no_assertion"
+    }
+   ],
+   "row_line": 123,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_NO_REV_AVAIL",
+   "callback_file": "src/x509/v3_no_rev_avail.rs",
+   "callback_line": 44,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_no_rev_avail.rs",
+    "may_bound": true,
+    "module": "v3_no_rev_avail",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x24cb80:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50915v3_no_rev_avail16i2r_NO_REV_AVAIL.llvm.<hash>"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_no_rev_avail.rs",
+    44,
+    "i2r_NO_REV_AVAIL"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:404 &crate::x509::v3_no_rev_avail::ossl_v3_no_rev_avail",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:404 &crate::x509::v3_no_rev_avail::ossl_v3_no_rev_avail",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_no_rev_avail.rs",
+     "id": "V1:src/x509/v3_no_rev_avail.rs:33:UNSAFE_FN_DEF",
+     "line": 33,
+     "stable_id": "src/x509/v3_no_rev_avail.rs::UNSAFE_FN_DEF::i2r_NO_REV_AVAIL",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_no_rev_avail.rs::i2r_NO_REV_AVAIL::ossl_v3_no_rev_avail::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_no_rev_avail",
+   "row_file": "src/x509/v3_no_rev_avail.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_no_rev_avail.rs",
+     "index": null,
+     "line": 110,
+     "name": "ossl_v3_no_rev_avail"
+    }
+   ],
+   "row_line": 110,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_pci",
+   "callback_file": "src/x509/v3_pci.rs",
+   "callback_line": 581,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_pci.rs",
+    "may_bound": true,
+    "module": "v3_pci",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x408a90:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_pci7i2r_pci"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_pci.rs",
+    581,
+    "i2r_pci"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:406 &crate::x509::v3_pci::ossl_v3_pci",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:406 &crate::x509::v3_pci::ossl_v3_pci",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_pci.rs::i2r_pci::ossl_v3_pci::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_pci",
+   "row_file": "src/x509/v3_pci.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_pci.rs",
+     "index": null,
+     "line": 781,
+     "name": "ossl_v3_pci"
+    }
+   ],
+   "row_line": 781,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_PKEY_USAGE_PERIOD",
+   "callback_file": "src/x509/v3_pku.rs",
+   "callback_line": 178,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_pku.rs",
+    "may_bound": true,
+    "module": "v3_pku",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x38ed40:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_pku21i2r_PKEY_USAGE_PERIOD"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_pku.rs",
+    178,
+    "i2r_PKEY_USAGE_PERIOD"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:378 &crate::x509::v3_pku::ossl_v3_pkey_usage_period",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:378 &crate::x509::v3_pku::ossl_v3_pkey_usage_period",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_pku.rs",
+     "id": "V1:src/x509/v3_pku.rs:164:UNSAFE_FN_DEF",
+     "line": 164,
+     "stable_id": "src/x509/v3_pku.rs::UNSAFE_FN_DEF::i2r_PKEY_USAGE_PERIOD",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_pku.rs::i2r_PKEY_USAGE_PERIOD::ossl_v3_pkey_usage_period::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_pkey_usage_period",
+   "row_file": "src/x509/v3_pku.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_pku.rs",
+     "index": null,
+     "line": 209,
+     "name": "ossl_v3_pkey_usage_period"
+    }
+   ],
+   "row_line": 209,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "unresolved",
+   "callback": "i2r",
+   "callback_file": "src/x509/v3_prn.rs",
+   "callback_line": 832,
+   "classification": "UNRESOLVED",
+   "classification_basis": "unresolved",
+   "classification_evidence": {
+    "direct_calls": [],
+    "file_reachable": true,
+    "method_table_binding": false,
+    "reachable_functions_basis": "absent-from-reachable-functions",
+    "reachable_row_references": [
+     {
+      "file": "src/ct/ct_x509v3.rs",
+      "file_reachable": true,
+      "line": 252
+     },
+     {
+      "file": "src/ct/ct_x509v3.rs",
+      "file_reachable": true,
+      "line": 269
+     },
+     {
+      "file": "src/ct/ct_x509v3.rs",
+      "file_reachable": true,
+      "line": 286
+     },
+     {
+      "file": "src/ocsp/v3_ocsp.rs",
+      "file_reachable": true,
+      "line": 467
+     }
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_prn.rs",
+    832,
+    "i2r"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "none-found",
+   "dispatcher_bindings": [],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_prn.rs::i2r::fn:general_name_row::i2r",
+   "registration_kind": "slot-registration",
+   "row": "fn:general_name_row",
+   "row_file": "src/x509/v3_prn.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_prn.rs",
+     "line": 832,
+     "name": "fn:general_name_row"
+    }
+   ],
+   "row_line": 832,
+   "slot": "i2r",
+   "source_defined": false,
+   "test_only": true,
+   "unsafe_fn": false
+  },
+  {
+   "assumption": "",
+   "basis": "edge-witness",
+   "callback": "i2r_OSSL_ROLE_SPEC_CERT_ID",
+   "callback_file": "src/x509/v3_rolespec.rs",
+   "callback_line": 297,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "edge-witness",
+   "classification_evidence": {
+    "definition_only": true,
+    "witness": {
+     "callee": "i2r_OSSL_ROLE_SPEC_CERT_ID",
+     "callee_key": [
+      "src/x509/v3_rolespec.rs",
+      297,
+      "i2r_OSSL_ROLE_SPEC_CERT_ID"
+     ],
+     "caller": "i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX",
+     "caller_key": [
+      "src/x509/v3_rolespec.rs",
+      392,
+      "i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_rolespec.rs",
+     "line": 425,
+     "site": "src/x509/v3_rolespec.rs:425"
+    },
+    "witnesses": [
+     {
+      "callee": "i2r_OSSL_ROLE_SPEC_CERT_ID",
+      "callee_key": [
+       "src/x509/v3_rolespec.rs",
+       297,
+       "i2r_OSSL_ROLE_SPEC_CERT_ID"
+      ],
+      "caller": "i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX",
+      "caller_key": [
+       "src/x509/v3_rolespec.rs",
+       392,
+       "i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX"
+      ],
+      "caller_reachable": true,
+      "caller_reachable_call_bound": true,
+      "caller_reachable_closure_name": true,
+      "file": "src/x509/v3_rolespec.rs",
+      "line": 425,
+      "site": "src/x509/v3_rolespec.rs:425"
+     }
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_rolespec.rs",
+    297,
+    "i2r_OSSL_ROLE_SPEC_CERT_ID"
+   ],
+   "direct_callers": [
+    {
+     "callee": "i2r_OSSL_ROLE_SPEC_CERT_ID",
+     "callee_key": [
+      "src/x509/v3_rolespec.rs",
+      297,
+      "i2r_OSSL_ROLE_SPEC_CERT_ID"
+     ],
+     "caller": "i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX",
+     "caller_key": [
+      "src/x509/v3_rolespec.rs",
+      392,
+      "i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX"
+     ],
+     "caller_reachable": true,
+     "caller_reachable_call_bound": true,
+     "caller_reachable_closure_name": true,
+     "file": "src/x509/v3_rolespec.rs",
+     "line": 425,
+     "site": "src/x509/v3_rolespec.rs:425"
+    }
+   ],
+   "dispatcher_bindings": [],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_rolespec.rs::i2r_OSSL_ROLE_SPEC_CERT_ID::<definition-only>",
+   "registration_kind": "definition-only",
+   "row": null,
+   "row_file": "src/x509/v3_rolespec.rs",
+   "row_instances": [],
+   "row_line": 297,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX",
+   "callback_file": "src/x509/v3_rolespec.rs",
+   "callback_line": 392,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_rolespec.rs",
+    "may_bound": true,
+    "module": "v3_rolespec",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x47c980:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_rolespec33i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_rolespec.rs",
+    392,
+    "i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:422 &crate::x509::v3_rolespec::ossl_v3_role_spec_cert_identifier",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:422 &crate::x509::v3_rolespec::ossl_v3_role_spec_cert_identifier",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": false,
+   "inventory_rows": [],
+   "override": false,
+   "registration_id": "src/x509/v3_rolespec.rs::i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX::ossl_v3_role_spec_cert_identifier::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_role_spec_cert_identifier",
+   "row_file": "src/x509/v3_rolespec.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_rolespec.rs",
+     "index": null,
+     "line": 443,
+     "name": "ossl_v3_role_spec_cert_identifier"
+    }
+   ],
+   "row_line": 443,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_ATTRIBUTES_SYNTAX",
+   "callback_file": "src/x509/v3_sda.rs",
+   "callback_line": 154,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_sda.rs",
+    "may_bound": true,
+    "module": "v3_sda",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x24d800:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5096v3_sda21i2r_ATTRIBUTES_SYNTAX"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_sda.rs",
+    154,
+    "i2r_ATTRIBUTES_SYNTAX"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:410 &crate::x509::v3_sda::ossl_v3_subj_dir_attrs",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:410 &crate::x509::v3_sda::ossl_v3_subj_dir_attrs",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:440 &crate::x509::v3_sda::ossl_v3_associated_info",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:440 &crate::x509::v3_sda::ossl_v3_associated_info",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_sda.rs",
+     "id": "V1:src/x509/v3_sda.rs:140:UNSAFE_FN_DEF",
+     "line": 140,
+     "stable_id": "src/x509/v3_sda.rs::UNSAFE_FN_DEF::i2r_ATTRIBUTES_SYNTAX",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_sda.rs::i2r_ATTRIBUTES_SYNTAX::fn:attributes_syntax_row::i2r",
+   "registration_kind": "slot-registration",
+   "row": "fn:attributes_syntax_row",
+   "row_file": "src/x509/v3_sda.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_sda.rs",
+     "line": 259,
+     "name": "ossl_v3_subj_dir_attrs"
+    },
+    {
+     "file": "src/x509/v3_sda.rs",
+     "line": 263,
+     "name": "ossl_v3_associated_info"
+    }
+   ],
+   "row_line": 240,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_SINGLE_USE",
+   "callback_file": "src/x509/v3_single_use.rs",
+   "callback_line": 45,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_single_use.rs",
+    "may_bound": true,
+    "module": "v3_single_use",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x408380:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_single_use14i2r_SINGLE_USE.llvm.<hash>"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_single_use.rs",
+    45,
+    "i2r_SINGLE_USE"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:435 &crate::x509::v3_single_use::ossl_v3_single_use",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:435 &crate::x509::v3_single_use::ossl_v3_single_use",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_single_use.rs",
+     "id": "V1:src/x509/v3_single_use.rs:34:UNSAFE_FN_DEF",
+     "line": 34,
+     "stable_id": "src/x509/v3_single_use.rs::UNSAFE_FN_DEF::i2r_SINGLE_USE",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_single_use.rs::i2r_SINGLE_USE::ossl_v3_single_use::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_single_use",
+   "row_file": "src/x509/v3_single_use.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_single_use.rs",
+     "index": null,
+     "line": 111,
+     "name": "ossl_v3_single_use"
+    }
+   ],
+   "row_line": 111,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_SOA_IDENTIFIER",
+   "callback_file": "src/x509/v3_soa_id.rs",
+   "callback_line": 44,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_soa_id.rs",
+    "may_bound": true,
+    "module": "v3_soa_id",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x2915f0:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5099v3_soa_id18i2r_SOA_IDENTIFIER.llvm.<hash>"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_soa_id.rs",
+    44,
+    "i2r_SOA_IDENTIFIER"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:428 &crate::x509::v3_soa_id::ossl_v3_soa_identifier",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:428 &crate::x509::v3_soa_id::ossl_v3_soa_identifier",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_soa_id.rs",
+     "id": "V1:src/x509/v3_soa_id.rs:33:UNSAFE_FN_DEF",
+     "line": 33,
+     "stable_id": "src/x509/v3_soa_id.rs::UNSAFE_FN_DEF::i2r_SOA_IDENTIFIER",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_soa_id.rs::i2r_SOA_IDENTIFIER::ossl_v3_soa_identifier::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_soa_identifier",
+   "row_file": "src/x509/v3_soa_id.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_soa_id.rs",
+     "index": null,
+     "line": 110,
+     "name": "ossl_v3_soa_identifier"
+    }
+   ],
+   "row_line": 110,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "sxnet_i2r",
+   "callback_file": "src/x509/v3_sxnet.rs",
+   "callback_line": 346,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_sxnet.rs",
+    "may_bound": true,
+    "module": "v3_sxnet",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x563f40:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x5098v3_sxnet9sxnet_i2r"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_sxnet.rs",
+    346,
+    "sxnet_i2r"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:390 &crate::x509::v3_sxnet::ossl_v3_sxnet",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:390 &crate::x509::v3_sxnet::ossl_v3_sxnet",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_sxnet.rs",
+     "id": "V1:src/x509/v3_sxnet.rs:332:UNSAFE_FN_DEF",
+     "line": 332,
+     "stable_id": "src/x509/v3_sxnet.rs::UNSAFE_FN_DEF::sxnet_i2r",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_sxnet.rs::sxnet_i2r::ossl_v3_sxnet::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_sxnet",
+   "row_file": "src/x509/v3_sxnet.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_sxnet.rs",
+     "index": null,
+     "line": 739,
+     "name": "ossl_v3_sxnet"
+    }
+   ],
+   "row_line": 739,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_OSSL_TIME_SPEC",
+   "callback_file": "src/x509/v3_timespec.rs",
+   "callback_line": 2106,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_timespec.rs",
+    "may_bound": true,
+    "module": "v3_timespec",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x353580:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50911v3_timespec18i2r_OSSL_TIME_SPEC"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_timespec.rs",
+    2106,
+    "i2r_OSSL_TIME_SPEC"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:425 &crate::x509::v3_timespec::ossl_v3_time_specification",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:425 &crate::x509::v3_timespec::ossl_v3_time_specification",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_timespec.rs",
+     "id": "V1:src/x509/v3_timespec.rs:2047:UNSAFE_FN_DEF",
+     "line": 2047,
+     "stable_id": "src/x509/v3_timespec.rs::UNSAFE_FN_DEF::i2r_OSSL_TIME_SPEC",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_timespec.rs::i2r_OSSL_TIME_SPEC::ossl_v3_time_specification::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_time_specification",
+   "row_file": "src/x509/v3_timespec.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_timespec.rs",
+     "index": null,
+     "line": 2153,
+     "name": "ossl_v3_time_specification"
+    }
+   ],
+   "row_line": 2153,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  },
+  {
+   "assumption": "",
+   "basis": "module-name-match",
+   "callback": "i2r_USER_NOTICE_SYNTAX",
+   "callback_file": "src/x509/v3_usernotice.rs",
+   "callback_line": 300,
+   "classification": "REACHABLE_BOUND",
+   "classification_basis": "module-name-match",
+   "classification_evidence": {
+    "file": "src/x509/v3_usernotice.rs",
+    "may_bound": true,
+    "module": "v3_usernotice",
+    "proof": false,
+    "symbols": [
+     "libcrypto.so.3:0x222b10:_RNvNtNtCscx02WjRFd5b_10openssl_rs4x50913v3_usernotice22i2r_USER_NOTICE_SYNTAX"
+    ]
+   },
+   "definition_key": [
+    "src/x509/v3_usernotice.rs",
+    300,
+    "i2r_USER_NOTICE_SYNTAX"
+   ],
+   "direct_callers": [],
+   "dispatcher_binding_status": "bound",
+   "dispatcher_bindings": [
+    {
+     "dispatcher": "X509V3_EXT_print",
+     "dispatcher_reachable": true,
+     "evidence": "src/x509/v3_lib.rs:427 &crate::x509::v3_usernotice::ossl_v3_user_notice",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    },
+    {
+     "dispatcher": "X509V3_EXT_print_fp",
+     "dispatcher_reachable": false,
+     "evidence": "src/x509/v3_lib.rs:427 &crate::x509::v3_usernotice::ossl_v3_user_notice",
+     "kind": "method-table",
+     "method_table": "STANDARD_EXTS"
+    }
+   ],
+   "gated": true,
+   "in_inventory": true,
+   "inventory_rows": [
+    {
+     "file": "src/x509/v3_usernotice.rs",
+     "id": "V1:src/x509/v3_usernotice.rs:287:UNSAFE_FN_DEF",
+     "line": 287,
+     "stable_id": "src/x509/v3_usernotice.rs::UNSAFE_FN_DEF::i2r_USER_NOTICE_SYNTAX",
+     "status": "DISCHARGED"
+    }
+   ],
+   "override": false,
+   "registration_id": "src/x509/v3_usernotice.rs::i2r_USER_NOTICE_SYNTAX::ossl_v3_user_notice::i2r",
+   "registration_kind": "slot-registration",
+   "row": "ossl_v3_user_notice",
+   "row_file": "src/x509/v3_usernotice.rs",
+   "row_instances": [
+    {
+     "file": "src/x509/v3_usernotice.rs",
+     "index": null,
+     "line": 331,
+     "name": "ossl_v3_user_notice"
+    }
+   ],
+   "row_line": 331,
+   "slot": "i2r",
+   "source_defined": true,
+   "test_only": false,
+   "unsafe_fn": true
+  }
+ ],
+ "schema": "openssl-rs/campaign/safe-c33/callback-registration-manifest/v1/part",
+ "slot": "i2r"
+}

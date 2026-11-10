@@ -1,0 +1,252 @@
+{
+ "receipt": "element7-fetch-wrapper-fix",
+ "kind": "instrument-repair",
+ "date": "2026-11-03",
+ "subphase": "B53-e7fix",
+ "state": "FIXED \u2014 the ten provider bindings lost between B52 and B53 are restored; the rule was not widened",
+ "candidate": {
+  "repository_head": "007feca9926acaa16d9988eaf068033e956eeef7",
+  "branch": "stage/p25/element7-s2b",
+  "inventory": "court/freeze-b53/census-b53.json",
+  "inventory_source_head": "b8bba955503014c8fd86303314c6deebaea093b0",
+  "install": "artifacts/phase2/install",
+  "libcrypto_so_3_sha256": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3",
+  "ssh": "court/tmp/openssh-closure/client-b53/openssh-9.9p1/ssh",
+  "ssh_sha256": "926975c81fe8d56297196a703a8a7b0f5eb0fae1644bbfa4643d4cd517f22ba0",
+  "sshd": "court/tmp/openssh-closure/server-b53/openssh-9.9p1/sshd",
+  "sshd_sha256": "0d3f5e924ff361cba290fb150b89e85806adf69c3a9de9440c4b8a6c09803ce2"
+ },
+ "rule_change": {
+  "file": "forensics/tools/consumer_closure.py",
+  "lines": {
+   "added": "4910-4914 (_is_generic_fetch_wrapper) and 4966-4967 (the _base_fetch predicate)",
+   "docstring": "4918 (_writer_reference now names a generic-fetch call, not only inner_evp_generic_fetch)"
+  },
+  "before": [
+   "if \"inner_evp_generic_fetch\" in cname:",
+   "    refs = _writer_reference(g, fstart, k)"
+  ],
+  "after": [
+   "if (\"inner_evp_generic_fetch\" in cname",
+   "        or _is_generic_fetch_wrapper(cname)):",
+   "    refs = _writer_reference(g, fstart, k)"
+  ],
+  "predicate": "base = re.sub(r\"\\.llvm(?:\\.[0-9]+)?$\", \"\", name or \"\"); return base.endswith(\"evp_generic_fetch\") and \"inner_evp_generic_fetch\" not in base",
+  "acceptance_rule": "unchanged: the existing writer witness must name exactly ONE FETCH_FAMILIES writer; otherwise _base_fetch returns (None, 'the generic fetch's construct callback does not name exactly one family writer') and the site keeps its materialised/target-bounded class",
+  "not_matched": "inner_evp_generic_fetch (handled by the existing arm) and evp_generic_fetch_from_prov (does not end with evp_generic_fetch)",
+  "why": "B53's rebuild changed inlining so the recorded callee at these sites is the public evp_generic_fetch wrapper rather than inner_evp_generic_fetch. The rule reads no address, so this was shape sensitivity, not a relink artefact. Ten sites were affected, not fourteen: the other four provider bindings (EvpKem.newctx, OsslEncoder.import_object, OsslProvider.init_function, EVP_Q_mac/EvpMac.settable_ctx_params) do not go through the wrapper."
+ },
+ "restored": {
+  "count": 10,
+  "class": "materialised(reg-top) -> ABI_CONTRACT_PROVIDER",
+  "ssh_and_sshd_identical": true,
+  "sites": [
+   {
+    "function": "provider::exchange::kdf_hkdf_gettable_ctx_params",
+    "call_site": "0x29199a",
+    "contract": "EvpKdf.gettable_ctx_params (offset 0x58, OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS)"
+   },
+   {
+    "function": "provider::exchange::kdf_hkdf_settable_ctx_params",
+    "call_site": "0x291ada",
+    "contract": "EvpKdf.settable_ctx_params (offset 0x60, OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS)"
+   },
+   {
+    "function": "provider::exchange::kdf_scrypt_gettable_ctx_params",
+    "call_site": "0x291c1a",
+    "contract": "EvpKdf.gettable_ctx_params (offset 0x58, OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS)"
+   },
+   {
+    "function": "provider::exchange::kdf_scrypt_settable_ctx_params",
+    "call_site": "0x291d5a",
+    "contract": "EvpKdf.settable_ctx_params (offset 0x60, OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS)"
+   },
+   {
+    "function": "provider::exchange::kdf_tls1_prf_gettable_ctx_params",
+    "call_site": "0x291e9a",
+    "contract": "EvpKdf.gettable_ctx_params (offset 0x58, OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS)"
+   },
+   {
+    "function": "provider::exchange::kdf_tls1_prf_settable_ctx_params",
+    "call_site": "0x291fda",
+    "contract": "EvpKdf.settable_ctx_params (offset 0x60, OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS)"
+   },
+   {
+    "function": "provider::mac_legacy_sig::mac_cmac_settable_ctx_params",
+    "call_site": "0x484a7a",
+    "contract": "EvpMac.settable_ctx_params (offset 0x68, OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS)"
+   },
+   {
+    "function": "provider::mac_legacy_sig::mac_hmac_settable_ctx_params",
+    "call_site": "0x484bba",
+    "contract": "EvpMac.settable_ctx_params (offset 0x68, OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS)"
+   },
+   {
+    "function": "provider::mac_legacy_sig::mac_siphash_settable_ctx_params",
+    "call_site": "0x484cfa",
+    "contract": "EvpMac.settable_ctx_params (offset 0x68, OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS)"
+   },
+   {
+    "function": "provider::mac_legacy_sig::mac_poly1305_settable_ctx_params",
+    "call_site": "0x484e3a",
+    "contract": "EvpMac.settable_ctx_params (offset 0x68, OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS)"
+   }
+  ]
+ },
+ "non_widening_control": {
+  "constructed_refusals": [
+   {
+    "case": "wrapper callee, construct argument is one non-family writer",
+    "observed": "_base_fetch -> base_refusal='the generic fetch's construct callback does not name exactly one family writer'; fetch_slot_witness -> None; class stays materialised (target_bounded)"
+   },
+   {
+    "case": "wrapper callee, two materialised family writers (EVP_KDF and EVP_MAC)",
+    "observed": "_base_fetch -> same refusal; fetch_slot_witness -> None; class stays materialised (target_bounded)"
+   }
+  ],
+  "constructed_positive": "wrapper callee with exactly one family writer (evp_kdf_from_algorithm) -> base_family=EVP_KDF, callee=...17evp_generic_fetch, construct=...evp_kdf_from_algorithm",
+  "predicate_control": "_is_generic_fetch_wrapper -> [True (wrapper), True (wrapper.llvm.N), False (inner_evp_generic_fetch.llvm.N), False (evp_generic_fetch_from_prov), False (EVP_KDF_fetch)]",
+  "real_candidate_census": {
+   "wrapper_call_sites": 38,
+   "resolving_to_one_family": 17,
+   "with_a_residual_indirect_site_through_the_fetch_return": 10,
+   "family_resolved_but_no_residual_site_unchanged": 7,
+   "arguments_not_in_FETCH_FAMILIES (15 EVP_MD + 5 EVP_CIPHER + 1 keymgmt_from_algorithm, refused)": 21,
+   "observed_effect": "only the 10 sites whose fetch return is the base of an unresolved indirect slot changed class; the other 28 wrapper call sites are byte-identical"
+  },
+  "get_capabilities_untouched": {
+   "function": "provider::capabilities::ossl_prov_get_capabilities (0x430560)",
+   "sites": [
+    "0x4305e7",
+    "0x430677",
+    "0x430687",
+    "0x43069c"
+   ],
+   "class_after_fix": "materialised / reg-value-partial[int] (target_bounded)",
+   "why": "their base is not a fetch return, so the fix cannot reach them; the investigation's unestablished contract is left exactly as found"
+  }
+ },
+ "mutation_control": {
+  "action": "removed the wrapper arm from the _base_fetch predicate (removed only the predicate arm, leaving the helper dead) and reran the ssh closure at the same candidate/flags",
+  "mutated_tool_sha256": "6ea3b5ac0abda824ed7dcf440ab1f8f7dd60fa8cf0cba2e761983ae1a81abdc4",
+  "mutated_output": "court/tmp/e7mut-ssh.json",
+  "result": "ACCEPTED, e7 80/51/131, ABI_CONTRACT_PROVIDER 4; the full per-site residual classification is identical to the B53 baseline (all 131 classes+reasons equal), so the regression reproduces exactly; exactly 10 sites differ from the fixed run",
+  "restored_sha256": "e2662e6724eceeda80c1ce1a90803ce16e66129466f4f8c30871bfe6bbc5b81c",
+  "restoration": "byte-identical to the pre-mutation copy (same sha256 before and after; py_compile ok)",
+  "reapplied": "the fixed receipts name tool sha256 e2662e6724eceeda80c1ce1a90803ce16e66129466f4f8c30871bfe6bbc5b81c, and the fixed-vs-mutated diff is exactly the same 10 sites, so restoring the file re-applies the fix"
+ },
+ "collateral": {
+  "relative_to": "evidence/closure-ssh-b53-baseline.json (same candidate, same flags, pre-fix tool)",
+  "per_site_class_changes": "exactly the 10 restorations; no other residual site changed class or reason (131/131 matched, none added, none removed)",
+  "unchanged_per_site_tables": [
+   "semantic_store_target_bounding",
+   "reachable_caller_target_bounding",
+   "static_table_instance",
+   "nested_static_instance",
+   "refutation_admission",
+   "precision.classes counters"
+  ],
+  "unresolved_by_class": "materialised 61 -> 51, ABI_CONTRACT_PROVIDER 4 -> 14; ABI_CONTRACT_EXPORT_CALLBACK 67 and field 45 unchanged",
+  "edge_dispositions": "51918 edges unchanged; CONTRACT_BOUNDED 71 -> 81 (+10), UNRESOLVED 658 -> 648 (-10), PROVED_TARGET_SET 51189 unchanged, defects 0; exclusion_reasons unchanged",
+  "witness_rule": "contract_bounded/witness_backed 71 -> 81 (+10 provider witnesses), candidate_without_witness 0",
+  "pkcs12_export_callback_gain_retained": "ABI_CONTRACT_EXPORT_CALLBACK stays 47 in both families. The PKCS12_create_ex2 export-callback entries (0x3e5066, 0x3e5198, 0x3e56dc) are present in both runs, so the B53 direction is kept, not traded away"
+ },
+ "closures": {
+  "flags": "python3 forensics/tools/consumer_closure.py --family openssh --artifact <b53 binary> --inventory court/freeze-b53/census-b53.json --carry-forward-closure <family b51 baseline> --enrolment-blockers forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json --workdir court/tmp/closure-b53/work-{ssh,sshd} --output <evidence path>",
+  "ssh": {
+   "verdict": "ACCEPTED",
+   "refusals": 0,
+   "reachable_files": 629,
+   "obligations": "378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN",
+   "carried_forward": 105,
+   "indirect_sites": 51918,
+   "element7_before": {
+    "target_bounded": 80,
+    "contract_bounded": 51,
+    "unresolved": 131,
+    "provider": 4,
+    "export_callback": 47
+   },
+   "element7_after": {
+    "target_bounded": 70,
+    "contract_bounded": 61,
+    "unresolved": 131,
+    "provider": 14,
+    "export_callback": 47
+   }
+  },
+  "sshd": {
+   "verdict": "ACCEPTED",
+   "refusals": 0,
+   "reachable_files": 628,
+   "obligations": "378 = 186 DISCHARGED / 192 BLOCKED / 0 UNKNOWN",
+   "carried_forward": 105,
+   "indirect_sites": 51918,
+   "element7_before": {
+    "target_bounded": 80,
+    "contract_bounded": 51,
+    "unresolved": 131,
+    "provider": 4,
+    "export_callback": 47
+   },
+   "element7_after": {
+    "target_bounded": 70,
+    "contract_bounded": 61,
+    "unresolved": 131,
+    "provider": 14,
+    "export_callback": 47
+   }
+  },
+  "vs_b52": "provider is back to B52's 14. The remaining B52-vs-fix difference (target 67->70, contract 60->61, unresolved 127->131) is the pre-existing B53 movement: +1 reachable export callback (PKCS12_create_ex2) and four newly reachable unresolved sites unrelated to this rule; it is not caused by the wrapper arm.",
+  "self_test": "python3 forensics/tools/consumer_closure.py --self-test -> 'self-test ok' (all witness mutation controls pass)"
+ },
+ "outputs": [
+  {
+   "path": "evidence/closure-ssh-b53-e7fix-baseline.json",
+   "bytes": 11679967,
+   "sha256": "a3c373174fabe38231784b20e715a025b0ae13bfba954370d73076d15e8091ef"
+  },
+  {
+   "path": "evidence/inventory-sshd-b53-e7fix-baseline.json",
+   "bytes": 11520506,
+   "sha256": "0010d7c115ba5dab6f161fde31d3280c6b1d0e39e309f0fb1dae6059be383249"
+  }
+ ],
+ "non_claims": [
+  "No obligation status changed: 378/186/192/0 and the DISCHARGED stable-identity set are identical to the B53 baseline.",
+  "Element 7 still FAILS: 70 reachable unresolved sites remain target-bounded. This repair restores ten bindings; it does not establish element 7.",
+  "The four ossl_prov_get_capabilities sites were deliberately left target-bounded; their contract remains unestablished.",
+  "No commit, freeze, ledger or CAMPAIGN-STATUS edit was made."
+ ],
+ "review": {
+  "reviewer": "independent adversarial adjudicator (session 5f0b78df-9b6b-4cd8-9c5a-9b2d6edcc889); transcribed verbatim",
+  "verdict": "APPROVE",
+  "date": "2026-11-03",
+  "verdict_text": "APPROVE",
+  "confirmed": [
+   "predicate excludes inner_evp_generic_fetch and evp_generic_fetch_from_prov; exactly-one-family-writer acceptance unchanged; no double count",
+   "non-widening census: 38 wrapper calls, 21 non-family construct sites refused, 7 single-family without a residual site, 10 with a residual site",
+   "collateral: 131/131 rows, exactly the 10 restorations, no other change",
+   "mutation reproduced byte-identically and differs from the fix at exactly the 10",
+   "the four ossl_prov_get_capabilities sites are genuinely target-bounded (base is an application argument, no wrapper call in the function)",
+   "no weakening: 378/186/192/0, 0 refusals, gates green, both families identical"
+  ]
+ },
+ "residuals": [
+  {
+   "id": "E7FIX-R1",
+   "state": "OPEN",
+   "why": "_writer_reference does not verify that the materialised writer is the construct-argument register. Correct at the ten sites (lea into %r8 immediately before the call) but heuristic; pre-existing for inner_evp_generic_fetch and now spanning 38 wrapper calls."
+  },
+  {
+   "id": "E7FIX-R2",
+   "state": "OPEN",
+   "why": "the wrapper predicate is suffix-based and would accept a name like foo_evp_generic_fetch. Only evp_generic_fetch, inner_evp_generic_fetch and evp_generic_fetch_from_prov exist in this DSO."
+  },
+  {
+   "id": "E7FIX-R3",
+   "state": "CLOSED",
+   "why": "the receipt mislabelled the 21 refused construct sites and described the mutation as restoring the pre-fix condition; both corrected here."
+  }
+ ]
+}
