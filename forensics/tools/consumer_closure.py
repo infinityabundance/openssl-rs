@@ -15563,7 +15563,8 @@ def registration_atexit_witness(g: "DsoGraph", site: dict, name: str):
 PBE_OWNER = "EvpPbeCtl"
 PBE_SOURCE = "src/evp/evp_pbe.rs"
 PBE_FUNCTION = "EVP_PBE_CipherInit_ex"
-PBE_SITE = 0x179A0D
+PBE_SITE = 0x50604D
+PBE_SITE_PIN = ("EVP_PBE_CipherInit_ex", 0x19D)
 PBE_FIELD = "keygen"
 PBE_FIELD_OFFSET = 0x10
 PBE_REGISTRY = "EVP_PBE_alg_add_type"
@@ -15664,7 +15665,8 @@ STORE_LOADER_LEGACY_SITE_PINS = {
     0x3E217D: ("OSSL_STORE_open_ex", 0x57D),
     0x3E2648: ("OSSL_STORE_open_ex", 0xA48),
 }
-STORE_LOADER_PROVIDER_SITE = 0x1C2528
+STORE_LOADER_PROVIDER_SITE = 0x3E2408
+STORE_LOADER_PROVIDER_SITE_PIN = ("OSSL_STORE_open_ex", 0x808)
 STORE_LOADER_PROVIDER_FIELD = "p_close"
 STORE_LOADER_PROVIDER_OFFSET = 0xB8
 STORE_LOADER_PROVIDER_WRITER = "loader_from_algorithm"
@@ -15695,7 +15697,8 @@ CONF_DSO_FINISH = "OPENSSL_finish"
 PEM_FUNCTION = "do_pk8pkey"
 PEM_SOURCE = "src/pem/pem_pk8.rs"
 PEM_SOURCE_FILES = ("src/pem/pem_pk8.rs", "src/pem/pem_pkey.rs")
-PEM_SITE = 0x4FA4C6
+PEM_SITE = 0x495DE6
+PEM_SITE_PIN = ("openssl_rs::pem::pem_pk8::do_pk8pkey", 0x286)
 PEM_DEFAULT = "PEM_def_callback"
 PEM_CB_STACK_INDEX = 7
 PEM_CB_STACK_SLOT = "0x4b8(%rsp)"
@@ -15703,8 +15706,16 @@ PEM_CB_STACK_SLOT = "0x4b8(%rsp)"
 # The guards that select the two provider/legacy close paths.  These are image
 # addresses, not inferred block numbers; a change to either refuses.
 STORE_LOADER_CLOSE_GUARDS = {
-    "legacy_je": (0x1C2510, 0x1C2513, "%r12", 0x1C275C),
-    "provider_jne": (0x1C2753, 0x1C2756, "%r12", 0x1C2519),
+    "legacy_je": (0x3E23F0, 0x3E23F3, "%r12", 0x3E263C),
+    "provider_jne": (0x3E2633, 0x3E2636, "%r12", 0x3E23F9),
+}
+STORE_LOADER_CLOSE_GUARD_PINS = {
+    "legacy_je": (("OSSL_STORE_open_ex", 0x7F0),
+                  ("OSSL_STORE_open_ex", 0x7F3),
+                  ("OSSL_STORE_open_ex", 0xA3C)),
+    "provider_jne": (("OSSL_STORE_open_ex", 0xA33),
+                     ("OSSL_STORE_open_ex", 0xA36),
+                     ("OSSL_STORE_open_ex", 0x7F9)),
 }
 
 _EXTERNAL_PRIM_SIZES = {
@@ -16348,9 +16359,9 @@ def _external_guard_chain(g: "DsoGraph", fstart: int, site_addr: int,
     """Prove the `%r12` guard polarity that selects this close path.
 
     Both close sites sit under the same pair of `test %r12,%r12` branches:
-    0x1c2513 `je` to the legacy block and 0x1c2756 `jne` to the provider
-    block.  The witness checks those exact instructions and targets; a new or
-    moved predecessor refuses.
+    check they name: 0x3e23f3 `je` to the legacy block and 0x3e2636 `jne` to the
+    provider block.  The witness checks those exact instructions and targets; a
+    new or moved predecessor refuses.
     """
     je = STORE_LOADER_CLOSE_GUARDS["legacy_je"]
     jne = STORE_LOADER_CLOSE_GUARDS["provider_jne"]
@@ -17746,13 +17757,21 @@ EXTERNAL_ABI_WITNESSES = (
 # The address is not the identity: the documented function leaf must match too.
 EXTERNAL_ABI_SITE_FUNCTIONS = {
     PBE_SITE: PBE_FUNCTION,
-    0x1C21A8: STORE_LOADER_FUNCTION,
-    0x1C229D: STORE_LOADER_FUNCTION,
-    0x1C2768: STORE_LOADER_FUNCTION,
+    0x3E2088: STORE_LOADER_FUNCTION,
+    0x3E217D: STORE_LOADER_FUNCTION,
+    0x3E2648: STORE_LOADER_FUNCTION,
     STORE_LOADER_PROVIDER_SITE: STORE_LOADER_FUNCTION,
-    0x2E111A: CONF_FUNCTION,
-    0x2E1532: CONF_FUNCTION,
+    0x17319A: CONF_FUNCTION,
+    0x1735B2: CONF_FUNCTION,
     PEM_SITE: PEM_FUNCTION,
+}
+# (site -> containing symbol, offset) for the literal keys above.
+EXTERNAL_ABI_SITE_PINS = {
+    0x3E2088: ("OSSL_STORE_open_ex", 0x488),
+    0x3E217D: ("OSSL_STORE_open_ex", 0x57D),
+    0x3E2648: ("OSSL_STORE_open_ex", 0xA48),
+    0x17319A: ("CONF_modules_load", 0x50A),
+    0x1735B2: ("CONF_modules_load", 0x922),
 }
 EXTERNAL_ABI_SITE_ADDRESSES = frozenset(EXTERNAL_ABI_SITE_FUNCTIONS)
 EXTERNAL_ABI_CLASSES = frozenset({
