@@ -24,6 +24,10 @@ use crate::runtime::mem::CRYPTO_strdup;
 use crate::runtime::obj::NID_indirect_issuer;
 use crate::x509::v3_lib::X509V3ExtMethod;
 
+#[cfg(test)]
+const _: extern "C" fn(*const X509V3ExtMethod, *mut c_void, *mut Bio, c_int) -> c_int =
+    i2r_INDIRECT_ISSUER;
+
 /// `OPENSSL_FILE` for this unit's `OPENSSL_strdup` expansion — `crypto/x509/v3_ind_iss.c`.
 const FILE: &core::ffi::CStr = c"crypto/x509/v3_ind_iss.c";
 /// `i2s_INDIRECT_ISSUER`'s `OPENSSL_strdup("NULL")` (`crypto/x509/v3_ind_iss.c:32`).
@@ -31,17 +35,10 @@ const LINE_STRDUP: c_int = 32;
 
 /// `static int i2r_INDIRECT_ISSUER(...)` — `crypto/x509/v3_ind_iss.c:17-22`. A bare `1`.
 ///
-/// # Safety
-///
-/// The `i2r` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
-/// `X509V3_EXT_print`'s `i2r` arm (`src/x509/v3_prn.rs:341`), which decoded the extension
-/// through the row's `ASN1_NULL` item and refused a NULL result (`:300-303`), and refused a
-/// NULL `out`/`ext` prologue (`:254-256`). The body reads none of `method`, `su`, `out` or
-/// `indent`; those are non-NULL per the dispatcher where the parameter is a pointer, and stay
-/// live for the call. No further property is required.
+/// Reads no argument, so it imposes no caller obligation.
 ///
 /// Authority-derived: `crypto/x509/v3_ind_iss.c:17-22` reads nothing and answers 1.
-unsafe extern "C" fn i2r_INDIRECT_ISSUER(
+extern "C" fn i2r_INDIRECT_ISSUER(
     _method: *const X509V3ExtMethod,
     _su: *mut c_void,
     _out: *mut Bio,
@@ -51,7 +48,9 @@ unsafe extern "C" fn i2r_INDIRECT_ISSUER(
 }
 
 /// `static void *r2i_INDIRECT_ISSUER(...)` — `crypto/x509/v3_ind_iss.c:24-28`.
-unsafe extern "C" fn r2i_INDIRECT_ISSUER(
+///
+/// Reads no argument, so it imposes no caller obligation.
+extern "C" fn r2i_INDIRECT_ISSUER(
     _method: *const X509V3ExtMethod,
     _ctx: *mut c_void,
     _value: *const c_char,
@@ -62,16 +61,11 @@ unsafe extern "C" fn r2i_INDIRECT_ISSUER(
 /// `static char *i2s_INDIRECT_ISSUER(const X509V3_EXT_METHOD *method, void *val)`
 /// — `crypto/x509/v3_ind_iss.c:30-33`.
 ///
-/// # Safety
-///
-/// The `i2s` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
-/// `X509V3_EXT_print`'s `i2s` arm (`src/x509/v3_prn.rs:334-352`), which resolved the row under
-/// the extension registry's read hold and decoded a non-NULL value through the row's item.
-/// Neither argument is read, so no further property is required.
+/// Neither argument is read, so it imposes no caller obligation.
 ///
 /// Authority-derived: `crypto/x509/v3_ind_iss.c:30-33` reads no argument and duplicates
 /// `"NULL"`.
-unsafe extern "C" fn i2s_INDIRECT_ISSUER(
+extern "C" fn i2s_INDIRECT_ISSUER(
     _method: *const X509V3ExtMethod,
     _val: *mut c_void,
 ) -> *mut c_char {
@@ -85,20 +79,13 @@ unsafe extern "C" fn i2s_INDIRECT_ISSUER(
 
 /// `static void *s2i_INDIRECT_ISSUER(...)` — `crypto/x509/v3_ind_iss.c:35-40`.
 ///
-/// # Safety
-///
-/// The `s2i` slot contract stated on [`X509V3ExtMethod`] (`src/x509/v3_lib.rs`). Caller:
-/// `do_ext_nconf`'s `s2i` arm (`src/x509/v3_conf.rs:1095`), which resolved `method` under the
-/// extension registry's read hold (held across the lookup, this callback and `do_ext_i2d`) and
-/// passes the caller's NUL-terminated configuration `value`; `ctx` is NULL or live. This
-/// callback reads no argument, so no further property is required. `method` stays live for the
-/// call, and `value` is borrowed, not freed or retained. The `ASN1_NULL` sentinel it returns
+/// Reads no argument, so it imposes no caller obligation. The `ASN1_NULL` sentinel it returns
 /// belongs to the dispatcher, which encodes it with this row's `ASN1_NULL_it` and releases it
 /// once (`src/x509/v3_conf.rs:1126-1132`).
 ///
 /// Authority-derived: `crypto/x509/v3_ind_iss.c:35-40` returns `ASN1_NULL_new()` and reads no
 /// argument.
-unsafe extern "C" fn s2i_INDIRECT_ISSUER(
+extern "C" fn s2i_INDIRECT_ISSUER(
     _method: *const X509V3ExtMethod,
     _ctx: *mut c_void,
     _str: *const c_char,

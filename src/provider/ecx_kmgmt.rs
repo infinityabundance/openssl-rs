@@ -1072,19 +1072,20 @@ unsafe extern "C" fn x448_set_params(key: *mut c_void, params: *const OsslParam)
 
 /// `static int ed25519_set_params(void *key, const OSSL_PARAM params[])` — `ecx_kmgmt.c:954-957`.
 ///
-/// # Safety
-/// The keymgmt `set_params` dispatch contract; neither argument is read.
-unsafe extern "C" fn ed25519_set_params(_key: *mut c_void, _params: *const OsslParam) -> c_int {
+/// Neither argument is read, so it imposes no caller obligation.
+extern "C" fn ed25519_set_params(_key: *mut c_void, _params: *const OsslParam) -> c_int {
     1
 }
 
 /// `static int ed448_set_params(void *key, const OSSL_PARAM params[])` — `ecx_kmgmt.c:959-962`.
 ///
-/// # Safety
-/// The keymgmt `set_params` dispatch contract; neither argument is read.
-unsafe extern "C" fn ed448_set_params(_key: *mut c_void, _params: *const OsslParam) -> c_int {
+/// Neither argument is read, so it imposes no caller obligation.
+extern "C" fn ed448_set_params(_key: *mut c_void, _params: *const OsslParam) -> c_int {
     1
 }
+
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void, *const OsslParam) -> c_int = ed448_set_params;
 
 /// `static const OSSL_PARAM ed_settable_params[]` — `ecx_kmgmt.c:964-966`.
 static ED_SETTABLE_PARAMS: [OsslParam; 1] = [END];

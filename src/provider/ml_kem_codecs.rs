@@ -461,8 +461,8 @@ pub(crate) unsafe fn ossl_ml_kem_d2i_PUBKEY(
 ) -> *mut MlKemKey {
     // SAFETY: `provctx` is a live context per the contract.
     let libctx = unsafe { prov_libctx_of(provctx.cast()) };
-    // SAFETY: the answer is a pointer into `src/ml_kem`'s static table.
-    let v = unsafe { ossl_ml_kem_get_vinfo(evp_type) };
+    // The answer is a pointer into `src/ml_kem`'s static table.
+    let v = ossl_ml_kem_get_vinfo(evp_type);
     let codec = ml_kem_get_codec(evp_type);
     if v.is_null() || codec.is_null() {
         return ptr::null_mut();
@@ -524,8 +524,8 @@ pub(crate) unsafe fn ossl_ml_kem_d2i_PKCS8(
     provctx: *mut ProvCtx,
     propq: *const c_char,
 ) -> *mut MlKemKey {
-    // SAFETY: the answer is a pointer into `src/ml_kem`'s static table.
-    let v = unsafe { ossl_ml_kem_get_vinfo(evp_type) };
+    // The answer is a pointer into `src/ml_kem`'s static table.
+    let v = ossl_ml_kem_get_vinfo(evp_type);
     let codec = ml_kem_get_codec(evp_type);
     if v.is_null() || codec.is_null() {
         return ptr::null_mut();
