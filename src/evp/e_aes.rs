@@ -1797,7 +1797,7 @@ unsafe extern "C" fn aes_wrap_cipher(
         return -1;
     }
     // SAFETY: `out`/`in_` are the caller's buffers.
-    if unsafe { ossl_is_partially_overlapping(out.cast(), in_.cast(), inlen as c_int) } != 0 {
+    if ossl_is_partially_overlapping(out.cast(), in_.cast(), inlen as c_int) != 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::E_AES_3722) };
         return 0;

@@ -180,10 +180,8 @@ unsafe impl CtxDestroy for ProviderConfGlobal {
 /// Its own lock is created here, and a lock failure releases the object rather than returning
 /// a half-built one.
 ///
-/// # Safety
-/// `libctx` is accepted and unused; the authority's argument is the context being built, which
-/// the caller in `context_init` is holding, so it is live.
-pub(crate) unsafe fn ossl_prov_conf_ctx_new(_libctx: *mut c_void) -> *mut ProviderConfGlobal {
+/// `libctx` is accepted and unused, as the authority's signature does.
+pub(crate) fn ossl_prov_conf_ctx_new(_libctx: *mut c_void) -> *mut ProviderConfGlobal {
     let Some(mut raw) =
         RawCtx::<ProviderConfGlobal>::zalloc_at(FILE_SEAM, L_PCGBL, FILE_SEAM, L_PCGBL_ERR)
     else {
@@ -205,6 +203,9 @@ pub(crate) unsafe fn ossl_prov_conf_ctx_new(_libctx: *mut c_void) -> *mut Provid
     // ownership; `into_raw` hands it to the context slot.
     unsafe { raw.assume_init().into_raw() }
 }
+
+#[cfg(test)]
+const _: fn(*mut c_void) -> *mut ProviderConfGlobal = ossl_prov_conf_ctx_new;
 
 /// `void ossl_prov_conf_ctx_free(void *vpcgbl)` — the slot's releaser.
 ///

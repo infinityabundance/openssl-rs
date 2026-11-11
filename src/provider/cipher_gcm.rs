@@ -1751,11 +1751,12 @@ static AES_GCM_HW: ProvGcmHw = ProvGcmHw {
 /// portable arm; the `.inc` arms this profile declines all answer method tables built from the
 /// same C functions.
 ///
-/// # Safety
-/// Always safe; a uniform signature the hw contract requires.
-unsafe fn ossl_prov_aes_hw_gcm(_keybits: usize) -> *const ProvGcmHw {
+fn ossl_prov_aes_hw_gcm(_keybits: usize) -> *const ProvGcmHw {
     ptr::addr_of!(AES_GCM_HW)
 }
+
+#[cfg(test)]
+const _: fn(usize) -> *const ProvGcmHw = ossl_prov_aes_hw_gcm;
 
 // ---------------------------------------------------------------------------------------------
 // Ownership of a context block
@@ -2044,11 +2045,12 @@ static ARIA_GCM_HW: ProvGcmHw = ProvGcmHw {
 /// `const PROV_GCM_HW *ossl_prov_aria_hw_gcm(size_t keybits)` — `cipher_aria_gcm_hw.c:34-37`.
 /// ARIA has one GCM table and ignores `keybits`.
 ///
-/// # Safety
-/// Always safe; a uniform signature the hw contract requires.
-unsafe fn ossl_prov_aria_hw_gcm(_keybits: usize) -> *const ProvGcmHw {
+fn ossl_prov_aria_hw_gcm(_keybits: usize) -> *const ProvGcmHw {
     ptr::addr_of!(ARIA_GCM_HW)
 }
+
+#[cfg(test)]
+const _: fn(usize) -> *const ProvGcmHw = ossl_prov_aria_hw_gcm;
 
 /// `aria_gcm_newctx` — `cipher_aria_gcm.c:16-28`.
 ///
@@ -2200,11 +2202,12 @@ static SM4_GCM_HW: ProvGcmHw = ProvGcmHw {
 /// portable arm; the `x86_64` and `rv64i` `.inc` arms this profile declines answer method tables
 /// built from the same C functions.
 ///
-/// # Safety
-/// Always safe; a uniform signature the hw contract requires.
-unsafe fn ossl_prov_sm4_hw_gcm(_keybits: usize) -> *const ProvGcmHw {
+fn ossl_prov_sm4_hw_gcm(_keybits: usize) -> *const ProvGcmHw {
     ptr::addr_of!(SM4_GCM_HW)
 }
+
+#[cfg(test)]
+const _: fn(usize) -> *const ProvGcmHw = ossl_prov_sm4_hw_gcm;
 
 /// `sm4_gcm_newctx` — `cipher_sm4_gcm.c:18-30`.
 ///

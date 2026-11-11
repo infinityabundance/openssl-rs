@@ -444,8 +444,7 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // SAFETY: `ctx` is the live context being initialised — either a fresh `CRYPTO_zalloc`
     // block or the process-global default during its own `RUN_ONCE` — so it is a live object
     // no other thread can observe yet.
-    let provider_conf =
-        unsafe { crate::provider::conf::ossl_prov_conf_ctx_new(ctx.cast::<c_void>()) };
+    let provider_conf = crate::provider::conf::ossl_prov_conf_ctx_new(ctx.cast::<c_void>());
     if provider_conf.is_null() {
         context_deinit(ctx);
         return false;
@@ -534,8 +533,7 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // `ossl_child_prov_ctx_free` releases unconditionally, because `CRYPTO_THREAD_lock_free`
     // accepts NULL. That is why the constructor is `OPENSSL_zalloc` and nothing else.
     // SAFETY: `ctx` is the live context being initialised, and the constructor reads no field.
-    let child_provider =
-        unsafe { crate::provider::child::ossl_child_prov_ctx_new(ctx.cast::<c_void>()) };
+    let child_provider = crate::provider::child::ossl_child_prov_ctx_new(ctx.cast::<c_void>());
     if child_provider.is_null() {
         context_deinit(ctx);
         return false;

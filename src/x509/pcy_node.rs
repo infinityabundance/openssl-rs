@@ -252,12 +252,13 @@ unsafe extern "C" fn node_cmp(a: *const c_void, b: *const c_void) -> c_int {
 
 /// `STACK_OF(X509_POLICY_NODE) *ossl_policy_node_cmp_new(void)` — `crypto/x509/pcy_node.c:23-26`.
 ///
-/// # Safety
-///
 /// The returned stack is owned by the caller and must be freed with `OPENSSL_sk_free`.
-pub(crate) unsafe fn ossl_policy_node_cmp_new() -> *mut OpenSslStack {
+pub(crate) fn ossl_policy_node_cmp_new() -> *mut OpenSslStack {
     OPENSSL_sk_new(Some(node_cmp))
 }
+
+#[cfg(test)]
+const _: fn() -> *mut OpenSslStack = ossl_policy_node_cmp_new;
 
 /// `X509_POLICY_NODE *ossl_policy_tree_find_sk(STACK_OF(X509_POLICY_NODE) *nodes, const ASN1_OBJECT *id)`
 /// — `crypto/x509/pcy_node.c:28-40`.
@@ -367,7 +368,7 @@ pub(crate) unsafe fn ossl_policy_level_add_node(
         } else {
             if level.nodes.is_null() {
                 // SAFETY: the new node stack is owned here.
-                level.nodes = unsafe { ossl_policy_node_cmp_new() };
+                level.nodes = ossl_policy_node_cmp_new();
             }
             if level.nodes.is_null() {
                 // SAFETY: a compile-time-constant site.

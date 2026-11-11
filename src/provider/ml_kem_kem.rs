@@ -280,14 +280,16 @@ unsafe fn ml_kem_set_ctx_params_decoder(
 
 /// Raise a fixed message through a site, the `ERR_raise_data` form.
 ///
-/// # Safety
-/// Nothing: the message is a NUL-terminated literal built here.
-unsafe fn raise_fixed(site: &crate::runtime::err::err_sites::ErrSite, msg: &str) {
+/// Nothing: the message is NUL-terminated literal built here.
+fn raise_fixed(site: &crate::runtime::err::err_sites::ErrSite, msg: &str) {
     let mut buf = msg.as_bytes().to_vec();
     buf.push(0);
     // SAFETY: `buf` is NUL-terminated just above.
     unsafe { raise_site_data(site, buf.as_ptr().cast()) };
 }
+
+#[cfg(test)]
+const _: fn(&crate::runtime::err::err_sites::ErrSite, &str) = raise_fixed;
 
 /// `static int ml_kem_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
 /// `ml_kem_kem.c:110-142`.

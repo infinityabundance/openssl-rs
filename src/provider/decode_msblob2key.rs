@@ -165,14 +165,17 @@ impl Drop for OwnedCtx {
 /// `static struct msblob2key_ctx_st *msblob2key_newctx(void *provctx,
 /// const struct keytype_desc_st *desc)` — `decode_msblob2key.c:63-73`.
 ///
-/// # Safety
-/// The decoder `newctx` dispatch contract.
-unsafe fn msblob2key_newctx(provctx: *mut c_void, desc: *const KeytypeDesc) -> *mut Msblob2keyCtx {
+/// The decoder `newctx` dispatch contract. Both pointers are stored, never read, so no
+/// caller precondition remains.
+fn msblob2key_newctx(provctx: *mut c_void, desc: *const KeytypeDesc) -> *mut Msblob2keyCtx {
     match OwnedCtx::new(provctx, desc) {
         Some(ctx) => ctx.into_raw(),
         None => ptr::null_mut(),
     }
 }
+
+#[cfg(test)]
+const _: fn(*mut c_void, *const KeytypeDesc) -> *mut Msblob2keyCtx = msblob2key_newctx;
 
 /// `static void msblob2key_freectx(void *vctx)` — `decode_msblob2key.c:75-80`.
 ///
@@ -505,7 +508,7 @@ macro_rules! implement_msblob {
         /// The decoder `newctx` dispatch contract.
         unsafe extern "C" fn $newctx(provctx: *mut c_void) -> *mut c_void {
             // SAFETY: `$desc` is a static descriptor and `provctx` is the caller's.
-            unsafe { msblob2key_newctx(provctx, &$desc).cast::<c_void>() }
+            msblob2key_newctx(provctx, &$desc).cast::<c_void>()
         }
 
         pub(crate) static $table: [OsslDispatch; 6] = [

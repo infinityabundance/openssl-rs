@@ -5702,11 +5702,12 @@ static SM4_XTS_HW: ProvCipherHw = ProvCipherHw {
 /// `cipher_sm4_xts_hw_x86_64.inc:28-34`. The C table is the answer on both sides of the extension
 /// test this profile declines (D266's reason for SM4 generally).
 ///
-/// # Safety
-/// Always safe; a uniform signature the hw contract requires.
-unsafe fn ossl_prov_cipher_hw_sm4_xts(_keybits: usize) -> *const ProvCipherHw {
+fn ossl_prov_cipher_hw_sm4_xts(_keybits: usize) -> *const ProvCipherHw {
     ptr::addr_of!(SM4_XTS_HW)
 }
+
+#[cfg(test)]
+const _: fn(usize) -> *const ProvCipherHw = ossl_prov_cipher_hw_sm4_xts;
 
 /// `sm4_xts_init` — `cipher_sm4_xts.c:36-61`.
 ///
@@ -9411,11 +9412,12 @@ static AES_CCM_HW: ProvCcmHw = ProvCcmHw {
 /// portable arm. The AESNI arm's selection is declined (see the section note); its
 /// `ossl_ccm_generic_*` methods are the same five, so only `setkey` differs.
 ///
-/// # Safety
-/// Always safe; the parameter is unused on this arm.
-unsafe fn ossl_prov_aes_hw_ccm(_keybits: usize) -> *const ProvCcmHw {
+fn ossl_prov_aes_hw_ccm(_keybits: usize) -> *const ProvCcmHw {
     ptr::addr_of!(AES_CCM_HW)
 }
+
+#[cfg(test)]
+const _: fn(usize) -> *const ProvCcmHw = ossl_prov_aes_hw_ccm;
 
 /// `aes_ccm_newctx` — `cipher_aes_ccm.c:23-34`.
 ///
@@ -9749,20 +9751,22 @@ static SM4_CCM_HW: ProvCcmHw = ProvCcmHw {
 /// `const PROV_CCM_HW *ossl_prov_aria_hw_ccm(size_t keybits)` — `cipher_aria_ccm_hw.c:38-41`.
 /// ARIA has one CCM table and ignores `keybits`.
 ///
-/// # Safety
-/// Always safe; a uniform signature the hw contract requires.
-unsafe fn ossl_prov_aria_hw_ccm(_keybits: usize) -> *const ProvCcmHw {
+fn ossl_prov_aria_hw_ccm(_keybits: usize) -> *const ProvCcmHw {
     ptr::addr_of!(ARIA_CCM_HW)
 }
+
+#[cfg(test)]
+const _: fn(usize) -> *const ProvCcmHw = ossl_prov_aria_hw_ccm;
 
 /// `const PROV_CCM_HW *ossl_prov_sm4_hw_ccm(size_t keybits)` — `cipher_sm4_ccm_hw_x86_64.inc:28-34`.
 /// The C table is the answer on both sides of the extension test this profile declines.
 ///
-/// # Safety
-/// Always safe; a uniform signature the hw contract requires.
-unsafe fn ossl_prov_sm4_hw_ccm(_keybits: usize) -> *const ProvCcmHw {
+fn ossl_prov_sm4_hw_ccm(_keybits: usize) -> *const ProvCcmHw {
     ptr::addr_of!(SM4_CCM_HW)
 }
+
+#[cfg(test)]
+const _: fn(usize) -> *const ProvCcmHw = ossl_prov_sm4_hw_ccm;
 
 /// `aria_ccm_newctx` — `cipher_aria_ccm.c:18-29`.
 ///
@@ -11952,11 +11956,12 @@ static CIPHER_HW_AES_HMAC_SHA1: ProvCipherHwAesHmacSha = ProvCipherHwAesHmacSha 
 /// `const PROV_CIPHER_HW_AES_HMAC_SHA *ossl_prov_cipher_hw_aes_cbc_hmac_sha1(void)` —
 /// `cipher_aes_cbc_hmac_sha1_hw.c:782-785`.
 ///
-/// # Safety
-/// None: the pointer is `'static`.
-unsafe fn ossl_prov_cipher_hw_aes_cbc_hmac_sha1() -> *const ProvCipherHwAesHmacSha {
+fn ossl_prov_cipher_hw_aes_cbc_hmac_sha1() -> *const ProvCipherHwAesHmacSha {
     &CIPHER_HW_AES_HMAC_SHA1
 }
+
+#[cfg(test)]
+const _: fn() -> *const ProvCipherHwAesHmacSha = ossl_prov_cipher_hw_aes_cbc_hmac_sha1;
 
 /// `aesni_cbc_hmac_sha256_init_key`.
 ///
@@ -12537,11 +12542,12 @@ static CIPHER_HW_AES_HMAC_SHA256: ProvCipherHwAesHmacSha = ProvCipherHwAesHmacSh
 
 /// `const PROV_CIPHER_HW_AES_HMAC_SHA *ossl_prov_cipher_hw_aes_cbc_hmac_sha256(void)`.
 ///
-/// # Safety
-/// None: the pointer is `'static`.
-unsafe fn ossl_prov_cipher_hw_aes_cbc_hmac_sha256() -> *const ProvCipherHwAesHmacSha {
+fn ossl_prov_cipher_hw_aes_cbc_hmac_sha256() -> *const ProvCipherHwAesHmacSha {
     &CIPHER_HW_AES_HMAC_SHA256
 }
+
+#[cfg(test)]
+const _: fn() -> *const ProvCipherHwAesHmacSha = ossl_prov_cipher_hw_aes_cbc_hmac_sha256;
 
 // ---------------------------------------------------------------------------------------------
 // The row layer — `cipher_aes_cbc_hmac_sha.c`
@@ -13913,11 +13919,12 @@ static AES_GCM_SIV_HW: ProvCipherHwAesGcmSiv = ProvCipherHwAesGcmSiv {
 /// `const PROV_CIPHER_HW_AES_GCM_SIV *ossl_prov_cipher_hw_aes_gcm_siv(size_t keybits)` —
 /// `cipher_aes_gcm_siv_hw.c:339-342`. The argument is ignored: one vtable serves all three rows.
 ///
-/// # Safety
-/// None: the pointer is `'static`.
-unsafe fn ossl_prov_cipher_hw_aes_gcm_siv(_keybits: usize) -> *const ProvCipherHwAesGcmSiv {
+fn ossl_prov_cipher_hw_aes_gcm_siv(_keybits: usize) -> *const ProvCipherHwAesGcmSiv {
     &AES_GCM_SIV_HW
 }
+
+#[cfg(test)]
+const _: fn(usize) -> *const ProvCipherHwAesGcmSiv = ossl_prov_cipher_hw_aes_gcm_siv;
 
 /// `static int aes_gcm_siv_ctr32(PROV_AES_GCM_SIV_CTX *ctx, const unsigned char *init_counter,
 /// unsigned char *out, const unsigned char *in, size_t len)` —
