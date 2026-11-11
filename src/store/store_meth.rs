@@ -494,13 +494,9 @@ unsafe extern "C" fn dealloc_tmp_loader_store(store: *mut c_void) {
 /// `static OSSL_METHOD_STORE *get_loader_store(OSSL_LIB_CTX *libctx)` —
 /// `store_meth.c:108-111`.
 ///
-/// # Safety
-/// `libctx` must be NULL or a live `OSSL_LIB_CTX`. `lib_ctx_get_data` is a safe wrapper in this
-/// crate (D113), but it forwards the raw context to `OSSL_LIB_CTX_get_data`, which dereferences
-/// it; the liveness obligation therefore stays here rather than at an unguarded safe boundary.
-unsafe fn get_loader_store(libctx: *mut c_void) -> *mut OsslMethodStore {
-    // `lib_ctx_get_data` is declared safe in this crate (D113), but its body dereferences the
-    // context; this function's contract is where that obligation is stated.
+/// Safe because `lib_ctx_get_data` validates the context's liveness and answers
+/// NULL for a released or foreign one, exactly as it does for an absent slot.
+fn get_loader_store(libctx: *mut c_void) -> *mut OsslMethodStore {
     lib_ctx_get_data(libctx, OSSL_LIB_CTX_STORE_LOADER_STORE_INDEX).cast::<OsslMethodStore>()
 }
 
@@ -672,8 +668,8 @@ unsafe fn inner_loader_fetch(
 ) -> *mut OsslStoreLoader {
     // SAFETY: `methdata` is live per the contract, so its `libctx` is NULL or live.
     let libctx = unsafe { (*methdata).libctx };
-    // SAFETY: `libctx` was read from the live `methdata` above, so it is NULL or live.
-    let store = unsafe { get_loader_store(libctx) };
+    // The slot read validates liveness itself.
+    let store = get_loader_store(libctx);
     let namemap = ossl_namemap_stored(libctx);
     let propq: *const c_char = if !properties.is_null() {
         properties
@@ -820,8 +816,8 @@ pub unsafe extern "C" fn OSSL_STORE_LOADER_fetch(
 /// # Safety
 /// `libctx` must be NULL or live.
 pub(crate) unsafe fn ossl_store_loader_store_cache_flush(libctx: *mut c_void) -> c_int {
-    // SAFETY: `libctx` is NULL or live per this function's contract.
-    let store = unsafe { get_loader_store(libctx) };
+    // The slot read validates liveness itself.
+    let store = get_loader_store(libctx);
     if !store.is_null() {
         // SAFETY: `store` is the live slot-15 store.
         return unsafe { ossl_method_store_cache_flush_all(store) };
@@ -840,7 +836,8 @@ pub(crate) unsafe fn ossl_store_loader_store_remove_all_provided(
     // SAFETY: `prov` is live per the contract, so its context is NULL or live.
     let libctx = unsafe { ossl_provider_libctx(prov) };
     // SAFETY: `libctx` is the provider's own context, hence NULL or live.
-    let store = unsafe { get_loader_store(libctx) };
+    // The slot read validates liveness itself.
+    let store = get_loader_store(libctx);
     if !store.is_null() {
         // SAFETY: the slot-15 store is live and `prov` is live.
         return unsafe { ossl_method_store_remove_all_provided(store, prov) };

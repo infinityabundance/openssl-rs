@@ -7934,7 +7934,7 @@ mod tls12_group_tests {
 
     /// Accepts every candidate certificate, so the mutual-auth test exercises the client's
     /// CertificateRequest handling rather than chain verification.
-    unsafe extern "C" fn accept_any_cert(_ok: c_int, _ctx: *mut c_void) -> c_int {
+    extern "C" fn accept_any_cert(_ok: c_int, _ctx: *mut c_void) -> c_int {
         1
     }
 
@@ -8732,7 +8732,7 @@ mod tls12_group_tests {
     static STATUS_CB_RESP: [u8; 4] = [0x30, 0x02, 0x0a, 0x00];
 
     /// `int (*)(SSL *, void *)` — records the argument and answers `SSL_TLSEXT_ERR_NOACK`.
-    unsafe extern "C" fn status_noack_cb(_ssl: *mut Ssl, arg: *mut c_void) -> c_int {
+    extern "C" fn status_noack_cb(_ssl: *mut Ssl, arg: *mut c_void) -> c_int {
         STATUS_CB_CALLS.fetch_add(1, Ordering::SeqCst);
         STATUS_CB_ARG.store(arg as usize, Ordering::SeqCst);
         3 // SSL_TLSEXT_ERR_NOACK

@@ -109,6 +109,8 @@ use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 use core::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering};
 
+use std::sync::Mutex;
+
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
 use crate::runtime::mem_coords::SeamFile;
@@ -1051,6 +1053,59 @@ fn set_default_context(defctx: *mut OsslLibCtx) -> bool {
     }
 }
 
+/// The addresses of the heap contexts this crate has handed out and not yet
+/// released.
+///
+/// The authority has no such registry, because in C a caller that passes a
+/// released `OSSL_LIB_CTX *` is simply invoking undefined behaviour. The safe
+/// internal accessor [`lib_ctx_get_data`] is reachable from safe Rust, so it
+/// cannot inherit that contract: it consults this registry before it
+/// dereferences anything and answers NULL for an address that is not live. That
+/// turns a use-after-free into the documented "slot is absent" answer, which is
+/// recorded in the module documentation as a deliberate safety improvement
+/// (§17: do not reproduce UB).
+///
+/// The global default is a process-static object and is always live; it is not
+/// stored here, and [`is_live_context`] answers it directly so the common NULL /
+/// default path never takes the lock.
+static LIVE_CONTEXTS: Mutex<Vec<usize>> = Mutex::new(Vec::new());
+
+/// Record `ctx` as live. Called once per heap context, before `context_init`
+/// publishes it, so a slot read performed during initialisation also validates.
+fn register_live_context(ctx: *mut OsslLibCtx) {
+    let mut live = match LIVE_CONTEXTS.lock() {
+        Ok(live) => live,
+        // No code under this lock can panic, so poisoning is unreachable; if it
+        // somehow happens, the mapping is still the correct one.
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    live.push(ctx as usize);
+}
+
+/// Drop `ctx` from the registry. Called by the one release path, before the
+/// block is freed, so a concurrent reader sees it as dead rather than dangling.
+fn unregister_live_context(ctx: *mut OsslLibCtx) {
+    let mut live = match LIVE_CONTEXTS.lock() {
+        Ok(live) => live,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    if let Some(at) = live.iter().position(|&p| p == ctx as usize) {
+        live.swap_remove(at);
+    }
+}
+
+/// Whether `ctx` names a context this process may dereference.
+fn is_live_context(ctx: *mut OsslLibCtx) -> bool {
+    if ctx == global_default() {
+        return true;
+    }
+    let live = match LIVE_CONTEXTS.lock() {
+        Ok(live) => live,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    live.contains(&(ctx as usize))
+}
+
 /// `ossl_lib_ctx_get_concrete(OSSL_LIB_CTX *ctx)` — resolve NULL to the default.
 fn concrete(ctx: *mut OsslLibCtx) -> *mut OsslLibCtx {
     if ctx.is_null() {
@@ -1088,9 +1143,14 @@ pub extern "C" fn OSSL_LIB_CTX_new() -> *mut c_void {
         let Some(ctx) = RawCtx::<OsslLibCtx>::zalloc() else {
             return ptr::null_mut();
         };
+        // Published before `context_init`, because initialisation builds slot objects
+        // that read this context's own slots through `lib_ctx_get_data`; the liveness
+        // check must already recognise the block the frame owns.
+        register_live_context(ctx.as_ptr());
         if !context_init(ctx.as_ptr()) {
             // The owner's `Drop` is the authority's failed-`context_init` release at
             // `crypto/context.c:439`: the block alone, never a slot teardown.
+            unregister_live_context(ctx.as_ptr());
             return ptr::null_mut();
         }
         // Success publishes the stable address; the C lifecycle then owns it until
@@ -1284,6 +1344,7 @@ pub unsafe extern "C" fn OSSL_LIB_CTX_free(ctx: *mut c_void) {
         if ctx.is_null() || lib_ctx_is_default(ctx) != 0 {
             return;
         }
+        unregister_live_context(ctx);
         // `if (ctx->ischild) ossl_provider_deinit_child(ctx);` -- before the slot objects
         // are released, because the deregistration tells the parent that this child is
         // gone and the parent may reach back through the globals it stored in slot 18. The
@@ -1413,10 +1474,26 @@ pub unsafe extern "C" fn OSSL_LIB_CTX_get_data(ctx: *mut c_void, index: c_int) -
 /// `void *ossl_lib_ctx_get_data(OSSL_LIB_CTX *ctx, int index)` — the internal
 /// spelling of the export. The public function is a direct forward in the
 /// authority, so it is a direct call here.
+///
+/// **Honest safe signature.** The export is `unsafe` because a C caller may hand
+/// it a released context; this internal accessor is reachable from safe Rust and
+/// therefore cannot inherit that obligation. It validates liveness against
+/// [`LIVE_CONTEXTS`] before dereferencing and answers the documented failure
+/// value (NULL, the same answer an absent slot gives) for an address this crate
+/// did not hand out or has already released. For every live context the answer
+/// is byte-identical to the authority's; the check only changes the response to
+/// input the authority would dereference into undefined behaviour.
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
 pub(crate) fn lib_ctx_get_data(ctx: *mut c_void, index: c_int) -> *mut c_void {
-    // SAFETY: `OSSL_LIB_CTX_get_data`'s contract is this function's contract:
-    // the caller passes NULL or a live context.
+    let raw = ctx.cast::<OsslLibCtx>();
+    // A non-NULL context must be one this crate allocated and has not released.
+    // A released or foreign address answers the documented failure value (NULL,
+    // the same answer every absent slot gives) instead of dereferencing it.
+    if !raw.is_null() && !is_live_context(raw) {
+        return ptr::null_mut();
+    }
+    // SAFETY: `ctx` is NULL or a context this module has registered as live and
+    // has not released; NULL resolves to the always-live global default.
     unsafe { OSSL_LIB_CTX_get_data(ctx, index) }
 }
 

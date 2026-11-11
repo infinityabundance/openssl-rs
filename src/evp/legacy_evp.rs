@@ -114,13 +114,13 @@ pub unsafe extern "C" fn EVP_add_cipher(c: *const EvpCipher) -> c_int {
     // `OBJ_nid2sn` is safe in this crate: an integer in, a static string or NULL out.
     let short = OBJ_nid2sn(nid);
     // SAFETY: `OBJ_NAME_add` borrows both strings, and `short` is a static the object table owns.
-    let r = unsafe { OBJ_NAME_add(short, OBJ_NAME_TYPE_CIPHER_METH, c.cast::<c_char>()) };
+    let r = OBJ_NAME_add(short, OBJ_NAME_TYPE_CIPHER_METH, c.cast::<c_char>());
     if r == 0 {
         return 0;
     }
     let long = OBJ_nid2ln(nid);
     // SAFETY: as above.
-    unsafe { OBJ_NAME_add(long, OBJ_NAME_TYPE_CIPHER_METH, c.cast::<c_char>()) }
+    OBJ_NAME_add(long, OBJ_NAME_TYPE_CIPHER_METH, c.cast::<c_char>())
 }
 
 /// `int EVP_add_digest(const EVP_MD *md)`.
@@ -148,13 +148,13 @@ pub unsafe extern "C" fn EVP_add_digest(md: *const EvpMd) -> c_int {
     let type_ = unsafe { (*md).type_ };
     let name = OBJ_nid2sn(type_);
     // SAFETY: `OBJ_NAME_add` borrows both strings.
-    let r = unsafe { OBJ_NAME_add(name, OBJ_NAME_TYPE_MD_METH, md.cast::<c_char>()) };
+    let r = OBJ_NAME_add(name, OBJ_NAME_TYPE_MD_METH, md.cast::<c_char>());
     if r == 0 {
         return 0;
     }
     let long = OBJ_nid2ln(type_);
     // SAFETY: as above.
-    let r = unsafe { OBJ_NAME_add(long, OBJ_NAME_TYPE_MD_METH, md.cast::<c_char>()) };
+    let r = OBJ_NAME_add(long, OBJ_NAME_TYPE_MD_METH, md.cast::<c_char>());
     if r == 0 {
         return 0;
     }
@@ -165,13 +165,13 @@ pub unsafe extern "C" fn EVP_add_digest(md: *const EvpMd) -> c_int {
         let pkey_short = OBJ_nid2sn(pkey_type);
         // SAFETY: `name` is the digest's own short name, which the table borrows as the alias's
         // target rather than as a method.
-        let r = unsafe { OBJ_NAME_add(pkey_short, OBJ_NAME_TYPE_MD_METH | OBJ_NAME_ALIAS, name) };
+        let r = OBJ_NAME_add(pkey_short, OBJ_NAME_TYPE_MD_METH | OBJ_NAME_ALIAS, name);
         if r == 0 {
             return 0;
         }
         let pkey_long = OBJ_nid2ln(pkey_type);
         // SAFETY: as above.
-        let r = unsafe { OBJ_NAME_add(pkey_long, OBJ_NAME_TYPE_MD_METH | OBJ_NAME_ALIAS, name) };
+        let r = OBJ_NAME_add(pkey_long, OBJ_NAME_TYPE_MD_METH | OBJ_NAME_ALIAS, name);
         return r;
     }
     r
@@ -205,7 +205,7 @@ unsafe extern "C" fn cipher_from_name(name: *const c_char, data: *mut c_void) {
         return;
     }
     // SAFETY: `name` is NUL-terminated per the contract.
-    let found = unsafe { OBJ_NAME_get(name, OBJ_NAME_TYPE_CIPHER_METH) };
+    let found = OBJ_NAME_get(name, OBJ_NAME_TYPE_CIPHER_METH);
     // SAFETY: `slot` is live and writable.
     unsafe { *slot = found.cast::<EvpCipher>() };
 }
@@ -224,7 +224,7 @@ unsafe extern "C" fn digest_from_name(name: *const c_char, data: *mut c_void) {
         return;
     }
     // SAFETY: `name` is NUL-terminated per the contract.
-    let found = unsafe { OBJ_NAME_get(name, OBJ_NAME_TYPE_MD_METH) };
+    let found = OBJ_NAME_get(name, OBJ_NAME_TYPE_MD_METH);
     // SAFETY: `slot` is live and writable.
     unsafe { *slot = found.cast::<EvpMd>() };
 }
@@ -250,7 +250,7 @@ pub(crate) unsafe fn evp_get_cipherbyname_ex(
     }
 
     // SAFETY: `name` is NULL or NUL-terminated per the contract.
-    let cp = unsafe { OBJ_NAME_get(name, OBJ_NAME_TYPE_CIPHER_METH) }.cast::<EvpCipher>();
+    let cp = OBJ_NAME_get(name, OBJ_NAME_TYPE_CIPHER_METH).cast::<EvpCipher>();
     if !cp.is_null() {
         return cp;
     }
@@ -313,7 +313,7 @@ pub(crate) unsafe fn evp_get_digestbyname_ex(
     }
 
     // SAFETY: `name` is NULL or NUL-terminated per the contract.
-    let dp = unsafe { OBJ_NAME_get(name, OBJ_NAME_TYPE_MD_METH) }.cast::<EvpMd>();
+    let dp = OBJ_NAME_get(name, OBJ_NAME_TYPE_MD_METH).cast::<EvpMd>();
     if !dp.is_null() {
         return dp;
     }

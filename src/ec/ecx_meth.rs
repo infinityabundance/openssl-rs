@@ -326,9 +326,9 @@ unsafe extern "C" fn ecx_priv_encode(p8: *mut Pkcs8PrivKeyInfo, pkey: *const Evp
 
 /// `static int ecx_size(const EVP_PKEY *pkey)` — `crypto/ec/ecx_meth.c:130`.
 ///
-/// # Safety
+/// # Notes
 /// `pkey` is live.
-unsafe extern "C" fn ecx_size(pkey: *const EvpPkey) -> c_int {
+extern "C" fn ecx_size(pkey: *const EvpPkey) -> c_int {
     keylen(pkey) as c_int
 }
 
@@ -374,9 +374,9 @@ unsafe extern "C" fn ecx_free(pkey: *mut EvpPkey) {
 /// `static int ecx_cmp_parameters(const EVP_PKEY *a, const EVP_PKEY *b)` —
 /// `crypto/ec/ecx_meth.c:161`. "parameters" are always equal.
 ///
-/// # Safety
+/// # Notes
 /// The two arguments are live; they are unread.
-unsafe extern "C" fn ecx_cmp_parameters(_a: *const EvpPkey, _b: *const EvpPkey) -> c_int {
+extern "C" fn ecx_cmp_parameters(_a: *const EvpPkey, _b: *const EvpPkey) -> c_int {
     1
 }
 
@@ -721,9 +721,9 @@ unsafe extern "C" fn ecx_get_pub_key(
 ///
 /// The authority provides no way to update an ECX key once set, so the count is the constant 1.
 ///
-/// # Safety
+/// # Notes
 /// `pkey` is live; it is unread.
-unsafe extern "C" fn ecx_pkey_dirty_cnt(_pkey: *const EvpPkey) -> usize {
+extern "C" fn ecx_pkey_dirty_cnt(_pkey: *const EvpPkey) -> usize {
     1
 }
 
@@ -903,17 +903,17 @@ unsafe extern "C" fn x448_import_from(params: *const OsslParam, vpctx: *mut c_vo
 
 /// `static int ecd_size25519(const EVP_PKEY *pkey)` — `crypto/ec/ecx_meth.c:533`.
 ///
-/// # Safety
+/// # Notes
 /// `pkey` is live; it is unread.
-unsafe extern "C" fn ecd_size25519(_pkey: *const EvpPkey) -> c_int {
+extern "C" fn ecd_size25519(_pkey: *const EvpPkey) -> c_int {
     ED25519_SIGSIZE as c_int
 }
 
 /// `static int ecd_size448(const EVP_PKEY *pkey)` — `crypto/ec/ecx_meth.c:538`.
 ///
-/// # Safety
+/// # Notes
 /// `pkey` is live; it is unread.
-unsafe extern "C" fn ecd_size448(_pkey: *const EvpPkey) -> c_int {
+extern "C" fn ecd_size448(_pkey: *const EvpPkey) -> c_int {
     ED448_SIGSIZE as c_int
 }
 
@@ -1386,9 +1386,9 @@ unsafe extern "C" fn pkey_ecx_derive448(
 /// `static int pkey_ecx_ctrl(EVP_PKEY_CTX *ctx, int type, int p1, void *p2)` —
 /// `crypto/ec/ecx_meth.c:779`. Only the peer key matters for derivation.
 ///
-/// # Safety
+/// # Notes
 /// The arguments are live; `type` alone is read.
-unsafe extern "C" fn pkey_ecx_ctrl(
+extern "C" fn pkey_ecx_ctrl(
     _ctx: *mut EvpPkeyCtx,
     type_: c_int,
     _p1: c_int,
@@ -1794,33 +1794,33 @@ static ED448_PKEY_METH: EvpPkeyMethod = EvpPkeyMethod {
 /// The `#ifdef S390X_EC_ASM` arm is not compiled on this profile, so the portable table is the
 /// answer unconditionally.
 ///
-/// # Safety
+/// # Notes
 /// Nothing: the answer is a `static` of this module.
-pub(crate) unsafe extern "C" fn ossl_ecx25519_pkey_method() -> *const EvpPkeyMethod {
+pub(crate) extern "C" fn ossl_ecx25519_pkey_method() -> *const EvpPkeyMethod {
     ptr::addr_of!(ECX25519_PKEY_METH)
 }
 
 /// `const EVP_PKEY_METHOD *ossl_ecx448_pkey_method(void)` — `crypto/ec/ecx_meth.c:1400`.
 ///
-/// # Safety
+/// # Notes
 /// Nothing: the answer is a `static` of this module.
-pub(crate) unsafe extern "C" fn ossl_ecx448_pkey_method() -> *const EvpPkeyMethod {
+pub(crate) extern "C" fn ossl_ecx448_pkey_method() -> *const EvpPkeyMethod {
     ptr::addr_of!(ECX448_PKEY_METH)
 }
 
 /// `const EVP_PKEY_METHOD *ossl_ed25519_pkey_method(void)` — `crypto/ec/ecx_meth.c:1409`.
 ///
-/// # Safety
+/// # Notes
 /// Nothing: the answer is a `static` of this module.
-pub(crate) unsafe extern "C" fn ossl_ed25519_pkey_method() -> *const EvpPkeyMethod {
+pub(crate) extern "C" fn ossl_ed25519_pkey_method() -> *const EvpPkeyMethod {
     ptr::addr_of!(ED25519_PKEY_METH)
 }
 
 /// `const EVP_PKEY_METHOD *ossl_ed448_pkey_method(void)` — `crypto/ec/ecx_meth.c:1421`.
 ///
-/// # Safety
+/// # Notes
 /// Nothing: the answer is a `static` of this module.
-pub(crate) unsafe extern "C" fn ossl_ed448_pkey_method() -> *const EvpPkeyMethod {
+pub(crate) extern "C" fn ossl_ed448_pkey_method() -> *const EvpPkeyMethod {
     ptr::addr_of!(ED448_PKEY_METH)
 }
 

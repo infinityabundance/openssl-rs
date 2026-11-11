@@ -389,9 +389,9 @@ unsafe fn static_ln_to_nid(s: *const c_char) -> c_int {
 
 /// `ossl_obj_obj2nid`'s static OID search.
 ///
-/// # Safety
+/// # Notes
 /// `data` must be readable for `len` bytes (or `len` may be 0).
-unsafe fn static_data_to_nid(data: *const u8, len: usize) -> c_int {
+fn static_data_to_nid(data: *const u8, len: usize) -> c_int {
     let idx = bsearch_index(NUM_OBJ, 0, |i| {
         let e = &NID_OBJS[OBJ_ORDER[i] as usize];
         obj_cmp_parts(len as c_int, data, e.length, e.data)
@@ -638,7 +638,7 @@ unsafe fn db_insert(
 /// `ossl_obj_obj2nid` over both the static and dynamic tables.
 fn content_to_nid(data: &[u8]) -> c_int {
     // SAFETY: `data` is a live slice, so its pointer is readable for its length.
-    let nid = unsafe { static_data_to_nid(data.as_ptr(), data.len()) };
+    let nid = static_data_to_nid(data.as_ptr(), data.len());
     if nid != NID_undef {
         return nid;
     }
@@ -1357,7 +1357,7 @@ pub unsafe extern "C" fn OBJ_obj2nid(a: *const Asn1Object) -> c_int {
             return NID_undef;
         }
         // SAFETY: `o.data` is readable for `o.length` bytes.
-        let nid = unsafe { static_data_to_nid(o.data, o.length as usize) };
+        let nid = static_data_to_nid(o.data, o.length as usize);
         if nid != NID_undef {
             return nid;
         }
@@ -1679,7 +1679,7 @@ pub unsafe extern "C" fn OBJ_add_object(obj: *const Asn1Object) -> c_int {
                 return NID_undef;
             }
             // SAFETY: `o.data` is readable for `o.length` bytes.
-            if unsafe { static_data_to_nid(o.data, o.length as usize) } != NID_undef {
+            if static_data_to_nid(o.data, o.length as usize) != NID_undef {
                 return NID_undef;
             }
         }
@@ -2164,10 +2164,10 @@ pub extern "C" fn OBJ_NAME_new_index(
 /// Follows alias chains (at most ten, as the authority does) and returns the
 /// stored `data` pointer, or NULL.
 ///
-/// # Safety
+/// # Notes
 /// `name` must be NULL or a valid NUL-terminated string.
 #[no_mangle]
-pub unsafe extern "C" fn OBJ_NAME_get(name: *const c_char, type_: c_int) -> *const c_char {
+pub extern "C" fn OBJ_NAME_get(name: *const c_char, type_: c_int) -> *const c_char {
     guard_ffi(core::ptr::null(), || {
         if name.is_null() {
             return core::ptr::null();
@@ -2201,15 +2201,11 @@ pub unsafe extern "C" fn OBJ_NAME_get(name: *const c_char, type_: c_int) -> *con
 ///
 /// Inserts or replaces an entry. Returns 1 on success.
 ///
-/// # Safety
+/// # Notes
 /// `name` and `data` must be valid NUL-terminated strings, and must outlive the
 /// entry (the authority also stores them borrowed).
 #[no_mangle]
-pub unsafe extern "C" fn OBJ_NAME_add(
-    name: *const c_char,
-    type_: c_int,
-    data: *const c_char,
-) -> c_int {
+pub extern "C" fn OBJ_NAME_add(name: *const c_char, type_: c_int, data: *const c_char) -> c_int {
     guard_ffi(0, || {
         if name.is_null() {
             return 0;
@@ -2258,10 +2254,10 @@ pub unsafe extern "C" fn OBJ_NAME_add(
 ///
 /// Returns 1 if an entry was removed, else 0.
 ///
-/// # Safety
+/// # Notes
 /// `name` must be NULL or a valid NUL-terminated string.
 #[no_mangle]
-pub unsafe extern "C" fn OBJ_NAME_remove(name: *const c_char, type_: c_int) -> c_int {
+pub extern "C" fn OBJ_NAME_remove(name: *const c_char, type_: c_int) -> c_int {
     guard_ffi(0, || {
         if name.is_null() {
             return 0;
@@ -2991,14 +2987,10 @@ mod tests {
             removed: usize,
         }
 
-        /// # Safety
+        /// # Notes
         /// The registry calls this destructor with the name, type and data it recorded; all
         /// three are borrowed for the call only and must not be released here.
-        unsafe extern "C" fn counting_free(
-            _name: *const c_char,
-            _type_: c_int,
-            _data: *const c_char,
-        ) {
+        extern "C" fn counting_free(_name: *const c_char, _type_: c_int, _data: *const c_char) {
             FREED.fetch_add(1, Ordering::SeqCst);
         }
 

@@ -2103,7 +2103,7 @@ pub unsafe extern "C" fn SSL_SESSION_set1_alpn_selected(
             0
         } else {
             // SAFETY: `dup` is this call's fresh block of `len` bytes; the member is empty.
-            unsafe { slot.store(dup, len) };
+            slot.store(dup, len);
             1
         }
     })
@@ -2563,7 +2563,7 @@ pub unsafe extern "C" fn SSL_SESSION_set1_ticket_appdata(
             0
         } else {
             // SAFETY: `dup` is this call's fresh block of `len` bytes; the member is empty.
-            unsafe { slot.store(dup, len) };
+            slot.store(dup, len);
             1
         }
     })

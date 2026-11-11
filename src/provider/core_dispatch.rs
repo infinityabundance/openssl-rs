@@ -302,10 +302,10 @@ unsafe impl Sync for ParamTypes {}
 ///
 /// The handle is ignored: the answer is the same three descriptors for every provider.
 ///
-/// # Safety
+/// # Notes
 /// None: `handle` is unused.
 #[allow(dead_code)] // unreachable until 6.8b-iii publishes the table
-pub(crate) unsafe extern "C" fn core_gettable_params(_handle: *const c_void) -> *const OsslParam {
+pub(crate) extern "C" fn core_gettable_params(_handle: *const c_void) -> *const OsslParam {
     PARAM_TYPES.0.as_ptr()
 }
 
@@ -554,10 +554,10 @@ pub(crate) unsafe extern "C" fn core_cleanup_user_nonce(
 /// The handle is ignored: OpenSSL's error queue is thread-local and not per-provider, which
 /// the authority's own comment says is a limitation rather than a design.
 ///
-/// # Safety
+/// # Notes
 /// None: the handle is unused.
 #[allow(dead_code)] // unreachable until 6.8b-iii publishes the table
-pub(crate) unsafe extern "C" fn core_new_error(_handle: *const c_void) {
+pub(crate) extern "C" fn core_new_error(_handle: *const c_void) {
     ERR_new();
 }
 
@@ -611,37 +611,37 @@ pub(crate) unsafe extern "C" fn core_vset_error(
 
 /// `static int core_set_error_mark(const OSSL_CORE_HANDLE *handle)`.
 ///
-/// # Safety
+/// # Notes
 /// None: the handle is unused.
 #[allow(dead_code)] // unreachable until 6.8b-iii publishes the table
-pub(crate) unsafe extern "C" fn core_set_error_mark(_handle: *const c_void) -> c_int {
+pub(crate) extern "C" fn core_set_error_mark(_handle: *const c_void) -> c_int {
     ERR_set_mark()
 }
 
 /// `static int core_clear_last_error_mark(const OSSL_CORE_HANDLE *handle)`.
 ///
-/// # Safety
+/// # Notes
 /// None: the handle is unused.
 #[allow(dead_code)] // unreachable until 6.8b-iii publishes the table
-pub(crate) unsafe extern "C" fn core_clear_last_error_mark(_handle: *const c_void) -> c_int {
+pub(crate) extern "C" fn core_clear_last_error_mark(_handle: *const c_void) -> c_int {
     ERR_clear_last_mark()
 }
 
 /// `static int core_pop_error_to_mark(const OSSL_CORE_HANDLE *handle)`.
 ///
-/// # Safety
+/// # Notes
 /// None: the handle is unused.
 #[allow(dead_code)] // unreachable until 6.8b-iii publishes the table
-pub(crate) unsafe extern "C" fn core_pop_error_to_mark(_handle: *const c_void) -> c_int {
+pub(crate) extern "C" fn core_pop_error_to_mark(_handle: *const c_void) -> c_int {
     ERR_pop_to_mark()
 }
 
 /// `static int core_count_to_mark(const OSSL_CORE_HANDLE *handle)`.
 ///
-/// # Safety
+/// # Notes
 /// None: the handle is unused.
 #[allow(dead_code)] // unreachable until 6.8b-iii publishes the table
-pub(crate) unsafe extern "C" fn core_count_to_mark(_handle: *const c_void) -> c_int {
+pub(crate) extern "C" fn core_count_to_mark(_handle: *const c_void) -> c_int {
     ERR_count_to_mark()
 }
 

@@ -532,9 +532,9 @@ static CMAC_GETTABLE_CTX_PARAMS: [OsslParam; 3] = [
 /// `static const OSSL_PARAM *cmac_gettable_ctx_params(void *ctx, void *provctx)` —
 /// `cmac_prov.c:216-220`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn cmac_gettable_ctx_params(
+extern "C" fn cmac_gettable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -581,9 +581,9 @@ static CMAC_SETTABLE_CTX_PARAMS: [OsslParam; 4] = [
 /// `static const OSSL_PARAM *cmac_settable_ctx_params(void *ctx, void *provctx)` —
 /// `cmac_prov.c:252-256`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn cmac_settable_ctx_params(
+extern "C" fn cmac_settable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -1119,9 +1119,9 @@ static GMAC_GETTABLE_PARAMS: [OsslParam; 2] = [param_size_t(OSSL_MAC_PARAM_SIZE)
 
 /// `static const OSSL_PARAM *gmac_gettable_params(void *provctx)` — `gmac_prov.c:181-184`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn gmac_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+extern "C" fn gmac_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
     GMAC_GETTABLE_PARAMS.as_ptr()
 }
 
@@ -1158,9 +1158,9 @@ static GMAC_SETTABLE_CTX_PARAMS: [OsslParam; 5] = [
 /// `static const OSSL_PARAM *gmac_settable_ctx_params(void *ctx, void *provctx)` —
 /// `gmac_prov.c:325-330`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn gmac_settable_ctx_params(
+extern "C" fn gmac_settable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -1587,9 +1587,9 @@ static SIPHASH_GETTABLE_CTX_PARAMS: [OsslParam; 4] = [
 /// `static const OSSL_PARAM *siphash_gettable_ctx_params(void *ctx, void *provctx)` —
 /// `siphash_prov.c:165-169`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn siphash_gettable_ctx_params(
+extern "C" fn siphash_gettable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -1641,9 +1641,9 @@ static SIPHASH_SETTABLE_CTX_PARAMS: [OsslParam; 5] = [
 /// `static const OSSL_PARAM *siphash_settable_ctx_params(void *ctx, void *provctx)` —
 /// `siphash_prov.c:197-201`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn siphash_settable_ctx_params(
+extern "C" fn siphash_settable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -2166,9 +2166,9 @@ static HMAC_GETTABLE_CTX_PARAMS: [OsslParam; 3] = [
 /// `static const OSSL_PARAM *hmac_gettable_ctx_params(void *ctx, void *provctx)` —
 /// `hmac_prov.c:350-354`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn hmac_gettable_ctx_params(
+extern "C" fn hmac_gettable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -2222,9 +2222,9 @@ static HMAC_SETTABLE_CTX_PARAMS: [OsslParam; 5] = [
 /// `static const OSSL_PARAM *hmac_settable_ctx_params(void *ctx, void *provctx)` —
 /// `hmac_prov.c:509-513`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn hmac_settable_ctx_params(
+extern "C" fn hmac_settable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -2637,9 +2637,9 @@ macro_rules! blake2_mac_row {
             /// `static const OSSL_PARAM *blake2_gettable_ctx_params(void *ctx, void *provctx)` —
             /// `blake2_mac_impl.c:150-154`.
             ///
-            /// # Safety
+            /// # Notes
             /// The dispatch contract.
-            unsafe extern "C" fn gettable_ctx_params(
+            extern "C" fn gettable_ctx_params(
                 _ctx: *mut c_void,
                 _provctx: *mut c_void,
             ) -> *const OsslParam {
@@ -2684,9 +2684,9 @@ macro_rules! blake2_mac_row {
             /// `static const OSSL_PARAM *blake2_mac_settable_ctx_params(void *ctx, void *p_ctx)`
             /// — `blake2_mac_impl.c:174-178`.
             ///
-            /// # Safety
+            /// # Notes
             /// The dispatch contract.
-            unsafe extern "C" fn settable_ctx_params(
+            extern "C" fn settable_ctx_params(
                 _ctx: *mut c_void,
                 _p_ctx: *mut c_void,
             ) -> *const OsslParam {
@@ -3070,9 +3070,9 @@ unsafe extern "C" fn poly1305_final(
 /// `static const OSSL_PARAM *poly1305_gettable_params(void *provctx)` — `poly1305_prov.c:189-192`.
 /// No context argument, because this is the provider-level list.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn poly1305_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+extern "C" fn poly1305_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
     POLY1305_GETTABLE_PARAMS.as_ptr()
 }
 
@@ -3098,9 +3098,9 @@ unsafe extern "C" fn poly1305_get_params(params: *mut OsslParam) -> c_int {
 /// `static const OSSL_PARAM *poly1305_settable_ctx_params(void *ctx, void *provctx)` —
 /// `poly1305_prov.c:246-250`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn poly1305_settable_ctx_params(
+extern "C" fn poly1305_settable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -4052,9 +4052,9 @@ unsafe extern "C" fn kmac_final(
 /// `static const OSSL_PARAM *kmac_gettable_ctx_params(void *ctx, void *provctx)` —
 /// `kmac_prov.c:469-474`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn kmac_gettable_ctx_params(
+extern "C" fn kmac_gettable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -4099,9 +4099,9 @@ unsafe extern "C" fn kmac_get_ctx_params(vmacctx: *mut c_void, params: *mut Ossl
 /// `static const OSSL_PARAM *kmac_settable_ctx_params(void *ctx, void *provctx)` —
 /// `kmac_prov.c:632-637`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn kmac_settable_ctx_params(
+extern "C" fn kmac_settable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {

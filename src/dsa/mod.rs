@@ -936,14 +936,14 @@ mod tests {
 
     /// Stored and compared, never called. Each returns its own constant so that a transcription
     /// which *did* call one would be visible rather than merely wrong.
-    unsafe extern "C" fn sentinel_do_sign(
+    extern "C" fn sentinel_do_sign(
         _dgst: *const c_uchar,
         _dlen: c_int,
         _dsa: *mut Dsa,
     ) -> *mut DsaSig {
         core::ptr::null_mut()
     }
-    unsafe extern "C" fn sentinel_sign_setup(
+    extern "C" fn sentinel_sign_setup(
         _dsa: *mut Dsa,
         _ctx_in: *mut BnCtx,
         _kinvp: *mut *mut BigNum,
@@ -951,7 +951,7 @@ mod tests {
     ) -> c_int {
         7
     }
-    unsafe extern "C" fn sentinel_do_verify(
+    extern "C" fn sentinel_do_verify(
         _dgst: *const c_uchar,
         _dgst_len: c_int,
         _sig: *mut DsaSig,
@@ -959,7 +959,7 @@ mod tests {
     ) -> c_int {
         7
     }
-    unsafe extern "C" fn sentinel_mod_exp(
+    extern "C" fn sentinel_mod_exp(
         _dsa: *mut Dsa,
         _rr: *mut BigNum,
         _a1: *const BigNum,
@@ -972,7 +972,7 @@ mod tests {
     ) -> c_int {
         7
     }
-    unsafe extern "C" fn sentinel_bn_mod_exp(
+    extern "C" fn sentinel_bn_mod_exp(
         _dsa: *mut Dsa,
         _r: *mut BigNum,
         _a: *const BigNum,
@@ -983,10 +983,10 @@ mod tests {
     ) -> c_int {
         7
     }
-    unsafe extern "C" fn sentinel_life(_dsa: *mut Dsa) -> c_int {
+    extern "C" fn sentinel_life(_dsa: *mut Dsa) -> c_int {
         7
     }
-    unsafe extern "C" fn sentinel_paramgen(
+    extern "C" fn sentinel_paramgen(
         _dsa: *mut Dsa,
         _bits: c_int,
         _seed: *const c_uchar,
@@ -997,7 +997,7 @@ mod tests {
     ) -> c_int {
         7
     }
-    unsafe extern "C" fn sentinel_keygen(_dsa: *mut Dsa) -> c_int {
+    extern "C" fn sentinel_keygen(_dsa: *mut Dsa) -> c_int {
         7
     }
 

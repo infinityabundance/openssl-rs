@@ -1960,9 +1960,9 @@ static CIPHER_GETTABLE_PARAMS: [OsslParam; 11] = [
 
 /// `ossl_cipher_generic_gettable_params` — `ciphercommon.c.in:48-51`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-pub(crate) unsafe extern "C" fn ossl_cipher_generic_gettable_params(
+pub(crate) extern "C" fn ossl_cipher_generic_gettable_params(
     _provctx: *mut c_void,
 ) -> *const OsslParam {
     CIPHER_GETTABLE_PARAMS.as_ptr()
@@ -1982,9 +1982,9 @@ static CIPHER_GETTABLE_CTX_PARAMS: [OsslParam; 8] = [
 
 /// `ossl_cipher_generic_gettable_ctx_params` — `ciphercommon.c.in:125-128`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-pub(crate) unsafe extern "C" fn ossl_cipher_generic_gettable_ctx_params(
+pub(crate) extern "C" fn ossl_cipher_generic_gettable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -2003,9 +2003,9 @@ static CIPHER_SETTABLE_CTX_PARAMS: [OsslParam; 6] = [
 
 /// `ossl_cipher_generic_settable_ctx_params` — `ciphercommon.c.in:142-145`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-pub(crate) unsafe extern "C" fn ossl_cipher_generic_settable_ctx_params(
+pub(crate) extern "C" fn ossl_cipher_generic_settable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -3284,9 +3284,9 @@ static TDES_GETTABLE_CTX_PARAMS: [OsslParam; 8] = [
 
 /// `ossl_tdes_gettable_ctx_params` — `cipher_tdes_common.c:131-134`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-pub(crate) unsafe extern "C" fn ossl_tdes_gettable_ctx_params(
+pub(crate) extern "C" fn ossl_tdes_gettable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -3302,9 +3302,9 @@ static TDES_SETTABLE_CTX_PARAMS: [OsslParam; 3] = [
 
 /// `ossl_tdes_settable_ctx_params`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn ossl_tdes_settable_ctx_params(
+extern "C" fn ossl_tdes_settable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -4749,9 +4749,9 @@ static CTS_GETTABLE_CTX_PARAMS: [OsslParam; 8] = [
 
 /// `aes_cbc_cts_gettable_ctx_params` / `camellia_cbc_cts_gettable_ctx_params`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn cts_gettable_ctx_params(
+extern "C" fn cts_gettable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -4768,9 +4768,9 @@ static CTS_SETTABLE_CTX_PARAMS: [OsslParam; 4] = [
 
 /// `aes_cbc_cts_settable_ctx_params` / `camellia_cbc_cts_settable_ctx_params`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn cts_settable_ctx_params(
+extern "C" fn cts_settable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -5090,9 +5090,9 @@ unsafe extern "C" fn cipher_hw_aes_xts_copyctx(dst: *mut ProvCipherCtx, src: *co
 /// plain function pointer rather than an `Option`, so a never-called stub stands in for the
 /// authority's `NULL`.
 ///
-/// # Safety
+/// # Notes
 /// Never called.
-unsafe extern "C" fn cipher_hw_aes_xts_cipher_unused(
+extern "C" fn cipher_hw_aes_xts_cipher_unused(
     _ctx: *mut ProvCipherCtx,
     _out: *mut c_uchar,
     _in_: *const c_uchar,
@@ -5112,9 +5112,9 @@ static AES_XTS_SETTABLE_CTX_PARAMS: [OsslParam; 2] = [param_size_t(OSSL_CIPHER_P
 
 /// `aes_xts_settable_ctx_params` — `cipher_aes_xts.c:249-253`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn aes_xts_settable_ctx_params(
+extern "C" fn aes_xts_settable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -6021,9 +6021,9 @@ static SM4_XTS_SETTABLE_CTX_PARAMS: [OsslParam; 2] = [
 
 /// `sm4_xts_settable_ctx_params` — `cipher_sm4_xts.c:197-201`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn sm4_xts_settable_ctx_params(
+extern "C" fn sm4_xts_settable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -6306,9 +6306,9 @@ unsafe extern "C" fn cipher_hw_aes_ocb_generic_initkey(
 /// a plain function pointer rather than an `Option`, so a never-called stub stands in for the
 /// authority's `NULL`.
 ///
-/// # Safety
+/// # Notes
 /// Never called.
-unsafe extern "C" fn cipher_hw_aes_ocb_cipher_unused(
+extern "C" fn cipher_hw_aes_ocb_cipher_unused(
     _ctx: *mut ProvCipherCtx,
     _out: *mut c_uchar,
     _in_: *const c_uchar,
@@ -6333,9 +6333,9 @@ static AES_OCB_HW: ProvCipherHw = ProvCipherHw {
 /// duplicate bodies, which are the only readers of `ProvCipherHw::copyctx`. The stub body is
 /// therefore empty and performs no copy at all (in particular, no `copy_nonoverlapping`).
 ///
-/// # Safety
+/// # Notes
 /// Never called.
-unsafe extern "C" fn cipher_hw_aes_ocb_copyctx_unused(
+extern "C" fn cipher_hw_aes_ocb_copyctx_unused(
     _dst: *mut ProvCipherCtx,
     _src: *const ProvCipherCtx,
 ) {
@@ -6860,9 +6860,9 @@ static OCB_GETTABLE_CTX_PARAMS: [OsslParam; 7] = [
 
 /// `cipher_ocb_gettable_ctx_params` — `cipher_aes_ocb.c:484-488`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn cipher_ocb_gettable_ctx_params(
+extern "C" fn cipher_ocb_gettable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -6879,9 +6879,9 @@ static OCB_SETTABLE_CTX_PARAMS: [OsslParam; 4] = [
 
 /// `cipher_ocb_settable_ctx_params` — `cipher_aes_ocb.c:496-500`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn cipher_ocb_settable_ctx_params(
+extern "C" fn cipher_ocb_settable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -8622,9 +8622,9 @@ const CCM_GET_CTX_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 7]
 
 /// `ossl_ccm_settable_ctx_params` — `ciphercommon_ccm.c:169-173`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn ossl_ccm_settable_ctx_params(
+extern "C" fn ossl_ccm_settable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -8719,9 +8719,9 @@ unsafe extern "C" fn ossl_ccm_set_ctx_params(vctx: *mut c_void, params: *const O
 
 /// `ossl_ccm_gettable_ctx_params` — `ciphercommon_ccm.c:388-392`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn ossl_ccm_gettable_ctx_params(
+extern "C" fn ossl_ccm_gettable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -10274,9 +10274,9 @@ static SIV_GETTABLE_CTX_PARAMS: [OsslParam; 4] = [
 
 /// `aes_siv_gettable_ctx_params` — `cipher_aes_siv.c:191-196`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn aes_siv_gettable_ctx_params(
+extern "C" fn aes_siv_gettable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -10349,9 +10349,9 @@ static SIV_SETTABLE_CTX_PARAMS: [OsslParam; 4] = [
 
 /// `aes_siv_settable_ctx_params` — `cipher_aes_siv.c:242-247`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn aes_siv_settable_ctx_params(
+extern "C" fn aes_siv_settable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -10686,9 +10686,9 @@ struct ProvNullCtx {
 
 /// `null_newctx` — `cipher_null.c:24-31`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn null_newctx(_provctx: *mut c_void) -> *mut c_void {
+extern "C" fn null_newctx(_provctx: *mut c_void) -> *mut c_void {
     if is_running() == 0 {
         return ptr::null_mut();
     }
@@ -10733,9 +10733,9 @@ unsafe extern "C" fn null_einit(
 
 /// `null_dinit` — `cipher_null.c:53-62`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn null_dinit(
+extern "C" fn null_dinit(
     _vctx: *mut c_void,
     _key: *const c_uchar,
     _keylen: usize,
@@ -10825,9 +10825,9 @@ static NULL_GETTABLE_CTX_PARAMS: [OsslParam; 4] = [
 
 /// `null_gettable_ctx_params` — `cipher_null.c:115-120`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn null_gettable_ctx_params(
+extern "C" fn null_gettable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -10867,9 +10867,9 @@ static NULL_SETTABLE_CTX_PARAMS: [OsslParam; 2] =
 
 /// `null_settable_ctx_params` — `cipher_null.c:152-157`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn null_settable_ctx_params(
+extern "C" fn null_settable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -12585,9 +12585,9 @@ static CBC_HMAC_SETTABLE_CTX_PARAMS: [OsslParam; 9] = [
 
 /// `aes_settable_ctx_params` — `cipher_aes_cbc_hmac_sha.c:80-84`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn aes_settable_ctx_params(
+extern "C" fn aes_settable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -12610,9 +12610,9 @@ static CBC_HMAC_GETTABLE_CTX_PARAMS: [OsslParam; 10] = [
 
 /// `aes_gettable_ctx_params` — `cipher_aes_cbc_hmac_sha.c:299-303`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn aes_gettable_ctx_params(
+extern "C" fn aes_gettable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -14296,9 +14296,9 @@ static GCM_SIV_GETTABLE_CTX_PARAMS: [OsslParam; 4] = [
 
 /// `ossl_aes_gcm_siv_gettable_ctx_params` — `cipher_aes_gcm_siv.c:209-213`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn ossl_aes_gcm_siv_gettable_ctx_params(
+extern "C" fn ossl_aes_gcm_siv_gettable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -14372,9 +14372,9 @@ static GCM_SIV_SETTABLE_CTX_PARAMS: [OsslParam; 4] = [
 
 /// `ossl_aes_gcm_siv_settable_ctx_params` — `cipher_aes_gcm_siv.c:267-271`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn ossl_aes_gcm_siv_settable_ctx_params(
+extern "C" fn ossl_aes_gcm_siv_settable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -15602,9 +15602,9 @@ static CHACHA20_GETTABLE_CTX_PARAMS: [OsslParam; 4] = [
 /// `const OSSL_PARAM *chacha20_gettable_ctx_params(void *cctx, void *provctx)` —
 /// `cipher_chacha20.c:140-144`. Hand-written rather than the generic list, which is the row's shape.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn chacha20_gettable_ctx_params(
+extern "C" fn chacha20_gettable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -15667,9 +15667,9 @@ static CHACHA20_SETTABLE_CTX_PARAMS: [OsslParam; 3] = [
 /// `const OSSL_PARAM *chacha20_settable_ctx_params(void *cctx, void *provctx)` —
 /// `cipher_chacha20.c:183-187`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn chacha20_settable_ctx_params(
+extern "C" fn chacha20_settable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -16912,9 +16912,9 @@ static CHACHA20_POLY1305_GETTABLE_CTX_PARAMS: [OsslParam; 6] = [
 /// `static const OSSL_PARAM *chacha20_poly1305_gettable_ctx_params(void *cctx, void *provctx)` —
 /// `cipher_chacha20_poly1305.c:261-265`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn chacha20_poly1305_gettable_ctx_params(
+extern "C" fn chacha20_poly1305_gettable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -16990,9 +16990,9 @@ unsafe extern "C" fn chacha20_poly1305_get_ctx_params(
 /// `const OSSL_PARAM *chacha20_poly1305_settable_ctx_params(void *cctx, void *provctx)` —
 /// `cipher_chacha20_poly1305.c:379-383`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn chacha20_poly1305_settable_ctx_params(
+extern "C" fn chacha20_poly1305_settable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -18667,9 +18667,9 @@ pub(crate) mod legacy {
 
     /// `ossl_cipher_var_keylen_settable_ctx_params`.
     ///
-    /// # Safety
+    /// # Notes
     /// The dispatch contract.
-    unsafe extern "C" fn var_keylen_settable_ctx_params(
+    extern "C" fn var_keylen_settable_ctx_params(
         _cctx: *mut c_void,
         _provctx: *mut c_void,
     ) -> *const OsslParam {
@@ -20518,9 +20518,9 @@ pub(crate) mod legacy {
 
     /// `rc2_gettable_ctx_params`.
     ///
-    /// # Safety
+    /// # Notes
     /// The dispatch contract.
-    unsafe extern "C" fn rc2_gettable_ctx_params(
+    extern "C" fn rc2_gettable_ctx_params(
         _cctx: *mut c_void,
         _provctx: *mut c_void,
     ) -> *const OsslParam {
@@ -20539,9 +20539,9 @@ pub(crate) mod legacy {
 
     /// `rc2_settable_ctx_params`.
     ///
-    /// # Safety
+    /// # Notes
     /// The dispatch contract.
-    unsafe extern "C" fn rc2_settable_ctx_params(
+    extern "C" fn rc2_settable_ctx_params(
         _cctx: *mut c_void,
         _provctx: *mut c_void,
     ) -> *const OsslParam {
@@ -22062,9 +22062,9 @@ pub(crate) mod legacy {
 
     /// `rc4_hmac_md5_gettable_ctx_params` — `cipher_rc4_hmac_md5.c:108-112`.
     ///
-    /// # Safety
+    /// # Notes
     /// The dispatch contract.
-    unsafe extern "C" fn rc4_hmac_md5_gettable_ctx_params(
+    extern "C" fn rc4_hmac_md5_gettable_ctx_params(
         _cctx: *mut c_void,
         _provctx: *mut c_void,
     ) -> *const OsslParam {
@@ -22108,9 +22108,9 @@ pub(crate) mod legacy {
 
     /// `rc4_hmac_md5_settable_ctx_params` — `cipher_rc4_hmac_md5.c:144-148`.
     ///
-    /// # Safety
+    /// # Notes
     /// The dispatch contract.
-    unsafe extern "C" fn rc4_hmac_md5_settable_ctx_params(
+    extern "C" fn rc4_hmac_md5_settable_ctx_params(
         _cctx: *mut c_void,
         _provctx: *mut c_void,
     ) -> *const OsslParam {
@@ -22798,11 +22798,11 @@ mod tests {
 
         static CONSULTED: AtomicUsize = AtomicUsize::new(0);
 
-        unsafe extern "C" fn refuses() -> c_int {
+        extern "C" fn refuses() -> c_int {
             CONSULTED.fetch_add(1, Ordering::SeqCst);
             0
         }
-        unsafe extern "C" fn accepts() -> c_int {
+        extern "C" fn accepts() -> c_int {
             CONSULTED.fetch_add(1, Ordering::SeqCst);
             1
         }
@@ -24372,3 +24372,7 @@ mod tests {
         assert_eq!(out[8..], [0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11]);
     }
 }
+
+// Compile-time control: the converted dispatcher keeps its exact C signature.
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void) -> *const OsslParam = ossl_cipher_generic_gettable_params;
