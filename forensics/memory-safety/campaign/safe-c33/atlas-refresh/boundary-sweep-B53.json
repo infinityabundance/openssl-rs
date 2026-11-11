@@ -1,0 +1,1882 @@
+{
+ "receipt": "boundary-sweep-B53",
+ "date": "2026-11-11",
+ "campaign": "safe-c33 shared-contract establishment (E2 follow-on: the `src/slh_dsa/` EVP_PKEY_PROVIDER cluster \u2014 the two SLH-DSA method tables)",
+ "subphase": "B53 takes the 30 BLOCKED `UNSAFE_FN_DEF` obligations of `evidence/closure-ssh-311.json` whose `file` is under `src/slh_dsa/`: the eighteen ADRS method-table accessors (`src/slh_dsa/adrs.rs`) and the twelve hash primitives (`src/slh_dsa/hash.rs`), all under mechanism `EVP_PKEY_PROVIDER`. The brief allowed a thirty-first site (a BLOCKED `UNSAFE_EXTERN_BLOCK` under `slh_dsa`); no such entry exists \u2014 the closure's only BLOCKED `UNSAFE_EXTERN_BLOCK` is `src/provider/decode_pvk2key.rs:54`, outside the cluster, and it is not claimed, so the count is 30, not 31. The delta is additive (3 files, 337 inserted lines, 0 deleted): 30 fn-level `# Safety` contracts, a shared contract on `SlhAdrs`/`SlhAdrsFunc`/`SlhHashFunc`, two compile-time table-liveness assertions, and one test-only guard-byte canary. No unsafe operation is added or removed and no behaviour changes. The discharge is NOT applied: `CAMPAIGN-STATUS.json` is untouched and the closure was not re-run.",
+ "candidate": {
+  "head": "bb3f7efe75f1b8b0c6cbf41a5dab8bbf74f447e9",
+  "head_subject": "ledger: discharge 14 SSL_CONF/cipher/serverinfo sites -> BLOCKED 149 -> 135",
+  "branch": "main",
+  "source_state": "HEAD bb3f7efe7 plus this subphase's uncommitted delta (3 files, +337/-0). Not committed and not pushed, per the brief; the orchestrator freezes this tree as S.",
+  "files": [
+   "src/slh_dsa/adrs.rs",
+   "src/slh_dsa/hash.rs",
+   "src/slh_dsa/tests.rs"
+  ],
+  "files_sha256": {
+   "src/slh_dsa/adrs.rs": "a0e9e7d9ba29688b6f767bcaba84b28dedb8aafc8ef0be25867aefd370eb773d",
+   "src/slh_dsa/hash.rs": "8351bb54d165803e856167f42912615c879729be163adadfee074400b493d0ed",
+   "src/slh_dsa/tests.rs": "9902130e7fded365717129b934cc0e6812e90a768f44da5c5639af0abd8e6f22"
+  },
+  "files_sha256_scope": "the three files the delta touches; every other file named in `callers` is unchanged from HEAD bb3f7efe7, so those coordinates are HEAD coordinates.",
+  "delta": {
+   "files": 3,
+   "insertions": 337,
+   "deletions": 0,
+   "kind": "doc-only contracts (30 `# Safety` sections + shared type/struct contracts) + 2 compile-time liveness assertions + 1 #[cfg(test)] canary"
+  },
+  "note": "line is advisory under content addressing; span_sha256 is the acceptance binding"
+ },
+ "authority": {
+  "id": "openssl-3.6.4-production",
+  "source": "forensics/authorities/src/openssl-3.6.4",
+  "header": "crypto/slh_dsa/slh_adrs.h:23-25 (SLH_ADRS_SIZE 32 / SLH_ADRSC_SIZE 22 / SLH_ADRS_SIZE_MAX 32), :36 (SLH_ADRS_DECLARE), :57-69 (SLH_ADRS_FUNC); slh_hash.h:55-62 (SLH_HASH_FUNC); slh_dsa_local.h:49 (scratch[64 + 2 * SLH_MAX_N])",
+  "dispatch": "crypto/slh_dsa/slh_adrs.c:68-151 (18 static writers, two tables) and slh_hash.c:64-281 (12 static primitives, two tables); the tables are selected by `is_shake` in slh_dsa_key.c:34-66 \u2014 candidate `slh_dsa_key_hash_init`, src/slh_dsa/hash_ctx.rs:217-255.",
+  "note": "The authority reaches both tables only through `key->adrs_func` / `key->hash_func`, exactly as the candidate does. Its hash primitives take an `out_len` and ignore it in all twelve bodies; the candidate reproduces that verbatim, so every contract binds the output span to `n`/`m` rather than to `out_len`. The authority's ADRS writers take a bare `uint8_t *` whose extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`; the candidate keeps that shape (`SlhAdrs`) and adds the extent to each contract."
+ },
+ "mechanism": {
+  "id": "EVP_PKEY_PROVIDER",
+  "state": "OWNERSHIP_RECONSTRUCTED",
+  "state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]",
+  "discharge": "SITE-SCOPED: the 30 operations below only. The mechanism state is unchanged and is not discharged mechanism-wide; 8 other EVP_PKEY_PROVIDER obligations stay BLOCKED."
+ },
+ "scope": {
+  "aggregation": "`.obligations[] | select(.file | startswith(\"src/slh_dsa\")) | select(.status == \"BLOCKED\")` over `evidence/closure-ssh-311.json` (175 DISCHARGED / 149 BLOCKED / 0 UNKNOWN; source_identity.repository_head 6eec8a175; generated 2026-11-11T04:05:33Z)",
+  "selected_count": 30,
+  "selected_by_kind": {
+   "UNSAFE_FN_DEF": 30,
+   "UNSAFE_EXTERN_BLOCK": 0
+  },
+  "selected_by_mechanism": {
+   "EVP_PKEY_PROVIDER": 30
+  },
+  "brief_expectation": "30 UNSAFE_FN_DEF + 1 possible UNSAFE_EXTERN_BLOCK; the extern block is not in this cluster",
+  "chosen_family": {
+   "family": "src/slh_dsa method tables",
+   "count": 30,
+   "why": "The two SLH-DSA method tables are the whole blocked population of the cluster: 18 accessors in adrs.rs (9 uncompressed + 9 compressed) and 12 primitives in hash.rs (6 SHAKE + 6 SHA-2). Nothing else under src/slh_dsa is BLOCKED."
+  },
+  "per_file": [
+   {
+    "file": "src/slh_dsa/adrs.rs",
+    "count": 18,
+    "operations": [
+     "slh_adrs_set_layer_address",
+     "slh_adrs_set_tree_address",
+     "slh_adrs_set_type_and_clear",
+     "slh_adrs_set_keypair_address",
+     "slh_adrs_copy_keypair_address",
+     "slh_adrs_set_chain_address",
+     "slh_adrs_set_hash_address",
+     "slh_adrs_zero",
+     "slh_adrs_copy",
+     "slh_adrsc_set_layer_address",
+     "slh_adrsc_set_tree_address",
+     "slh_adrsc_set_type_and_clear",
+     "slh_adrsc_set_keypair_address",
+     "slh_adrsc_copy_keypair_address",
+     "slh_adrsc_set_chain_address",
+     "slh_adrsc_set_hash_address",
+     "slh_adrsc_zero",
+     "slh_adrsc_copy"
+    ]
+   },
+   {
+    "file": "src/slh_dsa/hash.rs",
+    "count": 12,
+    "operations": [
+     "slh_hmsg_shake",
+     "slh_prf_shake",
+     "slh_prf_msg_shake",
+     "slh_f_shake",
+     "slh_h_shake",
+     "slh_t_shake",
+     "slh_hmsg_sha2",
+     "slh_prf_msg_sha2",
+     "slh_prf_sha2",
+     "slh_f_sha2",
+     "slh_h_sha2",
+     "slh_t_sha2"
+    ]
+   }
+  ],
+  "excluded": [
+   {
+    "operation": "the extern block at src/provider/decode_pvk2key.rs:54",
+    "file": "src/provider/decode_pvk2key.rs",
+    "line": 54,
+    "kind": "UNSAFE_EXTERN_BLOCK",
+    "mechanism": "EVP_PKEY_PROVIDER",
+    "reason": "It is the only BLOCKED UNSAFE_EXTERN_BLOCK in the closure and its file is not under `src/slh_dsa`, so the brief's condition (\"if its file is under slh_dsa\") is not met. It remains BLOCKED and is not claimed here."
+   }
+  ],
+  "not_touched": [
+   {
+    "family": "src/slh_dsa/* with any other status",
+    "count": 0
+   },
+   {
+    "family": "EVP_PKEY_PROVIDER BLOCKED outside src/slh_dsa",
+    "count": 8
+   }
+  ],
+  "baseline_receipt": "evidence/closure-ssh-311.json",
+  "ledger_note": "The ledger at HEAD reports 135 BLOCKED because 14 SSL_CONF/cipher/serverinfo sites were discharged after the closure was generated (subject of HEAD). None of them is under src/slh_dsa, so this selection is unchanged; the closure was not re-run to prove that, and a re-run is a BATCH/SEAL gate."
+ },
+ "shared_contract": "Each `SlhAdrsFunc` slot receives a pointer to a live, exclusively borrowed 32-byte region. The region has exactly one provenance in the crate: a `SlhAdrs` local (`[u8; SLH_ADRS_SIZE_MAX]`), passed directly or threaded through a function argument; no ADRS pointer crosses the C ABI. The call writes exactly the byte range its contract states (uncompressed writers end at 32, compressed ones at 22), reads nothing it does not name, requires only alignment 1, and requires that no other reference to the region be live across the call. `copy`/`copy_keypair_address` additionally require their two spans to be disjoint, which holds because every `dst` is a fresh local of the calling frame and every `src` is that frame's `adrs` parameter. Each `SlhHashFunc` slot receives a live context whose `key`/`params` are a static parameter row and whose tables are paired with the ADRS form it reads; the input spans are `n`/`msg_len`/`m_len`, the output span is `n` (or `m` for `h_msg`) regardless of the ignored `out_len`, and `out` never aliases `(*ctx).scratch`, which `do_hash` uses as its destination.",
+ "dispatch_paths": {
+  "entry_points": [
+   "src/provider/slh_dsa_sig.rs:559 (sign) and :637 (verify) call `ossl_slh_dsa_sign`/`ossl_slh_dsa_verify`; neither takes an ADRS pointer.",
+   "src/slh_dsa/dsa.rs \u2014 `ossl_slh_dsa_sign`/`ossl_slh_dsa_verify` are the only constructors of the outermost ADRS local (:106, :320)."
+  ],
+  "origins": [
+   "src/slh_dsa/dsa.rs:106 \u2014 `slh_sign_internal`, `let mut adrs = [0u8; SLH_ADRS_SIZE_MAX]`",
+   "src/slh_dsa/dsa.rs:320 \u2014 `slh_verify_internal`, same",
+   "src/slh_dsa/hypertree.rs:47 \u2014 `ossl_slh_ht_sign`, `SlhAdrs`",
+   "src/slh_dsa/hypertree.rs:153 \u2014 `ossl_slh_ht_verify`, `SlhAdrs`",
+   "src/slh_dsa/key.rs:483 \u2014 `slh_dsa_compute_pk_root`, `[0u8; SLH_ADRS_SIZE_MAX]`",
+   "src/slh_dsa/wots.rs:190/:191/:303/:403, src/slh_dsa/xmss.rs:147, src/slh_dsa/fors.rs:87/:334 \u2014 frame-local scratch blobs",
+   "src/slh_dsa/tests.rs:491 and :517 \u2014 the two test windows (the second is B53-C1)"
+  ],
+  "chain": [
+   "dsa.rs:106 -> fors_sign:231, fors_pk_from_sig:249/:418 (ht_sign/ht_verify take no adrs)",
+   "hypertree.rs:47 -> xmss_sign:87, xmss_pk_from_sig:113",
+   "hypertree.rs:153 -> xmss_pk_from_sig:191",
+   "key.rs:483 -> xmss_node:508",
+   "xmss_node adrs -> recursion:81/:91, wots_pk_gen:72",
+   "xmss_sign adrs -> wots_sign:169, xmss_node:183",
+   "xmss_pk_from_sig adrs -> wots_pk_from_sig:232",
+   "wots_pk_gen adrs -> slh_wots_chain:236; wots_sign adrs -> :357; wots_pk_from_sig adrs -> :462",
+   "fors_sign adrs -> fors_sk_gen:260, fors_node:283",
+   "fors_node adrs -> recursion:177/:187, fors_sk_gen:153"
+  ],
+  "slot_reads": "The 11 `SlhAdrsFunc` slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs and the 6 `SlhHashFunc` slots only in {wots,xmss,fors,dsa}.rs; a grep of every slot name over src/ returns no other module, so the caller set is closed inside the module. Every call site is listed per row.",
+  "table_selection": "src/slh_dsa/hash_ctx.rs:252-253 \u2014 `adrs_func = ossl_slh_get_adrs_fn(is_shake == 0)`, `hash_func = ossl_slh_get_hash_fn(is_shake)`. Both selectors read the same field, so a SHAKE hash primitive is always paired with the uncompressed (32-byte) ADRS writers and a SHA-2 one with the compressed (22-byte) writers.",
+  "extern_api": "No C ABI entry point accepts an ADRS pointer: both selectors and every slot are `pub(crate)`, and the provider rows pass only key, context, message and signature buffers.",
+  "second_reader": "The only other readers are the two `#[cfg(test)]` tests \u2014 src/slh_dsa/tests.rs:480-497 (the pre-existing compressed-clear extent test) and :509-616 (B53-C1) \u2014 and each builds its own local."
+ },
+ "row_liveness": {
+  "question": "Do the two method tables stay valid across the call?",
+  "answer": "YES, ENFORCED AT COMPILE TIME.",
+  "enforcement": "`METHODS` is a function-local `const` array in each selector and the returned `&METHODS[i]` is a promoted `'static` reference. Each selector carries `const _: &Table = &METHODS[0];` and `... [1];`, and a `const` initialiser accepts only a promoted reference, so materialising either table as a temporary or a runtime `let` is a compile error (E0435) rather than a dangling pointer. Nothing in the crate writes, frees or replaces `adrs_func`/`hash_func` after `slh_dsa_key_hash_init`.",
+  "observation": "Both assertions are unconditional, compile-time only (no symbol, no codegen), and were mutation-proven in-tree: changing `const METHODS` to `let METHODS` fails the build with two E0435 errors (negative control B53-C2).",
+  "static_rows": "Both tables; there is no registry, no refcount and no free API.",
+  "dynamic_rows": "None: no dynamic or caller-owned row can be installed.",
+  "caller_rows": "Not applicable."
+ },
+ "defect_class": "uncontracted unsafe fn definitions at 30 EVP_PKEY_PROVIDER sites in the two SLH-DSA method tables. Each body carried per-line `// SAFETY:` comments but no fn-level `# Safety`, so the pointer-extent obligation (a live, exclusively borrowed 32-byte ADRS region, and the exact byte range written) and the length obligations (`n`, `m`, `sha2_h_and_t_bound` from the parameter row, and the ignored `out_len`) were undocumented and unenumerated for callers.",
+ "boundaries": [
+  {
+   "id": "B53-ADRS-001",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 119,
+   "line_current": 136,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_layer_address",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::set_layer_address",
+   "table": "table 0 (uncompressed, 32-byte blob)",
+   "registration": "src/slh_dsa/adrs.rs:396 \u2014 `SlhAdrsFunc::set_layer_address` in table 0 (`is_compressed == 0`); the compressed twin is registered at :409",
+   "signature": "unsafe extern \"C\" fn(*mut u8, u32)",
+   "extent": "adrs[0..4]; highest written offset 3",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrs_set_layer_address and the call sites listed here; src/slh_dsa/adrs.rs:136)",
+   "contract": "`adrs` is the first byte of a live, exclusively borrowed 32-byte region; the call writes `adrs[0..4]` with a byte-wise big-endian store (alignment 1) and reads nothing.",
+   "callers": [
+    "src/slh_dsa/hypertree.rs:74 \u2014 `ossl_slh_ht_sign`, window is the local `adrs: SlhAdrs` (:47) zeroed at :65",
+    "src/slh_dsa/hypertree.rs:180 \u2014 `ossl_slh_ht_verify`, local (:153) zeroed at :172",
+    "src/slh_dsa/key.rs:489 \u2014 `slh_dsa_compute_pk_root`, local (:483) zeroed at :488"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "9756e0af07f26cf8ce68d1ff5b9888e174b899341f87bd7a20e42854228023c0",
+   "span_start_line": 136,
+   "span_end_line": 139,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-002",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 128,
+   "line_current": 154,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_tree_address",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::set_tree_address",
+   "table": "table 0 (uncompressed, 32-byte blob)",
+   "registration": "src/slh_dsa/adrs.rs:397 \u2014 `SlhAdrsFunc::set_tree_address` in table 0 (`is_compressed == 0`); the compressed twin is registered at :410",
+   "signature": "unsafe extern \"C\" fn(*mut u8, u64)",
+   "extent": "adrs[8..16]; highest written offset 15",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrs_set_tree_address and the call sites listed here; src/slh_dsa/adrs.rs:154)",
+   "contract": "`adrs` is the first byte of a live, exclusively borrowed 32-byte region; the call writes `adrs[8..16]` and reads nothing. The authority reserves twelve bytes for this field but writes only its low eight, so `adrs[4..8]` must already be zero for the value to be right; that is a value precondition, not a validity one (the write is in bounds whatever those bytes hold), and all four call sites satisfy it with the `zero` call listed in `callers`.",
+   "callers": [
+    "src/slh_dsa/hypertree.rs:75 \u2014 `ossl_slh_ht_sign`, local (:47) zeroed at :65 before the write",
+    "src/slh_dsa/hypertree.rs:181 \u2014 `ossl_slh_ht_verify`, local (:153) zeroed at :172",
+    "src/slh_dsa/dsa.rs:222 \u2014 `slh_sign_internal`, local (:106) zeroed at :168",
+    "src/slh_dsa/dsa.rs:406 \u2014 `slh_verify_internal`, local (:320) zeroed at :345"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations.",
+    "The zeroed high half is established at each of the four call sites by the `zero` call that precedes `set_tree_address`: hypertree.rs:65->:75, :172->:181, dsa.rs:168->:222, :345->:406. It is not a validity precondition (see the contract)."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "74cdb644f3363e0461dc2813a3b7ccd0ba37f3a64e00db5796d255d1a6463da3",
+   "span_start_line": 154,
+   "span_end_line": 157,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-003",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 134,
+   "line_current": 165,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_type_and_clear",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::set_type_and_clear",
+   "table": "table 0 (uncompressed, 32-byte blob)",
+   "registration": "src/slh_dsa/adrs.rs:398 \u2014 `SlhAdrsFunc::set_type_and_clear` in table 0 (`is_compressed == 0`); the compressed twin is registered at :411",
+   "signature": "unsafe extern \"C\" fn(*mut u8, u32)",
+   "extent": "adrs[16..20] then a 12-byte clear of adrs[20..32]; highest written offset 31",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrs_set_type_and_clear and the call sites listed here; src/slh_dsa/adrs.rs:165)",
+   "contract": "`adrs` is the first byte of a live, exclusively borrowed 32-byte region; the call stores the type at `adrs[16..20]` and then `write_bytes`-clears `adrs[20..32]`, i.e. the whole 32-byte region.",
+   "callers": [
+    "src/slh_dsa/xmss.rs:68 \u2014 `ossl_slh_xmss_node`, its `adrs` parameter (origins: key.rs:508 local, xmss.rs:183 from `ossl_slh_xmss_sign`, or the recursion at :81/:91)",
+    "src/slh_dsa/xmss.rs:105 \u2014 same function, the TREE-type branch",
+    "src/slh_dsa/xmss.rs:165 \u2014 `ossl_slh_xmss_sign`, its `adrs` parameter (origin: hypertree.rs:87 local :47)",
+    "src/slh_dsa/xmss.rs:228 \u2014 `ossl_slh_xmss_pk_from_sig`, its `adrs` parameter (origins: hypertree.rs:113 from the local :47, :191 from the local :153)",
+    "src/slh_dsa/xmss.rs:239 \u2014 same function, after the WOTS+ round trip",
+    "src/slh_dsa/dsa.rs:223 \u2014 `slh_sign_internal`, local :106",
+    "src/slh_dsa/dsa.rs:407 \u2014 `slh_verify_internal`, local :320",
+    "src/slh_dsa/wots.rs:205 \u2014 `ossl_slh_wots_pk_gen`, local `sk_adrs` (:190)",
+    "src/slh_dsa/wots.rs:262 \u2014 `ossl_slh_wots_pk_gen`, local `wots_pk_adrs` (:191)",
+    "src/slh_dsa/wots.rs:329 \u2014 `ossl_slh_wots_sign`, local `sk_adrs` (:303)",
+    "src/slh_dsa/wots.rs:492 \u2014 `ossl_slh_wots_pk_from_sig`, local `wots_pk_adrs` (:403)",
+    "src/slh_dsa/fors.rs:103 \u2014 `slh_fors_sk_gen`, local `sk_adrs` (:87)",
+    "src/slh_dsa/fors.rs:447 \u2014 `ossl_slh_fors_pk_from_sig`, local `pk_adrs` (:334)"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "693dd4afb38ff5925bea06270f272e8670ed05272f3ee61b68ca687cd67fe6bc",
+   "span_start_line": 165,
+   "span_end_line": 175,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-004",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 147,
+   "line_current": 183,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_keypair_address",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::set_keypair_address",
+   "table": "table 0 (uncompressed, 32-byte blob)",
+   "registration": "src/slh_dsa/adrs.rs:399 \u2014 `SlhAdrsFunc::set_keypair_address` in table 0 (`is_compressed == 0`); the compressed twin is registered at :412",
+   "signature": "unsafe extern \"C\" fn(*mut u8, u32)",
+   "extent": "adrs[20..24]; highest written offset 23",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrs_set_keypair_address and the call sites listed here; src/slh_dsa/adrs.rs:183)",
+   "contract": "`adrs` is the first byte of a live, exclusively borrowed 32-byte region; the call writes `adrs[20..24]` and reads nothing.",
+   "callers": [
+    "src/slh_dsa/xmss.rs:69 \u2014 `ossl_slh_xmss_node`, `adrs` parameter (see B53-ADRS-003 for the origins)",
+    "src/slh_dsa/xmss.rs:166 \u2014 `ossl_slh_xmss_sign`, `adrs` parameter",
+    "src/slh_dsa/xmss.rs:229 \u2014 `ossl_slh_xmss_pk_from_sig`, `adrs` parameter",
+    "src/slh_dsa/dsa.rs:224 \u2014 `slh_sign_internal`, local :106",
+    "src/slh_dsa/dsa.rs:408 \u2014 `slh_verify_internal`, local :320"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "da9acd4b689027dad39176acf1afd624dbe783a3d818328c267f0dd4409fac26",
+   "span_start_line": 183,
+   "span_end_line": 186,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-005",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 154,
+   "line_current": 196,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_copy_keypair_address",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::copy_keypair_address",
+   "table": "table 0 (uncompressed, 32-byte blob)",
+   "registration": "src/slh_dsa/adrs.rs:400 \u2014 `SlhAdrsFunc::copy_keypair_address` in table 0 (`is_compressed == 0`); the compressed twin is registered at :413",
+   "signature": "unsafe extern \"C\" fn(*mut u8, *const u8)",
+   "extent": "dst[20..24] and src[20..24]; highest written offset 23",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrs_copy_keypair_address and the call sites listed here; src/slh_dsa/adrs.rs:196)",
+   "contract": "`dst` is the first byte of a live, exclusively borrowed 32-byte region written at `dst[20..24]`; `src` is readable at `src[20..24]`; the two four-byte spans are disjoint, which is what `copy_nonoverlapping` requires. No caller can pass the same object twice: every `dst` is a fresh local of the calling frame (`sk_adrs`, `wots_pk_adrs`, `pk_adrs`) and every `src` is that frame's `adrs` parameter, which comes from a different frame's local.",
+   "callers": [
+    "src/slh_dsa/wots.rs:206 \u2014 `ossl_slh_wots_pk_gen`: `sk_adrs` (:190) <- caller's `adrs`",
+    "src/slh_dsa/wots.rs:263 \u2014 `ossl_slh_wots_pk_gen`: `wots_pk_adrs` (:191) <- caller's `adrs`",
+    "src/slh_dsa/wots.rs:330 \u2014 `ossl_slh_wots_sign`: `sk_adrs` (:303) <- caller's `adrs`",
+    "src/slh_dsa/wots.rs:493 \u2014 `ossl_slh_wots_pk_from_sig`: `wots_pk_adrs` (:403) <- caller's `adrs`",
+    "src/slh_dsa/fors.rs:104 \u2014 `slh_fors_sk_gen`: `sk_adrs` (:87) <- caller's `adrs`",
+    "src/slh_dsa/fors.rs:448 \u2014 `ossl_slh_fors_pk_from_sig`: `pk_adrs` (:334) <- caller's `adrs`"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "f1da23ff0c5eae1bb206e9df710f461d6b616b578a44cd9b349ae3765fcd1909",
+   "span_start_line": 196,
+   "span_end_line": 205,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-006",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 166,
+   "line_current": 215,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_chain_address",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::set_chain_address [also the set_tree_height slot]",
+   "table": "table 0 (uncompressed, 32-byte blob)",
+   "registration": "src/slh_dsa/adrs.rs:401 \u2014 `SlhAdrsFunc::set_chain_address` in table 0 (`is_compressed == 0`); the compressed twin is registered at :414; the `set_tree_height` slot is filled by the same body at :402 (compressed :415)",
+   "signature": "unsafe extern \"C\" fn(*mut u8, u32)",
+   "extent": "adrs[24..28]; highest written offset 27",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrs_set_chain_address and the call sites listed here; src/slh_dsa/adrs.rs:215)",
+   "contract": "`adrs` is the first byte of a live, exclusively borrowed 32-byte region; the call writes `adrs[24..28]` and reads nothing. The same body fills the `set_tree_height` slot (`slh_adrs.c:38`), so its call sites are the chain sites plus every `set_tree_height` site; both fields live at offset 24 in the authority's tables.",
+   "callers": [
+    "src/slh_dsa/wots.rs:212 \u2014 `ossl_slh_wots_pk_gen`, local `sk_adrs` (:190)",
+    "src/slh_dsa/wots.rs:234 \u2014 `ossl_slh_wots_pk_gen`, its `adrs` parameter (origins: xmss.rs:72 from `ossl_slh_xmss_node`'s parameter)",
+    "src/slh_dsa/wots.rs:337 \u2014 `ossl_slh_wots_sign`, local `sk_adrs` (:303)",
+    "src/slh_dsa/wots.rs:354 \u2014 `ossl_slh_wots_sign`, its `adrs` parameter (origin: xmss.rs:169 from `ossl_slh_xmss_sign`)",
+    "src/slh_dsa/wots.rs:443 \u2014 `ossl_slh_wots_pk_from_sig`, its `adrs` parameter (origin: xmss.rs:232)",
+    "src/slh_dsa/xmss.rs:106 \u2014 the `set_tree_height` slot, `ossl_slh_xmss_node` parameter",
+    "src/slh_dsa/xmss.rs:249 \u2014 the `set_tree_height` slot, `ossl_slh_xmss_pk_from_sig` parameter",
+    "src/slh_dsa/fors.rs:162 \u2014 the `set_tree_height` slot, `slh_fors_node` parameter",
+    "src/slh_dsa/fors.rs:197 \u2014 the `set_tree_height` slot, `slh_fors_node` recursion branch",
+    "src/slh_dsa/fors.rs:385 \u2014 the `set_tree_height` slot, `ossl_slh_fors_pk_from_sig` parameter",
+    "src/slh_dsa/fors.rs:414 \u2014 the `set_tree_height` slot, same function's tree walk"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "9b344dda5c1f77938c4970c58e29f3b9712aa6eed8d74039f4f391b009f495a5",
+   "span_start_line": 215,
+   "span_end_line": 218,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-007",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 172,
+   "line_current": 228,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_hash_address",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::set_hash_address [also the set_tree_index slot]",
+   "table": "table 0 (uncompressed, 32-byte blob)",
+   "registration": "src/slh_dsa/adrs.rs:403 \u2014 `SlhAdrsFunc::set_hash_address` in table 0 (`is_compressed == 0`); the compressed twin is registered at :416; the `set_tree_index` slot is filled by the same body at :404 (compressed :417)",
+   "signature": "unsafe extern \"C\" fn(*mut u8, u32)",
+   "extent": "adrs[28..32]; highest written offset 31",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrs_set_hash_address and the call sites listed here; src/slh_dsa/adrs.rs:228)",
+   "contract": "`adrs` is the first byte of a live, exclusively borrowed 32-byte region; the call writes `adrs[28..32]`, the last four bytes of the region, and reads nothing. The same body fills the `set_tree_index` slot (`slh_adrs.c:40`), so its call sites include every `set_tree_index` site.",
+   "callers": [
+    "src/slh_dsa/wots.rs:138 \u2014 `slh_wots_chain`, its `adrs` parameter",
+    "src/slh_dsa/wots.rs:148 \u2014 `slh_wots_chain`, the chain loop",
+    "src/slh_dsa/xmss.rs:107 \u2014 the `set_tree_index` slot, `ossl_slh_xmss_node` parameter",
+    "src/slh_dsa/xmss.rs:254 \u2014 the `set_tree_index` slot, `ossl_slh_xmss_pk_from_sig` even branch",
+    "src/slh_dsa/xmss.rs:263 \u2014 the `set_tree_index` slot, odd branch",
+    "src/slh_dsa/fors.rs:105 \u2014 the `set_tree_index` slot, `slh_fors_sk_gen` local `sk_adrs` (:87)",
+    "src/slh_dsa/fors.rs:163 \u2014 the `set_tree_index` slot, `slh_fors_node` leaf branch",
+    "src/slh_dsa/fors.rs:198 \u2014 the `set_tree_index` slot, internal-node branch",
+    "src/slh_dsa/fors.rs:386 \u2014 the `set_tree_index` slot, `ossl_slh_fors_pk_from_sig`",
+    "src/slh_dsa/fors.rs:418 \u2014 the `set_tree_index` slot, even branch",
+    "src/slh_dsa/fors.rs:426 \u2014 the `set_tree_index` slot, odd branch"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "ebf7bc41aef36e20322aa4a52144f298cb00250398db2dac88c382b779dd9323",
+   "span_start_line": 228,
+   "span_end_line": 231,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-008",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 178,
+   "line_current": 239,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_zero",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::zero",
+   "table": "table 0 (uncompressed, 32-byte blob)",
+   "registration": "src/slh_dsa/adrs.rs:405 \u2014 `SlhAdrsFunc::zero` in table 0 (`is_compressed == 0`); the compressed twin is registered at :418",
+   "signature": "unsafe extern \"C\" fn(*mut u8)",
+   "extent": "adrs[0..32]; highest written offset 31",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrs_zero and the call sites listed here; src/slh_dsa/adrs.rs:239)",
+   "contract": "`adrs` is the first byte of a live, exclusively borrowed 32-byte region; the call `write_bytes`-clears all 32 bytes and reads nothing.",
+   "callers": [
+    "src/slh_dsa/hypertree.rs:65 \u2014 `ossl_slh_ht_sign`, local :47",
+    "src/slh_dsa/hypertree.rs:172 \u2014 `ossl_slh_ht_verify`, local :153",
+    "src/slh_dsa/dsa.rs:168 \u2014 `slh_sign_internal`, local :106",
+    "src/slh_dsa/dsa.rs:345 \u2014 `slh_verify_internal`, local :320",
+    "src/slh_dsa/key.rs:488 \u2014 `slh_dsa_compute_pk_root`, local :483"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "1187889ec1f2d7ed311e2ea2b6d625f58d17308bb7039d2eac5efbd0d516cdec",
+   "span_start_line": 239,
+   "span_end_line": 242,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-009",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 184,
+   "line_current": 251,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_copy",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::copy",
+   "table": "table 0 (uncompressed, 32-byte blob)",
+   "registration": "src/slh_dsa/adrs.rs:406 \u2014 `SlhAdrsFunc::copy` in table 0 (`is_compressed == 0`); the compressed twin is registered at :419",
+   "signature": "unsafe extern \"C\" fn(*mut u8, *const u8)",
+   "extent": "dst[0..32] and src[0..32]; highest written offset 31",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrs_copy and the call sites listed here; src/slh_dsa/adrs.rs:251)",
+   "contract": "`dst` is the first byte of a live, exclusively borrowed 32-byte region written for all 32 bytes; `src` is readable for 32 bytes; the two arrays are disjoint, which is what `copy_nonoverlapping` requires. Every `dst` is a fresh local of the calling frame and every `src` is a parameter from another frame, so the two can never be the same object.",
+   "callers": [
+    "src/slh_dsa/wots.rs:204 \u2014 `ossl_slh_wots_pk_gen`: `sk_adrs` (:190) <- caller's `adrs`",
+    "src/slh_dsa/wots.rs:261 \u2014 `ossl_slh_wots_pk_gen`: `wots_pk_adrs` (:191) <- caller's `adrs`",
+    "src/slh_dsa/wots.rs:328 \u2014 `ossl_slh_wots_sign`: `sk_adrs` (:303) <- caller's `adrs`",
+    "src/slh_dsa/wots.rs:491 \u2014 `ossl_slh_wots_pk_from_sig`: `wots_pk_adrs` (:403) <- caller's `adrs`",
+    "src/slh_dsa/xmss.rs:164 \u2014 `ossl_slh_xmss_sign`: local `tmp_adrs` (:147) <- caller's `adrs`",
+    "src/slh_dsa/xmss.rs:174 \u2014 `ossl_slh_xmss_sign`: caller's `adrs` <- local `tmp_adrs` (:147)",
+    "src/slh_dsa/fors.rs:102 \u2014 `slh_fors_sk_gen`: `sk_adrs` (:87) <- caller's `adrs`",
+    "src/slh_dsa/fors.rs:446 \u2014 `ossl_slh_fors_pk_from_sig`: `pk_adrs` (:334) <- caller's `adrs`"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "0970edff68ca0b3b17fdb4a9a9971cda874e57176e0ebb2a1d9b215da56a9feb",
+   "span_start_line": 251,
+   "span_end_line": 254,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-010",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 193,
+   "line_current": 265,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_layer_address",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::set_layer_address",
+   "table": "table 1 (compressed, 22-byte blob inside the 32-byte region)",
+   "registration": "src/slh_dsa/adrs.rs:409 \u2014 `SlhAdrsFunc::set_layer_address` in table 1 (anything but 0); the uncompressed twin is registered at :396",
+   "signature": "unsafe extern \"C\" fn(*mut u8, u32)",
+   "extent": "adrsc[0..1]; highest written offset 0",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrsc_set_layer_address and the call sites listed here; src/slh_dsa/adrs.rs:265)",
+   "contract": "`adrsc` is the first byte of a live, exclusively borrowed 32-byte region; the call writes `adrsc[0..1]` and reads nothing. It receives the same three call sites as the uncompressed twin; the table is chosen by `key->adrs_func`, which `slh_dsa_key_hash_init` sets from `is_shake == 0`.",
+   "callers": [
+    "src/slh_dsa/hypertree.rs:74 \u2014 `ossl_slh_ht_sign`, window is the local `adrs: SlhAdrs` (:47) zeroed at :65",
+    "src/slh_dsa/hypertree.rs:180 \u2014 `ossl_slh_ht_verify`, local (:153) zeroed at :172",
+    "src/slh_dsa/key.rs:489 \u2014 `slh_dsa_compute_pk_root`, local (:483) zeroed at :488"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "e1e89e9583ea3baef9a9c4e10afa133244c53baeb9d43eb59aca7eb5893490f8",
+   "span_start_line": 265,
+   "span_end_line": 268,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-011",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 200,
+   "line_current": 278,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_tree_address",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::set_tree_address",
+   "table": "table 1 (compressed, 22-byte blob inside the 32-byte region)",
+   "registration": "src/slh_dsa/adrs.rs:410 \u2014 `SlhAdrsFunc::set_tree_address` in table 1 (anything but 0); the uncompressed twin is registered at :397",
+   "signature": "unsafe extern \"C\" fn(*mut u8, u64)",
+   "extent": "adrsc[1..9]; highest written offset 8",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrsc_set_tree_address and the call sites listed here; src/slh_dsa/adrs.rs:278)",
+   "contract": "`adrsc` is the first byte of a live, exclusively borrowed 32-byte region; the call writes `adrsc[1..9]`, the whole eight-byte compressed tree field, so unlike the uncompressed writer it needs no zeroed high half.",
+   "callers": [
+    "src/slh_dsa/hypertree.rs:75 \u2014 `ossl_slh_ht_sign`, local (:47) zeroed at :65 before the write",
+    "src/slh_dsa/hypertree.rs:181 \u2014 `ossl_slh_ht_verify`, local (:153) zeroed at :172",
+    "src/slh_dsa/dsa.rs:222 \u2014 `slh_sign_internal`, local (:106) zeroed at :168",
+    "src/slh_dsa/dsa.rs:406 \u2014 `slh_verify_internal`, local (:320) zeroed at :345"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations.",
+    "This writer covers its entire field, so the uncompressed writer's zeroed-high-half value precondition does not apply."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "3ef23bd60484cc58ce25b9950a3b9a5aea89bbde10ccddd315152c2543090af8",
+   "span_start_line": 278,
+   "span_end_line": 281,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-012",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 207,
+   "line_current": 291,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_type_and_clear",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::set_type_and_clear",
+   "table": "table 1 (compressed, 22-byte blob inside the 32-byte region)",
+   "registration": "src/slh_dsa/adrs.rs:411 \u2014 `SlhAdrsFunc::set_type_and_clear` in table 1 (anything but 0); the uncompressed twin is registered at :398",
+   "signature": "unsafe extern \"C\" fn(*mut u8, u32)",
+   "extent": "adrsc[9..10] then a 12-byte clear of adrsc[10..22]; highest written offset 21",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrsc_set_type_and_clear and the call sites listed here; src/slh_dsa/adrs.rs:291)",
+   "contract": "`adrsc` is the first byte of a live, exclusively borrowed 32-byte region; the call stores the type at `adrsc[9..10]` and clears `adrsc[10..22]`. The clear length is the authority's *uncompressed* `SLH_ADRS_SIZE_TYPECLEAR` (12) reached through `SLH_ADRSC_SIZE_TYPECLEAR` (`slh_adrs.c:35`), so the ten bytes past the 22-byte blob are untouched; the pre-existing test at src/slh_dsa/tests.rs:480-497 pins that independently of B53-C1.",
+   "callers": [
+    "src/slh_dsa/xmss.rs:68 \u2014 `ossl_slh_xmss_node`, its `adrs` parameter (origins: key.rs:508 local, xmss.rs:183 from `ossl_slh_xmss_sign`, or the recursion at :81/:91)",
+    "src/slh_dsa/xmss.rs:105 \u2014 same function, the TREE-type branch",
+    "src/slh_dsa/xmss.rs:165 \u2014 `ossl_slh_xmss_sign`, its `adrs` parameter (origin: hypertree.rs:87 local :47)",
+    "src/slh_dsa/xmss.rs:228 \u2014 `ossl_slh_xmss_pk_from_sig`, its `adrs` parameter (origins: hypertree.rs:113 from the local :47, :191 from the local :153)",
+    "src/slh_dsa/xmss.rs:239 \u2014 same function, after the WOTS+ round trip",
+    "src/slh_dsa/dsa.rs:223 \u2014 `slh_sign_internal`, local :106",
+    "src/slh_dsa/dsa.rs:407 \u2014 `slh_verify_internal`, local :320",
+    "src/slh_dsa/wots.rs:205 \u2014 `ossl_slh_wots_pk_gen`, local `sk_adrs` (:190)",
+    "src/slh_dsa/wots.rs:262 \u2014 `ossl_slh_wots_pk_gen`, local `wots_pk_adrs` (:191)",
+    "src/slh_dsa/wots.rs:329 \u2014 `ossl_slh_wots_sign`, local `sk_adrs` (:303)",
+    "src/slh_dsa/wots.rs:492 \u2014 `ossl_slh_wots_pk_from_sig`, local `wots_pk_adrs` (:403)",
+    "src/slh_dsa/fors.rs:103 \u2014 `slh_fors_sk_gen`, local `sk_adrs` (:87)",
+    "src/slh_dsa/fors.rs:447 \u2014 `ossl_slh_fors_pk_from_sig`, local `pk_adrs` (:334)",
+    "src/slh_dsa/tests.rs:492 \u2014 the pre-existing extent test, local `[0xAA; 32]` at :491 (this is the compressed table)"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations.",
+    "The clear extent is pinned independently by `slh_dsa::tests::the_compressed_address_clear_stays_inside_its_blob` (src/slh_dsa/tests.rs:480-497), which asserts bytes 22..32 keep their 0xAA fill."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "ab61d2d3ea20f607d76a5b6dadee1eac72c6faa62bcf7393df495b541e55a71a",
+   "span_start_line": 291,
+   "span_end_line": 301,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-013",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 221,
+   "line_current": 310,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_keypair_address",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::set_keypair_address",
+   "table": "table 1 (compressed, 22-byte blob inside the 32-byte region)",
+   "registration": "src/slh_dsa/adrs.rs:412 \u2014 `SlhAdrsFunc::set_keypair_address` in table 1 (anything but 0); the uncompressed twin is registered at :399",
+   "signature": "unsafe extern \"C\" fn(*mut u8, u32)",
+   "extent": "adrsc[10..14]; highest written offset 13",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrsc_set_keypair_address and the call sites listed here; src/slh_dsa/adrs.rs:310)",
+   "contract": "`adrsc` is the first byte of a live, exclusively borrowed 32-byte region; the call writes `adrsc[10..14]` and reads nothing.",
+   "callers": [
+    "src/slh_dsa/xmss.rs:69 \u2014 `ossl_slh_xmss_node`, `adrs` parameter (see B53-ADRS-003 for the origins)",
+    "src/slh_dsa/xmss.rs:166 \u2014 `ossl_slh_xmss_sign`, `adrs` parameter",
+    "src/slh_dsa/xmss.rs:229 \u2014 `ossl_slh_xmss_pk_from_sig`, `adrs` parameter",
+    "src/slh_dsa/dsa.rs:224 \u2014 `slh_sign_internal`, local :106",
+    "src/slh_dsa/dsa.rs:408 \u2014 `slh_verify_internal`, local :320"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "5bca8433d57c997f52e44c08798b28d4dfd22dbf1975261472652730501c6b1d",
+   "span_start_line": 310,
+   "span_end_line": 313,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-014",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 228,
+   "line_current": 323,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_copy_keypair_address",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::copy_keypair_address",
+   "table": "table 1 (compressed, 22-byte blob inside the 32-byte region)",
+   "registration": "src/slh_dsa/adrs.rs:413 \u2014 `SlhAdrsFunc::copy_keypair_address` in table 1 (anything but 0); the uncompressed twin is registered at :400",
+   "signature": "unsafe extern \"C\" fn(*mut u8, *const u8)",
+   "extent": "dst[10..14] and src[10..14]; highest written offset 13",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrsc_copy_keypair_address and the call sites listed here; src/slh_dsa/adrs.rs:323)",
+   "contract": "`dst` is the first byte of a live, exclusively borrowed 32-byte region written at `dst[10..14]`; `src` is readable at `src[10..14]`; the two spans are disjoint (fresh local dst, parameter src from another frame).",
+   "callers": [
+    "src/slh_dsa/wots.rs:206 \u2014 `ossl_slh_wots_pk_gen`: `sk_adrs` (:190) <- caller's `adrs`",
+    "src/slh_dsa/wots.rs:263 \u2014 `ossl_slh_wots_pk_gen`: `wots_pk_adrs` (:191) <- caller's `adrs`",
+    "src/slh_dsa/wots.rs:330 \u2014 `ossl_slh_wots_sign`: `sk_adrs` (:303) <- caller's `adrs`",
+    "src/slh_dsa/wots.rs:493 \u2014 `ossl_slh_wots_pk_from_sig`: `wots_pk_adrs` (:403) <- caller's `adrs`",
+    "src/slh_dsa/fors.rs:104 \u2014 `slh_fors_sk_gen`: `sk_adrs` (:87) <- caller's `adrs`",
+    "src/slh_dsa/fors.rs:448 \u2014 `ossl_slh_fors_pk_from_sig`: `pk_adrs` (:334) <- caller's `adrs`"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "65a991be8b06688a80e28523f0f6328a3dfbadfaed3b309468a8b8db0e8692ac",
+   "span_start_line": 323,
+   "span_end_line": 332,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-015",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 241,
+   "line_current": 344,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_chain_address",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::set_chain_address [also the compressed set_tree_height slot]",
+   "table": "table 1 (compressed, 22-byte blob inside the 32-byte region)",
+   "registration": "src/slh_dsa/adrs.rs:414 \u2014 `SlhAdrsFunc::set_chain_address` in table 1 (anything but 0); the uncompressed twin is registered at :401; the `set_tree_height` slot is filled by the same body at :402 (compressed :415)",
+   "signature": "unsafe extern \"C\" fn(*mut u8, u32)",
+   "extent": "adrsc[14..18]; highest written offset 17",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrsc_set_chain_address and the call sites listed here; src/slh_dsa/adrs.rs:344)",
+   "contract": "`adrsc` is the first byte of a live, exclusively borrowed 32-byte region; the call writes `adrsc[14..18]` and reads nothing. The same body fills the compressed `set_tree_height` slot (`slh_adrs.c:46`).",
+   "callers": [
+    "src/slh_dsa/wots.rs:212 \u2014 `ossl_slh_wots_pk_gen`, local `sk_adrs` (:190)",
+    "src/slh_dsa/wots.rs:234 \u2014 `ossl_slh_wots_pk_gen`, its `adrs` parameter (origins: xmss.rs:72 from `ossl_slh_xmss_node`'s parameter)",
+    "src/slh_dsa/wots.rs:337 \u2014 `ossl_slh_wots_sign`, local `sk_adrs` (:303)",
+    "src/slh_dsa/wots.rs:354 \u2014 `ossl_slh_wots_sign`, its `adrs` parameter (origin: xmss.rs:169 from `ossl_slh_xmss_sign`)",
+    "src/slh_dsa/wots.rs:443 \u2014 `ossl_slh_wots_pk_from_sig`, its `adrs` parameter (origin: xmss.rs:232)",
+    "src/slh_dsa/xmss.rs:106 \u2014 the `set_tree_height` slot, `ossl_slh_xmss_node` parameter",
+    "src/slh_dsa/xmss.rs:249 \u2014 the `set_tree_height` slot, `ossl_slh_xmss_pk_from_sig` parameter",
+    "src/slh_dsa/fors.rs:162 \u2014 the `set_tree_height` slot, `slh_fors_node` parameter",
+    "src/slh_dsa/fors.rs:197 \u2014 the `set_tree_height` slot, `slh_fors_node` recursion branch",
+    "src/slh_dsa/fors.rs:385 \u2014 the `set_tree_height` slot, `ossl_slh_fors_pk_from_sig` parameter",
+    "src/slh_dsa/fors.rs:414 \u2014 the `set_tree_height` slot, same function's tree walk"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "5f415d59c58b5db7c6fe9cfb877586aade5294f0bf992e7bcd7822691926dd51",
+   "span_start_line": 344,
+   "span_end_line": 347,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-016",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 248,
+   "line_current": 359,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_hash_address",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::set_hash_address [also the compressed set_tree_index slot]",
+   "table": "table 1 (compressed, 22-byte blob inside the 32-byte region)",
+   "registration": "src/slh_dsa/adrs.rs:416 \u2014 `SlhAdrsFunc::set_hash_address` in table 1 (anything but 0); the uncompressed twin is registered at :403; the `set_tree_index` slot is filled by the same body at :404 (compressed :417)",
+   "signature": "unsafe extern \"C\" fn(*mut u8, u32)",
+   "extent": "adrsc[18..22]; highest written offset 21",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrsc_set_hash_address and the call sites listed here; src/slh_dsa/adrs.rs:359)",
+   "contract": "`adrsc` is the first byte of a live, exclusively borrowed 32-byte region; the call writes `adrsc[18..22]`, the last four bytes of the compressed blob, and reads nothing. The same body fills the compressed `set_tree_index` slot (`slh_adrs.c:48`).",
+   "callers": [
+    "src/slh_dsa/wots.rs:138 \u2014 `slh_wots_chain`, its `adrs` parameter",
+    "src/slh_dsa/wots.rs:148 \u2014 `slh_wots_chain`, the chain loop",
+    "src/slh_dsa/xmss.rs:107 \u2014 the `set_tree_index` slot, `ossl_slh_xmss_node` parameter",
+    "src/slh_dsa/xmss.rs:254 \u2014 the `set_tree_index` slot, `ossl_slh_xmss_pk_from_sig` even branch",
+    "src/slh_dsa/xmss.rs:263 \u2014 the `set_tree_index` slot, odd branch",
+    "src/slh_dsa/fors.rs:105 \u2014 the `set_tree_index` slot, `slh_fors_sk_gen` local `sk_adrs` (:87)",
+    "src/slh_dsa/fors.rs:163 \u2014 the `set_tree_index` slot, `slh_fors_node` leaf branch",
+    "src/slh_dsa/fors.rs:198 \u2014 the `set_tree_index` slot, internal-node branch",
+    "src/slh_dsa/fors.rs:386 \u2014 the `set_tree_index` slot, `ossl_slh_fors_pk_from_sig`",
+    "src/slh_dsa/fors.rs:418 \u2014 the `set_tree_index` slot, even branch",
+    "src/slh_dsa/fors.rs:426 \u2014 the `set_tree_index` slot, odd branch"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "cdb191e4dd07ead8d9c38e3f6a6335bf13377c6a20b526c5a201e154ae45617e",
+   "span_start_line": 359,
+   "span_end_line": 362,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-017",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 254,
+   "line_current": 370,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_zero",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::zero",
+   "table": "table 1 (compressed, 22-byte blob inside the 32-byte region)",
+   "registration": "src/slh_dsa/adrs.rs:418 \u2014 `SlhAdrsFunc::zero` in table 1 (anything but 0); the uncompressed twin is registered at :405",
+   "signature": "unsafe extern \"C\" fn(*mut u8)",
+   "extent": "adrsc[0..22]; highest written offset 21",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrsc_zero and the call sites listed here; src/slh_dsa/adrs.rs:370)",
+   "contract": "`adrsc` is the first byte of a live, exclusively borrowed 32-byte region; the call `write_bytes`-clears the 22 bytes of the compressed blob and nothing past them.",
+   "callers": [
+    "src/slh_dsa/hypertree.rs:65 \u2014 `ossl_slh_ht_sign`, local :47",
+    "src/slh_dsa/hypertree.rs:172 \u2014 `ossl_slh_ht_verify`, local :153",
+    "src/slh_dsa/dsa.rs:168 \u2014 `slh_sign_internal`, local :106",
+    "src/slh_dsa/dsa.rs:345 \u2014 `slh_verify_internal`, local :320",
+    "src/slh_dsa/key.rs:488 \u2014 `slh_dsa_compute_pk_root`, local :483"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "5ef9e056dab4c8a37051738906fa7e5b5fcff0ca2fc49b6ce5da48730f977c58",
+   "span_start_line": 370,
+   "span_end_line": 373,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-ADRS-018",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 260,
+   "line_current": 382,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_copy",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhAdrsFunc::copy",
+   "table": "table 1 (compressed, 22-byte blob inside the 32-byte region)",
+   "registration": "src/slh_dsa/adrs.rs:419 \u2014 `SlhAdrsFunc::copy` in table 1 (anything but 0); the uncompressed twin is registered at :406",
+   "signature": "unsafe extern \"C\" fn(*mut u8, *const u8)",
+   "extent": "dst[0..22] and src[0..22]; highest written offset 21",
+   "guard": "no runtime guard in the accessor; the bound is the 32-byte provenance plus the constant extent, and is canaried for this exact slot by slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob (B53-C1)",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_adrsc_copy and the call sites listed here; src/slh_dsa/adrs.rs:382)",
+   "contract": "`dst` is the first byte of a live, exclusively borrowed 32-byte region written for 22 bytes; `src` is readable for 22; the two are disjoint (fresh local dst, parameter src from another frame).",
+   "callers": [
+    "src/slh_dsa/wots.rs:204 \u2014 `ossl_slh_wots_pk_gen`: `sk_adrs` (:190) <- caller's `adrs`",
+    "src/slh_dsa/wots.rs:261 \u2014 `ossl_slh_wots_pk_gen`: `wots_pk_adrs` (:191) <- caller's `adrs`",
+    "src/slh_dsa/wots.rs:328 \u2014 `ossl_slh_wots_sign`: `sk_adrs` (:303) <- caller's `adrs`",
+    "src/slh_dsa/wots.rs:491 \u2014 `ossl_slh_wots_pk_from_sig`: `wots_pk_adrs` (:403) <- caller's `adrs`",
+    "src/slh_dsa/xmss.rs:164 \u2014 `ossl_slh_xmss_sign`: local `tmp_adrs` (:147) <- caller's `adrs`",
+    "src/slh_dsa/xmss.rs:174 \u2014 `ossl_slh_xmss_sign`: caller's `adrs` <- local `tmp_adrs` (:147)",
+    "src/slh_dsa/fors.rs:102 \u2014 `slh_fors_sk_gen`: `sk_adrs` (:87) <- caller's `adrs`",
+    "src/slh_dsa/fors.rs:446 \u2014 `ossl_slh_fors_pk_from_sig`: `pk_adrs` (:334) <- caller's `adrs`"
+   ],
+   "established": [
+    "The pointer's only provenance in the crate is `SlhAdrs` (`[u8; SLH_ADRS_SIZE_MAX]`, 32 bytes): `SlhAdrsFunc` and `ossl_slh_get_adrs_fn` are `pub(crate)`, and the eleven slots are read only in src/slh_dsa/{wots,xmss,fors,hypertree,dsa,key}.rs (a grep of every slot name yields no other module). No ADRS pointer crosses the C ABI.",
+    "Every call site passes the first byte of a live local array (`as_mut_ptr()` at offset 0) or a parameter threaded from such a local. The complete origin set is the seven local allocations listed in `dispatch_paths.origins`; the parameter chains that carry them are listed in `dispatch_paths.chain`.",
+    "No reference to the region is live across the call: each call takes a temporary `as_mut_ptr()` borrow that ends at the call expression, the region is not borrowed elsewhere in the same expression, and the only writes during the call are the slot's own. Canary B53-C1 runs every slot of both tables on a window with eight guard bytes on each side.",
+    "Alignment 1 is sufficient: every store is byte-wise (`*p = ..`, `core::ptr::write_bytes`, `copy_nonoverlapping::<u8>`).",
+    "The extents are compile-time constants of the two tables: the uncompressed writers end at offset 32, the compressed ones at 22. Canary B53-C1 asserts both guards unchanged and the exact last written offset of all 22 slot/table combinations."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_adrs.c:68-111 (the nine uncompressed writers) and :113-151 (the nine compressed writers), transcribed statement-for-statement.",
+    "crypto/slh_dsa/slh_adrs.h:23-25 (`SLH_ADRS_SIZE` 32, `SLH_ADRSC_SIZE` 22, `SLH_ADRS_SIZE_MAX` 32) and :36 (`SLH_ADRS_DECLARE(a) uint8_t a[SLH_ADRS_SIZE_MAX]`).",
+    "The authority has the same bare-pointer contract and no runtime bound: the extent is the caller's `uint8_t adrs[SLH_ADRS_SIZE_MAX]`. The authority's `#define` aliases `set_tree_height`/`set_tree_index` onto the chain/hash writers (`:38-42`, `:46-48`), which is why those two slots carry two writers' call sites."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "64938fd8103782bfab0370dc09f7667223c35a0ee8af76efbdaee0cf63f81737",
+   "span_start_line": 382,
+   "span_end_line": 385,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C1 (bounds canary, this slot and its twin) and B53-C2 (table liveness, compile-time)"
+  },
+  {
+   "id": "B53-HASH-001",
+   "file": "src/slh_dsa/hash.rs",
+   "line": 179,
+   "line_current": 191,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_hmsg_shake",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhHashFunc::h_msg",
+   "table": "table 0 (SHAKE, `md_ctx` is SHAKE-256)",
+   "registration": "src/slh_dsa/hash.rs:738 \u2014 `SlhHashFunc::h_msg` in table 0 (`is_shake != 0`); the SHA-2 twin is registered at :746",
+   "signature": "unsafe extern \"C\" fn(*mut SlhDsaHashCtx, *const u8, *const u8, *const u8, *const u8, usize, *mut u8, usize) -> c_int",
+   "extent": "reads r[0..n], pk_seed[0..n], pk_root[0..n], msg[0..msg_len]; writes out[0..m]",
+   "guard": "no runtime guard in the primitive; the lengths are the parameter row's (`n`, `m`, `sha2_h_and_t_bound`) and the buffers are the callers' locals, enumerated above. The test-only canary B53-C1 covers the sibling ADRS table; these primitives are executed by the KATs (positive control) rather than by a bounds canary.",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_hmsg_shake and the call sites listed here; src/slh_dsa/hash.rs:191)",
+   "contract": "`ctx` is live with a non-NULL `key` whose `params` is a static row of the twelve, and the key's two tables are paired by `slh_dsa_key_hash_init`. `r`, `pk_seed` and `pk_root` are readable for `n`; `msg` is readable for `msg_len`; `out` is writable for `m`. `out_len` is ignored, as in the authority, so it imposes no bound.",
+   "callers": [
+    "src/slh_dsa/dsa.rs:176 \u2014 `slh_sign_internal`: out = `m_digest` [u8; 49] (:100), so m <= 49; r is the packet cursor just written by `prf_msg`",
+    "src/slh_dsa/dsa.rs:352 \u2014 `slh_verify_internal`: out = `m_digest` [u8; 49] (:314); r is the first n bytes of the signature"
+   ],
+   "established": [
+    "`params` is always one of the twelve static rows (src/slh_dsa/params.rs:81-120): n in {16,24,32}, m in {30,34,39,42,47,49}, `sha2_h_and_t_bound` in {0,64,128} (0 only on SHAKE rows), and no row has `sha2_h_and_t_bound < n`.",
+    "`slh_dsa_key_hash_init` (src/slh_dsa/hash_ctx.rs:217-255) is the only writer of `md`, `md_big`, `hmac`, `adrs_func` and `hash_func`: `md` is SHAKE-256 or SHA2-256, `md_big` is the same object (SHA2-256, and every SHAKE key) or SHA2-512, and both tables are selected from the same `is_shake`, so a SHA-2 primitive is always paired with the compressed ADRS table and reads 22 of a 32-byte array.",
+    "The context's scratch is `[u8; SLH_DSA_HASH_SCRATCH_LEN]` = 128 (src/slh_dsa/mod.rs:63-64, :82) and `MAX_DIGEST_SIZE` = 64 (src/slh_dsa/mod.rs:62). The largest digest written into scratch is SHA2-512's 64 bytes, and `slh_h_sha2`'s `m1 || m2` region starts at 64 and is at most 64 bytes, so it reaches but never passes the end.",
+    "`m_digest` is `[0u8; SLH_MAX_M]` with `SLH_MAX_M` = 49 (src/slh_dsa/dsa.rs:57-58) at both `h_msg` call sites, and every row's `m` is <= 49.",
+    "The eleven `SlhHashFunc` slots are read only in src/slh_dsa/{wots,xmss,fors,dsa}.rs; the call sites and the capacity of the output span each supplies are listed per row.",
+    "No output region is live across the call and none aliases `(*ctx).scratch` at any call site; every output span is `n` or `m` bytes or larger."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_hash.c:64-134 (the six SHAKE primitives) and :152-281 (the six SHA-2 primitives), transcribed statement-for-statement; the arithmetic (`n`, `m`, `b - n`, `2 * n`, `MAX_DIGEST_SIZE`) is the authority's.",
+    "crypto/slh_dsa/slh_hash.c:19 (`MAX_DIGEST_SIZE` 64) and slh_dsa_local.h:49 (`scratch[64 + 2 * SLH_MAX_N]`).",
+    "The authority ignores `out_len` in all twelve primitives; the candidate reproduces that verbatim, so these contracts bind the output span to `n`/`m` rather than to `out_len`."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "6648bf9884ead39a93165caa43cced1e1bb3b3c2397e4c5b51387e0ea96eb0f3",
+   "span_start_line": 191,
+   "span_end_line": 221,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C2 (table liveness, compile-time); no bounds canary for this primitive \u2014 B53-R7"
+  },
+  {
+   "id": "B53-HASH-002",
+   "file": "src/slh_dsa/hash.rs",
+   "line": 212,
+   "line_current": 230,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_prf_shake",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhHashFunc::prf",
+   "table": "table 0 (SHAKE, `md_ctx` is SHAKE-256)",
+   "registration": "src/slh_dsa/hash.rs:739 \u2014 `SlhHashFunc::prf` in table 0 (`is_shake != 0`); the SHA-2 twin is registered at :747",
+   "signature": "unsafe extern \"C\" fn(*mut SlhDsaHashCtx, *const u8, *const u8, *const u8, *mut u8, usize) -> c_int",
+   "extent": "reads pk_seed[0..n], adrs[0..32], sk_seed[0..n]; writes out[0..n]",
+   "guard": "no runtime guard in the primitive; the lengths are the parameter row's (`n`, `m`, `sha2_h_and_t_bound`) and the buffers are the callers' locals, enumerated above. The test-only canary B53-C1 covers the sibling ADRS table; these primitives are executed by the KATs (positive control) rather than by a bounds canary.",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_prf_shake and the call sites listed here; src/slh_dsa/hash.rs:230)",
+   "contract": "`ctx` is live with a non-NULL `key` whose `params` is a static row of the twelve, and the key's two tables are paired by `slh_dsa_key_hash_init`. `pk_seed` and `sk_seed` are readable for `n`; `adrs` is readable for `SLH_ADRS_SIZE` (32) bytes, the uncompressed blob a SHAKE key uses; `out` is writable for `n` and does not overlap `(*ctx).scratch`. `out_len` is ignored, as in the authority.",
+   "callers": [
+    "src/slh_dsa/wots.rs:215 \u2014 `ossl_slh_wots_pk_gen`: out = `sk` [u8; 32] (:188), adrs = `sk_adrs` (:190)",
+    "src/slh_dsa/wots.rs:340 \u2014 `ossl_slh_wots_sign`: out = `sk` [u8; 32] (:302), adrs = `sk_adrs` (:303)",
+    "src/slh_dsa/fors.rs:109 \u2014 `slh_fors_sk_gen`: out = the caller's buffer with capacity >= n (32 from `out` in `fors_sign`, 32 from `sk` in `fors_node`), adrs = `sk_adrs` (:87)"
+   ],
+   "established": [
+    "`params` is always one of the twelve static rows (src/slh_dsa/params.rs:81-120): n in {16,24,32}, m in {30,34,39,42,47,49}, `sha2_h_and_t_bound` in {0,64,128} (0 only on SHAKE rows), and no row has `sha2_h_and_t_bound < n`.",
+    "`slh_dsa_key_hash_init` (src/slh_dsa/hash_ctx.rs:217-255) is the only writer of `md`, `md_big`, `hmac`, `adrs_func` and `hash_func`: `md` is SHAKE-256 or SHA2-256, `md_big` is the same object (SHA2-256, and every SHAKE key) or SHA2-512, and both tables are selected from the same `is_shake`, so a SHA-2 primitive is always paired with the compressed ADRS table and reads 22 of a 32-byte array.",
+    "The context's scratch is `[u8; SLH_DSA_HASH_SCRATCH_LEN]` = 128 (src/slh_dsa/mod.rs:63-64, :82) and `MAX_DIGEST_SIZE` = 64 (src/slh_dsa/mod.rs:62). The largest digest written into scratch is SHA2-512's 64 bytes, and `slh_h_sha2`'s `m1 || m2` region starts at 64 and is at most 64 bytes, so it reaches but never passes the end.",
+    "`m_digest` is `[0u8; SLH_MAX_M]` with `SLH_MAX_M` = 49 (src/slh_dsa/dsa.rs:57-58) at both `h_msg` call sites, and every row's `m` is <= 49.",
+    "The eleven `SlhHashFunc` slots are read only in src/slh_dsa/{wots,xmss,fors,dsa}.rs; the call sites and the capacity of the output span each supplies are listed per row.",
+    "No output region is live across the call and none aliases `(*ctx).scratch` at any call site; every output span is `n` or `m` bytes or larger."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_hash.c:64-134 (the six SHAKE primitives) and :152-281 (the six SHA-2 primitives), transcribed statement-for-statement; the arithmetic (`n`, `m`, `b - n`, `2 * n`, `MAX_DIGEST_SIZE`) is the authority's.",
+    "crypto/slh_dsa/slh_hash.c:19 (`MAX_DIGEST_SIZE` 64) and slh_dsa_local.h:49 (`scratch[64 + 2 * SLH_MAX_N]`).",
+    "The authority ignores `out_len` in all twelve primitives; the candidate reproduces that verbatim, so these contracts bind the output span to `n`/`m` rather than to `out_len`."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "673ed9b7fa64309ca867db9164563334fa391f9d1fed90df4227e796c811be2f",
+   "span_start_line": 230,
+   "span_end_line": 255,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C2 (table liveness, compile-time); no bounds canary for this primitive \u2014 B53-R7"
+  },
+  {
+   "id": "B53-HASH-003",
+   "file": "src/slh_dsa/hash.rs",
+   "line": 240,
+   "line_current": 264,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_prf_msg_shake",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhHashFunc::prf_msg",
+   "table": "table 0 (SHAKE, `md_ctx` is SHAKE-256)",
+   "registration": "src/slh_dsa/hash.rs:740 \u2014 `SlhHashFunc::prf_msg` in table 0 (`is_shake != 0`); the SHA-2 twin is registered at :748",
+   "signature": "unsafe extern \"C\" fn(*mut SlhDsaHashCtx, *const u8, *const u8, *const u8, usize, *mut Wpacket) -> c_int",
+   "extent": "reads sk_prf[0..n], opt_rand[0..n], msg[0..msg_len]; writes this frame's out[0..32] for n and then n bytes into the packet",
+   "guard": "no runtime guard in the primitive; the lengths are the parameter row's (`n`, `m`, `sha2_h_and_t_bound`) and the buffers are the callers' locals, enumerated above. The test-only canary B53-C1 covers the sibling ADRS table; these primitives are executed by the KATs (positive control) rather than by a bounds canary.",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_prf_msg_shake and the call sites listed here; src/slh_dsa/hash.rs:264)",
+   "contract": "`ctx` is live with a non-NULL `key` whose `params` is a static row of the twelve, and the key's two tables are paired by `slh_dsa_key_hash_init`. `sk_prf` and `opt_rand` are readable for `n`; `msg` is readable for `msg_len`; `pkt` is a live initialised `WPACKET` with at least `n` bytes of room. The output crosses this frame's own `[u8; SLH_MAX_N]` (32 >= n), so no caller-owned output span is involved.",
+   "callers": [
+    "src/slh_dsa/dsa.rs:175 \u2014 `slh_sign_internal`: pkt = `w_packet` over the caller's signature buffer (`WPACKET_init_static_len`, :143)"
+   ],
+   "established": [
+    "`params` is always one of the twelve static rows (src/slh_dsa/params.rs:81-120): n in {16,24,32}, m in {30,34,39,42,47,49}, `sha2_h_and_t_bound` in {0,64,128} (0 only on SHAKE rows), and no row has `sha2_h_and_t_bound < n`.",
+    "`slh_dsa_key_hash_init` (src/slh_dsa/hash_ctx.rs:217-255) is the only writer of `md`, `md_big`, `hmac`, `adrs_func` and `hash_func`: `md` is SHAKE-256 or SHA2-256, `md_big` is the same object (SHA2-256, and every SHAKE key) or SHA2-512, and both tables are selected from the same `is_shake`, so a SHA-2 primitive is always paired with the compressed ADRS table and reads 22 of a 32-byte array.",
+    "The context's scratch is `[u8; SLH_DSA_HASH_SCRATCH_LEN]` = 128 (src/slh_dsa/mod.rs:63-64, :82) and `MAX_DIGEST_SIZE` = 64 (src/slh_dsa/mod.rs:62). The largest digest written into scratch is SHA2-512's 64 bytes, and `slh_h_sha2`'s `m1 || m2` region starts at 64 and is at most 64 bytes, so it reaches but never passes the end.",
+    "`m_digest` is `[0u8; SLH_MAX_M]` with `SLH_MAX_M` = 49 (src/slh_dsa/dsa.rs:57-58) at both `h_msg` call sites, and every row's `m` is <= 49.",
+    "The eleven `SlhHashFunc` slots are read only in src/slh_dsa/{wots,xmss,fors,dsa}.rs; the call sites and the capacity of the output span each supplies are listed per row.",
+    "No output region is live across the call and none aliases `(*ctx).scratch` at any call site; every output span is `n` or `m` bytes or larger."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_hash.c:64-134 (the six SHAKE primitives) and :152-281 (the six SHA-2 primitives), transcribed statement-for-statement; the arithmetic (`n`, `m`, `b - n`, `2 * n`, `MAX_DIGEST_SIZE`) is the authority's.",
+    "crypto/slh_dsa/slh_hash.c:19 (`MAX_DIGEST_SIZE` 64) and slh_dsa_local.h:49 (`scratch[64 + 2 * SLH_MAX_N]`).",
+    "The authority ignores `out_len` in all twelve primitives; the candidate reproduces that verbatim, so these contracts bind the output span to `n`/`m` rather than to `out_len`."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "43fb339b48729654ca113c3cc34a6e70265ec35c4f9f378b9a65f4614122d37e",
+   "span_start_line": 264,
+   "span_end_line": 293,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C2 (table liveness, compile-time); no bounds canary for this primitive \u2014 B53-R7"
+  },
+  {
+   "id": "B53-HASH-004",
+   "file": "src/slh_dsa/hash.rs",
+   "line": 272,
+   "line_current": 302,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_f_shake",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhHashFunc::f",
+   "table": "table 0 (SHAKE, `md_ctx` is SHAKE-256)",
+   "registration": "src/slh_dsa/hash.rs:741 \u2014 `SlhHashFunc::f` in table 0 (`is_shake != 0`); the SHA-2 twin is registered at :749",
+   "signature": "unsafe extern \"C\" fn(*mut SlhDsaHashCtx, *const u8, *const u8, *const u8, usize, *mut u8, usize) -> c_int",
+   "extent": "reads pk_seed[0..n], adrs[0..32], m1[0..m1_len]; writes out[0..n]",
+   "guard": "no runtime guard in the primitive; the lengths are the parameter row's (`n`, `m`, `sha2_h_and_t_bound`) and the buffers are the callers' locals, enumerated above. The test-only canary B53-C1 covers the sibling ADRS table; these primitives are executed by the KATs (positive control) rather than by a bounds canary.",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_f_shake and the call sites listed here; src/slh_dsa/hash.rs:302)",
+   "contract": "`ctx` is live with a non-NULL `key` whose `params` is a static row of the twelve, and the key's two tables are paired by `slh_dsa_key_hash_init`. `pk_seed` is readable for `n`; `adrs` is readable for 32 bytes; `m1` is readable for `m1_len`; `out` is writable for `n` and does not overlap `(*ctx).scratch`. `out_len` is ignored, as in the authority.",
+   "callers": [
+    "src/slh_dsa/wots.rs:141 \u2014 `slh_wots_chain`: out = `tmp`, n bytes allocated from the packet (:132)",
+    "src/slh_dsa/wots.rs:150 \u2014 `slh_wots_chain`: chained, same span",
+    "src/slh_dsa/fors.rs:166 \u2014 `slh_fors_node`: out = `node` with `node_len` >= n (32 from the recursion, n from `fors_pk_from_sig`)",
+    "src/slh_dsa/fors.rs:200 \u2014 `slh_fors_node` internal branch: out = `node`",
+    "src/slh_dsa/fors.rs:400 \u2014 `ossl_slh_fors_pk_from_sig`: out = `node0`, n bytes allocated at :396"
+   ],
+   "established": [
+    "`params` is always one of the twelve static rows (src/slh_dsa/params.rs:81-120): n in {16,24,32}, m in {30,34,39,42,47,49}, `sha2_h_and_t_bound` in {0,64,128} (0 only on SHAKE rows), and no row has `sha2_h_and_t_bound < n`.",
+    "`slh_dsa_key_hash_init` (src/slh_dsa/hash_ctx.rs:217-255) is the only writer of `md`, `md_big`, `hmac`, `adrs_func` and `hash_func`: `md` is SHAKE-256 or SHA2-256, `md_big` is the same object (SHA2-256, and every SHAKE key) or SHA2-512, and both tables are selected from the same `is_shake`, so a SHA-2 primitive is always paired with the compressed ADRS table and reads 22 of a 32-byte array.",
+    "The context's scratch is `[u8; SLH_DSA_HASH_SCRATCH_LEN]` = 128 (src/slh_dsa/mod.rs:63-64, :82) and `MAX_DIGEST_SIZE` = 64 (src/slh_dsa/mod.rs:62). The largest digest written into scratch is SHA2-512's 64 bytes, and `slh_h_sha2`'s `m1 || m2` region starts at 64 and is at most 64 bytes, so it reaches but never passes the end.",
+    "`m_digest` is `[0u8; SLH_MAX_M]` with `SLH_MAX_M` = 49 (src/slh_dsa/dsa.rs:57-58) at both `h_msg` call sites, and every row's `m` is <= 49.",
+    "The eleven `SlhHashFunc` slots are read only in src/slh_dsa/{wots,xmss,fors,dsa}.rs; the call sites and the capacity of the output span each supplies are listed per row.",
+    "No output region is live across the call and none aliases `(*ctx).scratch` at any call site; every output span is `n` or `m` bytes or larger."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_hash.c:64-134 (the six SHAKE primitives) and :152-281 (the six SHA-2 primitives), transcribed statement-for-statement; the arithmetic (`n`, `m`, `b - n`, `2 * n`, `MAX_DIGEST_SIZE`) is the authority's.",
+    "crypto/slh_dsa/slh_hash.c:19 (`MAX_DIGEST_SIZE` 64) and slh_dsa_local.h:49 (`scratch[64 + 2 * SLH_MAX_N]`).",
+    "The authority ignores `out_len` in all twelve primitives; the candidate reproduces that verbatim, so these contracts bind the output span to `n`/`m` rather than to `out_len`."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "004792ae69d480ffaa05e4cde672380d954fc19844a267db6aab9e3fec59cf05",
+   "span_start_line": 302,
+   "span_end_line": 328,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C2 (table liveness, compile-time); no bounds canary for this primitive \u2014 B53-R7"
+  },
+  {
+   "id": "B53-HASH-005",
+   "file": "src/slh_dsa/hash.rs",
+   "line": 301,
+   "line_current": 337,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_h_shake",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhHashFunc::h",
+   "table": "table 0 (SHAKE, `md_ctx` is SHAKE-256)",
+   "registration": "src/slh_dsa/hash.rs:742 \u2014 `SlhHashFunc::h` in table 0 (`is_shake != 0`); the SHA-2 twin is registered at :750",
+   "signature": "unsafe extern \"C\" fn(*mut SlhDsaHashCtx, *const u8, *const u8, *const u8, *const u8, *mut u8, usize) -> c_int",
+   "extent": "reads pk_seed[0..n], adrs[0..32], m1[0..n], m2[0..n]; writes out[0..n]",
+   "guard": "no runtime guard in the primitive; the lengths are the parameter row's (`n`, `m`, `sha2_h_and_t_bound`) and the buffers are the callers' locals, enumerated above. The test-only canary B53-C1 covers the sibling ADRS table; these primitives are executed by the KATs (positive control) rather than by a bounds canary.",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_h_shake and the call sites listed here; src/slh_dsa/hash.rs:337)",
+   "contract": "`ctx` is live with a non-NULL `key` whose `params` is a static row of the twelve, and the key's two tables are paired by `slh_dsa_key_hash_init`. `pk_seed` is readable for `n`; `adrs` is readable for 32 bytes; `m1` and `m2` are each readable for `n` (the lengths are the parameter set's, not caller-supplied); `out` is writable for `n` and does not overlap `(*ctx).scratch`. `out_len` is ignored, as in the authority.",
+   "callers": [
+    "src/slh_dsa/xmss.rs:111 \u2014 `ossl_slh_xmss_node`: out = `pk_out` with `pk_out_len` >= n (lnode/rnode of 32 from the recursion, n from key.rs:502)",
+    "src/slh_dsa/xmss.rs:256 \u2014 `ossl_slh_xmss_pk_from_sig`: out = `node` = `pk_out`",
+    "src/slh_dsa/xmss.rs:265 \u2014 same function, odd branch: out = `node`",
+    "src/slh_dsa/fors.rs:201 \u2014 `slh_fors_node` internal branch: out = `node`",
+    "src/slh_dsa/fors.rs:420 \u2014 `ossl_slh_fors_pk_from_sig`: out = `node1` = `node0`",
+    "src/slh_dsa/fors.rs:428 \u2014 same function, odd branch: out = `node1`"
+   ],
+   "established": [
+    "`params` is always one of the twelve static rows (src/slh_dsa/params.rs:81-120): n in {16,24,32}, m in {30,34,39,42,47,49}, `sha2_h_and_t_bound` in {0,64,128} (0 only on SHAKE rows), and no row has `sha2_h_and_t_bound < n`.",
+    "`slh_dsa_key_hash_init` (src/slh_dsa/hash_ctx.rs:217-255) is the only writer of `md`, `md_big`, `hmac`, `adrs_func` and `hash_func`: `md` is SHAKE-256 or SHA2-256, `md_big` is the same object (SHA2-256, and every SHAKE key) or SHA2-512, and both tables are selected from the same `is_shake`, so a SHA-2 primitive is always paired with the compressed ADRS table and reads 22 of a 32-byte array.",
+    "The context's scratch is `[u8; SLH_DSA_HASH_SCRATCH_LEN]` = 128 (src/slh_dsa/mod.rs:63-64, :82) and `MAX_DIGEST_SIZE` = 64 (src/slh_dsa/mod.rs:62). The largest digest written into scratch is SHA2-512's 64 bytes, and `slh_h_sha2`'s `m1 || m2` region starts at 64 and is at most 64 bytes, so it reaches but never passes the end.",
+    "`m_digest` is `[0u8; SLH_MAX_M]` with `SLH_MAX_M` = 49 (src/slh_dsa/dsa.rs:57-58) at both `h_msg` call sites, and every row's `m` is <= 49.",
+    "The eleven `SlhHashFunc` slots are read only in src/slh_dsa/{wots,xmss,fors,dsa}.rs; the call sites and the capacity of the output span each supplies are listed per row.",
+    "No output region is live across the call and none aliases `(*ctx).scratch` at any call site; every output span is `n` or `m` bytes or larger."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_hash.c:64-134 (the six SHAKE primitives) and :152-281 (the six SHA-2 primitives), transcribed statement-for-statement; the arithmetic (`n`, `m`, `b - n`, `2 * n`, `MAX_DIGEST_SIZE`) is the authority's.",
+    "crypto/slh_dsa/slh_hash.c:19 (`MAX_DIGEST_SIZE` 64) and slh_dsa_local.h:49 (`scratch[64 + 2 * SLH_MAX_N]`).",
+    "The authority ignores `out_len` in all twelve primitives; the candidate reproduces that verbatim, so these contracts bind the output span to `n`/`m` rather than to `out_len`."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "e95ecce61b8f438495e81129f5da4361b59b3437f5ba522c1f4fdbbcd8f9982f",
+   "span_start_line": 337,
+   "span_end_line": 365,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C2 (table liveness, compile-time); no bounds canary for this primitive \u2014 B53-R7"
+  },
+  {
+   "id": "B53-HASH-006",
+   "file": "src/slh_dsa/hash.rs",
+   "line": 332,
+   "line_current": 374,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_t_shake",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhHashFunc::t",
+   "table": "table 0 (SHAKE, `md_ctx` is SHAKE-256)",
+   "registration": "src/slh_dsa/hash.rs:743 \u2014 `SlhHashFunc::t` in table 0 (`is_shake != 0`); the SHA-2 twin is registered at :751",
+   "signature": "unsafe extern \"C\" fn(*mut SlhDsaHashCtx, *const u8, *const u8, *const u8, usize, *mut u8, usize) -> c_int",
+   "extent": "reads pk_seed[0..n], adrs[0..32], ml[0..ml_len]; writes out[0..n]",
+   "guard": "no runtime guard in the primitive; the lengths are the parameter row's (`n`, `m`, `sha2_h_and_t_bound`) and the buffers are the callers' locals, enumerated above. The test-only canary B53-C1 covers the sibling ADRS table; these primitives are executed by the KATs (positive control) rather than by a bounds canary.",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_t_shake and the call sites listed here; src/slh_dsa/hash.rs:374)",
+   "contract": "`ctx` is live with a non-NULL `key` whose `params` is a static row of the twelve, and the key's two tables are paired by `slh_dsa_key_hash_init`. `pk_seed` is readable for `n`; `adrs` is readable for 32 bytes; `ml` is readable for `ml_len`; `out` is writable for `n` and does not overlap `(*ctx).scratch`. `out_len` is ignored, as in the authority.",
+   "callers": [
+    "src/slh_dsa/wots.rs:267 \u2014 `ossl_slh_wots_pk_gen`: out = `pk_out` with `pk_out_len` >= n",
+    "src/slh_dsa/wots.rs:512 \u2014 `ossl_slh_wots_pk_from_sig`: out = `pk_out`",
+    "src/slh_dsa/fors.rs:454 \u2014 `ossl_slh_fors_pk_from_sig`: out = `pk_out` with `pk_out_len` >= n (32 from dsa.rs, n from the hypertree)"
+   ],
+   "established": [
+    "`params` is always one of the twelve static rows (src/slh_dsa/params.rs:81-120): n in {16,24,32}, m in {30,34,39,42,47,49}, `sha2_h_and_t_bound` in {0,64,128} (0 only on SHAKE rows), and no row has `sha2_h_and_t_bound < n`.",
+    "`slh_dsa_key_hash_init` (src/slh_dsa/hash_ctx.rs:217-255) is the only writer of `md`, `md_big`, `hmac`, `adrs_func` and `hash_func`: `md` is SHAKE-256 or SHA2-256, `md_big` is the same object (SHA2-256, and every SHAKE key) or SHA2-512, and both tables are selected from the same `is_shake`, so a SHA-2 primitive is always paired with the compressed ADRS table and reads 22 of a 32-byte array.",
+    "The context's scratch is `[u8; SLH_DSA_HASH_SCRATCH_LEN]` = 128 (src/slh_dsa/mod.rs:63-64, :82) and `MAX_DIGEST_SIZE` = 64 (src/slh_dsa/mod.rs:62). The largest digest written into scratch is SHA2-512's 64 bytes, and `slh_h_sha2`'s `m1 || m2` region starts at 64 and is at most 64 bytes, so it reaches but never passes the end.",
+    "`m_digest` is `[0u8; SLH_MAX_M]` with `SLH_MAX_M` = 49 (src/slh_dsa/dsa.rs:57-58) at both `h_msg` call sites, and every row's `m` is <= 49.",
+    "The eleven `SlhHashFunc` slots are read only in src/slh_dsa/{wots,xmss,fors,dsa}.rs; the call sites and the capacity of the output span each supplies are listed per row.",
+    "No output region is live across the call and none aliases `(*ctx).scratch` at any call site; every output span is `n` or `m` bytes or larger."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_hash.c:64-134 (the six SHAKE primitives) and :152-281 (the six SHA-2 primitives), transcribed statement-for-statement; the arithmetic (`n`, `m`, `b - n`, `2 * n`, `MAX_DIGEST_SIZE`) is the authority's.",
+    "crypto/slh_dsa/slh_hash.c:19 (`MAX_DIGEST_SIZE` 64) and slh_dsa_local.h:49 (`scratch[64 + 2 * SLH_MAX_N]`).",
+    "The authority ignores `out_len` in all twelve primitives; the candidate reproduces that verbatim, so these contracts bind the output span to `n`/`m` rather than to `out_len`."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "714bcb8e05f7e5eaf911cda7fc0daecb5db4700788e4eb186feac9a412bf90ee",
+   "span_start_line": 374,
+   "span_end_line": 400,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C2 (table liveness, compile-time); no bounds canary for this primitive \u2014 B53-R7"
+  },
+  {
+   "id": "B53-HASH-007",
+   "file": "src/slh_dsa/hash.rs",
+   "line": 392,
+   "line_current": 440,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_hmsg_sha2",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhHashFunc::h_msg",
+   "table": "table 1 (SHA-2, `md_big_ctx`)",
+   "registration": "src/slh_dsa/hash.rs:746 \u2014 `SlhHashFunc::h_msg` in table 1 (`is_shake == 0`); the SHAKE twin is registered at :738",
+   "signature": "unsafe extern \"C\" fn(*mut SlhDsaHashCtx, *const u8, *const u8, *const u8, *const u8, usize, *mut u8, usize) -> c_int",
+   "extent": "reads r[0..n], pk_seed[0..n], pk_root[0..n], msg[0..msg_len]; writes the seed local [0..2n+sz] and out[0..m]",
+   "guard": "no runtime guard in the primitive; the lengths are the parameter row's (`n`, `m`, `sha2_h_and_t_bound`) and the buffers are the callers' locals, enumerated above. The test-only canary B53-C1 covers the sibling ADRS table; these primitives are executed by the KATs (positive control) rather than by a bounds canary.",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_hmsg_sha2 and the call sites listed here; src/slh_dsa/hash.rs:440)",
+   "contract": "`ctx` is live with a non-NULL `key` whose `params` is a static row of the twelve, and the key's two tables are paired by `slh_dsa_key_hash_init`. `md_big` is SHA2-256 (when it is the same object as `md`) or SHA2-512 and `md_big_ctx` is its live context, so `sz = EVP_MD_get_size(md_big)` is 32 or 64 and `sz <= 0` is refused. `r`, `pk_seed` and `pk_root` are readable for `n`; `msg` is readable for `msg_len`; `out` is writable for `m`. The 128-byte `seed` local is filled to `2n + sz` <= 128 for every row. `out_len` is ignored, as in the authority.",
+   "callers": [
+    "src/slh_dsa/dsa.rs:176 \u2014 `slh_sign_internal`: out = `m_digest` [u8; 49] (:100)",
+    "src/slh_dsa/dsa.rs:352 \u2014 `slh_verify_internal`: out = `m_digest` [u8; 49] (:314)"
+   ],
+   "established": [
+    "`params` is always one of the twelve static rows (src/slh_dsa/params.rs:81-120): n in {16,24,32}, m in {30,34,39,42,47,49}, `sha2_h_and_t_bound` in {0,64,128} (0 only on SHAKE rows), and no row has `sha2_h_and_t_bound < n`.",
+    "`slh_dsa_key_hash_init` (src/slh_dsa/hash_ctx.rs:217-255) is the only writer of `md`, `md_big`, `hmac`, `adrs_func` and `hash_func`: `md` is SHAKE-256 or SHA2-256, `md_big` is the same object (SHA2-256, and every SHAKE key) or SHA2-512, and both tables are selected from the same `is_shake`, so a SHA-2 primitive is always paired with the compressed ADRS table and reads 22 of a 32-byte array.",
+    "The context's scratch is `[u8; SLH_DSA_HASH_SCRATCH_LEN]` = 128 (src/slh_dsa/mod.rs:63-64, :82) and `MAX_DIGEST_SIZE` = 64 (src/slh_dsa/mod.rs:62). The largest digest written into scratch is SHA2-512's 64 bytes, and `slh_h_sha2`'s `m1 || m2` region starts at 64 and is at most 64 bytes, so it reaches but never passes the end.",
+    "`m_digest` is `[0u8; SLH_MAX_M]` with `SLH_MAX_M` = 49 (src/slh_dsa/dsa.rs:57-58) at both `h_msg` call sites, and every row's `m` is <= 49.",
+    "The eleven `SlhHashFunc` slots are read only in src/slh_dsa/{wots,xmss,fors,dsa}.rs; the call sites and the capacity of the output span each supplies are listed per row.",
+    "No output region is live across the call and none aliases `(*ctx).scratch` at any call site; every output span is `n` or `m` bytes or larger.",
+    "The worst case is a category-5 row: n = 32 and sz = 64, so `2n + sz` = 128 exactly fills `seed[2 * SLH_MAX_N + MAX_DIGEST_SIZE]` (2*32 + 64)."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_hash.c:64-134 (the six SHAKE primitives) and :152-281 (the six SHA-2 primitives), transcribed statement-for-statement; the arithmetic (`n`, `m`, `b - n`, `2 * n`, `MAX_DIGEST_SIZE`) is the authority's.",
+    "crypto/slh_dsa/slh_hash.c:19 (`MAX_DIGEST_SIZE` 64) and slh_dsa_local.h:49 (`scratch[64 + 2 * SLH_MAX_N]`).",
+    "The authority ignores `out_len` in all twelve primitives; the candidate reproduces that verbatim, so these contracts bind the output span to `n`/`m` rather than to `out_len`."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "6c5cb81a886611547de5d252fbe4e414f0590874be7c85cba8aa66eb35d187a3",
+   "span_start_line": 440,
+   "span_end_line": 487,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C2 (table liveness, compile-time); no bounds canary for this primitive \u2014 B53-R7"
+  },
+  {
+   "id": "B53-HASH-008",
+   "file": "src/slh_dsa/hash.rs",
+   "line": 442,
+   "line_current": 496,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_prf_msg_sha2",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhHashFunc::prf_msg",
+   "table": "table 1 (SHA-2, `hmac_ctx`)",
+   "registration": "src/slh_dsa/hash.rs:748 \u2014 `SlhHashFunc::prf_msg` in table 1 (`is_shake == 0`); the SHAKE twin is registered at :740",
+   "signature": "unsafe extern \"C\" fn(*mut SlhDsaHashCtx, *const u8, *const u8, *const u8, usize, *mut Wpacket) -> c_int",
+   "extent": "reads sk_prf[0..n], opt_rand[0..n], msg[0..msg_len]; writes the mac local [0..64] and then n bytes into the packet",
+   "guard": "no runtime guard in the primitive; the lengths are the parameter row's (`n`, `m`, `sha2_h_and_t_bound`) and the buffers are the callers' locals, enumerated above. The test-only canary B53-C1 covers the sibling ADRS table; these primitives are executed by the KATs (positive control) rather than by a bounds canary.",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_prf_msg_sha2 and the call sites listed here; src/slh_dsa/hash.rs:496)",
+   "contract": "`ctx` is live with a non-NULL `key` whose `params` is a static row of the twelve, and the key's two tables are paired by `slh_dsa_key_hash_init`. `hmac_ctx` is the key's live HMAC context. `sk_prf` and `opt_rand` are readable for `n`; `msg` is readable for `msg_len`; `pkt` is a live initialised `WPACKET` with at least `n` bytes of room. `mac` is `[u8; MAX_DIGEST_SIZE]` (64) and `EVP_MAC_final` is given that outsize, so a MAC longer than 64 is refused rather than overflowed. The output crosses this frame's own buffer.",
+   "callers": [
+    "src/slh_dsa/dsa.rs:175 \u2014 `slh_sign_internal`: pkt = `w_packet` over the caller's signature buffer (:143)"
+   ],
+   "established": [
+    "`params` is always one of the twelve static rows (src/slh_dsa/params.rs:81-120): n in {16,24,32}, m in {30,34,39,42,47,49}, `sha2_h_and_t_bound` in {0,64,128} (0 only on SHAKE rows), and no row has `sha2_h_and_t_bound < n`.",
+    "`slh_dsa_key_hash_init` (src/slh_dsa/hash_ctx.rs:217-255) is the only writer of `md`, `md_big`, `hmac`, `adrs_func` and `hash_func`: `md` is SHAKE-256 or SHA2-256, `md_big` is the same object (SHA2-256, and every SHAKE key) or SHA2-512, and both tables are selected from the same `is_shake`, so a SHA-2 primitive is always paired with the compressed ADRS table and reads 22 of a 32-byte array.",
+    "The context's scratch is `[u8; SLH_DSA_HASH_SCRATCH_LEN]` = 128 (src/slh_dsa/mod.rs:63-64, :82) and `MAX_DIGEST_SIZE` = 64 (src/slh_dsa/mod.rs:62). The largest digest written into scratch is SHA2-512's 64 bytes, and `slh_h_sha2`'s `m1 || m2` region starts at 64 and is at most 64 bytes, so it reaches but never passes the end.",
+    "`m_digest` is `[0u8; SLH_MAX_M]` with `SLH_MAX_M` = 49 (src/slh_dsa/dsa.rs:57-58) at both `h_msg` call sites, and every row's `m` is <= 49.",
+    "The eleven `SlhHashFunc` slots are read only in src/slh_dsa/{wots,xmss,fors,dsa}.rs; the call sites and the capacity of the output span each supplies are listed per row.",
+    "No output region is live across the call and none aliases `(*ctx).scratch` at any call site; every output span is `n` or `m` bytes or larger."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_hash.c:64-134 (the six SHAKE primitives) and :152-281 (the six SHA-2 primitives), transcribed statement-for-statement; the arithmetic (`n`, `m`, `b - n`, `2 * n`, `MAX_DIGEST_SIZE`) is the authority's.",
+    "crypto/slh_dsa/slh_hash.c:19 (`MAX_DIGEST_SIZE` 64) and slh_dsa_local.h:49 (`scratch[64 + 2 * SLH_MAX_N]`).",
+    "The authority ignores `out_len` in all twelve primitives; the candidate reproduces that verbatim, so these contracts bind the output span to `n`/`m` rather than to `out_len`."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "526b9c09e976ed8a2c39324d43919ec96a69fe7f7bdf1f2f90be61f07dd08797",
+   "span_start_line": 496,
+   "span_end_line": 543,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C2 (table liveness, compile-time); no bounds canary for this primitive \u2014 B53-R7"
+  },
+  {
+   "id": "B53-HASH-009",
+   "file": "src/slh_dsa/hash.rs",
+   "line": 531,
+   "line_current": 593,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_prf_sha2",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhHashFunc::prf",
+   "table": "table 1 (SHA-2, `md_ctx` is SHA2-256)",
+   "registration": "src/slh_dsa/hash.rs:747 \u2014 `SlhHashFunc::prf` in table 1 (`is_shake == 0`); the SHAKE twin is registered at :739",
+   "signature": "unsafe extern \"C\" fn(*mut SlhDsaHashCtx, *const u8, *const u8, *const u8, *mut u8, usize) -> c_int",
+   "extent": "reads pk_seed[0..n], adrs[0..22], sk_seed[0..n]; `do_hash` reads zeros[0..64-n] and writes scratch[0..32] then out[0..n]",
+   "guard": "no runtime guard in the primitive; the lengths are the parameter row's (`n`, `m`, `sha2_h_and_t_bound`) and the buffers are the callers' locals, enumerated above. The test-only canary B53-C1 covers the sibling ADRS table; these primitives are executed by the KATs (positive control) rather than by a bounds canary.",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_prf_sha2 and the call sites listed here; src/slh_dsa/hash.rs:593)",
+   "contract": "`ctx` is live with a non-NULL `key` whose `params` is a static row of the twelve, and the key's two tables are paired by `slh_dsa_key_hash_init`. `adrs` is a 32-byte `SlhAdrs` of which the first `SLH_ADRSC_SIZE` (22) bytes are read; `pk_seed` and `sk_seed` are readable for `n`; `out` is writable for `n` and does not overlap `(*ctx).scratch`. `out_len` is ignored, as in the authority. `do_hash`'s `zeros` is `[u8; 128]` and its bound is 64, so `b - n` in {48,40,32} for n in {16,24,32}.",
+   "callers": [
+    "src/slh_dsa/wots.rs:215 \u2014 `ossl_slh_wots_pk_gen`: out = `sk` [u8; 32], adrs = `sk_adrs` (:190)",
+    "src/slh_dsa/wots.rs:340 \u2014 `ossl_slh_wots_sign`: out = `sk` [u8; 32], adrs = `sk_adrs` (:303)",
+    "src/slh_dsa/fors.rs:109 \u2014 `slh_fors_sk_gen`: out = the caller's buffer (capacity >= n), adrs = `sk_adrs` (:87)"
+   ],
+   "established": [
+    "`params` is always one of the twelve static rows (src/slh_dsa/params.rs:81-120): n in {16,24,32}, m in {30,34,39,42,47,49}, `sha2_h_and_t_bound` in {0,64,128} (0 only on SHAKE rows), and no row has `sha2_h_and_t_bound < n`.",
+    "`slh_dsa_key_hash_init` (src/slh_dsa/hash_ctx.rs:217-255) is the only writer of `md`, `md_big`, `hmac`, `adrs_func` and `hash_func`: `md` is SHAKE-256 or SHA2-256, `md_big` is the same object (SHA2-256, and every SHAKE key) or SHA2-512, and both tables are selected from the same `is_shake`, so a SHA-2 primitive is always paired with the compressed ADRS table and reads 22 of a 32-byte array.",
+    "The context's scratch is `[u8; SLH_DSA_HASH_SCRATCH_LEN]` = 128 (src/slh_dsa/mod.rs:63-64, :82) and `MAX_DIGEST_SIZE` = 64 (src/slh_dsa/mod.rs:62). The largest digest written into scratch is SHA2-512's 64 bytes, and `slh_h_sha2`'s `m1 || m2` region starts at 64 and is at most 64 bytes, so it reaches but never passes the end.",
+    "`m_digest` is `[0u8; SLH_MAX_M]` with `SLH_MAX_M` = 49 (src/slh_dsa/dsa.rs:57-58) at both `h_msg` call sites, and every row's `m` is <= 49.",
+    "The eleven `SlhHashFunc` slots are read only in src/slh_dsa/{wots,xmss,fors,dsa}.rs; the call sites and the capacity of the output span each supplies are listed per row.",
+    "No output region is live across the call and none aliases `(*ctx).scratch` at any call site; every output span is `n` or `m` bytes or larger."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_hash.c:64-134 (the six SHAKE primitives) and :152-281 (the six SHA-2 primitives), transcribed statement-for-statement; the arithmetic (`n`, `m`, `b - n`, `2 * n`, `MAX_DIGEST_SIZE`) is the authority's.",
+    "crypto/slh_dsa/slh_hash.c:19 (`MAX_DIGEST_SIZE` 64) and slh_dsa_local.h:49 (`scratch[64 + 2 * SLH_MAX_N]`).",
+    "The authority ignores `out_len` in all twelve primitives; the candidate reproduces that verbatim, so these contracts bind the output span to `n`/`m` rather than to `out_len`."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "3d6ed1f4c67769ca6c0d073daa2769ceaa3fbedea08d4b1d1f1615c0ff2916db",
+   "span_start_line": 593,
+   "span_end_line": 617,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C2 (table liveness, compile-time); no bounds canary for this primitive \u2014 B53-R7"
+  },
+  {
+   "id": "B53-HASH-010",
+   "file": "src/slh_dsa/hash.rs",
+   "line": 558,
+   "line_current": 627,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_f_sha2",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhHashFunc::f",
+   "table": "table 1 (SHA-2, `md_ctx` is SHA2-256)",
+   "registration": "src/slh_dsa/hash.rs:749 \u2014 `SlhHashFunc::f` in table 1 (`is_shake == 0`); the SHAKE twin is registered at :741",
+   "signature": "unsafe extern \"C\" fn(*mut SlhDsaHashCtx, *const u8, *const u8, *const u8, usize, *mut u8, usize) -> c_int",
+   "extent": "reads pk_seed[0..n], adrs[0..22], m1[0..m1_len]; `do_hash` reads zeros[0..64-n] and writes scratch[0..32] then out[0..n]",
+   "guard": "no runtime guard in the primitive; the lengths are the parameter row's (`n`, `m`, `sha2_h_and_t_bound`) and the buffers are the callers' locals, enumerated above. The test-only canary B53-C1 covers the sibling ADRS table; these primitives are executed by the KATs (positive control) rather than by a bounds canary.",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_f_sha2 and the call sites listed here; src/slh_dsa/hash.rs:627)",
+   "contract": "`ctx` is live with a non-NULL `key` whose `params` is a static row of the twelve, and the key's two tables are paired by `slh_dsa_key_hash_init`. `adrs` is a 32-byte array of which 22 bytes are read; `pk_seed` is readable for `n`; `m1` is readable for `m1_len`; `out` is writable for `n` and does not overlap `(*ctx).scratch`. `out_len` is ignored, as in the authority. The bound-1 zero run is `64 - n`, at most 48.",
+   "callers": [
+    "src/slh_dsa/wots.rs:141 \u2014 `slh_wots_chain`: out = `tmp`, n bytes from the packet (:132)",
+    "src/slh_dsa/wots.rs:150 \u2014 `slh_wots_chain`: chained, same span",
+    "src/slh_dsa/fors.rs:166 \u2014 `slh_fors_node`: out = `node` with `node_len` >= n",
+    "src/slh_dsa/fors.rs:200 \u2014 internal branch, same buffer",
+    "src/slh_dsa/fors.rs:400 \u2014 `ossl_slh_fors_pk_from_sig`: out = `node0`, n bytes"
+   ],
+   "established": [
+    "`params` is always one of the twelve static rows (src/slh_dsa/params.rs:81-120): n in {16,24,32}, m in {30,34,39,42,47,49}, `sha2_h_and_t_bound` in {0,64,128} (0 only on SHAKE rows), and no row has `sha2_h_and_t_bound < n`.",
+    "`slh_dsa_key_hash_init` (src/slh_dsa/hash_ctx.rs:217-255) is the only writer of `md`, `md_big`, `hmac`, `adrs_func` and `hash_func`: `md` is SHAKE-256 or SHA2-256, `md_big` is the same object (SHA2-256, and every SHAKE key) or SHA2-512, and both tables are selected from the same `is_shake`, so a SHA-2 primitive is always paired with the compressed ADRS table and reads 22 of a 32-byte array.",
+    "The context's scratch is `[u8; SLH_DSA_HASH_SCRATCH_LEN]` = 128 (src/slh_dsa/mod.rs:63-64, :82) and `MAX_DIGEST_SIZE` = 64 (src/slh_dsa/mod.rs:62). The largest digest written into scratch is SHA2-512's 64 bytes, and `slh_h_sha2`'s `m1 || m2` region starts at 64 and is at most 64 bytes, so it reaches but never passes the end.",
+    "`m_digest` is `[0u8; SLH_MAX_M]` with `SLH_MAX_M` = 49 (src/slh_dsa/dsa.rs:57-58) at both `h_msg` call sites, and every row's `m` is <= 49.",
+    "The eleven `SlhHashFunc` slots are read only in src/slh_dsa/{wots,xmss,fors,dsa}.rs; the call sites and the capacity of the output span each supplies are listed per row.",
+    "No output region is live across the call and none aliases `(*ctx).scratch` at any call site; every output span is `n` or `m` bytes or larger."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_hash.c:64-134 (the six SHAKE primitives) and :152-281 (the six SHA-2 primitives), transcribed statement-for-statement; the arithmetic (`n`, `m`, `b - n`, `2 * n`, `MAX_DIGEST_SIZE`) is the authority's.",
+    "crypto/slh_dsa/slh_hash.c:19 (`MAX_DIGEST_SIZE` 64) and slh_dsa_local.h:49 (`scratch[64 + 2 * SLH_MAX_N]`).",
+    "The authority ignores `out_len` in all twelve primitives; the candidate reproduces that verbatim, so these contracts bind the output span to `n`/`m` rather than to `out_len`."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "c6bd6f53142e3952118c1b16526278a5f2d0ca87da478245908811db7007e8d0",
+   "span_start_line": 627,
+   "span_end_line": 652,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C2 (table liveness, compile-time); no bounds canary for this primitive \u2014 B53-R7"
+  },
+  {
+   "id": "B53-HASH-011",
+   "file": "src/slh_dsa/hash.rs",
+   "line": 586,
+   "line_current": 663,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_h_sha2",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhHashFunc::h",
+   "table": "table 1 (SHA-2, `md_big_ctx`)",
+   "registration": "src/slh_dsa/hash.rs:750 \u2014 `SlhHashFunc::h` in table 1 (`is_shake == 0`); the SHAKE twin is registered at :742",
+   "signature": "unsafe extern \"C\" fn(*mut SlhDsaHashCtx, *const u8, *const u8, *const u8, *const u8, *mut u8, usize) -> c_int",
+   "extent": "reads pk_seed[0..n], adrs[0..22], m1[0..n], m2[0..n]; writes scratch[64..64+2n], then scratch[0..sz], then out[0..n]",
+   "guard": "no runtime guard in the primitive; the lengths are the parameter row's (`n`, `m`, `sha2_h_and_t_bound`) and the buffers are the callers' locals, enumerated above. The test-only canary B53-C1 covers the sibling ADRS table; these primitives are executed by the KATs (positive control) rather than by a bounds canary.",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_h_sha2 and the call sites listed here; src/slh_dsa/hash.rs:663)",
+   "contract": "`ctx` is live with a non-NULL `key` whose `params` is a static row of the twelve, and the key's two tables are paired by `slh_dsa_key_hash_init`. `adrs` is a 32-byte array of which 22 bytes are read; `pk_seed` is readable for `n`; `m1` and `m2` are each readable for `n`; `out` is writable for `n` and does not overlap `(*ctx).scratch`, which this function also uses: the `m1 || m2` copy occupies `scratch[64..64 + 2n]` (at most 128) and the digest is written to `scratch[0..sz]` (at most 64), so the two regions are disjoint and both are inside the 128-byte scratch. `out_len` is ignored, as in the authority. `sha2_h_and_t_bound` is 64 or 128, at least n, and `do_hash` reads `zeros[0..b-n]`.",
+   "callers": [
+    "src/slh_dsa/xmss.rs:111 \u2014 `ossl_slh_xmss_node`: out = `pk_out`, `pk_out_len` >= n",
+    "src/slh_dsa/xmss.rs:256 \u2014 `ossl_slh_xmss_pk_from_sig`: out = `node`",
+    "src/slh_dsa/xmss.rs:265 \u2014 odd branch, same buffer",
+    "src/slh_dsa/fors.rs:201 \u2014 `slh_fors_node`: out = `node`",
+    "src/slh_dsa/fors.rs:420 \u2014 `ossl_slh_fors_pk_from_sig`: out = `node1`",
+    "src/slh_dsa/fors.rs:428 \u2014 odd branch, same buffer"
+   ],
+   "established": [
+    "`params` is always one of the twelve static rows (src/slh_dsa/params.rs:81-120): n in {16,24,32}, m in {30,34,39,42,47,49}, `sha2_h_and_t_bound` in {0,64,128} (0 only on SHAKE rows), and no row has `sha2_h_and_t_bound < n`.",
+    "`slh_dsa_key_hash_init` (src/slh_dsa/hash_ctx.rs:217-255) is the only writer of `md`, `md_big`, `hmac`, `adrs_func` and `hash_func`: `md` is SHAKE-256 or SHA2-256, `md_big` is the same object (SHA2-256, and every SHAKE key) or SHA2-512, and both tables are selected from the same `is_shake`, so a SHA-2 primitive is always paired with the compressed ADRS table and reads 22 of a 32-byte array.",
+    "The context's scratch is `[u8; SLH_DSA_HASH_SCRATCH_LEN]` = 128 (src/slh_dsa/mod.rs:63-64, :82) and `MAX_DIGEST_SIZE` = 64 (src/slh_dsa/mod.rs:62). The largest digest written into scratch is SHA2-512's 64 bytes, and `slh_h_sha2`'s `m1 || m2` region starts at 64 and is at most 64 bytes, so it reaches but never passes the end.",
+    "`m_digest` is `[0u8; SLH_MAX_M]` with `SLH_MAX_M` = 49 (src/slh_dsa/dsa.rs:57-58) at both `h_msg` call sites, and every row's `m` is <= 49.",
+    "The eleven `SlhHashFunc` slots are read only in src/slh_dsa/{wots,xmss,fors,dsa}.rs; the call sites and the capacity of the output span each supplies are listed per row.",
+    "No output region is live across the call and none aliases `(*ctx).scratch` at any call site; every output span is `n` or `m` bytes or larger.",
+    "The `m1 || m2` region starting at `MAX_DIGEST_SIZE` is the authority's layout (slh_hash.c:263); with n = 32 it ends exactly at 128, the scratch length."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_hash.c:64-134 (the six SHAKE primitives) and :152-281 (the six SHA-2 primitives), transcribed statement-for-statement; the arithmetic (`n`, `m`, `b - n`, `2 * n`, `MAX_DIGEST_SIZE`) is the authority's.",
+    "crypto/slh_dsa/slh_hash.c:19 (`MAX_DIGEST_SIZE` 64) and slh_dsa_local.h:49 (`scratch[64 + 2 * SLH_MAX_N]`).",
+    "The authority ignores `out_len` in all twelve primitives; the candidate reproduces that verbatim, so these contracts bind the output span to `n`/`m` rather than to `out_len`."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "aa390f20591313430c3adcab3f504d74bcfd9acfb6419daa142c4256381772dc",
+   "span_start_line": 663,
+   "span_end_line": 692,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C2 (table liveness, compile-time); no bounds canary for this primitive \u2014 B53-R7"
+  },
+  {
+   "id": "B53-HASH-012",
+   "file": "src/slh_dsa/hash.rs",
+   "line": 618,
+   "line_current": 702,
+   "line_provenance": "V1 census coordinate at the closure source head (evidence/closure-ssh-311.json); line_current refreshed to this candidate's tree",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_t_sha2",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "slot": "SlhHashFunc::t",
+   "table": "table 1 (SHA-2, `md_big_ctx`)",
+   "registration": "src/slh_dsa/hash.rs:751 \u2014 `SlhHashFunc::t` in table 1 (`is_shake == 0`); the SHAKE twin is registered at :743",
+   "signature": "unsafe extern \"C\" fn(*mut SlhDsaHashCtx, *const u8, *const u8, *const u8, usize, *mut u8, usize) -> c_int",
+   "extent": "reads pk_seed[0..n], adrs[0..22], ml[0..ml_len]; `do_hash` reads zeros[0..b-n] and writes scratch[0..64] then out[0..n]",
+   "guard": "no runtime guard in the primitive; the lengths are the parameter row's (`n`, `m`, `sha2_h_and_t_bound`) and the buffers are the callers' locals, enumerated above. The test-only canary B53-C1 covers the sibling ADRS table; these primitives are executed by the KATs (positive control) rather than by a bounds canary.",
+   "disposition": "SAFETY_DISCHARGED (scope: slh_t_sha2 and the call sites listed here; src/slh_dsa/hash.rs:702)",
+   "contract": "`ctx` is live with a non-NULL `key` whose `params` is a static row of the twelve, and the key's two tables are paired by `slh_dsa_key_hash_init`. `adrs` is a 32-byte array of which 22 bytes are read; `pk_seed` is readable for `n`; `ml` is readable for `ml_len`; `out` is writable for `n` and does not overlap `(*ctx).scratch`. `out_len` is ignored, as in the authority. `sha2_h_and_t_bound` is 64 or 128, at least n.",
+   "callers": [
+    "src/slh_dsa/wots.rs:267 \u2014 `ossl_slh_wots_pk_gen`: out = `pk_out` with `pk_out_len` >= n",
+    "src/slh_dsa/wots.rs:512 \u2014 `ossl_slh_wots_pk_from_sig`: out = `pk_out`",
+    "src/slh_dsa/fors.rs:454 \u2014 `ossl_slh_fors_pk_from_sig`: out = `pk_out` with `pk_out_len` >= n"
+   ],
+   "established": [
+    "`params` is always one of the twelve static rows (src/slh_dsa/params.rs:81-120): n in {16,24,32}, m in {30,34,39,42,47,49}, `sha2_h_and_t_bound` in {0,64,128} (0 only on SHAKE rows), and no row has `sha2_h_and_t_bound < n`.",
+    "`slh_dsa_key_hash_init` (src/slh_dsa/hash_ctx.rs:217-255) is the only writer of `md`, `md_big`, `hmac`, `adrs_func` and `hash_func`: `md` is SHAKE-256 or SHA2-256, `md_big` is the same object (SHA2-256, and every SHAKE key) or SHA2-512, and both tables are selected from the same `is_shake`, so a SHA-2 primitive is always paired with the compressed ADRS table and reads 22 of a 32-byte array.",
+    "The context's scratch is `[u8; SLH_DSA_HASH_SCRATCH_LEN]` = 128 (src/slh_dsa/mod.rs:63-64, :82) and `MAX_DIGEST_SIZE` = 64 (src/slh_dsa/mod.rs:62). The largest digest written into scratch is SHA2-512's 64 bytes, and `slh_h_sha2`'s `m1 || m2` region starts at 64 and is at most 64 bytes, so it reaches but never passes the end.",
+    "`m_digest` is `[0u8; SLH_MAX_M]` with `SLH_MAX_M` = 49 (src/slh_dsa/dsa.rs:57-58) at both `h_msg` call sites, and every row's `m` is <= 49.",
+    "The eleven `SlhHashFunc` slots are read only in src/slh_dsa/{wots,xmss,fors,dsa}.rs; the call sites and the capacity of the output span each supplies are listed per row.",
+    "No output region is live across the call and none aliases `(*ctx).scratch` at any call site; every output span is `n` or `m` bytes or larger."
+   ],
+   "authority_derived": [
+    "crypto/slh_dsa/slh_hash.c:64-134 (the six SHAKE primitives) and :152-281 (the six SHA-2 primitives), transcribed statement-for-statement; the arithmetic (`n`, `m`, `b - n`, `2 * n`, `MAX_DIGEST_SIZE`) is the authority's.",
+    "crypto/slh_dsa/slh_hash.c:19 (`MAX_DIGEST_SIZE` 64) and slh_dsa_local.h:49 (`scratch[64 + 2 * SLH_MAX_N]`).",
+    "The authority ignores `out_len` in all twelve primitives; the candidate reproduces that verbatim, so these contracts bind the output span to `n`/`m` rather than to `out_len`."
+   ],
+   "tests": [
+    "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+    "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+    "slh_dsa::tests::the_signature_digest_agrees_with_every_vector"
+   ],
+   "span_sha256": "d1fe7cacd91e6611adeccc47d02bffb08fad564e8eacd55cf664bbf6e3664aba",
+   "span_start_line": 702,
+   "span_end_line": 727,
+   "span_source_commit": "uncommitted worktree at HEAD bb3f7efe7 (candidate.files_sha256 binds this exact tree)",
+   "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
+   "negative_control_ref": "B53-C2 (table liveness, compile-time); no bounds canary for this primitive \u2014 B53-R7"
+  }
+ ],
+ "hidden_obligations": 0,
+ "hidden_obligations_note": "No obligation is hidden. Six duties are not enforceable inside the bodies and are now stated in the relevant `# Safety` section: (1) `out_len` is ignored in all twelve hash primitives (authority-identical), so the output span binds to `n`/`m`; (2) `slh_adrs_set_tree_address` assumes the high four bytes of its twelve-byte field are already zero \u2014 a value precondition, not a validity one, met by the `zero` call at all four sites; (3) `sha2_h_and_t_bound` is 64 or 128 and never below `n`, and `md_big` is SHA2-256/512 with a positive `EVP_MD_get_size` \u2014 invariants of the static parameter rows and of `slh_dsa_key_hash_init`, which is the only writer of those fields; (4) `out` must not overlap `(*ctx).scratch`, which `do_hash` writes and copies from; (5) `prf_msg*` needs a live `WPACKET` with `n` bytes of room; (6) `copy`/`copy_keypair_address` need disjoint spans. A hidden obligation is one that is neither enforced nor stated; none was found.",
+ "new_unsafe_assumptions": 0,
+ "new_unsafe_assumptions_note": "The delta adds no `unsafe fn`, no unsafe expression, no exported item and no unsafe assumption on callers. The two `const _: &Table` assertions are compile-time only. The canary is `#[cfg(test)]` and calls only existing slots.",
+ "unsafe_operations_removed": 0,
+ "unsafe_operations_introduced": 0,
+ "test_only_unsafe_added": 0,
+ "boundary_size": "30 unsafe fn bodies (unchanged) + 30 fn-level `# Safety` contracts + the shared type/struct contracts + 2 compile-time table-liveness assertions + 1 test-only canary over 22 slot/table combinations. One shared mechanism is touched (the 32-byte ADRS provenance); no new shared mechanism was introduced.",
+ "safe_callers_can_cause_ub": false,
+ "safe_callers_can_cause_ub_note": "All 30 operations are `unsafe extern \"C\" fn`; both selectors and the struct fields are `pub(crate)`; and no safe Rust item in the crate accepts or returns an ADRS pointer or a hash-table slot. A safe caller therefore cannot reach any of these bodies without an unsafe block, and the provider entry points construct their own 32-byte locals, so no C caller can supply an ADRS pointer at all.",
+ "negative_control": [
+  {
+   "id": "B53-C1",
+   "name": "slh_dsa::tests::every_adrs_writer_stays_inside_the_32_byte_blob",
+   "kind": "court functional test, lib unittest (test-only canary)",
+   "guard": "a 32-byte window inside a 48-byte array with 8 sentinel bytes on each side, all 11 slots of both tables, asserting both guards unchanged and the exact last written offset",
+   "result": "PASS after restore (1 passed, 0 failed at --test-threads=1)",
+   "observation": "Every writer lands exactly where its contract says: uncompressed 3/15/31/23/23/27/27/31/31/31/31 and compressed 0/8/21/13/13/17/17/21/21/21/21 (layer, tree, type+clear, keypair, copy-keypair, chain, tree-height, hash, tree-index, zero, copy), with both guards untouched. The uncompressed `copy` reaches 31 and the compressed one 21.",
+   "mutation_sensitive": true,
+   "mutation": "`const SLH_ADRS_OFF_HASH_ADDR: usize = 28;` in src/slh_dsa/adrs.rs replaced by `= 30;`, so `set_hash_address` (and its `set_tree_index` alias) stores 30..34 and runs two bytes past the blob",
+   "fails_if": "observed FAILED, rc 101, at src/slh_dsa/tests.rs:532: \"adrs set_hash_address: a write reached past the 32-byte blob (highest offset 33)\" (0 passed; 1 failed; 2334 filtered out)",
+   "restore": "byte-for-byte: sha256 a0e9e7d9ba29688b6f767bcaba84b28dedb8aafc8ef0be25867aefd370eb773d before and after the mutation (mutant sha256 9350581130a5320390cda668fb3c39c1958708f3c337a771c2255e49ca72e3c8); the test then passes again and the file hash equals candidate.files_sha256",
+   "limits": "The window is the only pointer the accessor receives, so the canary proves the extent and the guards but cannot detect a write through some other, wrongly derived pointer; that derivation is established by the caller enumeration, not by this test. It also cannot see a write that stays inside the blob but outside the field the FIPS layout intends (the KATs cover values, not offsets)."
+  },
+  {
+   "id": "B53-C2",
+   "name": "table-liveness assertions in `ossl_slh_get_adrs_fn` / `ossl_slh_get_hash_fn`",
+   "kind": "compile-time assertion (not a runtime test)",
+   "guard": "`const _: &SlhAdrsFunc = &METHODS[0]; const _: &SlhAdrsFunc = &METHODS[1];` in the ADRS selector (the hash selector carries the twin pair)",
+   "result": "compiles at the candidate (exit 0)",
+   "observation": "A `const` initialiser accepts only a promoted reference, so the returned table pointer names a `'static` allocation. This is the row-liveness fact the 30 contracts rely on, proved by the compiler rather than asserted in prose.",
+   "mutation_sensitive": true,
+   "mutation": "`const METHODS: [SlhAdrsFunc; 2] = [` -> `let METHODS: [SlhAdrsFunc; 2] = [` in src/slh_dsa/adrs.rs",
+   "fails_if": "observed `error[E0435]: attempt to use a non-constant value in a constant` twice; `error: could not compile 'openssl-rs' (lib) due to 2 previous errors`, build exit 101",
+   "restore": "restored byte-for-byte (same sha256); `cargo build --lib` exit 0",
+   "limits": "Compile-time only: it proves the table is not a temporary, not that a future caller keeps the returned pointer correctly. A `static METHODS` item would give the same guarantee; the `const` form was kept because it is the existing transcription."
+  }
+ ],
+ "positive_control": [
+  {
+   "id": "B53-P1",
+   "name": "slh_dsa::tests::the_root_recomputation_agrees_with_every_vector",
+   "kind": "court functional test, lib unittest",
+   "result": "PASS (included in the 10 slh_dsa tests at --test-threads=4)",
+   "observation": "Recomputes PK_ROOT from SK_SEED || PK_SEED through `ossl_slh_xmss_node` and the WOTS+ generator for all twelve keygen vectors (the test asserts 18 checked keys = 12 keygen + 6 sigGen), so both ADRS tables and both hash tables execute on real parameter sets. A wrong offset or a wrong table pairing moves the root.",
+   "limits": "It is a functional comparison against the authority's own vectors, not a differential run of two builds."
+  },
+  {
+   "id": "B53-P2",
+   "name": "slh_dsa::tests::the_signature_digest_agrees_with_every_vector",
+   "kind": "court functional test, lib unittest",
+   "result": "PASS (included in the 10 slh_dsa tests at --test-threads=4)",
+   "observation": "Deterministically signs the six sigGen items and compares the SHA-256 of the signature with the vector's `sig_digest`, exercising prf_msg, h_msg and the wots/fors/xmss/hypertree walks on the same buffers the contracts describe.",
+   "limits": "Six items only; the digest is of the whole signature, so a wrong byte is detected but not localised."
+  },
+  {
+   "id": "B53-P3",
+   "name": "slh_dsa::tests::the_compressed_address_clear_stays_inside_its_blob",
+   "kind": "court functional test, lib unittest (pre-existing, not added by B53)",
+   "result": "PASS (included in the 10 slh_dsa tests at --test-threads=4)",
+   "observation": "Pins the compressed `set_type_and_clear` extent independently of B53-C1: bytes 10..22 are cleared, bytes 22..32 keep their 0xAA fill.",
+   "limits": "One slot of one table."
+  }
+ ],
+ "fast_gate_at_candidate": {
+  "candidate": "bb3f7efe7 + the uncommitted delta (candidate.files_sha256)",
+  "ran_at_head": "bb3f7efe75f1b8b0c6cbf41a5dab8bbf74f447e9",
+  "container": "docker/openssl-rs-court.sh (never the host)",
+  "toolchain": "pinned by the court image; CARGO_BUILD_JOBS=4; tests --test-threads=4 unless stated",
+  "fmt": {
+   "command": "docker/openssl-rs-court.sh exec cargo fmt --all -- --check",
+   "exit": 0,
+   "output": "no output; FMT_EXIT=0"
+  },
+  "clippy": {
+   "command": "docker/openssl-rs-court.sh exec cargo clippy --lib -- -D warnings",
+   "exit": 0,
+   "output": "Compiling openssl-rs v0.0.46 (/work); Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.77s; 0 warnings, 0 errors"
+  },
+  "focused_tests": {
+   "command": "docker/openssl-rs-court.sh exec cargo test --lib slh_dsa -- --test-threads=4",
+   "exit": 0,
+   "output": "running 10 tests ... test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 2325 filtered out; finished in 52.92s"
+  },
+  "mutation_runs": [
+   {
+    "command": "cargo test --lib every_adrs_writer_stays_inside_the_32_byte_blob -- --test-threads=1 (with SLH_ADRS_OFF_HASH_ADDR = 30)",
+    "exit": 101,
+    "output": "FAILED, \"adrs set_hash_address: a write reached past the 32-byte blob (highest offset 33)\"; 0 passed; 1 failed; 2334 filtered out"
+   },
+   {
+    "command": "cargo build --lib (with `let METHODS` in ossl_slh_get_adrs_fn)",
+    "exit": 101,
+    "output": "error[E0435]: attempt to use a non-constant value in a constant (x2); could not compile openssl-rs (lib)"
+   },
+   {
+    "command": "cargo test --lib every_adrs_writer_stays_inside_the_32_byte_blob -- --test-threads=1 (after restore)",
+    "exit": 0,
+    "output": "test result: ok. 1 passed; 0 failed; 2334 filtered out"
+   }
+  ],
+  "scope_note": "FAST evidence only. The full library suite (serial and threaded), Miri/ASan/TSan/dudect, the authority differential, the consumer closures and the closure re-run are NOT_RUN at this candidate."
+ },
+ "residuals": [
+  {
+   "id": "B53-R1",
+   "severity": "low",
+   "disposition": "STATED-ABI-OBLIGATION",
+   "description": "`out_len` is accepted and ignored by all twelve hash primitives (the authority ignores it too). A caller that believes `out_len` bounds the write would be wrong: the output span is `n` (`m` for `h_msg`) and every current call site supplies at least that. Stated in each contract; nothing enforces it at runtime."
+  },
+  {
+   "id": "B53-R2",
+   "severity": "low",
+   "disposition": "STATED-CALLER-OBLIGATION",
+   "description": "`slh_adrs_set_tree_address` writes only the low eight bytes of the twelve-byte tree-address field and assumes the high four are zero. This is a value precondition, not a validity one; the four call sites satisfy it with a preceding `zero` (hypertree.rs:65->:75, :172->:181; dsa.rs:168->:222, :345->:406). A future caller that sets the tree address without zeroing the blob would produce a wrong address, not UB."
+  },
+  {
+   "id": "B53-R3",
+   "severity": "low",
+   "disposition": "STATED-CONSTRUCTION-INVARIANT",
+   "description": "The parameter-row invariants the primitives depend on (`sha2_h_and_t_bound` in {64,128} and >= n; n <= 32; m <= 49; `md_big` SHA2-256/512 with a positive size) are established by the static table and by `slh_dsa_key_hash_init`, the only writer of those fields. They are not re-checked at the primitive."
+  },
+  {
+   "id": "B53-R4",
+   "severity": "low",
+   "disposition": "AUTHORITY-IDENTICAL-OBSERVATION",
+   "description": "`slh_prf_msg_sha2` sets `hmac_digest_used = 1` before `EVP_MAC_init` runs, so a failed init leaves the flag set and a retry passes `p = NULL` to `EVP_MAC_init`. This is the authority's own ordering (slh_hash.c:196-219 (the flag is set at :206, before `EVP_MAC_init` at :209)) and is not a memory-safety property; it is recorded, not repaired, because repairing it would diverge from the authority without a security justification."
+  },
+  {
+   "id": "B53-R5",
+   "severity": "medium",
+   "disposition": "NOT-RUN",
+   "description": "No Miri, ASan, LSan or TSan run was made; the aliasing claim rests on the caller enumeration plus the guard-byte canary, and no leak/UB instrument was exercised at this candidate."
+  },
+  {
+   "id": "B53-R6",
+   "severity": "medium",
+   "disposition": "NOT-RUN",
+   "description": "Constant-time behaviour was not measured. SLH-DSA signing is secret-dependent and this module is on the signing path; B53 makes no timing claim in either direction."
+  },
+  {
+   "id": "B53-R7",
+   "severity": "medium",
+   "disposition": "STATED-EVIDENCE-LIMIT",
+   "description": "The canary proves extents and guards for the ADRS table only. The hash primitives have no bounds canary; their length obligations are argued from the parameter rows and the caller buffer sizes and are exercised by the KATs, which detect wrong bytes rather than a hypothetical out-of-bounds write."
+  }
+ ],
+ "not_run": [
+  {
+   "gate": "full library suite, serial and threaded",
+   "blocker": "FAST-only phase; only the slh_dsa filter was run"
+  },
+  {
+   "gate": "Miri (Stacked/Tree Borrows)",
+   "blocker": "not invoked; no new aliasing model claim"
+  },
+  {
+   "gate": "ASan / LeakSanitizer",
+   "blocker": "not invoked"
+  },
+  {
+   "gate": "TSan",
+   "blocker": "not invoked; no concurrency is introduced"
+  },
+  {
+   "gate": "dudect / constant-time",
+   "blocker": "not invoked; no timing claim is made"
+  },
+  {
+   "gate": "authority differential harness",
+   "blocker": "not run; the positive control is the authority's embedded vector file"
+  },
+  {
+   "gate": "Wycheproof / ACVP beyond the embedded slh_dsa.inc vectors",
+   "blocker": "not run"
+  },
+  {
+   "gate": "consumer closure (curl/nginx/OpenSSH/HAProxy/Redis)",
+   "blocker": "deliberately not run"
+  },
+  {
+   "gate": "closure re-run and CAMPAIGN-STATUS application",
+   "blocker": "deliberately not run; this is a receipt for independent adjudication"
+  }
+ ],
+ "non_claims": [
+  "B53 scopes the claim to the 30 operations listed and the call sites named in each row. EVP_PKEY_PROVIDER stays at OWNERSHIP_RECONSTRUCTED and is not discharged mechanism-wide.",
+  "The dispositions are receipts, not applied adjudications: the closure was not re-run and CAMPAIGN-STATUS.json was not edited.",
+  "No sanitizer, Miri, leak check, constant-time measurement or authority differential run was made.",
+  "The canary proves write extents and guard bytes for the ADRS slots; it does not prove that a pointer cannot arrive from some other derivation, and it says nothing about the hash primitives' buffers.",
+  "The KATs are the authority's own vector file embedded with `include_str!`, so they are a functional comparison, not a two-build differential.",
+  "`out_len` is ignored by design (authority-identical); no contract binds to it.",
+  "Every line and span is bound to candidate.files_sha256; any source edit invalidates these coordinates and the receipt."
+ ],
+ "review_conditions": [
+  "C1_identity: the candidate is HEAD bb3f7efe7 plus the 3-file, +337/-0 delta; candidate.files_sha256 binds that exact tree. The delta is uncommitted because the brief forbids committing; the orchestrator freezes it as S.",
+  "C2_selection: 30 obligations selected (30 UNSAFE_FN_DEF, 0 UNSAFE_EXTERN_BLOCK). The closure's only BLOCKED UNSAFE_EXTERN_BLOCK is src/provider/decode_pvk2key.rs:54, outside src/slh_dsa, and is not claimed.",
+  "C3_canary: every_adrs_writer_stays_inside_the_32_byte_blob passes at the candidate and fails deterministically when SLH_ADRS_OFF_HASH_ADDR is moved from 28 to 30 (highest offset 33); src/slh_dsa/adrs.rs is restored byte-for-byte (sha256 a0e9e7d9...).",
+  "C4_liveness: each selector carries `const _: &Table = &METHODS[i];`; changing the table to a runtime `let` fails the build with E0435, so the returned pointer is provably not a temporary.",
+  "C5_gates: fmt exit 0; `cargo clippy --lib -- -D warnings` exit 0; `cargo test --lib slh_dsa -- --test-threads=4` exit 0 with 10 passed. Full suite, sanitizers and closures are NOT_RUN.",
+  "C6_scope: the two aliased slots (set_tree_height, set_tree_index) are covered by their writer's contract and their call sites are listed in B53-ADRS-006 and B53-ADRS-007; no separate operation is claimed.",
+  "C7_authority: `out_len` is ignored in the authority too; the contracts bind to n/m. This is stated, not silently \"fixed\"."
+ ],
+ "applied": true,
+ "review": {
+  "state": "adjudicated-fast",
+  "reviewer": "orchestrating agent (not the author of the sweep)",
+  "independent_checks": [
+   "all 7 ADRS allocation sites are [u8; SLH_ADRS_SIZE_MAX] (32); no 22-byte allocation is ever passed to an uncompressed accessor",
+   "the compressed table writes at most offset 22, the uncompressed table at most 32, and both tables are used with 32-byte arrays",
+   "both tables are `const METHODS` (E0435 if materialised as a temporary)",
+   "every accessor slot is reached only through SlhDsaParams.adrs_func; no C ABI entry point accepts an ADRS pointer",
+   "re-ran the canary and the focused slh_dsa suite in the court: 10 passed, 0 failed; fmt clean"
+  ],
+  "not_run": [
+   "Miri/ASan",
+   "closure re-run",
+   "authority differential",
+   "full suite"
+  ],
+  "note": "Fast adjudication only, per the phase instruction. The BOUNDARY/SEAL evidence for this sweep remains outstanding and is recorded as NOT_RUN in the receipt."
+ },
+ "schema_note": "Same shape as boundary-sweep-B51.json, minus its review history. Differences: `applied: false` with `review.state: pending-independent-review`; a per-row `callers` array (required for these pointer-taking slots); `table`/`slot`/`registration` name the exact function-pointer slot; and two negative controls (a runtime guard-byte canary and a compile-time liveness assertion). `line` is the V1 census coordinate; `line_current` is advisory; `span_sha256` is the acceptance binding.",
+ "review_history": [
+  {
+   "reviewer": "pending independent adjudication",
+   "verdict": "UNAPPLIED",
+   "applied": false,
+   "date": "2026-11-11",
+   "prohibition": "Do not apply these dispositions to CAMPAIGN-STATUS.json or run the closure against them in this subphase."
+  }
+ ]
+}
