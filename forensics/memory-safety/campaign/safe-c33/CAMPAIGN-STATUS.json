@@ -1421,6 +1421,109 @@
     "level": "fast (fmt, clippy -D warnings, focused lib tests). BOUNDARY/SEAL not run."
    },
    "applied_ledger_effect": "30 scoped boundaries BLOCKED -> SAFETY_DISCHARGED (scoped); DISCHARGED 189 -> 219, BLOCKED 135 -> 105 for both families; no other mechanism or site moved"
+  },
+  {
+   "receipt": "boundary-sweep-B54",
+   "artifact": "atlas-refresh/boundary-sweep-B54.json",
+   "base_head": "7e8e11879",
+   "state": "SAFETY_DISCHARGED (scoped to the 72 named boundaries); 11 rows RETAINED BLOCKED",
+   "scope": "the 83 BLOCKED X509_VERIFY_POLICY X509V3_EXT_METHOD callback obligations at evidence/closure-ssh-311.json",
+   "discharged_boundaries": [
+    "src/ct/ct_x509v3.rs:70",
+    "src/x509/v3_audit_id.rs:37",
+    "src/x509/v3_ia5.rs:113",
+    "src/x509/v3_skid.rs:90",
+    "src/x509/v3_skid.rs:206",
+    "src/x509/v3_utf8.rs:114",
+    "src/x509/v3_utl.rs:573",
+    "src/x509/v3_addr.rs:2241",
+    "src/x509/v3_akid.rs:359",
+    "src/x509/v3_bitst.rs:288",
+    "src/x509/v3_bitst.rs:360",
+    "src/ct/ct_sct.rs:247",
+    "src/ocsp/v3_ocsp.rs:325",
+    "src/x509/v3_lib.rs:624",
+    "src/x509/v3_ac_tgt.rs:624",
+    "src/x509/v3_ac_tgt.rs:688",
+    "src/x509/v3_ac_tgt.rs:825",
+    "src/x509/v3_ac_tgt.rs:889",
+    "src/x509/v3_ac_tgt.rs:934",
+    "src/x509/v3_admis.rs:557",
+    "src/x509/v3_asid.rs:1263",
+    "src/x509/v3_attrdesc.rs:637",
+    "src/x509/v3_attrdesc.rs:699",
+    "src/x509/v3_attrdesc.rs:738",
+    "src/x509/v3_attrdesc.rs:794",
+    "src/x509/v3_attrmap.rs:576",
+    "src/x509/v3_authattid.rs:164",
+    "src/x509/v3_bitst.rs:234",
+    "src/x509/v3_rolespec.rs:297",
+    "src/x509/v3_san.rs:356",
+    "src/x509/v3_timespec.rs:1475",
+    "src/x509/v3_timespec.rs:1526",
+    "src/x509/v3_timespec.rs:1549",
+    "src/x509/v3_timespec.rs:1572",
+    "src/ct/ct_x509v3.rs:86",
+    "src/ocsp/v3_ocsp.rs:122",
+    "src/ocsp/v3_ocsp.rs:187",
+    "src/ocsp/v3_ocsp.rs:344",
+    "src/ocsp/v3_ocsp.rs:406",
+    "src/x509/v3_ac_tgt.rs:962",
+    "src/x509/v3_addr.rs:921",
+    "src/x509/v3_admis.rs:640",
+    "src/x509/v3_asid.rs:817",
+    "src/x509/v3_attrdesc.rs:850",
+    "src/x509/v3_attrmap.rs:653",
+    "src/x509/v3_authattid.rs:229",
+    "src/x509/v3_crld.rs:1471",
+    "src/x509/v3_crld.rs:1638",
+    "src/x509/v3_crld.rs:1685",
+    "src/x509/v3_crld.rs:1710",
+    "src/x509/v3_crld.rs:2003",
+    "src/x509/v3_ncons.rs:588",
+    "src/x509/v3_pci.rs:581",
+    "src/x509/v3_rolespec.rs:392",
+    "src/ct/ct_x509v3.rs:59",
+    "src/x509/v3_audit_id.rs:30",
+    "src/x509/v3_enum.rs:156",
+    "src/x509/v3_ia5.rs:77",
+    "src/x509/v3_skid.rs:73",
+    "src/x509/v3_utf8.rs:74",
+    "src/x509/v3_utl.rs:501",
+    "src/x509/v3_utl.rs:535",
+    "src/x509/v3_akid.rs:231",
+    "src/x509/v3_battcons.rs:191",
+    "src/x509/v3_bcons.rs:192",
+    "src/x509/v3_bitst.rs:349",
+    "src/x509/v3_extku.rs:184",
+    "src/x509/v3_info.rs:323",
+    "src/x509/v3_pcons.rs:154",
+    "src/x509/v3_pmaps.rs:200",
+    "src/x509/v3_san.rs:317",
+    "src/x509/v3_tlsf.rs:173"
+   ],
+   "retained_boundaries": [
+    "src/x509/v3_cpols.rs:1247",
+    "src/x509/v3_pci.rs:647",
+    "src/x509/v3_crld.rs:1325",
+    "src/x509/v3_crld.rs:1554",
+    "src/x509/v3_crld.rs:1913",
+    "src/x509/v3_ncons.rs:390",
+    "src/x509/v3_san.rs:1058",
+    "src/x509/v3_san.rs:1115",
+    "src/x509/v3_san.rs:1131",
+    "src/x509/v3_san.rs:1231",
+    "src/x509/v3_san.rs:1355"
+   ],
+   "hidden_obligations": 0,
+   "adjudicated": true,
+   "adjudication": {
+    "reviewer": "orchestrating agent (independent of the sweep author)",
+    "verdict": "DISPATCH_DISCHARGE 72/83; REJECT 11/83",
+    "control": "four mutation-proven negative controls (print slot pairing, method-row item pairing, alt-row nid pairing, tag/row-item checks); each fails when its row is mispaired and was reverted byte-for-byte",
+    "level": "fast (fmt, clippy -D warnings, focused x509 lib tests 161 passed). BOUNDARY/SEAL not run."
+   },
+   "applied_ledger_effect": "72 scoped boundaries BLOCKED -> SAFETY_DISCHARGED (scoped). Ledger DISCHARGED 219 -> 290 (+72, -1 reopened), BLOCKED 105 -> 34 (-72, +1 reopened). No other mechanism or site moved."
   }
  ],
  "withdrawn_boundary_discharges": [],
@@ -2339,8 +2442,8 @@
   "identity_correction": "The previous block claimed S = a8716b4f2 with libcrypto ececbd98 / ssh 560652df / sshd 51f00033. That triple is the SUPERSEDED B52 lineage (bound in atlas-refresh/b52-candidate-freeze.json) and contradicted the b53 receipts the block cited. It is replaced here by the receipt-bound B53 identity; the B52 hashes remain recorded in their own freeze receipt and are not overwritten.",
   "closure": {
    "ssh": {
-    "DISCHARGED": 219,
-    "BLOCKED": 105,
+    "DISCHARGED": 290,
+    "BLOCKED": 34,
     "UNKNOWN": 0,
     "obligations_total": 324,
     "verdict": "ACCEPTED",
@@ -2351,11 +2454,11 @@
     "inventory_source_head": "6eec8a175",
     "libcrypto_so_3_sha256": "136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5d88d09a9a44",
     "note": "Re-measured at HEAD after 59 unsafe-fn sites were eliminated. The -54 obligations (-36 BLOCKED, -18 DISCHARGED) are carried-removed: those sites no longer exist, so they are neither discharged nor blocked.",
-    "counts_note": "includes the 14 sslconf-exclusivity discharges and the 30 B53 slh_dsa method-table discharges; the closure receipts will reflect them at the next re-measure"
+    "counts_note": "includes the 14 sslconf, 30 B53 slh_dsa and 72 B54 X509 callback discharges, less the 1 B51 row reopened by B54-F1; the closure receipts will reflect this at the next re-measure"
    },
    "sshd": {
-    "DISCHARGED": 219,
-    "BLOCKED": 105,
+    "DISCHARGED": 290,
+    "BLOCKED": 34,
     "UNKNOWN": 0,
     "obligations_total": 324,
     "verdict": "ACCEPTED",
@@ -2365,7 +2468,7 @@
     "measured_census": "court/freeze-311/census-311.json",
     "inventory_source_head": "6eec8a175",
     "note": "Re-measured at HEAD. The -54 (-36 BLOCKED, -18 DISCHARGED) are carried-removed sites that no longer exist.",
-    "counts_note": "includes the 14 sslconf-exclusivity discharges and the 30 B53 slh_dsa method-table discharges; the closure receipts will reflect them at the next re-measure"
+    "counts_note": "includes the 14 sslconf, 30 B53 slh_dsa and 72 B54 X509 callback discharges, less the 1 B51 row reopened by B54-F1; the closure receipts will reflect this at the next re-measure"
    }
   },
   "closure_receipts": [
@@ -3039,5 +3142,31 @@
   "s57_ssl_sess": "ssl_sess.rs production unsafe blocks 131 -> 134, production unsafe fn 18 -> 21, #[no_mangle] exports unchanged at 65; the whole file (tests included) is 207 -> 219 blocks. The three new production blocks/fns are SessionKey::of_session/matches, SessionRef::acquire/adopt_cache_entry and SessionRef::drop; the mem::zeroed SslSession probe and the raw byte-compare loop are gone.",
   "s58_t1_lib": "t1_lib.rs production unsafe blocks 52 -> 62, production unsafe fn 11 -> 15, total 52 -> 70; ssl_lib.rs production 764 -> 768, total 862 -> 866; statem_clnt.rs production 258 -> 261, total 319 -> 326; statem_srvr.rs production 264 -> 263, total 380 -> 379. The new blocks are the OwnedSigalgs/SigalgsSlot contracts and their tests; the raw incumbent free/store and hand-computed (ptr,len) slices are gone.",
   "s61_ssl_lib": "ssl_lib.rs total unsafe blocks 864 -> 869, production unsafe fn 78 -> 79; statem_lib.rs 11 -> 13 and statem_srvr.rs 379 -> 380 are test-only regression blocks. The production increase is ssl_get_security_level_bits plus the SSL_SECOP_VERSION arm, each with a SAFETY contract; no ABI or allocator seam changed."
- }
+ },
+ "reopened_discharges": [
+  {
+   "reopens": "boundary-sweep-B51",
+   "boundary": "src/x509/v3_info.rs::v2i_AUTHORITY_INFO_ACCESS",
+   "reason": "B54-F1 refutes the premise B51 relied on: X509V3_EXT_nconf* admit a NULL ctx, and v2i_AUTHORITY_INFO_ACCESS forwards ctx to v2i_GENERAL_NAME_ex, whose dirName arm reaches X509V3_get_section, which dereferences (*ctx). Until the NULL-ctx path is repaired or excluded, this row is BLOCKED again.",
+   "receipt": "atlas-refresh/boundary-sweep-B54.json",
+   "ledger_effect": "DISCHARGED -1, BLOCKED +1"
+  }
+ ],
+ "findings": [
+  {
+   "id": "B54-F1",
+   "severity": "high",
+   "state": "open",
+   "what": "A documented-nullable ctx is dereferenced on reachable configuration paths. X509V3_EXT_nconf / _nid / _int document ctx as NULL-or-live; value-less section branches call X509V3_get_section(ctx, name), which does (*ctx).db; do_ext_nconf also reads (*ctx).db before dispatching v2i/r2i. X509V3_EXT_nconf_nid(NULL, NULL, NID_subject_alt_name, \"dirName:x\") is therefore a NULL dereference.",
+   "blocks": "the 11 BLOCKED B54 rows and the reopened B51 row; any SAFE_COMPATIBLE claim that includes the X509V3 config-decode surface",
+   "required_resolution": "Either refuse a NULL ctx at the entry points whose rows can reach a section path (matching the authority behaviour that the entries themselves document), or make the section path NULL-safe end to end. Whichever is chosen needs a load-bearing test that fails on the NULL input today."
+  },
+  {
+   "id": "B54-F2",
+   "severity": "medium",
+   "state": "open",
+   "what": "X509V3_EXT_nconf* document `value` as nullable while v3_check_critical/v3_check_generic strncmp it immediately.",
+   "blocks": "nothing discharged, but the entry contracts are wrong; they must be corrected or the calls made null-safe."
+  }
+ ]
 }
