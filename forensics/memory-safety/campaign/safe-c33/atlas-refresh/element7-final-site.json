@@ -1,0 +1,279 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/element7-target-set-evidence/v1",
+ "receipt": "element7-final-site",
+ "kind": "element7-target-set-evidence",
+ "date": "2026-11-11",
+ "subphase": "B53-e7final (working-tree B58 cfg(test) span repair verified here)",
+ "revision": 1,
+ "group": "provider_hw_table / 0x1BE7F4",
+ "state": "RESOLVED IN THE INSTRUMENT - element 7 PASS (contract-bounded) at the ssh candidate; no contract class was widened and no source-level witness was required",
+ "applied": false,
+ "purpose": "Resolve the last non-contract-bounded reachable unresolved site of element 7 (libcrypto 0x1BE7F4, ossl_gcm_one_shot, call *0x18(%r13)) without widening a contract class, with a positive run, an adversarial control and a receipt. CAMPAIGN-STATUS.json and state.json are not touched.",
+ "source_identity": {
+  "repository_head": "53ec4f3ac2400eb05320a045365e08452548abd3",
+  "branch": "stage/p25/b53-discharge",
+  "working_tree_dirty": true,
+  "dirty_paths": [
+   "forensics/tools/consumer_closure.py (pre-existing uncommitted change, see tool.provenance)"
+  ],
+  "inventory": {
+   "path": "court/freeze-311/census-311.json",
+   "sha256": "70cb32fef96ee4cc8565d4f01508a0e46ff81a396643c122be480eb3a6d96622"
+  },
+  "install": "artifacts/phase2/install",
+  "libcrypto_so_3_sha256": "136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5dbe88d09a9a44",
+  "artifact": {
+   "path": "court/tmp/openssh-closure/client-b53/openssh-9.9p1/ssh",
+   "sha256": "926975c81fe8d56297196a703a8a7b0f5eb0fae1644bbfa4643d4cd517f22ba0"
+  }
+ },
+ "tool": {
+  "path": "forensics/tools/consumer_closure.py",
+  "version": 5,
+  "sha256": "8f0379bb8151654cb44d60c236463e089b594177376f69d7f5b69baead5be5c4",
+  "committed_head_sha256": "8bddac5555fc9546d2967c5c2bc31eceb43e48374c3fd0a31f0a3befd0ec630a",
+  "provenance": "The item-extent `_phw_cfg_test_spans` change and its self-tests were ALREADY PRESENT UNCOMMITTED in the working tree when this analysis started (docstring labels the defect B58). This receipt verifies that change as the necessary and sufficient resolution; it does not claim authorship. The committed HEAD tool (8bddac...) is the tool that produced evidence/closure-ssh-311.json.",
+  "change": {
+   "function": "_phw_cfg_test_spans",
+   "line": "forensics/tools/consumer_closure.py:12640",
+   "before": "brace-match from the #[cfg(test)] attribute to the next `{` and its matching `}`; a semicolon-terminated assertion item therefore extended into the next item",
+   "after": "the span is the item's own extent: a semicolon/comma terminates it, a brace body is brace-matched; attribute mentions in comments are excluded",
+   "self_tests": "the same file adds five checks at :30880-:30908 (assertion item is test-only; its span ends at the semicolon; a `mod tests` span covers its body and ends at its brace; an attribute named in a doc comment is not an attribute)"
+  }
+ },
+ "baseline": {
+  "path": "evidence/closure-ssh-311.json",
+  "sha256": "f2d128a909831815e8c755a97ee87b43cf8849efdbcac8ec89ac14b04b712147",
+  "tool_sha256": "8bddac5555fc9546d2967c5c2bc31eceb43e48374c3fd0a31f0a3befd0ec630a",
+  "element7": "FAIL",
+  "reachable_unresolved": 103,
+  "target_bounded": 1,
+  "contract_bounded": 102,
+  "site": {
+   "dso": "libcrypto.so.3",
+   "function": "0x1be7c0",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider10cipher_gcm17ossl_gcm_one_shot",
+   "call_site": "0x1be7f4",
+   "text": "call *0x18(%r13)",
+   "class": "field",
+   "reason": "base-slot-partial",
+   "nested_refusal": "writer-set-incomplete",
+   "pointer_slot": "ProvGcmCtx.hw@0xf0 (declaration src/provider/cipher_gcm.rs:608)",
+   "unproven_base_stores": [
+    "std::sync::once::Once::call_once_force closure of once_lock::OnceLock<Table>::initialize / get_or_init (named_groups) at 0x2484e8",
+    "asn1_item_list.llvm at 0x3f5eca"
+   ],
+   "overlapping_non_scalar_stores": 6
+  }
+ },
+ "refusal_chain": {
+  "summary": "0x1BE7F4 does not intrinsically need a writer-set proof. It fell through to the S2b nested writer-set rule only because S5 refused first, and S5 refused because the context type-closure was under-approximated to one table. The neighbours did not fall through because their singleton target sets happened to be satisfied by the one surviving table.",
+  "s5_refusal_condition": {
+   "rule": "provider_hw_table_witness (S5)",
+   "file_line": "forensics/tools/consumer_closure.py:13951",
+   "condition": "if targets != wanted: return _phw_refusal('target-set-not-enumerated', ...)",
+   "computed_targets_with_one_table": ["0x1bede0"],
+   "enumerated_wanted": ["0x1bede0", "0x1bee80"],
+   "why": "with only AES_GCM_HW in the closure, the AES_GCM_HW.cipherupdate slot resolves to the folded 0x1bede0; the ARIA table (which supplies 0x1bee80) is absent from the closure, so the computed set is a strict subset of the two enumerated targets"
+  },
+  "root_cause": {
+   "defect": "the pre-fix cfg(test) span over-approximated a semicolon-terminated assertion item into the next item",
+   "source": "src/provider/cipher_gcm.rs",
+   "pre_fix_spans_line_ranges": [
+    [1758, 1792],
+    [2052, 2079],
+    [2209, 2236],
+    [2494, 3128],
+    [3090, 3127]
+   ],
+   "post_fix_spans_line_ranges": [
+    [1758, 1759],
+    [2052, 2053],
+    [2209, 2210],
+    [2494, 3128]
+   ],
+   "swallowed_production_items": [
+    "src/provider/cipher_gcm.rs:2059 unsafe fn aria_gcm_newctx (old span 2052-2079) and its ossl_gcm_initctx call at :2071",
+    "src/provider/cipher_gcm.rs:2216 unsafe fn sm4_gcm_newctx (old span 2209-2236) and its ossl_gcm_initctx call at :2228"
+   ],
+   "mechanism": "_phw_constructions skips a helper call whose position is inside a cfg(test) span (_phw_relative_ok); dropping the ARIA and SM4 constructors left the ProvGcmCtx hw@0xf0 type-closure as {AES_GCM_HW} (one table).",
+   "why_neighbours_passed": "0x1BE7DE (aadupdate) and 0x1BE80C (cipherfinal) enumerate one target each; AES_GCM_HW supplies both, so target_set == wanted even with one table. 0x1BE7F4 enumerates two."
+  },
+  "downstream_s2b": {
+   "rule": "nested_static_instance_witness (S2b)",
+   "refusal": "writer-set-incomplete",
+   "why_it_is_not_a_real_obligation": "S2b indexes stores by bare displacement 0x18 and admits unqualified bases. The named std::sync::once closure is once_lock::OnceLock<Table>::initialize for `named_groups` (a different type in the ffc path), not a ProvGcmCtx.hw writer. The 6 overlapping 16-byte stores are likewise other owning types. S2b never ran once S5 resolved."
+  }
+ },
+ "decision": {
+  "option_a_complete_writer_set": {
+   "admissible": false,
+   "why": "The source writer set of ProvGcmHw.cipherupdate is already the complete enumerated {AES_GCM_HW, ARIA_GCM_HW, SM4_GCM_HW}. The missing element was a constructor, not a writer. The std::sync::once store is an S2b displacement over-approximation; silencing it would not restore the missing constructors and would not change S5's target set. No contract class was widened."
+  },
+  "option_b_prove_the_fold": {
+   "admissible": false,
+   "why": "The two ENUMERATED targets do not fold: ossl_gcm_cipher_update is 0x1bee80 and sm4_gcm_cipher_update is 0x1bede0 in this exact image (distinct function starts). Only the non-enumerated source function generic_aes_gcm_cipher_update is absent and folds into sm4_gcm_cipher_update (0x1bede0). A singleton target set would therefore be false."
+  },
+  "chosen": "Repair the cfg(test) item-extent span (tool-only). It is the root cause, it restores the ARIA and SM4 constructors, and the resulting three-table type-closure makes the computed target set exactly the enumerated two-address set. No predicate, contract or source file was changed.",
+  "symbol_evidence": {
+   "ossl_gcm_aad_update": "0x1becb0",
+   "ossl_gcm_cipher_final": "0x1bed30",
+   "sm4_gcm_cipher_update": "0x1bede0",
+   "ossl_gcm_cipher_update": "0x1bee80",
+   "generic_aes_gcm_cipher_update": "absent from the image (folded into sm4_gcm_cipher_update)"
+  }
+ },
+ "measurement": {
+  "command": "python3 forensics/tools/consumer_closure.py --family openssh --artifact court/tmp/openssh-closure/client-b53/openssh-9.9p1/ssh --install artifacts/phase2/install --inventory court/freeze-311/census-311.json --enrolment-blockers forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json --workdir court/tmp/e7final/work-ssh --output evidence/closure-ssh-b53-e7final.json --summary",
+  "result": {
+   "verdict": "ACCEPTED",
+   "element7": "PASS (contract-bounded)",
+   "indirect_sites": 52321,
+   "resolved_sites": 52173,
+   "unresolved_sites": 148,
+   "reachable_unresolved": 103,
+   "target_bounded": 0,
+   "contract_bounded": 103,
+   "unclassified": 0,
+   "contract_bounded_by_class": {
+    "ABI_CONTRACT_CONF_MODULE": 2,
+    "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+    "ABI_CONTRACT_EXPORT_CALLBACK": 62,
+    "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+    "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+    "ABI_CONTRACT_PBE_REGISTRY": 1,
+    "ABI_CONTRACT_PROVIDER": 17,
+    "ABI_CONTRACT_PROVIDER_HW_TABLE": 5,
+    "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+    "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+    "ABI_CONTRACT_STORE_LOADER": 3
+   },
+   "site_0x1be7f4": {
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "reason": "provider hw-table closed context-set contract: ProvGcmHw.cipherupdate@0x18 over 3 closed-context table(s), closure type-closure"
+   },
+   "nested_static_instance": {
+    "resolved": 0,
+    "refused": 10,
+    "by_refusal": {
+     "ctx-not-proven-parameter": 2,
+     "no-context-type": 3,
+     "writer-set-incomplete": 5
+    }
+   }
+  }
+ },
+ "mutation_control": {
+  "action": "Same tool file, same candidate, same flags; a wrapper (court/tmp/e7control.py, sha256 c468c0876d0f8a0747fc0953cb524628670f9ba417f59d4340ff3c79f8d6266f) replaced ONLY cc._phw_cfg_test_spans with the pre-fix brace-matching implementation. The production tool file was not edited.",
+  "pre_fix_function": "for m in re.finditer(r'#\\[cfg\\(\\s*test\\s*\\)\\]', text): brace = text.find('{', m.end()); end = _s1_brace_span(text, brace); spans.append((m.start(), end))",
+  "output": "court/tmp/e7control/closure-control.json (sha256 0de1f3751a3ec696f218bcc45228f21b7aedd1a82212c3c927bcc143ff6bf385)",
+  "observed": {
+   "element7": "FAIL",
+   "target_bounded": 1,
+   "contract_bounded": 102,
+   "provider_hw_table": 4,
+   "site_0x1be7f4": {
+    "class": "field",
+    "reason": "base-slot-partial",
+    "nested_refusal": "writer-set-incomplete",
+    "pointer_slot": "ProvGcmCtx.hw@0xf0"
+   },
+   "nested_static_instance": {
+    "refused": 11,
+    "writer-set-incomplete": 6
+   },
+   "closure_table_counts": {
+    "0x1be7de": "1 closed-context table",
+    "0x1be7f4": "not closed (field/base-slot-partial)",
+    "0x1be80c": "1 closed-context table"
+   }
+  },
+  "revert": "The control is confined to a separate wrapper process. forensics/tools/consumer_closure.py has the same sha256 (8f0379bb...) before and after the control, and the passing run at that same hash is evidence/closure-ssh-b53-e7final.json; the b53e7 passing artifact is therefore the post-revert (indeed never-mutated) result.",
+  "why_this_is_the_right_canary": "It mutates exactly the fact the proof depends on - the item extent that makes the ARIA and SM4 constructors visible to _phw_constructions - and reproduces the baseline refusal byte-for-byte at the level of class, reason, pointer slot and element-7 counts."
+ },
+ "collateral": {
+  "relative_to": "the control run (same candidate, same flags, only the span function substituted)",
+  "residual_sites_compared": 103,
+  "added": 0,
+  "removed": 0,
+  "changed": 3,
+  "changes": [
+   "0x1be7de: class unchanged (ABI_CONTRACT_PROVIDER_HW_TABLE); witness slot refines from 1 to 3 closed-context tables",
+   "0x1be7f4: field/base-slot-partial -> ABI_CONTRACT_PROVIDER_HW_TABLE at 3 closed-context tables (the target site)",
+   "0x1be80c: class unchanged (ABI_CONTRACT_PROVIDER_HW_TABLE); witness slot refines from 1 to 3 closed-context tables"
+  ],
+  "unresolved_by_class": "ABI_CONTRACT_PROVIDER_HW_TABLE 4 -> 5, field 9 -> 8; every other class counter is identical",
+  "no_other_predicate_or_contract_changed": true,
+  "no_contract_class_widened": true
+ },
+ "execution": {
+  "court": "openssl-rs-court-b53e7 (openssl-rs-court:1)",
+  "caps": {
+   "OPENSSL_RS_COURT_MEM": "8g",
+   "OPENSSL_RS_COURT_MEMSWAP": "8g",
+   "OPENSSL_RS_COURT_MEMRES": "8g",
+   "OPENSSL_RS_COURT_DATA": "6291456 KiB (6 GiB) for the closure runs"
+  },
+  "availability_before": "55-66 GiB available; cap computed as min(8g, available-16g) = 8g",
+  "first_attempt": "refused by the default per-process RLIMIT_DATA (4 GiB) with MemoryError in _section_bytes during the semantic provenance resolver; cgroup memory.events oom=0 oom_kill=0, memory.peak 4,288,262,144 B",
+  "stated_change": "the cgroup cap was left at 8g/8g; only the per-process OPENSSL_RS_COURT_DATA was raised to 6 GiB, below the cgroup cap, and the runs completed with oom_kill=0",
+  "one_heavy_command_at_a_time": true
+ },
+ "outputs": [
+  {
+   "path": "evidence/closure-ssh-b53-e7final.json",
+   "bytes": 11302383,
+   "sha256": "0ca4c51bcd7b23bdc5e2011beed50850ab3df1f8ea4ce402f862661f778705fd"
+  },
+  {
+   "path": "court/tmp/e7control/closure-control.json",
+   "bytes": 11295815,
+   "sha256": "0de1f3751a3ec696f218bcc45228f21b7aedd1a82212c3c927bcc143ff6bf385"
+  },
+  {
+   "path": "court/tmp/e7control.py",
+   "sha256": "c468c0876d0f8a0747fc0953cb524628670f9ba417f59d4340ff3c79f8d6266f"
+  }
+ ],
+ "not_run": [
+  "cargo fmt --all -- --check (no Rust source change; tool-only change)",
+  "cargo clippy --all-targets -- -D warnings (no Rust source change)",
+  "cargo test --lib (no Rust source change; the instrument's own --self-test was run and passed)",
+  "the sshd sibling closure (only the ssh family was required for the element-7 predicate)",
+  "BOUNDARY-level independent caller/dependency-closure audit and ASan/Miri/Loom/mutation controls",
+  "SEAL-level full forensic regeneration and held-out compatibility campaign",
+  "independent adversarial review of this receipt (author and adjudicator are the same session; see review)",
+  "ledger/CAMPAIGN-STATUS.json/state.json update (explicitly out of scope; applied=false)",
+  "commit/push (explicitly out of scope)",
+  "the standing docker/ host bind-mount isolation fix"
+ ],
+ "non_claims": [
+  "This does not discharge any source obligation and does not change 324/175/149/0 or the DISCHARGED stable-identity set.",
+  "The S2b displacement-based writer over-approximation still exists for other sites; it is not repaired or widened here, only no longer reached by 0x1BE7F4.",
+  "The earlier 0x1BE7F4 refusal was an instrument precision defect (a span parser bug), not a candidate memory-safety improvement.",
+  "No claim is made that the full closure is free of other over-approximations; the 103 remaining contract-bounded sites keep their own evidence status.",
+  "The 6 GiB DATA override is a per-process virtual-space limit change, not a cgroup cap change; the cgroup stayed at 8g."
+ ],
+ "residuals": [
+  {
+   "id": "E7FS-R1",
+   "state": "OPEN",
+   "why": "The cfg(test) item-extent repair is uncommitted in the working tree; evidence identity is bound to the working-tree sha256 8f0379bb... and a future commit must preserve it or regenerate the receipt."
+  },
+  {
+   "id": "E7FS-R2",
+   "state": "OPEN",
+   "why": "S2b still treats any unqualified store at the same bare displacement as a possible writer; the std::sync::once OnceLock<Table> closure is a false positive by shape. It is not on this site's path any more."
+  },
+  {
+   "id": "E7FS-R3",
+   "state": "OPEN",
+   "why": "The closure generator needs >4 GiB RLIMIT_DATA at this candidate (MemoryError at ~4.0 GiB); the run used an explicit 6 GiB DATA override. This is recorded, not hidden."
+  }
+ ],
+ "review": {
+  "independent_review": "NOT_RUN",
+  "author_is_adjudicator": true,
+  "note": "AGENTS.md section 15 requires that the agent writing a safety claim is not its sole authority. This receipt is therefore evidence for review, not a discharged claim; the independent reviewer must re-run the control and confirm the collateral set."
+ }
+}
