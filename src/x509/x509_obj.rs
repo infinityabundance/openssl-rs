@@ -146,14 +146,15 @@ unsafe fn strncpy_no_name(buf: *mut c_char, len: c_int) {
 /// The `buferr:`/`end:` tail: raise the error, then release the `BUF_MEM` (its owner's `Drop`),
 /// and answer NULL.
 ///
-/// # Safety
-///
 /// None: the owners in the caller's frame release themselves on return.
-unsafe fn raise_and_null(site: &ErrSite) -> *mut c_char {
+fn raise_and_null(site: &ErrSite) -> *mut c_char {
     // SAFETY: a compile-time-constant site.
     unsafe { raise_site(site) };
     ptr::null_mut()
 }
+
+#[cfg(test)]
+const _: fn(&ErrSite) -> *mut c_char = raise_and_null;
 
 /// `char *X509_NAME_oneline(const X509_NAME *a, char *buf, int len)` —
 /// `crypto/x509/x509_obj.c:25-179`.
@@ -179,14 +180,14 @@ pub unsafe extern "C" fn X509_NAME_oneline(
             // `OnelineBuf::new` is the authority's `BUF_MEM_new()`; a refused allocation reaches
             // `buferr:` with a NULL `b`, which is the same raise.
             let Some(owned) = OnelineBuf::new() else {
-                // SAFETY: a compile-time-constant site; there is no owner to release.
-                return unsafe { raise_and_null(&err_sites::X509_OBJ_175) };
+                // There is no owner to release on this path.
+                return raise_and_null(&err_sites::X509_OBJ_175);
             };
             // SAFETY: `owned` is live and uniquely owned.
             if unsafe { BUF_MEM_grow(owned.as_ptr(), 200) } == 0 {
                 // `owned`'s `Drop` is the authority's `BUF_MEM_free(b)` at `buferr:`.
-                // SAFETY: a compile-time-constant site; `owned` releases on return.
-                return unsafe { raise_and_null(&err_sites::X509_OBJ_175) };
+                // `owned` releases on return.
+                return raise_and_null(&err_sites::X509_OBJ_175);
             }
             // SAFETY: `owned` is live and its `data` holds at least one byte.
             unsafe { *(*owned.as_ptr()).data = 0 };
@@ -241,8 +242,7 @@ pub unsafe extern "C" fn X509_NAME_oneline(
             let (type_, num, q) = unsafe { ((*value).type_, (*value).length, (*value).data) };
             if num > NAME_ONELINE_MAX {
                 // `b`'s owner releases at the authority's `buferr:`.
-                // SAFETY: a compile-time-constant site; `b` releases on return.
-                return unsafe { raise_and_null(&err_sites::X509_OBJ_75) };
+                return raise_and_null(&err_sites::X509_OBJ_75);
             }
 
             if type_ == V_ASN1_GENERALSTRING && (num % 4) == 0 {
@@ -286,16 +286,15 @@ pub unsafe extern "C" fn X509_NAME_oneline(
             l += 1 + l1 + 1 + l2;
             if l > NAME_ONELINE_MAX {
                 // `b`'s owner releases at the authority's `buferr:`.
-                // SAFETY: a compile-time-constant site; `b` releases on return.
-                return unsafe { raise_and_null(&err_sites::X509_OBJ_116) };
+                return raise_and_null(&err_sites::X509_OBJ_116);
             }
 
             let mut p: *mut c_char;
             if let Some(owned) = b.as_ref() {
                 // SAFETY: `owned` is live; the grow either succeeds or fails.
                 if unsafe { BUF_MEM_grow(owned.as_ptr(), (l + 1) as usize) } == 0 {
-                    // SAFETY: a compile-time-constant site; `b`'s owner releases on return.
-                    return unsafe { raise_and_null(&err_sites::X509_OBJ_175) };
+                    // `b`'s owner releases on return.
+                    return raise_and_null(&err_sites::X509_OBJ_175);
                 }
                 // SAFETY: `owned` is live and holds `l + 1` bytes, so `lold` is in range.
                 p = unsafe { (*owned.as_ptr()).data.add(lold as usize) };

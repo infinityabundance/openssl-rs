@@ -269,14 +269,16 @@ const LINE_KEY_FREE: c_int = 74;
 
 /// Raise a fixed message through a site, the `ERR_raise_data` form.
 ///
-/// # Safety
 /// Nothing: the message is a NUL-terminated literal built here.
-unsafe fn raise_fixed(site: &err_sites::ErrSite, msg: &str) {
+fn raise_fixed(site: &err_sites::ErrSite, msg: &str) {
     let mut buf = msg.as_bytes().to_vec();
     buf.push(0);
     // SAFETY: `buf` is NUL-terminated just above.
     unsafe { raise_site_data(site, buf.as_ptr().cast()) };
 }
+
+#[cfg(test)]
+const _: fn(&err_sites::ErrSite, &str) = raise_fixed;
 
 /// `static void mlx_kem_key_free(void *vkey)` — `mlx_kmgmt.c:67-77`.
 ///
@@ -673,12 +675,10 @@ unsafe fn raise_length_mismatch(
     // SAFETY: `alg` is NUL-terminated per the contract.
     let a = unsafe { CStr::from_ptr(alg) }.to_string_lossy();
     // SAFETY: forwarded under this function's contract.
-    unsafe {
-        raise_fixed(
-            site,
-            &format!("Unexpected {a} {kind} key length {got} != {expected}"),
-        );
-    }
+    raise_fixed(
+        site,
+        &format!("Unexpected {a} {kind} key length {got} != {expected}"),
+    );
 }
 
 /// `static int export_sub_cb(const OSSL_PARAM *params, void *varg)` — `mlx_kmgmt.c:171-214`.

@@ -3539,9 +3539,8 @@ fn safe_div_round_up_int_8(a: c_int) -> c_int {
 /// is smaller than the length in either direction. Hence `wrapping_sub` below, and hence the two
 /// tests being `|`-ed rather than short-circuited: both are computed.
 ///
-/// # Safety
 /// No preconditions: the pointers are only converted to integers.
-pub(crate) unsafe fn ossl_is_partially_overlapping(
+pub(crate) fn ossl_is_partially_overlapping(
     ptr1: *const c_void,
     ptr2: *const c_void,
     len: c_int,
@@ -3553,6 +3552,9 @@ pub(crate) unsafe fn ossl_is_partially_overlapping(
         & (((diff < lent) | (diff > 0usize.wrapping_sub(lent))) as u32);
     overlapped as c_int
 }
+
+#[cfg(test)]
+const _: fn(*const c_void, *const c_void, c_int) -> c_int = ossl_is_partially_overlapping;
 
 /// `static int evp_EncryptDecryptUpdate(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl,
 /// const unsigned char *in, int inl)`.
@@ -3595,8 +3597,8 @@ unsafe fn evp_EncryptDecryptUpdate(
     // SAFETY: `cipher` is live.
     if (unsafe { (*cipher).flags } & EVP_CIPH_FLAG_CUSTOM_CIPHER) != 0 {
         if bl == 1 {
-            // SAFETY: the two buffers are the caller's, per the contract.
-            if unsafe { ossl_is_partially_overlapping(out.cast(), in_.cast(), cmpl) } != 0 {
+            // The two buffers are the caller's, per the contract.
+            if ossl_is_partially_overlapping(out.cast(), in_.cast(), cmpl) != 0 {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::EVP_ENC_899) };
                 return 0;
@@ -4144,8 +4146,8 @@ pub unsafe extern "C" fn EVP_DecryptUpdate(
     // SAFETY: `cipher` is live.
     if (unsafe { (*cipher).flags } & EVP_CIPH_FLAG_CUSTOM_CIPHER) != 0 {
         if b == 1 {
-            // SAFETY: the buffers are the caller's.
-            if unsafe { ossl_is_partially_overlapping(out.cast(), in_.cast(), cmpl) } != 0 {
+            // The buffers are the caller's.
+            if ossl_is_partially_overlapping(out.cast(), in_.cast(), cmpl) != 0 {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::EVP_ENC_1191) };
                 return 0;
@@ -4200,7 +4202,7 @@ pub unsafe extern "C" fn EVP_DecryptUpdate(
             return 0;
         }
         // SAFETY: the buffers are the caller's.
-        if unsafe { ossl_is_partially_overlapping(out.cast(), in_.cast(), b as c_int) } != 0 {
+        if ossl_is_partially_overlapping(out.cast(), in_.cast(), b as c_int) != 0 {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::EVP_ENC_1218) };
             return 0;

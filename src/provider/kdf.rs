@@ -3944,31 +3944,34 @@ unsafe fn pbkdf2_lower_bound_check_passed(
 /// checks when `lower_bound_checks` is on (raised with the *variable* reason the lower-bound
 /// function selected), and the iteration-count floor of one when it is off.
 ///
-/// # Safety
-/// `_ctx` is unused on this profile; the caller's contract otherwise.
-unsafe fn lower_bound_check_passed(
+/// `_ctx` is unused on this profile.
+fn lower_bound_check_passed(
     _ctx: *mut KdfPbkdf2,
     saltlen: c_int,
     iter: u64,
     keylen: usize,
     lower_bound_checks: c_int,
 ) -> c_int {
-    // SAFETY: the caller's contract.
-    unsafe {
-        if lower_bound_checks != 0 {
-            let mut error: c_int = 0;
-            let passed = pbkdf2_lower_bound_check_passed(saltlen, iter, keylen, &mut error);
-            if passed == 0 {
-                raise_site_dynamic(&err_sites::PROV_PBKDF2_248, error);
-                return 0;
-            }
-        } else if iter < 1 {
-            raise_site(&err_sites::PROV_PBKDF2_252);
+    if lower_bound_checks != 0 {
+        let mut error: c_int = 0;
+        // SAFETY: `&mut error` is this frame's writable slot.
+        let passed =
+            unsafe { pbkdf2_lower_bound_check_passed(saltlen, iter, keylen, &raw mut error) };
+        if passed == 0 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site_dynamic(&err_sites::PROV_PBKDF2_248, error) };
             return 0;
         }
-        1
+    } else if iter < 1 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PROV_PBKDF2_252) };
+        return 0;
     }
+    1
 }
+
+#[cfg(test)]
+const _: fn(*mut KdfPbkdf2, c_int, u64, usize, c_int) -> c_int = lower_bound_check_passed;
 
 /// `static int pbkdf2_derive(KDF_PBKDF2 *ctx, const char *pass, size_t passlen, const unsigned
 /// char *salt, int saltlen, uint64_t iter, const EVP_MD *digest, unsigned char *key, size_t

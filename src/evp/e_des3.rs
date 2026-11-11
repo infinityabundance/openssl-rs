@@ -674,7 +674,7 @@ unsafe extern "C" fn des_ede3_wrap_cipher(
         return -1;
     }
     // SAFETY: `out`/`in_` are the caller's buffers and `inl` is their extent.
-    if unsafe { ossl_is_partially_overlapping(out.cast(), in_.cast(), inl as c_int) } != 0 {
+    if ossl_is_partially_overlapping(out.cast(), in_.cast(), inl as c_int) != 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::E_DES3_398) };
         return 0;

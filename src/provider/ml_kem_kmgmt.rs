@@ -224,14 +224,16 @@ struct ProvMlKemGenCtx {
 
 /// Raise a fixed message through a site, the `ERR_raise_data` form.
 ///
-/// # Safety
 /// Nothing: the message is a NUL-terminated literal built here.
-unsafe fn raise_fixed(site: &err_sites::ErrSite, msg: &str) {
+fn raise_fixed(site: &err_sites::ErrSite, msg: &str) {
     let mut buf = msg.as_bytes().to_vec();
     buf.push(0);
     // SAFETY: `buf` is NUL-terminated just above.
     unsafe { raise_site_data(site, buf.as_ptr().cast()) };
 }
+
+#[cfg(test)]
+const _: fn(&err_sites::ErrSite, &str) = raise_fixed;
 
 /// Raise a message of the form `prefix || algorithm_name || suffix`.
 ///

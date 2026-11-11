@@ -211,15 +211,17 @@ unsafe impl CtxDestroy for ChildProvGlobals {
 /// `OPENSSL_zalloc` and nothing else: **no lock**. See the module documentation for why that
 /// ordering is the authority's and why the free can then be unconditional.
 ///
-/// # Safety
 /// `libctx` is accepted and unused; the authority's argument is the context being built.
-pub(crate) unsafe fn ossl_child_prov_ctx_new(_libctx: *mut c_void) -> *mut c_void {
+pub(crate) fn ossl_child_prov_ctx_new(_libctx: *mut c_void) -> *mut c_void {
     // The owner allocates at the authority's own size and coordinates; a zeroed
     // `ChildProvGlobals` is its constructed state, so `OwnedCtx` validates it directly. `into_raw`
     // hands the slot the stable address the C objects keep, and the matching free reclaims it.
     OwnedCtx::<ChildProvGlobals>::zalloc()
         .map_or(ptr::null_mut(), |gbl| gbl.into_raw().cast::<c_void>())
 }
+
+#[cfg(test)]
+const _: fn(*mut c_void) -> *mut c_void = ossl_child_prov_ctx_new;
 
 /// `void ossl_child_prov_ctx_free(void *vgbl)`.
 ///

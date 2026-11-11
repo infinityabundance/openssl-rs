@@ -519,14 +519,16 @@ unsafe impl CtxDestroy for BarePubkey {
 
 /// Raise `msg` through `site`, the `ERR_raise_data` form of a site whose text interpolates a name.
 ///
-/// # Safety
 /// Nothing: the message is NUL-terminated here.
-unsafe fn raise_msg(site: &err_sites::ErrSite, msg: String) {
+fn raise_msg(site: &err_sites::ErrSite, msg: String) {
     let mut buf = msg.into_bytes();
     buf.push(0);
     // SAFETY: `buf` is NUL-terminated just above.
     unsafe { raise_site_data(site, buf.as_ptr().cast()) };
 }
+
+#[cfg(test)]
+const _: fn(&err_sites::ErrSite, String) = raise_msg;
 
 /// Cleanse the decoder's read block before its plain release.
 ///
@@ -1045,13 +1047,11 @@ unsafe fn slh_dsa_d2i_pkcs8(
         if ptype != V_ASN1_UNDEF {
             // SAFETY: `ctx`'s name is NUL-terminated.
             let name = unsafe { CStr::from_ptr((*ctx).desc.keytype_name) }.to_string_lossy();
-            // SAFETY: the message is NUL-terminated by `raise_msg`.
-            unsafe {
-                raise_msg(
-                    &err_sites::PROV_DECODE_DER2KEY_699,
-                    format!("unexpected parameters with a PKCS#8 {name} private key"),
-                )
-            };
+            // The message is NUL-terminated by `raise_msg`.
+            raise_msg(
+                &err_sites::PROV_DECODE_DER2KEY_699,
+                format!("unexpected parameters with a PKCS#8 {name} private key"),
+            );
             break 'body;
         }
         // SAFETY: `alg` is live; `ctx` is live.
@@ -1113,16 +1113,14 @@ unsafe fn slh_dsa_d2i_pubkey(
     if der_len != 18 + len as c_long {
         // SAFETY: `ctx`'s name is NUL-terminated.
         let name = unsafe { CStr::from_ptr((*ctx).desc.keytype_name) }.to_string_lossy();
-        // SAFETY: the message is NUL-terminated by `raise_msg`.
-        unsafe {
-            raise_msg(
-                &err_sites::PROV_DECODE_DER2KEY_751,
-                format!(
-                    "unexpected {name} public key length: {der_len} != {}",
-                    18 + len as c_long
-                ),
-            )
-        };
+        // The message is NUL-terminated by `raise_msg`.
+        raise_msg(
+            &err_sites::PROV_DECODE_DER2KEY_751,
+            format!(
+                "unexpected {name} public key length: {der_len} != {}",
+                18 + len as c_long
+            ),
+        );
         // SAFETY: `ret` is live and this call owns it.
         unsafe { ossl_slh_dsa_key_free(ret) };
         return ptr::null_mut();
@@ -1152,13 +1150,11 @@ unsafe fn slh_dsa_d2i_pubkey(
     if parsed.is_null() {
         // SAFETY: `ret`'s name is NUL-terminated.
         let name = unsafe { CStr::from_ptr(ossl_slh_dsa_key_get_name(ret)) }.to_string_lossy();
-        // SAFETY: the message is NUL-terminated by `raise_msg`.
-        unsafe {
-            raise_msg(
-                &err_sites::PROV_DECODE_DER2KEY_765,
-                format!("malformed {name} public key ASN.1 encoding"),
-            )
-        };
+        // The message is NUL-terminated by `raise_msg`.
+        raise_msg(
+            &err_sites::PROV_DECODE_DER2KEY_765,
+            format!("malformed {name} public key ASN.1 encoding"),
+        );
         // `spki`'s `Drop` runs the authority's own cleanup and `ret` is freed after it.
         drop(spki);
         // SAFETY: `ret` is live and this call owns it.
@@ -1175,13 +1171,11 @@ unsafe fn slh_dsa_d2i_pubkey(
     if bad {
         // SAFETY: `ret`'s name is NUL-terminated.
         let name = unsafe { CStr::from_ptr(ossl_slh_dsa_key_get_name(ret)) }.to_string_lossy();
-        // SAFETY: the message is NUL-terminated by `raise_msg`.
-        unsafe {
-            raise_msg(
-                &err_sites::PROV_DECODE_DER2KEY_773,
-                format!("malformed {name} public key ASN.1 encoding"),
-            )
-        };
+        // The message is NUL-terminated by `raise_msg`.
+        raise_msg(
+            &err_sites::PROV_DECODE_DER2KEY_773,
+            format!("malformed {name} public key ASN.1 encoding"),
+        );
         // `spki`'s `Drop` runs the authority's own cleanup and `ret` is freed after it.
         drop(spki);
         // SAFETY: `ret` is live and this call owns it.
@@ -1199,13 +1193,11 @@ unsafe fn slh_dsa_d2i_pubkey(
     {
         // SAFETY: `ret`'s name is NUL-terminated.
         let name = unsafe { CStr::from_ptr(ossl_slh_dsa_key_get_name(ret)) }.to_string_lossy();
-        // SAFETY: the message is NUL-terminated by `raise_msg`.
-        unsafe {
-            raise_msg(
-                &err_sites::PROV_DECODE_DER2KEY_779,
-                format!("unexpected algorithm OID for an {name} public key"),
-            )
-        };
+        // The message is NUL-terminated by `raise_msg`.
+        raise_msg(
+            &err_sites::PROV_DECODE_DER2KEY_779,
+            format!("unexpected algorithm OID for an {name} public key"),
+        );
         // `spki`'s `Drop` runs the authority's own cleanup and `ret` is freed after it.
         drop(spki);
         // SAFETY: `ret` is live and this call owns it.
@@ -1217,13 +1209,11 @@ unsafe fn slh_dsa_d2i_pubkey(
     if unsafe { ossl_slh_dsa_set_pub(ret, (*pubkey).data, (*pubkey).length as usize) } == 0 {
         // SAFETY: `ret`'s name is NUL-terminated.
         let name = unsafe { CStr::from_ptr(ossl_slh_dsa_key_get_name(ret)) }.to_string_lossy();
-        // SAFETY: the message is NUL-terminated by `raise_msg`.
-        unsafe {
-            raise_msg(
-                &err_sites::PROV_DECODE_DER2KEY_786,
-                format!("failed to parse {name} public key from the input data"),
-            )
-        };
+        // The message is NUL-terminated by `raise_msg`.
+        raise_msg(
+            &err_sites::PROV_DECODE_DER2KEY_786,
+            format!("failed to parse {name} public key from the input data"),
+        );
         // `spki`'s `Drop` runs the authority's own cleanup and `ret` is freed after it.
         drop(spki);
         // SAFETY: `ret` is live and this call owns it.
