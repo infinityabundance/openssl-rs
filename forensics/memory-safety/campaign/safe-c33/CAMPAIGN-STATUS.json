@@ -2263,22 +2263,24 @@
         "verdict": "ACCEPTED",
         "refusals": 0,
         "safe_compatible": false,
-        "receipt": "evidence/closure-ssh-0046h.json",
-        "measured_census": "court/freeze-0046h/census-0046h.json",
-        "inventory_source_head": "1dbf97ed4",
+        "receipt": "evidence/closure-ssh-311.json",
+        "measured_census": "court/freeze-311/census-311.json",
+        "inventory_source_head": "6eec8a175",
         "libcrypto_so_3_sha256": "136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5d88d09a9a44",
         "note": "Re-measured at HEAD after 59 unsafe-fn sites were eliminated. The -54 obligations (-36 BLOCKED, -18 DISCHARGED) are carried-removed: those sites no longer exist, so they are neither discharged nor blocked."
       },
       "sshd": {
-        "DISCHARGED": 193,
-        "BLOCKED": 185,
+        "DISCHARGED": 175,
+        "BLOCKED": 149,
         "UNKNOWN": 0,
-        "obligations_total": 378,
+        "obligations_total": 324,
         "verdict": "ACCEPTED",
         "refusals": 0,
         "safe_compatible": false,
-        "status": "STALE - not re-measured at 1dbf97ed4; the values above still describe the pre-elimination inventory and must not be read as current",
-        "receipt": "evidence/inventory-sshd-b70-thunk.json"
+        "receipt": "evidence/closure-sshd-311.json",
+        "measured_census": "court/freeze-311/census-311.json",
+        "inventory_source_head": "6eec8a175",
+        "note": "Re-measured at HEAD. The -54 (-36 BLOCKED, -18 DISCHARGED) are carried-removed sites that no longer exist."
       }
     },
     "closure_receipts": [
