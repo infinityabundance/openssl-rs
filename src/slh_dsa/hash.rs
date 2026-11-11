@@ -59,6 +59,12 @@ const OSSL_MAC_PARAM_DIGEST: *const c_char = c"digest".as_ptr();
 const OSSL_MAC_PARAM_PROPERTIES: *const c_char = c"properties".as_ptr();
 
 /// `SLH_HASH_FUNC` — `slh_hash.h:55-62`, the six primitives in declaration order.
+///
+/// Every slot takes a live hash context plus bare input/output spans. The slot contract is stated
+/// on each function below; the shared part is that `ctx` is live with a non-NULL `key` whose
+/// `params` is one row of the crate's static table (`n <= SLH_MAX_N`, `m <= SLH_MAX_M`, and, for
+/// the SHA-2 arm, `sha2_h_and_t_bound` in {64, 128}), and that the method tables are paired with
+/// the address tables by `slh_dsa_key_hash_init` for the same `is_shake` selector.
 #[repr(C)]
 pub(crate) struct SlhHashFunc {
     pub(crate) h_msg: unsafe extern "C" fn(
@@ -176,6 +182,12 @@ unsafe fn xof_digest_4(
 // --- the SHAKE primitives — `slh_hash.c:63-134` ---
 
 /// `static int slh_hmsg_shake(...)` — `slh_hash.c:64-76`.
+///
+/// # Safety
+/// `ctx` is live and the method tables are paired as `slh_dsa_key_hash_init` builds them. `r`,
+/// `pk_seed` and `pk_root` are readable for `params->n` bytes; `msg` is readable for `msg_len`;
+/// `out` is writable for `params->m` bytes. `out_len` is ignored, exactly as the authority ignores
+/// it, so it imposes no bound.
 unsafe extern "C" fn slh_hmsg_shake(
     ctx: *mut SlhDsaHashCtx,
     r: *const u8,
@@ -209,6 +221,12 @@ unsafe extern "C" fn slh_hmsg_shake(
 }
 
 /// `static int slh_prf_shake(...)` — `slh_hash.c:78-88`.
+///
+/// # Safety
+/// `ctx` is live and its tables are paired. `pk_seed` and `sk_seed` are readable for `params->n`
+/// bytes; `adrs` is readable for `SLH_ADRS_SIZE` (32) bytes, the uncompressed blob a SHAKE key
+/// uses; `out` is writable for `params->n` bytes and does not overlap `(*ctx).scratch`. `out_len`
+/// is ignored, as in the authority.
 unsafe extern "C" fn slh_prf_shake(
     ctx: *mut SlhDsaHashCtx,
     pk_seed: *const u8,
@@ -237,6 +255,12 @@ unsafe extern "C" fn slh_prf_shake(
 }
 
 /// `static int slh_prf_msg_shake(...)` — `slh_hash.c:90-104`.
+///
+/// # Safety
+/// `ctx` is live and its tables are paired. `sk_prf` and `opt_rand` are readable for `params->n`
+/// bytes; `msg` is readable for `msg_len`; `pkt` is a live initialised `WPACKET` with at least
+/// `params->n` bytes of room. The output goes through this frame's own `[u8; SLH_MAX_N]`, so no
+/// caller-owned output span is involved.
 unsafe extern "C" fn slh_prf_msg_shake(
     ctx: *mut SlhDsaHashCtx,
     sk_prf: *const u8,
@@ -269,6 +293,12 @@ unsafe extern "C" fn slh_prf_msg_shake(
 }
 
 /// `static int slh_f_shake(...)` — `slh_hash.c:106-114`.
+///
+/// # Safety
+/// `ctx` is live and its tables are paired. `pk_seed` is readable for `params->n` bytes; `adrs` is
+/// readable for `SLH_ADRS_SIZE` (32) bytes; `m1` is readable for `m1_len`; `out` is writable for
+/// `params->n` bytes and does not overlap `(*ctx).scratch`. `out_len` is ignored, as in the
+/// authority.
 unsafe extern "C" fn slh_f_shake(
     ctx: *mut SlhDsaHashCtx,
     pk_seed: *const u8,
@@ -298,6 +328,12 @@ unsafe extern "C" fn slh_f_shake(
 }
 
 /// `static int slh_h_shake(...)` — `slh_hash.c:116-124`.
+///
+/// # Safety
+/// `ctx` is live and its tables are paired. `pk_seed` is readable for `params->n` bytes; `adrs` is
+/// readable for `SLH_ADRS_SIZE` (32) bytes; `m1` and `m2` are each readable for `params->n` bytes
+/// (the lengths are the parameter set's, not caller-supplied); `out` is writable for `params->n`
+/// bytes and does not overlap `(*ctx).scratch`. `out_len` is ignored, as in the authority.
 unsafe extern "C" fn slh_h_shake(
     ctx: *mut SlhDsaHashCtx,
     pk_seed: *const u8,
@@ -329,6 +365,12 @@ unsafe extern "C" fn slh_h_shake(
 }
 
 /// `static int slh_t_shake(...)` — `slh_hash.c:126-134`.
+///
+/// # Safety
+/// `ctx` is live and its tables are paired. `pk_seed` is readable for `params->n` bytes; `adrs` is
+/// readable for `SLH_ADRS_SIZE` (32) bytes; `ml` is readable for `ml_len`; `out` is writable for
+/// `params->n` bytes and does not overlap `(*ctx).scratch`. `out_len` is ignored, as in the
+/// authority.
 unsafe extern "C" fn slh_t_shake(
     ctx: *mut SlhDsaHashCtx,
     pk_seed: *const u8,
@@ -389,6 +431,12 @@ unsafe fn digest_4(
 }
 
 /// `static int slh_hmsg_sha2(...)` — `slh_hash.c:152-175`.
+///
+/// # Safety
+/// `hctx` is live and built by `slh_dsa_key_hash_init`, so `(*hctx).key->md_big` is SHA2-256 (when
+/// it is the same object as `md`) or SHA2-512 and `md_big_ctx` is its live context. `r`, `pk_seed`
+/// and `pk_root` are readable for `params->n` bytes; `msg` is readable for `msg_len`; `out` is
+/// writable for `params->m` bytes. `out_len` is ignored, as in the authority.
 unsafe extern "C" fn slh_hmsg_sha2(
     hctx: *mut SlhDsaHashCtx,
     r: *const u8,
@@ -439,6 +487,12 @@ unsafe extern "C" fn slh_hmsg_sha2(
 }
 
 /// `static int slh_prf_msg_sha2(...)` — `slh_hash.c:177-216`.
+///
+/// # Safety
+/// `hctx` is live and built by `slh_dsa_key_hash_init`, so `hmac_ctx` is the key's HMAC context.
+/// `sk_prf` and `opt_rand` are readable for `params->n` bytes; `msg` is readable for `msg_len`;
+/// `pkt` is a live initialised `WPACKET` with at least `params->n` bytes of room. The output goes
+/// through this frame's own `[u8; MAX_DIGEST_SIZE]`, so no caller-owned output span is involved.
 unsafe extern "C" fn slh_prf_msg_sha2(
     hctx: *mut SlhDsaHashCtx,
     sk_prf: *const u8,
@@ -528,6 +582,14 @@ unsafe fn do_hash(
 }
 
 /// `static int slh_prf_sha2(...)` — `slh_hash.c:239-248`.
+///
+/// # Safety
+/// `hctx` is live and its tables are paired, so `adrs` is the 32-byte [`super::adrs::SlhAdrs`]
+/// array of a SHA-2 key and only its first `SLH_ADRSC_SIZE` (22) bytes are read. `pk_seed` and
+/// `sk_seed` are readable for `params->n` bytes; `out` is writable for `params->n` bytes and does
+/// not overlap `(*hctx).scratch`. `out_len` is ignored, as in the authority. The parameter set's
+/// `sha2_h_and_t_bound` (64 or 128) is at least `n`, which is what makes `do_hash`'s `b - n` zero
+/// run non-negative and inside its 128-byte local.
 unsafe extern "C" fn slh_prf_sha2(
     hctx: *mut SlhDsaHashCtx,
     pk_seed: *const u8,
@@ -555,6 +617,13 @@ unsafe extern "C" fn slh_prf_sha2(
 }
 
 /// `static int slh_f_sha2(...)` — `slh_hash.c:250-256`.
+///
+/// # Safety
+/// `hctx` is live and its tables are paired, so `adrs` is a 32-byte [`super::adrs::SlhAdrs`]
+/// array of which the first `SLH_ADRSC_SIZE` (22) bytes are read. `pk_seed` is readable for
+/// `params->n` bytes; `m1` is readable for `m1_len`; `out` is writable for `params->n` bytes and
+/// does not overlap `(*hctx).scratch`. `out_len` is ignored, as in the authority; the bound-1
+/// zero run relies on `64 >= n`.
 unsafe extern "C" fn slh_f_sha2(
     hctx: *mut SlhDsaHashCtx,
     pk_seed: *const u8,
@@ -583,6 +652,14 @@ unsafe extern "C" fn slh_f_sha2(
 }
 
 /// `static int slh_h_sha2(...)` — `slh_hash.c:258-271`.
+///
+/// # Safety
+/// `hctx` is live and its tables are paired, so `adrs` is a 32-byte [`super::adrs::SlhAdrs`]
+/// array of which the first `SLH_ADRSC_SIZE` (22) bytes are read. `pk_seed` is readable for
+/// `params->n` bytes; `m1` and `m2` are each readable for `params->n` bytes; `out` is writable for
+/// `params->n` bytes and does not overlap `(*hctx).scratch`, which this function also uses as the
+/// `m1 || m2` scratch at offset `MAX_DIGEST_SIZE`. `out_len` is ignored, as in the authority. The
+/// parameter set's `sha2_h_and_t_bound` (64 or 128) is at least `n`.
 unsafe extern "C" fn slh_h_sha2(
     hctx: *mut SlhDsaHashCtx,
     pk_seed: *const u8,
@@ -615,6 +692,13 @@ unsafe extern "C" fn slh_h_sha2(
 }
 
 /// `static int slh_t_sha2(...)` — `slh_hash.c:273-281`.
+///
+/// # Safety
+/// `hctx` is live and its tables are paired, so `adrs` is a 32-byte [`super::adrs::SlhAdrs`]
+/// array of which the first `SLH_ADRSC_SIZE` (22) bytes are read. `pk_seed` is readable for
+/// `params->n` bytes; `ml` is readable for `ml_len`; `out` is writable for `params->n` bytes and
+/// does not overlap `(*hctx).scratch`. `out_len` is ignored, as in the authority. The parameter
+/// set's `sha2_h_and_t_bound` (64 or 128) is at least `n`.
 unsafe extern "C" fn slh_t_sha2(
     hctx: *mut SlhDsaHashCtx,
     pk_seed: *const u8,
@@ -667,6 +751,12 @@ pub(crate) fn ossl_slh_get_hash_fn(is_shake: c_int) -> *const SlhHashFunc {
             t: slh_t_sha2,
         },
     ];
+    // Load-bearing liveness control: a `const` initialiser may hold only a promoted reference, so
+    // this is a compile error (E0435) if the table is ever materialised as a temporary or moved
+    // into a runtime local. It is the fact the six slot contracts rely on: a returned pointer
+    // names a `'static` allocation and nothing in the crate releases it.
+    const _: &SlhHashFunc = &METHODS[0];
+    const _: &SlhHashFunc = &METHODS[1];
     if is_shake != 0 {
         &METHODS[0]
     } else {

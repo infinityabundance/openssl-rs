@@ -495,3 +495,122 @@ fn the_compressed_address_clear_stays_inside_its_blob() {
         assert_eq!(&adrs[22..], &[0xAAu8; 10], "past the compressed blob");
     }
 }
+
+/// Every ADRS writer stays inside the 32-byte blob every caller hands it.
+///
+/// The slots of `SlhAdrsFunc` take a bare `*mut u8`, so the offset constants are the only thing
+/// between the transcription and an out-of-bounds write. Each of the eleven slots of both method
+/// tables runs here on the middle 32 bytes of a 48-byte array: a write one byte past the blob
+/// lands in a guard byte and is observed instead of being absorbed by a larger buffer. The last
+/// non-sentinel index is also asserted to equal the extent the writer's `# Safety` section states,
+/// so a silently narrowed write fails too. The sentinel (0xA5) is not producible by any value used
+/// below (the writers emit 0x00..=0x08, 0x11, 0x33, 0x44, 0x55, 0x66, 0x77 and 0x88).
+#[test]
+fn every_adrs_writer_stays_inside_the_32_byte_blob() {
+    const PAD: usize = 8;
+    const W: usize = super::adrs::SLH_ADRS_SIZE_MAX;
+    const SENTINEL: u8 = 0xA5;
+
+    /// Run one writer on a guard-wrapped window and check both guards and the write extent.
+    fn probe(label: &str, expected_last: usize, call: impl FnOnce(*mut u8, *const u8)) {
+        let mut buf = [SENTINEL; PAD + W + PAD];
+        let src = [0x77u8; W];
+        // SAFETY: `buf` holds `PAD + W + PAD` bytes, so `PAD` is a valid offset into it and the
+        // window handed to the writer is exactly `W` bytes wide.
+        let win = unsafe { buf.as_mut_ptr().add(PAD) };
+        call(win, src.as_ptr());
+
+        let max = (0..buf.len())
+            .rev()
+            .find(|&i| buf[i] != SENTINEL)
+            .map(|i| i as isize - PAD as isize)
+            .expect("every writer writes at least one byte");
+        assert!(
+            buf[..PAD].iter().all(|&b| b == SENTINEL),
+            "{label}: a write reached before the blob (highest offset {max})"
+        );
+        assert!(
+            buf[PAD + W..].iter().all(|&b| b == SENTINEL),
+            "{label}: a write reached past the 32-byte blob (highest offset {max})"
+        );
+        assert!(
+            max < W as isize,
+            "{label}: the highest written offset {max} must stay below {W}"
+        );
+        assert_eq!(
+            max, expected_last as isize,
+            "{label}: the contracted write extent"
+        );
+    }
+
+    // SAFETY: `ossl_slh_get_adrs_fn` reads only its selector and answers a `'static` table; every
+    // window below is an offset slice of a local array that is live and used only for that one
+    // call.
+    unsafe {
+        let u = super::adrs::ossl_slh_get_adrs_fn(0);
+        let c = super::adrs::ossl_slh_get_adrs_fn(1);
+        assert!(!u.is_null() && !c.is_null(), "both method tables");
+
+        // Uncompressed: the blob is the whole 32-byte array.
+        probe("adrs set_layer_address", 3, |w, _| {
+            ((*u).set_layer_address)(w, 0x11)
+        });
+        probe("adrs set_tree_address", 15, |w, _| {
+            ((*u).set_tree_address)(w, 0x0102_0304_0506_0708)
+        });
+        probe("adrs set_type_and_clear", 31, |w, _| {
+            ((*u).set_type_and_clear)(w, 0x33)
+        });
+        probe("adrs set_keypair_address", 23, |w, _| {
+            ((*u).set_keypair_address)(w, 0x44)
+        });
+        probe("adrs copy_keypair_address", 23, |w, s| {
+            ((*u).copy_keypair_address)(w, s)
+        });
+        probe("adrs set_chain_address", 27, |w, _| {
+            ((*u).set_chain_address)(w, 0x55)
+        });
+        probe("adrs set_tree_height", 27, |w, _| {
+            ((*u).set_tree_height)(w, 0x55)
+        });
+        probe("adrs set_hash_address", 31, |w, _| {
+            ((*u).set_hash_address)(w, 0x66)
+        });
+        probe("adrs set_tree_index", 31, |w, _| {
+            ((*u).set_tree_index)(w, 0x66)
+        });
+        probe("adrs zero", 31, |w, _| ((*u).zero)(w));
+        probe("adrs copy", 31, |w, s| ((*u).copy)(w, s));
+
+        // Compressed: the blob is the first 22 bytes of the same 32-byte array.
+        probe("adrsc set_layer_address", 0, |w, _| {
+            ((*c).set_layer_address)(w, 0x11)
+        });
+        probe("adrsc set_tree_address", 8, |w, _| {
+            ((*c).set_tree_address)(w, 0x0102_0304_0506_0708)
+        });
+        probe("adrsc set_type_and_clear", 21, |w, _| {
+            ((*c).set_type_and_clear)(w, 0x33)
+        });
+        probe("adrsc set_keypair_address", 13, |w, _| {
+            ((*c).set_keypair_address)(w, 0x44)
+        });
+        probe("adrsc copy_keypair_address", 13, |w, s| {
+            ((*c).copy_keypair_address)(w, s)
+        });
+        probe("adrsc set_chain_address", 17, |w, _| {
+            ((*c).set_chain_address)(w, 0x55)
+        });
+        probe("adrsc set_tree_height", 17, |w, _| {
+            ((*c).set_tree_height)(w, 0x55)
+        });
+        probe("adrsc set_hash_address", 21, |w, _| {
+            ((*c).set_hash_address)(w, 0x66)
+        });
+        probe("adrsc set_tree_index", 21, |w, _| {
+            ((*c).set_tree_index)(w, 0x66)
+        });
+        probe("adrsc zero", 21, |w, _| ((*c).zero)(w));
+        probe("adrsc copy", 21, |w, s| ((*c).copy)(w, s));
+    }
+}
