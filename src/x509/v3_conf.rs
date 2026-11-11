@@ -182,6 +182,14 @@ const V3_CONF_399: crate::runtime::err::err_sites::ErrSite =
 /// `X509V3_get_section`'s refusal at `v3_conf.c:410`.
 const V3_CONF_410: crate::runtime::err::err_sites::ErrSite =
     v3_conf_site(410, c"X509V3_get_section", X509V3_R_OPERATION_NOT_DEFINED);
+/// `X509V3_get_section`'s NULL-context refusal, a deliberate safety deviation.
+///
+/// The authority dereferences `ctx->db` here unconditionally, so a NULL `ctx` is
+/// undefined behaviour in `v3_conf.c`; it is not reproduced. The line is the
+/// same 410 so a reader lands on the authority's function, and the reason says
+/// what actually happened.
+const V3_CONF_410_NULL: crate::runtime::err::err_sites::ErrSite =
+    v3_conf_site(410, c"X509V3_get_section", ERR_R_PASSED_NULL_PARAMETER);
 /// `X509V3_set_nconf`'s NULL-context refusal at `v3_conf.c:454`.
 const V3_CONF_454: crate::runtime::err::err_sites::ErrSite =
     v3_conf_site(454, c"X509V3_set_nconf", ERR_R_PASSED_NULL_PARAMETER);
@@ -426,6 +434,14 @@ pub unsafe extern "C" fn X509V3_get_section(
     ctx: *mut X509V3Ctx,
     section: *const c_char,
 ) -> *mut OpenSslStack {
+    if ctx.is_null() {
+        // Deliberate deviation from `v3_conf.c`, which dereferences `ctx` here:
+        // refuse instead of reproducing undefined behaviour.
+        // SAFETY: the site is a compile-time constant and raising needs no
+        // live object beyond the thread's error queue.
+        unsafe { raise_site(&V3_CONF_410_NULL) };
+        return ptr::null_mut();
+    }
     // SAFETY: `ctx` is live per the contract.
     let (db, db_meth) = unsafe { ((*ctx).db, (*ctx).db_meth) };
     if db.is_null() || db_meth.is_null() {
@@ -1099,6 +1115,16 @@ unsafe fn do_ext_nconf(
             return ptr::null_mut();
         }
     } else if let Some(cb) = r2i {
+        if ctx.is_null() {
+            // Deliberate deviation: `v3_conf.c` reads `ctx->db` here, so a NULL
+            // `ctx` is undefined behaviour in the authority. The public entries
+            // document `ctx` as NULL-or-live, so this input is reachable and is
+            // refused rather than dereferenced.
+            // nothing to release; the refusal is the whole effect.
+            // SAFETY: the site is a compile-time constant; no pointer is read.
+            unsafe { raise_site(&V3_CONF_410_NULL) };
+            return ptr::null_mut();
+        }
         // SAFETY: `ctx` is live; the `db`/`db_meth` pair is what the r2i callback reads.
         let (db, db_meth) = unsafe { ((*ctx).db, (*ctx).db_meth) };
         if db.is_null() || db_meth.is_null() {
@@ -1585,7 +1611,7 @@ mod tests {
         NID_indirect_issuer, NID_info_access, NID_inhibit_any_policy, NID_issuerSignTool,
         NID_netscape_comment, NID_no_assertion, NID_no_rev_avail, NID_policy_constraints,
         NID_policy_mappings, NID_sbgp_autonomousSysNum, NID_single_use, NID_soa_identifier,
-        NID_subjectSignTool, NID_sxnet, NID_tlsfeature, OBJ_obj2nid,
+        NID_subjectSignTool, NID_subject_alt_name, NID_sxnet, NID_tlsfeature, OBJ_obj2nid,
     };
     use crate::x509::v3_lib::{
         X509V3ExtMethod, X509V3_EXT_add, X509V3_EXT_cleanup, X509V3_EXT_d2i,
@@ -1594,6 +1620,7 @@ mod tests {
 
     use core::sync::atomic::{AtomicBool, AtomicI32, AtomicPtr, Ordering};
 
+    use crate::asn1::items::ASN1_OCTET_STRING_it;
     use crate::asn1::layout::Asn1Item;
     use crate::runtime::obj::OBJ_create;
     use crate::x509::v3_bcons::{
@@ -2159,5 +2186,276 @@ mod tests {
         );
         assert_ne!(ERR_get_error(), 0, "the refusal must raise");
         ERR_clear_error();
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // B54: the config-decode dispatch (`v2i`/`s2i`) supplies a live `CONF_VALUE` stack or a
+    // NUL-terminated value, and the row's own item is what encodes the returned object.
+    // ---------------------------------------------------------------------------------------
+
+    /// Whether the last `v2i` probe found its own declared item on the row it was called on.
+    static CONF_ITEM_MATCHED: AtomicBool = AtomicBool::new(false);
+    /// Whether the last `v2i` probe found the live `CONF_VALUE` the dispatcher parsed.
+    static CONF_INPUT_OK: AtomicBool = AtomicBool::new(false);
+    /// The `s2i` twins.
+    static S2I_ITEM_MATCHED: AtomicBool = AtomicBool::new(false);
+    static S2I_STR_OK: AtomicBool = AtomicBool::new(false);
+
+    /// B54-C3: a `v2i` probe that (a) verifies the row it is installed in declares the item it
+    /// produces, (b) verifies the dispatcher supplied a live `name:value` entry, and (c) refuses
+    /// when (a) fails. The check happens before any input is used, so a mispaired row is caught
+    /// by the type check and never reaches the encoder.
+    unsafe extern "C" fn b54_conf_v2i(
+        method: *const X509V3ExtMethod,
+        _ctx: *mut c_void,
+        values: *mut OpenSslStack,
+    ) -> *mut c_void {
+        // SAFETY: `method` is the live row the dispatcher resolved; `it` is its accessor.
+        let declared = unsafe { (*method).it }.and_then(|it| {
+            // SAFETY: `it` is the row's item accessor.
+            let p = unsafe { it() };
+            if p.is_null() {
+                None
+            } else {
+                Some(p)
+            }
+        });
+        // SAFETY: the item accessor answers a static item the crate owns.
+        let expected = ASN1_OCTET_STRING_it();
+        let matched = matches!(declared, Some(p) if p == expected);
+        CONF_ITEM_MATCHED.store(matched, Ordering::SeqCst);
+
+        // SAFETY: `values` is the dispatcher's live non-empty stack; `i = 0` is in bounds.
+        let num = unsafe { OPENSSL_sk_num(values) };
+        if num > 0 {
+            // SAFETY: `values` is live and `0` is in bounds; the element is a `CONF_VALUE`.
+            let cnf = unsafe { OPENSSL_sk_value(values, 0) }.cast::<ConfValue>();
+            // SAFETY: `cnf` is live; both fields are NULL or NUL-terminated.
+            let (name, value) = unsafe { ((*cnf).name, (*cnf).value) };
+            // SAFETY: the two pointers are NULL or NUL-terminated per the stack contract.
+            let ok = unsafe {
+                !name.is_null()
+                    && !value.is_null()
+                    && core::ffi::CStr::from_ptr(name) == c"b54"
+                    && core::ffi::CStr::from_ptr(value) == c"probe"
+            };
+            CONF_INPUT_OK.store(ok, Ordering::SeqCst);
+        }
+
+        if !matched {
+            // The row declares a different item: refuse before building anything, so the
+            // mispairing is reported as a failed extension rather than encoded as the wrong type.
+            return ptr::null_mut();
+        }
+        // SAFETY: the item allocator answers NULL or a fresh octet string owned by the dispatcher.
+        crate::asn1::string::ASN1_OCTET_STRING_new().cast::<c_void>()
+    }
+
+    /// B54-C4: the `s2i` twin of [`b54_conf_v2i`].
+    unsafe extern "C" fn b54_conf_s2i(
+        method: *const X509V3ExtMethod,
+        _ctx: *mut c_void,
+        value: *const c_char,
+    ) -> *mut c_void {
+        // SAFETY: `method` is the live row the dispatcher resolved; `it` is its accessor.
+        let declared = unsafe { (*method).it }.and_then(|it| {
+            // SAFETY: `it` is the row's item accessor.
+            let p = unsafe { it() };
+            if p.is_null() {
+                None
+            } else {
+                Some(p)
+            }
+        });
+        // SAFETY: the item accessor answers a static item the crate owns.
+        let expected = ASN1_OCTET_STRING_it();
+        let matched = matches!(declared, Some(p) if p == expected);
+        S2I_ITEM_MATCHED.store(matched, Ordering::SeqCst);
+        // SAFETY: `value` is the caller's NUL-terminated configuration string.
+        let ok = unsafe { !value.is_null() && core::ffi::CStr::from_ptr(value) == c"probe" };
+        S2I_STR_OK.store(ok, Ordering::SeqCst);
+
+        if !matched {
+            return ptr::null_mut();
+        }
+        // SAFETY: the item allocator answers NULL or a fresh octet string owned by the dispatcher.
+        crate::asn1::string::ASN1_OCTET_STRING_new().cast::<c_void>()
+    }
+
+    /// One leaked caller-owned row for the B54 config probes.
+    fn b54_conf_row(
+        nid: c_int,
+        item: unsafe extern "C" fn() -> *const Asn1Item,
+        v2i: bool,
+    ) -> *mut X509V3ExtMethod {
+        Box::leak(Box::new(X509V3ExtMethod {
+            ext_nid: nid,
+            ext_flags: 0,
+            it: Some(item),
+            ext_new: None,
+            ext_free: None,
+            d2i: None,
+            i2d: None,
+            i2s: None,
+            s2i: if v2i { None } else { Some(b54_conf_s2i) },
+            i2v: None,
+            v2i: if v2i { Some(b54_conf_v2i) } else { None },
+            i2r: None,
+            r2i: None,
+            usr_data: ptr::null_mut(),
+        }))
+    }
+
+    /// The config path: the dispatcher hands the callback a live `CONF_VALUE` (or the raw string)
+    /// and encodes the returned object with the row's own `it`; a row whose `it` is not the item
+    /// the callback produces is refused by the callback's own check.
+    #[test]
+    fn config_slots_receive_conf_values_and_check_the_rows_item() {
+        // The three probe rows below are process-global registry entries: hold the same global
+        // state lock every other registry-touching unit takes, so a concurrent registry-count
+        // control (B53) cannot observe them and no concurrent cleanup can retire them.
+        let _serial = crate::test_support::lock_global_state();
+        use crate::asn1::items::ASN1_INTEGER_it;
+        use crate::runtime::obj::OBJ_create;
+
+        let v2i_nid = {
+            // SAFETY: all three strings are NUL-terminated and `OBJ_create` copies them.
+            let nid = unsafe {
+                OBJ_create(
+                    c"1.3.6.1.4.1.57264.54.7".as_ptr(),
+                    c"b54-v2i".as_ptr(),
+                    c"B54 v2i probe".as_ptr(),
+                )
+            };
+            assert_ne!(nid, 0);
+            nid
+        };
+        let bad_nid = {
+            // SAFETY: as above.
+            let nid = unsafe {
+                OBJ_create(
+                    c"1.3.6.1.4.1.57264.54.8".as_ptr(),
+                    c"b54-bad-v2i".as_ptr(),
+                    c"B54 v2i mispaired".as_ptr(),
+                )
+            };
+            assert_ne!(nid, 0);
+            nid
+        };
+        let s2i_nid = {
+            // SAFETY: as above.
+            let nid = unsafe {
+                OBJ_create(
+                    c"1.3.6.1.4.1.57264.54.9".as_ptr(),
+                    c"b54-s2i".as_ptr(),
+                    c"B54 s2i probe".as_ptr(),
+                )
+            };
+            assert_ne!(nid, 0);
+            nid
+        };
+
+        // SAFETY: the three rows are leaked so they outlive the registry borrows; `_add` takes
+        // the write hold.
+        for row in [
+            b54_conf_row(v2i_nid, ASN1_OCTET_STRING_it, true),
+            b54_conf_row(bad_nid, ASN1_INTEGER_it, true),
+            b54_conf_row(s2i_nid, ASN1_OCTET_STRING_it, false),
+        ] {
+            // SAFETY: `row` is a live leaked row.
+            assert_eq!(
+                unsafe { X509V3_EXT_add(row) },
+                1,
+                "the probe row must register"
+            );
+        }
+
+        ERR_clear_error();
+        // SAFETY: NULL `conf`/`ctx` are what the entry contract allows; `b54:probe` is
+        // NUL-terminated.
+        let ext = unsafe {
+            X509V3_EXT_nconf_nid(
+                ptr::null_mut(),
+                ptr::null_mut(),
+                v2i_nid,
+                c"b54:probe".as_ptr(),
+            )
+        };
+        assert!(!ext.is_null(), "the correctly paired v2i must build");
+        assert!(
+            CONF_ITEM_MATCHED.load(Ordering::SeqCst),
+            "the v2i row must declare the item the callback produces"
+        );
+        assert!(
+            CONF_INPUT_OK.load(Ordering::SeqCst),
+            "the v2i callback must receive the dispatcher's live CONF_VALUE"
+        );
+        // SAFETY: `ext` is this frame's own.
+        unsafe { crate::x509::x_exten::X509_EXTENSION_free(ext) };
+
+        // The mispaired row: a different item, so the callback's own check fires and the
+        // extension is refused. No object is ever encoded or freed as the wrong type.
+        CONF_ITEM_MATCHED.store(true, Ordering::SeqCst);
+        // SAFETY: as above.
+        let bad = unsafe {
+            X509V3_EXT_nconf_nid(
+                ptr::null_mut(),
+                ptr::null_mut(),
+                bad_nid,
+                c"b54:probe".as_ptr(),
+            )
+        };
+        assert!(bad.is_null(), "the mispaired v2i must be refused");
+        assert!(
+            !CONF_ITEM_MATCHED.load(Ordering::SeqCst),
+            "the probe must observe the mispaired row's declared item"
+        );
+        ERR_clear_error();
+
+        // The `s2i` arm receives the raw NUL-terminated value, not a parsed stack.
+        // SAFETY: NULL `conf`/`ctx` are allowed; `probe` is NUL-terminated.
+        let ext = unsafe {
+            X509V3_EXT_nconf_nid(ptr::null_mut(), ptr::null_mut(), s2i_nid, c"probe".as_ptr())
+        };
+        assert!(!ext.is_null(), "the correctly paired s2i must build");
+        assert!(
+            S2I_ITEM_MATCHED.load(Ordering::SeqCst),
+            "the s2i row must declare the item the callback produces"
+        );
+        assert!(
+            S2I_STR_OK.load(Ordering::SeqCst),
+            "the s2i callback must receive the caller's NUL-terminated value"
+        );
+        // SAFETY: `ext` is this frame's own.
+        unsafe { crate::x509::x_exten::X509_EXTENSION_free(ext) };
+    }
+
+    /// B54-F1: the section path used to dereference a NULL `ctx`.
+    ///
+    /// `X509V3_EXT_nconf*` document `ctx` as NULL-or-live, and a `dirName:` value
+    /// reaches `X509V3_get_section`, which the authority lets dereference NULL.
+    /// The input below is reachable through the public entry and must be refused
+    /// with an error rather than faulting.
+    #[test]
+    fn a_null_config_context_is_refused_on_the_section_path() {
+        // SAFETY: no live object is required to clear the thread's error queue.
+        unsafe { ERR_clear_error() };
+        // SAFETY: every pointer argument is NULL or a NUL-terminated literal, which
+        // is exactly the input under test.
+        let ext = unsafe {
+            X509V3_EXT_nconf_nid(
+                ptr::null_mut(),
+                ptr::null_mut(),
+                NID_subject_alt_name,
+                c"dirName:section".as_ptr(),
+            )
+        };
+        assert!(
+            ext.is_null(),
+            "a NULL ctx must not produce an extension on the section path"
+        );
+        // SAFETY: reads and pops the current thread's error queue.
+        let err = unsafe { ERR_get_error() };
+        assert_ne!(err, 0, "the refusal must be reported on the error stack");
     }
 }
