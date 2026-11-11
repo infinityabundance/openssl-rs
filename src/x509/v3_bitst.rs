@@ -346,6 +346,13 @@ pub unsafe extern "C" fn v2i_ASN1_BIT_STRING(
 }
 
 /// The `i2v` slot for the `EXT_BITSTRING` rows.
+///
+/// # Safety
+///
+/// The `i2v` slot contract stated on [`X509V3ExtMethod`]. Caller: `X509V3_EXT_print`'s `i2v`
+/// arm, which decoded `value` through the row's `ASN1_BIT_STRING_it`. `meth` is that same row,
+/// so its `usr_data` is the `BitStringBitname` table the callee walks; both preconditions are
+/// forwarded unchanged to [`i2v_ASN1_BIT_STRING`].
 unsafe extern "C" fn bitst_i2v(
     meth: *const X509V3ExtMethod,
     value: *mut c_void,
@@ -357,6 +364,13 @@ unsafe extern "C" fn bitst_i2v(
 }
 
 /// The `v2i` slot for the `EXT_BITSTRING` rows.
+///
+/// # Safety
+///
+/// The `v2i` slot contract stated on [`X509V3ExtMethod`]. Caller: `do_ext_nconf`'s `v2i` arm,
+/// which resolved `meth` under the registry read hold and passes a live non-empty
+/// `STACK_OF(CONF_VALUE)`. `meth`'s `usr_data` is the row's `BitStringBitname` table; both
+/// preconditions are forwarded unchanged to [`v2i_ASN1_BIT_STRING`].
 unsafe extern "C" fn bitst_v2i(
     meth: *const X509V3ExtMethod,
     ctx: *mut c_void,

@@ -320,6 +320,14 @@ pub unsafe extern "C" fn i2d_AUTHORITY_INFO_ACCESS(
 ///
 /// One `CONF_VALUE` per access description, its name rewritten in place to
 /// `"<object> - <general-name>"`.
+///
+/// # Safety
+///
+/// The `i2v` slot contract stated on [`X509V3ExtMethod`]. Caller: `X509V3_EXT_print`'s `i2v`
+/// arm, which decoded `ainfo` through this row's `AUTHORITY_INFO_ACCESS_it`; each element is a
+/// live `ACCESS_DESCRIPTION` and is read only. `method` may be NULL (this body forwards it to
+/// [`i2v_GENERAL_NAME`], which accepts NULL); the returned stack and its members belong to the
+/// caller.
 unsafe extern "C" fn i2v_AUTHORITY_INFO_ACCESS(
     method: *const X509V3ExtMethod,
     ainfo: *mut c_void,
@@ -441,9 +449,12 @@ unsafe fn push_cstr(buf: &mut Vec<u8>, p: *const c_char) {
 /// `X509V3_EXT_add` borrows a caller-owned row (only `X509V3_EXT_DYNAMIC` rows are
 /// registry-owned), so the registrar must keep the row storage live and unmodified while it is
 /// registered. The read hold is not re-entrant for registry writers, so this callback must not
-/// call `X509V3_EXT_add`, `X509V3_EXT_add_list`, `X509V3_EXT_add_alias` or
-/// `X509V3_EXT_cleanup` (B51-R9). `ctx` is NULL-or-live per the slot contract; this body forwards
-/// it unchanged to `v2i_GENERAL_NAME_ex`, which documents the same contract.
+/// `X509V3_EXT_add`, `X509V3_EXT_add_list`, `X509V3_EXT_add_alias` or
+/// `X509V3_EXT_cleanup` (B51-R9). `ctx` is NULL-or-live per the slot contract; this body
+/// forwards it unchanged to `v2i_GENERAL_NAME_ex`, which documents the same contract. A NULL
+/// `ctx` is refused on the forwarded `dirName` section path (`X509V3_get_section` raises and
+/// answers NULL) and accepted on the forwarded `otherName` path (`ASN1_generate_v3` accepts
+/// NULL).
 ///
 /// Authority-derived: `crypto/x509/v3_conf.c:96-112`; `crypto/x509/v3_info.c:101-149`.
 unsafe extern "C" fn v2i_AUTHORITY_INFO_ACCESS(

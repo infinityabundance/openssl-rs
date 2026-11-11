@@ -170,6 +170,13 @@ pub unsafe extern "C" fn TLS_FEATURE_free(a: *mut OpenSslStack) {
 /// *tls_feature, STACK_OF(CONF_VALUE) *ext_list)` — `crypto/x509/v3_tlsf.c:58-78`.
 ///
 /// A known id prints as its name; anything else prints through `X509V3_add_value_int`.
+///
+/// # Safety
+///
+/// The `i2v` slot contract stated on [`X509V3ExtMethod`]. Caller: `X509V3_EXT_print`'s `i2v`
+/// arm, which decoded `tls_feature` through this row's `tls_feature_it` (a `SEQUENCE OF
+/// ASN1_INTEGER`) and passes NULL as the sink. Each element is read only; the returned stack and
+/// its members belong to the caller.
 unsafe extern "C" fn i2v_TLS_FEATURE(
     _method: *const X509V3ExtMethod,
     tls_feature: *mut c_void,

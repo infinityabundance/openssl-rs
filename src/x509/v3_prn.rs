@@ -495,6 +495,7 @@ pub unsafe extern "C" fn X509V3_EXT_print_fp(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::asn1::layout::Asn1String;
     use crate::asn1::string::{
         ASN1_OCTET_STRING_free, ASN1_OCTET_STRING_new, ASN1_OCTET_STRING_set,
     };
@@ -507,6 +508,7 @@ mod tests {
     use crate::x509::v3_lib::{X509V3_EXT_add, X509V3_EXT_add_alias, X509V3_EXT_cleanup};
     use crate::x509::x509_v3::X509_EXTENSION_create_by_NID;
     use crate::x509::x_exten::X509_EXTENSION_free;
+    use core::sync::atomic::{AtomicI32, Ordering};
 
     /// A minimal live row for the item-resolution guard: only `it` is read.
     fn probe_row(it: Option<unsafe extern "C" fn() -> *const Asn1Item>) -> X509V3ExtMethod {
@@ -779,9 +781,7 @@ mod tests {
     /// the recorded call.
     #[test]
     fn i2s_is_not_called_when_the_value_does_not_decode() {
-        let _serial = REGISTRY_TEST_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let _serial = crate::test_support::lock_global_state();
         I2S_CALLED.store(false, std::sync::atomic::Ordering::SeqCst);
         let nid = fresh_nid(
             c"1.3.6.1.4.1.57264.50.1",
@@ -816,7 +816,6 @@ mod tests {
     /// Serialises the tests that mutate the process-global extension registry. The registry's own
     /// read/write lock protects memory safety; this test-only mutex keeps one test's
     /// `X509V3_EXT_cleanup` from removing another test's alias between its add and its print.
-    static REGISTRY_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     /// Register a fresh object and answer its NID. A fresh NID has no `STANDARD_EXTS` row, so a
     /// dynamic alias registered for it is reached only through the dynamic `EXT_LIST` fallback.
@@ -865,9 +864,7 @@ mod tests {
     /// `X509V3_EXT_cleanup` then releases it. The read hold keeps the row live for the print.
     #[test]
     fn a_dynamic_alias_prints_and_cleanup_releases_it() {
-        let _serial = REGISTRY_TEST_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let _serial = crate::test_support::lock_global_state();
         let nid_to = fresh_nid(
             c"1.3.6.1.4.1.57264.49.1",
             c"b49-alias-print",
@@ -947,9 +944,7 @@ mod tests {
     #[test]
     fn cleanup_cannot_release_a_row_while_a_print_uses_it() {
         use std::sync::atomic::Ordering as AtomicOrdering;
-        let _serial = REGISTRY_TEST_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let _serial = crate::test_support::lock_global_state();
         PRINT_ENTERED.store(false, AtomicOrdering::SeqCst);
         CLEANUP_DONE.store(false, AtomicOrdering::SeqCst);
         CLEANUP_RAN_DURING_PRINT.store(false, AtomicOrdering::SeqCst);
@@ -1005,6 +1000,363 @@ mod tests {
         unsafe {
             BIO_free(bio);
             X509_EXTENSION_free(ext);
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // B54: the print/encode dispatch hands each slot the object the row's own item decoded.
+    // ---------------------------------------------------------------------------------------
+
+    /// The ASN.1 tag of the object the last probe received (`-1` before any call).
+    static SEEN_TAG: AtomicI32 = AtomicI32::new(-1);
+    /// The tag the probe expects: the type its audited callback casts the object to.
+    static EXPECTED_TAG: AtomicI32 = AtomicI32::new(-1);
+
+    fn set_expected(tag: c_int) {
+        EXPECTED_TAG.store(tag, Ordering::SeqCst);
+        SEEN_TAG.store(-1, Ordering::SeqCst);
+    }
+
+    /// A probe standing in for an audited printer: it records the tag of the object the
+    /// dispatcher supplied and succeeds only when that tag is the one the audited callback
+    /// casts to. Every item used with this probe is `ASN1_STRING`-shaped (`INTEGER`,
+    /// `OCTET STRING`, `UTF8String`), so reading `type_` is valid for all of them.
+    unsafe extern "C" fn tag_probe_i2r(
+        _method: *const X509V3ExtMethod,
+        value: *mut c_void,
+        _out: *mut Bio,
+        _indent: c_int,
+    ) -> c_int {
+        // SAFETY: `value` is the object this row's item decoded (an `ASN1_STRING` shape).
+        let seen = unsafe { (*value.cast::<Asn1String>()).type_ };
+        SEEN_TAG.store(seen, Ordering::SeqCst);
+        c_int::from(seen == EXPECTED_TAG.load(Ordering::SeqCst))
+    }
+
+    /// The `i2s` twin of [`tag_probe_i2r`]: same tag check, and on success it returns the one
+    /// whole seam allocation the `i2s` contract owes the dispatcher.
+    unsafe extern "C" fn tag_probe_i2s(
+        _method: *const X509V3ExtMethod,
+        value: *mut c_void,
+    ) -> *mut c_char {
+        // SAFETY: `value` is the object this row's item decoded (an `ASN1_STRING` shape).
+        let seen = unsafe { (*value.cast::<Asn1String>()).type_ };
+        SEEN_TAG.store(seen, Ordering::SeqCst);
+        if seen != EXPECTED_TAG.load(Ordering::SeqCst) {
+            return ptr::null_mut();
+        }
+        // SAFETY: the literal is a static NUL-terminated string; the allocator answers NULL or a
+        // fresh block the dispatcher releases once.
+        unsafe { crate::runtime::mem::CRYPTO_strdup(c"b54".as_ptr(), ptr::null(), 0) }
+    }
+
+    /// The `i2v` twin of [`tag_probe_i2r`]: it checks the tag and, on success, answers a fresh
+    /// `CONF_VALUE` stack whose ownership the dispatcher takes (it pops it free at
+    /// `src/x509/v3_prn.rs:372`).
+    unsafe extern "C" fn tag_probe_i2v(
+        _method: *const X509V3ExtMethod,
+        value: *mut c_void,
+        _sink: *mut OpenSslStack,
+    ) -> *mut OpenSslStack {
+        // SAFETY: `value` is the object this row's item decoded (an `ASN1_STRING` shape).
+        let seen = unsafe { (*value.cast::<Asn1String>()).type_ };
+        SEEN_TAG.store(seen, Ordering::SeqCst);
+        if seen != EXPECTED_TAG.load(Ordering::SeqCst) {
+            return ptr::null_mut();
+        }
+        // SAFETY: `line` is NUL-terminated; the returned stack is this call's own and is
+        // transferred to the dispatcher.
+        unsafe { crate::x509::v3_utl::X509V3_parse_list(c"b54:probe".as_ptr()) }
+    }
+
+    /// One caller-owned row for the probes: `it` is `item`, and exactly one slot is set.
+    fn probe_tag_row(
+        nid: c_int,
+        item: Option<unsafe extern "C" fn() -> *const Asn1Item>,
+        i2r: bool,
+        i2s: bool,
+        i2v: bool,
+    ) -> X509V3ExtMethod {
+        X509V3ExtMethod {
+            ext_nid: nid,
+            ext_flags: 0,
+            it: item,
+            ext_new: None,
+            ext_free: None,
+            d2i: None,
+            i2d: None,
+            i2s: if i2s { Some(tag_probe_i2s) } else { None },
+            s2i: None,
+            i2v: if i2v { Some(tag_probe_i2v) } else { None },
+            v2i: None,
+            i2r: if i2r { Some(tag_probe_i2r) } else { None },
+            r2i: None,
+            usr_data: ptr::null_mut(),
+        }
+    }
+
+    /// Print one extension of `nid` whose value is `der`, through the probe rows, and answer
+    /// what the probe saw and what `X509V3_EXT_print` returned.
+    fn print_and_observe(nid: c_int, der: &[u8]) -> (c_int, c_int) {
+        let ext = extension_with_der(nid, der);
+        // SAFETY: `BIO_s_mem` is a live method table and `BIO_new` returns a fresh BIO.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null(), "the memory BIO must be created");
+        // SAFETY: both live; the row was registered by the caller of this helper.
+        let ret = unsafe { X509V3_EXT_print(bio, ext, 0, 4) };
+        let seen = SEEN_TAG.load(Ordering::SeqCst);
+        // SAFETY: both objects are this frame's own.
+        unsafe {
+            BIO_free(bio);
+            X509_EXTENSION_free(ext);
+        }
+        (ret, seen)
+    }
+
+    /// B54-C1 (print path, `i2s` and `i2r`): the dispatcher decodes with the row's `it` and
+    /// hands that object to the same row's slot, so a callback that casts to the item's type is
+    /// sound. The third row is deliberately mispaired: its item decodes an `OCTET STRING` while
+    /// its probe expects an `INTEGER`. The harness observes the actual tag and refuses, so the
+    /// violation is caught by the type check rather than silently reinterpreted.
+    #[test]
+    fn print_slots_receive_the_tag_their_rows_item_decodes() {
+        let _serial = crate::test_support::lock_global_state();
+        let int_i2r = fresh_nid(
+            c"1.3.6.1.4.1.57264.54.1",
+            c"b54-int-i2r",
+            c"B54 i2r integer",
+        );
+        let oct_i2r = fresh_nid(c"1.3.6.1.4.1.57264.54.2", c"b54-oct-i2r", c"B54 i2r octet");
+        let int_i2s = fresh_nid(
+            c"1.3.6.1.4.1.57264.54.3",
+            c"b54-int-i2s",
+            c"B54 i2s integer",
+        );
+        let bad_i2s = fresh_nid(
+            c"1.3.6.1.4.1.57264.54.4",
+            c"b54-bad-i2s",
+            c"B54 i2s mispaired",
+        );
+        let rows = [
+            (
+                int_i2r,
+                probe_tag_row(
+                    int_i2r,
+                    Some(crate::asn1::items::ASN1_INTEGER_it),
+                    true,
+                    false,
+                    false,
+                ),
+            ),
+            (
+                oct_i2r,
+                probe_tag_row(
+                    oct_i2r,
+                    Some(crate::asn1::items::ASN1_OCTET_STRING_it),
+                    true,
+                    false,
+                    false,
+                ),
+            ),
+            (
+                int_i2s,
+                probe_tag_row(
+                    int_i2s,
+                    Some(crate::asn1::items::ASN1_INTEGER_it),
+                    false,
+                    true,
+                    false,
+                ),
+            ),
+            (
+                bad_i2s,
+                probe_tag_row(
+                    bad_i2s,
+                    Some(crate::asn1::items::ASN1_OCTET_STRING_it),
+                    false,
+                    true,
+                    false,
+                ),
+            ),
+        ];
+        for (_, row) in rows {
+            // SAFETY: the boxed row is leaked so it outlives the registry borrow; the call takes
+            // the write hold.
+            let leaked: &'static mut X509V3ExtMethod = Box::leak(Box::new(row));
+            // SAFETY: `leaked` is a live row that outlives the registry entry.
+            assert_eq!(
+                unsafe { X509V3_EXT_add(leaked) },
+                1,
+                "the probe row must register"
+            );
+        }
+
+        // The `i2r` arm: an INTEGER row's printer sees an INTEGER, an OCTET row's sees an OCTET.
+        set_expected(crate::asn1::layout::V_ASN1_INTEGER);
+        let (ret, seen) = print_and_observe(int_i2r, &[0x02, 0x01, 0x2A]);
+        assert_eq!(
+            seen,
+            crate::asn1::layout::V_ASN1_INTEGER,
+            "i2r saw the wrong tag"
+        );
+        assert_eq!(ret, 1, "the correctly paired i2r must succeed");
+
+        set_expected(crate::asn1::layout::V_ASN1_OCTET_STRING);
+        let (ret, seen) = print_and_observe(oct_i2r, &[0x04, 0x01, 0x41]);
+        assert_eq!(
+            seen,
+            crate::asn1::layout::V_ASN1_OCTET_STRING,
+            "i2r saw the wrong tag"
+        );
+        assert_eq!(ret, 1, "the correctly paired i2r must succeed");
+
+        // The `i2s` arm: same object, same check, and the returned block is the dispatcher's.
+        set_expected(crate::asn1::layout::V_ASN1_INTEGER);
+        let (ret, seen) = print_and_observe(int_i2s, &[0x02, 0x01, 0x2A]);
+        assert_eq!(seen, crate::asn1::layout::V_ASN1_INTEGER);
+        assert_eq!(ret, 1, "the correctly paired i2s must succeed");
+
+        // The type fact violated: an OCTET STRING item with an INTEGER-expecting callback. The
+        // probe sees the real tag, refuses, and the dispatcher reports the print failure; the
+        // object is never reinterpreted as an integer.
+        set_expected(crate::asn1::layout::V_ASN1_INTEGER);
+        let (ret, seen) = print_and_observe(bad_i2s, &[0x04, 0x01, 0x41]);
+        assert_eq!(
+            seen,
+            crate::asn1::layout::V_ASN1_OCTET_STRING,
+            "the probe must observe the object's real tag, not the one it expects"
+        );
+        assert_eq!(ret, 0, "the mispaired i2s must be refused");
+    }
+
+    /// B54-C2 (encode path, `i2v`): the `i2v` slot receives the same decoded object and returns
+    /// a stack whose ownership transfers to the dispatcher exactly once. The mispaired row is
+    /// refused by the same tag check.
+    #[test]
+    fn i2v_slot_receives_the_tag_its_rows_item_decodes() {
+        let _serial = crate::test_support::lock_global_state();
+        let int_i2v = fresh_nid(
+            c"1.3.6.1.4.1.57264.54.5",
+            c"b54-int-i2v",
+            c"B54 i2v integer",
+        );
+        let bad_i2v = fresh_nid(
+            c"1.3.6.1.4.1.57264.54.6",
+            c"b54-bad-i2v",
+            c"B54 i2v mispaired",
+        );
+        for row in [
+            probe_tag_row(
+                int_i2v,
+                Some(crate::asn1::items::ASN1_INTEGER_it),
+                false,
+                false,
+                true,
+            ),
+            probe_tag_row(
+                bad_i2v,
+                Some(crate::asn1::items::ASN1_OCTET_STRING_it),
+                false,
+                false,
+                true,
+            ),
+        ] {
+            // SAFETY: leaked so the row outlives the registry borrow; the call takes the write
+            // hold.
+            let leaked: &'static mut X509V3ExtMethod = Box::leak(Box::new(row));
+            // SAFETY: `leaked` is a live row that outlives the registry entry.
+            assert_eq!(
+                unsafe { X509V3_EXT_add(leaked) },
+                1,
+                "the probe row must register"
+            );
+        }
+
+        set_expected(crate::asn1::layout::V_ASN1_INTEGER);
+        let (ret, seen) = print_and_observe(int_i2v, &[0x02, 0x01, 0x2A]);
+        assert_eq!(
+            seen,
+            crate::asn1::layout::V_ASN1_INTEGER,
+            "i2v saw the wrong tag"
+        );
+        assert_eq!(ret, 1, "the correctly paired i2v must succeed");
+
+        set_expected(crate::asn1::layout::V_ASN1_INTEGER);
+        let (ret, seen) = print_and_observe(bad_i2v, &[0x04, 0x01, 0x41]);
+        assert_eq!(seen, crate::asn1::layout::V_ASN1_OCTET_STRING);
+        assert_eq!(ret, 0, "the mispaired i2v must be refused");
+    }
+
+    /// B54-W (per-call-site witness): every production row below declares the item its audited
+    /// callback was written for. The decode the dispatcher performs and the cast the callback
+    /// makes therefore agree. Swapping any row's `it` for a different item makes this fail.
+    #[test]
+    fn standard_rows_declare_the_item_their_callbacks_were_written_for() {
+        type It = unsafe extern "C" fn() -> *const Asn1Item;
+        use crate::asn1::items::{
+            ASN1_ENUMERATED_it, ASN1_GENERALIZEDTIME_it, ASN1_INTEGER_it, ASN1_OCTET_STRING_it,
+            ASN1_UTF8STRING_it,
+        };
+        use crate::runtime::obj::{
+            NID_authority_key_identifier, NID_basic_constraints, NID_crl_distribution_points,
+            NID_crl_number, NID_crl_reason, NID_ext_key_usage, NID_id_pkix_OCSP_CrlID,
+            NID_id_pkix_OCSP_archiveCutoff, NID_info_access, NID_issuer_alt_name,
+            NID_issuing_distribution_point, NID_name_constraints, NID_policy_constraints,
+            NID_policy_mappings, NID_proxyCertInfo, NID_sbgp_autonomousSysNum, NID_subjectSignTool,
+            NID_subject_alt_name, NID_subject_key_identifier, NID_target_information,
+        };
+        use crate::x509::v3_ac_tgt::OSSL_TARGETING_INFORMATION_it;
+        use crate::x509::v3_akeya::AUTHORITY_KEYID_it;
+        use crate::x509::v3_asid::ASIdentifiers_it;
+        use crate::x509::v3_bcons::BASIC_CONSTRAINTS_it;
+        use crate::x509::v3_crld::{CRL_DIST_POINTS_it, ISSUING_DIST_POINT_it};
+        use crate::x509::v3_extku::EXTENDED_KEY_USAGE_it;
+        use crate::x509::v3_genn::GENERAL_NAMES_it;
+        use crate::x509::v3_info::AUTHORITY_INFO_ACCESS_it;
+        use crate::x509::v3_ncons::NAME_CONSTRAINTS_it;
+        use crate::x509::v3_pcia::PROXY_CERT_INFO_EXTENSION_it;
+        use crate::x509::v3_pcons::POLICY_CONSTRAINTS_it;
+        use crate::x509::v3_pmaps::POLICY_MAPPINGS_it;
+
+        let cases: &[(c_int, It)] = &[
+            // `i2s` rows
+            (NID_crl_number, ASN1_INTEGER_it),
+            (NID_crl_reason, ASN1_ENUMERATED_it),
+            (NID_subject_key_identifier, ASN1_OCTET_STRING_it),
+            (NID_subjectSignTool, ASN1_UTF8STRING_it),
+            // `i2v`/`v2i` rows
+            (NID_basic_constraints, BASIC_CONSTRAINTS_it),
+            (NID_policy_constraints, POLICY_CONSTRAINTS_it),
+            (NID_policy_mappings, POLICY_MAPPINGS_it),
+            (NID_authority_key_identifier, AUTHORITY_KEYID_it),
+            (NID_info_access, AUTHORITY_INFO_ACCESS_it),
+            (NID_ext_key_usage, EXTENDED_KEY_USAGE_it),
+            (NID_subject_alt_name, GENERAL_NAMES_it),
+            (NID_issuer_alt_name, GENERAL_NAMES_it),
+            (NID_crl_distribution_points, CRL_DIST_POINTS_it),
+            (NID_issuing_distribution_point, ISSUING_DIST_POINT_it),
+            (NID_sbgp_autonomousSysNum, ASIdentifiers_it),
+            (NID_name_constraints, NAME_CONSTRAINTS_it),
+            // `i2r` rows (including the nested target-information printers)
+            (NID_id_pkix_OCSP_CrlID, crate::ocsp::ocsp_asn::OCSP_CRLID_it),
+            (NID_id_pkix_OCSP_archiveCutoff, ASN1_GENERALIZEDTIME_it),
+            (NID_target_information, OSSL_TARGETING_INFORMATION_it),
+            (NID_proxyCertInfo, PROXY_CERT_INFO_EXTENSION_it),
+        ];
+        for (nid, expected) in cases {
+            // SAFETY: `nid` is an integer; the lookup takes the registry read hold itself.
+            let row = unsafe { crate::x509::v3_lib::X509V3_EXT_get_nid(*nid) };
+            assert!(!row.is_null(), "NID {nid} must resolve to a standard row");
+            // SAFETY: `row` is live under the registry read hold for this call.
+            let declared = unsafe { (*row).it }.expect("the row must declare an item");
+            // SAFETY: `declared` is the row's item accessor.
+            let resolved = unsafe { declared() };
+            // SAFETY: `expected` is the item the audited callback casts to.
+            let wanted = unsafe { expected() };
+            assert_eq!(
+                resolved, wanted,
+                "NID {nid}: the row declares a different item than the audited callback casts to"
+            );
         }
     }
 }

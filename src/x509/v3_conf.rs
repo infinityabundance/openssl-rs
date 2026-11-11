@@ -428,7 +428,9 @@ pub unsafe extern "C" fn X509V3_get_string(
 ///
 /// # Safety
 ///
-/// `ctx` must be live; `section` is NULL or NUL-terminated.
+/// `ctx` is NULL or live; `section` is NULL or NUL-terminated. A NULL `ctx` is refused — an
+/// error is raised and NULL is returned — instead of being dereferenced. That refusal is a
+/// deliberate deviation from `v3_conf.c`, which reads `ctx->db` unconditionally.
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_get_section(
     ctx: *mut X509V3Ctx,
@@ -442,7 +444,7 @@ pub unsafe extern "C" fn X509V3_get_section(
         unsafe { raise_site(&V3_CONF_410_NULL) };
         return ptr::null_mut();
     }
-    // SAFETY: `ctx` is live per the contract.
+    // SAFETY: the guard above returned for a NULL `ctx`, so `ctx` is live here.
     let (db, db_meth) = unsafe { ((*ctx).db, (*ctx).db_meth) };
     if db.is_null() || db_meth.is_null() {
         // SAFETY: the site is a compile-time constant.
@@ -484,13 +486,16 @@ pub unsafe extern "C" fn X509V3_string_free(ctx: *mut X509V3Ctx, str_: *mut c_ch
 ///
 /// # Safety
 ///
-/// `ctx` must be live; `section` is NULL or a stack this context produced.
+/// `ctx` is NULL or live; `section` is NULL or a stack this context produced. `ctx` is read
+/// only when `section` is non-NULL, so a NULL `section` may be paired with a NULL `ctx` (which
+/// is what `v3_san::do_dirname` does after a refused section read).
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_section_free(ctx: *mut X509V3Ctx, section: *mut OpenSslStack) {
     if section.is_null() {
         return;
     }
-    // SAFETY: `ctx` is live per the contract.
+    // SAFETY: the guard above returned for a NULL `section`, so this read only happens when
+    // `section` is a live stack the context produced and `ctx` is live per the contract.
     let (db, db_meth) = unsafe { ((*ctx).db, (*ctx).db_meth) };
     if db_meth.is_null() {
         return;
@@ -1022,9 +1027,12 @@ unsafe fn v3_generic_extension(
 ///
 /// # Safety
 ///
-/// `conf` NULL or live; `ctx` NULL or live; `value` NUL-terminated. The method row the dispatcher
-/// resolves is protected for the whole call by the registry read hold, so a DYNAMIC row stays live
-/// through the `v2i`/`s2i`/`r2i` callback and through `do_ext_i2d`'s use of it (B51).
+/// `conf` NULL or live; `ctx` NULL or live; `value` NUL-terminated. A NULL `ctx` is not
+/// dereferenced: the `r2i` arm refuses it before reading the row, and a `v2i`/`s2i` callback
+/// reaches the context only through `X509V3_get_section`, which refuses it; both raise and
+/// return NULL. The method row the dispatcher resolves is protected for the whole call by the
+/// registry read hold, so a DYNAMIC row stays live through the `v2i`/`s2i`/`r2i` callback and
+/// through `do_ext_i2d`'s use of it (B51).
 unsafe fn do_ext_nconf(
     conf: *mut Conf,
     ctx: *mut X509V3Ctx,
@@ -1193,6 +1201,8 @@ unsafe fn delete_ext(sk: *mut OpenSslStack, dext: *mut X509Extension) {
 /// # Safety
 ///
 /// `conf` NULL or live; `ctx` NULL or live; `section`/`name`/`value` NULL or NUL-terminated.
+/// A NULL `ctx` is refused by the `r2i` arm or by the first section read with an error, not
+/// dereferenced.
 unsafe fn X509V3_EXT_nconf_int(
     conf: *mut Conf,
     ctx: *mut X509V3Ctx,
@@ -1244,7 +1254,9 @@ unsafe fn X509V3_EXT_nconf_int(
 ///
 /// # Safety
 ///
-/// `conf` NULL or live; `ctx` NULL or live; `name`/`value` NULL or NUL-terminated.
+/// `conf` NULL or live; `ctx` NULL or live; `name`/`value` NULL or NUL-terminated. A NULL
+/// `ctx` is refused by the `r2i` arm or by the first section read with an error, not
+/// dereferenced.
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_EXT_nconf(
     conf: *mut Conf,
@@ -1261,7 +1273,8 @@ pub unsafe extern "C" fn X509V3_EXT_nconf(
 ///
 /// # Safety
 ///
-/// `conf` NULL or live; `ctx` NULL or live; `value` NULL or NUL-terminated.
+/// `conf` NULL or live; `ctx` NULL or live; `value` NULL or NUL-terminated. A NULL `ctx` is
+/// refused by the `r2i` arm or by the first section read with an error, not dereferenced.
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_EXT_nconf_nid(
     conf: *mut Conf,
@@ -2457,5 +2470,214 @@ mod tests {
         // SAFETY: reads and pops the current thread's error queue.
         let err = unsafe { ERR_get_error() };
         assert_ne!(err, 0, "the refusal must be reported on the error stack");
+    }
+}
+
+#[cfg(test)]
+mod b55_tests {
+    use super::*;
+
+    use crate::asn1::layout::Asn1Item;
+    use crate::runtime::err::{ERR_clear_error, ERR_get_error};
+    use crate::runtime::obj::{
+        NID_certificate_policies, NID_crl_distribution_points,
+        NID_id_aa_issuing_distribution_point, NID_info_access, NID_issuer_alt_name,
+        NID_name_constraints, NID_proxyCertInfo, NID_subject_alt_name,
+    };
+    use crate::runtime::stack::{OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_push};
+    use crate::x509::v3_cpols::{ossl_v3_cpols, CERTIFICATEPOLICIES_it};
+    use crate::x509::v3_crld::{
+        ossl_v3_aa_issuing_dist_point, ossl_v3_crld, ossl_v3_freshest_crl, ossl_v3_idp,
+        CRL_DIST_POINTS_it, ISSUING_DIST_POINT_it, OSSL_AA_DIST_POINT_it,
+    };
+    use crate::x509::v3_genn::GENERAL_NAMES_it;
+    use crate::x509::v3_info::{ossl_v3_info, ossl_v3_sinfo, AUTHORITY_INFO_ACCESS_it};
+    use crate::x509::v3_ncons::{
+        ossl_v3_delegated_name_constraints, ossl_v3_holder_name_constraints,
+        ossl_v3_name_constraints, NAME_CONSTRAINTS_it,
+    };
+    use crate::x509::v3_pci::ossl_v3_pci;
+    use crate::x509::v3_pcia::PROXY_CERT_INFO_EXTENSION_it;
+    use crate::x509::v3_san::{
+        ossl_v3_alt, v2i_GENERAL_NAME, v2i_GENERAL_NAMES, v2i_GENERAL_NAME_ex,
+    };
+
+    /// The item a row declares: the dispatcher decodes, encodes and frees the callback's answer
+    /// with this accessor, so the answer's dynamic type is fixed by the method-table entry.
+    fn declared_item(row: &X509V3ExtMethod) -> *const Asn1Item {
+        // SAFETY: every row asserted here declares an item accessor, and the accessor is a static
+        // `extern "C" fn() -> *const Asn1Item` with no preconditions.
+        unsafe { row.it.expect("the row declares an item")() }
+    }
+
+    /// B55 type fact, re-checked at this HEAD: the 13 method-table entries that carry the
+    /// adjudicated callbacks still declare the item those callbacks produce. The B54-F1 repair
+    /// touched only `v3_conf.rs`, and this is the property that makes each row's dynamic type
+    /// independent of the input bytes.
+    #[test]
+    fn b55_rows_still_declare_the_item_their_callbacks_produce() {
+        let cases: [(&X509V3ExtMethod, *const Asn1Item); 13] = [
+            (&ossl_v3_crld, CRL_DIST_POINTS_it()),
+            (&ossl_v3_freshest_crl, CRL_DIST_POINTS_it()),
+            (&ossl_v3_idp, ISSUING_DIST_POINT_it()),
+            (&ossl_v3_aa_issuing_dist_point, OSSL_AA_DIST_POINT_it()),
+            (&ossl_v3_name_constraints, NAME_CONSTRAINTS_it()),
+            (&ossl_v3_holder_name_constraints, NAME_CONSTRAINTS_it()),
+            (&ossl_v3_delegated_name_constraints, NAME_CONSTRAINTS_it()),
+            (&ossl_v3_alt[0], GENERAL_NAMES_it()),
+            (&ossl_v3_alt[1], GENERAL_NAMES_it()),
+            (&ossl_v3_info, AUTHORITY_INFO_ACCESS_it()),
+            (&ossl_v3_sinfo, AUTHORITY_INFO_ACCESS_it()),
+            (&ossl_v3_cpols, CERTIFICATEPOLICIES_it()),
+            (&ossl_v3_pci, PROXY_CERT_INFO_EXTENSION_it()),
+        ];
+        for (row, want) in cases {
+            assert_eq!(
+                declared_item(row),
+                want,
+                "row NID {} must keep its declared item",
+                row.ext_nid
+            );
+        }
+    }
+
+    /// B55 null-context negative control: every adjudicated row whose value can reach a
+    /// config-section read is driven through the public entry with a NULL `ctx`. Each call must
+    /// answer NULL with the error stack populated and the process must survive. Removing the
+    /// `X509V3_get_section` NULL guard makes the first case abort (SIGABRT), which is the
+    /// mutation evidence recorded with this receipt.
+    #[test]
+    fn b55_null_config_context_is_refused_on_every_section_path() {
+        let _guard = crate::test_support::lock_global_state();
+
+        // `<nid>, <value>, <row>`: each value is shaped so that, with a live context, the row
+        // would read the named section. Here the context is NULL and the read must be refused.
+        // `v2i_idp` is not listed: its refusal path frees a freshly allocated
+        // `ISSUING_DIST_POINT`, whose inline boolean template fields make the generic item walk
+        // form a misaligned slot (B55-F1); the call aborts in that free. `v2i_aaidp` is listed
+        // because a refused section leaves `point` NULL, but the row still stays BLOCKED: a
+        // *successful* `OSSL_AA_DIST_POINT` build aborts in the same machinery during encoding.
+        let rows: [(c_int, &CStr, &str); 8] = [
+            (
+                NID_crl_distribution_points,
+                c"b55_crl_section",
+                "v2i_crld (value-less entry names a section)",
+            ),
+            (
+                NID_id_aa_issuing_distribution_point,
+                c"b55_aaidp_section",
+                "v2i_aaidp (value-less entry names a section; refused branch frees NULL)",
+            ),
+            (
+                NID_name_constraints,
+                c"permitted;dirName:b55_nc_section",
+                "v2i_NAME_CONSTRAINTS -> v2i_GENERAL_NAME_ex -> do_dirname",
+            ),
+            (
+                NID_issuer_alt_name,
+                c"dirName:b55_issuer_section",
+                "v2i_issuer_alt -> v2i_GENERAL_NAME -> do_dirname",
+            ),
+            (
+                NID_subject_alt_name,
+                c"dirName:b55_subject_section",
+                "v2i_subject_alt -> v2i_GENERAL_NAME -> do_dirname",
+            ),
+            (
+                NID_info_access,
+                c"OCSP;dirName:b55_info_section",
+                "v2i_AUTHORITY_INFO_ACCESS -> v2i_GENERAL_NAME_ex -> do_dirname",
+            ),
+            (
+                NID_certificate_policies,
+                c"@b55_policy_section",
+                "r2i_certpol (the r2i arm refuses a NULL ctx)",
+            ),
+            (
+                NID_proxyCertInfo,
+                c"@b55_proxy_section",
+                "r2i_pci (the r2i arm refuses a NULL ctx)",
+            ),
+        ];
+
+        for (nid, value, what) in rows {
+            ERR_clear_error();
+            // SAFETY: every pointer is NULL or a NUL-terminated literal, exactly the input
+            // under test.
+            let ext = unsafe {
+                X509V3_EXT_nconf_nid(ptr::null_mut(), ptr::null_mut(), nid, value.as_ptr())
+            };
+            assert!(
+                ext.is_null(),
+                "{what}: a NULL ctx must not produce an extension"
+            );
+            let err = ERR_get_error();
+            assert_ne!(err, 0, "{what}: the refusal must be on the error stack");
+            ERR_clear_error();
+        }
+
+        // The three helpers are public entry points in their own right; drive each with a live
+        // `CONF_VALUE` whose name is `dirName` and whose value names a section.
+        let mut cnf = ConfValue {
+            section: ptr::null_mut(),
+            name: c"dirName".as_ptr().cast_mut(),
+            value: c"b55_helper_section".as_ptr().cast_mut(),
+        };
+
+        ERR_clear_error();
+        // SAFETY: `cnf` is a live local `CONF_VALUE`; the context and method are NULL, which the
+        // helper's contract admits.
+        let ex = unsafe {
+            v2i_GENERAL_NAME_ex(
+                ptr::null_mut(),
+                ptr::null(),
+                ptr::null_mut(),
+                &raw mut cnf,
+                0,
+            )
+        };
+        assert!(
+            ex.is_null(),
+            "v2i_GENERAL_NAME_ex: a NULL ctx must be refused"
+        );
+        assert_ne!(
+            ERR_get_error(),
+            0,
+            "v2i_GENERAL_NAME_ex: the refusal must be on the error stack"
+        );
+
+        ERR_clear_error();
+        // SAFETY: `cnf` is a live local `CONF_VALUE`; the context and method are NULL.
+        let one = unsafe { v2i_GENERAL_NAME(ptr::null(), ptr::null_mut(), &raw mut cnf) };
+        assert!(
+            one.is_null(),
+            "v2i_GENERAL_NAME: a NULL ctx must be refused"
+        );
+        assert_ne!(
+            ERR_get_error(),
+            0,
+            "v2i_GENERAL_NAME: the refusal must be on the error stack"
+        );
+
+        let nval = OPENSSL_sk_new_null();
+        assert!(!nval.is_null(), "the test must own a stack");
+        // SAFETY: `nval` is live and `cnf` is a live local entry whose address outlives the call.
+        unsafe { OPENSSL_sk_push(nval, (&raw mut cnf).cast::<c_void>()) };
+        ERR_clear_error();
+        // SAFETY: `nval` is a live stack of live `CONF_VALUE` pointers; the context and method
+        // are NULL, which the contract admits.
+        let many = unsafe { v2i_GENERAL_NAMES(ptr::null(), ptr::null_mut(), nval) };
+        assert!(
+            many.is_null(),
+            "v2i_GENERAL_NAMES: a NULL ctx must be refused"
+        );
+        assert_ne!(
+            ERR_get_error(),
+            0,
+            "v2i_GENERAL_NAMES: the refusal must be on the error stack"
+        );
+        // SAFETY: `nval` is this test's own stack and holds no owned elements.
+        unsafe { OPENSSL_sk_free(nval) };
+        ERR_clear_error();
     }
 }

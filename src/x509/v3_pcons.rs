@@ -150,7 +150,13 @@ pub unsafe extern "C" fn POLICY_CONSTRAINTS_free(a: *mut PolicyConstraints) {
 }
 
 /// `static STACK_OF(CONF_VALUE) *i2v_POLICY_CONSTRAINTS(const X509V3_EXT_METHOD *method, void *a,
-/// STACK_OF(CONF_VALUE) *extlist)` — `crypto/x509/v3_pcons.c:43-53`.
+/// `STACK_OF(CONF_VALUE) *extlist)` — `crypto/x509/v3_pcons.c:43-53`.
+///
+/// # Safety
+///
+/// The `i2v` slot contract stated on [`X509V3ExtMethod`]. Caller: `X509V3_EXT_print`'s `i2v`
+/// arm, which decoded `a` through this row's `POLICY_CONSTRAINTS_it` and passes NULL as the
+/// sink. The value is read only; the returned stack and its members belong to the caller.
 unsafe extern "C" fn i2v_POLICY_CONSTRAINTS(
     _method: *const X509V3ExtMethod,
     a: *mut c_void,

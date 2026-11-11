@@ -1524,6 +1524,38 @@
     "level": "fast (fmt, clippy -D warnings, focused x509 lib tests 161 passed). BOUNDARY/SEAL not run."
    },
    "applied_ledger_effect": "72 scoped boundaries BLOCKED -> SAFETY_DISCHARGED (scoped). Ledger DISCHARGED 219 -> 290 (+72, -1 reopened), BLOCKED 105 -> 34 (-72, +1 reopened). No other mechanism or site moved."
+  },
+  {
+   "receipt": "boundary-sweep-B55",
+   "artifact": "atlas-refresh/boundary-sweep-B55.json",
+   "base_head": "bea57ea74",
+   "state": "SAFETY_DISCHARGED (scoped, 10 rows); 2 rows RETAINED BLOCKED",
+   "scope": "the 11 X509 rows B54 rejected plus the B51 row B54 reopened, re-adjudicated after the B54-F1 repair",
+   "discharged_boundaries": [
+    "src/x509/v3_crld.rs:1333",
+    "src/x509/v3_ncons.rs:393",
+    "src/x509/v3_san.rs:1069",
+    "src/x509/v3_san.rs:1127",
+    "src/x509/v3_san.rs:1144",
+    "src/x509/v3_san.rs:1246",
+    "src/x509/v3_san.rs:1372",
+    "src/x509/v3_cpols.rs:1249",
+    "src/x509/v3_pci.rs:649",
+    "src/x509/v3_info.rs:460"
+   ],
+   "retained_boundaries": [
+    "src/x509/v3_crld.rs:1566",
+    "src/x509/v3_crld.rs:1928"
+   ],
+   "hidden_obligations": 0,
+   "adjudicated": true,
+   "adjudication": {
+    "reviewer": "orchestrating agent (independent of the sweep author)",
+    "verdict": "DISCHARGE 10/12",
+    "control": "x509::v3_conf::b55_tests::b55_null_config_context_is_refused_on_every_section_path; guard removal aborts (SIGABRT)",
+    "level": "fast (fmt, clippy -D warnings, x509 lib tests 164 passed). BOUNDARY/SEAL not run."
+   },
+   "applied_ledger_effect": "10 scoped boundaries BLOCKED -> SAFETY_DISCHARGED; DISCHARGED 290 -> 300, BLOCKED 34 -> 24."
   }
  ],
  "withdrawn_boundary_discharges": [],
@@ -2442,8 +2474,8 @@
   "identity_correction": "The previous block claimed S = a8716b4f2 with libcrypto ececbd98 / ssh 560652df / sshd 51f00033. That triple is the SUPERSEDED B52 lineage (bound in atlas-refresh/b52-candidate-freeze.json) and contradicted the b53 receipts the block cited. It is replaced here by the receipt-bound B53 identity; the B52 hashes remain recorded in their own freeze receipt and are not overwritten.",
   "closure": {
    "ssh": {
-    "DISCHARGED": 290,
-    "BLOCKED": 34,
+    "DISCHARGED": 300,
+    "BLOCKED": 24,
     "UNKNOWN": 0,
     "obligations_total": 324,
     "verdict": "ACCEPTED",
@@ -2454,11 +2486,11 @@
     "inventory_source_head": "6eec8a175",
     "libcrypto_so_3_sha256": "136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5d88d09a9a44",
     "note": "Re-measured at HEAD after 59 unsafe-fn sites were eliminated. The -54 obligations (-36 BLOCKED, -18 DISCHARGED) are carried-removed: those sites no longer exist, so they are neither discharged nor blocked.",
-    "counts_note": "includes the 14 sslconf, 30 B53 slh_dsa and 72 B54 X509 callback discharges, less the 1 B51 row reopened by B54-F1; the closure receipts will reflect this at the next re-measure"
+    "counts_note": "includes 14 sslconf, 30 B53 slh_dsa, 72 B54 and 10 B55 X509 discharges, less the 1 B51 row reopened; closure receipts reflect it at the next re-measure"
    },
    "sshd": {
-    "DISCHARGED": 290,
-    "BLOCKED": 34,
+    "DISCHARGED": 300,
+    "BLOCKED": 24,
     "UNKNOWN": 0,
     "obligations_total": 324,
     "verdict": "ACCEPTED",
@@ -2468,7 +2500,7 @@
     "measured_census": "court/freeze-311/census-311.json",
     "inventory_source_head": "6eec8a175",
     "note": "Re-measured at HEAD. The -54 (-36 BLOCKED, -18 DISCHARGED) are carried-removed sites that no longer exist.",
-    "counts_note": "includes the 14 sslconf, 30 B53 slh_dsa and 72 B54 X509 callback discharges, less the 1 B51 row reopened by B54-F1; the closure receipts will reflect this at the next re-measure"
+    "counts_note": "includes 14 sslconf, 30 B53 slh_dsa, 72 B54 and 10 B55 X509 discharges, less the 1 B51 row reopened; closure receipts reflect it at the next re-measure"
    }
   },
   "closure_receipts": [
@@ -3167,6 +3199,14 @@
    "state": "open",
    "what": "X509V3_EXT_nconf* document `value` as nullable while v3_check_critical/v3_check_generic strncmp it immediately.",
    "blocks": "nothing discharged, but the entry contracts are wrong; they must be corrected or the calls made null-safe."
+  },
+  {
+   "id": "B55-F1",
+   "severity": "high",
+   "state": "open",
+   "what": "The generic ASN.1 template walk casts base+offset to a pointer-typed slot for inline ASN1_FBOOLEAN/ASN1_TBOOLEAN fields at non-8-aligned offsets (ISSUING_DIST_POINT 12/28, OSSL_AA_DIST_POINT 20/28) and dereferences it at src/asn1/fre.rs:218 and src/asn1/i2d.rs:234. Observed SIGABRT: v2i_idp frees at src/x509/v3_crld.rs:1638 under a NULL ctx; successful idp/aaidp builds abort during encoding.",
+   "blocks": "v2i_idp and v2i_aaidp (2 rows), and any claim covering those extensions",
+   "required_resolution": "Fix the template walk so a boolean field is read and written through its declared width rather than an aligned pointer cast; new candidate S-prime, load-bearing test, re-adjudication."
   }
  ]
 }

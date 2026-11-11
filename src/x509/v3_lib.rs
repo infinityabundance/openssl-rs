@@ -621,6 +621,14 @@ unsafe extern "C" fn ext_cmp(a: *const c_void, b: *const c_void) -> c_int {
 ///
 /// Frees only a `X509V3_EXT_DYNAMIC` row, i.e. one `X509V3_EXT_add_alias` allocated; a caller's
 /// static table row is the caller's.
+///
+/// # Safety
+///
+/// `ext` is NULL or the element the registry's own `ext_list` holds: the stack is created by
+/// `X509V3_EXT_add`'s list constructor with `ext_cmp` as its comparator, and every element pushed
+/// into it is a row pointer (this module's only writer). A NULL element is ignored; a DYNAMIC row
+/// is the single `CRYPTO_malloc` block `X509V3_EXT_add_alias` made and is released here exactly
+/// once, and a non-DYNAMIC row is left untouched because its storage belongs to the caller.
 unsafe extern "C" fn ext_list_free(ext: *mut c_void) {
     let method = ext.cast::<X509V3ExtMethod>();
     if !method.is_null() {

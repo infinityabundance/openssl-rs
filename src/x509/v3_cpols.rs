@@ -1243,7 +1243,9 @@ unsafe fn notice_section(
 ///
 /// # Safety
 ///
-/// `ctx` is NULL or a live `X509V3_CTX`; `value` is NUL-terminated.
+/// `ctx` is NULL or a live `X509V3_CTX`; `value` is NUL-terminated. A NULL `ctx` is refused on
+/// the `@section` arm: `X509V3_get_section` raises and answers NULL, and this body then raises
+/// the section site and answers NULL.
 unsafe extern "C" fn r2i_certpol(
     _method: *const X509V3ExtMethod,
     ctx: *mut c_void,
@@ -1291,7 +1293,7 @@ unsafe extern "C" fn r2i_certpol(
             continue;
         // SAFETY: `pstr` points at a NUL-terminated string.
         } else if unsafe { *pstr } == b'@' as c_char {
-            // SAFETY: `ctx` is live; `pstr + 1` points into the NUL-terminated name.
+            // SAFETY: `ctx` is NULL or live; `pstr + 1` points into the NUL-terminated name.
             let polsect = unsafe { X509V3_get_section(ctx, pstr.add(1)) };
             if polsect.is_null() {
                 // SAFETY: `cnf->name` is NUL-terminated; the site is a compiled-in constant.
@@ -1299,9 +1301,11 @@ unsafe extern "C" fn r2i_certpol(
                 failed = true;
                 break;
             }
-            // SAFETY: `ctx` is live; `polsect` is a live section.
+            // SAFETY: `polsect` came from `X509V3_get_section`, which only answers when `ctx`
+            // is live, and `polsect` is a live section.
             let pol = unsafe { policy_section(ctx, polsect, ia5org) };
-            // SAFETY: `ctx` is live; `polsect` is a live section.
+            // SAFETY: `polsect` is non-NULL here, so `ctx` is live and `polsect` is a live
+            // section.
             unsafe { X509V3_section_free(ctx, polsect) };
             if pol.is_null() {
                 failed = true;

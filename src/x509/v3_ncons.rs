@@ -386,7 +386,10 @@ unsafe fn push_cstr(buf: &mut Vec<u8>, s: *const c_char) {
 ///
 /// # Safety
 ///
-/// `method`/`ctx` are the caller's; `nval` is a live `STACK_OF(CONF_VALUE)`.
+/// `method` is the live row; `ctx` is NULL or live; `nval` is a live `STACK_OF(CONF_VALUE)`.
+/// A NULL `ctx` is refused on each element's `dirName` arm by the section read
+/// (`X509V3_get_section` raises and answers NULL, so the build fails) and accepted on the
+/// `otherName` arm (`ASN1_generate_v3` accepts NULL).
 unsafe extern "C" fn v2i_NAME_CONSTRAINTS(
     method: *const X509V3ExtMethod,
     ctx: *mut c_void,
@@ -447,8 +450,8 @@ unsafe extern "C" fn v2i_NAME_CONSTRAINTS(
             unsafe { NAME_CONSTRAINTS_free(ncons) };
             return ptr::null_mut();
         }
-        // SAFETY: `sub` is live; `sub->base` is its allocated GENERAL_NAME slot; `ctx` is the
-        // caller's; `tval` is this call's own.
+        // SAFETY: `sub` is live; `sub->base` is its allocated GENERAL_NAME slot; `ctx` is NULL
+        // or live per the contract; `tval` is this call's own.
         if unsafe {
             v2i_GENERAL_NAME_ex(
                 (*sub).base,
