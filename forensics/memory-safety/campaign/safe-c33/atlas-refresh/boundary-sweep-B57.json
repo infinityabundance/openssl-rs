@@ -1,0 +1,237 @@
+{
+ "receipt": "boundary-sweep-B57",
+ "date": "2026-11-11",
+ "campaign": "safe-c33: repair the shared ASN.1 template walk's inline-boolean slot access, and re-adjudicate the last two BLOCKED rows (v2i_idp, v2i_aaidp)",
+ "subphase": "B57 reproduces B55-F1, fixes it structurally in the shared template walk, proves the correction with a load-bearing control, and re-adjudicates the two X509 rows B55 left BLOCKED. Reproduction first: a safe caller reaching ISSUING_DIST_POINT or OSSL_AA_DIST_POINT through X509V3_EXT_nconf_nid aborted in the generic free/encode/print walk with `misaligned pointer dereference: address must be a multiple of 0x8` (free: src/asn1/fre.rs:218; encode: src/asn1/i2d.rs:234; print: src/asn1/tasn_prn.rs:218). Root cause: a template field is reached as `base + offset` and the walk dereferenced it as an eight-byte `ASN1_VALUE **`, but an inline ASN1_BOOLEAN is a four-byte `int` at a four-byte-aligned offset. The repair adds one width-aware inline-boolean abstraction in src/asn1/utl.rs and uses it at every generic read/write site; no ABI, layout or exported symbol changed. Proving the fix surfaced a second independent defect in the same row: OSSL_AA_DIST_POINT_TT hardcoded template offsets 16/20/24/28 while the authority's `offsetof` gives 20/24/28/32 (the struct has `dp_reasons` at 16), so the boolean fields were encoded from the wrong slots; the offsets are now derived with `core::mem::offset_of!`. Both rows are SAFETY_DISCHARGED, site-scoped. Nothing is applied; CAMPAIGN-STATUS.json / state.json are untouched, and nothing was committed or pushed.",
+ "candidate": {
+  "head": "be5ed202376c1b5ef6b2dba988b1a3c1488c410a",
+  "head_short": "be5ed2023",
+  "head_subject": "ledger: B56 clears the last 22 non-X509 sites -> BLOCKED 24 -> 2",
+  "branch": "main (== origin/stage/p25/b53-discharge == stage/p25/b53-discharge at be5ed2023)",
+  "source_state": "HEAD plus an uncommitted working-tree delta. The delta changes production code: (a) src/asn1/{utl,fre,i2d,tasn_prn,new,d2i}.rs implement the width-aware inline-boolean slot access; (b) src/x509/v3_crld.rs derives OSSL_AA_DIST_POINT's template offsets from offset_of and adds the B57 tests. No `#[repr(C)]` layout, exported symbol, signature or attribute changed; no check was weakened. `applied:false`; a reviewer must freeze this delta as S' before applying any disposition.",
+  "working_delta_kind": "production repair + test-only",
+  "files_sha256": {
+   "src/asn1/utl.rs": "edf25fdcf527635ac6f30ad64ea6face16039b7cde4dcb9780da2275d44f0597",
+   "src/asn1/fre.rs": "f98991dbf5b8ee303bf8b4878545ee97ed9d1a4cf9a973f9c03ef80eb5b8dfdf",
+   "src/asn1/i2d.rs": "6c85374419362eab9afa1c06c4bd6beba233c135127b11e03454a066c690c63c",
+   "src/asn1/tasn_prn.rs": "21d8b4439c62a58f19f70a8d176aea67576fea31a90d749126932e09b6d5825f",
+   "src/asn1/new.rs": "c045b3edf504558fc4b45ef666dd2ab60a6af0df84e91d6c01eee1c9d7e281b5",
+   "src/asn1/d2i.rs": "97a9534737611bad9a969ca84c6aaf8fd8971d25901a6c93c2a4d2af4ae73f99",
+   "src/x509/v3_crld.rs": "4cf3a9388ef44590ea1a4a3c43337b3b2b1c07b8be6f4f77f014017b6b892a60",
+   "src/x509/v3_conf.rs": "cb45ccb4e4770480df0c5b5c6a354ed01825eac52f1d5968fad9b61ade9fd65b"
+  },
+  "diff_stat": "8 files changed, 377 insertions(+), 52 deletions(-)",
+  "note": "line_current is recomputed at this exact tree; the receipt binds by files_sha256."
+ },
+ "authority": {
+  "version": "pinned OpenSSL 3.6.4",
+  "contract": "crypto/x509/v3_crld.c:344-351 (ISSUING_DIST_POINT) and :554-560 (OSSL_AA_DIST_POINT) build their ASN1_SEQUENCE with ASN1_EXP_OPT/ASN1_IMP_OPT, whose template offset is `offsetof(stname, field)`. `ASN1_BOOLEAN` is `int` (four bytes; include/openssl/asn1.h), and include/openssl/x509v3.h:2004-2012 places `dp_reasons` at offset 16, so OSSL_AA_DIST_POINT's booleans are at offsets 20/24/28/32.",
+  "observed_authority_read": "ossl_asn1_item_embed_free and asn1_item_embed_i2d read `*pval` as `ASN1_VALUE *` before the item-type dispatch. For an inline boolean at a four-byte-aligned offset that C read is an unaligned, over-wide load (and at the last field four bytes past the allocation). The crate must not reproduce it: Rust makes the misaligned read UB, and debug builds abort with `misaligned pointer dereference`.",
+  "deviation": "The candidate never forms a pointer-typed access for an inline ASN1_BOOLEAN: the free, encode, decode and print walks skip the pointer-shaped presence read for `is_inline_boolean(it)` and read/write the field with `ptr::read_unaligned`/`ptr::write_unaligned` at `c_int` width. Wire encoding and set/clear semantics are unchanged and are asserted byte-for-byte. Recorded per AGENTS.md section 17."
+ },
+ "mechanism": {
+  "id": "ASN1_TEMPLATE_WALK",
+  "family": "generic item free/encode/decode/print template interpreter",
+  "state": "OWNERSHIP_RECONSTRUCTED (mechanism-wide); this receipt repairs the inline-boolean slot access and is SITE-SCOPED for the two discharged rows",
+  "root_cause": "`get_field_ptr`/`get_const_field_ptr` return `base + tt.offset` cast to `*mut *mut c_void`. The generic walks then read `*pval` as an eight-byte pointer to decide whether the field is present. An inline ASN1_BOOLEAN (ASN1_FBOOLEAN_it / ASN1_TBOOLEAN_it) stores a four-byte `int` in the slot, and the dist-point fields sit at 4-byte-aligned offsets, so that read is simultaneously over-wide and misaligned. Rust's debug-mode check turns it into a non-unwinding panic and SIGABRT; in every profile it is UB.",
+  "secondary_defect": "B57-F2: OSSL_AA_DIST_POINT_TT was transcribed with offsets 16/20/24/28, omitting `dp_reasons` at 16, so the encoder/free walk bound the boolean fields one member low and left `containsSOAPublicKeyCerts` (offset 32) unbound. Reproduced as a wrong-decoded-value assertion while proving B57-F1; fixed by deriving every OSSL_AA_DIST_POINT offset with `core::mem::offset_of!`."
+ },
+ "repair": {
+  "abstraction": "src/asn1/utl.rs: `is_inline_boolean(&Asn1Item)` (itype PRIMITIVE and utype BOOLEAN), `read_inline_boolean(*const c_void) -> c_int` and `write_inline_boolean(*mut c_void, c_int)`, the last two via `ptr::read_unaligned`/`ptr::write_unaligned` at c_int width.",
+  "sites": [
+   "src/asn1/fre.rs:231 (item_embed_free): the non-primitive null guard no longer reads the slot; src/asn1/fre.rs:129 (primitive_free) skips the pointer read for `is_inline_boolean`; src/asn1/fre.rs:166 writes the BOOLEAN default through `write_inline_boolean`.",
+   "src/asn1/i2d.rs:237 (item_ex_i2d): the non-primitive null guard no longer reads the slot; src/asn1/i2d.rs:629 reads the boolean through `read_inline_boolean`.",
+   "src/asn1/tasn_prn.rs:223 (asn1_item_print_ctx): an inline boolean is treated as present without a pointer read.",
+   "src/asn1/new.rs:552/645 and src/asn1/d2i.rs:1061 write the boolean through `write_inline_boolean`.",
+   "src/x509/v3_crld.rs OSSL_AA_DIST_POINT_TT: offsets derived from `offset_of!(AaDistPoint, ...)`."
+  ],
+  "width_and_alignment": "four-byte c_int at the field's real offset; `read_unaligned`/`write_unaligned` make the alignment assumption explicit and sound even though the current offsets are 4-aligned.",
+  "abi": "No `#[repr(C)]` layout, size, offset, exported symbol, signature or lint attribute changed."
+ },
+ "rows": [
+  {
+   "id": "V1:src/x509/v3_crld.rs:1554:UNSAFE_FN_DEF",
+   "operation": "v2i_idp",
+   "file": "src/x509/v3_crld.rs",
+   "line_current": 1566,
+   "registration": "row `ossl_v3_idp` (:2140 region), slot `v2i`; `it = ISSUING_DIST_POINT_it`",
+   "dispatch_path": "CONFIG_DECODE_v2i (do_ext_nconf v2i arm) -> v2i_idp -> ISSUING_DIST_POINT_it encode/free",
+   "type_fact": "The returned value is `ISSUING_DIST_POINT`, the row's declared item. The method-table entry is unchanged; the item's encode, free and print walks now access its inline booleans at c_int width.",
+   "section_paths": [
+    "`fullname:<value>` -> set_dist_point_name -> gnames_from_sectname -> X509V3_get_section (NULL ctx refused).",
+    "`relativename:<value>` -> X509V3_get_section (NULL ctx refused)."
+   ],
+   "contract": "`method` is a live row; `ctx` is NULL or live; `nval` is a live `CONF_VALUE` stack. A NULL `ctx` is refused on the `fullname`/`relativename` section reads by `set_dist_point_name`; the other arms do not read it. The returned ISSUING_DIST_POINT is owned by the caller and is encoded and freed through `ISSUING_DIST_POINT_it`.",
+   "control": [
+    "x509::v3_crld::b57_repro_tests::b57_idp_free_walk_reads_inline_booleans_at_their_width",
+    "x509::v3_crld::b57_repro_tests::b57_idp_nconf_encodes_every_inline_boolean",
+    "x509::v3_crld::b57_repro_tests::b57_idp_nconf_refusal_frees_partial_value",
+    "x509::v3_crld::b57_repro_tests::b57_print_walk_reads_inline_booleans_at_their_width",
+    "x509::v3_conf::b55_tests::b55_null_config_context_is_refused_on_every_section_path (the B57 extension adds the `fullname:` idp row)"
+   ],
+   "pre_fix_observed": "SIGABRT. Free/refusal: `misaligned pointer dereference: address must be a multiple of 0x8 but is ...c5c` at src/asn1/fre.rs:218 in item_embed_free (from template_free -> item_embed_free -> ASN1_item_free -> ISSUING_DIST_POINT_free). Successful build: same panic at src/asn1/i2d.rs:234 in item_ex_i2d. Print: same panic at src/asn1/tasn_prn.rs:218. Addresses are base+12 (onlyCA).",
+   "post_fix_observed": "All five controls pass. `onlyCA:TRUE,onlyuser:TRUE,indirectCRL:TRUE,onlyAA:TRUE` encodes exactly `30 0c 81 01 ff 82 01 ff 84 01 ff 85 01 ff`; decoding it back yields 0xff in each of the four slots and NULL for onlysomereasons/distpoint. A fresh value has all four fields FALSE and frees cleanly. The NULL-ctx refusal answers NULL with an error on the stack and survives.",
+   "verdict": "SAFETY_DISCHARGED",
+   "scope_note": "Site-scoped to this callback, its do_ext_nconf dispatch and the ISSUING_DIST_POINT item. The shared machinery is repaired, but the whole-tree audit of every inline-boolean template and the BOUNDARY/SEAL instruments are NOT_RUN."
+  },
+  {
+   "id": "V1:src/x509/v3_crld.rs:1913:UNSAFE_FN_DEF",
+   "operation": "v2i_aaidp",
+   "file": "src/x509/v3_crld.rs",
+   "line_current": 1928,
+   "registration": "row `ossl_v3_aa_issuing_dist_point` (:2203 region), slot `v2i`; `it = OSSL_AA_DIST_POINT_it`",
+   "dispatch_path": "CONFIG_DECODE_v2i (do_ext_nconf v2i arm) -> v2i_aaidp -> OSSL_AA_DIST_POINT_it encode/free",
+   "type_fact": "The returned value is `OSSL_AA_DIST_POINT`, the row's declared item. The method-table entry is unchanged; the item's template offsets now equal the authority's `offsetof` values and its inline booleans are accessed at c_int width.",
+   "section_paths": [
+    "value-less entry -> X509V3_get_section (NULL ctx refused); the refused branch leaves `point` NULL.",
+    "valued entry -> v2i_GENERAL_NAME -> do_dirname.",
+    "live-context section -> aaidp_from_section can fail after allocating `point`, freeing it at the err arm (same walk)."
+   ],
+   "contract": "`method` is a live row; `ctx` is NULL or live; `nval` is a live `CONF_VALUE` stack. A NULL `ctx` is refused on the section read and on a bare entry's `dirName` arm; both raise and this body answers NULL. The returned OSSL_AA_DIST_POINT is owned by the caller and is encoded and freed through `OSSL_AA_DIST_POINT_it`.",
+   "control": [
+    "x509::v3_crld::b57_repro_tests::b57_aaidp_nconf_encodes_inline_booleans",
+    "x509::v3_crld::b57_repro_tests::b57_aaidp_tboolean_set_and_clear_wire_form",
+    "x509::v3_conf::b55_tests::b55_null_config_context_is_refused_on_every_section_path"
+   ],
+   "pre_fix_observed": "SIGABRT. Successful `URI:http://example.test` build: `misaligned pointer dereference: address must be a multiple of 0x8 but is ...044` at src/asn1/i2d.rs:234 in item_ex_i2d (base+20). The direct item encode aborts at the same site; a failed build frees through src/asn1/fre.rs:218.",
+   "post_fix_observed": "Both B57 controls pass. With `indirectCRL=0xff` and the three TBOOLEANs cleared (the TBOOLEAN default is TRUE), the encoding is exactly `30 0c 82 01 ff 83 01 00 84 01 00 85 01 00`; a fresh value encodes `30 00`. The URI build decodes back with distpoint present, indirectCRL FALSE and the three TBOOLEANs at their TRUE default. The NULL-ctx section refusal answers NULL with an error on the stack.",
+   "verdict": "SAFETY_DISCHARGED",
+   "scope_note": "Site-scoped to this callback, its do_ext_nconf dispatch and the OSSL_AA_DIST_POINT item, including the B57-F2 offset correction. A live-context `@section` build through a real CONF is not driven at B57 (the direct item test covers the same fields); see not_run."
+  }
+ ],
+ "verdict_counts": {
+  "SAFETY_DISCHARGED": 2,
+  "BLOCKED": 0,
+  "total": 2
+ },
+ "findings": [
+  {
+   "id": "B57-F1",
+   "class": "unsafe type/width mismatch in a shared template walk (misaligned, over-wide pointer read of an inline ASN1_BOOLEAN field)",
+   "severity": "memory-safety (UB; debug SIGABRT)",
+   "where": [
+    "src/asn1/fre.rs:218 (item_embed_free; pre-fix)",
+    "src/asn1/fre.rs:117 (primitive_free; pre-fix)",
+    "src/asn1/i2d.rs:234 (item_ex_i2d; pre-fix)",
+    "src/asn1/tasn_prn.rs:218 (asn1_item_print_ctx; pre-fix)"
+   ],
+   "observed": [
+    "v2i_idp free/refusal and successful encode: SIGABRT",
+    "v2i_aaidp successful encode: SIGABRT",
+    "generic print walk over ISSUING_DIST_POINT: SIGABRT"
+   ],
+   "status": "FIXED at this candidate; every listed site now uses the width-aware abstraction or skips the pointer read.",
+   "residual": "The same class affected other inline-boolean templates (X509_EXTENSION.critical, TS certReq/ordering, OSSL_TIME_SPEC.notThisTime) by the same code; they are repaired by the shared change but are not individually tested at B57."
+  },
+  {
+   "id": "B57-F2",
+   "class": "template offset mismatch against the authority's `offsetof`",
+   "severity": "compatibility / correctness (wrong field encoded and decoded)",
+   "where": [
+    "src/x509/v3_crld.rs OSSL_AA_DIST_POINT_TT (pre-fix offsets 16/20/24/28)"
+   ],
+   "observed": "The B57 aaidp assertion read back indirectCRL=1 for an all-default URI-only value, exposing that the boolean templates were bound one member low (dp_reasons occupies offset 16).",
+   "status": "FIXED by deriving all six offsets with `core::mem::offset_of!`, which matches the authority's macro; the exact set/clear wire form is asserted.",
+   "residual": "None known; the struct offset assertions in the same module pin 20/24/28/32."
+  }
+ ],
+ "negative_control": {
+  "method": "Revert exactly the six ASN.1 files (src/asn1/{utl,fre,i2d,tasn_prn,new,d2i}.rs) to HEAD, keeping the B57 tests in src/x509/v3_crld.rs, run each test alone, then restore the repaired files.",
+  "per_test_observed": {
+   "b57_idp_free_walk_reads_inline_booleans_at_their_width": "SIGABRT at src/asn1/fre.rs:218 (misaligned, base+12)",
+   "b57_idp_nconf_encodes_every_inline_boolean": "SIGABRT at src/asn1/i2d.rs:234",
+   "b57_idp_nconf_refusal_frees_partial_value": "SIGABRT at src/asn1/fre.rs:218",
+   "b57_aaidp_nconf_encodes_inline_booleans": "SIGABRT at src/asn1/i2d.rs:234",
+   "b57_aaidp_tboolean_set_and_clear_wire_form": "SIGABRT at src/asn1/i2d.rs:234",
+   "b57_print_walk_reads_inline_booleans_at_their_width": "SIGABRT at src/asn1/tasn_prn.rs:218"
+  },
+  "restored": "The six files were restored from the saved copies; the post-restore b57 run is 6 passed.",
+  "conclusion": "Every B57 test fails on the pre-fix tree at the mechanism it names and passes on the repaired tree; the controls are load-bearing."
+ },
+ "positive_control": {
+  "test": "b57_idp_nconf_encodes_every_inline_boolean / b57_aaidp_tboolean_set_and_clear_wire_form",
+  "assertion": "Exact DER for set and clear values, and a decode round-trip into the real struct fields.",
+  "result": "pass"
+ },
+ "boundary_size": {
+  "production_files_changed": 7,
+  "contracts_updated": "No public signature changed. Three internal generic reads no longer form a pointer-typed access for an inline boolean; four boolean writes use the width-correct accessor; two template offsets derive from offset_of.",
+  "rows_discharged": 2,
+  "rows_blocked": 0,
+  "new_tests": 6
+ },
+ "new_unsafe_assumptions": 0,
+ "new_unsafe_assumptions_note": "No new caller obligation. `is_inline_boolean` is a pure predicate; the two accessors' contracts require a slot of at least c_int size for an item satisfying the predicate, which the template machinery already establishes. Every new unsafe block carries a SAFETY comment.",
+ "unsafe_operations_removed": 3,
+ "unsafe_operations_introduced": 0,
+ "test_only_unsafe_added": "The B57 tests allocate/free through the crate's public APIs and use one test-only slice view over an extension's data for its owner's lifetime; no production unsafe was added for the tests.",
+ "safe_callers_can_cause_ub": false,
+ "safe_callers_can_cause_ub_note": "Within the two discharged rows' scope, a safe config caller can no longer reach the misaligned read: the free, encode, decode and print walks are width-correct for the inline booleans of both items, and a NULL ctx is refused. Mechanism-wide, this receipt does not claim every template/field combination is audited.",
+ "hidden_obligations": 0,
+ "hidden_obligations_note": "B57-F1 and B57-F2 are reported explicitly, with observed reproduction and named fixes. No obligation was reclassified to reach a verdict.",
+ "fast_gate_at_candidate": {
+  "candidate": "be5ed2023 + the uncommitted repair/test delta; src/x509/v3_crld.rs sha256 4cf3a9388ef44590ea1a4a3c43337b3b2b1c07b8be6f4f77f014017b6b892a60",
+  "container": "docker/openssl-rs-court.sh (never the host)",
+  "toolchain": "pinned by the court image; CARGO_BUILD_JOBS=4; one heavy command at a time; free -g checked before builds (37 GiB available)",
+  "fmt": "cargo fmt --all -- --check: exit 0",
+  "clippy": "cargo clippy --lib -- -D warnings: exit 0, Finished dev profile",
+  "focused_tests": "cargo test --lib asn1:: -- --test-threads=4: ok. 70 passed; 0 failed; 1 ignored. cargo test --lib x509:: -- --test-threads=4: ok. 170 passed; 0 failed; 0 ignored.",
+  "exact_new_tests": "cargo test --lib b57_ -- --test-threads=1: 6 passed; 0 failed. Each also aborts on the pre-fix tree at its named site (negative control above).",
+  "mutation": "pre-fix ASN.1 files restored from HEAD -> all 6 tests SIGABRT; repaired files restored -> 6 passed.",
+  "scope_note": "FAST only. The full library suite (serial and threaded), clippy --all-targets, Miri/ASan/TSan/LSan/Loom, authority differential, consumer closures and CAMPAIGN-STATUS application are NOT_RUN."
+ },
+ "residuals": [
+  "The repair is mechanism-wide but the whole-tree audit of every inline-boolean template (X509_EXTENSION.critical, TS certReq/ordering, OSSL_TIME_SPEC.notThisTime) is not individually tested at B57; the shared code path is the same and no row depends on those items here.",
+  "The aaidp live-context `@section` path (aaidp_from_section) is not driven end-to-end; the direct item test covers the same six template fields.",
+  "The adjudicated source identity is HEAD plus an uncommitted repair/test delta; a reviewer must commit that delta as S' before applying any disposition.",
+  "No authority differential was run for the corrected OSSL_AA_DIST_POINT offsets; the authority's offsetof values are read from the pinned source and the struct assertions, not measured against a built authority binary at B57."
+ ],
+ "not_run": [
+  "full library suite (serial and --test-threads=4) and the 1962-test floor check: deferred to BATCH/SEAL",
+  "cargo clippy --all-targets (only --lib was run, per FAST)",
+  "Miri (Stacked Borrows and Tree Borrows), ASan, TSan, LSan, Loom",
+  "authority differential for the corrected offsets and for the inline-boolean wire form",
+  "Wycheproof/ACVP and dudect (not applicable to this ownership/type repair)",
+  "Rustls/BoringSSL/NSS-style protocol fuzzing and FRF-Fuzz",
+  "consumer compatibility replay (curl, nginx, OpenSSH, HAProxy, Redis) and the 33-family atlas",
+  "forensic regeneration and CAMPAIGN-STATUS.json / state.json application",
+  "whole-tree audit of the other inline-boolean templates and every template offset in the crate",
+  "a live-context aaidp section build end-to-end"
+ ],
+ "non_claims": [
+  "B57 is not a cryptographic result and not a compatibility result.",
+  "A green B57 control is not a SAFE_COMPATIBLE graduation and does not discharge any consumer family.",
+  "The two discharges are site-scoped to the named callbacks, their do_ext_nconf dispatch and their items at this exact tree; they do not discharge the shared template machinery mechanism-wide.",
+  "The absence of the abort is not one of the BOUNDARY/SEAL instruments; Miri, sanitizers and the authority differential remain NOT_RUN."
+ ],
+ "review_conditions": [
+  "C1_identity: candidate.head is be5ed2023; files_sha256 binds the adjudicated tree (HEAD plus the uncommitted repair/test delta); line_current is recomputed there.",
+  "C2_reproduction_first: the pre-fix abort was observed for every control before any change, at src/asn1/fre.rs:218, src/asn1/i2d.rs:234 and src/asn1/tasn_prn.rs:218.",
+  "C3_root_cause: `get_field_ptr` returns base+offset as `*mut *mut c_void`; an inline ASN1_BOOLEAN is a four-byte c_int at a four-byte-aligned offset, so the eight-byte pointer read is over-wide and misaligned.",
+  "C4_repair: the width-aware abstraction is the only boolean slot access in the generic walks; no ABI/layout/exported symbol changed.",
+  "C5_control: all six tests abort on the pre-fix tree at the named site and pass on the repaired tree.",
+  "C6_second_defect: OSSL_AA_DIST_POINT_TT offsets now derive from offset_of and match the authority's 20/24/28/32; the exact wire form is asserted.",
+  "C7_honesty: both rows are SAFETY_DISCHARGED site-scoped, with every deferred instrument recorded as NOT_RUN."
+ ],
+ "applied": true,
+ "review": {
+  "state": "adjudicated-fast",
+  "reviewer": "orchestrating agent (not the author of the sweep)",
+  "independent_checks": [
+   "reproduced the pre-fix SIGABRT at fre.rs:218 (misaligned pointer dereference, address must be a multiple of 0x8) and the encode abort at i2d.rs:234",
+   "the abstraction is width- and alignment-correct: is_inline_boolean gates read_unaligned/write_unaligned of c_int, and the OSSL_AA_DIST_POINT_TT offsets now come from offset_of rather than hardcoded values",
+   "six b57 tests pass at this tree; asn1:: 70 passed, x509:: 170 passed; fmt and clippy -D warnings clean",
+   "the wire forms are asserted explicitly (idp all-TRUE 30 0c 81 01 ff 82 01 ff 84 01 ff 85 01 ff; aaidp set/clear 30 0c 82 01 ff 83 01 00 84 01 00 85 01 00)"
+  ],
+  "not_run": [
+   "full suite",
+   "clippy --all-targets",
+   "Miri/ASan/TSan/LSan/Loom",
+   "authority differential",
+   "whole-tree inline-boolean audit",
+   "live-context aaidp_from_section"
+  ],
+  "note": "Fast adjudication. The offset table defect (aaidp 16/20/24/28 vs the authority 20/24/28/32) was found while proving the fix and is repaired."
+ },
+ "schema_note": "One row per site. `id` is the V1 census coordinate inherited from B54/B55; `line_current` is recomputed at files_sha256. `verdict` uses the campaign's graduation vocabulary: SAFETY_DISCHARGED is site-scoped; BLOCKED names the precise missing fact. Nothing in CAMPAIGN-STATUS.json or state.json was modified."
+}

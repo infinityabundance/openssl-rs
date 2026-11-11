@@ -1599,6 +1599,27 @@
     "level": "fast (fmt, clippy -D warnings, focused module suites). BOUNDARY/SEAL not run."
    },
    "applied_ledger_effect": "DISCHARGED 300 -> 321; BLOCKED 24 -> 2; 1 site ELIMINATED (leaves the census at the next re-measure, so the re-measured total becomes 323, not 324)."
+  },
+  {
+   "receipt": "boundary-sweep-B57",
+   "artifact": "atlas-refresh/boundary-sweep-B57.json",
+   "base_head": "be5ed2023",
+   "state": "SAFETY_DISCHARGED (scoped, 2 rows)",
+   "scope": "v2i_idp and v2i_aaidp, the last two BLOCKED obligations, re-adjudicated after the inline-boolean repair",
+   "discharged_boundaries": [
+    "src/x509/v3_crld.rs:1566",
+    "src/x509/v3_crld.rs:1928"
+   ],
+   "retained_boundaries": [],
+   "hidden_obligations": 0,
+   "adjudicated": true,
+   "adjudication": {
+    "reviewer": "orchestrating agent (independent of the sweep author)",
+    "verdict": "DISCHARGE 2/2",
+    "control": "six b57 tests plus the extended b55 NULL-ctx row; the six ASN.1 files reverted to HEAD abort at fre.rs:218 / i2d.rs:234 / tasn_prn.rs:218, restored they pass",
+    "level": "fast (fmt, clippy -D warnings, asn1:: 70, x509:: 170). BOUNDARY/SEAL not run."
+   },
+   "applied_ledger_effect": "DISCHARGED 321 -> 323; BLOCKED 2 -> 0. With the 1 eliminated site, the census total becomes 323 at the next re-measure."
   }
  ],
  "withdrawn_boundary_discharges": [],
@@ -2517,8 +2538,8 @@
   "identity_correction": "The previous block claimed S = a8716b4f2 with libcrypto ececbd98 / ssh 560652df / sshd 51f00033. That triple is the SUPERSEDED B52 lineage (bound in atlas-refresh/b52-candidate-freeze.json) and contradicted the b53 receipts the block cited. It is replaced here by the receipt-bound B53 identity; the B52 hashes remain recorded in their own freeze receipt and are not overwritten.",
   "closure": {
    "ssh": {
-    "DISCHARGED": 321,
-    "BLOCKED": 2,
+    "DISCHARGED": 323,
+    "BLOCKED": 0,
     "UNKNOWN": 0,
     "obligations_total": 324,
     "verdict": "ACCEPTED",
@@ -2529,11 +2550,11 @@
     "inventory_source_head": "6eec8a175",
     "libcrypto_so_3_sha256": "136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5d88d09a9a44",
     "note": "Re-measured at HEAD after 59 unsafe-fn sites were eliminated. The -54 obligations (-36 BLOCKED, -18 DISCHARGED) are carried-removed: those sites no longer exist, so they are neither discharged nor blocked.",
-    "counts_note": "324 at the census; 321 DISCHARGED, 2 BLOCKED (both X509 rows held by B55-F1), 1 ELIMINATED site that leaves the census at the next re-measure. Closure receipts reflect this at the next re-measure."
+    "counts_note": "BLOCKED reaches 0. 323 DISCHARGED plus 1 ELIMINATED site that leaves the census at the next re-measure. Still requires the closure re-measure, element 7 resolution and downstream L7 before any SAFE_COMPATIBLE verdict."
    },
    "sshd": {
-    "DISCHARGED": 321,
-    "BLOCKED": 2,
+    "DISCHARGED": 323,
+    "BLOCKED": 0,
     "UNKNOWN": 0,
     "obligations_total": 324,
     "verdict": "ACCEPTED",
@@ -2543,7 +2564,7 @@
     "measured_census": "court/freeze-311/census-311.json",
     "inventory_source_head": "6eec8a175",
     "note": "Re-measured at HEAD. The -54 (-36 BLOCKED, -18 DISCHARGED) are carried-removed sites that no longer exist.",
-    "counts_note": "324 at the census; 321 DISCHARGED, 2 BLOCKED (both X509 rows held by B55-F1), 1 ELIMINATED site that leaves the census at the next re-measure. Closure receipts reflect this at the next re-measure."
+    "counts_note": "BLOCKED reaches 0. 323 DISCHARGED plus 1 ELIMINATED site that leaves the census at the next re-measure. Still requires the closure re-measure, element 7 resolution and downstream L7 before any SAFE_COMPATIBLE verdict."
    }
   },
   "closure_receipts": [

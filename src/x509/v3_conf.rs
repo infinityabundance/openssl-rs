@@ -2482,7 +2482,8 @@ mod b55_tests {
     use crate::runtime::obj::{
         NID_certificate_policies, NID_crl_distribution_points,
         NID_id_aa_issuing_distribution_point, NID_info_access, NID_issuer_alt_name,
-        NID_name_constraints, NID_proxyCertInfo, NID_subject_alt_name,
+        NID_issuing_distribution_point, NID_name_constraints, NID_proxyCertInfo,
+        NID_subject_alt_name,
     };
     use crate::runtime::stack::{OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_push};
     use crate::x509::v3_cpols::{ossl_v3_cpols, CERTIFICATEPOLICIES_it};
@@ -2552,16 +2553,19 @@ mod b55_tests {
 
         // `<nid>, <value>, <row>`: each value is shaped so that, with a live context, the row
         // would read the named section. Here the context is NULL and the read must be refused.
-        // `v2i_idp` is not listed: its refusal path frees a freshly allocated
-        // `ISSUING_DIST_POINT`, whose inline boolean template fields make the generic item walk
-        // form a misaligned slot (B55-F1); the call aborts in that free. `v2i_aaidp` is listed
-        // because a refused section leaves `point` NULL, but the row still stays BLOCKED: a
-        // *successful* `OSSL_AA_DIST_POINT` build aborts in the same machinery during encoding.
-        let rows: [(c_int, &CStr, &str); 8] = [
+        // `v2i_idp` and `v2i_aaidp` are both listed at B57: the B55-F1 template-walk defect
+        // that aborted their refusal cleanup (and a successful aaidp encode) is repaired, so
+        // the refusal path now runs to a NULL answer on the error stack.
+        let rows: [(c_int, &CStr, &str); 9] = [
             (
                 NID_crl_distribution_points,
                 c"b55_crl_section",
                 "v2i_crld (value-less entry names a section)",
+            ),
+            (
+                NID_issuing_distribution_point,
+                c"fullname:b55_idp_section",
+                "v2i_idp -> set_dist_point_name -> gnames_from_sectname",
             ),
             (
                 NID_id_aa_issuing_distribution_point,

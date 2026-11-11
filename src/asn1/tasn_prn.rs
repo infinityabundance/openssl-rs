@@ -68,7 +68,9 @@ use crate::asn1::layout::*;
 use crate::asn1::owned::OwnedBlock;
 use crate::asn1::prim::ASN1_INTEGER_to_BN;
 use crate::asn1::time::{ASN1_GENERALIZEDTIME_print, ASN1_UTCTIME_print};
-use crate::asn1::utl::{call_item_exp, do_adb, get_choice_selector_const, get_const_field_ptr};
+use crate::asn1::utl::{
+    call_item_exp, do_adb, get_choice_selector_const, get_const_field_ptr, is_inline_boolean,
+};
 use crate::bn::bignum::{BN_bn2dec, BN_bn2hex, BN_free, BN_num_bits};
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::dump::BIO_dump_indent;
@@ -214,8 +216,17 @@ unsafe fn asn1_item_print_ctx(
         asn1_cb = unsafe { aux_const_cb(aux) };
     }
 
-    // SAFETY: `fld` is the caller's live slot.
-    let present = !unsafe { *fld }.is_null();
+    // An inline `ASN1_BOOLEAN` keeps its value in the slot's low four bytes, so the slot
+    // is never a pointer and reading one would be over-wide and, at a four-byte-aligned
+    // offset, misaligned. Such a field is always "present" for the guard below, which is
+    // what the authority's short-circuit expresses.
+    let present = if is_inline_boolean(it) {
+        true
+    } else {
+        // SAFETY: `fld` is the caller's live slot, and a non-inline field's slot holds a
+        // pointer.
+        !unsafe { *fld }.is_null()
+    };
     if (it.itype != ASN1_ITYPE_PRIMITIVE || it.utype != c_long::from(V_ASN1_BOOLEAN)) && !present {
         if pctx.flags & ASN1_PCTX_FLAGS_SHOW_ABSENT != 0 {
             if nohdr == 0 {

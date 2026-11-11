@@ -778,42 +778,42 @@ static OSSL_AA_DIST_POINT_TT: [Asn1Template; 6] = [
     Asn1Template {
         flags: ASN1_TFLG_EXPLICIT | ASN1_TFLG_OPTIONAL,
         tag: 0,
-        offset: 0,
+        offset: core::mem::offset_of!(AaDistPoint, distpoint) as c_ulong,
         field_name: c"distpoint".as_ptr(),
         item: dist_point_name_it as *mut c_void,
     },
     Asn1Template {
         flags: ASN1_TFLG_IMPLICIT | ASN1_TFLG_OPTIONAL,
         tag: 1,
-        offset: 8,
+        offset: core::mem::offset_of!(AaDistPoint, reasons) as c_ulong,
         field_name: c"reasons".as_ptr(),
         item: ASN1_BIT_STRING_it as *mut c_void,
     },
     Asn1Template {
         flags: ASN1_TFLG_IMPLICIT | ASN1_TFLG_OPTIONAL,
         tag: 2,
-        offset: 16,
+        offset: core::mem::offset_of!(AaDistPoint, indirectCRL) as c_ulong,
         field_name: c"indirectCRL".as_ptr(),
         item: ASN1_FBOOLEAN_it as *mut c_void,
     },
     Asn1Template {
         flags: ASN1_TFLG_IMPLICIT | ASN1_TFLG_OPTIONAL,
         tag: 3,
-        offset: 20,
+        offset: core::mem::offset_of!(AaDistPoint, containsUserAttributeCerts) as c_ulong,
         field_name: c"containsUserAttributeCerts".as_ptr(),
         item: ASN1_TBOOLEAN_it as *mut c_void,
     },
     Asn1Template {
         flags: ASN1_TFLG_IMPLICIT | ASN1_TFLG_OPTIONAL,
         tag: 4,
-        offset: 24,
+        offset: core::mem::offset_of!(AaDistPoint, containsAACerts) as c_ulong,
         field_name: c"containsAACerts".as_ptr(),
         item: ASN1_TBOOLEAN_it as *mut c_void,
     },
     Asn1Template {
         flags: ASN1_TFLG_IMPLICIT | ASN1_TFLG_OPTIONAL,
         tag: 5,
-        offset: 28,
+        offset: core::mem::offset_of!(AaDistPoint, containsSOAPublicKeyCerts) as c_ulong,
         field_name: c"containsSOAPublicKeyCerts".as_ptr(),
         item: ASN1_TBOOLEAN_it as *mut c_void,
     },
@@ -2216,3 +2216,247 @@ pub static ossl_v3_aa_issuing_dist_point: X509V3ExtMethod = X509V3ExtMethod {
     r2i: None,
     usr_data: ptr::null_mut(),
 };
+
+#[cfg(test)]
+mod b57_repro_tests {
+    //! B57 — the generic ASN.1 template walk and inline `ASN1_BOOLEAN` fields.
+    //!
+    //! A template field is reached as `base + offset` and the walk historically read the
+    //! field as an `ASN1_VALUE **` (an eight-byte pointer). An inline `ASN1_BOOLEAN` is a
+    //! four-byte `int` at a four-byte-aligned offset, so on the pre-fix tree the free walk
+    //! aborted at `src/asn1/fre.rs` and the encode walk at `src/asn1/i2d.rs` with
+    //! `misaligned pointer dereference: address must be a multiple of 0x8`. These tests
+    //! build the two rows' objects through the real config dispatcher, check the exact
+    //! wire encoding and the authority's set/clear semantics, and pin the free, encode and
+    //! print walks.
+
+    use super::*;
+    use crate::asn1::tasn_prn::ASN1_item_print;
+    use crate::runtime::bio::bss_mem::BIO_s_mem;
+    use crate::runtime::bio::{BIO_free, BIO_new};
+    use crate::runtime::err::{ERR_clear_error, ERR_get_error};
+    use crate::x509::v3_conf::X509V3_EXT_nconf_nid;
+    use crate::x509::x509_v3::X509_EXTENSION_get_data;
+    use crate::x509::x_exten::{X509Extension, X509_EXTENSION_free};
+
+    /// Build an extension the way a real caller does: through the row's `v2i` callback,
+    /// the item encoder and the item free, with a NULL config context.
+    unsafe fn build(nid: c_int, value: &core::ffi::CStr) -> *mut X509Extension {
+        // SAFETY: `value` is NUL-terminated; NULL `conf`/`ctx` are what the contract allows.
+        unsafe { X509V3_EXT_nconf_nid(ptr::null_mut(), ptr::null_mut(), nid, value.as_ptr()) }
+    }
+
+    /// The encoded value of an extension, as a byte slice for as long as the caller keeps
+    /// `ext` alive.
+    unsafe fn ext_bytes<'a>(ext: *mut X509Extension) -> &'a [u8] {
+        // SAFETY: `ext` is live per the caller's contract.
+        let data = unsafe { X509_EXTENSION_get_data(ext) };
+        assert!(!data.is_null(), "the extension carries an OCTET STRING");
+        // SAFETY: `data` is live and `length` counts its initialized bytes.
+        unsafe {
+            let len = (*data).length.max(0) as usize;
+            core::slice::from_raw_parts((*data).data, len)
+        }
+    }
+
+    /// The free walk reads every template field. An inline `ASN1_BOOLEAN` must be read at
+    /// its real width: pre-fix this aborts at `src/asn1/fre.rs` (offset 12, misaligned).
+    #[test]
+    fn b57_idp_free_walk_reads_inline_booleans_at_their_width() {
+        let _g = crate::test_support::lock_global_state();
+        ERR_clear_error();
+        let idp = ISSUING_DIST_POINT_new();
+        assert!(!idp.is_null(), "the allocator answers a fresh value");
+        // SAFETY: `idp` is live and owned by this frame; `ASN1_item_new` sets each
+        // `ASN1_FBOOLEAN` to its default (FALSE).
+        unsafe {
+            assert_eq!((*idp).onlyuser, 0);
+            assert_eq!((*idp).onlyCA, 0);
+            assert!((*idp).onlysomereasons.is_null());
+            assert_eq!((*idp).indirectCRL, 0);
+            assert_eq!((*idp).onlyattr, 0);
+            ISSUING_DIST_POINT_free(idp);
+        }
+    }
+
+    /// A successful `issuingDistributionPoint` build through the dispatcher: the value is
+    /// encoded (pre-fix this aborts at `src/asn1/i2d.rs`) and freed again (pre-fix this
+    /// aborts at `src/asn1/fre.rs`). The exact DER pins the wire encoding of every inline
+    /// boolean, and decoding it back pins the set semantics.
+    #[test]
+    fn b57_idp_nconf_encodes_every_inline_boolean() {
+        let _g = crate::test_support::lock_global_state();
+        ERR_clear_error();
+        // The four `ASN1_FBOOLEAN` template fields, each TRUE.
+        // SAFETY: the value is NUL-terminated; NULL `conf`/`ctx` are allowed.
+        let ext = unsafe {
+            build(
+                NID_issuing_distribution_point,
+                c"onlyuser:TRUE,onlyCA:TRUE,indirectCRL:TRUE,onlyAA:TRUE",
+            )
+        };
+        assert!(!ext.is_null(), "a valid idp value must build");
+        // [0] absent, then [1]/[2]/[4]/[5] each IMPLICIT primitive TRUE = 0x80|tag, len 1,
+        // value 0xFF. A FALSE (the item default) is omitted.
+        let want = [
+            0x30, 0x0c, 0x81, 0x01, 0xff, 0x82, 0x01, 0xff, 0x84, 0x01, 0xff, 0x85, 0x01, 0xff,
+        ];
+        // SAFETY: `ext` is live and owned by this frame.
+        let got = unsafe { ext_bytes(ext) };
+        assert_eq!(
+            got, &want,
+            "the inline booleans must encode with their real width"
+        );
+        // SAFETY: `ext` is live and owned by this frame.
+        unsafe { X509_EXTENSION_free(ext) };
+
+        // Decode the same bytes back and confirm each field landed in its four-byte slot.
+        let mut cur = want.as_ptr();
+        let mut out: *mut IssuingDistPoint = ptr::null_mut();
+        // SAFETY: `cur`/`&mut out` are this frame's slots over `want`.
+        let dec =
+            unsafe { d2i_ISSUING_DIST_POINT(&raw mut out, &raw mut cur, want.len() as c_long) };
+        assert!(!dec.is_null(), "the encoded value must decode");
+        // SAFETY: `dec` is live and owned by this frame.
+        unsafe {
+            assert_eq!((*dec).onlyuser, 0xff);
+            assert_eq!((*dec).onlyCA, 0xff);
+            assert_eq!((*dec).indirectCRL, 0xff);
+            assert_eq!((*dec).onlyattr, 0xff);
+            assert!((*dec).onlysomereasons.is_null());
+            assert!((*dec).distpoint.is_null());
+            ISSUING_DIST_POINT_free(dec);
+        }
+    }
+
+    /// The refusal path is the one B55 named at `src/x509/v3_crld.rs:1638`: the freshly
+    /// allocated `ISSUING_DIST_POINT` is freed after an unknown field name. Pre-fix that
+    /// free aborts in the boolean template walk; post-fix the call answers NULL with the
+    /// error raised and the process survives.
+    #[test]
+    fn b57_idp_nconf_refusal_frees_partial_value() {
+        let _g = crate::test_support::lock_global_state();
+        ERR_clear_error();
+        // SAFETY: the value is NUL-terminated; NULL `conf`/`ctx` are allowed.
+        let ext = unsafe { build(NID_issuing_distribution_point, c"bogus:TRUE") };
+        assert!(ext.is_null(), "an unknown idp field must be refused");
+        assert_ne!(ERR_get_error(), 0, "the refusal must raise");
+        ERR_clear_error();
+    }
+
+    /// A successful `aaDistPoint` build through the dispatcher. All six templates are
+    /// walked during the encode (pre-fix this aborts at offset 20 of the first template
+    /// that reaches a boolean) and during the free of the built value.
+    #[test]
+    fn b57_aaidp_nconf_encodes_inline_booleans() {
+        let _g = crate::test_support::lock_global_state();
+        ERR_clear_error();
+        // SAFETY: the value is NUL-terminated; NULL `conf`/`ctx` are allowed.
+        let ext = unsafe {
+            build(
+                NID_id_aa_issuing_distribution_point,
+                c"URI:http://example.test",
+            )
+        };
+        assert!(!ext.is_null(), "a bare GENERAL_NAME must build");
+        // SAFETY: `ext` is live and owned by this frame.
+        let got = unsafe { ext_bytes(ext) };
+        assert_eq!(got.first(), Some(&0x30), "the item is a SEQUENCE");
+
+        let mut cur = got.as_ptr();
+        let mut out: *mut AaDistPoint = ptr::null_mut();
+        // SAFETY: `cur`/`&mut out` are this frame's slots over `got`.
+        let dec =
+            unsafe { d2i_OSSL_AA_DIST_POINT(&raw mut out, &raw mut cur, got.len() as c_long) };
+        assert!(!dec.is_null(), "the encoded value must decode");
+        // SAFETY: `dec` is live and owned by this frame. `ASN1_item_new` left the
+        // `ASN1_FBOOLEAN` at FALSE and the three `ASN1_TBOOLEAN`s at their TRUE default;
+        // the absent fields keep those values.
+        unsafe {
+            assert!(!(*dec).distpoint.is_null(), "the URI is present");
+            assert!((*dec).reasons.is_null());
+            assert_eq!((*dec).indirectCRL, 0);
+            assert_ne!((*dec).containsUserAttributeCerts, 0);
+            assert_ne!((*dec).containsAACerts, 0);
+            assert_ne!((*dec).containsSOAPublicKeyCerts, 0);
+            OSSL_AA_DIST_POINT_free(dec);
+        }
+        // SAFETY: `ext` is live and owned by this frame.
+        unsafe { X509_EXTENSION_free(ext) };
+    }
+
+    /// The `ASN1_TBOOLEAN` default is TRUE, so its *set* wire form is the FALSE/clear value
+    /// `00`, and its TRUE value is omitted. This pins both directions at the four-byte
+    /// field width for `OSSL_AA_DIST_POINT`, whose boolean fields sit at offsets 20 and 24.
+    #[test]
+    fn b57_aaidp_tboolean_set_and_clear_wire_form() {
+        let _g = crate::test_support::lock_global_state();
+        let point = OSSL_AA_DIST_POINT_new();
+        assert!(!point.is_null());
+        // SAFETY: `point` is live and owned by this frame.
+        unsafe {
+            assert_eq!((*point).indirectCRL, 0);
+            assert_ne!((*point).containsUserAttributeCerts, 0);
+            assert_ne!((*point).containsAACerts, 0);
+            assert_ne!((*point).containsSOAPublicKeyCerts, 0);
+            (*point).indirectCRL = 0xff;
+            (*point).containsUserAttributeCerts = 0;
+            (*point).containsAACerts = 0;
+            (*point).containsSOAPublicKeyCerts = 0;
+        }
+        let want = [
+            0x30, 0x0c, 0x82, 0x01, 0xff, 0x83, 0x01, 0x00, 0x84, 0x01, 0x00, 0x85, 0x01, 0x00,
+        ];
+        // Size the encoding, then write it into a caller buffer (the non-allocating arm of
+        // the public encoder).
+        // SAFETY: `point` is live; a NULL destination is the sizing convention.
+        let len = unsafe { i2d_OSSL_AA_DIST_POINT(point, ptr::null_mut()) };
+        assert_eq!(len, want.len() as c_int);
+        let mut buf = [0u8; 14];
+        let mut p = buf.as_mut_ptr();
+        // SAFETY: `buf` has `len` bytes and `p` points at its start.
+        let written = unsafe { i2d_OSSL_AA_DIST_POINT(point, &raw mut p) };
+        assert_eq!(written, len);
+        assert_eq!(buf, want);
+        // SAFETY: `point` is live and owned by this frame.
+        unsafe { OSSL_AA_DIST_POINT_free(point) };
+
+        // A fresh value has every field at its default, so nothing is emitted.
+        let fresh = OSSL_AA_DIST_POINT_new();
+        assert!(!fresh.is_null());
+        // SAFETY: `fresh` is live.
+        let empty_len = unsafe { i2d_OSSL_AA_DIST_POINT(fresh, ptr::null_mut()) };
+        assert_eq!(empty_len, 2);
+        let mut empty = [0u8; 2];
+        let mut p = empty.as_mut_ptr();
+        // SAFETY: `empty` has two bytes and `p` points at its start.
+        unsafe { i2d_OSSL_AA_DIST_POINT(fresh, &raw mut p) };
+        assert_eq!(empty, [0x30, 0x00]);
+        // SAFETY: `fresh` is live and owned by this frame.
+        unsafe { OSSL_AA_DIST_POINT_free(fresh) };
+    }
+
+    /// The generic print walk (`asn1_item_print_ctx`) makes the same pointer-shaped
+    /// "is the field present?" read for every template, so it hit the same defect. This
+    /// drives it over a value whose boolean fields are set, so the walk visits them.
+    #[test]
+    fn b57_print_walk_reads_inline_booleans_at_their_width() {
+        let _g = crate::test_support::lock_global_state();
+        let idp = ISSUING_DIST_POINT_new();
+        assert!(!idp.is_null());
+        // SAFETY: `idp` is live and owned by this frame.
+        unsafe { (*idp).onlyCA = 0xff };
+        // SAFETY: `BIO_s_mem` is a static method.
+        let bio = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bio.is_null(), "a memory BIO must be created");
+        // SAFETY: `bio` is live; `idp` is a live value of `ISSUING_DIST_POINT_it()`.
+        let ok =
+            unsafe { ASN1_item_print(bio, idp.cast(), 0, ISSUING_DIST_POINT_it(), ptr::null()) };
+        assert_eq!(ok, 1, "the print walk must complete");
+        // SAFETY: `bio` is this frame's own; `idp` is live and owned here.
+        unsafe {
+            BIO_free(bio);
+            ISSUING_DIST_POINT_free(idp);
+        }
+    }
+}
