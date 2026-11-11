@@ -157,11 +157,12 @@ are **references for technique only**.
 - One bounded task at a time; a subagent does not commit or push; the
   orchestrator commits, verifies and merges.
 - Everything runs in the court container (`docker/openssl-rs-court.sh`), never on
-  the host. **OOM protection is mandatory**: run one heavy command at a time;
+  - **OOM protection is mandatory**: run one heavy command at a time;
   build with `CARGO_BUILD_JOBS=4` and test with `cargo test --lib -- --test-threads=4`
   (the editor and other host work already consume most of RAM and swap is full —
   a build spike has crashed the session before); check `free -g` before a build
   and abort if `available` is small. Never build into a RAM-backed tmpfs.
+  §6.1 makes this unconditional, and it binds every agent, every command.
 - Local gate per batch: `cargo fmt --all -- --check`,
   `cargo clippy --all-targets -- -D warnings`,
   **all current library tests pass**. The observed floor is **1962** library
@@ -180,6 +181,37 @@ are **references for technique only**.
   retained / **newly introduced**, compatibility tested, and whether every
   remaining unsafe op has an explicit validity contract.
 - Defer full Phase-25 forensic regeneration to seal points; keep the local gate.
+
+### §6.1 OOM protection is unconditional (2026-11-11)
+
+**No command may run without a memory cap. There is no exception, no "small"
+build, and no agent that is exempt.** A crash of the editor or the session is not
+an acceptable cost of any experiment, so protection is applied before the command
+starts, not after it gets large.
+
+Rules, all mandatory:
+
+1. **Every heavy command runs inside `docker/openssl-rs-court.sh`**, which caps the
+   cgroup. Nothing compiles, links, tests or benchmarks on the host — not one
+   crate, not one `rustc` invocation, not one script that does either.
+2. **The cap is computed from live availability, never assumed.** Before the
+   command: read `available` from `free -g`. If available < 24 GiB, do not start a
+   build. Set `OPENSSL_RS_COURT_MEM` and `OPENSSL_RS_COURT_MEMSWAP` explicitly to
+   `min(8g, available - 16g)` with a floor of `2g`; if that floor is not met, the
+   command does not run. A court started without these variables set is a
+   violation, even if it happens to fit.
+3. **One heavy command at a time.** Check `docker ps` and `/proc/pressure/io`
+   first. Another session's benchmark is not ours to interrupt and not ours to
+   compete with: wait, or lower the cap and say so in the receipt.
+4. **Bound the parallelism**: `CARGO_BUILD_JOBS<=4`, `--test-threads<=4`, and
+   prefer an exact test name over a whole module when the module is large.
+5. **A run that OOMs is evidence, not noise.** Record it, stop, lower the cap, and
+   state the change. Do not retry the same command at the same size.
+6. **If a cap cannot be established, the command does not run.** "I could not
+   measure" is a refusal, never a licence to run unprotected.
+
+This section binds the orchestrator as well as subagents: the ledger, receipt and
+`git` commands are exempt because they do not compile; everything else is not.
 
 ### Execution discipline (mandatory — 2026-10-17)
 
