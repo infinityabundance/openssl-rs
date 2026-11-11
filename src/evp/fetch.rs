@@ -120,11 +120,9 @@ const LINE_STRDUP_EMPTY: c_int = 592;
 /// is the reason it is one here: the index number appears **once** in this file, so the four
 /// store-touching functions cannot disagree about which slot the EVP fetch path uses.
 ///
-/// # Safety
-/// `libctx` must be NULL or live.
-pub(crate) unsafe fn get_evp_method_store(libctx: *mut c_void) -> *mut OsslMethodStore {
-    // `lib_ctx_get_data` is a SAFE function in this crate (D113), so the slot read needs no
-    // block even though this function is `unsafe`.
+/// Safe because `lib_ctx_get_data` validates the context's liveness and answers NULL for a
+/// released or foreign context, exactly as it does for an absent slot.
+pub(crate) fn get_evp_method_store(libctx: *mut c_void) -> *mut OsslMethodStore {
     lib_ctx_get_data(libctx, OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX).cast::<OsslMethodStore>()
 }
 
@@ -144,8 +142,8 @@ unsafe fn evp_set_parsed_default_properties(
     loadconfig: c_int,
     mirrored: c_int,
 ) -> c_int {
-    // SAFETY: `libctx` is NULL or live per the contract.
-    let store = unsafe { get_evp_method_store(libctx) };
+    // The slot read validates liveness itself.
+    let store = get_evp_method_store(libctx);
     // SAFETY: as above.
     let plp = unsafe { ossl_ctx_global_properties(libctx, loadconfig) };
 
@@ -937,8 +935,8 @@ unsafe fn inner_evp_generic_fetch(
 ) -> *mut c_void {
     // SAFETY: `methdata` is live per the contract.
     let libctx = unsafe { (*methdata).libctx };
-    // SAFETY: `libctx` is live per the contract and this only reads the slot.
-    let store = unsafe { get_evp_method_store(libctx) };
+    // The slot read validates liveness itself.
+    let store = get_evp_method_store(libctx);
     // SAFETY: `libctx` is live, so this answers the namemap or NULL.
     let namemap = ossl_namemap_stored(libctx);
 

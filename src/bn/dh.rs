@@ -81,352 +81,320 @@ use crate::bn::dh_data as data;
 
 /// `const BIGNUM ossl_bignum_const_2` — `crypto/bn/bn_dh.c:1385`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_const_2() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_const_2() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_CONST_2_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_dh1024_160_p` — `crypto/bn/bn_dh.c:1389`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_dh1024_160_p() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_dh1024_160_p() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_DH1024_160_P_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_dh1024_160_q` — `crypto/bn/bn_dh.c:1390`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_dh1024_160_q() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_dh1024_160_q() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_DH1024_160_Q_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_dh1024_160_g` — `crypto/bn/bn_dh.c:1391`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_dh1024_160_g() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_dh1024_160_g() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_DH1024_160_G_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_dh2048_224_p` — `crypto/bn/bn_dh.c:1392`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_dh2048_224_p() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_dh2048_224_p() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_DH2048_224_P_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_dh2048_224_q` — `crypto/bn/bn_dh.c:1393`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_dh2048_224_q() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_dh2048_224_q() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_DH2048_224_Q_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_dh2048_224_g` — `crypto/bn/bn_dh.c:1394`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_dh2048_224_g() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_dh2048_224_g() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_DH2048_224_G_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_dh2048_256_p` — `crypto/bn/bn_dh.c:1395`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_dh2048_256_p() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_dh2048_256_p() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_DH2048_256_P_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_dh2048_256_q` — `crypto/bn/bn_dh.c:1396`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_dh2048_256_q() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_dh2048_256_q() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_DH2048_256_Q_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_dh2048_256_g` — `crypto/bn/bn_dh.c:1397`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_dh2048_256_g() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_dh2048_256_g() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_DH2048_256_G_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_ffdhe2048_p` — `crypto/bn/bn_dh.c:1399`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_ffdhe2048_p() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_ffdhe2048_p() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_FFDHE2048_P_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_ffdhe2048_q` — `crypto/bn/bn_dh.c:1400`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_ffdhe2048_q() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_ffdhe2048_q() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_FFDHE2048_Q_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_ffdhe3072_p` — `crypto/bn/bn_dh.c:1401`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_ffdhe3072_p() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_ffdhe3072_p() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_FFDHE3072_P_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_ffdhe3072_q` — `crypto/bn/bn_dh.c:1402`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_ffdhe3072_q() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_ffdhe3072_q() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_FFDHE3072_Q_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_ffdhe4096_p` — `crypto/bn/bn_dh.c:1403`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_ffdhe4096_p() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_ffdhe4096_p() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_FFDHE4096_P_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_ffdhe4096_q` — `crypto/bn/bn_dh.c:1404`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_ffdhe4096_q() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_ffdhe4096_q() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_FFDHE4096_Q_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_ffdhe6144_p` — `crypto/bn/bn_dh.c:1405`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_ffdhe6144_p() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_ffdhe6144_p() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_FFDHE6144_P_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_ffdhe6144_q` — `crypto/bn/bn_dh.c:1406`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_ffdhe6144_q() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_ffdhe6144_q() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_FFDHE6144_Q_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_ffdhe8192_p` — `crypto/bn/bn_dh.c:1407`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_ffdhe8192_p() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_ffdhe8192_p() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_FFDHE8192_P_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_ffdhe8192_q` — `crypto/bn/bn_dh.c:1408`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_ffdhe8192_q() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_ffdhe8192_q() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_FFDHE8192_Q_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_modp_1536_p` — `crypto/bn/bn_dh.c:1411`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_modp_1536_p() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_modp_1536_p() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_MODP_1536_P_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_modp_1536_q` — `crypto/bn/bn_dh.c:1412`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_modp_1536_q() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_modp_1536_q() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_MODP_1536_Q_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_modp_2048_p` — `crypto/bn/bn_dh.c:1414`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_modp_2048_p() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_modp_2048_p() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_MODP_2048_P_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_modp_2048_q` — `crypto/bn/bn_dh.c:1415`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_modp_2048_q() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_modp_2048_q() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_MODP_2048_Q_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_modp_3072_p` — `crypto/bn/bn_dh.c:1416`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_modp_3072_p() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_modp_3072_p() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_MODP_3072_P_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_modp_3072_q` — `crypto/bn/bn_dh.c:1417`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_modp_3072_q() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_modp_3072_q() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_MODP_3072_Q_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_modp_4096_p` — `crypto/bn/bn_dh.c:1418`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_modp_4096_p() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_modp_4096_p() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_MODP_4096_P_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_modp_4096_q` — `crypto/bn/bn_dh.c:1419`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_modp_4096_q() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_modp_4096_q() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_MODP_4096_Q_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_modp_6144_p` — `crypto/bn/bn_dh.c:1420`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_modp_6144_p() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_modp_6144_p() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_MODP_6144_P_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_modp_6144_q` — `crypto/bn/bn_dh.c:1421`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_modp_6144_q() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_modp_6144_q() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_MODP_6144_Q_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_modp_8192_p` — `crypto/bn/bn_dh.c:1422`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_modp_8192_p() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_modp_8192_p() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_MODP_8192_P_BYTES)
 }
 
 /// `const BIGNUM ossl_bignum_modp_8192_q` — `crypto/bn/bn_dh.c:1423`.
 ///
-/// # Safety
-///
-/// Takes no pointers. The result is the shared object behind the authority's own
-/// `const BIGNUM`; it must not be modified or freed.
-pub(crate) unsafe fn ossl_bignum_modp_8192_q() -> *const BigNum {
+/// The result is the shared object behind the authority's own `const BIGNUM`;
+/// a caller that mutates or frees it takes on that remaining obligation through
+/// the raw pointer it receives.
+pub(crate) fn ossl_bignum_modp_8192_q() -> *const BigNum {
     static CACHE: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
     static_data_bignum(&CACHE, &data::OSSL_BIGNUM_MODP_8192_Q_BYTES)
 }

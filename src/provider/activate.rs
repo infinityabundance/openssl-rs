@@ -1681,7 +1681,7 @@ mod tests {
     const SELF_TEST_SLOT: usize = 5;
 
     /// `osl_provider_teardown`'s target: records that it ran **and** with which context.
-    unsafe extern "C" fn p_teardown(ctx: *mut c_void) {
+    extern "C" fn p_teardown(ctx: *mut c_void) {
         // A pointer comparison, which needs no `unsafe` block: `provctx_addr` is a safe
         // function and comparing two raw pointers is a safe operation.
         let matches = ctx == provctx_addr();
@@ -1690,7 +1690,7 @@ mod tests {
     }
 
     /// `OSSL_FUNC_provider_gettable_params_fn`.
-    unsafe extern "C" fn p_gettable_params(ctx: *mut c_void) -> *const OsslParam {
+    extern "C" fn p_gettable_params(ctx: *mut c_void) -> *const OsslParam {
         // A pointer comparison, which needs no `unsafe` block: `provctx_addr` is a safe
         // function and comparing two raw pointers is a safe operation.
         let matches = ctx == provctx_addr();
@@ -1699,7 +1699,7 @@ mod tests {
     }
 
     /// `OSSL_FUNC_provider_get_params_fn`.
-    unsafe extern "C" fn p_get_params(ctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    extern "C" fn p_get_params(ctx: *mut c_void, params: *mut OsslParam) -> c_int {
         // A pointer comparison, which needs no `unsafe` block: `provctx_addr` is a safe
         // function and comparing two raw pointers is a safe operation.
         let matches = ctx == provctx_addr();
@@ -1709,7 +1709,7 @@ mod tests {
     }
 
     /// `OSSL_FUNC_provider_self_test_fn`.
-    unsafe extern "C" fn p_self_test(ctx: *mut c_void) -> c_int {
+    extern "C" fn p_self_test(ctx: *mut c_void) -> c_int {
         // A pointer comparison, which needs no `unsafe` block: `provctx_addr` is a safe
         // function and comparing two raw pointers is a safe operation.
         let matches = ctx == provctx_addr();
@@ -1757,7 +1757,7 @@ mod tests {
     }
 
     /// `OSSL_FUNC_provider_unquery_operation_fn` — answers nothing, records what it got.
-    unsafe extern "C" fn p_unquery_operation(
+    extern "C" fn p_unquery_operation(
         ctx: *mut c_void,
         operation_id: c_int,
         algs: *const OsslAlgorithm,
@@ -1771,7 +1771,7 @@ mod tests {
     }
 
     /// `OSSL_FUNC_provider_random_bytes_fn`.
-    unsafe extern "C" fn p_random_bytes(
+    extern "C" fn p_random_bytes(
         ctx: *mut c_void,
         which: c_int,
         _buf: *mut c_void,

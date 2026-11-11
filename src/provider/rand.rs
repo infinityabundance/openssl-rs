@@ -552,17 +552,17 @@ unsafe impl DrbgCtx for ProvDrbgNonceGlobal {
 
 /// `int ossl_drbg_lock(void *vctx)` — `drbg.c:53-56`. A hint only, ignored.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-pub(crate) unsafe extern "C" fn ossl_drbg_lock(_vctx: *mut c_void) -> c_int {
+pub(crate) extern "C" fn ossl_drbg_lock(_vctx: *mut c_void) -> c_int {
     1
 }
 
 /// `void ossl_drbg_unlock(void *vctx)` — `drbg.c:59-61`. A hint only, ignored.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-pub(crate) unsafe extern "C" fn ossl_drbg_unlock(_vctx: *mut c_void) {}
+pub(crate) extern "C" fn ossl_drbg_unlock(_vctx: *mut c_void) {}
 
 /// `static int ossl_drbg_lock_parent(PROV_DRBG *drbg)` — `drbg.c:63-74`.
 ///
@@ -3021,9 +3021,9 @@ unsafe extern "C" fn drbg_ctr_get_ctx_params(vdrbg: *mut c_void, params: *mut Os
 /// `static const OSSL_PARAM *drbg_ctr_gettable_ctx_params(void *vctx, void *provctx)`
 /// — `drbg_ctr.c:748-752`.
 ///
-/// # Safety
+/// # Notes
 /// The `OSSL_FUNC_rand_gettable_ctx_params_fn` contract.
-unsafe extern "C" fn drbg_ctr_gettable_ctx_params(
+extern "C" fn drbg_ctr_gettable_ctx_params(
     _vctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -3197,9 +3197,9 @@ unsafe extern "C" fn drbg_ctr_set_ctx_params(vctx: *mut c_void, params: *const O
 /// `static const OSSL_PARAM *drbg_ctr_settable_ctx_params(void *vctx, void *provctx)`
 /// — `drbg_ctr.c:850-854`.
 ///
-/// # Safety
+/// # Notes
 /// The `OSSL_FUNC_rand_settable_ctx_params_fn` contract.
-unsafe extern "C" fn drbg_ctr_settable_ctx_params(
+extern "C" fn drbg_ctr_settable_ctx_params(
     _vctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -4091,9 +4091,9 @@ unsafe extern "C" fn drbg_hash_get_ctx_params(vdrbg: *mut c_void, params: *mut O
 /// `static const OSSL_PARAM *drbg_hash_gettable_ctx_params(void *vctx, void *p_ctx)`
 /// — `drbg_hash.c:536-540`.
 ///
-/// # Safety
+/// # Notes
 /// The `OSSL_FUNC_rand_gettable_ctx_params_fn` contract.
-unsafe extern "C" fn drbg_hash_gettable_ctx_params(
+extern "C" fn drbg_hash_gettable_ctx_params(
     _vctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -4299,9 +4299,9 @@ unsafe extern "C" fn drbg_hash_set_ctx_params(
 /// `static const OSSL_PARAM *drbg_hash_settable_ctx_params(void *vctx, void *p_ctx)`
 /// — `drbg_hash.c:665-669`.
 ///
-/// # Safety
+/// # Notes
 /// The `OSSL_FUNC_rand_settable_ctx_params_fn` contract.
-unsafe extern "C" fn drbg_hash_settable_ctx_params(
+extern "C" fn drbg_hash_settable_ctx_params(
     _vctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -5076,9 +5076,9 @@ unsafe extern "C" fn drbg_hmac_get_ctx_params(vdrbg: *mut c_void, params: *mut O
 /// `static const OSSL_PARAM *drbg_hmac_gettable_ctx_params(void *vctx, void *p_ctx)`
 /// — `drbg_hmac.c:438-442`.
 ///
-/// # Safety
+/// # Notes
 /// The `OSSL_FUNC_rand_gettable_ctx_params_fn` contract.
-unsafe extern "C" fn drbg_hmac_gettable_ctx_params(
+extern "C" fn drbg_hmac_gettable_ctx_params(
     _vctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -5334,9 +5334,9 @@ unsafe extern "C" fn drbg_hmac_set_ctx_params(
 /// `static const OSSL_PARAM *drbg_hmac_settable_ctx_params(void *vctx, void *p_ctx)`
 /// — `drbg_hmac.c:596-600`.
 ///
-/// # Safety
+/// # Notes
 /// The `OSSL_FUNC_rand_settable_ctx_params_fn` contract.
-unsafe extern "C" fn drbg_hmac_settable_ctx_params(
+extern "C" fn drbg_hmac_settable_ctx_params(
     _vctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {

@@ -488,7 +488,7 @@ pub(crate) fn evp_md_new() -> *mut EvpMd {
 unsafe extern "C" fn set_legacy_nid(name: *const c_char, vlegacy_nid: *mut c_void) {
     let legacy_nid = vlegacy_nid.cast::<c_int>();
     // SAFETY: `name` is NUL-terminated per the contract.
-    let legacy_method = unsafe { OBJ_NAME_get(name, OBJ_NAME_TYPE_MD_METH) };
+    let legacy_method = OBJ_NAME_get(name, OBJ_NAME_TYPE_MD_METH);
     // SAFETY: `legacy_nid` is writable per the contract.
     if unsafe { *legacy_nid } == -1 {
         return;
@@ -4070,29 +4070,25 @@ pub unsafe extern "C" fn EVP_MD_CTX_test_flags(ctx: *const EvpMdCtx, flags: c_in
 
 /// `static int init(EVP_MD_CTX *ctx)` — answers 1 without touching anything.
 ///
-/// # Safety
+/// # Notes
 /// The ABI is the authority's; no argument is read.
-unsafe extern "C" fn md_null_init(_ctx: *mut EvpMdCtx) -> c_int {
+extern "C" fn md_null_init(_ctx: *mut EvpMdCtx) -> c_int {
     1
 }
 
 /// `static int update(EVP_MD_CTX *ctx, const void *data, size_t count)` — answers 1.
 ///
-/// # Safety
+/// # Notes
 /// The ABI is the authority's; no argument is read.
-unsafe extern "C" fn md_null_update(
-    _ctx: *mut EvpMdCtx,
-    _data: *const c_void,
-    _count: usize,
-) -> c_int {
+extern "C" fn md_null_update(_ctx: *mut EvpMdCtx, _data: *const c_void, _count: usize) -> c_int {
     1
 }
 
 /// `static int final(EVP_MD_CTX *ctx, unsigned char *md)` — answers 1.
 ///
-/// # Safety
+/// # Notes
 /// The ABI is the authority's; no argument is read.
-unsafe extern "C" fn md_null_final(_ctx: *mut EvpMdCtx, _md: *mut c_uchar) -> c_int {
+extern "C" fn md_null_final(_ctx: *mut EvpMdCtx, _md: *mut c_uchar) -> c_int {
     1
 }
 
@@ -6080,26 +6076,22 @@ mod tests {
 
     // Callbacks whose identity is the observable: each is installed on a hand-built method and read
     // back through the getter, so a setter that stored nothing would fail the positive control.
-    unsafe extern "C" fn init_probe(_ctx: *mut EvpMdCtx) -> c_int {
+    extern "C" fn init_probe(_ctx: *mut EvpMdCtx) -> c_int {
         1
     }
-    unsafe extern "C" fn update_probe(
-        _ctx: *mut EvpMdCtx,
-        _data: *const c_void,
-        _count: usize,
-    ) -> c_int {
+    extern "C" fn update_probe(_ctx: *mut EvpMdCtx, _data: *const c_void, _count: usize) -> c_int {
         1
     }
-    unsafe extern "C" fn final_probe(_ctx: *mut EvpMdCtx, _md: *mut c_uchar) -> c_int {
+    extern "C" fn final_probe(_ctx: *mut EvpMdCtx, _md: *mut c_uchar) -> c_int {
         1
     }
-    unsafe extern "C" fn copy_probe(_to: *mut EvpMdCtx, _from: *const EvpMdCtx) -> c_int {
+    extern "C" fn copy_probe(_to: *mut EvpMdCtx, _from: *const EvpMdCtx) -> c_int {
         1
     }
-    unsafe extern "C" fn cleanup_probe(_ctx: *mut EvpMdCtx) -> c_int {
+    extern "C" fn cleanup_probe(_ctx: *mut EvpMdCtx) -> c_int {
         1
     }
-    unsafe extern "C" fn ctrl_probe(
+    extern "C" fn ctrl_probe(
         _ctx: *mut EvpMdCtx,
         _cmd: c_int,
         _p1: c_int,
@@ -6401,9 +6393,9 @@ mod tests {
 
         /// `static int update(EVP_MD_CTX *, const void *, size_t)` — counts and accepts.
         ///
-        /// # Safety
+        /// # Notes
         /// The ABI is the authority's; no argument is read.
-        unsafe extern "C" fn counting_update(
+        extern "C" fn counting_update(
             _ctx: *mut EvpMdCtx,
             _data: *const c_void,
             _count: usize,
@@ -6604,9 +6596,9 @@ mod tests {
     fn copying_a_context_onto_itself_is_a_safe_identity() {
         /// `static int init(EVP_MD_CTX *)` -- accepts.
         ///
-        /// # Safety
+        /// # Notes
         /// The ABI is the authority's; no argument is read.
-        unsafe extern "C" fn init(_ctx: *mut EvpMdCtx) -> c_int {
+        extern "C" fn init(_ctx: *mut EvpMdCtx) -> c_int {
             1
         }
 
@@ -6749,9 +6741,9 @@ mod tests {
 
         /// `static void copyctx(void *, void *)` -- counts and records pointer identity.
         ///
-        /// # Safety
+        /// # Notes
         /// The ABI is the authority's; the pointers are compared, not read.
-        unsafe extern "C" fn copyctx(out: *mut c_void, in_: *mut c_void) {
+        extern "C" fn copyctx(out: *mut c_void, in_: *mut c_void) {
             CALLS.fetch_add(1, Ordering::AcqRel);
             if out == in_ {
                 SAME.fetch_add(1, Ordering::AcqRel);
@@ -6794,9 +6786,9 @@ mod tests {
 
         /// `static int cleanup(EVP_MD_CTX *)` -- counts.
         ///
-        /// # Safety
+        /// # Notes
         /// The ABI is the authority's; no argument is read.
-        unsafe extern "C" fn cleanup(_ctx: *mut EvpMdCtx) -> c_int {
+        extern "C" fn cleanup(_ctx: *mut EvpMdCtx) -> c_int {
             CLEANUPS.fetch_add(1, Ordering::AcqRel);
             1
         }
@@ -6879,9 +6871,9 @@ mod tests {
     fn a_failed_legacy_copy_resets_the_destination() {
         /// `static void *dupctx(void *)` -- refuses.
         ///
-        /// # Safety
+        /// # Notes
         /// The ABI is the authority's; no argument is read.
-        unsafe extern "C" fn refuse_dup(_ctx: *mut c_void) -> *mut c_void {
+        extern "C" fn refuse_dup(_ctx: *mut c_void) -> *mut c_void {
             ptr::null_mut()
         }
 
@@ -7046,9 +7038,9 @@ mod tests {
 
         /// `static void visitor(EVP_MD *md, void *arg)` — counts.
         ///
-        /// # Safety
+        /// # Notes
         /// The ABI is the authority's; the pointer is not read.
-        unsafe extern "C" fn counting_visitor(_md: *mut EvpMd, _arg: *mut c_void) {
+        extern "C" fn counting_visitor(_md: *mut EvpMd, _arg: *mut c_void) {
             VISITED.fetch_add(1, Ordering::AcqRel);
         }
 

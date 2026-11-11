@@ -2952,14 +2952,14 @@ impl<'a, N: Copy + Default + PartialEq> MemberBufSlot<'a, N> {
     /// Store a freshly-allocated block of `len` bytes into the (now empty) member, transferring
     /// ownership of it to the enclosing object.
     ///
-    /// # Safety
+    /// # Notes
     ///
     /// `new` is NULL or a live block this caller owns exclusively whose allocation is **at least**
     /// `len` bytes and writable for `len` (produced by the crate's allocator seam, or adopted from
     /// a block whose ownership this caller gives up) and no other owner will release it; the field
     /// is currently unset (`(NULL, 0)`). Exactness is not required: `clear`/destruction release
     /// only the base pointer, and `realloc` operates on the allocator's own block.
-    pub(crate) unsafe fn store(&mut self, new: *mut u8, len: N) {
+    pub(crate) fn store(&mut self, new: *mut u8, len: N) {
         debug_assert!(
             (*self.ptr).is_null() && *self.len == N::default(),
             "blob member slot must be empty before store"
@@ -9548,7 +9548,7 @@ unsafe fn set_cert_type(slot: &mut MemberBufSlot<'_, usize>, val: *const u8, len
     slot.clear(FILE, 8285);
     if !tmp.is_null() {
         // SAFETY: `tmp` is this call's fresh exclusive block of `len` bytes.
-        unsafe { slot.store(tmp, len) };
+        slot.store(tmp, len);
     }
     1
 }
@@ -9795,10 +9795,10 @@ pub unsafe extern "C" fn SSL_CTX_get_domain_flags(
 
 /// `int SSL_get_domain_flags(const SSL *ssl, uint64_t *domain_flags)` — `ssl/ssl_lib.c:8180-8188`.
 ///
-/// # Safety
+/// # Notes
 /// `ssl` must point to a live connection; `domain_flags` must be writable.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get_domain_flags(ssl: *const Ssl, domain_flags: *mut u64) -> c_int {
+pub extern "C" fn SSL_get_domain_flags(ssl: *const Ssl, domain_flags: *mut u64) -> c_int {
     guard_ffi(0, || {
         let _ = (ssl, domain_flags);
         // `IS_QUIC(ssl)` is false for every object this crate builds, so the authority's
@@ -10010,10 +10010,10 @@ pub unsafe extern "C" fn SSL_get_server_random(
 /// a fresh connection holds no buffers and the authority's TLS methods allocate none eagerly, so
 /// this slice answers 1 and the divergence is recorded in `src/ssl/mod.rs`.
 ///
-/// # Safety
+/// # Notes
 /// `ssl` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_alloc_buffers(ssl: *mut Ssl) -> c_int {
+pub extern "C" fn SSL_alloc_buffers(ssl: *mut Ssl) -> c_int {
     guard_ffi(0, || {
         let _ = ssl;
         1
@@ -10025,10 +10025,10 @@ pub unsafe extern "C" fn SSL_alloc_buffers(ssl: *mut Ssl) -> c_int {
 /// As [`SSL_alloc_buffers`], the record layer is 14.4's; the authority's methods free nothing for a
 /// fresh connection and answer 1, which this slice reproduces (recorded in `src/ssl/mod.rs`).
 ///
-/// # Safety
+/// # Notes
 /// `ssl` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_free_buffers(ssl: *mut Ssl) -> c_int {
+pub extern "C" fn SSL_free_buffers(ssl: *mut Ssl) -> c_int {
     guard_ffi(0, || {
         let _ = ssl;
         1
@@ -10078,10 +10078,10 @@ pub unsafe extern "C" fn SSL_set_value_uint(
 /// `void SSL_set_debug(SSL *s, int debug)` — `ssl/ssl_lib.c:6149-6154`: the authority's body is
 /// empty ("Old function was do-nothing anyway").
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_set_debug(s: *mut Ssl, debug: c_int) {
+pub extern "C" fn SSL_set_debug(s: *mut Ssl, debug: c_int) {
     guard_ffi((), || {
         let _ = (s, debug);
     })
@@ -10089,10 +10089,10 @@ pub unsafe extern "C" fn SSL_set_debug(s: *mut Ssl, debug: c_int) {
 
 /// `int SSL_get_blocking_mode(SSL *s)` — `ssl/ssl_lib.c:7730-7740`: `-1` for a non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get_blocking_mode(s: *mut Ssl) -> c_int {
+pub extern "C" fn SSL_get_blocking_mode(s: *mut Ssl) -> c_int {
     guard_ffi(-1, || {
         let _ = s;
         -1
@@ -10102,10 +10102,10 @@ pub unsafe extern "C" fn SSL_get_blocking_mode(s: *mut Ssl) -> c_int {
 /// `int SSL_set_blocking_mode(SSL *s, int blocking)` — `ssl/ssl_lib.c:7718-7728`: `0` for a
 /// non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_set_blocking_mode(s: *mut Ssl, blocking: c_int) -> c_int {
+pub extern "C" fn SSL_set_blocking_mode(s: *mut Ssl, blocking: c_int) -> c_int {
     guard_ffi(0, || {
         let _ = (s, blocking);
         0
@@ -10117,10 +10117,10 @@ pub unsafe extern "C" fn SSL_set_blocking_mode(s: *mut Ssl, blocking: c_int) -> 
 /// The authority's DTLS arm (`DTLSv1_handle_timeout`) is 14.8's; the transport here is TLS, for
 /// which the authority answers 1. Recorded in `src/ssl/mod.rs`.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_handle_events(s: *mut Ssl) -> c_int {
+pub extern "C" fn SSL_handle_events(s: *mut Ssl) -> c_int {
     guard_ffi(0, || {
         // `is_dtls(s)` is false for every method this slice builds.
         let _ = s;
@@ -10241,13 +10241,10 @@ pub unsafe extern "C" fn SSL_shutdown_ex(
 /// `int SSL_set1_initial_peer_addr(SSL *s, const BIO_ADDR *peer_addr)` — `ssl/ssl_lib.c:7742-7752`:
 /// `0` for a non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection; `peer_addr` is not read on this path.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_set1_initial_peer_addr(
-    s: *mut Ssl,
-    peer_addr: *const c_void,
-) -> c_int {
+pub extern "C" fn SSL_set1_initial_peer_addr(s: *mut Ssl, peer_addr: *const c_void) -> c_int {
     guard_ffi(0, || {
         let _ = (s, peer_addr);
         0
@@ -10257,10 +10254,10 @@ pub unsafe extern "C" fn SSL_set1_initial_peer_addr(
 /// `SSL *SSL_new_stream(SSL *s, uint64_t flags)` — `ssl/ssl_lib.c:7780-7790`: NULL for a non-QUIC
 /// object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_new_stream(s: *mut Ssl, flags: u64) -> *mut Ssl {
+pub extern "C" fn SSL_new_stream(s: *mut Ssl, flags: u64) -> *mut Ssl {
     guard_ffi(ptr::null_mut(), || {
         let _ = (s, flags);
         ptr::null_mut()
@@ -10270,10 +10267,10 @@ pub unsafe extern "C" fn SSL_new_stream(s: *mut Ssl, flags: u64) -> *mut Ssl {
 /// `SSL *SSL_accept_stream(SSL *s, uint64_t flags)` — `ssl/ssl_lib.c:7903-7913`: NULL for a
 /// non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_accept_stream(s: *mut Ssl, flags: u64) -> *mut Ssl {
+pub extern "C" fn SSL_accept_stream(s: *mut Ssl, flags: u64) -> *mut Ssl {
     guard_ffi(ptr::null_mut(), || {
         let _ = (s, flags);
         ptr::null_mut()
@@ -10283,10 +10280,10 @@ pub unsafe extern "C" fn SSL_accept_stream(s: *mut Ssl, flags: u64) -> *mut Ssl 
 /// `size_t SSL_get_accept_stream_queue_len(SSL *s)` — `ssl/ssl_lib.c:7915-7925`: 0 for a non-QUIC
 /// object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get_accept_stream_queue_len(s: *mut Ssl) -> usize {
+pub extern "C" fn SSL_get_accept_stream_queue_len(s: *mut Ssl) -> usize {
     guard_ffi(0, || {
         let _ = s;
         0
@@ -10296,10 +10293,10 @@ pub unsafe extern "C" fn SSL_get_accept_stream_queue_len(s: *mut Ssl) -> usize {
 /// `int SSL_stream_conclude(SSL *ssl, uint64_t flags)` — `ssl/ssl_lib.c:7768-7778`: 0 for a
 /// non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `ssl` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_stream_conclude(ssl: *mut Ssl, flags: u64) -> c_int {
+pub extern "C" fn SSL_stream_conclude(ssl: *mut Ssl, flags: u64) -> c_int {
     guard_ffi(0, || {
         let _ = (ssl, flags);
         0
@@ -10309,14 +10306,10 @@ pub unsafe extern "C" fn SSL_stream_conclude(ssl: *mut Ssl, flags: u64) -> c_int
 /// `int SSL_stream_reset(SSL *s, const SSL_STREAM_RESET_ARGS *args, size_t args_len)` —
 /// `ssl/ssl_lib.c:7927-7939`: 0 for a non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_stream_reset(
-    s: *mut Ssl,
-    args: *const c_void,
-    args_len: usize,
-) -> c_int {
+pub extern "C" fn SSL_stream_reset(s: *mut Ssl, args: *const c_void, args_len: usize) -> c_int {
     guard_ffi(0, || {
         let _ = (s, args, args_len);
         0
@@ -10326,10 +10319,10 @@ pub unsafe extern "C" fn SSL_stream_reset(
 /// `int SSL_get_stream_type(SSL *s)` — `ssl/ssl_lib.c:7843-7853`: `SSL_STREAM_TYPE_BIDI` for a
 /// non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get_stream_type(s: *mut Ssl) -> c_int {
+pub extern "C" fn SSL_get_stream_type(s: *mut Ssl) -> c_int {
     guard_ffi(SSL_STREAM_TYPE_BIDI, || {
         let _ = s;
         SSL_STREAM_TYPE_BIDI
@@ -10339,10 +10332,10 @@ pub unsafe extern "C" fn SSL_get_stream_type(s: *mut Ssl) -> c_int {
 /// `uint64_t SSL_get_stream_id(SSL *s)` — `ssl/ssl_lib.c:7855-7865`: `UINT64_MAX` for a non-QUIC
 /// object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get_stream_id(s: *mut Ssl) -> u64 {
+pub extern "C" fn SSL_get_stream_id(s: *mut Ssl) -> u64 {
     guard_ffi(u64::MAX, || {
         let _ = s;
         u64::MAX
@@ -10351,10 +10344,10 @@ pub unsafe extern "C" fn SSL_get_stream_id(s: *mut Ssl) -> u64 {
 
 /// `int SSL_is_stream_local(SSL *s)` — `ssl/ssl_lib.c:7867-7877`: `-1` for a non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_is_stream_local(s: *mut Ssl) -> c_int {
+pub extern "C" fn SSL_is_stream_local(s: *mut Ssl) -> c_int {
     guard_ffi(-1, || {
         let _ = s;
         -1
@@ -10364,10 +10357,10 @@ pub unsafe extern "C" fn SSL_is_stream_local(s: *mut Ssl) -> c_int {
 /// `int SSL_get_stream_read_state(SSL *s)` — `ssl/ssl_lib.c:7941-7951`:
 /// `SSL_STREAM_STATE_NONE` for a non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get_stream_read_state(s: *mut Ssl) -> c_int {
+pub extern "C" fn SSL_get_stream_read_state(s: *mut Ssl) -> c_int {
     guard_ffi(SSL_STREAM_STATE_NONE, || {
         let _ = s;
         SSL_STREAM_STATE_NONE
@@ -10377,10 +10370,10 @@ pub unsafe extern "C" fn SSL_get_stream_read_state(s: *mut Ssl) -> c_int {
 /// `int SSL_get_stream_write_state(SSL *s)` — `ssl/ssl_lib.c:7953-7963`:
 /// `SSL_STREAM_STATE_NONE` for a non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get_stream_write_state(s: *mut Ssl) -> c_int {
+pub extern "C" fn SSL_get_stream_write_state(s: *mut Ssl) -> c_int {
     guard_ffi(SSL_STREAM_STATE_NONE, || {
         let _ = s;
         SSL_STREAM_STATE_NONE
@@ -10390,13 +10383,10 @@ pub unsafe extern "C" fn SSL_get_stream_write_state(s: *mut Ssl) -> c_int {
 /// `int SSL_get_stream_read_error_code(SSL *s, uint64_t *app_error_code)` —
 /// `ssl/ssl_lib.c:7965-7975`: `-1` for a non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get_stream_read_error_code(
-    s: *mut Ssl,
-    app_error_code: *mut u64,
-) -> c_int {
+pub extern "C" fn SSL_get_stream_read_error_code(s: *mut Ssl, app_error_code: *mut u64) -> c_int {
     guard_ffi(-1, || {
         let _ = (s, app_error_code);
         -1
@@ -10406,13 +10396,10 @@ pub unsafe extern "C" fn SSL_get_stream_read_error_code(
 /// `int SSL_get_stream_write_error_code(SSL *s, uint64_t *app_error_code)` —
 /// `ssl/ssl_lib.c:7977-7987`: `-1` for a non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get_stream_write_error_code(
-    s: *mut Ssl,
-    app_error_code: *mut u64,
-) -> c_int {
+pub extern "C" fn SSL_get_stream_write_error_code(s: *mut Ssl, app_error_code: *mut u64) -> c_int {
     guard_ffi(-1, || {
         let _ = (s, app_error_code);
         -1
@@ -10422,10 +10409,10 @@ pub unsafe extern "C" fn SSL_get_stream_write_error_code(
 /// `int SSL_set_default_stream_mode(SSL *s, uint32_t mode)` — `ssl/ssl_lib.c:7879-7889`: 0 for a
 /// non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_set_default_stream_mode(s: *mut Ssl, mode: u32) -> c_int {
+pub extern "C" fn SSL_set_default_stream_mode(s: *mut Ssl, mode: u32) -> c_int {
     guard_ffi(0, || {
         let _ = (s, mode);
         0
@@ -10435,14 +10422,10 @@ pub unsafe extern "C" fn SSL_set_default_stream_mode(s: *mut Ssl, mode: u32) -> 
 /// `int SSL_set_incoming_stream_policy(SSL *s, int policy, uint64_t aec)` —
 /// `ssl/ssl_lib.c:7891-7901`: 0 for a non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_set_incoming_stream_policy(
-    s: *mut Ssl,
-    policy: c_int,
-    aec: u64,
-) -> c_int {
+pub extern "C" fn SSL_set_incoming_stream_policy(s: *mut Ssl, policy: c_int, aec: u64) -> c_int {
     guard_ffi(0, || {
         let _ = (s, policy, aec);
         0
@@ -10451,19 +10434,19 @@ pub unsafe extern "C" fn SSL_set_incoming_stream_policy(
 
 /// `SSL *SSL_get0_connection(SSL *s)` — `ssl/ssl_lib.c:7792-7802`: `s` for a non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get0_connection(s: *mut Ssl) -> *mut Ssl {
+pub extern "C" fn SSL_get0_connection(s: *mut Ssl) -> *mut Ssl {
     guard_ffi(ptr::null_mut(), || s)
 }
 
 /// `SSL *SSL_get0_listener(SSL *s)` — `ssl/ssl_lib.c:7809-7819`: NULL for a non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get0_listener(s: *mut Ssl) -> *mut Ssl {
+pub extern "C" fn SSL_get0_listener(s: *mut Ssl) -> *mut Ssl {
     guard_ffi(ptr::null_mut(), || {
         let _ = s;
         ptr::null_mut()
@@ -10472,10 +10455,10 @@ pub unsafe extern "C" fn SSL_get0_listener(s: *mut Ssl) -> *mut Ssl {
 
 /// `SSL *SSL_get0_domain(SSL *s)` — `ssl/ssl_lib.c:7821-7831`: NULL for a non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get0_domain(s: *mut Ssl) -> *mut Ssl {
+pub extern "C" fn SSL_get0_domain(s: *mut Ssl) -> *mut Ssl {
     guard_ffi(ptr::null_mut(), || {
         let _ = s;
         ptr::null_mut()
@@ -10490,7 +10473,7 @@ pub unsafe extern "C" fn SSL_get0_domain(s: *mut Ssl) -> *mut Ssl {
 pub unsafe extern "C" fn SSL_is_connection(s: *mut Ssl) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `s` is live per the caller's contract.
-        c_int::from(unsafe { SSL_get0_connection(s) } == s)
+        c_int::from(SSL_get0_connection(s) == s)
     })
 }
 
@@ -10502,7 +10485,7 @@ pub unsafe extern "C" fn SSL_is_connection(s: *mut Ssl) -> c_int {
 pub unsafe extern "C" fn SSL_is_listener(s: *mut Ssl) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `s` is live per the caller's contract.
-        c_int::from(unsafe { SSL_get0_listener(s) } == s)
+        c_int::from(SSL_get0_listener(s) == s)
     })
 }
 
@@ -10514,17 +10497,17 @@ pub unsafe extern "C" fn SSL_is_listener(s: *mut Ssl) -> c_int {
 pub unsafe extern "C" fn SSL_is_domain(s: *mut Ssl) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `s` is live per the caller's contract.
-        c_int::from(unsafe { SSL_get0_domain(s) } == s)
+        c_int::from(SSL_get0_domain(s) == s)
     })
 }
 
 /// `SSL *SSL_new_listener(SSL_CTX *ctx, uint64_t flags)` — `ssl/ssl_lib.c:8026-8036`: NULL for a
 /// non-QUIC context.
 ///
-/// # Safety
+/// # Notes
 /// `ctx` must point to a live context.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_new_listener(ctx: *mut SslCtx, flags: u64) -> *mut Ssl {
+pub extern "C" fn SSL_new_listener(ctx: *mut SslCtx, flags: u64) -> *mut Ssl {
     guard_ffi(ptr::null_mut(), || {
         let _ = (ctx, flags);
         ptr::null_mut()
@@ -10534,10 +10517,10 @@ pub unsafe extern "C" fn SSL_new_listener(ctx: *mut SslCtx, flags: u64) -> *mut 
 /// `SSL *SSL_new_listener_from(SSL *ssl, uint64_t flags)` — `ssl/ssl_lib.c:8038-8048`: NULL for a
 /// non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `ssl` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_new_listener_from(ssl: *mut Ssl, flags: u64) -> *mut Ssl {
+pub extern "C" fn SSL_new_listener_from(ssl: *mut Ssl, flags: u64) -> *mut Ssl {
     guard_ffi(ptr::null_mut(), || {
         let _ = (ssl, flags);
         ptr::null_mut()
@@ -10547,10 +10530,10 @@ pub unsafe extern "C" fn SSL_new_listener_from(ssl: *mut Ssl, flags: u64) -> *mu
 /// `SSL *SSL_new_from_listener(SSL *ssl, uint64_t flags)` — `ssl/ssl_lib.c:8050-8060`: NULL for a
 /// non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `ssl` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_new_from_listener(ssl: *mut Ssl, flags: u64) -> *mut Ssl {
+pub extern "C" fn SSL_new_from_listener(ssl: *mut Ssl, flags: u64) -> *mut Ssl {
     guard_ffi(ptr::null_mut(), || {
         let _ = (ssl, flags);
         ptr::null_mut()
@@ -10560,10 +10543,10 @@ pub unsafe extern "C" fn SSL_new_from_listener(ssl: *mut Ssl, flags: u64) -> *mu
 /// `SSL *SSL_accept_connection(SSL *ssl, uint64_t flags)` — `ssl/ssl_lib.c:8062-8072`: NULL for a
 /// non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `ssl` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_accept_connection(ssl: *mut Ssl, flags: u64) -> *mut Ssl {
+pub extern "C" fn SSL_accept_connection(ssl: *mut Ssl, flags: u64) -> *mut Ssl {
     guard_ffi(ptr::null_mut(), || {
         let _ = (ssl, flags);
         ptr::null_mut()
@@ -10573,10 +10556,10 @@ pub unsafe extern "C" fn SSL_accept_connection(ssl: *mut Ssl, flags: u64) -> *mu
 /// `size_t SSL_get_accept_connection_queue_len(SSL *ssl)` — `ssl/ssl_lib.c:8074-8084`: 0 for a
 /// non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `ssl` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get_accept_connection_queue_len(ssl: *mut Ssl) -> usize {
+pub extern "C" fn SSL_get_accept_connection_queue_len(ssl: *mut Ssl) -> usize {
     guard_ffi(0, || {
         let _ = ssl;
         0
@@ -10585,10 +10568,10 @@ pub unsafe extern "C" fn SSL_get_accept_connection_queue_len(ssl: *mut Ssl) -> u
 
 /// `int SSL_listen(SSL *ssl)` — `ssl/ssl_lib.c:8086-8096`: 0 for a non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `ssl` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_listen(ssl: *mut Ssl) -> c_int {
+pub extern "C" fn SSL_listen(ssl: *mut Ssl) -> c_int {
     guard_ffi(0, || {
         let _ = ssl;
         0
@@ -10598,10 +10581,10 @@ pub unsafe extern "C" fn SSL_listen(ssl: *mut Ssl) -> c_int {
 /// `SSL *SSL_new_domain(SSL_CTX *ctx, uint64_t flags)` — `ssl/ssl_lib.c:8098-8108`: NULL for a
 /// non-QUIC context.
 ///
-/// # Safety
+/// # Notes
 /// `ctx` must point to a live context.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_new_domain(ctx: *mut SslCtx, flags: u64) -> *mut Ssl {
+pub extern "C" fn SSL_new_domain(ctx: *mut SslCtx, flags: u64) -> *mut Ssl {
     guard_ffi(ptr::null_mut(), || {
         let _ = (ctx, flags);
         ptr::null_mut()
@@ -10611,10 +10594,10 @@ pub unsafe extern "C" fn SSL_new_domain(ctx: *mut SslCtx, flags: u64) -> *mut Ss
 /// `int SSL_get_conn_close_info(SSL *s, SSL_CONN_CLOSE_INFO *info, size_t info_len)` —
 /// `ssl/ssl_lib.c:7989-8000`: `-1` for a non-QUIC object.
 ///
-/// # Safety
+/// # Notes
 /// `s` must point to a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get_conn_close_info(
+pub extern "C" fn SSL_get_conn_close_info(
     s: *mut Ssl,
     info: *mut c_void,
     info_len: usize,
@@ -11530,10 +11513,10 @@ pub unsafe extern "C" fn SSL_get_pending_cipher(
 /// authority's own default record method answers NULL for a connection that has negotiated no
 /// compression, so NULL is its answer for the states this stratum reaches.
 ///
-/// # Safety
+/// # Notes
 /// `s` must be NULL or a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get_current_compression(_s: *const Ssl) -> *const c_void {
+pub extern "C" fn SSL_get_current_compression(_s: *const Ssl) -> *const c_void {
     ptr::null()
 }
 
@@ -11541,10 +11524,10 @@ pub unsafe extern "C" fn SSL_get_current_compression(_s: *const Ssl) -> *const c
 ///
 /// As [`SSL_get_current_compression`], for the read record method.
 ///
-/// # Safety
+/// # Notes
 /// `s` must be NULL or a live connection.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get_current_expansion(_s: *const Ssl) -> *const c_void {
+pub extern "C" fn SSL_get_current_expansion(_s: *const Ssl) -> *const c_void {
     ptr::null()
 }
 
@@ -14688,9 +14671,9 @@ mod contract_tests {
 
     /// The security callback's verdict is the refusal arm's decision.
     ///
-    /// # Safety
+    /// # Notes
     /// The opaque arguments are not dereferenced.
-    unsafe extern "C" fn deny_security(
+    extern "C" fn deny_security(
         _s: *const Ssl,
         _ctx: *const SslCtx,
         _op: c_int,
@@ -14702,9 +14685,9 @@ mod contract_tests {
         0
     }
 
-    /// # Safety
+    /// # Notes
     /// As [`deny_security`]; this one accepts every operation.
-    unsafe extern "C" fn allow_security(
+    extern "C" fn allow_security(
         _s: *const Ssl,
         _ctx: *const SslCtx,
         _op: c_int,
@@ -14828,3 +14811,7 @@ mod contract_tests {
         }
     }
 }
+
+// Compile-time control: the converted export keeps its exact C signature.
+#[cfg(test)]
+const _: extern "C" fn(*const Ssl, *mut u64) -> c_int = SSL_get_domain_flags;

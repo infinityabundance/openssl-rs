@@ -53,13 +53,12 @@ unsafe fn add(md: *const EvpMd) {
 unsafe fn alias(target_nid: c_int, alias_name: *const c_char) {
     // SAFETY: `alias_name` is a static string and `OBJ_nid2sn` answers a static for a NID the
     // object table holds, both borrowed by the table.
-    unsafe {
-        OBJ_NAME_add(
-            alias_name,
-            OBJ_NAME_TYPE_MD_METH | OBJ_NAME_ALIAS,
-            OBJ_nid2sn(target_nid),
-        );
-    }
+
+    OBJ_NAME_add(
+        alias_name,
+        OBJ_NAME_TYPE_MD_METH | OBJ_NAME_ALIAS,
+        OBJ_nid2sn(target_nid),
+    );
 }
 
 /// `void openssl_add_all_digests_int(void)` — `crypto/evp/c_alld.c`.

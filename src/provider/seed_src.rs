@@ -500,9 +500,9 @@ unsafe extern "C" fn seed_src_get_ctx_params(vseed: *mut c_void, params: *mut Os
 /// `static const OSSL_PARAM *seed_src_gettable_ctx_params(ossl_unused void *vseed,
 /// ossl_unused void *provctx)` — `seed_src.c:177-181`. No `settable_ctx_params` exists.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn seed_src_gettable_ctx_params(
+extern "C" fn seed_src_gettable_ctx_params(
     _vseed: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -512,9 +512,9 @@ unsafe extern "C" fn seed_src_gettable_ctx_params(
 /// `static int seed_src_verify_zeroization(ossl_unused void *vseed)` — `seed_src.c:183-186`.
 /// The authority always answers 1; nothing is held that could be verified.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn seed_src_verify_zeroization(_vseed: *mut c_void) -> c_int {
+extern "C" fn seed_src_verify_zeroization(_vseed: *mut c_void) -> c_int {
     1
 }
 
@@ -592,27 +592,27 @@ unsafe extern "C" fn seed_clear_seed(_vdrbg: *mut c_void, out: *mut c_uchar, out
 
 /// `static int seed_src_enable_locking(ossl_unused void *vseed)` — `seed_src.c:223-226`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn seed_src_enable_locking(_vseed: *mut c_void) -> c_int {
+extern "C" fn seed_src_enable_locking(_vseed: *mut c_void) -> c_int {
     1
 }
 
 /// `int seed_src_lock(ossl_unused void *vctx)` — `seed_src.c:228-231`. **Non-static** in the
 /// authority (unusual for this class), so it is `pub(crate)` here rather than module-private.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-pub(crate) unsafe extern "C" fn seed_src_lock(_vctx: *mut c_void) -> c_int {
+pub(crate) extern "C" fn seed_src_lock(_vctx: *mut c_void) -> c_int {
     1
 }
 
 /// `void seed_src_unlock(ossl_unused void *vctx)` — `seed_src.c:233-235`. Non-static in the
 /// authority.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-pub(crate) unsafe extern "C" fn seed_src_unlock(_vctx: *mut c_void) {}
+pub(crate) extern "C" fn seed_src_unlock(_vctx: *mut c_void) {}
 
 /// `const OSSL_DISPATCH ossl_seed_src_functions[]` — `seed_src.c:237-257`, fourteen entries.
 ///
@@ -882,9 +882,9 @@ unsafe extern "C" fn test_rng_generate(
 /// `static int test_rng_reseed(ossl_unused void *vtest, ...)` — `test_rng.c:154-162`.
 /// A test RNG reseed is a no-op that answers 1.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn test_rng_reseed(
+extern "C" fn test_rng_reseed(
     _vtest: *mut c_void,
     _prediction_resistance: c_int,
     _ent: *const c_uchar,
@@ -1017,9 +1017,9 @@ unsafe extern "C" fn test_rng_get_ctx_params(vtest: *mut c_void, params: *mut Os
 /// `static const OSSL_PARAM *test_rng_gettable_ctx_params(ossl_unused void *vtest,
 /// ossl_unused void *provctx)` — `test_rng.c:328-332`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn test_rng_gettable_ctx_params(
+extern "C" fn test_rng_gettable_ctx_params(
     _vtest: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -1135,9 +1135,9 @@ unsafe extern "C" fn test_rng_set_ctx_params(
 /// `static const OSSL_PARAM *test_rng_settable_ctx_params(ossl_unused void *vtest,
 /// ossl_unused void *provctx)` — `test_rng.c:494-498`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn test_rng_settable_ctx_params(
+extern "C" fn test_rng_settable_ctx_params(
     _vtest: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -1146,9 +1146,9 @@ unsafe extern "C" fn test_rng_settable_ctx_params(
 
 /// `static int test_rng_verify_zeroization(ossl_unused void *vtest)` — `test_rng.c:500-503`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn test_rng_verify_zeroization(_vtest: *mut c_void) -> c_int {
+extern "C" fn test_rng_verify_zeroization(_vtest: *mut c_void) -> c_int {
     1
 }
 

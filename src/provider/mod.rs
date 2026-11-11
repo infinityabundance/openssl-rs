@@ -1143,9 +1143,9 @@ unsafe extern "C" fn provider_deactivate_free(p: *mut c_void) {
 
 /// The slot-1 cast, spelled once so the pointer conversion is in one place.
 ///
-/// # Safety
-/// `libctx` must be NULL or a live context.
-unsafe fn provider_store_slot(libctx: *mut c_void) -> *mut ProviderStore {
+/// Safe because [`lib_ctx_get_data`] validates the context's liveness itself and
+/// answers NULL for a released or foreign one; the cast cannot fail.
+fn provider_store_slot(libctx: *mut c_void) -> *mut ProviderStore {
     lib_ctx_get_data(libctx, PROVIDER_STORE_INDEX).cast::<ProviderStore>()
 }
 
@@ -1158,8 +1158,7 @@ unsafe fn provider_store_slot(libctx: *mut c_void) -> *mut ProviderStore {
 /// # Safety
 /// `libctx` must be NULL or live.
 pub(crate) unsafe fn get_provider_store(libctx: *mut c_void) -> *mut ProviderStore {
-    // SAFETY: `libctx` is NULL or live per the contract.
-    let store = unsafe { provider_store_slot(libctx) };
+    let store = provider_store_slot(libctx);
     if store.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::PROVIDER_CORE_335) };

@@ -95,9 +95,9 @@ pub(crate) fn ssl_protocol_to_string(version: c_int) -> *const c_char {
 
 /// `ssl3_get_cipher` — `s3_lib.c:3781-3787`. The reversal is the authority's.
 ///
-/// # Safety
+/// # Notes
 /// No precondition; the returned pointer is into a process-lifetime static.
-unsafe fn ssl3_get_cipher(u: c_uint) -> *const SslCipher {
+fn ssl3_get_cipher(u: c_uint) -> *const SslCipher {
     let n = t::SSL3_CIPHERS.len();
     if (u as usize) < n {
         &t::SSL3_CIPHERS[n - 1 - u as usize]
@@ -109,9 +109,9 @@ unsafe fn ssl3_get_cipher(u: c_uint) -> *const SslCipher {
 /// `ssl3_get_cipher_by_id` — `s3_lib.c:4715-4728`, as a linear search over the three tables (the
 /// authority binary-searches sorted copies; the answer is the same).
 ///
-/// # Safety
+/// # Notes
 /// No precondition; the returned pointer is into a process-lifetime static.
-pub(crate) unsafe fn ssl3_get_cipher_by_id(id: u32) -> *const SslCipher {
+pub(crate) fn ssl3_get_cipher_by_id(id: u32) -> *const SslCipher {
     for tbl in [
         &t::TLS13_CIPHERS[..],
         &t::SSL3_CIPHERS[..],
@@ -136,7 +136,7 @@ pub(crate) unsafe fn ssl3_get_cipher_by_char(p: *const u8) -> *const SslCipher {
         | ((unsafe { *p } as u32) << 8)
         | (unsafe { *p.add(1) } as u32);
     // SAFETY: no precondition on the lookup.
-    unsafe { ssl3_get_cipher_by_id(id) }
+    ssl3_get_cipher_by_id(id)
 }
 
 /// `ssl3_get_cipher_by_std_name` — `s3_lib.c:4730-4747`.
@@ -313,7 +313,7 @@ unsafe fn ssl_cipher_collect_ciphers(
     let n = ssl3_num_ciphers();
     for i in 0..n {
         // SAFETY: `i` is in range for the reversal.
-        let c = unsafe { ssl3_get_cipher(i as c_uint) };
+        let c = ssl3_get_cipher(i as c_uint);
         if c.is_null() {
             continue;
         }
@@ -1604,19 +1604,19 @@ pub unsafe extern "C" fn SSL_CIPHER_is_aead(c: *const SslCipher) -> c_int {
 
 /// `const char *OSSL_default_cipher_list(void)` — `ssl/ssl_ciph.c:2239-2242`.
 ///
-/// # Safety
+/// # Notes
 /// The returned pointer is a static string.
 #[no_mangle]
-pub unsafe extern "C" fn OSSL_default_cipher_list() -> *const c_char {
+pub extern "C" fn OSSL_default_cipher_list() -> *const c_char {
     c"ALL:!COMPLEMENTOFDEFAULT:!eNULL".as_ptr()
 }
 
 /// `const char *OSSL_default_ciphersuites(void)` — `ssl/ssl_ciph.c:2249-2254`.
 ///
-/// # Safety
+/// # Notes
 /// The returned pointer is a static string.
 #[no_mangle]
-pub unsafe extern "C" fn OSSL_default_ciphersuites() -> *const c_char {
+pub extern "C" fn OSSL_default_ciphersuites() -> *const c_char {
     c"TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256".as_ptr()
 }
 
@@ -1794,10 +1794,10 @@ pub unsafe extern "C" fn SSL_COMP_add_compression_method(id: c_int, cm: *mut Com
 
 /// `const char *SSL_COMP_get_name(const COMP_METHOD *comp)` — `ssl/ssl_ciph.c:2057-2064`.
 ///
-/// # Safety
+/// # Notes
 /// `comp` NULL or a live `COMP_METHOD`.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_COMP_get_name(comp: *const CompMethod) -> *const c_char {
+pub extern "C" fn SSL_COMP_get_name(comp: *const CompMethod) -> *const c_char {
     guard_ffi(ptr::null(), || {
         if comp.is_null() {
             return ptr::null();

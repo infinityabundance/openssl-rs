@@ -1715,9 +1715,9 @@ unsafe extern "C" fn x963kdf_set_ctx_params(vctx: *mut c_void, params: *const Os
 /// `static const OSSL_PARAM *sskdf_settable_ctx_params(void *ctx, void *provctx)` —
 /// `sskdf.c:654-658`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn sskdf_settable_ctx_params(
+extern "C" fn sskdf_settable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -1727,9 +1727,9 @@ unsafe extern "C" fn sskdf_settable_ctx_params(
 /// `static const OSSL_PARAM *sskdf_common_gettable_ctx_params(void *ctx, void *provctx)` —
 /// `sskdf.c:686-689`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn sskdf_common_gettable_ctx_params(
+extern "C" fn sskdf_common_gettable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -1739,9 +1739,9 @@ unsafe extern "C" fn sskdf_common_gettable_ctx_params(
 /// `static const OSSL_PARAM *x963kdf_settable_ctx_params(void *ctx, void *provctx)` —
 /// `sskdf.c:741-745`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn x963kdf_settable_ctx_params(
+extern "C" fn x963kdf_settable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -2759,9 +2759,9 @@ unsafe extern "C" fn x942kdf_get_ctx_params(vctx: *mut c_void, params: *mut Ossl
 /// `static const OSSL_PARAM *x942kdf_settable_ctx_params(void *ctx, void *provctx)` —
 /// `x942kdf.c:628-632`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn x942kdf_settable_ctx_params(
+extern "C" fn x942kdf_settable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -2771,9 +2771,9 @@ unsafe extern "C" fn x942kdf_settable_ctx_params(
 /// `static const OSSL_PARAM *x942kdf_gettable_ctx_params(void *ctx, void *provctx)` —
 /// `x942kdf.c:657-661`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn x942kdf_gettable_ctx_params(
+extern "C" fn x942kdf_gettable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -3278,9 +3278,9 @@ unsafe extern "C" fn pkcs12kdf_get_ctx_params(vctx: *mut c_void, params: *mut Os
 /// `static const OSSL_PARAM *kdf_pkcs12_settable_ctx_params(void *ctx, void *provctx)` —
 /// `pkcs12kdf.c:299-303`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn pkcs12kdf_settable_ctx_params(
+extern "C" fn pkcs12kdf_settable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -3290,9 +3290,9 @@ unsafe extern "C" fn pkcs12kdf_settable_ctx_params(
 /// `static const OSSL_PARAM *kdf_pkcs12_gettable_ctx_params(void *ctx, void *provctx)` —
 /// `pkcs12kdf.c:324-328`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn pkcs12kdf_gettable_ctx_params(
+extern "C" fn pkcs12kdf_gettable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -3786,9 +3786,9 @@ unsafe extern "C" fn sshkdf_get_ctx_params(vctx: *mut c_void, params: *mut OsslP
 /// `static const OSSL_PARAM *kdf_sshkdf_settable_ctx_params(void *ctx, void *p_ctx)` —
 /// `sshkdf.c:480-484`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn sshkdf_settable_ctx_params(
+extern "C" fn sshkdf_settable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -3798,9 +3798,9 @@ unsafe extern "C" fn sshkdf_settable_ctx_params(
 /// `static const OSSL_PARAM *kdf_sshkdf_gettable_ctx_params(void *ctx, void *p_ctx)` —
 /// `sshkdf.c:565-569`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn sshkdf_gettable_ctx_params(
+extern "C" fn sshkdf_gettable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -4439,9 +4439,9 @@ unsafe extern "C" fn pbkdf2_get_ctx_params(vctx: *mut c_void, params: *mut OsslP
 /// `static const OSSL_PARAM *kdf_pbkdf2_settable_ctx_params(void *ctx, void *p_ctx)` —
 /// `pbkdf2.c:456-460`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn pbkdf2_settable_ctx_params(
+extern "C" fn pbkdf2_settable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -4451,9 +4451,9 @@ unsafe extern "C" fn pbkdf2_settable_ctx_params(
 /// `static const OSSL_PARAM *kdf_pbkdf2_gettable_ctx_params(void *ctx, void *p_ctx)` —
 /// `pbkdf2.c:482-486`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn pbkdf2_gettable_ctx_params(
+extern "C" fn pbkdf2_gettable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -5522,9 +5522,9 @@ unsafe extern "C" fn hkdf_common_get_ctx_params(
 /// `static const OSSL_PARAM *kdf_hkdf_settable_ctx_params(void *ctx, void *provctx)` —
 /// `hkdf.c:497-503`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn hkdf_settable_ctx_params(
+extern "C" fn hkdf_settable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -5534,9 +5534,9 @@ unsafe extern "C" fn hkdf_settable_ctx_params(
 /// `static const OSSL_PARAM *hkdf_gettable_ctx_params(void *ctx, void *provctx)` —
 /// `hkdf.c:540-543`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn hkdf_gettable_ctx_params(
+extern "C" fn hkdf_gettable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -5632,9 +5632,9 @@ unsafe extern "C" fn hkdf_fixed_digest_set_ctx_params(
 /// `static const OSSL_PARAM *kdf_hkdf_fixed_digest_settable_ctx_params(void *ctx, void *provctx)` —
 /// `hkdf.c:741-745`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn hkdf_fixed_digest_settable_ctx_params(
+extern "C" fn hkdf_fixed_digest_settable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -5758,9 +5758,9 @@ unsafe extern "C" fn tls13_set_ctx_params(vctx: *mut c_void, params: *const Ossl
 /// `static const OSSL_PARAM *kdf_tls1_3_settable_ctx_params(void *ctx, void *provctx)` —
 /// `hkdf.c:1694-1698`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn tls13_settable_ctx_params(
+extern "C" fn tls13_settable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -6628,9 +6628,9 @@ unsafe extern "C" fn tls1_prf_get_ctx_params(vctx: *mut c_void, params: *mut Oss
 /// `static const OSSL_PARAM *kdf_tls1_prf_settable_ctx_params(void *ctx, void *provctx)` —
 /// `tls1_prf.c:618-623`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn tls1_prf_settable_ctx_params(
+extern "C" fn tls1_prf_settable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -6640,9 +6640,9 @@ unsafe extern "C" fn tls1_prf_settable_ctx_params(
 /// `static const OSSL_PARAM *kdf_tls1_prf_gettable_ctx_params(void *ctx, void *provctx)` —
 /// `tls1_prf.c:700-705`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn tls1_prf_gettable_ctx_params(
+extern "C" fn tls1_prf_gettable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -7413,9 +7413,9 @@ unsafe extern "C" fn kbkdf_get_ctx_params(vctx: *mut c_void, params: *mut OsslPa
 /// `static const OSSL_PARAM *kbkdf_settable_ctx_params(void *ctx, void *provctx)` —
 /// `kbkdf.c:490-494`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn kbkdf_settable_ctx_params(
+extern "C" fn kbkdf_settable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -7425,9 +7425,9 @@ unsafe extern "C" fn kbkdf_settable_ctx_params(
 /// `static const OSSL_PARAM *kbkdf_gettable_ctx_params(void *ctx, void *provctx)` —
 /// `kbkdf.c:520-524`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn kbkdf_gettable_ctx_params(
+extern "C" fn kbkdf_gettable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -8229,9 +8229,9 @@ unsafe extern "C" fn kdf_scrypt_get_ctx_params(vctx: *mut c_void, params: *mut O
 /// `static const OSSL_PARAM *kdf_scrypt_settable_ctx_params(void *ctx, void *p_ctx)` —
 /// `scrypt.c:399-403`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn kdf_scrypt_settable_ctx_params(
+extern "C" fn kdf_scrypt_settable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -8241,9 +8241,9 @@ unsafe extern "C" fn kdf_scrypt_settable_ctx_params(
 /// `static const OSSL_PARAM *kdf_scrypt_gettable_ctx_params(void *ctx, void *p_ctx)` —
 /// `scrypt.c:461-465`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn kdf_scrypt_gettable_ctx_params(
+extern "C" fn kdf_scrypt_gettable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -8897,9 +8897,9 @@ unsafe extern "C" fn krb5kdf_get_ctx_params(vctx: *mut c_void, params: *mut Ossl
 /// `static const OSSL_PARAM *krb5kdf_settable_ctx_params(void *ctx, void *provctx)` —
 /// `krb5kdf.c:193-197`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn krb5kdf_settable_ctx_params(
+extern "C" fn krb5kdf_settable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -8909,9 +8909,9 @@ unsafe extern "C" fn krb5kdf_settable_ctx_params(
 /// `static const OSSL_PARAM *krb5kdf_gettable_ctx_params(void *ctx, void *provctx)` —
 /// `krb5kdf.c:228-232`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn krb5kdf_gettable_ctx_params(
+extern "C" fn krb5kdf_gettable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -9385,9 +9385,9 @@ unsafe extern "C" fn hmac_drbg_kdf_set_ctx_params(
 /// `static const OSSL_PARAM *hmac_drbg_kdf_settable_ctx_params(void *vctx, void *p_ctx)` —
 /// `hmacdrbg_kdf.c:258-262`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn hmac_drbg_kdf_settable_ctx_params(
+extern "C" fn hmac_drbg_kdf_settable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -9397,9 +9397,9 @@ unsafe extern "C" fn hmac_drbg_kdf_settable_ctx_params(
 /// `static const OSSL_PARAM *hmac_drbg_kdf_gettable_ctx_params(void *vctx, void *p_ctx)` —
 /// `hmacdrbg_kdf.c:181-185`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn hmac_drbg_kdf_gettable_ctx_params(
+extern "C" fn hmac_drbg_kdf_gettable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -11825,9 +11825,9 @@ unsafe extern "C" fn kdf_argon2_set_ctx_params(
 /// `static const OSSL_PARAM *kdf_argon2_settable_ctx_params(void *ctx, void *p_ctx)` —
 /// generated `argon2.c:1678-1682`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn kdf_argon2_settable_ctx_params(
+extern "C" fn kdf_argon2_settable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -11867,9 +11867,9 @@ unsafe extern "C" fn kdf_argon2_get_ctx_params(vctx: *mut c_void, params: *mut O
 /// `static const OSSL_PARAM *kdf_argon2_gettable_ctx_params(void *ctx, void *p_ctx)` —
 /// generated `argon2.c:1737-1741`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn kdf_argon2_gettable_ctx_params(
+extern "C" fn kdf_argon2_gettable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -12510,9 +12510,9 @@ unsafe extern "C" fn pbkdf1_set_ctx_params(vctx: *mut c_void, params: *const Oss
 
 /// `static const OSSL_PARAM *kdf_pbkdf1_settable_ctx_params(...)` — `pbkdf1.c:269-273`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn pbkdf1_settable_ctx_params(
+extern "C" fn pbkdf1_settable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -12542,9 +12542,9 @@ unsafe extern "C" fn pbkdf1_get_ctx_params(vctx: *mut c_void, params: *mut OsslP
 
 /// `static const OSSL_PARAM *kdf_pbkdf1_gettable_ctx_params(...)` — `pbkdf1.c:294-298`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn pbkdf1_gettable_ctx_params(
+extern "C" fn pbkdf1_gettable_ctx_params(
     _ctx: *mut c_void,
     _p_ctx: *mut c_void,
 ) -> *const OsslParam {
@@ -12955,12 +12955,9 @@ unsafe extern "C" fn pvk_set_ctx_params(vctx: *mut c_void, params: *const OsslPa
 
 /// `static const OSSL_PARAM *kdf_pvk_settable_ctx_params(...)` — `pvkkdf.c:220-224`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn pvk_settable_ctx_params(
-    _ctx: *mut c_void,
-    _p_ctx: *mut c_void,
-) -> *const OsslParam {
+extern "C" fn pvk_settable_ctx_params(_ctx: *mut c_void, _p_ctx: *mut c_void) -> *const OsslParam {
     PVK_SETTABLE_CTX_PARAMS.as_ptr()
 }
 
@@ -12987,12 +12984,9 @@ unsafe extern "C" fn pvk_get_ctx_params(vctx: *mut c_void, params: *mut OsslPara
 
 /// `static const OSSL_PARAM *kdf_pvk_gettable_ctx_params(...)` — `pvkkdf.c:245-249`.
 ///
-/// # Safety
+/// # Notes
 /// The dispatch contract.
-unsafe extern "C" fn pvk_gettable_ctx_params(
-    _ctx: *mut c_void,
-    _p_ctx: *mut c_void,
-) -> *const OsslParam {
+extern "C" fn pvk_gettable_ctx_params(_ctx: *mut c_void, _p_ctx: *mut c_void) -> *const OsslParam {
     PVK_GETTABLE_CTX_PARAMS.as_ptr()
 }
 
@@ -13491,7 +13485,7 @@ mod tests {
             EVP_CIPHER_meth_set_init,
         };
 
-        unsafe extern "C" fn init(
+        extern "C" fn init(
             _ctx: *mut c_void,
             _key: *const u8,
             _iv: *const u8,
