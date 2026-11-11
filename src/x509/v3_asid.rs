@@ -1260,6 +1260,14 @@ pub unsafe extern "C" fn X509v3_asid_is_canonical(asid: *mut AsIdentifiers) -> c
 /// `crypto/x509/v3_asid.c:351-482`.
 ///
 /// Sorts a list, rejects overlaps and inverted ranges, and merges adjacent ranges.
+///
+/// # Safety
+///
+/// `choice` is NULL or a live `ASIdentifierChoice` whose selector is one of the item's two arms;
+/// on the `asIdsOrRanges` arm its stack holds live `ASIdOrRange` elements that this call owns and
+/// may reorder, detach from and free. Caller: [`v2i_ASIdentifiers`] (`src/x509/v3_asid.rs:1441`,
+/// `:1445`), on the `ASIdentifiers` it built or decoded through that row's item, so both fields
+/// the caller reads (`asnum`, `rdi`) are live under the item's own descriptor.
 unsafe fn as_identifier_choice_canonize(choice: *mut AsIdentifierChoice) -> c_int {
     let mut a_max_plus_one: *mut Asn1String = ptr::null_mut();
     let mut bn: *mut BigNum = ptr::null_mut();

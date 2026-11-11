@@ -776,3 +776,54 @@ mod nonce_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod b54_tests {
+    use super::*;
+
+    /// B54-W1: the print-path type fact, per call site. `X509V3_EXT_print` decodes the value
+    /// through the row's declared item and hands that object to the same row's `i2r`; each of
+    /// these printers casts to the type its row's item decodes. Swapping the two `i2r` slots
+    /// makes this fail (and would pair a printer with an object of the other type at runtime,
+    /// so this witness — not a dispatch — is the safe detector).
+    #[test]
+    fn the_print_slots_pair_each_printer_with_its_declared_item() {
+        // SAFETY: the accessors answer static items the crate owns.
+        let crlid_item = crate::ocsp::ocsp_asn::OCSP_CRLID_it();
+        // SAFETY: as above.
+        let acutoff_item = crate::asn1::items::ASN1_GENERALIZEDTIME_it();
+        // SAFETY: as above.
+        let serviceloc_item = crate::ocsp::ocsp_asn::OCSP_SERVICELOC_it();
+
+        // SAFETY: the rows are static and their `it` slots are the accessors read here.
+        unsafe {
+            assert_eq!(
+                ossl_v3_ocsp_crlid.it.expect("an item")(),
+                crlid_item,
+                "i2r_ocsp_crlid reads OCSP_CRLID"
+            );
+            assert_eq!(
+                ossl_v3_ocsp_acutoff.it.expect("an item")(),
+                acutoff_item,
+                "i2r_ocsp_acutoff reads ASN1_GENERALIZEDTIME"
+            );
+            assert_eq!(
+                ossl_v3_ocsp_serviceloc.it.expect("an item")(),
+                serviceloc_item,
+                "i2r_ocsp_serviceloc reads OCSP_SERVICELOC"
+            );
+        }
+        assert_eq!(
+            ossl_v3_ocsp_crlid.i2r.map(|f| f as usize),
+            Some(i2r_ocsp_crlid as *const () as usize)
+        );
+        assert_eq!(
+            ossl_v3_ocsp_acutoff.i2r.map(|f| f as usize),
+            Some(i2r_ocsp_acutoff as *const () as usize)
+        );
+        assert_eq!(
+            ossl_v3_ocsp_serviceloc.i2r.map(|f| f as usize),
+            Some(i2r_ocsp_serviceloc as *const () as usize)
+        );
+    }
+}

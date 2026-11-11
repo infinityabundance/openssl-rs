@@ -60,6 +60,13 @@ const _: extern "C" fn(*const X509V3ExtMethod, *mut c_void, *const c_char) -> *m
 /// This function must not free it.
 ///
 /// Neither argument is read, so it imposes no caller obligation.
+///
+/// # Safety
+///
+/// The `i2s` slot contract stated on [`X509V3ExtMethod`]. Caller: `X509V3_EXT_print`'s `i2s`
+/// arm (`src/x509/v3_prn.rs:334-352`), which passes the row it resolved and the value that row's
+/// `ASN1_NULL` item decoded. This body reads neither; it answers a fresh `CRYPTO_strdup` block
+/// (or NULL when that allocation fails) whose ownership the dispatcher takes and releases once.
 extern "C" fn i2s_poison(_method: *const X509V3ExtMethod, _val: *mut c_void) -> *mut c_char {
     // SAFETY: `"NULL"` is a static NUL-terminated string.
     unsafe { CRYPTO_strdup(c"NULL".as_ptr(), ptr::null(), 0) }
@@ -69,6 +76,13 @@ extern "C" fn i2s_poison(_method: *const X509V3ExtMethod, _val: *mut c_void) -> 
 /// `crypto/ct/ct_x509v3.c:21-24`.
 ///
 /// No argument is read, so it imposes no caller obligation.
+///
+/// # Safety
+///
+/// The `s2i` slot contract stated on [`X509V3ExtMethod`]. Caller: `do_ext_nconf`'s `s2i` arm
+/// (`src/x509/v3_conf.rs:1095-1099`), which resolves this row under the registry read hold and
+/// passes a borrowed NUL-terminated configuration value. This body reads none of its arguments
+/// and answers a fresh `ASN1_NULL` owned by the dispatcher, which encodes and frees it once.
 extern "C" fn s2i_poison(
     _method: *const X509V3ExtMethod,
     _ctx: *mut c_void,

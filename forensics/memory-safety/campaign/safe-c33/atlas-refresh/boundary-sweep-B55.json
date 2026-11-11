@@ -1,0 +1,456 @@
+{
+ "receipt": "boundary-sweep-B55",
+ "date": "2026-11-11",
+ "campaign": "safe-c33 shared-contract establishment: re-adjudication of the 12 X509_VERIFY_POLICY rows blocked or reopened by B54",
+ "subphase": "B55 re-adjudicates exactly the 11 rows B54 marked BLOCKED (v2i_crld, v2i_idp, v2i_aaidp, v2i_NAME_CONSTRAINTS, v2i_GENERAL_NAME_ex, v2i_GENERAL_NAME, v2i_GENERAL_NAMES, v2i_issuer_alt, v2i_subject_alt, r2i_certpol, r2i_pci) and the B51 row B54 reopened (B51-V2I-005, v2i_AUTHORITY_INFO_ACCESS). B54's single blocking fact was that X509V3_EXT_nconf* admit a NULL ctx while the section path dereferenced it. Commit bea57ea74 (B54-F1) now refuses a NULL ctx in X509V3_get_section and in do_ext_nconf's r2i arm. B55 re-reads the repaired code, enumerates every section-reaching path from each row, updates the `# Safety` contracts to the now-true NULL-or-live form, and drives a load-bearing NULL-ctx negative control. 10 rows are SAFETY_DISCHARGED. 2 rows (v2i_idp, v2i_aaidp) remain BLOCKED on an independent defect discovered by the control: the generic ASN.1 template walk forms a pointer-typed slot from inline boolean fields at non-pointer-aligned struct offsets, which aborts in the encode/free path (B55-F1). Nothing is applied and CAMPAIGN-STATUS.json / state.json are untouched.",
+ "candidate": {
+  "head": "bea57ea7463c6d64e2165508c8788cd46fcc38d3",
+  "head_short": "bea57ea74",
+  "head_subject": "x509: refuse a NULL config context instead of dereferencing it (B54-F1)",
+  "branch": "stage/p25/b53-discharge",
+  "source_state": "HEAD plus a working-tree delta. HEAD contains the B54-F1 repair (guard in X509V3_get_section and the r2i arm) and, because the repair commit also carried that file's pending B54 test delta, src/x509/v3_conf.rs is committed through HEAD. The working tree additionally holds B54's documentation/test-only delta for the other files and B55's changes. B55 changes no production statement, expression, signature, attribute, layout or ABI item: every B55 line is `///` documentation, an inline `// SAFETY:` comment, or `#[cfg(test)]` test code. Per the task instruction nothing was committed or pushed.",
+  "working_delta_kind": "documentation + test-only (uncommitted)",
+  "files_sha256": {
+   "src/x509/v3_conf.rs": "6e0a7c8a47413fe1ec728d64bfc34043c0492a3d850fc746ac5f36e3bcef9b70",
+   "src/x509/v3_san.rs": "66825f9c299cf358633750a47dca230f387697e3a07b0688fb3903c289fb144a",
+   "src/x509/v3_crld.rs": "559fc0aa301f2723491bcfd1dfb9f4bfbb2d732c14a8a06ff0d2ad6333b473e8",
+   "src/x509/v3_ncons.rs": "543ebc3c23d1c2fc4222a4ccb0093f2f037b7ed438caa2665460fb3bb760a722",
+   "src/x509/v3_info.rs": "df41a3cf368bd811add756832e803aeb1f02abb52b86b8a1752d7cf461139077",
+   "src/x509/v3_cpols.rs": "9a07bc01105da6a8aa3ca393256da759234e716f3f6ec7367a5cf2b808052a9c",
+   "src/x509/v3_pci.rs": "95615ff2d86877d331ba3b717584accb9a76ef3965accc7966bf4ad1d3716d87"
+  },
+  "note": "line_current is recomputed at this exact tree; span hashes are not restated because the files also carry B54's uncommitted doc/test delta, so the receipt binds by files_sha256."
+ },
+ "authority": {
+  "version": "pinned OpenSSL 3.6.4",
+  "contract": "crypto/x509/v3_conf.c:407-416 (X509V3_get_section) dereferences ctx->db unconditionally; crypto/x509/v3_conf.c:79-135 (do_ext_nconf) reads ctx->db/db_meth in the r2i arm.",
+  "deviation": "The candidate refuses a NULL ctx at both sites with ERR_R_PASSED_NULL_PARAMETER and returns NULL instead of reproducing the authority's undefined behaviour. Recorded per AGENTS.md section 17. With a live ctx the behaviour is unchanged."
+ },
+ "mechanism": {
+  "id": "X509_VERIFY_POLICY",
+  "family": "v2i and r2i",
+  "state": "OWNERSHIP_RECONSTRUCTED (mechanism-wide); this receipt is SITE-SCOPED to the 12 rows below"
+ },
+ "shared_contract": {
+  "slot": "X509V3ExtMethod.v2i/r2i receives (method, ctx, nval-or-value). do_ext_nconf resolves exactly one row by NID and calls that row's slot.",
+  "null_ctx": "A NULL ctx is refused, never dereferenced: the r2i arm refuses before reading the row (src/x509/v3_conf.rs:1126-1135), and every section read goes through X509V3_get_section, which refuses (src/x509/v3_conf.rs:439-446).",
+  "type_fact": "The dispatcher's answer type is fixed by the method-table entry: do_ext_i2d encodes and frees the callback's value with that same row's `it`. The F1 repair touched only src/x509/v3_conf.rs; every row's `it` is re-checked at this HEAD."
+ },
+ "dispatch_paths": [
+  "CONFIG_DECODE_v2i: do_ext_nconf v2i arm (src/x509/v3_conf.rs:1102-1110); callback called at :1111 with ctx possibly NULL.",
+  "CONFIG_DECODE_r2i: do_ext_nconf r2i arm (src/x509/v3_conf.rs:1124-1145); NULL ctx refused at :1126-1135, read at :1137, callback at :1144; encode/free at :1160.",
+  "SECTION_READ: X509V3_get_section (src/x509/v3_conf.rs:435); NULL ctx refused at :439-446; `(*ctx).db` read only at :448 after the guard."
+ ],
+ "section_path_enumeration": [
+  {
+   "read": "X509V3_get_section",
+   "file": "src/x509/v3_conf.rs",
+   "line": 435,
+   "null_refusal": "439-446",
+   "post_guard_deref": 448,
+   "note": "The single section-read refusal point. Every path below terminates here when ctx is NULL."
+  },
+  {
+   "read": "do_ext_nconf r2i arm",
+   "file": "src/x509/v3_conf.rs",
+   "line": 1126,
+   "null_refusal": "1126-1135",
+   "post_guard_deref": 1137,
+   "note": "Refuses ctx before reading (*ctx).db/db_meth or calling the r2i slot (:1144)."
+  },
+  {
+   "read": "do_dirname -> X509V3_get_section",
+   "file": "src/x509/v3_san.rs",
+   "line": 874,
+   "helper": "do_dirname (src/x509/v3_san.rs:867)",
+   "note": "On refusal sk is NULL, so X509V3_section_free (src/x509/v3_conf.rs:493) returns before reading ctx."
+  },
+  {
+   "read": "do_othername -> ASN1_generate_v3",
+   "file": "src/x509/v3_san.rs",
+   "line": 817,
+   "helper": "do_othername (src/x509/v3_san.rs:799)",
+   "note": "ASN1_generate_v3 accepts NULL and guards it before any section lookup (src/asn1/asn1_gen.rs:974 and :1098), so this arm is NULL-safe without a refusal."
+  },
+  {
+   "read": "a2i_GENERAL_NAME GEN_DIRNAME / GEN_OTHERNAME",
+   "file": "src/x509/v3_san.rs",
+   "line": 979,
+   "helper": "a2i_GENERAL_NAME (src/x509/v3_san.rs:915); GEN_OTHERNAME at :989"
+  },
+  {
+   "read": "set_dist_point_name -> gnames_from_sectname",
+   "file": "src/x509/v3_crld.rs",
+   "line": 955,
+   "helper": "gnames_from_sectname (src/x509/v3_crld.rs:950), called at :1008"
+  },
+  {
+   "read": "set_dist_point_name relativename",
+   "file": "src/x509/v3_crld.rs",
+   "line": 1019,
+   "helper": "set_dist_point_name (src/x509/v3_crld.rs:990)"
+  },
+  {
+   "read": "crldp_from_section -> set_dist_point_name / gnames_from_sectname",
+   "file": "src/x509/v3_crld.rs",
+   "line": 1289,
+   "helper": "crldp_from_section (src/x509/v3_crld.rs:1276); CRLissuer read at :1306",
+   "note": "Reached only after a successful section read, hence only with a live ctx."
+  },
+  {
+   "read": "aaidp_from_section -> set_dist_point_name",
+   "file": "src/x509/v3_crld.rs",
+   "line": 1858,
+   "helper": "aaidp_from_section (src/x509/v3_crld.rs:1845)",
+   "note": "Reached only after a successful section read, hence only with a live ctx."
+  },
+  {
+   "read": "policy_section -> X509V3_get_section",
+   "file": "src/x509/v3_cpols.rs",
+   "line": 1012,
+   "helper": "policy_section (src/x509/v3_cpols.rs:918)",
+   "note": "Reached only after r2i_certpol's successful section read, hence only with a live ctx."
+  }
+ ],
+ "rows": [
+  {
+   "id": "V1:src/x509/v3_crld.rs:1325:UNSAFE_FN_DEF",
+   "operation": "v2i_crld",
+   "file": "src/x509/v3_crld.rs",
+   "line_current": 1333,
+   "registration": "rows `ossl_v3_crld` (:2098) and `ossl_v3_freshest_crl` (:2119), slot `v2i`; `it = CRL_DIST_POINTS_it`",
+   "dispatch_path": "CONFIG_DECODE_v2i (do_ext_nconf v2i arm)",
+   "type_fact": "The returned stack is `CRL_DIST_POINTS`, the row's item. Unchanged at this HEAD; asserted by b55_rows_still_declare_the_item_their_callbacks_produce.",
+   "section_paths": [
+    "value-less entry -> X509V3_get_section at src/x509/v3_crld.rs:1356; a NULL answer breaks before crldp_from_section (:1362).",
+    "valued entry -> v2i_GENERAL_NAME at src/x509/v3_crld.rs:1373 -> src/x509/v3_san.rs:1162 -> a2i :979 -> do_dirname :874 -> X509V3_get_section (refused)."
+   ],
+   "contract": "`method` is a live row; `ctx` is NULL or live; `nval` is a live `CONF_VALUE` stack. A NULL `ctx` is refused on the section read and on each bare entry's `dirName` arm; both raise and this body answers NULL.",
+   "null_ctx_control": "b55_null_config_context_is_refused_on_every_section_path, table row NID_crl_distribution_points with `b55_crl_section` -> NULL + error (passed).",
+   "verdict": "SAFETY_DISCHARGED",
+   "evidence": "Guard src/x509/v3_conf.rs:439-446 refuses the NULL read; the refusal path frees only NULL-or-empty structures (DIST_POINT_free of a fresh point, whose templates are all pointer fields at offsets 0/8/16). Type fact unchanged and asserted."
+  },
+  {
+   "id": "V1:src/x509/v3_crld.rs:1554:UNSAFE_FN_DEF",
+   "operation": "v2i_idp",
+   "file": "src/x509/v3_crld.rs",
+   "line_current": 1566,
+   "registration": "row `ossl_v3_idp` (:2140), slot `v2i`; `it = ISSUING_DIST_POINT_it`",
+   "dispatch_path": "CONFIG_DECODE_v2i (do_ext_nconf v2i arm)",
+   "type_fact": "The returned value is `ISSUING_DIST_POINT`, the row's item. The row entry is unchanged at this HEAD (asserted), but the item's encode/free machinery is defective (B55-F1), so the type fact cannot be discharged as a working path.",
+   "section_paths": [
+    "`fullname:<value>` -> set_dist_point_name (call at src/x509/v3_crld.rs:1588) -> gnames_from_sectname (:1008) -> X509V3_get_section (:955), refused.",
+    "`relativename:<value>` -> X509V3_get_section at src/x509/v3_crld.rs:1019, refused."
+   ],
+   "contract": "`method` is a live row; `ctx` is NULL or live; `nval` is a live `CONF_VALUE` stack. A NULL `ctx` is refused on the `fullname`/`relativename` section reads by `set_dist_point_name`; the other arms do not read it.",
+   "null_ctx_control": "ATTEMPTED AND FAILED: the NULL-ctx section path is reached and the guard supplies NULL, but the refusal then frees the partially built ISSUING_DIST_POINT at src/x509/v3_crld.rs:1638, and the process aborts (SIGABRT, misaligned pointer dereference at src/asn1/fre.rs:218). Observed, not inferred.",
+   "verdict": "BLOCKED",
+   "missing_fact": "The row's refusal and success paths free/encode ISSUING_DIST_POINT through the generic ASN.1 template walk, which forms a pointer-typed slot from the inline ASN1_FBOOLEAN fields at struct offsets 12 and 28 (ISSUING_DIST_POINT_TT at src/x509/v3_crld.rs:664-699). A 4-byte-aligned `*mut *mut c_void` is then dereferenced at src/asn1/fre.rs:218 (free) and src/asn1/i2d.rs:234 (encode). Debug builds abort; the read is UB in any profile. Needs a repair to the shared template machinery (out of B55 scope; requires a new candidate S')."
+  },
+  {
+   "id": "V1:src/x509/v3_crld.rs:1913:UNSAFE_FN_DEF",
+   "operation": "v2i_aaidp",
+   "file": "src/x509/v3_crld.rs",
+   "line_current": 1928,
+   "registration": "row `ossl_v3_aa_issuing_dist_point` (:2203), slot `v2i`; `it = OSSL_AA_DIST_POINT_it`",
+   "dispatch_path": "CONFIG_DECODE_v2i (do_ext_nconf v2i arm)",
+   "type_fact": "The returned value is `OSSL_AA_DIST_POINT`, the row's item. The row entry is unchanged at this HEAD (asserted), but the item's encode/free machinery is defective (B55-F1).",
+   "section_paths": [
+    "value-less entry -> X509V3_get_section at src/x509/v3_crld.rs:1946; refused, and the refused branch leaves `point` NULL so the cleanup is a null free.",
+    "valued entry -> v2i_GENERAL_NAME at src/x509/v3_crld.rs:1961 -> do_dirname.",
+    "A live-context section -> aaidp_from_section (:1845) can fail after allocating `point`, freeing it at :1908 (same B55-F1 walk)."
+   ],
+   "contract": "`method` is a live row; `ctx` is NULL or live; `nval` is a live `CONF_VALUE` stack. A NULL `ctx` is refused on the section read and on a bare entry's `dirName` arm; both raise and this body answers NULL.",
+   "null_ctx_control": "b55_null_config_context_is_refused_on_every_section_path, table row NID_id_aa_issuing_distribution_point with `b55_aaidp_section` -> NULL + error (passed). A separate temporary probe of a successful build (`URI:http://example.com`, live ctx) aborted with SIGABRT at src/asn1/i2d.rs:234.",
+   "verdict": "BLOCKED",
+   "missing_fact": "Although the NULL-ctx section read is now safe, a successful `OSSL_AA_DIST_POINT` build aborts during encoding because OSSL_AA_DIST_POINT_TT (src/x509/v3_crld.rs:797-818) has inline ASN1_FBOOLEAN/ASN1_TBOOLEAN fields at offsets 20 and 28; the template walk forms a misaligned `*mut *const c_void` dereferenced at src/asn1/i2d.rs:234 (and the same class at src/asn1/fre.rs:218). Observed SIGABRT, not inferred. Needs the B55-F1 repair."
+  },
+  {
+   "id": "V1:src/x509/v3_ncons.rs:390:UNSAFE_FN_DEF",
+   "operation": "v2i_NAME_CONSTRAINTS",
+   "file": "src/x509/v3_ncons.rs",
+   "line_current": 393,
+   "registration": "rows `ossl_v3_name_constraints` (:1515), `ossl_v3_holder_name_constraints` (:1535), `ossl_v3_delegated_name_constraints` (:1555); `it = NAME_CONSTRAINTS_it`",
+   "dispatch_path": "CONFIG_DECODE_v2i (do_ext_nconf v2i arm)",
+   "type_fact": "The returned value is `NAME_CONSTRAINTS`, the row's item. Unchanged at this HEAD; asserted.",
+   "section_paths": [
+    "per element -> v2i_GENERAL_NAME_ex at src/x509/v3_ncons.rs:456 -> src/x509/v3_san.rs:1069 -> a2i :979 -> do_dirname :874 -> X509V3_get_section (refused).",
+    "otherName -> ASN1_generate_v3 (src/x509/v3_san.rs:817), which accepts and guards NULL (src/asn1/asn1_gen.rs:974/:1098)."
+   ],
+   "contract": "`method` is the live row; `ctx` is NULL or live; `nval` is a live `STACK_OF(CONF_VALUE)`. A NULL `ctx` is refused on each element's `dirName` arm by the section read and accepted on the `otherName` arm.",
+   "null_ctx_control": "table row NID_name_constraints with `permitted;dirName:b55_nc_section` -> NULL + error (passed).",
+   "verdict": "SAFETY_DISCHARGED",
+   "evidence": "Guard refuses at src/x509/v3_conf.rs:439-446; the failure path frees NAME_CONSTRAINTS and GENERAL_SUBTREE, whose templates are pointer fields only (src/x509/v3_ncons.rs:250-295)."
+  },
+  {
+   "id": "V1:src/x509/v3_san.rs:1058:UNSAFE_FN_DEF",
+   "operation": "v2i_GENERAL_NAME_ex",
+   "file": "src/x509/v3_san.rs",
+   "line_current": 1069,
+   "registration": "public helper; called from v2i_NAME_CONSTRAINTS (src/x509/v3_ncons.rs:456), v2i_AUTHORITY_INFO_ACCESS (src/x509/v3_info.rs:504) and v2i_GENERAL_NAME (:1133)",
+   "dispatch_path": "helper reached from CONFIG_DECODE_v2i rows",
+   "type_fact": "`cnf` is a live CONF_VALUE at every call site; the returned GeneralName is a GENERAL_NAMES element. Unchanged.",
+   "section_paths": [
+    "GEN_DIRNAME -> do_dirname at src/x509/v3_san.rs:979 -> X509V3_get_section :874 (refused when ctx is NULL).",
+    "GEN_OTHERNAME -> do_othername :989 -> ASN1_generate_v3 :817, which accepts NULL."
+   ],
+   "contract": "`out` is NULL or a live `GENERAL_NAME`; `cnf` must be a live `CONF_VALUE`; `ctx` is NULL or live. A NULL `ctx` is refused on the `dirName` arm and accepted on the `otherName` arm.",
+   "null_ctx_control": "direct helper control with a live `dirName:<section>` CONF_VALUE and NULL ctx -> NULL + error (passed).",
+   "verdict": "SAFETY_DISCHARGED"
+  },
+  {
+   "id": "V1:src/x509/v3_san.rs:1115:UNSAFE_FN_DEF",
+   "operation": "v2i_GENERAL_NAME",
+   "file": "src/x509/v3_san.rs",
+   "line_current": 1127,
+   "registration": "public helper; forwards to v2i_GENERAL_NAME_ex at src/x509/v3_san.rs:1133; called from v2i_GENERAL_NAMES (:1162), v2i_issuer_alt (:1286), v2i_subject_alt (:1419) and v2i_crld/v2i_aaidp",
+   "dispatch_path": "helper reached from CONFIG_DECODE_v2i rows",
+   "type_fact": "`cnf` is a live CONF_VALUE and the returned GeneralName is a GENERAL_NAMES element. Unchanged.",
+   "section_paths": [
+    "Forwards to v2i_GENERAL_NAME_ex (src/x509/v3_san.rs:1133); the `dirName` refusal is at :979 -> :874."
+   ],
+   "contract": "`cnf` must be a live `CONF_VALUE`; `ctx` is NULL or live. A NULL `ctx` is refused on the `dirName` arm; see v2i_GENERAL_NAME_ex.",
+   "null_ctx_control": "direct helper control with a live `dirName:<section>` CONF_VALUE and NULL ctx -> NULL + error (passed).",
+   "verdict": "SAFETY_DISCHARGED"
+  },
+  {
+   "id": "V1:src/x509/v3_san.rs:1131:UNSAFE_FN_DEF",
+   "operation": "v2i_GENERAL_NAMES",
+   "file": "src/x509/v3_san.rs",
+   "line_current": 1144,
+   "registration": "public helper; loops v2i_GENERAL_NAME at src/x509/v3_san.rs:1162; called from gnames_from_sectname (src/x509/v3_crld.rs:966)",
+   "dispatch_path": "helper reached from CONFIG_DECODE_v2i rows",
+   "type_fact": "`nval` elements are CONF_VALUE; each is handed to v2i_GENERAL_NAME and each answer is a GENERAL_NAMES element. Unchanged.",
+   "section_paths": [
+    "Per element -> v2i_GENERAL_NAME at src/x509/v3_san.rs:1162 -> `dirName` refusal at :979 -> :874."
+   ],
+   "contract": "`ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers. A NULL `ctx` is refused on each element's `dirName` arm.",
+   "null_ctx_control": "direct helper control with a one-element stack whose entry is `dirName:<section>` and NULL ctx -> NULL + error (passed; the stack is released with OPENSSL_sk_free because the elements are stack-local).",
+   "verdict": "SAFETY_DISCHARGED"
+  },
+  {
+   "id": "V1:src/x509/v3_san.rs:1231:UNSAFE_FN_DEF",
+   "operation": "v2i_issuer_alt",
+   "file": "src/x509/v3_san.rs",
+   "line_current": 1246,
+   "registration": "row `ossl_v3_alt[1]` (:1232), slot `v2i` = thunk `san_v2i_issuer`; `it = GENERAL_NAMES_it`",
+   "dispatch_path": "CONFIG_DECODE_v2i (do_ext_nconf v2i arm)",
+   "type_fact": "The returned stack is `GENERAL_NAMES`, the row's item. Unchanged at this HEAD; asserted.",
+   "section_paths": [
+    "per element -> v2i_GENERAL_NAME at src/x509/v3_san.rs:1286 -> `dirName` refusal at :979 -> :874.",
+    "`issuer=copy` -> copy_issuer (:1291), which guards NULL ctx and raises."
+   ],
+   "contract": "`ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers. A NULL `ctx` is refused by the `issuer=copy` arm and on each element's `dirName` arm; both raise and this body answers NULL.",
+   "null_ctx_control": "table row NID_issuer_alt_name with `dirName:b55_issuer_section` -> NULL + error (passed).",
+   "verdict": "SAFETY_DISCHARGED"
+  },
+  {
+   "id": "V1:src/x509/v3_san.rs:1355:UNSAFE_FN_DEF",
+   "operation": "v2i_subject_alt",
+   "file": "src/x509/v3_san.rs",
+   "line_current": 1372,
+   "registration": "row `ossl_v3_alt[0]` (:1232), slot `v2i` = thunk `san_v2i`; `it = GENERAL_NAMES_it`",
+   "dispatch_path": "CONFIG_DECODE_v2i (do_ext_nconf v2i arm)",
+   "type_fact": "The returned stack is `GENERAL_NAMES`, the row's item. Unchanged at this HEAD; asserted.",
+   "section_paths": [
+    "per element -> v2i_GENERAL_NAME at src/x509/v3_san.rs:1419 -> `dirName` refusal at :979 -> :874.",
+    "`email=copy`/`email=move` -> copy_email (:1423), which guards NULL ctx and raises."
+   ],
+   "contract": "`ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers. A NULL `ctx` is refused by the `email=copy`/`email=move` arms and on each element's `dirName` arm; both raise and this body answers NULL.",
+   "null_ctx_control": "table row NID_subject_alt_name with `dirName:b55_subject_section` -> NULL + error (passed).",
+   "verdict": "SAFETY_DISCHARGED"
+  },
+  {
+   "id": "V1:src/x509/v3_cpols.rs:1247:UNSAFE_FN_DEF",
+   "operation": "r2i_certpol",
+   "file": "src/x509/v3_cpols.rs",
+   "line_current": 1249,
+   "registration": "row `ossl_v3_cpols` (:1606), slot `r2i`; `it = CERTIFICATEPOLICIES_it`",
+   "dispatch_path": "CONFIG_DECODE_r2i (do_ext_nconf r2i arm)",
+   "type_fact": "The returned stack is `CERTIFICATEPOLICIES`, the row's item. Unchanged at this HEAD; asserted.",
+   "section_paths": [
+    "`@section` -> X509V3_get_section at src/x509/v3_cpols.rs:1297 (refused when NULL; the body raises and answers NULL).",
+    "policy_section (:918) is reached only after a successful read, i.e. only with a live ctx."
+   ],
+   "contract": "`ctx` is NULL or a live `X509V3_CTX`; `value` is NUL-terminated. A NULL `ctx` is refused on the `@section` arm.",
+   "null_ctx_control": "table row NID_certificate_policies with `@b55_policy_section` -> NULL + error (passed); the dispatcher's r2i guard (:1126-1135) refuses before the callback.",
+   "verdict": "SAFETY_DISCHARGED",
+   "evidence": "The r2i arm establishes a live ctx and refuses NULL at src/x509/v3_conf.rs:1126-1135; the callback's own section read also refuses independently."
+  },
+  {
+   "id": "V1:src/x509/v3_pci.rs:647:UNSAFE_FN_DEF",
+   "operation": "r2i_pci",
+   "file": "src/x509/v3_pci.rs",
+   "line_current": 649,
+   "registration": "row `ossl_v3_pci` (:784), slot `r2i`; `it = PROXY_CERT_INFO_EXTENSION_it` (src/x509/v3_pcia.rs:191)",
+   "dispatch_path": "CONFIG_DECODE_r2i (do_ext_nconf r2i arm)",
+   "type_fact": "The returned value is `PROXY_CERT_INFO_EXTENSION`, the row's item. Unchanged at this HEAD; asserted.",
+   "section_paths": [
+    "`@section` -> X509V3_get_section at src/x509/v3_pci.rs:686 (refused when NULL; error and NULL returned)."
+   ],
+   "contract": "`ctx` is NULL or live; `value` is NUL-terminated. The dispatcher's `r2i` arm establishes a live `ctx` (and refuses NULL before the call); a NULL `ctx` is also refused on the `@section` read.",
+   "null_ctx_control": "table row NID_proxyCertInfo with `@b55_proxy_section` -> NULL + error (passed); the dispatcher's r2i guard refuses first.",
+   "verdict": "SAFETY_DISCHARGED",
+   "evidence": "Guard at src/x509/v3_conf.rs:1126-1135 plus the independent refusal at src/x509/v3_pci.rs:686; the item's fields are all pointers (src/x509/v3_pcia.rs:143-154), so the B55-F1 class does not apply."
+  },
+  {
+   "id": "B51-V2I-005",
+   "operation": "v2i_AUTHORITY_INFO_ACCESS",
+   "file": "src/x509/v3_info.rs",
+   "line_current": 460,
+   "registration": "rows `ossl_v3_info` (:599) and `ossl_v3_sinfo` (:602), built by `info_access_row` (:576-593), slot `v2i`; `it = AUTHORITY_INFO_ACCESS_it`",
+   "dispatch_path": "CONFIG_DECODE_v2i (do_ext_nconf v2i arm)",
+   "type_fact": "The returned stack is `AUTHORITY_INFO_ACCESS`, the row's item. Unchanged at this HEAD; asserted.",
+   "section_paths": [
+    "per element -> v2i_GENERAL_NAME_ex at src/x509/v3_info.rs:504 -> src/x509/v3_san.rs:1069 -> `dirName` refusal at :979 -> X509V3_get_section :874.",
+    "otherName -> ASN1_generate_v3 (src/x509/v3_san.rs:817), which accepts NULL."
+   ],
+   "contract": "`ctx` is NULL-or-live per the slot contract; the body forwards it unchanged to `v2i_GENERAL_NAME_ex`. A NULL `ctx` is refused on the forwarded `dirName` section path and accepted on the forwarded `otherName` path.",
+   "null_ctx_control": "table row NID_info_access with `OCSP;dirName:b55_info_section` -> NULL + error (passed).",
+   "verdict": "SAFETY_DISCHARGED",
+   "evidence": "This is the row B54 reopened (B54-X1). The premise that failed at B51 \u2014 v2i_GENERAL_NAME_ex's NULL-or-live contract \u2014 is now true: the forwarded `dirName` read is refused at src/x509/v3_conf.rs:439-446. The B51 registry read-hold fact (B51-R1/canary B51-H1) is unchanged."
+  }
+ ],
+ "verdict_counts": {
+  "SAFETY_DISCHARGED": 10,
+  "BLOCKED": 2,
+  "total": 12
+ },
+ "contracts_changed": [
+  "X509V3_get_section (src/x509/v3_conf.rs:431): `ctx` must be live -> `ctx` is NULL or live; a NULL is refused with an error and NULL, a deliberate deviation from v3_conf.c.",
+  "X509V3_section_free (src/x509/v3_conf.rs:489): `ctx` must be live -> `ctx` is NULL or live and is read only when `section` is non-NULL, so a NULL section may be paired with a NULL ctx.",
+  "do_ext_nconf (src/x509/v3_conf.rs:1030): added that a NULL ctx is not dereferenced: the r2i arm refuses it before reading the row and the v2i/s2i callbacks reach it only through the refusing X509V3_get_section.",
+  "X509V3_EXT_nconf_int / X509V3_EXT_nconf / X509V3_EXT_nconf_nid (src/x509/v3_conf.rs:1204, :1258, :1277): added that a NULL ctx is refused by the r2i arm or the first section read with an error.",
+  "do_dirname (src/x509/v3_san.rs:863): `ctx` must be a live X509V3_CTX -> NULL or live; a NULL is refused on the section read and the body frees the name and answers NULL.",
+  "a2i_GENERAL_NAME (src/x509/v3_san.rs:909), v2i_GENERAL_NAME_ex (:1063), v2i_GENERAL_NAME (:1124), v2i_GENERAL_NAMES (:1141): the existing NULL-or-live sentence is now true; each names the `dirName` refusal and the `otherName` acceptance.",
+  "v2i_issuer_alt (src/x509/v3_san.rs:1243) and v2i_subject_alt (:1369): added that the copy/move arms and the `dirName` arm refuse a NULL ctx and the body answers NULL.",
+  "gnames_from_sectname (src/x509/v3_crld.rs:947), set_dist_point_name (:987), crldp_from_section (:1274), aaidp_from_section (:1843), v2i_crld (:1330), v2i_idp (:1563), v2i_aaidp (:1920): `ctx` is a live X509V3_CTX -> NULL or live; each names where the refusal happens.",
+  "v2i_NAME_CONSTRAINTS (src/x509/v3_ncons.rs:389): `method`/`ctx` are the caller's -> `method` is the live row and `ctx` is NULL or live, with the `dirName` refusal and `otherName` acceptance stated.",
+  "r2i_certpol (src/x509/v3_cpols.rs:1246): added that a NULL ctx is refused on the `@section` arm.",
+  "r2i_pci (src/x509/v3_pci.rs:646): `ctx` is a live X509V3_CTX -> NULL or live; notes the dispatcher establishes a live ctx and the `@section` read also refuses NULL.",
+  "v2i_AUTHORITY_INFO_ACCESS (src/x509/v3_info.rs:453): added that the forwarded `dirName` path refuses a NULL ctx and the forwarded `otherName` path accepts it.",
+  "Inline `// SAFETY:` comments at every affected call were reworded to the actual obligation (for example, `X509V3_section_free` is a no-op for a NULL section and a non-NULL section implies a live ctx because it came from X509V3_get_section)."
+ ],
+ "negative_control": {
+  "test": "x509::v3_conf::b55_tests::b55_null_config_context_is_refused_on_every_section_path",
+  "coverage": "8 public-entry rows (v2i_crld, v2i_aaidp, v2i_NAME_CONSTRAINTS, v2i_issuer_alt, v2i_subject_alt, v2i_AUTHORITY_INFO_ACCESS, r2i_certpol, r2i_pci) plus the three public helpers (v2i_GENERAL_NAME_ex, v2i_GENERAL_NAME, v2i_GENERAL_NAMES). v2i_idp is the one row not driven: its refusal path aborts in the item free (B55-F1), so it is recorded as BLOCKED rather than given a passing control.",
+  "assertion": "For every case the public entry is called with ctx = NULL and a section-triggering value; the result must be NULL and the error stack must be non-empty, and the process must survive.",
+  "result": "passed (2 tests, 0 failed, --test-threads=1)",
+  "mutation": {
+   "change": "removed the NULL-ctx guard block at src/x509/v3_conf.rs:439-446 (the `if ctx.is_null() { ... return ptr::null_mut(); }` body of X509V3_get_section) and left everything else untouched",
+   "observed": "the control aborted: panic at src/x509/v3_conf.rs:440:35 `null pointer dereference occurred`, non-unwinding panic, signal 6 (SIGABRT), test exit 101",
+   "restored": "restored from a byte copy; sha256 of src/x509/v3_conf.rs matches 6e0a7c8a47413fe1ec728d64bfc34043c0492a3d850fc746ac5f36e3bcef9b70 before and after",
+   "conclusion": "the guard is load-bearing for the section path and the control would fail without it"
+  }
+ },
+ "positive_control": {
+  "test": "x509::v3_conf::b55_tests::b55_rows_still_declare_the_item_their_callbacks_produce",
+  "assertion": "all 13 method-table entries carrying the adjudicated callbacks still declare the item their callback produces (CRL_DIST_POINTS, ISSUING_DIST_POINT, OSSL_AA_DIST_POINT, NAME_CONSTRAINTS x3, GENERAL_NAMES x2, AUTHORITY_INFO_ACCESS x2, CERTIFICATEPOLICIES, PROXY_CERT_INFO_EXTENSION)",
+  "result": "passed"
+ },
+ "findings": [
+  {
+   "id": "B55-F1",
+   "class": "misaligned pointer dereference / UB in the generic ASN.1 template walk for inline primitive fields",
+   "severity": "high",
+   "where": [
+    "src/asn1/utl.rs:452-455 (`get_field_ptr`) and :462-468 (`get_const_field_ptr`) cast `base + tt.offset` to `*mut *mut c_void` / `*mut *const c_void` without regard to the field's alignment.",
+    "src/asn1/fre.rs:218 dereferences that slot (`let value = *pval`), and src/asn1/i2d.rs:234 does the same on the encode side.",
+    "ISSUING_DIST_POINT_TT (src/x509/v3_crld.rs:664-699) has ASN1_FBOOLEAN inline int fields at offsets 12 and 28; OSSL_AA_DIST_POINT_TT (src/x509/v3_crld.rs:797-818) has ASN1_FBOOLEAN/ASN1_TBOOLEAN fields at offsets 20 and 28. The reverse template walk visits offset 28 first."
+   ],
+   "observed": [
+    "X509V3_EXT_nconf_nid(NULL, NULL, NID_issuing_distribution_point, \"fullname:@b55_idp_section\") aborts at src/asn1/fre.rs:218 during the refusal's cleanup (ISSUING_DIST_POINT_free at src/x509/v3_crld.rs:1638).",
+    "A successful idp build with a live ctx (\"onlyuser:true\") aborts at src/asn1/i2d.rs:234 during encoding.",
+    "A successful aaidp build with a live ctx (\"URI:http://example.com\") aborts at src/asn1/i2d.rs:234 during encoding."
+   ],
+   "not_caused_by": "the B54-F1 guard and the B55 documentation changes; the guard is what makes the NULL-ctx refusal reach the cleanup instead of dereferencing ctx, and the cleanup is where this independent defect lives.",
+   "not_fixed_here": "B55 is an adjudication plus documentation/test-only changes; repairing the shared template machinery is a production change and would require a new candidate S'. Two rows stay BLOCKED until it is repaired and re-adjudicated.",
+   "residual_risk": "The same class reaches any item whose template contains an inline field at a non-pointer-aligned offset. A whole-tree audit of ASN1_TFLG templates against struct offsets is required; B55 only establishes that none of the other ten adjudicated rows' success paths in this table use such a field."
+  },
+  {
+   "id": "B54-F2 (carried, out of scope)",
+   "class": "false documented precondition (value)",
+   "status": "unchanged by B55; the B55 controls pass non-NULL values so they do not exercise it. It is not evidence for or against these rows' NULL-ctx handling."
+  }
+ ],
+ "new_unsafe_assumptions": 0,
+ "new_unsafe_assumptions_note": "No production code was added or changed by B55; the two tests use only the crate's existing public C-ABI entries and safe stack constructors.",
+ "unsafe_operations_removed": 0,
+ "unsafe_operations_introduced": 0,
+ "test_only_unsafe_added": "Two #[cfg(test)] functions in src/x509/v3_conf.rs: b55_rows_still_declare_the_item_their_callbacks_produce (one unsafe item-accessor call) and b55_null_config_context_is_refused_on_every_section_path (public unsafe extern entries, OPENSSL_sk_push/OPENSSL_sk_free, and one zeroed-context temporary used only by an out-of-tree probe and not present in the final tree).",
+ "boundary_size": {
+  "production_unsafe_changed": 0,
+  "contracts_updated": 15,
+  "rows_discharged": 10,
+  "rows_blocked": 2,
+  "new_tests": 2
+ },
+ "safe_callers_can_cause_ub": false,
+ "safe_callers_can_cause_ub_note": "Within the 10 discharged rows, no: the NULL-ctx path returns through the refusing guard and every cleanup on that path releases only NULL-or-empty values. The 2 blocked rows are NOT claimed safe: a safe config caller can still reach the B55-F1 misalignment, so they are reported BLOCKED rather than discharged.",
+ "hidden_obligations": 0,
+ "hidden_obligations_note": "B55-F1 is an explicit, reported defect with named rows and observed aborts, not a hidden obligation. The two blocked rows are the explicit accounting for it.",
+ "fast_gate_at_candidate": {
+  "candidate": "bea57ea74 + the working-tree documentation/test delta; src/x509/v3_conf.rs sha256 6e0a7c8a47413fe1ec728d64bfc34043c0492a3d850fc746ac5f36e3bcef9b70",
+  "container": "docker/openssl-rs-court.sh (never the host)",
+  "toolchain": "pinned by the court image; CARGO_BUILD_JOBS=4; one heavy command at a time; free -g checked before each build",
+  "fmt": "cargo fmt --all -- --check: exit 0 (FMT_EXIT=0)",
+  "clippy": "cargo clippy --lib -- -D warnings: exit 0, Finished dev profile (CLIPPY_EXIT=0)",
+  "focused_tests": "cargo test --lib x509:: -- --test-threads=4: ok. 164 passed; 0 failed; 0 ignored; 2180 filtered out",
+  "exact_new_tests": "x509::v3_conf::b55_tests::b55_rows_still_declare_the_item_their_callbacks_produce and x509::v3_conf::b55_tests::b55_null_config_context_is_refused_on_every_section_path: both ok (2 passed; 0 failed), and each also passed alone with --exact --test-threads=1",
+  "mutation": "guard removed -> SIGABRT at src/x509/v3_conf.rs:440; restored byte-for-byte (sha256 matched)",
+  "scope_note": "FAST only. The full library suite (serial and threaded), Miri/ASan/TSan/LSan, dudect, authority differential, consumer closures and CAMPAIGN-STATUS application are NOT_RUN."
+ },
+ "residuals": [
+  "B55-F1 (misaligned template slot for inline primitive fields) blocks v2i_idp and v2i_aaidp and is not repaired.",
+  "B54-F2 (NULL value accepted by the public entries but dereferenced by v3_check_critical/v3_check_generic) remains open and is out of scope.",
+  "The adjudicated source identity is HEAD plus an uncommitted documentation/test delta; a reviewer must commit that delta as S' before applying any disposition.",
+  "No authority differential was run for the NULL-ctx refusal; the deviation is recorded but its compatibility effect is NOT_RUN.",
+  "The two blocked rows have no passing NULL-ctx control; their missing fact is the B55-F1 repair."
+ ],
+ "not_run": [
+  "full library suite (serial and --test-threads=4) and the 1962-test floor check: deferred to BATCH/SEAL",
+  "cargo clippy --all-targets (only --lib was run, per FAST)",
+  "Miri (Stacked Borrows and Tree Borrows), ASan, TSan, LSan, Loom",
+  "authority differential for the NULL-ctx refusal and for a live ctx",
+  "Wycheproof/ACVP and dudect (not applicable to this documentation/test change)",
+  "Rustls/BoringSSL/NSS-style protocol fuzzing and FRF-Fuzz",
+  "consumer compatibility replay (curl, nginx, OpenSSH, HAProxy, Redis) and the 33-family atlas",
+  "forensic regeneration and CAMPAIGN-STATUS.json / state.json application",
+  "production repair of B55-F1 and its whole-tree template/offset audit",
+  "a passing NULL-ctx control for v2i_idp (aborts in cleanup) and a clean success-path control for v2i_aaidp (aborts in encoding)"
+ ],
+ "non_claims": [
+  "B55 is not a cryptographic result and not a compatibility result.",
+  "A green B55 control is not a SAFE_COMPATIBLE graduation and does not discharge any consumer family.",
+  "The ten discharges are site-scoped to the named callback and its do_ext_nconf dispatch path at this exact tree; they do not discharge the mechanism-wide state.",
+  "B55 does not claim the shared ASN.1 template machinery is safe; B55-F1 shows it is not."
+ ],
+ "review_conditions": [
+  "C1_identity: candidate.head is bea57ea74; files_sha256 binds the adjudicated tree (HEAD plus the uncommitted doc/test delta); line_current is recomputed there and `line` is the census coordinate.",
+  "C2_repair: the guard is read at src/x509/v3_conf.rs:439-446 (X509V3_get_section) and :1126-1135 (r2i arm); every section-reaching path in section_path_enumeration terminates at one of them.",
+  "C3_type_fact: no method-table entry changed (F1 touched only v3_conf.rs); b55_rows_still_declare_the_item_their_callbacks_produce asserts all 13 entries at this HEAD.",
+  "C4_controls: the NULL-ctx control covers 8 rows and 3 helpers; the two blocked rows are excluded for the observed B55-F1 aborts, not for a documentation gap.",
+  "C5_mutation: the guard removal aborted at src/x509/v3_conf.rs:440 and was restored byte-for-byte (sha256 6e0a7c8a...).",
+  "C6_honesty: v2i_idp and v2i_aaidp are BLOCKED even though the guard protects their NULL-ctx read, because their encode/free path is independently unsafe (B55-F1)."
+ ],
+ "applied": true,
+ "review": {
+  "state": "adjudicated-fast",
+  "reviewer": "orchestrating agent (not the author of the sweep)",
+  "independent_checks": [
+   "single section refusal point X509V3_get_section src/x509/v3_conf.rs:439-446; (*ctx) read only after it",
+   "r2i arm guard src/x509/v3_conf.rs:1126-1135, read at :1137",
+   "both b55_tests pass at HEAD; guard removal aborts with \"null pointer dereference occurred\"",
+   "the 10 discharged rows = the 11 B54 rejects minus the 2 kept blocked, plus the reopened B51 row"
+  ],
+  "not_run": [
+   "Miri/ASan",
+   "closure re-run",
+   "authority differential",
+   "full suite",
+   "OpenSSH L7"
+  ],
+  "note": "Fast adjudication. v2i_idp/v2i_aaidp stay BLOCKED on the newly found B55-F1, not on this repair."
+ },
+ "schema_note": "One row per site. `line` is the V1 census coordinate inherited from B54/B51; `line_current` is recomputed at files_sha256. `verdict` uses the campaign's graduation vocabulary: SAFETY_DISCHARGED is site-scoped; BLOCKED names the precise missing fact."
+}

@@ -1472,6 +1472,12 @@ unsafe fn i2r_OSSL_DAY_TIME_BAND(
 
 /// `static int print_int_month(BIO *out, int64_t month)` — `crypto/x509/v3_timespec.c:198-229`.
 /// `SEP`, not the `SEPT` of [`MONTH_NAMES`].
+///
+/// # Safety
+///
+/// `out` is a live BIO. `month` is a plain value (no pointer is dereferenced); callers reach this
+/// from [`i2r_OSSL_TIME_SPEC`]'s `intMonth` arm, where it came from `ASN1_INTEGER_get_int64` on a
+/// live integer element.
 unsafe fn print_int_month(out: *mut Bio, month: i64) -> c_int {
     // SAFETY: `out` is live per the caller's contract; each literal is static.
     unsafe {
@@ -1523,6 +1529,12 @@ unsafe fn print_bit_month(out: *mut Bio, bs: *mut Asn1String) -> c_int {
 
 /// `static int print_bit_week(BIO *out, ASN1_BIT_STRING *bs)` — `crypto/x509/v3_timespec.c:253-268`.
 /// The fifth bit means "the final week", hence [`WEEK_NAMES`] rather than a numeric render.
+///
+/// # Safety
+///
+/// `out` is a live BIO; `bs` is a live `ASN1_BIT_STRING` with a readable `length`/`data` pair.
+/// Caller: [`i2r_OSSL_TIME_SPEC`]'s `bitWeek` arm, where `bs` is the live member the decoded
+/// item's selector selects.
 unsafe fn print_bit_week(out: *mut Bio, bs: *mut Asn1String) -> c_int {
     let mut i = OSSL_TIME_SPEC_BIT_WEEKS_1;
     let mut j = 0;
@@ -1546,6 +1558,12 @@ unsafe fn print_bit_week(out: *mut Bio, bs: *mut Asn1String) -> c_int {
 
 /// `static int print_day_of_week(BIO *out, ASN1_BIT_STRING *bs)` —
 /// `crypto/x509/v3_timespec.c:270-285`.
+///
+/// # Safety
+///
+/// `out` is a live BIO; `bs` is a live `ASN1_BIT_STRING` with a readable `length`/`data` pair.
+/// Callers: [`i2r_OSSL_TIME_SPEC`]'s `bitDay` arm and [`print_bit_named_day`], both of which pass
+/// the live member the decoded item's selector selects.
 unsafe fn print_day_of_week(out: *mut Bio, bs: *mut Asn1String) -> c_int {
     let mut i = OSSL_TIME_SPEC_DAY_BIT_SUN;
     let mut j = 0;
@@ -1569,6 +1587,12 @@ unsafe fn print_day_of_week(out: *mut Bio, bs: *mut Asn1String) -> c_int {
 
 /// `static int print_int_day_of_week(BIO *out, int64_t dow)` —
 /// `crypto/x509/v3_timespec.c:287-308`.
+///
+/// # Safety
+///
+/// `out` is a live BIO. `dow` is a plain value (no pointer is dereferenced); callers reach this
+/// from [`i2r_OSSL_TIME_SPEC`]'s `intDay` arm, where it came from `ASN1_INTEGER_get_int64` on a
+/// live integer element.
 unsafe fn print_int_day_of_week(out: *mut Bio, dow: i64) -> c_int {
     // SAFETY: `out` is live per the caller's contract; each literal is static.
     unsafe {

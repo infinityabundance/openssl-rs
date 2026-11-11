@@ -944,8 +944,9 @@ unsafe extern "C" fn dist_point_free_thunk(p: *mut c_void) {
 ///
 /// # Safety
 ///
-/// `ctx` is a live `X509V3_CTX`; `sect` is NUL-terminated (and, when it leads with `@`, its tail
-/// names a section).
+/// `ctx` is NULL or live; `sect` is NUL-terminated (and, when it leads with `@`, its tail
+/// names a section). A NULL `ctx` is refused on the `@` branch: `X509V3_get_section` raises and
+/// answers NULL, so this helper raises the section-not-found site and answers NULL.
 unsafe fn gnames_from_sectname(ctx: *mut X509V3Ctx, sect: *mut c_char) -> *mut OpenSslStack {
     // SAFETY: `sect` is NUL-terminated per the contract.
     let is_section = c_int::from(unsafe { *sect } == b'@' as c_char) != 0;
@@ -961,11 +962,12 @@ unsafe fn gnames_from_sectname(ctx: *mut X509V3Ctx, sect: *mut c_char) -> *mut O
         unsafe { raise_site(&V3_CRLD_56) };
         return ptr::null_mut();
     }
-    // SAFETY: `ctx` is live and `gnsect` is a live `CONF_VALUE` stack; the NULL method is the
-    // authority's own argument.
+    // SAFETY: `ctx` is NULL or live and `gnsect` is a live `CONF_VALUE` stack; the NULL method is
+    // the authority's own argument.
     let gens = unsafe { v2i_GENERAL_NAMES(ptr::null(), ctx, gnsect) };
     if is_section {
-        // SAFETY: `ctx` is live and `gnsect` is a section this call owns.
+        // SAFETY: `gnsect` came from `X509V3_get_section`, which only answers when `ctx` is
+        // live, and `gnsect` is a section this call owns.
         unsafe { X509V3_section_free(ctx, gnsect) };
     } else {
         // SAFETY: `gnsect` is a list this call owns; `conf_value_free_thunk` its destructor.
@@ -982,7 +984,9 @@ unsafe fn gnames_from_sectname(ctx: *mut X509V3Ctx, sect: *mut c_char) -> *mut O
 ///
 /// # Safety
 ///
-/// `pdp` is a writable slot; `ctx` is a live `X509V3_CTX`; `cnf` is a live `CONF_VALUE`.
+/// `pdp` is a writable slot; `ctx` is NULL or live; `cnf` is a live `CONF_VALUE`. A NULL `ctx`
+/// is refused on both name arms: `gnames_from_sectname` and `X509V3_get_section` raise and
+/// answer NULL, and this helper then releases what it built and answers `-1`.
 unsafe fn set_dist_point_name(
     pdp: *mut *mut DistPointName,
     ctx: *mut X509V3Ctx,
@@ -1000,7 +1004,7 @@ unsafe fn set_dist_point_name(
         // `HAS_PREFIX(cnf->name, "fullname")` == `strncmp(name, "fullname", 8) == 0`.
         // SAFETY: `name` is NUL-terminated and the literal is static.
         if unsafe { strncmp((*cnf).name, c"fullname".as_ptr(), 8) } == 0 {
-            // SAFETY: `ctx` is live and `value` is NUL-terminated per the contract.
+            // SAFETY: `ctx` is NULL or live and `value` is NUL-terminated per the contract.
             fnm = unsafe { gnames_from_sectname(ctx, (*cnf).value) };
             if fnm.is_null() {
                 break 'body;
@@ -1011,7 +1015,7 @@ unsafe fn set_dist_point_name(
             if nm.is_null() {
                 return -1;
             }
-            // SAFETY: `ctx` is live and `value` is NUL-terminated per the contract.
+            // SAFETY: `ctx` is NULL or live and `value` is NUL-terminated per the contract.
             let dnsect = unsafe { X509V3_get_section(ctx, (*cnf).value) };
             if dnsect.is_null() {
                 // SAFETY: `nm` is a live value this call owns.
@@ -1023,7 +1027,8 @@ unsafe fn set_dist_point_name(
             // SAFETY: `nm` and `dnsect` are live per the contract; `MBSTRING_ASC` is the
             // authority's `chtype`.
             let ret = unsafe { X509V3_NAME_from_section(nm, dnsect, MBSTRING_ASC as c_ulong) };
-            // SAFETY: `ctx` is live and `dnsect` is a section this call owns.
+            // SAFETY: `dnsect` came from `X509V3_get_section`, which only answers when `ctx` is
+            // live, and `dnsect` is a section this call owns.
             unsafe { X509V3_section_free(ctx, dnsect) };
             // SAFETY: `nm` is live; its `entries` is the fragment this call takes over.
             unsafe {
@@ -1266,7 +1271,8 @@ unsafe fn print_reasons(
 ///
 /// # Safety
 ///
-/// `ctx` is a live `X509V3_CTX`; `nval` is a live `CONF_VALUE` stack.
+/// `ctx` is NULL or live; `nval` is a live `CONF_VALUE` stack. A NULL `ctx` is refused on the
+/// name-entry and `CRLissuer` section reads with an error; this body then answers NULL.
 unsafe fn crldp_from_section(ctx: *mut X509V3Ctx, nval: *mut OpenSslStack) -> *mut DistPoint {
     let point = DIST_POINT_new();
     if point.is_null() {
@@ -1296,7 +1302,7 @@ unsafe fn crldp_from_section(ctx: *mut X509V3Ctx, nval: *mut OpenSslStack) -> *m
                 }
             // SAFETY: `cnf` is live and its `name` is NUL-terminated.
             } else if unsafe { strcmp((*cnf).name, c"CRLissuer".as_ptr()) } == 0 {
-                // SAFETY: `ctx` is live and `cnf->value` is NUL-terminated.
+                // SAFETY: `ctx` is NULL or live and `cnf->value` is NUL-terminated.
                 let iss = unsafe { gnames_from_sectname(ctx, (*cnf).value) };
                 // SAFETY: `point` is live; the field slot is writable.
                 unsafe { (*point).CRLissuer = iss };
@@ -1321,7 +1327,9 @@ unsafe fn crldp_from_section(ctx: *mut X509V3Ctx, nval: *mut OpenSslStack) -> *m
 ///
 /// # Safety
 ///
-/// `method` is a live row; `ctx` is a live `X509V3_CTX`; `nval` is a live `CONF_VALUE` stack.
+/// `method` is a live row; `ctx` is NULL or live; `nval` is a live `CONF_VALUE` stack. A NULL
+/// `ctx` is refused on the section read and on each bare entry's `dirName` arm; both raise and
+/// this body answers NULL.
 unsafe extern "C" fn v2i_crld(
     method: *const X509V3ExtMethod,
     ctx: *mut c_void,
@@ -1344,14 +1352,16 @@ unsafe extern "C" fn v2i_crld(
                 let cnf = unsafe { OPENSSL_sk_value(nval, i) }.cast::<ConfValue>();
                 // SAFETY: `cnf` is live per the contract.
                 if unsafe { (*cnf).value }.is_null() {
-                    // SAFETY: `ctx` is live and `cnf->name` is NUL-terminated.
+                    // SAFETY: `ctx` is NULL or live and `cnf->name` is NUL-terminated.
                     let dpsect = unsafe { X509V3_get_section(ctx, (*cnf).name) };
                     if dpsect.is_null() {
                         break 'body;
                     }
-                    // SAFETY: `ctx` is live and `dpsect` is a live section.
+                    // SAFETY: `dpsect` came from `X509V3_get_section`, which only answers when
+                    // `ctx` is live, and `dpsect` is a live section.
                     let point = unsafe { crldp_from_section(ctx, dpsect) };
-                    // SAFETY: `ctx` is live and `dpsect` is a section this call owns.
+                    // SAFETY: `dpsect` is non-NULL here, so `ctx` is live and `dpsect` is a
+                    // section this call owns.
                     unsafe { X509V3_section_free(ctx, dpsect) };
                     if point.is_null() {
                         break 'body;
@@ -1550,7 +1560,9 @@ unsafe extern "C" fn i2r_idp(
 ///
 /// # Safety
 ///
-/// `method` is a live row; `ctx` is a live `X509V3_CTX`; `nval` is a live `CONF_VALUE` stack.
+/// `method` is a live row; `ctx` is NULL or live; `nval` is a live `CONF_VALUE` stack. A NULL
+/// `ctx` is refused on the `fullname`/`relativename` section reads by [`set_dist_point_name`];
+/// the other arms do not read it.
 unsafe extern "C" fn v2i_idp(
     _method: *const X509V3ExtMethod,
     ctx: *mut c_void,
@@ -1828,7 +1840,8 @@ unsafe fn print_boolean(out: *mut Bio, b: c_int) -> c_int {
 ///
 /// # Safety
 ///
-/// `ctx` is a live `X509V3_CTX`; `nval` is a live `CONF_VALUE` stack.
+/// `ctx` is NULL or live; `nval` is a live `CONF_VALUE` stack. A NULL `ctx` is refused on the
+/// name-entry and `CRLissuer` section reads; this body then answers NULL.
 unsafe fn aaidp_from_section(ctx: *mut X509V3Ctx, nval: *mut OpenSslStack) -> *mut AaDistPoint {
     let point = OSSL_AA_DIST_POINT_new();
     if point.is_null() {
@@ -1904,7 +1917,9 @@ unsafe fn aaidp_from_section(ctx: *mut X509V3Ctx, nval: *mut OpenSslStack) -> *m
 ///
 /// # Safety
 ///
-/// `method` is a live row; `ctx` is a live `X509V3_CTX`; `nval` is a live `CONF_VALUE` stack.
+/// `method` is a live row; `ctx` is NULL or live; `nval` is a live `CONF_VALUE` stack. A NULL
+/// `ctx` is refused on the section read and on a bare entry's `dirName` arm; both raise and
+/// this body answers NULL.
 // The authority's `gens = NULL` after `point->distpoint->name.fullname = gens` is dead on the
 // success path: the function returns `point` before reaching the `err:` cleanup, and Rust models
 // that as a `return` inside the block. It is kept because it is what the authority writes and
@@ -1927,14 +1942,16 @@ unsafe extern "C" fn v2i_aaidp(
     'body: {
         // SAFETY: `cnf` is live per the contract.
         if unsafe { (*cnf).value }.is_null() {
-            // SAFETY: `ctx` is live and `cnf->name` is NUL-terminated.
+            // SAFETY: `ctx` is NULL or live and `cnf->name` is NUL-terminated.
             let dpsect = unsafe { X509V3_get_section(ctx, (*cnf).name) };
             if dpsect.is_null() {
                 break 'body;
             }
-            // SAFETY: `ctx` is live and `dpsect` is a live section.
+            // SAFETY: `dpsect` came from `X509V3_get_section`, which only answers when `ctx` is
+            // live, and `dpsect` is a live section.
             point = unsafe { aaidp_from_section(ctx, dpsect) };
-            // SAFETY: `ctx` is live and `dpsect` is a section this call owns.
+            // SAFETY: `dpsect` is non-NULL here, so `ctx` is live and `dpsect` is a section this
+            // call owns.
             unsafe { X509V3_section_free(ctx, dpsect) };
             if point.is_null() {
                 break 'body;

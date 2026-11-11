@@ -188,6 +188,13 @@ pub unsafe extern "C" fn i2d_OSSL_BASIC_ATTR_CONSTRAINTS(
 /// `static STACK_OF(CONF_VALUE) *i2v_OSSL_BASIC_ATTR_CONSTRAINTS(X509V3_EXT_METHOD *method,
 /// OSSL_BASIC_ATTR_CONSTRAINTS *battcons, STACK_OF(CONF_VALUE) *extlist)` —
 /// `crypto/x509/v3_battcons.c:45-53`.
+///
+/// # Safety
+///
+/// The `i2v` slot contract stated on [`X509V3ExtMethod`]. Caller: `X509V3_EXT_print`'s `i2v`
+/// arm, which decoded `battcons` through this row's `OSSL_BASIC_ATTR_CONSTRAINTS_it` and passes
+/// NULL as the sink. `battcons` is the dispatcher's live value, borrowed for the call; the
+/// returned stack (this call's own, or the sink) and its members belong to the caller.
 unsafe extern "C" fn i2v_OSSL_BASIC_ATTR_CONSTRAINTS(
     _method: *const X509V3ExtMethod,
     battcons: *mut c_void,

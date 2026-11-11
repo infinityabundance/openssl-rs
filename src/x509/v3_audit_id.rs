@@ -27,6 +27,13 @@ use crate::x509::v3_lib::X509V3ExtMethod;
 use crate::x509::v3_skid::{i2s_ASN1_OCTET_STRING, s2i_ASN1_OCTET_STRING};
 
 /// The `i2s` slot for `i2s_ASN1_OCTET_STRING`.
+///
+/// # Safety
+///
+/// The `i2s` slot contract stated on [`X509V3ExtMethod`]. Caller: `X509V3_EXT_print`'s `i2s`
+/// arm, which decoded `value` through this row's `ASN1_OCTET_STRING_it` and refuses a NULL
+/// decode, so `value` is a live octet string with a `length`/`data` invariant. The row is
+/// borrowed and unread by the callee; the returned block is the caller's.
 unsafe extern "C" fn audit_i2s(meth: *const X509V3ExtMethod, value: *mut c_void) -> *mut c_char {
     // SAFETY: `meth` is the table's live row (read only by the implementation); `value` is the
     // `ASN1_OCTET_STRING` the caller stored in the slot.
@@ -34,6 +41,14 @@ unsafe extern "C" fn audit_i2s(meth: *const X509V3ExtMethod, value: *mut c_void)
 }
 
 /// The `s2i` slot for `s2i_ASN1_OCTET_STRING`.
+///
+/// # Safety
+///
+/// The `s2i` slot contract stated on [`X509V3ExtMethod`]. Caller: `do_ext_nconf`'s `s2i` arm,
+/// which passes a borrowed NUL-terminated configuration value; `value` is therefore non-NULL
+/// (what [`s2i_ASN1_OCTET_STRING`] requires) and is neither freed nor retained here. The fresh
+/// `ASN1_OCTET_STRING` on success is encoded with this row's item and freed once by the
+/// dispatcher.
 unsafe extern "C" fn audit_s2i(
     meth: *const X509V3ExtMethod,
     ctx: *mut c_void,

@@ -860,14 +860,17 @@ unsafe fn do_othername(
 ///
 /// # Safety
 ///
-/// `value` must be NUL-terminated; `ctx` must be a live `X509V3_CTX`.
+/// `value` must be NUL-terminated; `ctx` is NULL or live. A NULL `ctx` is refused on the
+/// section read: `X509V3_get_section` raises and answers NULL, after which this body frees the
+/// name it allocated and answers NULL. `X509V3_section_free` is then a no-op because the
+/// section is NULL.
 unsafe fn do_dirname(value: *const c_char, ctx: *mut X509V3Ctx) -> *mut X509Name {
     let mut ret = 0;
     let mut sk: *mut OpenSslStack = core::ptr::null_mut();
     // SAFETY: the item allocator answers NULL or a live value.
     let nm = X509_NAME_new();
     if !nm.is_null() {
-        // SAFETY: `ctx` is live and `value` is NUL-terminated per the contract.
+        // SAFETY: `ctx` is NULL or live and `value` is NUL-terminated per the contract.
         sk = unsafe { X509V3_get_section(ctx, value) };
         if sk.is_null() {
             // `ERR_raise_data(ERR_LIB_X509V3, X509V3_R_SECTION_NOT_FOUND, "section=%s", value)`.
@@ -883,7 +886,9 @@ unsafe fn do_dirname(value: *const c_char, ctx: *mut X509V3Ctx) -> *mut X509Name
             ret = unsafe { X509V3_NAME_from_section(nm, sk, MBSTRING_ASC as c_ulong) };
         }
     }
-    // SAFETY: `ctx` is live and `sk` is NULL or this call's own section.
+    // SAFETY: `ctx` is NULL or live and `sk` is NULL or a section this call owns. A NULL `sk`
+    // makes the release a no-op; a non-NULL `sk` came from `X509V3_get_section`, which only
+    // answers when `ctx` was live.
     unsafe { X509V3_section_free(ctx, sk) };
     if ret == 0 {
         // SAFETY: `nm` is NULL or this call's own value.
@@ -902,7 +907,10 @@ unsafe fn do_dirname(value: *const c_char, ctx: *mut X509V3Ctx) -> *mut X509Name
 ///
 /// # Safety
 ///
-/// `out` is NULL or a live `GENERAL_NAME`; `value` must be NUL-terminated; `ctx` is NULL or live.
+/// `out` is NULL or a live `GENERAL_NAME`; `value` must be NUL-terminated; `ctx` is NULL or
+/// live. The `dirName` arm refuses a NULL `ctx` through [`do_dirname`]'s section read; the
+/// `otherName` arm passes `ctx` to `ASN1_generate_v3`, which accepts NULL and uses it only for
+/// a section reference.
 #[no_mangle]
 pub unsafe extern "C" fn a2i_GENERAL_NAME(
     out: *mut GeneralName,
@@ -1053,7 +1061,10 @@ unsafe fn err_value(site: &crate::runtime::err::err_sites::ErrSite, value: *cons
 ///
 /// # Safety
 ///
-/// `out` is NULL or a live `GENERAL_NAME`; `cnf` must be a live `CONF_VALUE`; `ctx` is NULL or live.
+/// `out` is NULL or a live `GENERAL_NAME`; `cnf` must be a live `CONF_VALUE`; `ctx` is NULL or
+/// live. A NULL `ctx` is refused on the `dirName` arm (`X509V3_get_section` raises and answers
+/// NULL, so the build fails) and accepted on the `otherName` arm (`ASN1_generate_v3` accepts
+/// NULL).
 #[no_mangle]
 pub unsafe extern "C" fn v2i_GENERAL_NAME_ex(
     out: *mut GeneralName,
@@ -1110,7 +1121,8 @@ pub unsafe extern "C" fn v2i_GENERAL_NAME_ex(
 ///
 /// # Safety
 ///
-/// `cnf` must be a live `CONF_VALUE`; `ctx` is NULL or live.
+/// `cnf` must be a live `CONF_VALUE`; `ctx` is NULL or live. A NULL `ctx` is refused on the
+/// `dirName` arm; see [`v2i_GENERAL_NAME_ex`].
 #[no_mangle]
 pub unsafe extern "C" fn v2i_GENERAL_NAME(
     method: *const X509V3ExtMethod,
@@ -1126,7 +1138,8 @@ pub unsafe extern "C" fn v2i_GENERAL_NAME(
 ///
 /// # Safety
 ///
-/// `ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers.
+/// `ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers. A NULL `ctx`
+/// is refused on each element's `dirName` arm; see [`v2i_GENERAL_NAME_ex`].
 #[no_mangle]
 pub unsafe extern "C" fn v2i_GENERAL_NAMES(
     method: *const X509V3ExtMethod,
@@ -1227,7 +1240,9 @@ pub static ossl_v3_alt: [X509V3ExtMethod; 3] = [
 ///
 /// # Safety
 ///
-/// `ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers.
+/// `ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers. A NULL `ctx`
+/// is refused by the `issuer=copy` arm ([`copy_issuer`]) and on each element's `dirName` arm
+/// (the section read refuses it); both raise and this body answers NULL.
 unsafe extern "C" fn v2i_issuer_alt(
     method: *mut X509V3ExtMethod,
     ctx: *mut X509V3Ctx,
@@ -1351,7 +1366,9 @@ unsafe extern "C" fn copy_issuer(ctx: *mut X509V3Ctx, gens: *mut OpenSslStack) -
 ///
 /// # Safety
 ///
-/// `ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers.
+/// `ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers. A NULL `ctx`
+/// is refused by the `email=copy`/`email=move` arms ([`copy_email`]) and on each element's
+/// `dirName` arm (the section read refuses it); both raise and this body answers NULL.
 unsafe extern "C" fn v2i_subject_alt(
     method: *mut X509V3ExtMethod,
     ctx: *mut X509V3Ctx,
@@ -1498,4 +1515,45 @@ unsafe extern "C" fn copy_email(
     }
 
     1
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// B54-W3: the config-decode type fact, per call site. `do_ext_nconf` resolves the row by
+    /// NID and calls that row's `v2i`; `ossl_v3_alt`'s three rows all declare `GENERAL_NAMES_it`,
+    /// so each builder's cast to `GENERAL_NAMES` is fixed by the entry it is installed in. Only
+    /// `subject_alt_name` may use the copy/move-email builder and only `issuer_alt_name` the
+    /// issuer builder; swapping the two `v2i` values makes this fail.
+    #[test]
+    fn the_alt_rows_pair_each_builder_with_its_nid() {
+        let general_names = GENERAL_NAMES_it();
+        assert_eq!(ossl_v3_alt[0].ext_nid, NID_subject_alt_name);
+        assert_eq!(ossl_v3_alt[1].ext_nid, NID_issuer_alt_name);
+        // SAFETY: both rows' `it` accessors answer the static `GENERAL_NAMES` item.
+        assert_eq!(
+            unsafe { ossl_v3_alt[0].it.expect("an item")() },
+            general_names
+        );
+        // SAFETY: as above.
+        assert_eq!(
+            unsafe { ossl_v3_alt[1].it.expect("an item")() },
+            general_names
+        );
+        assert_eq!(
+            ossl_v3_alt[0].v2i.map(|f| f as usize),
+            Some(san_v2i as *const () as usize),
+            "subjectAltName must be built by v2i_subject_alt"
+        );
+        assert_eq!(
+            ossl_v3_alt[1].v2i.map(|f| f as usize),
+            Some(san_v2i_issuer as *const () as usize),
+            "issuerAltName must be built by v2i_issuer_alt"
+        );
+        assert_eq!(
+            ossl_v3_alt[0].i2v.map(|f| f as usize),
+            Some(san_i2v as *const () as usize)
+        );
+    }
 }
