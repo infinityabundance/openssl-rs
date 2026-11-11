@@ -12638,15 +12638,53 @@ def _phw_split(text: str):
 
 
 def _phw_cfg_test_spans(text: str):
-    """`#[cfg(test)]` item spans: test-only source is recorded, never admitted."""
+    """`#[cfg(test)]` item spans: test-only source is recorded, never admitted.
+
+    The span is the *item's* extent.  A semicolon-terminated item -- in this
+    crate, the `#[cfg(test)] const _: fn(...) = f;` compile-time assertions that
+    pin dispatch shapes -- ends at its semicolon.  Brace-matching from the
+    attribute instead runs into the *next* item, and every production function
+    between the assertion and that brace is then misclassified as test-only: a
+    context constructor excluded that way silently shrinks a `hw`-table closure
+    (B58: the two GCM constructors after the AES assertion).
+    """
     spans = []
+    comments = [cm.span() for cm in
+                re.finditer(r"//[^\n]*|/\*.*?\*/", text, re.S)]
     for m in re.finditer(r"#\[cfg\(\s*test\s*\)\]", text):
-        brace = text.find("{", m.end())
-        if brace < 0:
+        if any(a <= m.start() < b for a, b in comments):
             continue
-        end = _s1_brace_span(text, brace)
-        if end is not None:
-            spans.append((m.start(), end))
+        i = m.end()
+        while i < len(text):
+            if text.startswith("//", i):
+                nl = text.find("\n", i)
+                i = len(text) if nl < 0 else nl + 1
+                continue
+            if text.startswith("/*", i):
+                end = text.find("*/", i + 2)
+                i = len(text) if end < 0 else end + 2
+                continue
+            c = text[i]
+            if c == '"':
+                i += 1
+                while i < len(text):
+                    if text[i] == "\\":
+                        i += 2
+                        continue
+                    if text[i] == '"':
+                        i += 1
+                        break
+                    i += 1
+                continue
+            if c in ";,":
+                spans.append((m.start(), i + 1))
+                break
+            if c == "{":
+                end = _s1_brace_span(text, i)
+                if end is not None:
+                    spans.append((m.start(), end))
+                break
+            i += 1
     return spans
 
 
@@ -30838,6 +30876,35 @@ def self_test() -> int:
     check("opensym libcrypto", bool(OPENSYM.match("libcrypto.so.3")), True)
     check("opensym libssl3", bool(OPENSYM.match("libssl.so.3")), True)
     check("opensym other", bool(OPENSYM.match("libcrypto.a")), False)
+
+    # cfg(test) item spans.  A semicolon-terminated `#[cfg(test)]` assertion
+    # item must end at its own semicolon; brace-matching from the attribute
+    # would swallow the production items that follow it and silently shrink a
+    # provider hw-table context closure (B58: ARIA/SM4 GCM constructors).
+    cfg_text = (
+        "#[cfg(test)]\n"
+        "const _: fn(u8) -> u8 = f;\n"
+        "\n"
+        "pub fn g() -> u8 { 1 }\n"
+        "\n"
+        "#[cfg(test)]\n"
+        "mod tests {\n"
+        "    fn t() { }\n"
+        "}\n"
+        "\n"
+        "/// negative control (`#[cfg(test)]` only) names the attribute\n"
+        "pub fn h() -> u8 { 2 }\n")
+    cfg_spans = _phw_cfg_test_spans(cfg_text)
+    check("cfg(test) assertion item is test-only",
+          _phw_in_spans(cfg_spans, cfg_text.index("const _: fn")), True)
+    check("cfg(test) assertion span ends at its semicolon",
+          _phw_in_spans(cfg_spans, cfg_text.index("pub fn g")), False)
+    check("cfg(test) mod span covers its body",
+          _phw_in_spans(cfg_spans, cfg_text.index("fn t")), True)
+    check("cfg(test) mod span ends at its brace",
+          _phw_in_spans(cfg_spans, cfg_text.index("pub fn h")), False)
+    check("cfg(test) named in a doc comment is not an attribute",
+          _phw_in_spans(cfg_spans, cfg_text.index("/// negative")), False)
 
     # nm line parsing
     check("nm defined", parse_nm_line("0000000000000123 T EVP_rc4"), (0x123, "T", "EVP_rc4"))
