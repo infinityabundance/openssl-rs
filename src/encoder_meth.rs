@@ -1237,6 +1237,15 @@ pub unsafe extern "C" fn OSSL_ENCODER_settable_ctx_params(
 
 /// `sk_OSSL_ENCODER_INSTANCE_pop_free`'s destructor: the crate's stack frees elements through a
 /// `void *`-shaped callback, so `ossl_encoder_instance_free` is reached through this thunk.
+///
+/// # Safety
+///
+/// `p` is NULL or the `OSSL_ENCODER_INSTANCE` whose reference the stack owns and is releasing.
+/// The single installation is [`OsslEncoderCtx`]'s `destroy_body` over that context's own
+/// `encoder_insts` stack, whose elements `ossl_encoder_instance_new`
+/// (`src/encoder_lib.rs:381`) built and each hold one encoder reference;
+/// `ossl_encoder_instance_free` accepts NULL and releases each of those fields exactly once
+/// through the instance's own `CtxDestroy`.
 unsafe extern "C" fn encoder_instance_free_thunk(p: *mut c_void) {
     // SAFETY: the stack's element is an `OsslEncoderInstance` this crate allocated and owns.
     unsafe { ossl_encoder_instance_free(p.cast()) };

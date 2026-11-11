@@ -22197,6 +22197,17 @@ pub(crate) mod legacy {
     const RC4_HMAC_MD5_FLAGS: u64 = PROV_CIPHER_FLAG_VARIABLE_LENGTH | PROV_CIPHER_FLAG_AEAD;
 
     /// `rc4_hmac_md5_newctx` — `cipher_rc4_hmac_md5.c:48-65`.
+    ///
+    /// # Safety
+    ///
+    /// `OSSL_FUNC_cipher_newctx_fn`'s ABI contract: `provctx` is NULL or the live provider
+    /// context of the provider that published this row (`ossl_provider_ctx` of the method's
+    /// `prov`, passed by `crate::evp::cipher_ctx`'s two constructors). It is only forwarded to
+    /// `ossl_cipher_generic_initkey`, which reads it through `prov_libctx_of` when non-NULL and
+    /// never releases it, so the caller keeps ownership. The answer is NULL or a new context
+    /// allocated through the crate's `CRYPTO_*` seam, owned by the caller and released by this
+    /// row's `freectx` (`rc4_hmac_md5_freectx` through the same dispatch table); nothing else is
+    /// transferred.
     unsafe extern "C" fn rc4_hmac_md5_newctx(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();

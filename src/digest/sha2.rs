@@ -389,6 +389,14 @@ impl Sha512Ctx {
 
 /// `sha512_224_init` — `crypto/sha/sha512.c:70-84`. Internal: `sha.h` declares no
 /// `SHA512_224_Init`, and `EVP_sha512_224` reaches it through the provider (8.1b).
+///
+/// # Safety
+///
+/// `c` is a live, aligned, writable `Sha512Ctx` this module allocated (the provider's
+/// `sha2_prov.c` context block, or a test's own), not aliased by another exclusive reference
+/// for the call. Every write below is to that caller-owned value's scalar fields; nothing is
+/// read first, so an uninitialised-but-allocated block is enough. Its sibling
+/// [`sha512_256_init`] states the same contract for the same caller population.
 #[allow(dead_code)] // the landing caller is `providers/implementations/digests/sha2_prov.c`, 8.1b's
 pub(crate) unsafe fn sha512_224_init(c: *mut Sha512Ctx) -> c_int {
     // SAFETY: the caller's contract.

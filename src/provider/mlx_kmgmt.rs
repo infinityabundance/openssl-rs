@@ -124,6 +124,14 @@ pub(crate) unsafe fn mlx_kem_have_pubkey(key: *const MlxKey) -> bool {
 }
 
 /// `mlx_kem_have_prvkey(key)` — `prov/mlx_kem.h:45`, `(key)->state > 1`.
+///
+/// # Safety
+///
+/// As [`mlx_kem_have_pubkey`]: `key` is non-NULL and live. The callers are the key-management
+/// functions in this module and `mlx_kem.rs` (`:184`, `:452`, and `:360`/`:841` here), which read
+/// it from the `OSSL_KEYMGMT` operation's own `vkey`/`keydata` argument, i.e. the object the
+/// provider dispatch handed them for the duration of the call. The read is a single `u32` field
+/// of that object; nothing is written, released or stored.
 #[inline]
 pub(crate) unsafe fn mlx_kem_have_prvkey(key: *const MlxKey) -> bool {
     // SAFETY: `key` is live per the caller's contract.
@@ -1784,3 +1792,49 @@ declare_dispatch!(
     MLX_X448_KEM_KMGMT_FUNCTIONS,
     3
 );
+
+#[cfg(test)]
+mod b56_tests {
+    use super::*;
+
+    /// B56-C5 — `mlx_kem_have_pubkey`/`mlx_kem_have_prvkey` are `>` tests on the key's `state`
+    /// field, and the three states they separate are the whole obligation of the pair.
+    ///
+    /// The rows' contracts are "a live `MlxKey`"; this test pins what the read means, so a
+    /// predicate written as the wrong comparison (both rows' most likely transcription error)
+    /// fails here rather than silently mis-selecting a key on export or import.
+    #[test]
+    fn the_state_predicates_partition_the_three_documented_states() {
+        let mut key = MlxKey {
+            libctx: core::ptr::null_mut(),
+            propq: core::ptr::null_mut(),
+            minfo: core::ptr::null(),
+            xinfo: core::ptr::null(),
+            mkey: core::ptr::null_mut(),
+            xkey: core::ptr::null_mut(),
+            state: MLX_HAVE_NOKEYS,
+        };
+        // SAFETY: `key` is this test's own live local, so both reads are of a live `MlxKey`.
+        unsafe {
+            assert!(
+                !mlx_kem_have_pubkey(&key) && !mlx_kem_have_prvkey(&key),
+                "no keys: neither predicate holds"
+            );
+            key.state = MLX_HAVE_PUBKEY;
+            assert!(
+                mlx_kem_have_pubkey(&key) && !mlx_kem_have_prvkey(&key),
+                "public key only: have_pubkey holds and have_prvkey does not"
+            );
+            key.state = MLX_HAVE_PRVKEY;
+            assert!(
+                mlx_kem_have_pubkey(&key) && mlx_kem_have_prvkey(&key),
+                "private key: both predicates hold, which is what \"have a private key\" means"
+            );
+            key.state = MLX_HAVE_PRVKEY + 1;
+            assert!(
+                mlx_kem_have_prvkey(&key),
+                "the test is `>`, so a larger state still answers true"
+            );
+        }
+    }
+}

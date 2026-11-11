@@ -558,12 +558,32 @@ unsafe extern "C" fn keymgmt_free_thunk(p: *mut c_void) {
 
 /// `sk_OSSL_DECODER_INSTANCE_deep_copy`'s copy function: `ossl_decoder_instance_dup` has the typed
 /// shape, so it is reached through this `*const c_void -> *mut c_void` adapter.
+///
+/// # Safety
+///
+/// `OPENSSL_sk_deep_copy`'s copy-function contract: `src` is one element of the stack being
+/// copied, handed back unchanged as a live `OSSL_DECODER_INSTANCE` this crate allocated. The only
+/// installation is the `decoder_insts` stack of the context copy below (`:1338`), whose elements
+/// `ossl_decoder_instance_new`/`_dup` created (`src/decoder_lib.rs:283`, `:404`). The answer is a
+/// newly owned duplicate (`ossl_decoder_instance_dup` takes its own decoder reference and builds
+/// a fresh provider context) that the deep copy's element loop owns; on refusal it is NULL and the
+/// caller releases only what it already copied.
 unsafe extern "C" fn decoder_instance_dup_thunk(src: *const c_void) -> *mut c_void {
     // SAFETY: the stack's element is a live `OsslDecoderInstance`.
     unsafe { ossl_decoder_instance_dup(src.cast::<OsslDecoderInstance>()).cast::<c_void>() }
 }
 
 /// `sk_OSSL_DECODER_INSTANCE_deep_copy`'s free function.
+///
+/// # Safety
+///
+/// `OPENSSL_sk_pop_free`/`deep_copy`'s element-release contract: `p` is NULL or one element of a
+/// `decoder_insts` stack, i.e. a live `OSSL_DECODER_INSTANCE` whose single reference the stack is
+/// releasing. Two sites install it, both on such a stack: the copy's failure path (`:1339`) and
+/// the context's own `OSSL_DECODER_CTX_free` in the sibling module
+/// (`src/decoder_meth.rs:754`). `ossl_decoder_instance_free` accepts NULL and releases each field
+/// once through the instance's own `CtxDestroy`, so this thunk never releases a reference it does
+/// not own and never releases one twice.
 unsafe extern "C" fn decoder_instance_free_thunk(p: *mut c_void) {
     // SAFETY: the stack's element is a live `OsslDecoderInstance` the copy owns.
     unsafe { ossl_decoder_instance_free(p.cast::<OsslDecoderInstance>()) };
@@ -1847,4 +1867,17 @@ mod tests {
             }
         }
     }
+}
+
+#[cfg(test)]
+mod b56_tests {
+    use super::*;
+
+    // B56-C6 — the two thunks' ABI shape, as `OPENSSL_sk_deep_copy` and `OPENSSL_sk_pop_free`
+    // call it. A change to either parameter or return type stops this file compiling instead of
+    // becoming a silent frame-layout mismatch at the C boundary.
+    const _: unsafe extern "C" fn(*const c_void) -> *mut c_void = decoder_instance_dup_thunk;
+    const _: unsafe extern "C" fn(*mut c_void) = decoder_instance_free_thunk;
+    const _: unsafe extern "C" fn(*const c_void) -> *mut c_void = keymgmt_dup_thunk;
+    const _: unsafe extern "C" fn(*mut c_void) = keymgmt_free_thunk;
 }

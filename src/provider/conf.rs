@@ -232,6 +232,15 @@ pub(crate) unsafe fn ossl_prov_conf_ctx_free(vpcgbl: *mut c_void) {
 /// The `ossl_provider_free` callback in the shape `OPENSSL_sk_pop_free` takes. The authority
 /// passes the function pointer directly; the registry's stack here is untyped, so the adapter
 /// exists to make the coercion explicit rather than to change it.
+///
+/// # Safety
+///
+/// `OPENSSL_sk_pop_free`'s element-release contract: `value` is one element of
+/// `ProviderConfGlobal::activated_providers`, i.e. a live `OSSL_PROVIDER *` whose single
+/// reference the list owns. The list is only ever grown at `:566-578`, which pushes `actual` --
+/// the object `ossl_provider_add_to_store` handed over with the store's reference -- and on a
+/// refused push deactivates and frees that reference itself. `ossl_provider_free` releases the
+/// one reference, so the list's teardown releases it exactly once.
 unsafe extern "C" fn provider_free_thunk(value: *mut c_void) {
     // SAFETY: the list's entries are `OSSL_PROVIDER *` and it is handing each one over for
     // release.

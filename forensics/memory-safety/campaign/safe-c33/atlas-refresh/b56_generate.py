@@ -1,0 +1,1063 @@
+#!/usr/bin/env python3
+"""Generate forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B56.json.
+
+The rows are the 22 BLOCKED obligations of evidence/closure-ssh-311.json that are
+neither X509_VERIFY_POLICY (B54/B55) nor the slh_dsa / SSL_SESSION rows the ledger
+discharged after the closure was frozen. Line numbers are recomputed from the
+adjudicated working tree; every hash below was measured there.
+
+SPDX-License-Identifier: Apache-2.0
+"""
+
+import json
+import hashlib
+import os
+import subprocess
+
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))
+OUT = os.path.join(
+    ROOT,
+    "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B56.json",
+)
+
+FILES = [
+    "src/asn1/fre.rs",
+    "src/cms/cms_asn1.rs",
+    "src/context/namemap.rs",
+    "src/decoder_pkey.rs",
+    "src/digest/sha2.rs",
+    "src/encoder_meth.rs",
+    "src/engine/eng_dyn.rs",
+    "src/pkcs7/pk7_asn1.rs",
+    "src/provider/cipher.rs",
+    "src/provider/conf.rs",
+    "src/provider/decode_pvk2key.rs",
+    "src/provider/mlx_kmgmt.rs",
+    "src/rand/rand_lib.rs",
+    "src/runtime/thread.rs",
+]
+
+
+def sha256(path):
+    with open(os.path.join(ROOT, path), "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
+def head():
+    return subprocess.check_output(
+        ["git", "-C", ROOT, "rev-parse", "HEAD"], text=True
+    ).strip()
+
+
+def row(rid, file, line, line_current, operation, mechanism, registration, caller,
+        obligation, verdict, evidence, kind="UNSAFE_FN_DEF"):
+    return {
+        "id": rid,
+        "file": file,
+        "line": line,
+        "line_provenance": "V1 census coordinate from evidence/closure-ssh-311.json; "
+                           "line_current is recomputed at the adjudicated tree",
+        "line_current": line_current,
+        "kind": kind,
+        "operation": operation,
+        "mechanism": mechanism,
+        "registration": registration,
+        "caller": caller,
+        "obligation": obligation,
+        "verdict": verdict,
+        "evidence": evidence,
+    }
+
+
+ROWS = [
+    row(
+        "V1:src/cms/cms_asn1.rs:523:UNSAFE_FN_DEF",
+        "src/cms/cms_asn1.rs", 523, 534, "cms_ec_cb", "RAND_CMS_STORE_KEYFMT",
+        "CMS_ENCRYPTED_CONTENT_INFO_AUX `asn1_cb` (src/cms/cms_asn1.rs:1358), installed as "
+        "`funcs` of CMS_ENCRYPTED_CONTENT_INFO_ITEM (:1387-1393), whose `size` is "
+        "`size_of::<CmsEncryptedContentInfo>()` and whose `sname` is \"CMS_EncryptedContentInfo\".",
+        "asn1::fre::item_embed_free's FREE_POST arm (src/asn1/fre.rs:345-347), reached only through "
+        "that item's `funcs`. `d2i`/`new` call NEW_POST/D2I_POST, which this callback ignores.",
+        "`pval` is the live value slot of a `CMS_EncryptedContentInfo`; the callback releases "
+        "`key`/`keylen`, which the item's three templates (contentType, "
+        "contentEncryptionAlgorithm, encryptedContent) never touch.",
+        "SAFETY_DISCHARGED",
+        "Type: the item machinery allocates the value with this item's `size` and reaches the "
+        "callback only through this item's `funcs`, so the `*pval` cast is fixed by the registrar "
+        "entry (B56-C1 pins the pairing by address). Single release: `key`/`keylen` are not "
+        "template fields, so the walk cannot release them and the callback is their only release; "
+        "the block itself is released by the same walk after FREE_POST. Contract added: "
+        "`# Safety` on the fn (was census reason \"block-level SAFETY present but no # Safety\").",
+    ),
+    row(
+        "V1:src/cms/cms_asn1.rs:539:UNSAFE_FN_DEF",
+        "src/cms/cms_asn1.rs", 539, 557, "cms_rek_cb", "RAND_CMS_STORE_KEYFMT",
+        "CMS_RECIPIENT_ENCRYPTED_KEY_AUX `asn1_cb` (:1555), installed as `funcs` of "
+        "CMS_RECIPIENT_ENCRYPTED_KEY_ITEM (:1577-1583).",
+        "asn1::fre::item_embed_free FREE_POST (src/asn1/fre.rs:345-347); the object is built by "
+        "the KARI templates' SEQUENCE OF (src/cms/cms_asn1.rs:1708-1716).",
+        "`pval` is the live `CMS_RecipientEncryptedKey`; `pkey` is a non-template member.",
+        "SAFETY_DISCHARGED",
+        "Same dispatch and single-release facts as cms_ec_cb: the item's two templates are `rid` "
+        "and `encryptedKey`, so `pkey` has no other releaser. B56-C1 covers the registration.",
+    ),
+    row(
+        "V1:src/cms/cms_asn1.rs:556:UNSAFE_FN_DEF",
+        "src/cms/cms_asn1.rs", 556, 584, "cms_kari_cb", "RAND_CMS_STORE_KEYFMT",
+        "CMS_KEY_AGREE_RECIPIENT_INFO_AUX `asn1_cb` (:1665), installed as `funcs` of "
+        "CMS_KEY_AGREE_RECIPIENT_INFO_ITEM (:1708-1714).",
+        "NEW_POST: src/asn1/new.rs:344 (the NDEF/SEQUENCE arm); FREE_POST: "
+        "src/asn1/fre.rs:345-347. Both reached only through this item.",
+        "On NEW_POST the value was just allocated (zeroed), so `ctx`/`pctx` start NULL and the "
+        "callback owns what it creates; on FREE_POST the walk has already released and NULLed the "
+        "five template fields, so `ctx`/`pctx` are non-template members with one release here.",
+        "SAFETY_DISCHARGED",
+        "Contract added for both operations. NEW_POST refusal (return 0) is the machinery's own "
+        "error path, which frees the half-built value through the same walk (src/asn1/new.rs:253-259); "
+        "`ctx` is NULL on that path, and `EVP_CIPHER_CTX_free`/`EVP_PKEY_CTX_free` accept NULL.",
+    ),
+    row(
+        "V1:src/cms/cms_asn1.rs:585:UNSAFE_FN_DEF",
+        "src/cms/cms_asn1.rs", 585, 623, "cms_kemri_cb", "RAND_CMS_STORE_KEYFMT",
+        "CMS_KEM_RECIPIENT_INFO_AUX `asn1_cb` (:1855), installed as `funcs` of "
+        "CMS_KEM_RECIPIENT_INFO_ITEM (:1926-1932).",
+        "NEW_POST: src/asn1/new.rs:344; FREE_POST: src/asn1/fre.rs:345-347.",
+        "`pval` is the live `CMS_KEMRecipientInfo`; `ctx`/`pctx` are non-template members. The "
+        "callback also calls `ASN1_STRING_free(ukm)` although `ukm` *is* a template field "
+        "(offset 48, `ASN1_TFLG_EXPLICIT | OPTIONAL`); that is sound only because the walk clears "
+        "the field slot.",
+        "SAFETY_DISCHARGED",
+        "The load-bearing fact is the free walk's clearing: `template_free` -> "
+        "`item_embed_free(embed = 0)` -> `primitive_free`, which ends with `*pval = NULL` "
+        "(src/asn1/fre.rs:186-187). So `ukm` is NULL at FREE_POST and the authority-shaped "
+        "`ASN1_STRING_free` (NULL-tolerant, src/asn1/string.rs:314-318) is a no-op, not a second "
+        "release. B56-C3 pins the clearing and fails if it is removed. This is the one row in the "
+        "sweep whose safety rests on an ordering-and-clearing fact rather than on a "
+        "non-template-member fact, and it is stated as such.",
+    ),
+    row(
+        "V1:src/cms/cms_asn1.rs:617:UNSAFE_FN_DEF",
+        "src/cms/cms_asn1.rs", 617, 671, "cms_ri_cb", "RAND_CMS_STORE_KEYFMT",
+        "CMS_RECIPIENT_INFO_AUX `asn1_cb` (:2013), installed as `funcs` of "
+        "CMS_RECIPIENT_INFO_ITEM (:2056-2062, a CHOICE with `utype: 0` = `offsetof(encoded_type)`).",
+        "FREE_PRE: src/asn1/fre.rs:254-259 (the CHOICE arm's callback, called at :256 before the "
+        "selector's own field free); FREE_POST: :271-274; D2I_POST: src/asn1/d2i.rs:1849 (CHOICE "
+        "arm); NEW_POST: src/asn1/new.rs:253 (CHOICE arm).",
+        "`pval` is the live `CMS_RecipientInfo`; the FREE_PRE arm reads the union through `type_`, "
+        "so `type_` must name the same arm the CHOICE selector (`encoded_type`) names. It releases "
+        "only the selected arm's non-template members and returns 1, leaving the arm itself and the "
+        "enclosing block to the walk.",
+        "SAFETY_DISCHARGED",
+        "Arm agreement: `type_` is written only together with `encoded_type` - by the machinery at "
+        "NEW_POST/D2I_POST (`type_ = encoded_type`, src/cms/cms_asn1.rs:669/:680) and by every "
+        "in-crate constructor (cms_env.rs:781-782, :1918-1919, :3489-3490, :3509-3510; "
+        "cms_kari.rs:838-839, :1082-1083; cms_kemri.rs:192-193; cms_pwri.rs:411-412). A decoded "
+        "selector can only be the tag the CHOICE actually decoded, so a hostile DER cannot make "
+        "them disagree. Members: ktri's pkey/recip/pctx, kekri's key, pwri's pass are not in their "
+        "arms' templates, and FREE_PRE runs before the walk, so each has exactly one release.",
+    ),
+    row(
+        "V1:src/cms/cms_asn1.rs:668:UNSAFE_FN_DEF",
+        "src/cms/cms_asn1.rs", 668, 733, "cms_cb", "RAND_CMS_STORE_KEYFMT",
+        "CMS_CONTENT_INFO_AUX `asn1_cb` (:2523), installed as `funcs` of CMS_CONTENT_INFO_ITEM "
+        "(:2545-2551).",
+        "STREAM_PRE: src/asn1/bio_asn1.rs:911 (BIO_new_NDEF's own local `Asn1StreamArg`); "
+        "STREAM_POST: src/asn1/bio_asn1.rs:1121-1127 (ndef_suffix's rebuilt local); "
+        "DETACHED_PRE/POST: src/asn1/asn_mime.rs:1004-1010 and :1024-1030 (SMIME_write_ASN1_ex's "
+        "own local); FREE_POST: src/asn1/fre.rs:345-347.",
+        "`pval` is NULL or the live `CMS_ContentInfo`; `exarg` is a live `Asn1StreamArg` on all "
+        "four streaming operations and NULL on FREE_POST; `ctx.propq` is a non-template member "
+        "whose only writer is `CmsPropqSlot`.",
+        "SAFETY_DISCHARGED",
+        "Each streaming entry point passes a live local of the *same* `Asn1StreamArg` type "
+        "(`src/asn1/bio_asn1.rs:937-944`), which is the authority's own struct and the type the "
+        "callback casts to; the module comment at pk7_asn1.rs:567-572 records the earlier defect "
+        "class of a disagreeing redefinition, and there is exactly one definition here. FREE_POST "
+        "releases `ctx.propq` through `CStrSlot::clear` (src/runtime/member_slot.rs:83-93), which "
+        "replaces the slot with NULL *before* the release, so a repeated FREE_POST would release "
+        "NULL rather than the block: the single-release property is structural, not incidental.",
+    ),
+    row(
+        "V1:src/pkcs7/pk7_asn1.rs:607:UNSAFE_FN_DEF",
+        "src/pkcs7/pk7_asn1.rs", 607, 616, "ri_cb", "RAND_CMS_STORE_KEYFMT",
+        "PKCS7_RECIP_INFO_AUX `asn1_cb` (:660), installed as `funcs` of PKCS7_RECIP_INFO_ITEM "
+        "(:907-913, `size_of::<Pkcs7RecipInfo>()`, sname \"PKCS7_RECIP_INFO\").",
+        "asn1::fre::item_embed_free FREE_POST (src/asn1/fre.rs:345-347), only through that item.",
+        "`pval` is the live `PKCS7_RECIP_INFO`; `cert` is a non-template member (the four "
+        "templates are version, issuer_and_serial, key_enc_algor, enc_key).",
+        "SAFETY_DISCHARGED",
+        "Registrar pairing pinned by B56-C2 (item accessor, `size`, `sname`, `asn1_cb` by "
+        "address). Single release: `cert` has no template field and no other releaser in the "
+        "module; the walk releases the block after FREE_POST.",
+    ),
+    row(
+        "V1:src/rand/rand_lib.rs:535:UNSAFE_FN_DEF",
+        "src/rand/rand_lib.rs", 535, 548, "ossl_rand_cleanup_int", "RAND_CMS_STORE_KEYFMT",
+        "No registration: an internal `pub(crate) unsafe fn` carrying `#[allow(dead_code)]`.",
+        "None in this candidate. The documented landing caller is OPENSSL_cleanup's RAND arm "
+        "(src/runtime/init.rs); grep over src/ finds only that comment, so no caller can violate "
+        "the contract today, and the function is `unsafe`, so no safe Rust path reaches it.",
+        "The caller must establish shutdown quiescence: no other thread inside a RAND call and no "
+        "later RAND entry before re-initialisation, because the releases below are process-global "
+        "(the method table, the pool, and the two lock statics).",
+        "SAFETY_DISCHARGED",
+        "Contract added with the exact exclusion and with the idempotence fact: re-entry on a "
+        "quiescent process returns at the `RAND_INITED` test before any release "
+        "(src/rand/rand_lib.rs:552), and both lock swaps leave NULL, which "
+        "`CRYPTO_THREAD_lock_free` treats as a no-op. Retained: the landing caller owes the "
+        "exclusion (residual B56-R3).",
+    ),
+    row(
+        "V1:src/context/namemap.rs:298:UNSAFE_FN_DEF",
+        "src/context/namemap.rs", 298, 307, "get_legacy_cipher_names", "RUNTIME_CONCURRENCY",
+        "`OBJ_NAME_do_all(OBJ_NAME_TYPE_CIPHER_METH, Some(get_legacy_cipher_names), namemap)` at "
+        "src/context/namemap.rs:381-385 inside prepopulate_legacy_names; the only installation.",
+        "OBJ_NAME_do_all's walk (the crate's `runtime::obj` implementation), which supplies `on` "
+        "from the table and passes the caller's `arg` unchanged.",
+        "`on` is a live, non-NULL `OBJ_NAME` row owned by the global table with a NUL-terminated "
+        "`name`; `arg` is the live `OSSL_NAMEMAP` of the installing frame. Neither is stored or "
+        "released, so the callback owns no allocation.",
+        "SAFETY_DISCHARGED",
+        "Both facts are established at the single installation site in the same function that "
+        "owns the map (`namemap` is a parameter of prepopulate_legacy_names, `:359`). The callback "
+        "takes no ownership, so the double-release obligation is vacuous rather than proven "
+        "discharged by hand. Contract added for the ABI rule (this is the census's documented gap).",
+    ),
+    row(
+        "V1:src/context/namemap.rs:308:UNSAFE_FN_DEF",
+        "src/context/namemap.rs", 308, 322, "get_legacy_md_names", "RUNTIME_CONCURRENCY",
+        "`OBJ_NAME_do_all(OBJ_NAME_TYPE_MD_METH, Some(get_legacy_md_names), namemap)` at "
+        "src/context/namemap.rs:386-390; the only installation.",
+        "As get_legacy_cipher_names.",
+        "Same walk contract; `arg` is the same live map of the same installing frame.",
+        "SAFETY_DISCHARGED",
+        "As the previous row. Recorded limit: the two callbacks differ only in the accessor used "
+        "on the looked-up method (`EVP_CIPHER_get_nid` vs `EVP_MD_get_type`) and both `EvpCipher` "
+        "and `EvpMd` begin with the NID `int`, so a swapped *registration* would be "
+        "observationally inert while still being a type-confused cast - which is why the audit "
+        "rests on the installation site and the declared element type, not on a name-difference "
+        "test (residual B56-R5).",
+    ),
+    row(
+        "V1:src/runtime/thread.rs:666:UNSAFE_FN_DEF",
+        "src/runtime/thread.rs", 666, 679, "free_lock (linux/x86_64/gnu/64-bit)", "RUNTIME_CONCURRENCY",
+        "No registration; the sized variant is selected by the cfg at :671-676 and pairs with "
+        "`alloc_lock`'s `CRYPTO_zalloc` + `block.write(new_inner())` at :441-457.",
+        "One caller: `CRYPTO_THREAD_lock_free` (src/runtime/thread.rs:724), whose `# Safety` "
+        "requires NULL or a live lock not used again.",
+        "`lock` is `CRYPTO_zalloc`'s whole `AUTHORITY_CRYPTO_RWLOCK_SIZE` block, exclusively owned "
+        "by this call, first `size_of::<RwlockInner>()` bytes initialised. Two disjoint releases: "
+        "`drop_in_place` drops the embedded state and never the block; the `BlockRelease` guard "
+        "(constructed first) is the block's one `CRYPTO_free`.",
+        "SAFETY_DISCHARGED",
+        "Contract added. Measured: B56-C4 records exactly one release of the block address and no "
+        "double release across a successful free and a NULL free; mutation M3 (a second "
+        "`CRYPTO_free` of the same pointer) makes the probe fail with `left: 2, right: 1`.",
+    ),
+    row(
+        "V1:src/runtime/thread.rs:679:UNSAFE_FN_DEF",
+        "src/runtime/thread.rs", 679, 700, "free_lock (other profiles)", "RUNTIME_CONCURRENCY",
+        "No registration; the `Box` variant, selected by the `not(all(...))` cfg at :694-700.",
+        "The same single caller: `CRYPTO_THREAD_lock_free` (:724).",
+        "`lock` came from `Box::into_raw(Box::new(new_inner()))` (`alloc_lock`, :468-470) and this "
+        "is its only `Box::from_raw`, which is the block's single release.",
+        "SAFETY_DISCHARGED",
+        "Contract added. This variant does not compile on the measured profile, so it is verified "
+        "by inspection only; the compensation is that `alloc_lock`/`free_lock` are the only pair "
+        "that name the representation, and both are cfg-selected together.",
+    ),
+    row(
+        "V1:src/decoder_pkey.rs:561:UNSAFE_FN_DEF",
+        "src/decoder_pkey.rs", 561, 571, "decoder_instance_dup_thunk", "EVP_PKEY_PROVIDER",
+        "`OPENSSL_sk_deep_copy((*src).decoder_insts, Some(decoder_instance_dup_thunk), ..)` at "
+        "src/decoder_pkey.rs:1356-1360; the only installation.",
+        "OPENSSL_sk_deep_copy's copy function, called once per element of `src.decoder_insts`.",
+        "`src` is a live, non-NULL `OSSL_DECODER_INSTANCE` this crate allocated, whose one stack "
+        "reference the copy owns. Elements are created by `ossl_decoder_instance_new`/`_dup` "
+        "(src/decoder_lib.rs:283, :404) and pushed only after a successful construction "
+        "(:492-507); the answer is a newly owned duplicate which the copy's element loop owns.",
+        "SAFETY_DISCHARGED",
+        "Contract added (the census's documented gap). ABI shape pinned by B56-C6 (compile-time "
+        "coercion to `unsafe extern \"C\" fn(*const c_void) -> *mut c_void`). The element type is "
+        "fixed by the only writer of `decoder_insts`: `ossl_decoder_ctx_add_decoder_inst` "
+        "(:506) pushes an `OsslDecoderInstance` whose ownership it was handed.",
+    ),
+    row(
+        "V1:src/decoder_pkey.rs:567:UNSAFE_FN_DEF",
+        "src/decoder_pkey.rs", 567, 587, "decoder_instance_free_thunk", "EVP_PKEY_PROVIDER",
+        "`OPENSSL_sk_deep_copy`'s free function on the copy's failure path "
+        "(src/decoder_pkey.rs:1359) and the context's own `OSSL_DECODER_CTX_free` via "
+        "`src/decoder_meth.rs:752-755`; the same element type at both sites.",
+        "OPENSSL_sk_deep_copy / OPENSSL_sk_pop_free element release.",
+        "`p` is NULL or one element of a `decoder_insts` stack, i.e. a live "
+        "`OSSL_DECODER_INSTANCE` whose single reference the stack is releasing.",
+        "SAFETY_DISCHARGED",
+        "Same element-type fact as the dup thunk; `ossl_decoder_instance_free` itself accepts NULL "
+        "and releases each field once through the instance's `CtxDestroy` "
+        "(src/decoder_lib.rs:387-392), so the thunk adds no ownership. Contract added; ABI shape "
+        "pinned by B56-C6. Note (not a defect): the sibling module carries a second, identical "
+        "thunk (`src/decoder_meth.rs:774`); the duplication is recorded as residual B56-R6.",
+    ),
+    row(
+        "V1:src/digest/sha2.rs:393:UNSAFE_FN_DEF",
+        "src/digest/sha2.rs", 393, 401, "sha512_224_init", "EVP_PKEY_PROVIDER",
+        "No registration: an internal `pub(crate) unsafe fn` with `#[allow(dead_code)]`.",
+        "None in this candidate. The documented landing caller is the provider's sha2 dispatch "
+        "(8.1b), whose context is a live `Sha512Ctx` it just allocated; no in-tree caller exists, "
+        "so no caller can violate the contract today.",
+        "`c` is a live, aligned, writable `Sha512Ctx` the caller allocated and does not alias "
+        "mutably.",
+        "SAFETY_DISCHARGED",
+        "Contract added, worded as the sibling `sha512_256_init` already states for the same "
+        "caller population (:417-420). Every write is to scalar fields of the caller's value and "
+        "nothing is read first, so an allocated-but-uninitialised block is enough. Retained: the "
+        "landing caller owes liveness/uniqueness (residual B56-R3).",
+    ),
+    row(
+        "V1:src/encoder_meth.rs:1240:UNSAFE_FN_DEF",
+        "src/encoder_meth.rs", 1240, 1249, "encoder_instance_free_thunk", "EVP_PKEY_PROVIDER",
+        "`OPENSSL_sk_pop_free((*ptr).encoder_insts, Some(encoder_instance_free_thunk))` in "
+        "`OsslEncoderCtx`'s `destroy_body` (src/encoder_meth.rs:1271); the only installation.",
+        "OPENSSL_sk_pop_free over the context's own `encoder_insts` stack.",
+        "`p` is NULL or the `OSSL_ENCODER_INSTANCE` whose reference the stack owns; elements are "
+        "created by `ossl_encoder_instance_new` (src/encoder_lib.rs:381) and pushed with ownership "
+        "by `ossl_encoder_ctx_add_encoder_inst` (:544-556).",
+        "SAFETY_DISCHARGED",
+        "Contract added. `ossl_encoder_instance_free` accepts NULL and releases the instance's "
+        "encoder reference and its fields once through its own `CtxDestroy` "
+        "(src/encoder_lib.rs:482-506), so the thunk itself owns and releases nothing.",
+    ),
+    row(
+        "V1:src/provider/cipher.rs:22200:UNSAFE_FN_DEF",
+        "src/provider/cipher.rs", 22200, 22211, "rc4_hmac_md5_newctx", "EVP_PKEY_PROVIDER",
+        "`legacy_table!(rc4_hmac_md5_newctx, ...)` (src/provider/cipher.rs:22236-22252) publishes "
+        "it as the row's `OSSL_FUNC_CIPHER_NEWCTX` entry; the dispatch slot type is "
+        "`CipherNewCtxFn = unsafe extern \"C\" fn(*mut c_void) -> *mut c_void` "
+        "(src/evp/cipher.rs:198).",
+        "`crate::evp::cipher_ctx`'s two constructors: `f(provctx)` with "
+        "`provctx = ossl_provider_ctx(prov)` at src/evp/cipher_ctx.rs:2080-2089 and :2569-2578. "
+        "The answer is stored in `ctx.algctx` and released by the same row's `freectx`.",
+        "`provctx` is NULL or the provider's live context (it is read through `prov_libctx_of` by "
+        "`ossl_cipher_generic_initkey`, src/provider/cipher.rs:1720-1722, and never released); the "
+        "answer is a new `PROV_RC4_HMAC_MD5_CTX` from the crate's seam, owned by the caller.",
+        "SAFETY_DISCHARGED",
+        "Contract added for the ABI rule. Both call sites pass the method's own provider context "
+        "(the same provider that published the row), and the ownership pairing newctx/freectx is "
+        "the dispatch table's own (same `legacy_table!` invocation). `is_running()` is the "
+        "authority's constant-1 guard, so the refusal arms only cover allocation failure, which "
+        "`OwnedCtx::new()` already reports as NULL.",
+    ),
+    row(
+        "V1:src/provider/conf.rs:235:UNSAFE_FN_DEF",
+        "src/provider/conf.rs", 235, 244, "provider_free_thunk", "EVP_PKEY_PROVIDER",
+        "`OPENSSL_sk_pop_free((*ptr).activated_providers, Some(provider_free_thunk))` in "
+        "`ProviderConfGlobal`'s `destroy_body` (src/provider/conf.rs:164); the only installation.",
+        "OPENSSL_sk_pop_free over this module's `activated_providers` list.",
+        "`value` is one element of that list: a live `OSSL_PROVIDER *` whose single reference the "
+        "list owns.",
+        "SAFETY_DISCHARGED",
+        "Contract added. The only growth site (:564-579) pushes `actual` - the object "
+        "`ossl_provider_add_to_store` hands over with the store's reference - and on a refused "
+        "push deactivates and frees that reference itself, so the list owns exactly one reference "
+        "per element and its teardown releases it exactly once.",
+    ),
+    row(
+        "V1:src/provider/decode_pvk2key.rs:54:UNSAFE_EXTERN_BLOCK",
+        "src/provider/decode_pvk2key.rs", 54, None, "(removed) extern \"C\" { fn strcmp }",
+        "EVP_PKEY_PROVIDER",
+        "No remaining declaration: the file now imports `crate::runtime::bio::sys::strcmp` "
+        "(src/provider/decode_pvk2key.rs:50), the crate's audited libc declaration "
+        "(src/runtime/bio/sys.rs:955-956).",
+        "The single use is `strcmp((*p).key, OSSL_DECODER_PARAM_PROPERTIES)` in "
+        "`pvk2key_set_ctx_params` (src/provider/decode_pvk2key.rs:202), under the "
+        "`OSSL_PARAM` walking contract that both operands are NUL-terminated.",
+        "ELIMINATED: the obligation (that a locally re-declared `strcmp` matches libc's signature) "
+        "is gone rather than stated, because there is no second declaration to get wrong.",
+        "ELIMINATED",
+        "Unsafe operation removed: one `unsafe extern \"C\"` block deleted; the call site keeps its "
+        "own SAFETY comment for the pointer validity, which is the part the ABI declaration could "
+        "never establish. `grep -n 'extern \"C\" {'` finds no block left in the file. This is the "
+        "only row in the sweep whose verdict is not a contract discharge.",
+    ),
+    row(
+        "V1:src/provider/mlx_kmgmt.rs:128:UNSAFE_FN_DEF",
+        "src/provider/mlx_kmgmt.rs", 128, 136, "mlx_kem_have_prvkey", "EVP_PKEY_PROVIDER",
+        "No registration: an internal `pub(crate) unsafe fn` (the pair to the audited "
+        "`mlx_kem_have_pubkey` at :129).",
+        "Four product callers: src/provider/mlx_kmgmt.rs:368 (`mlx_kem_has`), :849 "
+        "(`mlx_kem_export`), :1238; and src/provider/mlx_kem.rs:184, :452. Each reads the `MlxKey` "
+        "the provider dispatch handed it for the call.",
+        "`key` is non-NULL and live. The read is one `u32` field; nothing is written, stored or "
+        "released.",
+        "SAFETY_DISCHARGED",
+        "Contract added, worded as its audited sibling states. Behaviour pinned by B56-C5: the two "
+        "predicates partition the three documented states, and mutation M4 (the `>` threshold "
+        "changed to `MLX_HAVE_NOKEYS`) makes it fail at the public-key-only case.",
+    ),
+    row(
+        "V1:src/engine/eng_dyn.rs:401:UNSAFE_FN_DEF",
+        "src/engine/eng_dyn.rs", 401, 415, "dynamic_data_ctx_free_func", "C_ABI_CONTRACT",
+        "Registered as the `CRYPTO_EX_INDEX_ENGINE` free hook by "
+        "`CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_ENGINE, 0, NULL, NULL, NULL, "
+        "Some(dynamic_data_ctx_free_func))` at src/engine/eng_dyn.rs:495-502; the only "
+        "installation.",
+        "`CRYPTO_free_ex_data` for an ENGINE being destroyed: src/runtime/ex_data.rs:508-510, "
+        "reached from `OwnedEngine`'s `Drop` (src/engine/eng_lib.rs:332-336). The hook is also "
+        "invoked with NULL for indices whose slot is empty, which the callback must (and does) "
+        "accept.",
+        "`ptr` is NULL or the live `DynamicDataCtx` stored at this index. The element type holds "
+        "because the index is created with this hook and the only writer of the index is "
+        "`dynamic_set_data_ctx`'s `ENGINE_set_ex_data(e, idx, p)` (:467) with `p: *mut "
+        "DynamicDataCtx`.",
+        "SAFETY_DISCHARGED",
+        "Contract added. Single release: `CRYPTO_free_ex_data` invokes each index's free hook once "
+        "per ENGINE teardown, and `OwnedCtx::from_raw_at` is the block's one release. B56-C7 "
+        "measures exactly one release of the context block's address on the real "
+        "ENGINE_new -> dynamic_get_data_ctx -> ENGINE_free path; mutation M5 (a second "
+        "`CRYPTO_free` of the same block in the hook) makes it fail.",
+    ),
+    row(
+        "V1:src/engine/eng_list.rs:97:UNSAFE_FN_DEF",
+        "src/engine/eng_list.rs", 97, 97, "engine_list_cleanup", "C_ABI_CONTRACT",
+        "`engine_cleanup_add_last(Some(engine_list_cleanup))` at src/engine/eng_list.rs:168, the "
+        "first time the list becomes non-empty; the only installation.",
+        "The engine cleanup stack's runner `engine_cleanup_cb_free` (src/engine/eng_lib.rs:685-698, "
+        "itself `#[allow(dead_code)]`): `engine_cleanup_int` is withheld until `OPENSSL_cleanup` "
+        "names it (src/engine/eng_lib.rs:698-704), so the callback is registered but unreachable "
+        "in this candidate.",
+        "`ENGINE_CLEANUP_CB`'s ABI rule plus this callback's own two preconditions: the engine lock "
+        "is initialised and is not held by the calling thread (`ENGINE_remove` takes it). Both are "
+        "established by the only path that can make the list non-empty: `ENGINE_add` -> "
+        "`engine_list_add`, whose engine came from `ENGINE_new`/`ENGINE_by_id`, and both run "
+        "`run_engine_lock_init` (ENGINE_new, src/engine/eng_lib.rs:441-445).",
+        "SAFETY_DISCHARGED",
+        "The contract was already present and correct; the row is discharged on the registration "
+        "and the reachability fact rather than on a new document line. With a NULL lock the loop's "
+        "`ENGINE_remove` answers 0 and the function returns with the list intact - a leak, not UB, "
+        "which the contract states.",
+    ),
+]
+
+# The 22nd row's `line_current` is omitted (the declaration is gone); normalise the record.
+for r in ROWS:
+    if r["operation"].startswith("(removed)"):
+        r["line_current"] = None
+
+VERDICT_COUNTS = {
+    "selected": len(ROWS),
+    "SAFETY_DISCHARGED": sum(1 for r in ROWS if r["verdict"] == "SAFETY_DISCHARGED"),
+    "ELIMINATED": sum(1 for r in ROWS if r["verdict"] == "ELIMINATED"),
+    "BLOCKED": sum(1 for r in ROWS if r["verdict"] == "BLOCKED"),
+    "by_mechanism": {
+        "RAND_CMS_STORE_KEYFMT": {
+            "total": sum(1 for r in ROWS if r["mechanism"] == "RAND_CMS_STORE_KEYFMT"),
+            "discharged": sum(
+                1 for r in ROWS
+                if r["mechanism"] == "RAND_CMS_STORE_KEYFMT" and r["verdict"] == "SAFETY_DISCHARGED"),
+            "eliminated": 0,
+            "blocked": sum(
+                1 for r in ROWS
+                if r["mechanism"] == "RAND_CMS_STORE_KEYFMT" and r["verdict"] == "BLOCKED"),
+        },
+        "RUNTIME_CONCURRENCY": {
+            "total": sum(1 for r in ROWS if r["mechanism"] == "RUNTIME_CONCURRENCY"),
+            "discharged": sum(
+                1 for r in ROWS
+                if r["mechanism"] == "RUNTIME_CONCURRENCY" and r["verdict"] == "SAFETY_DISCHARGED"),
+            "eliminated": 0,
+            "blocked": sum(
+                1 for r in ROWS
+                if r["mechanism"] == "RUNTIME_CONCURRENCY" and r["verdict"] == "BLOCKED"),
+        },
+        "EVP_PKEY_PROVIDER": {
+            "total": sum(1 for r in ROWS if r["mechanism"] == "EVP_PKEY_PROVIDER"),
+            "discharged": sum(
+                1 for r in ROWS
+                if r["mechanism"] == "EVP_PKEY_PROVIDER" and r["verdict"] == "SAFETY_DISCHARGED"),
+            "eliminated": sum(
+                1 for r in ROWS
+                if r["mechanism"] == "EVP_PKEY_PROVIDER" and r["verdict"] == "ELIMINATED"),
+            "blocked": sum(
+                1 for r in ROWS
+                if r["mechanism"] == "EVP_PKEY_PROVIDER" and r["verdict"] == "BLOCKED"),
+        },
+        "C_ABI_CONTRACT": {
+            "total": sum(1 for r in ROWS if r["mechanism"] == "C_ABI_CONTRACT"),
+            "discharged": sum(
+                1 for r in ROWS
+                if r["mechanism"] == "C_ABI_CONTRACT" and r["verdict"] == "SAFETY_DISCHARGED"),
+            "eliminated": 0,
+            "blocked": sum(
+                1 for r in ROWS
+                if r["mechanism"] == "C_ABI_CONTRACT" and r["verdict"] == "BLOCKED"),
+        },
+    },
+}
+
+RECEIPT = {
+    "receipt": "boundary-sweep-B56",
+    "date": "2026-11-11",
+    "campaign": "safe-c33 shared-contract establishment: the last 22 BLOCKED obligations outside "
+                "the X509 and slh_dsa clusters",
+    "subphase": (
+        "B56 adjudicates the 22 remaining non-X509 BLOCKED obligations of "
+        "evidence/closure-ssh-311.json: 8 RAND_CMS_STORE_KEYFMT, 4 RUNTIME_CONCURRENCY, "
+        "8 EVP_PKEY_PROVIDER and 2 C_ABI_CONTRACT. The queue is the closure's 149 BLOCKED minus "
+        "the 83 X509 rows B54/B55 adjudicated, the 30 slh_dsa rows and the 14 SSL_SESSION rows the "
+        "ledger discharged, and it equals the applied ledger's 24 BLOCKED minus the 2 X509 rows "
+        "B55-F1 still blocks. Twenty-one rows are SAFETY_DISCHARGED on a per-row caller/ABI "
+        "argument plus a fn-level `# Safety` contract (the census's own reason for every one of "
+        "them is 'block-level SAFETY present but no # Safety fn contract'); one row - the local "
+        "`unsafe extern \"C\" { strcmp }` in provider/decode_pvk2key.rs - is ELIMINATED by reusing "
+        "the crate's audited declaration. Nothing is applied and CAMPAIGN-STATUS.json / state.json "
+        "are untouched."
+    ),
+    "candidate": {
+        "head": head(),
+        "head_short": head()[:9],
+        "head_subject": "ledger: B55 re-adjudicates the 12 null-ctx rows -> BLOCKED 34 -> 24",
+        "branch": "stage/p25/b53-discharge",
+        "source_state": (
+            "HEAD plus one uncommitted working-tree delta. The delta changes exactly one production "
+            "item - the local `strcmp` declaration in src/provider/decode_pvk2key.rs is replaced by "
+            "the import of the audited `runtime::bio::sys::strcmp` - and is otherwise `///` and "
+            "`// SAFETY:` documentation plus `#[cfg(test)]` test code. No wire/ABI layout, no "
+            "`#[repr(C)]` item, no exported symbol, signature or attribute changed; no check was "
+            "weakened. Per the task instruction nothing was committed or pushed."
+        ),
+        "working_delta": {
+            "kind": "documentation + test-only, plus one eliminated unsafe extern block "
+                    "(uncommitted)",
+            "diff_stat": "14 files changed, 559 insertions(+), 6 deletions(-)",
+            "production": [
+                "src/provider/decode_pvk2key.rs: the 4-line `unsafe extern \"C\" { strcmp }` block "
+                "and its import replaced by `use crate::runtime::bio::sys::strcmp;` (one unsafe "
+                "operation removed; the call is unchanged)",
+                "20 fn-level `# Safety` contracts added (the census's documented gap at every row)",
+            ],
+            "test_only": [
+                "src/cms/cms_asn1.rs: B56-C1 (new #[cfg(test)] mod b56_tests)",
+                "src/pkcs7/pk7_asn1.rs: B56-C2",
+                "src/asn1/fre.rs: B56-C3",
+                "src/runtime/thread.rs: B56-C4 (#[ignore]d allocator probe)",
+                "src/provider/mlx_kmgmt.rs: B56-C5",
+                "src/decoder_pkey.rs: B56-C6 (compile-time ABI coercions)",
+                "src/engine/eng_dyn.rs: B56-C7 (#[ignore]d allocator probe)",
+            ],
+            "note": "A reviewer must freeze this delta as S' before applying any disposition; every "
+                    "line_current and files_sha256 below binds the working tree named here, not HEAD.",
+        },
+        "files": FILES,
+        "files_sha256": {f: sha256(f) for f in FILES},
+        "note": "`line` is the census coordinate from evidence/closure-ssh-311.json; `line_current` "
+                "is recomputed at this exact tree (the documentation delta shifted lines in the "
+                "files it touched). files_sha256 is the acceptance binding for this draft.",
+    },
+    "authority": {
+        "id": "openssl-3.6.4-production",
+        "source": "forensics/authorities/src/openssl-3.6.4",
+        "contracts": [
+            "crypto/cms/cms_asn1.c:83-90, :121-128, :146-160, :186-203, :233-269, :347-379 (the six "
+            "CMS item callbacks) and crypto/pkcs7/pk7_asn1.c:179-187 (the recipient callback)",
+            "crypto/param_build_set.c / crypto/provider_conf.c:159-... (ossl_prov_conf_global free "
+            "and the provider list)",
+            "crypto/engine/eng_dyn.c:137-149 (the CRYPTO_EX_free hook) and "
+            "crypto/engine/eng_list.c:42-51 (the cleanup callback)",
+            "crypto/threads_pthread.c / crypto/threads_lib.c:73-85 (CRYPTO_THREAD_lock_free)",
+            "providers/implementations/ciphers/cipher_rc4_hmac_md5.c:48-65 (newctx)",
+            "providers/implementations/keymgmt/mlx_kmgmt.c / prov/mlx_kem.h:44-45",
+            "crypto/core_namemap.c (the OBJ_NAME walks)",
+        ],
+        "note": "Where the candidate and the authority differ, the row says so. B56 records one such "
+                "difference of shape rather than behaviour: the authority's `cms_kemri_cb` frees a "
+                "template field on FREE_POST and is sound only because `ossl_asn1_template_free` "
+                "clears the field slot; the candidate reproduces that and B56-C3 pins the clearing.",
+    },
+    "mechanisms": [
+        {
+            "id": "RAND_CMS_STORE_KEYFMT",
+            "state": "OWNERSHIP_RECONSTRUCTED",
+            "state_source": "state.json#/mechanisms[id=RAND_CMS_STORE_KEYFMT]",
+            "discharge": "SITE-SCOPED to the 8 rows below; the mechanism is not discharged "
+                         "mechanism-wide.",
+        },
+        {
+            "id": "RUNTIME_CONCURRENCY",
+            "state": "OWNERSHIP_RECONSTRUCTED",
+            "state_source": "state.json#/mechanisms[id=RUNTIME_CONCURRENCY]",
+            "discharge": "SITE-SCOPED to the 4 rows below.",
+        },
+        {
+            "id": "EVP_PKEY_PROVIDER",
+            "state": "OWNERSHIP_RECONSTRUCTED",
+            "state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]",
+            "discharge": "SITE-SCOPED to the 8 rows below. The slh_dsa rows of the same mechanism "
+                         "were discharged by the ledger (7e8e11879) and are not re-claimed.",
+        },
+        {
+            "id": "C_ABI_CONTRACT",
+            "state": "OWNERSHIP_RECONSTRUCTED",
+            "state_source": "state.json#/mechanisms[id=C_ABI_CONTRACT]",
+            "discharge": "SITE-SCOPED to the 2 rows below.",
+        },
+    ],
+    "scope": {
+        "aggregation": ".obligations[] | select(.status == \"BLOCKED\") over "
+                       "evidence/closure-ssh-311.json (175 DISCHARGED / 149 BLOCKED / 0 UNKNOWN)",
+        "raw_blocked_count": 149,
+        "queue_arithmetic": {
+            "closure_blocked": 149,
+            "minus_X509_VERIFY_POLICY_B54_B55": 83,
+            "minus_slh_dsa_ledger_7e8e11879": 30,
+            "minus_SSL_SESSION_sslconf_ssl_ciph_ssl_rsa_ledger_bb3f7efe7": 14,
+            "selected": 22,
+            "cross_check": "CAMPAIGN-STATUS.json current_applied_state.closure.ssh.BLOCKED = 24 = "
+                           "22 (this sweep) + 2 (the X509 rows B55-F1 still blocks: v2i_idp, "
+                           "v2i_aaidp)",
+        },
+        "chosen_family": {
+            "family": "the entire remaining non-X509 BLOCKED set (all four mechanisms)",
+            "count": 22,
+            "why": "It is the last non-X509 blocker set, so clearing it is the remaining step "
+                   "between the applied ledger and an X509-only BLOCKED population.",
+        },
+        "not_touched": [
+            {
+                "family": "X509_VERIFY_POLICY (83 rows)",
+                "count": 83,
+                "reason": "Adjudicated by boundary-sweep-B54 (72 discharged / 11 rejected) and "
+                          "B55 (10 discharged / 2 blocked on B55-F1). Not re-claimed here.",
+            },
+            {
+                "family": "EVP_PKEY_PROVIDER slh_dsa method-table rows (30)",
+                "count": 30,
+                "reason": "Discharged by ledger commit 7e8e11879; not re-claimed.",
+            },
+            {
+                "family": "SSL_SESSION ssl_conf/ssl_ciph/ssl_rsa rows (14)",
+                "count": 14,
+                "reason": "Discharged by ledger commit bb3f7efe7 after the closure snapshot; not "
+                          "re-claimed.",
+            },
+        ],
+        "baseline_receipt": "evidence/closure-ssh-311.json",
+    },
+    "shared_contracts": {
+        "asn1_item_callbacks": "An `ASN1_AUX.asn1_cb` is reached only through the `funcs` of the "
+                               "one `ASN1_ITEM` that declares it, and the item machinery allocates "
+                               "and validates the value with that item's `size`; therefore the "
+                               "callback's `*pval` cast is fixed by the registrar entry, not by the "
+                               "input bytes. Freeing: FREE_PRE runs before the template walk (the "
+                               "callback owns non-template members of the selected arm), FREE_POST "
+                               "runs after it (the walk has released and NULLed every template "
+                               "field, so the callback owns non-template members only and a "
+                               "template-field release is a no-op).",
+        "sk_free_thunks": "The crate's stacks are untyped, so an element destructor is reached "
+                          "through a `void *`-shaped thunk. The obligation is the stack's element "
+                          "type; it holds because each stack is grown only by this crate's own "
+                          "constructor, which pushes the element only after a successful "
+                          "construction and transfers one reference to the list.",
+        "provider_dispatch": "A provider dispatch entry is published by a table in the same "
+                             "translation unit as the constructor, and the core supplies the "
+                             "method's own `provctx` (`ossl_provider_ctx(prov)`). The answer is "
+                             "owned by the caller and released by the same table's `freectx`.",
+        "ex_data_free": "`CRYPTO_free_ex_data` invokes each registered index's free hook exactly "
+                        "once per object teardown, with the slot's current value (NULL included). "
+                        "An index's free hook may therefore assume only `ptr` NULL-or-the-type-"
+                        "this-crate-stores-at-that-index, and must own the release it performs.",
+        "cleanup_stack": "`engine_cleanup_add_last` records a `void (*)(void)`; the runner "
+                         "`engine_cleanup_int` is withheld, so a registered callback is unreachable "
+                         "in this candidate. Both engine rows state the lock precondition the "
+                         "runner will owe.",
+    },
+    "rows": ROWS,
+    "verdict_counts": VERDICT_COUNTS,
+    "rejected": [],
+    "findings": [],
+    "findings_note": (
+        "No memory-safety defect was found in the 22 sites: every obligation is the documentation "
+        "gap the census names, plus one eliminate-able duplicate declaration. Two near-defects were "
+        "checked and are recorded as observations rather than findings, so a reviewer can replay "
+        "the check rather than trust the conclusion."
+    ),
+    "observations": [
+        {
+            "id": "B56-O1",
+            "class": "authority-shaped hazard that is sound only because of an adjacent rule",
+            "where": "cms_kemri_cb FREE_POST releases `ukm`, which *is* a template field "
+                     "(src/cms/cms_asn1.rs:1926-1945, offset 48).",
+            "why_sound": "`template_free` -> `item_embed_free(embed = 0)` -> `primitive_free` clears "
+                         "the caller's slot at src/asn1/fre.rs:186-187, so the field is NULL before "
+                         "FREE_POST and `ASN1_STRING_free(NULL)` is a no-op.",
+            "why_recorded": "The authority writes the same shape (crypto/cms/cms_asn1.c:186-203). "
+                            "It is not a defect, but the safety of this row is one edit away from "
+                            "being wrong: if the free walk ever stopped clearing field slots, this "
+                            "callback would double-release a secret-bearing octet string. B56-C3 "
+                            "is that edit's tripwire.",
+            "disposition": "PINNED by B56-C3; no code change (matching the authority is required).",
+        },
+        {
+            "id": "B56-O2",
+            "class": "layout-robust type confusion that a behaviour test cannot see",
+            "where": "get_legacy_cipher_names / get_legacy_md_names "
+                     "(src/context/namemap.rs:307, :322).",
+            "why_recorded": "Both callbacks cast the looked-up method to their own type; `EvpCipher` "
+                            "and `EvpMd` both begin with the NID `int`, so swapping the two "
+                            "registrations would keep the added names identical. A behaviour test "
+                            "therefore cannot be the control; the installation site and the declared "
+                            "element type are.",
+            "disposition": "STATED (B56-R5).",
+        },
+    ],
+    "negative_control_provenance": "All five mutations were observed FAILED and reverted byte-for-byte with `sha256sum -c` OK against the final working tree. M1/M2/M3 touch files that were not modified after their run; M4 and M5 were re-run at the final tree content after a comment-only control-label renumbering, and both still fail there.",
+    "negative_control": [
+        {
+            "id": "B56-C1",
+            "name": "cms::cms_asn1::b56_tests::each_release_callback_is_bound_to_the_item_whose_type_it_casts",
+            "kind": "per-call-site witness (AGENTS.md section 22), 6 production items",
+            "mechanism": "RAND_CMS_STORE_KEYFMT",
+            "guard": "for each item accessor: `size == size_of::<C>()`, `sname` names C, `funcs` "
+                     "non-NULL, and `(*funcs as *const Asn1Aux).asn1_cb` is the audited callback by "
+                     "address",
+            "result": "PASS; FAILED under mutation M1; PASS again after byte-identical revert",
+            "mutation_sensitive": True,
+            "mutation": "src/cms/cms_asn1.rs: `asn1_cb: Some(cms_ec_cb)` in "
+                        "CMS_ENCRYPTED_CONTENT_INFO_AUX replaced by `Some(cms_kari_cb)`",
+            "fails_if": "observed FAILED, rc 101, at 'CMS_EncryptedContentInfo: the item's asn1_cb "
+                        "is not the callback audited for it' (3 passed; 1 failed; 1 ignored)",
+            "restore": "byte-for-byte: src/cms/cms_asn1.rs sha256 "
+                       "59ba46ca8059a3a1bcabb4dd08f9452d1b61d621d7fda9adcbb4aaa7eefe5e2d before and "
+                       "after the mutation (`sha256sum -c` 4/4 OK), and the test passes again",
+            "limits": "Covers the 6 CMS rows by name. It pins the registration, not the runtime "
+                      "value flow; the value flow is covered by the template-clearing control "
+                      "(B56-C3) and by the existing cms:: suite (49 tests).",
+        },
+        {
+            "id": "B56-C2",
+            "name": "pkcs7::pk7_asn1::b56_tests::each_pkcs7_callback_is_bound_to_the_item_whose_type_it_casts",
+            "kind": "per-call-site witness, 2 production items",
+            "mechanism": "RAND_CMS_STORE_KEYFMT",
+            "guard": "the same four facts for PKCS7_SIGNER_INFO_ITEM (si_cb) and "
+                     "PKCS7_RECIP_INFO_ITEM (ri_cb)",
+            "result": "PASS",
+            "mutation_sensitive": False,
+            "limits": "Not separately mutated: it is the same check as B56-C1 on the sibling module, "
+                      "whose mutation M1 establishes the sensitivity of the predicate. Stated rather "
+                      "than implied.",
+        },
+        {
+            "id": "B56-C3",
+            "name": "asn1::fre::b56_tests::the_template_walk_nulls_a_simple_field_slot",
+            "kind": "mechanism control (the FREE_POST single-release rule)",
+            "mechanism": "RAND_CMS_STORE_KEYFMT",
+            "guard": "after `template_free` of a non-embedded pointer field, the caller's slot is "
+                     "NULL, which is what makes a FREE_POST release of a template field a no-op",
+            "result": "PASS; FAILED under mutation M2; PASS again after byte-identical revert",
+            "mutation_sensitive": True,
+            "mutation": "src/asn1/fre.rs: the `*pval = null` write at the end of `primitive_free` "
+                        "removed",
+            "fails_if": "observed FAILED, rc 101, at 'the template walk left the field slot "
+                        "non-NULL, so a FREE_POST callback would release it twice' (3 passed; "
+                        "1 failed)",
+            "restore": "byte-for-byte: src/asn1/fre.rs sha256 "
+                       "98682d3f1ae0607d7d3bf914b7c7da1fb2385d72fc4b9afc94ec9c8b5d7468b0 before and "
+                       "after; `sha256sum -c` 4/4 OK; the test passes again",
+            "limits": "It exercises the clearing through a template this test builds, not through a "
+                      "CMS object; the CMS row's own free path is covered by the existing cms:: "
+                      "suite and by inspection of the walk order (fre.rs:345-347).",
+        },
+        {
+            "id": "B56-C4",
+            "name": "runtime::thread::b56_probe::the_lock_block_is_released_exactly_once",
+            "kind": "allocator-transcript probe (crate's recording CRYPTO_set_mem_functions shim), "
+                    "#[ignore]d, one process per run",
+            "mechanism": "RUNTIME_CONCURRENCY",
+            "guard": "exactly one Free event at the lock block's address across "
+                     "CRYPTO_THREAD_lock_new -> CRYPTO_THREAD_lock_free, and no double release "
+                     "across a successful free plus a NULL free",
+            "result": "PASS; FAILED under mutation M3; PASS again after byte-identical revert",
+            "mutation_sensitive": True,
+            "mutation": "src/runtime/thread.rs: a second "
+                        "`CRYPTO_free(lock, FILE, LINE_FREE)` appended to the sized `free_lock`",
+            "fails_if": "observed FAILED, rc 101, 'the lock block must be released exactly once' "
+                        "with left: 2, right: 1 (the second release is refused by the shim, so the "
+                        "process survives and the assertion reports it)",
+            "restore": "byte-for-byte: src/runtime/thread.rs sha256 "
+                       "2855a5edd56f0f804045ad6de42f17ecdfc7cb0e37835f04407757e3de80aa74 before and "
+                       "after; `sha256sum -c` 4/4 OK; the probe passes again",
+            "limits": "Covers the sized variant, which is the one this profile compiles. The `Box` "
+                      "variant is inspection-only (row 12). The probe is one-way (the hook cannot be "
+                      "uninstalled), which is why it is #[ignore]d and run alone.",
+        },
+        {
+            "id": "B56-C5",
+            "name": "provider::mlx_kmgmt::b56_tests::the_state_predicates_partition_the_three_documented_states",
+            "kind": "court functional test, lib unittest",
+            "mechanism": "EVP_PKEY_PROVIDER",
+            "guard": "`mlx_kem_have_pubkey`/`mlx_kem_have_prvkey` are `>` tests that distinguish the "
+                     "three `MLX_HAVE_*` states, including a larger-than-2 state",
+            "result": "PASS; FAILED under mutation M4; PASS again after byte-identical revert",
+            "mutation_sensitive": True,
+            "mutation": "src/provider/mlx_kmgmt.rs: `(*key).state > MLX_HAVE_PUBKEY` changed to "
+                        "`> MLX_HAVE_NOKEYS` in `mlx_kem_have_prvkey`",
+            "fails_if": "observed FAILED, rc 101, 'public key only: have_pubkey holds and "
+                        "have_prvkey does not' (3 passed; 1 failed)",
+            "restore": "byte-for-byte: src/provider/mlx_kmgmt.rs sha256 "
+                       "7c1c6d4115189ad54e8b455c985b10bfc9e02bb9b47b8a5fe44bac97b2e8a8cf before and "
+                       "after; `sha256sum -c` 4/4 OK; the test passes again",
+            "limits": "It pins the read's meaning for one of the eight rows. The other seven are "
+                      "covered by their contracts, B56-C6 and the module's existing tests.",
+        },
+        {
+            "id": "B56-C6",
+            "name": "decoder_pkey::b56_tests (const coercions)",
+            "kind": "compile-time ABI witness",
+            "mechanism": "EVP_PKEY_PROVIDER",
+            "guard": "each of the four thunks coerces to its exact `unsafe extern \"C\"` shape",
+            "result": "PASS (the library and test target compile)",
+            "mutation_sensitive": False,
+            "limits": "A wrong *cast target inside* a thunk is not a signature change, so this "
+                      "control cannot see it; that case is covered by the element-type argument in "
+                      "the rows and by the stack writers' single-constructor discipline. Stated "
+                      "rather than implied.",
+        },
+        {
+            "id": "B56-C7",
+            "name": "engine::eng_dyn::b56_probe::the_ex_data_free_hook_releases_its_context_once",
+            "kind": "allocator-transcript probe, #[ignore]d, one process per run",
+            "mechanism": "C_ABI_CONTRACT",
+            "guard": "exactly one Free event at the DynamicDataCtx block's address on the real "
+                     "ENGINE_new -> dynamic_get_data_ctx -> ENGINE_free path (the hook runs through "
+                     "CRYPTO_free_ex_data), and no double release",
+            "result": "PASS; FAILED under mutation M5; PASS again after byte-identical revert",
+            "mutation_sensitive": True,
+            "mutation": "src/engine/eng_dyn.rs: a second `CRYPTO_free(ptr, FILE, LINE_FREE_CTX)` "
+                        "appended to `dynamic_data_ctx_free_func`",
+            "fails_if": "observed FAILED, rc 101, 'the ex_data hook must release its context exactly "
+                        "once' (0 passed; 1 failed)",
+            "restore": "byte-for-byte: src/engine/eng_dyn.rs sha256 "
+                       "62f73fb49845b8807ce06a49e18144a01ab550a967bbf10e063c9dd8f4f0436d before and "
+                       "after; the probe passes again",
+            "limits": "The second C_ABI row (`engine_list_cleanup`) is unreachable in this candidate "
+                      "(its runner `engine_cleanup_int` is withheld), so no runtime control can "
+                      "exist for it; its discharge rests on the registration site and the "
+                      "lock-init argument in its row.",
+        },
+    ],
+    "positive_control": {
+        "id": "B56-P1",
+        "name": "the focused module suites at the adjudicated tree",
+        "kind": "court functional tests (existing + new)",
+        "result": "PASS: cms:: 49 passed / 10 ignored; pkcs7 8; runtime::thread 34 / 1 ignored (the "
+                  "B56 probe); provider::mlx 2; engine::eng_dyn 1 / 1 ignored; context::namemap 6; "
+                  "digest::sha2 4; provider::decode_pvk2key 1; decoder_pkey 3; the b56 filter 4 "
+                  "passed / 2 ignored; both probes pass individually with OPENSSL_RS_ADV_PROBE=1",
+        "observation": "The modules whose contracts were added still pass their own suites, so the "
+                       "documentation delta did not change behaviour and the elimination in "
+                       "decode_pvk2key.rs reached the same libc function.",
+        "limits": "No full-suite run (FAST gate, as instructed); no authority differential.",
+    },
+    "hidden_obligations": 0,
+    "hidden_obligations_note": (
+        "Zero hidden obligations for the 21 discharged rows: each retained duty is stated in the "
+        "row's contract or in `residuals` - the landing callers of the three dead functions owe "
+        "liveness/shutdown exclusion, the stack writers owe the element type, and the engine "
+        "cleanup runner owes the lock precondition. The eliminated row has no obligation left. "
+        "Nothing in this sweep was found to be an unreported obligation."
+    ),
+    "new_unsafe_assumptions": 0,
+    "new_unsafe_assumptions_note": "No unsafe fn was added and no exported item changed. The test "
+                                   "code adds six unsafe blocks in `#[cfg(test)]` units (each with a "
+                                   "`SAFETY:` comment) and no non-test unsafe operation; one "
+                                   "production unsafe extern block was removed.",
+    "unsafe_operations_removed": 1,
+    "unsafe_operations_introduced": 0,
+    "test_only_unsafe_added": 6,
+    "boundary_size": (
+        "Four mechanisms, 22 sites: 8 ASN.1 item callbacks (6 CMS + 1 PKCS7 + 1 internal shutdown), "
+        "4 concurrency sites (2 OBJ_NAME walk callbacks, 2 cfg-variant lock releasers), 8 provider "
+        "sites (2 stack thunks, 1 provider-ABI constructor, 1 provider-list thunk, 1 key-state "
+        "predicate, 1 digest init, 1 extern block eliminated, 1 decoder free thunk) and 2 C ABI "
+        "callbacks (one ex_data free hook, one cleanup callback). 20 fn-level contracts added (the "
+        "21st discharged row, engine_list_cleanup, already carried a correct one); 7 "
+        "controls (5 allocator/witness controls, 2 compile-time/behavioural); 5 production "
+        "mutations each observed FAILED and reverted byte-for-byte. No new unsafe abstraction."
+    ),
+    "safe_callers_can_cause_ub": False,
+    "safe_callers_can_cause_ub_note": (
+        "Every row is either an `unsafe extern \"C\"` callback installed by the crate's own "
+        "registration (item `funcs`, stack destructor slot, provider dispatch entry, ex_data index, "
+        "cleanup stack), an internal `unsafe fn` with no safe caller, or - for the eliminated row - "
+        "a declaration that no longer exists. No safe Rust item accepts or returns any of these "
+        "types, so a safe caller cannot reach them; the retained obligations are C-ABI caller "
+        "duties, stated per row."
+    ),
+    "fast_gate_at_candidate": {
+        "candidate": "a30756364 + the uncommitted documentation/test/elimination delta",
+        "container": "docker/openssl-rs-court.sh (never the host); CARGO_BUILD_JOBS=4; one heavy "
+                     "command at a time; `free -g` checked before each build",
+        "toolchain": "pinned by the court image",
+        "fmt": "cargo fmt --all -- --check: exit 0 (FMT_EXIT=0, re-checked after the last edit)",
+        "clippy": "cargo clippy --lib -- -D warnings: exit 0, 'Finished dev profile' (no new "
+                  "warning; the test target's 24 pre-existing warnings are in other modules' test "
+                  "code and are not part of this gate)",
+        "focused_tests": "cargo test --lib b56 -- --test-threads=4: ok. 4 passed; 0 failed; "
+                         "2 ignored; 2344 filtered out",
+        "module_tests": "cms:: 49 passed / 10 ignored; pkcs7 8 passed; runtime::thread 34 passed / "
+                        "1 ignored; provider::mlx 2 passed; engine::eng_dyn 1 passed / 1 ignored; "
+                        "context::namemap 6 passed; digest::sha2 4 passed; "
+                        "provider::decode_pvk2key 1 passed; decoder_pkey 3 passed - all with "
+                        "--test-threads=4, 0 failed",
+        "adv_probes": "OPENSSL_RS_ADV_PROBE=1 cargo test --lib -- --exact <probe> --ignored "
+                      "--test-threads=1: both B56 probes pass at the correct tree (1 passed each)",
+        "scope_note": "FAST evidence only. The full library suite (serial and threaded), "
+                      "Miri/ASan/TSan/LSan, dudect, authority differential, consumer closures and "
+                      "CAMPAIGN-STATUS application are NOT_RUN.",
+    },
+    "residuals": [
+        {
+            "id": "B56-R1",
+            "severity": "low",
+            "disposition": "STATED-ABI-OBLIGATION",
+            "description": "The element type of every stack destructor/dup thunk is the stack "
+                           "writer's obligation. It is established for the in-crate stacks "
+                           "(decoder_insts, encoder_insts, activated_providers) by their single "
+                           "constructors, but a future writer that pushes another type would not be "
+                           "caught by the type system. B56-C6 pins the ABI shape, not the element "
+                           "type.",
+        },
+        {
+            "id": "B56-R2",
+            "severity": "low",
+            "disposition": "PINNED-BY-CONTROL",
+            "description": "cms_kemri_cb's free of the template field `ukm` is a no-op only because "
+                           "the free walk clears field slots (B56-O1). B56-C3 fails if the clearing "
+                           "is removed; there is no production change, because matching the "
+                           "authority is required.",
+        },
+        {
+            "id": "B56-R3",
+            "severity": "medium",
+            "disposition": "STATED-PENDING-CALLER",
+            "description": "Three rows are discharged with no in-candidate caller: "
+                           "ossl_rand_cleanup_int (shutdown exclusion), sha512_224_init "
+                           "(live/unique context) and engine_list_cleanup (engine lock initialised "
+                           "and not held). Their landing callers owe those preconditions; the rows "
+                           "say so, and no safe Rust path reaches them today.",
+        },
+        {
+            "id": "B56-R4",
+            "severity": "low",
+            "disposition": "NOT-RUN",
+            "description": "No authority differential, sanitizer or Miri run; no leak measurement for "
+                           "the CMS free callbacks' partial-build paths. The controls measure single "
+                           "release by address, not leak-freedom.",
+        },
+        {
+            "id": "B56-R5",
+            "severity": "low",
+            "disposition": "STATED",
+            "description": "B56-O2: the two namemap walk callbacks are layout-agnostic under a swap, "
+                           "so the discharge rests on the installation site and the declared "
+                           "element type rather than on a behaviour test.",
+        },
+        {
+            "id": "B56-R6",
+            "severity": "low",
+            "disposition": "STATED-DUPLICATION",
+            "description": "`decoder_instance_free_thunk` exists twice "
+                           "(src/decoder_pkey.rs:587 and src/decoder_meth.rs:774) with identical "
+                           "bodies. Both are correct; consolidating them is a cleanup outside this "
+                           "sweep's scope.",
+        },
+    ],
+    "not_run": [
+        {
+            "gate": "full library suite, serial and --test-threads=4",
+            "blocker": "BATCH gate; only the nine focused module filters and the two probes were run",
+        },
+        {"gate": "Miri (Stacked/Tree Borrows)", "blocker": "not invoked; no new aliasing model claim"},
+        {"gate": "ASan / LeakSanitizer", "blocker": "not invoked; single release is measured by "
+                                                    "address, not leak-freedom"},
+        {"gate": "TSan", "blocker": "not invoked; the concurrency arguments are about lifetime, not "
+                                    "data races, and are inherited from the existing suites"},
+        {"gate": "dudect / constant-time",
+         "blocker": "no secret-dependent operation is touched (the one secret-bearing member, the "
+                    "CMS session key, keeps its `OPENSSL_clear_free` arm unchanged)"},
+        {"gate": "authority differential (error strings / transcripts)",
+         "blocker": "no differential court run; authority statements are read from the pinned 3.6.4 "
+                    "source"},
+        {"gate": "consumer closure (curl/nginx/OpenSSH/HAProxy/Redis)",
+         "blocker": "deliberately not run"},
+        {"gate": "CAMPAIGN-STATUS.json / state.json application",
+         "blocker": "deliberately not run; this is an unapplied adjudication draft"},
+        {"gate": "closure re-run (evidence/closure-ssh-311.json regeneration)",
+         "blocker": "seal-point work; the closure remains the frozen baseline at 175/149"},
+        {"gate": "independent review",
+         "blocker": "review.state is pending-independent-review; the author of the claim must not be "
+                    "its sole adjudicator"},
+    ],
+    "non_claims": [
+        "B56 scopes its 21 discharges to the named operations and their callers; none of the four "
+        "mechanisms is discharged mechanism-wide, and the two X509 rows B55-F1 blocks stay BLOCKED.",
+        "No row is counted as discharged on documentation alone: each row names the caller or ABI "
+        "rule that supplies its argument and the fact that makes the operation sound.",
+        "The controls prove registration and single release by allocator address; they do not prove "
+        "leak-freedom, DER equality, or constant-time behaviour.",
+        "The candidate is HEAD plus an uncommitted delta; a reviewer must freeze that delta as S' "
+        "before applying.",
+        "UNSAFE_EXTERN_BLOCK elimination reused an existing declaration; it does not claim that the "
+        "crate's libc surface is otherwise verified.",
+    ],
+    "review_conditions": [
+        "C1_identity: candidate.head is a30756364 with the working delta enumerated; files_sha256 "
+        "binds the adjudicated tree; line_current is recomputed there and `line` is the census "
+        "coordinate.",
+        "C2_queue: 22 selected = 8 RAND_CMS_STORE_KEYFMT + 4 RUNTIME_CONCURRENCY + 8 "
+        "EVP_PKEY_PROVIDER + 2 C_ABI_CONTRACT, and 149 - 83 - 30 - 14 = 22, cross-checked against "
+        "the applied ledger's 24 = 22 + 2.",
+        "C3_evidence: every discharged row cites the caller file:line that supplies its argument (or "
+        "states that no caller exists) and the fact that makes the operation sound; no row is "
+        "discharged on a `# Safety` comment alone.",
+        "C4_controls: 7 controls; 5 production mutations (M1 cms_asn1, M2 fre, M3 thread, M4 mlx, "
+        "M5 eng_dyn) each observed FAILED and reverted byte-for-byte with `sha256sum -c` OK.",
+        "C5_no_weakening: fmt/clippy clean, no lint attribute changed, no check removed, no ABI/"
+        "layout change; the only production edit removes an unsafe extern block.",
+        "C6_rejections: none. The strongest rows (cms_ri_cb's arm agreement, cms_kemri_cb's "
+        "template-field release, the two dead functions) carry their argument in the row rather than "
+        "a bare verdict.",
+    ],
+    "applied": False,
+    "review": {
+        "state": "pending-independent-review",
+        "reviewer": None,
+        "independent_checks": [],
+        "not_run": [
+            "independent read of the 22 rows against the tree",
+            "closure re-run",
+            "authority differential",
+            "full suite",
+            "downstream replay",
+        ],
+        "note": "Fast adjudication handed to an independent reviewer as instructed. The author of "
+                "the claims above must not be their sole adjudicator.",
+    },
+    "schema_note": "Follows boundary-sweep-B54/B55: `rows` (one record per obligation with "
+                   "mechanism/registration/caller/obligation/verdict/evidence), `verdict_counts` with "
+                   "per-mechanism breakdowns, `observations`, `negative_control`, `residuals`, "
+                   "`not_run`. `line` is the census coordinate; `line_current`, `files_sha256` and the "
+                   "gate outputs are recomputed at the adjudicated tree.",
+    "generator": {
+        "script": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b56_generate.py",
+        "note": "The script reproduces the row set from evidence/closure-ssh-311.json plus the "
+                "per-row prose and recomputes files_sha256 and candidate.head; the JSON is the "
+                "artefact.",
+    },
+}
+
+with open(OUT, "w") as f:
+    json.dump(RECEIPT, f, indent=1)
+    f.write("\n")
+
+print("wrote", OUT)
+print(json.dumps(VERDICT_COUNTS, indent=1))

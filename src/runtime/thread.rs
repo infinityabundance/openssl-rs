@@ -657,6 +657,19 @@ impl Drop for BlockRelease {
     }
 }
 
+/// Release one lock through the authority-sized representation.
+///
+/// # Safety
+///
+/// `lock` is the block [`alloc_lock`] returned: `CRYPTO_zalloc`'s whole
+/// `AUTHORITY_CRYPTO_RWLOCK_SIZE` allocation, exclusively owned by this call, whose first
+/// `size_of::<RwlockInner>()` bytes `alloc_lock` initialised with `new_inner()`, and which no
+/// other owner will release. The single caller is [`CRYPTO_THREAD_lock_free`], whose own
+/// contract requires exactly those facts (NULL or a live lock not used again). The two releases
+/// are disjoint: `drop_in_place` drops the embedded state and never the block, and the
+/// `BlockRelease` guard -- constructed *before* `drop_in_place` -- is the block's one
+/// `CRYPTO_free`, so an unwinding destructor cannot leave the block unreleased or release it
+/// twice.
 #[cfg(all(
     target_os = "linux",
     target_arch = "x86_64",
@@ -670,6 +683,14 @@ unsafe fn free_lock(lock: *mut CryptoRwlock) {
     unsafe { core::ptr::drop_in_place(lock.cast::<RwlockInner>()) };
 }
 
+/// Release one lock through the `Box` representation used off the measured profile.
+///
+/// # Safety
+///
+/// `lock` came from `Box::into_raw(Box::new(new_inner()))` in [`alloc_lock`] and is
+/// exclusively owned by this call, which is its only `Box::from_raw`. As with the sized
+/// variant, the single caller is [`CRYPTO_THREAD_lock_free`], whose contract requires a live,
+/// not-again-used lock.
 #[cfg(not(all(
     target_os = "linux",
     target_arch = "x86_64",
@@ -2469,5 +2490,49 @@ mod condvar_tests {
             ossl_crypto_mutex_free(&raw mut m);
             ossl_crypto_condvar_free(&raw mut cv);
         }
+    }
+}
+
+#[cfg(test)]
+mod b56_probe {
+    //! B56-C4 — the lock block's single release, measured with the crate's recording allocator.
+    //!
+    //! `free_lock`'s contract is "one block, released exactly once". The lock's own destructor
+    //! releases the embedded `RwlockInner` and the `BlockRelease` guard releases the block, so the
+    //! two halves must not overlap. Nothing observable at the C API distinguishes those from a
+    //! double release, which is why the control is the allocator transcript rather than an
+    //! assertion about the returned value.
+    use super::*;
+
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run one process per probe (--ignored, --test-threads=1)"]
+    fn the_lock_block_is_released_exactly_once() {
+        use crate::ssl::adv_alloc;
+
+        let _guard = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+        adv_alloc::reset();
+
+        let lock = CRYPTO_THREAD_lock_new();
+        assert!(!lock.is_null(), "the lock block is allocated");
+        let addr = lock as usize;
+        // SAFETY: `lock` is live, this frame owns it, and this is its single release.
+        unsafe { CRYPTO_THREAD_lock_free(lock) };
+
+        let releases = adv_alloc::events()
+            .iter()
+            .filter(|e| matches!(e, adv_alloc::Ev::Free { p } if *p == addr))
+            .count();
+        assert_eq!(
+            releases, 1,
+            "the lock block must be released exactly once (the guard's free, not also the destructor's)"
+        );
+        adv_alloc::assert_no_double_free();
+
+        // NULL is the authority's own no-op and must release nothing.
+        // SAFETY: NULL is the documented no-op arm of `CRYPTO_THREAD_lock_free`.
+        unsafe { CRYPTO_THREAD_lock_free(core::ptr::null_mut()) };
+        adv_alloc::assert_no_double_free();
     }
 }

@@ -398,6 +398,20 @@ unsafe extern "C" fn int_free_str(s: *mut c_void) {
 ///
 /// Registered as the `CRYPTO_EX_INDEX_ENGINE` free hook, so it runs when an ENGINE holding
 /// a [`DynamicDataCtx`] is destroyed. The signature is `CRYPTO_EX_free`'s.
+///
+/// # Safety
+///
+/// `CRYPTO_EX_free`'s ex_data contract: `ptr` is NULL or the value currently stored at the index
+/// this hook was registered for (`CRYPTO_get_ex_data`'s answer at callback time,
+/// `src/runtime/ex_data.rs:508-510`), and that value is a live `DynamicDataCtx` which the
+/// enclosing ENGINE owns through its own ex_data slot. Established structurally: the index is
+/// created with this hook as its free function (`:481-488`) and the only writer of that index is
+/// [`dynamic_set_data_ctx`]'s `ENGINE_set_ex_data(e, idx, p)` at `:453`, whose `p` is a
+/// `*mut DynamicDataCtx`. The hook runs once per `CRYPTO_free_ex_data` for that ENGINE (the
+/// authority's own free_ex_data contract), and `OwnedCtx::from_raw_at` is the block's single
+/// release, so a repeated call on the same non-NULL value would be a caller defect rather than a
+/// second release this hook performs on its own. `_parent`/`_ad`/`_idx`/`_argl`/`_argp` are
+/// unread (the authority's own signature names them, hence the leading underscores).
 unsafe extern "C" fn dynamic_data_ctx_free_func(
     _parent: *mut c_void,
     ptr: *mut c_void,
@@ -1036,3 +1050,49 @@ const _: () = {
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(DynamicDataCtx => zero_state_sweep_dynamic_data_ctx);
+
+#[cfg(test)]
+mod b56_probe {
+    //! B56-C7 — the ex_data free hook's single release, measured with the crate's recording
+    //! allocator.
+    //!
+    //! The hook's contract is "the ENGINE's ex_data slot holds one `DynamicDataCtx`, released
+    //! exactly once here". The ENGINE's own destructor is the only runner
+    //! (`CRYPTO_free_ex_data` from `OwnedEngine`'s `Drop`), so the probe drives the real path and
+    //! counts releases of the context block's address in the allocator transcript.
+    use super::*;
+
+    #[test]
+    #[ignore = "requires OPENSSL_RS_ADV_PROBE=1; run one process per probe (--ignored, --test-threads=1)"]
+    fn the_ex_data_free_hook_releases_its_context_once() {
+        use crate::engine::eng_lib::{ENGINE_free, ENGINE_new};
+        use crate::ssl::adv_alloc;
+
+        let _guard = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+        adv_alloc::reset();
+
+        let engine = ENGINE_new();
+        assert!(!engine.is_null(), "the engine block is allocated");
+        // SAFETY: `engine` is a fresh live engine this frame owns; the call installs the module's
+        // ex_data index on first use and stores a context at it.
+        let ctx = unsafe { dynamic_get_data_ctx(engine) };
+        assert!(!ctx.is_null(), "the dynamic context is created");
+        let addr = ctx as usize;
+
+        // SAFETY: `engine` is live and this releases this frame's reference; the last reference's
+        // drop is what runs `CRYPTO_free_ex_data` and therefore the audited hook.
+        unsafe { ENGINE_free(engine) };
+
+        let releases = adv_alloc::events()
+            .iter()
+            .filter(|e| matches!(e, adv_alloc::Ev::Free { p } if *p == addr))
+            .count();
+        assert_eq!(
+            releases, 1,
+            "the ex_data hook must release its context exactly once"
+        );
+        adv_alloc::assert_no_double_free();
+    }
+}

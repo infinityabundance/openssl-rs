@@ -446,3 +446,43 @@ pub unsafe extern "C" fn ASN1_item_ex_free(pval: *mut *mut c_void, it: *const As
     // SAFETY: the caller's contract.
     unsafe { item_embed_free(pval, it, 0) }
 }
+
+#[cfg(test)]
+mod b56_tests {
+    use super::*;
+
+    /// B56-C3 — the rule that makes a `FREE_POST` callback's second release a no-op.
+    ///
+    /// `cms_kemri_cb` releases `kemri->ukm` on `ASN1_OP_FREE_POST`, and `ukm` *is* a template
+    /// field. That is sound only because the walk releases the field through its own item and
+    /// clears the caller's slot, so the callback sees NULL. This test pins the clearing: a
+    /// SEQUENCE template's simple (non-embedded) pointer field is released and the slot is left
+    /// NULL. Removing the write makes a later `free(slot)` a second release of the same block,
+    /// which is exactly what the CMS callback would do.
+    #[test]
+    fn the_template_walk_nulls_a_simple_field_slot() {
+        // The template's `item` slot holds the accessor's address, the shape `item_ref` builds in
+        // the item modules.
+        fn item_ref(f: extern "C" fn() -> *const Asn1Item) -> *mut c_void {
+            f as *mut c_void
+        }
+        // A field whose shape is `ukm`'s: a non-embedded pointer to an `ASN1_OCTET_STRING`.
+        let tt = Asn1Template {
+            flags: 0,
+            tag: 0,
+            offset: 0,
+            field_name: core::ptr::null(),
+            item: item_ref(crate::asn1::items::ASN1_OCTET_STRING_it),
+        };
+        let value = crate::asn1::string::ASN1_STRING_new();
+        assert!(!value.is_null(), "the field's value is allocated");
+        let mut slot: *mut c_void = value.cast();
+        // SAFETY: `slot` is a live field slot holding the live `ASN1_OCTET_STRING` this frame
+        // allocated, and `tt` is a live template naming that value's own item.
+        unsafe { template_free(&mut slot, &tt) };
+        assert!(
+            slot.is_null(),
+            "the template walk left the field slot non-NULL, so a FREE_POST callback would release it twice"
+        );
+    }
+}

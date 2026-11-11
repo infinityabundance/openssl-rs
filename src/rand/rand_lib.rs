@@ -531,6 +531,19 @@ fn run_once_rand_init() -> c_int {
 }
 
 /// `void ossl_rand_cleanup_int(void)`.
+///
+/// # Safety
+///
+/// The caller must hold the shutdown exclusion: no other thread may be inside a RAND call, and
+/// no later `RAND_*` entry may run before [`run_once_rand_init`] succeeds again. The releases
+/// below are process-global (the method table through `RAND_set_rand_method(NULL)`, the pool, the
+/// two `RAND_ENGINE_LOCK`/`RAND_METH_LOCK` statics), so a concurrent reader would use a freed
+/// lock. The function is nonetheless idempotent when re-entered on a quiescent process: the
+/// `RAND_INITED` test returns before any release, and the two lock swaps leave NULL (a no-op for
+/// `CRYPTO_THREAD_lock_free`), so a second call releases nothing twice. In-tree it has no
+/// caller: the landing caller is `OPENSSL_cleanup`'s RAND arm, which is the shutdown point that
+/// establishes the exclusion. `_it`-style obligations do not apply; the `cleanup` hook of the
+/// method table is the table's own and takes no arguments.
 #[allow(dead_code)] // the landing caller is `OPENSSL_cleanup`'s RAND arm (`src/runtime/init.rs`)
 pub(crate) unsafe fn ossl_rand_cleanup_int() {
     // The authority reads `default_RAND_meth` before the `rand_inited` test; both are copied
