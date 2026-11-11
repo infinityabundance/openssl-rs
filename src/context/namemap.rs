@@ -295,6 +295,15 @@ unsafe fn get_legacy_evp_names(
 }
 
 /// `static void get_legacy_cipher_names(const OBJ_NAME *on, void *arg)`.
+///
+/// # Safety
+///
+/// `OBJ_NAME_do_all`'s walk contract: `on` is a live, non-NULL row of the global `OBJ_NAME`
+/// table for the walk's type, valid for the duration of the call and owned by the table, whose
+/// `name` is a NUL-terminated string the table owns; `arg` is the pointer the walk was given,
+/// here the live `OSSL_NAMEMAP` of [`prepopulate_legacy_names`]'s frame (the only installation
+/// site, `:367-376`, passes that map and nothing else). Neither pointer is stored or released
+/// here, so the callback owns no allocation and cannot double-release anything.
 unsafe extern "C" fn get_legacy_cipher_names(on: *const ObjName, arg: *mut c_void) {
     // SAFETY: `on` is the walk's own row and both strings are the table's.
     let cipher = unsafe { OBJ_NAME_get((*on).name, (*on).type_) }.cast::<EvpCipher>();
@@ -305,6 +314,11 @@ unsafe extern "C" fn get_legacy_cipher_names(on: *const ObjName, arg: *mut c_voi
 }
 
 /// `static void get_legacy_md_names(const OBJ_NAME *on, void *arg)`.
+///
+/// # Safety
+///
+/// As [`get_legacy_cipher_names`]: `on` is a live row of the `OBJ_NAME_TYPE_MD_METH` half of the
+/// table and `arg` is [`prepopulate_legacy_names`]'s live map (installation at `:372-376`).
 unsafe extern "C" fn get_legacy_md_names(on: *const ObjName, arg: *mut c_void) {
     // SAFETY: as `get_legacy_cipher_names`.
     let md = unsafe { OBJ_NAME_get((*on).name, (*on).type_) }.cast::<EvpMd>();

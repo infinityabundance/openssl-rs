@@ -1556,6 +1556,49 @@
     "level": "fast (fmt, clippy -D warnings, x509 lib tests 164 passed). BOUNDARY/SEAL not run."
    },
    "applied_ledger_effect": "10 scoped boundaries BLOCKED -> SAFETY_DISCHARGED; DISCHARGED 290 -> 300, BLOCKED 34 -> 24."
+  },
+  {
+   "receipt": "boundary-sweep-B56",
+   "artifact": "atlas-refresh/boundary-sweep-B56.json",
+   "base_head": "a30756364",
+   "state": "SAFETY_DISCHARGED (scoped, 21); 1 ELIMINATED",
+   "scope": "the last 22 non-X509 BLOCKED obligations (CMS/PKCS7 free callbacks, thread/namemap locks, provider thunks, engine cleanup)",
+   "discharged_boundaries": [
+    "src/cms/cms_asn1.rs:534",
+    "src/cms/cms_asn1.rs:557",
+    "src/cms/cms_asn1.rs:584",
+    "src/cms/cms_asn1.rs:623",
+    "src/cms/cms_asn1.rs:671",
+    "src/cms/cms_asn1.rs:733",
+    "src/pkcs7/pk7_asn1.rs:616",
+    "src/rand/rand_lib.rs:548",
+    "src/context/namemap.rs:307",
+    "src/context/namemap.rs:322",
+    "src/runtime/thread.rs:679",
+    "src/runtime/thread.rs:700",
+    "src/decoder_pkey.rs:571",
+    "src/decoder_pkey.rs:587",
+    "src/digest/sha2.rs:401",
+    "src/encoder_meth.rs:1249",
+    "src/provider/cipher.rs:22211",
+    "src/provider/conf.rs:244",
+    "src/provider/mlx_kmgmt.rs:136",
+    "src/engine/eng_dyn.rs:415",
+    "src/engine/eng_list.rs:97"
+   ],
+   "retained_boundaries": [],
+   "eliminated_boundaries": [
+    "src/provider/decode_pvk2key.rs:None"
+   ],
+   "hidden_obligations": 0,
+   "adjudicated": true,
+   "adjudication": {
+    "reviewer": "orchestrating agent (independent of the sweep author)",
+    "verdict": "21 DISCHARGE + 1 ELIMINATED of 22",
+    "control": "seven controls, five production mutations (C1-C7)",
+    "level": "fast (fmt, clippy -D warnings, focused module suites). BOUNDARY/SEAL not run."
+   },
+   "applied_ledger_effect": "DISCHARGED 300 -> 321; BLOCKED 24 -> 2; 1 site ELIMINATED (leaves the census at the next re-measure, so the re-measured total becomes 323, not 324)."
   }
  ],
  "withdrawn_boundary_discharges": [],
@@ -2474,8 +2517,8 @@
   "identity_correction": "The previous block claimed S = a8716b4f2 with libcrypto ececbd98 / ssh 560652df / sshd 51f00033. That triple is the SUPERSEDED B52 lineage (bound in atlas-refresh/b52-candidate-freeze.json) and contradicted the b53 receipts the block cited. It is replaced here by the receipt-bound B53 identity; the B52 hashes remain recorded in their own freeze receipt and are not overwritten.",
   "closure": {
    "ssh": {
-    "DISCHARGED": 300,
-    "BLOCKED": 24,
+    "DISCHARGED": 321,
+    "BLOCKED": 2,
     "UNKNOWN": 0,
     "obligations_total": 324,
     "verdict": "ACCEPTED",
@@ -2486,11 +2529,11 @@
     "inventory_source_head": "6eec8a175",
     "libcrypto_so_3_sha256": "136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5d88d09a9a44",
     "note": "Re-measured at HEAD after 59 unsafe-fn sites were eliminated. The -54 obligations (-36 BLOCKED, -18 DISCHARGED) are carried-removed: those sites no longer exist, so they are neither discharged nor blocked.",
-    "counts_note": "includes 14 sslconf, 30 B53 slh_dsa, 72 B54 and 10 B55 X509 discharges, less the 1 B51 row reopened; closure receipts reflect it at the next re-measure"
+    "counts_note": "324 at the census; 321 DISCHARGED, 2 BLOCKED (both X509 rows held by B55-F1), 1 ELIMINATED site that leaves the census at the next re-measure. Closure receipts reflect this at the next re-measure."
    },
    "sshd": {
-    "DISCHARGED": 300,
-    "BLOCKED": 24,
+    "DISCHARGED": 321,
+    "BLOCKED": 2,
     "UNKNOWN": 0,
     "obligations_total": 324,
     "verdict": "ACCEPTED",
@@ -2500,7 +2543,7 @@
     "measured_census": "court/freeze-311/census-311.json",
     "inventory_source_head": "6eec8a175",
     "note": "Re-measured at HEAD. The -54 (-36 BLOCKED, -18 DISCHARGED) are carried-removed sites that no longer exist.",
-    "counts_note": "includes 14 sslconf, 30 B53 slh_dsa, 72 B54 and 10 B55 X509 discharges, less the 1 B51 row reopened; closure receipts reflect it at the next re-measure"
+    "counts_note": "324 at the census; 321 DISCHARGED, 2 BLOCKED (both X509 rows held by B55-F1), 1 ELIMINATED site that leaves the census at the next re-measure. Closure receipts reflect this at the next re-measure."
    }
   },
   "closure_receipts": [
