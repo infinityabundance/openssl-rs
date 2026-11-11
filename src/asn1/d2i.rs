@@ -1053,13 +1053,12 @@ unsafe fn ex_c2i(
                 // The authority stores a BOOLEAN *in the value slot itself*:
                 // `tbool = (ASN1_BOOLEAN *)pval; *tbool = *cont;`. Only the slot's
                 // first four bytes are meaningful and the rest is whatever was there,
-                // so the read side must read four bytes too. Writing through the slot
-                // as an `int` is what reproduces that rather than inventing a cleaner
-                // representation no caller could observe.
-                // SAFETY: `pval` points at a slot at least `size_of::<c_int>()` bytes
-                // wide, because it holds a pointer; `cont` is readable for the one
-                // byte `len == 1` established.
-                unsafe { *(pval as *mut c_int) = c_int::from(*cont) };
+                // so the write is at the field's real width and need not be
+                // pointer-aligned.
+                // SAFETY: `pval` addresses an inline `ASN1_BOOLEAN` field slot of at
+                // least `size_of::<c_int>()` bytes; `cont` is readable for the one byte
+                // `len == 1` established.
+                unsafe { utl::write_inline_boolean(pval.cast(), c_int::from(*cont)) };
             }
 
             V_ASN1_BIT_STRING => {

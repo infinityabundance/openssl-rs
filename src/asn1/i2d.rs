@@ -230,10 +230,15 @@ unsafe fn item_ex_i2d(
     }
     // SAFETY: `it` is non-null, and the caller owns it for the duration.
     let it = unsafe { &*it };
-    // SAFETY: `pval` is a live slot per the caller's contract.
-    let value_is_null = unsafe { *pval }.is_null();
-    if it.itype != ASN1_ITYPE_PRIMITIVE && value_is_null {
-        return 0;
+    // A non-primitive value is reached through the slot, and a null one encodes to
+    // nothing. A primitive's value may live in the slot itself — an inline
+    // `ASN1_BOOLEAN` — so for a primitive the slot is never read as a pointer; the
+    // width-correct access happens in the arm that consumes the value.
+    if it.itype != ASN1_ITYPE_PRIMITIVE {
+        // SAFETY: `pval` is a live slot holding a pointer for a non-primitive item.
+        if unsafe { *pval }.is_null() {
+            return 0;
+        }
     }
     let aux = it.funcs.cast::<Asn1Aux>();
     // The const view of the caller's slot, which is what every helper below and the
@@ -617,11 +622,11 @@ unsafe fn ex_i2c(
         V_ASN1_BOOLEAN => {
             // The value lives in the slot itself: `tbool = (ASN1_BOOLEAN *)pval`.
             // Only the low four bytes are read, which is why a caller must pass the
-            // boolean as the pointer's own bits rather than as a pointee.
-            let tbool = pval as *const c_int;
-            // SAFETY: `pval` points at a slot at least `size_of::<c_int>()` bytes
-            // wide, because it holds a pointer.
-            let value = unsafe { *tbool };
+            // boolean as the pointer's own bits rather than as a pointee. The read is
+            // unaligned: the field is a four-byte `int` and its offset need not be
+            // pointer-aligned.
+            // SAFETY: `pval` addresses an inline `ASN1_BOOLEAN` field slot.
+            let value = unsafe { utl::read_inline_boolean(pval.cast()) };
             if value == -1 {
                 // `-1` is the "absent" marker `ASN1_TYPE_free` writes back.
                 return -1;

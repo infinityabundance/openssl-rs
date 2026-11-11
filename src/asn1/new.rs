@@ -545,9 +545,11 @@ unsafe fn primitive_new(pval: *mut *mut c_void, it: *const Asn1Item, embed: c_in
         }
         V_ASN1_BOOLEAN => {
             // The value is the slot's own first four bytes, and the initial value is
-            // the item's `size` — its default.
-            // SAFETY: `pval` is at least `size_of::<c_int>()` bytes wide.
-            unsafe { *(pval as *mut c_int) = item.size as c_int };
+            // the item's `size` — its default. The write is at the field's real width
+            // and need not be pointer-aligned.
+            // SAFETY: `pval` addresses a field slot of at least `size_of::<c_int>()`
+            // bytes holding an inline boolean.
+            unsafe { utl::write_inline_boolean(pval.cast(), item.size as c_int) };
         }
         V_ASN1_NULL => {
             // The sentinel, which `ASN1_NULL_free` never dereferences. The clippy lint
@@ -638,9 +640,9 @@ unsafe fn primitive_clear(pval: *mut *mut c_void, it: &Asn1Item) {
         it.utype as c_int
     };
     if utype == V_ASN1_BOOLEAN {
-        // SAFETY: the slot is at least `size_of::<c_int>()` bytes wide, and the clear
-        // value is the item's default.
-        unsafe { *(pval as *mut c_int) = it.size as c_int };
+        // SAFETY: `pval` addresses a field slot of at least `size_of::<c_int>()` bytes
+        // holding an inline boolean, and the clear value is the item's default.
+        unsafe { utl::write_inline_boolean(pval.cast(), it.size as c_int) };
     } else {
         // SAFETY: the slot is writable.
         unsafe { *pval = core::ptr::null_mut() };
