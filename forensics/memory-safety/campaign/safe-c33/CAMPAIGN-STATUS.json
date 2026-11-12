@@ -2550,12 +2550,13 @@
   }
  },
  "current_applied_state": {
-  "as_of": "2026-11-08",
-  "branch": "stage/p25/element7-s2b",
+  "as_of": "2026-11-12",
+  "branch": "stage/p25/b53-discharge",
   "evidence_head": "b6f38f134",
+  "evidence_commit": "49a93318a",
   "candidate_S": "b6f38f134",
   "artifact_build_S": "b8bba9555",
-  "candidate_source_identity": "S = 0c4028198 is the source-plus-verification-tool-and-ledger candidate this block is measured at (tool sha256 b13ebd6e). Its build-relevant inputs (src/, Cargo.toml, Cargo.lock, build.rs, rust-toolchain.toml) are byte-identical to b8bba9555, which is the commit the install and both consumers were built and relinked at: libcrypto.so.3 1c03ec0a, ssh 926975c8, sshd 0d3f5e92, frozen in atlas-refresh/b53-candidate-freeze.json, court/freeze-b53/census-b53.json and build commit fdfdfc456. No rebuild was performed because no build-relevant input changed; the three artifact hashes are unchanged. Every closure field below is derived from the two b70 receipts cited below.",
+  "candidate_source_identity": "S = b6f38f134, measured with the shipping instrument forensics/tools/consumer_closure.py sha256 010467396d845c09..., not the earlier tool. The b61 freeze (atlas-refresh/b61-candidate-freeze.json) binds at this S: libcrypto.so.3 f3061a4f, libssl.so.3 906ca753, ssh 77975f46, sshd 11a41af8, census court/freeze-b58/census-b58.json 7dc8c19d, and the B48 digest-control repairs. Both families were measured at this one S with this one tool; no count was carried from v1u, from a released version, or from the superseded b70-thunk block. The previous value of this field (S = 0c4028198, tool b13ebd6e, b70 receipts, libcrypto 1c03ec0a) is superseded and preserved in git history at commit 62d63ae4c.",
   "identity_correction": "The previous block claimed S = a8716b4f2 with libcrypto ececbd98 / ssh 560652df / sshd 51f00033. That triple is the SUPERSEDED B52 lineage (bound in atlas-refresh/b52-candidate-freeze.json) and contradicted the b53 receipts the block cited. It is replaced here by the receipt-bound B53 identity; the B52 hashes remain recorded in their own freeze receipt and are not overwritten.",
   "closure": {
    "ssh": {
@@ -2566,12 +2567,12 @@
     "verdict": "ACCEPTED",
     "refusals": 0,
     "safe_compatible": false,
-    "receipt": "evidence/closure-ssh-b60.json",
+    "receipt": "evidence/closure-ssh-b61.json",
     "measured_census": "court/freeze-b58/census-b58.json",
     "inventory_source_head": "b6f38f134",
     "libcrypto_so_3_sha256": "f3061a4f",
-    "note": "Re-measured at HEAD after 59 unsafe-fn sites were eliminated. The -54 obligations (-36 BLOCKED, -18 DISCHARGED) are carried-removed: those sites no longer exist, so they are neither discharged nor blocked.",
-    "counts_note": "Measured, not carried: 323/323/0/0 at S=b6f38f134 (tool 84551e78, libcrypto f3061a4f, ssh 77975f46, sshd 11a41af8, census 7dc8c19d). element 7 FAIL on 32 target-bounded sites, so safe_compatible stays false until those are discharged at this exact candidate."
+    "note": "Measured at the b61 freeze with the shipping instrument (tool sha256 010467396d845c09...). BLOCKED reached 0 at this candidate through the B53 slh_dsa, B54 X509 dispatch, B55 re-adjudication, B56 CMS/PKCS7/thread/provider/engine, B57 ASN.1 inline boolean, B59 sslconf+ct span and B60 declared_spans sweeps, each carrying its own receipt, mutation-proven negative controls and a fast gate.",
+    "counts_note": "Measured, not carried: 323 obligations / 323 DISCHARGED / 0 BLOCKED / 0 UNKNOWN / 0 refusals at S=b6f38f134 with tool 01046739, libcrypto f3061a4f, libssl 906ca753, ssh 77975f46, sshd 11a41af8, census 7dc8c19d. element 7 PASS: 153 reachable unresolved sites, all contract-bounded, 0 target-bounded. THIS COUNT IS DEFAULT-GATE ONLY: with --enforce-disposition-conflicts the same receipts re-adjudicate to 162 DISCHARGED / 161 BLOCKED / 0 UNKNOWN (see discharge_instrument.enforced_gate_measurement). safe_compatible stays false: the instrument never self-promotes, and graduation is an adjudication that no independent reviewer has yet made."
    },
    "sshd": {
     "DISCHARGED": 323,
@@ -2581,60 +2582,106 @@
     "verdict": "ACCEPTED",
     "refusals": 0,
     "safe_compatible": false,
-    "receipt": "evidence/closure-sshd-b60.json",
+    "receipt": "evidence/closure-sshd-b61.json",
     "measured_census": "court/freeze-b58/census-b58.json",
     "inventory_source_head": "b6f38f134",
-    "note": "Re-measured at HEAD. The -54 (-36 BLOCKED, -18 DISCHARGED) are carried-removed sites that no longer exist.",
-    "counts_note": "Measured, not carried: 323/323/0/0 at S=b6f38f134 (tool 84551e78, libcrypto f3061a4f, ssh 77975f46, sshd 11a41af8, census 7dc8c19d). element 7 FAIL on 32 target-bounded sites, so safe_compatible stays false until those are discharged at this exact candidate.",
+    "note": "Measured at the same b61 freeze and with the same instrument as ssh; the ssh and sshd receipts agree exactly on all counts, on element 7 and on the artefact hashes except the consumer binary itself.",
+    "counts_note": "Measured, not carried: 323 obligations / 323 DISCHARGED / 0 BLOCKED / 0 UNKNOWN / 0 refusals at S=b6f38f134 with tool 01046739, libcrypto f3061a4f, libssl 906ca753, sshd 11a41af8, census 7dc8c19d. element 7 PASS: 153 reachable unresolved sites, all contract-bounded, 0 target-bounded. THIS COUNT IS DEFAULT-GATE ONLY: with --enforce-disposition-conflicts the same receipts re-adjudicate to 162 DISCHARGED / 161 BLOCKED / 0 UNKNOWN. safe_compatible stays false for the same reason as ssh.",
     "libcrypto_so_3_sha256": "f3061a4f"
    }
   },
   "closure_receipts": [
-   "evidence/closure-ssh-b70-thunk.json",
-   "evidence/inventory-sshd-b70-thunk.json"
+   "evidence/closure-ssh-b61.json",
+   "evidence/closure-sshd-b61.json"
   ],
+  "non_final_receipts": [
+   "evidence/closure-ssh-b61-tool6006c893.json",
+   "evidence/closure-sshd-b61-tool6006c893.json"
+  ],
+  "non_final_receipts_note": "Retained deliberately and not deleted: they were produced by the earlier tool 6006c893 at the same candidate and are evidence about that tool, not about graduation. Any count read from them is superseded by the 01046739 receipts.",
   "receipt_identity": {
    "ssh": {
-    "path": "evidence/closure-ssh-b70-thunk.json",
-    "sha256": "ecaf5402845436e24b06eb6d0f6a3eaaf4c00f403bee6faee1859b7bc63979af",
-    "source_head": "0c402819872b4d29e5234291cc759ddfe162678d",
-    "artifact_sha256": "926975c81fe8d56297196a703a8a7b0f5eb0fae1644bbfa4643d4cd517f22ba0"
+    "path": "evidence/closure-ssh-b61.json",
+    "sha256": "53f96b46c9a4bb2737233fdfd80c4e1b7c507043dbf6016049494f5765ff0a18",
+    "source_head_abbrev": "b6f38f134",
+    "artifact_sha256_abbrev": "77975f46"
    },
    "sshd": {
-    "path": "evidence/inventory-sshd-b70-thunk.json",
-    "sha256": "c7a6bcd088a2c240def1bf585a32fc020fb5541e45801111076a502664fc4b7d",
-    "source_head": "0c402819872b4d29e5234291cc759ddfe162678d",
-    "artifact_sha256": "0d3f5e924ff361cba290fb150b89e85806adf69c3a9de9440c4b8a6c09803ce2"
-   }
+    "path": "evidence/closure-sshd-b61.json",
+    "sha256": "f7885399db53fe6da847dfc7b39b9794c197a287da1438bdda0df0e8db9eb698",
+    "source_head_abbrev": "b6f38f134",
+    "artifact_sha256_abbrev": "11a41af8"
+   },
+   "form_note": "Abbreviated digests are recorded as they appear in the b61 freeze; the receipt files and atlas-refresh/b61-candidate-freeze.json (sha256 e9eb42be85996a20b78ab729415d5ffdc6b38c922b481c4e51a031ad713407c6) carry the full values. The abbreviated forms here are not a truncation of a different digest."
   },
   "discharge_instrument": {
-   "tool_sha256": "b13ebd6e5fa4afc1acdc4a477b2b9a556e7182d6e34bb744f655809159b04039",
-   "disposition_gate": "enforcing: a listed boundary must start with SAFETY_DISCHARGED (structured prefix); 0 withdrawals",
+   "tool_sha256": "010467396d845c09...",
+   "disposition_gate": "enforcing: a listed boundary must start with SAFETY_DISCHARGED (structured prefix); the b61 run recorded 0 withdrawals",
    "conflict_gate": "diagnostic-only by default; opt-in --enforce-disposition-conflicts",
-   "unresolved_conflicts": 72,
+   "unresolved_conflicts": 161,
    "conflict_finding": "atlas-refresh/b67-g1-conflict-finding.json",
-   "note": "enabling the conflict gate now would withdraw 72 applied discharges (B45 9, B48 19, B49 16, B50 11, B51 8, B52 9) that never declared supersession of the older site receipts; it is therefore diagnostic until those receipts declare reviewed supersedes entries. The b67-g1 finding recorded 72 at b70, of which B48 contributed 19; B48 is re-applied under the 2026-11-10 independent DISCHARGE at S' = cdaf16816 (see scoped_boundary_discharges)"
+   "enforced_gate_measurement": {
+    "measured_utc": "2026-11-12",
+    "measured_with": "tool 010467396d845c094c6019ca29bc72ec3a55ea9b13ae49ebc17d705582b147a8",
+    "candidate": "b6f38f134",
+    "method": "targeted re-adjudication through the shipping tool's own load_boundaries / discharge_plane / adjudicate over the b61 obligation queue (court/tmp/b67_g1_probe.py), source_commit pinned to b6f38f134; NOT the full build_receipt run, which is ~2290 s (ssh) / 2107 s (sshd) and was NOT_RUN",
+    "fidelity": "the b61 receipts' own disposition_conflicts section already records the same 165 conflict obligations / 179 conflict edges / 161 unresolved obligations / 175 unresolved edges, enforced: false, byte-identical between ssh and sshd; the probe reproduces the 323/0/0 statuses exactly, so this is a second independent confirmation of the frozen receipts rather than a new measurement of the source",
+    "default_gate": "323 DISCHARGED / 0 BLOCKED / 0 UNKNOWN",
+    "enforced_gate": "162 DISCHARGED / 161 BLOCKED / 0 UNKNOWN, newly_discharged 0",
+    "withdrawn_by_discharging_receipt": {
+     "B45": 9,
+     "B48": 19,
+     "B49": 10,
+     "B50": 5,
+     "B51": 8,
+     "B52": 3,
+     "B53": 30,
+     "B54": 65,
+     "B55": 9,
+     "B56": 1,
+     "B57": 2
+    },
+    "conflicting_receipt_edges_largest": {
+     "p25-x509-v3-ext-slots-sites": 47,
+     "p25-slh-dsa-adrs-sites": 18,
+     "openssh-v1i": 13,
+     "openssh-v1j": 13,
+     "p25-slh-dsa-hash-sites": 12,
+     "p25-engine-callback-sites": 10,
+     "openssl-v1l-sites": 9,
+     "b52-gap-v3_crld-sites": 8,
+     "p25-evp-legacy-md-init-sites": 6,
+     "b52-gap-v3_ac_tgt-sites": 6,
+     "openssh-asn1-ocsp-sites": 5,
+     "b52-gap-v3_attrdesc-sites": 5
+    },
+    "reason_class": "conflicting-disposition: another boundary for the same (file, kind, operation) records a non-discharging disposition, and the discharging receipt does not declare that boundary in supersedes. 159 of the 161 are keyword BLOCKED and 2 are CONTRACTED.",
+    "the_two_contracted": "src/ocsp/v3_ocsp.rs:122 i2r_ocsp_crlid and src/ocsp/v3_ocsp.rs:406 i2r_ocsp_serviceloc, both conflicting with P25-OSSH-OCSP-3/7 in openssh-asn1-ocsp-sites",
+    "verdict": "The 323/323 DISCHARGED figure does NOT survive an enforced conflict gate. It is a default-gate number. 161 obligations are held by a real, specific, per-operation disagreement between two receipts, not by a counting artefact, and the disagreement must be resolved on the source: either the newer discharge is correct and the older BLOCKED boundary is genuinely superseded (then the newer receipt must declare that boundary in supersedes, reviewed), or the older BLOCKED disposition is correct and the newer discharge must be withdrawn. A blanket supersedes declaration across all 161 is forbidden and would be a weakened instrument.",
+    "artifacts": "court/freeze-b61/{ssh,sshd}-{diagnostic,enforced}.json and court/freeze-b61/withdrawn-enforced.json (court/ is git-ignored; nothing was copied into evidence/)"
+   },
+   "note": "The 72 unresolved conflicts (B45 9, B48 19, B49 16, B50 11, B51 8, B52 9) recorded by the superseded tool b13ebd6e at b70 are superseded by the measurement above; B48's 19 are unchanged and still present. The enforced-gate figure is 161, not 72, because B53-B57 discharges were added later and each also conflicts. Enabling --enforce-disposition-conflicts remains forbidden until each conflict is resolved on the source: the enforced 162/161 is the honest current reading of the ledger, and the diagnostic 323/0 must never be quoted without this caveat."
   },
   "element7": {
    "status": "PASS (contract-bounded)",
    "established": true,
    "target_bounded_unresolved_sites": 0,
-   "contract_bounded_sites": 127,
-   "reachable_unresolved_sites": 127,
+   "contract_bounded_sites": 153,
+   "reachable_unresolved_sites": 153,
    "unclassified_reachable_sites": 0,
-   "batch_receipt": "atlas-refresh/element7-b66-e7pbe.json",
-   "delta_from_previous": "2 -> 0: the two PBE out-parameter sites are resolved from the BUILTIN_PBE relocations (5 keygen_ex targets; the 2 KDF targets), with the in-image GOT-binding caveat recorded. reachable_unresolved 129 -> 127; contract_bounded stays 127; obligations unchanged. The ssh and sshd receipts agree exactly."
+   "batch_receipt": "the element_7 block of evidence/closure-ssh-b61.json and evidence/closure-sshd-b61.json",
+   "delta_from_previous": "32 -> 0 target-bounded at the shipping tool: 26 sites resolved to the new class ABI_CONTRACT_CORE_DISPATCH (base lib_ctx_get_data(ctx,17|18), a single source store under the documented OSSL_FUNC_* id, reachable only behind the null guard), 5 to ABI_CONTRACT_PROVIDER, and 1 to ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT (do_pk8pkey, register-agnostic), with 12 mutation -> refusal -> restore controls. contract_bounded rises 127 -> 153 because the shipping tool enumerates reachable unresolved sites more widely; the change of denominator is an instrument change, not a new proof. The ssh and sshd receipts agree exactly."
   },
   "safe_compatible_blockers": {
    "safe_compatible": false,
-   "DISCHARGED": 193,
-   "BLOCKED": 185,
+   "DISCHARGED": 323,
+   "BLOCKED": 0,
    "UNKNOWN": 0,
-   "disposition_conflicts_unresolved": 72,
-   "note": "element 7 PASS closes only the indirect-call precision predicate; B67, B69 and B70 close seven site-scoped obligations (two BIO readbuffer callbacks, three RAND lifecycle sites, two CMS stack free thunks). 185 safety-relevant obligations remain BLOCKED, the discharge instrument surfaces 72 unresolved disposition conflicts that keep the conflict gate diagnostic-only, no mechanism is discharged mechanism-wide, B46/B47 remain open and B48 is re-applied under the 2026-11-10 independent DISCHARGE at S' = cdaf16816, and the evidence pipeline and the exact-candidate L7/SEAL verification remain open."
+   "disposition_conflicts_unresolved": 161,
+   "note": "0 BLOCKED and 0 UNKNOWN under the DEFAULT (diagnostic) conflict gate; 161 BLOCKED and 162 DISCHARGED under --enforce-disposition-conflicts at the same candidate and tool. That gap is the live work queue and it is a ledger state, not a graduation: (a) the 161 disposition conflicts are unresolved per-operation disagreements that have not been adjudicated on the source; (b) no mechanism is discharged mechanism-wide; (c) every adjudication in this campaign, including the b61 discharges, was made by the orchestrating agent and is therefore NOT independently reviewed, which is a mandatory condition of graduation; (d) the --self-test court exits 1 with 42 failures (34 e7abi address/witness pins, 8 e7pbe PBE fixture pinned to the pre-R13 image 0x505EB0 vs the observed f3061a4f), so the instrument's own self-test is failing at the candidate it just measured; (e) no L7 workload has been replayed against the exact converted ssh/sshd binaries, and every BOUNDARY/SEAL gate is NOT_RUN."
   },
   "identity_residual": "The b64 receipts themselves record artifact_identity.build_provenance = null and ledger_record.artifact_matches_this_build = false. Their tie to b8bba9555 rests on the B53 freeze and census, not on a build record inside the receipt. This is a recorded receipt-level provenance gap; it is not a passing identity claim and must be closed before a SEAL identity is asserted.",
-  "derived_from": "the scoped_boundary_discharges rows applied at or before S: openssh-v1i 74, B48 36, B49 22, openssl-v1l 15, B50 11, B45 9, B51 10, B52 9, B67 2, B69 3, B70 2 = 193 DISCHARGED, plus 66 supplementary admissions from the callback-enumeration gate, all 66 of which now have an exact site record. The B48 row's 36 obligations are counted under the 2026-11-10 independent DISCHARGE at S' = cdaf16816 (see scoped_boundary_discharges). Totals 378 = 193 / 185 / 0.",
+  "derived_from": "the b61 closure receipts enumerate 323 obligations and discharge all 323 under the default gate, of which 161 are withdrawn by the enforced conflict gate, leaving 162 DISCHARGED / 161 BLOCKED. The earlier 378-obligation universe (193 DISCHARGED / 185 BLOCKED / 0 UNKNOWN, tool b13ebd6e) is SUPERSEDED, and it is deliberately NOT reconciled into the new totals: a tool change re-enumerates the universe, so the 378 -> 323 movement is an instrument/universe change and must never be presented as 185 discharges. The scoped_boundary_discharges rows (openssh-v1i, B45, B48, B49, openssl-v1l, B50, B51, B52, B67, B69, B70, plus the 66 callback-enumeration admissions) remain the per-boundary record of what was proved and are unchanged by this recount.",
   "enrolment_source": {
    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json",
    "schema": "openssl-rs/campaign/safe-c33/callback-enrolment/v1",
@@ -2655,7 +2702,7 @@
    "release_candidate",
    "closure"
   ],
-  "note": "The top-level generated_date/branch/source_head/release_candidate/closure blocks remain the 0.0.44 release snapshot and are NOT the current applied state; they are marked stale for current reading rather than overwritten. Element 7 remains FAIL at this candidate (131 reachable unresolved = 66 target-bounded + 65 contract-bounded) in the first B53 measurement; the reviewed rules below reduce it to the current 14. Two element-7 rule fixes are reviewed: ten provider fetch bindings restored after a codegen-shape change masked them, and four provider capability callbacks modelled as a declared ABI contract. A third reviewed rule closes the six SLH-DSA method-table sites with per-field target pairs, and a fourth follows exported callback parameters through copies, spill/reload and phis (60 -> 56 target-bounded). An earlier version of that fourth rule was rejected and reverted for bundling an undisclosed header-gate rewrite; the re-landed version is chain-only with a mixed-arm phi control and exact per-step accounting. A fifth reviewed rule closes the 25 provider hw-table sites after a first attempt was rejected and reverted for an incomplete owner set; the repair computes the owner set by scan and gates on exhaustiveness. A sixth reviewed rule closes the legacy cipher block slots and the decoder method object (31 -> 26 target-bounded), correcting a triage label that had named the wrong field. A seventh reviewed rule stops the header scanner reading #define bodies as declarations, which had poisoned the callback classification for nine sites (26 -> 17 target-bounded). An eighth reviewed rule handles merged call sites (one call, two reaching loads from the same fetch result), closing the two KEM sites (17 -> 15 target-bounded) while refusing fifteen other merged-shaped sites. Element 7 now PASSES at b5ff19ce7 (see element7 above): target-bounded is 0 and all 127 reachable unresolved sites are contract-bounded, so the predicate is established under AGENTS.md section 7 criterion 2. Four witness batches landed: the base-slot sites (msblob closed descriptor table; rcu proved-empty writer list), the finite PKCS12 parameter sites, the eight registerable dispatch sites carried as per-call-site external ABI contracts, and the two PBE out-parameter sites resolved from the BUILTIN_PBE relocations (5 keygen_ex targets; the 2 KDF targets; in-image GOT-binding caveat recorded). The ssh and sshd receipts agree exactly. B67 then closed the two BIO readbuffer callbacks (empty precondition set), taking the ledger to 188 DISCHARGED / 190 BLOCKED / 0 UNKNOWN. Element 7 PASS plus B67/B69/B70 still do NOT graduate the consumer: 185 safety-relevant obligations remain BLOCKED, B69 closed three RAND lifecycle sites (ctx_new, ctx_free, drbg_status) while retaining the uncalled cleanup_int, and B70 closed the two CMS stack free thunks (the CRL thunk at contract/body level, its arm NOT_RUN), the discharge instrument now enforces a structured disposition gate but reports 72 unresolved disposition conflicts (B45 9 / B48 19 / B49 16 / B50 11 / B51 8 / B52 9) that keep its conflict gate diagnostic-only, no mechanism is discharged mechanism-wide, and B46/B47, the evidence pipeline and the exact-candidate L7/SEAL verification remain open (B48 is re-applied under the 2026-11-10 independent DISCHARGE at S' = cdaf16816), so SAFE_COMPATIBLE is still false for both families. ACCEPTED here means the closure raises no refusal on this universe; it does not mean the 185 BLOCKED obligations are safe, and no mechanism is discharged mechanism-wide."
+  "note": "The top-level generated_date/branch/source_head/release_candidate/closure blocks remain the 0.0.44 release snapshot and are NOT the current applied state; they are marked stale for current reading rather than overwritten. The long note that previously stood here described the superseded b70 block (188 DISCHARGED / 190 BLOCKED, element 7 PASS at b5ff19ce7, 72 disposition conflicts, B46/B47 open) and is preserved verbatim in git history at commit 62d63ae4c rather than overwritten in place. Current state: element 7 PASS with 0 target-bounded sites, 323/323/0/0 for both ssh and sshd, and SAFE_COMPATIBLE still false for the five reasons listed in safe_compatible_blockers. Retained historical detail from that superseded note that remains true and load-bearing: the eight reviewed element-7 rules each landed after at least one rejection or revert (an undisclosed header-gate rewrite, an incomplete provider hw-table owner set, a mis-named triage field, a header scanner reading #define bodies as declarations, and fifteen refused merged-shaped sites), and those refusals are part of the record. Superseded text follows for provenance:  Two element-7 rule fixes are reviewed: ten provider fetch bindings restored after a codegen-shape change masked them, and four provider capability callbacks modelled as a declared ABI contract. A third reviewed rule closes the six SLH-DSA method-table sites with per-field target pairs, and a fourth follows exported callback parameters through copies, spill/reload and phis (60 -> 56 target-bounded). An earlier version of that fourth rule was rejected and reverted for bundling an undisclosed header-gate rewrite; the re-landed version is chain-only with a mixed-arm phi control and exact per-step accounting. A fifth reviewed rule closes the 25 provider hw-table sites after a first attempt was rejected and reverted for an incomplete owner set; the repair computes the owner set by scan and gates on exhaustiveness. A sixth reviewed rule closes the legacy cipher block slots and the decoder method object (31 -> 26 target-bounded), correcting a triage label that had named the wrong field. A seventh reviewed rule stops the header scanner reading #define bodies as declarations, which had poisoned the callback classification for nine sites (26 -> 17 target-bounded). An eighth reviewed rule handles merged call sites (one call, two reaching loads from the same fetch result), closing the two KEM sites (17 -> 15 target-bounded) while refusing fifteen other merged-shaped sites. Element 7 now PASSES at b5ff19ce7 (see element7 above): target-bounded is 0 and all 127 reachable unresolved sites are contract-bounded, so the predicate is established under AGENTS.md section 7 criterion 2. Four witness batches landed: the base-slot sites (msblob closed descriptor table; rcu proved-empty writer list), the finite PKCS12 parameter sites, the eight registerable dispatch sites carried as per-call-site external ABI contracts, and the two PBE out-parameter sites resolved from the BUILTIN_PBE relocations (5 keygen_ex targets; the 2 KDF targets; in-image GOT-binding caveat recorded). The ssh and sshd receipts agree exactly. B67 then closed the two BIO readbuffer callbacks (empty precondition set), taking the ledger to 188 DISCHARGED / 190 BLOCKED / 0 UNKNOWN. Element 7 PASS plus B67/B69/B70 still do NOT graduate the consumer: 185 safety-relevant obligations remain BLOCKED, B69 closed three RAND lifecycle sites (ctx_new, ctx_free, drbg_status) while retaining the uncalled cleanup_int, and B70 closed the two CMS stack free thunks (the CRL thunk at contract/body level, its arm NOT_RUN), the discharge instrument now enforces a structured disposition gate but reports 72 unresolved disposition conflicts (B45 9 / B48 19 / B49 16 / B50 11 / B51 8 / B52 9) that keep its conflict gate diagnostic-only, no mechanism is discharged mechanism-wide, and B46/B47, the evidence pipeline and the exact-candidate L7/SEAL verification remain open (B48 is re-applied under the 2026-11-10 independent DISCHARGE at S' = cdaf16816), so SAFE_COMPATIBLE is still false for both families. ACCEPTED here means the closure raises no refusal on this universe; it does not mean the 185 BLOCKED obligations are safe, and no mechanism is discharged mechanism-wide."
  },
  "closure": {
   "receipt": "evidence/closure-ssh-v1r.json; evidence/inventory-sshd-v1r.json",
