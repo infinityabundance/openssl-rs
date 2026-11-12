@@ -1394,5 +1394,158 @@
    "date": "2026-11-01",
    "reviewer": "independent reviewer; verdict transcribed verbatim by the orchestrator"
   }
- ]
+ ],
+ "supersedes": [
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-001"
+   ],
+   "file": "src/x509/v3_aaa.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ALLOWED_ATTRIBUTES_CHOICE",
+   "discharging_boundary": "B49-I2R-001",
+   "discharging_receipt": "boundary-sweep-B49",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_aaa.rs, UNSAFE_FN_DEF, i2r_ALLOWED_ATTRIBUTES_CHOICE) as discharging boundary B49-I2R-001; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 397-463, sha256 7879ad37f050e8f2), and the discharging record's recorded span_sha256 7879ad37f050e8f2 equals that content hash; the older record's coordinate 382 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 382-448)",
+   "discharging_evidence": "boundary-sweep-B49 discharges the i2r slot callbacks through X509V3_EXT_print's single row/item resolution; its independent reviewer APPROVE is recorded in review_history (2026-11-01, transcribed verbatim) and applied to the 22 named boundaries",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-002"
+   ],
+   "file": "src/x509/v3_aaa.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ALLOWED_ATTRIBUTES_ITEM",
+   "discharging_boundary": "B49-I2R-002",
+   "discharging_receipt": "boundary-sweep-B49",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_aaa.rs, UNSAFE_FN_DEF, i2r_ALLOWED_ATTRIBUTES_ITEM) as discharging boundary B49-I2R-002; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 480-524, sha256 8b66bf3bbfd7db61), and the discharging record's recorded span_sha256 8b66bf3bbfd7db61 equals that content hash; the older record's coordinate 452 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 452-496)",
+   "discharging_evidence": "boundary-sweep-B49 discharges the i2r slot callbacks through X509V3_EXT_print's single row/item resolution; its independent reviewer APPROVE is recorded in review_history (2026-11-01, transcribed verbatim) and applied to the 22 named boundaries",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-003"
+   ],
+   "file": "src/x509/v3_aaa.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ALLOWED_ATTRIBUTES_SYNTAX",
+   "discharging_boundary": "B49-I2R-003",
+   "discharging_receipt": "boundary-sweep-B49",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_aaa.rs, UNSAFE_FN_DEF, i2r_ALLOWED_ATTRIBUTES_SYNTAX) as discharging boundary B49-I2R-003; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 541-573, sha256 d3afd256def0d824), and the discharging record's recorded span_sha256 d3afd256def0d824 equals that content hash; the older record's coordinate 500 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 500-532)",
+   "discharging_evidence": "boundary-sweep-B49 discharges the i2r slot callbacks through X509V3_EXT_print's single row/item resolution; its independent reviewer APPROVE is recorded in review_history (2026-11-01, transcribed verbatim) and applied to the 22 named boundaries",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-015"
+   ],
+   "file": "src/x509/v3_cpols.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_certpol",
+   "discharging_boundary": "B49-I2R-005",
+   "discharging_receipt": "boundary-sweep-B49",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_cpols.rs, UNSAFE_FN_DEF, i2r_certpol) as discharging boundary B49-I2R-005; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 1384-1415, sha256 a8dee41e15e5e929), and the discharging record's recorded span_sha256 a8dee41e15e5e929 equals that content hash; the older record's coordinate 1366 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 1366-1397)",
+   "discharging_evidence": "boundary-sweep-B49 discharges the i2r slot callbacks through X509V3_EXT_print's single row/item resolution; its independent reviewer APPROVE is recorded in review_history (2026-11-01, transcribed verbatim) and applied to the 22 named boundaries",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-033"
+   ],
+   "file": "src/x509/v3_iobo.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ISSUED_ON_BEHALF_OF",
+   "discharging_boundary": "B49-I2R-008",
+   "discharging_receipt": "boundary-sweep-B49",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_iobo.rs, UNSAFE_FN_DEF, i2r_ISSUED_ON_BEHALF_OF) as discharging boundary B49-I2R-008; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 55-71, sha256 8c2db67d5f3f8c7e), and the discharging record's recorded span_sha256 8c2db67d5f3f8c7e equals that content hash; the older record's coordinate 42 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 42-58)",
+   "discharging_evidence": "boundary-sweep-B49 discharges the i2r slot callbacks through X509V3_EXT_print's single row/item resolution; its independent reviewer APPROVE is recorded in review_history (2026-11-01, transcribed verbatim) and applied to the 22 named boundaries",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-035"
+   ],
+   "file": "src/x509/v3_ist.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_issuer_sign_tool",
+   "discharging_boundary": "B49-I2R-009",
+   "discharging_receipt": "boundary-sweep-B49",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_ist.rs, UNSAFE_FN_DEF, i2r_issuer_sign_tool) as discharging boundary B49-I2R-009; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 380-461, sha256 6988c6ab335eb120), and the discharging record's recorded span_sha256 6988c6ab335eb120 equals that content hash; the older record's coordinate 331 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 331-412)",
+   "discharging_evidence": "boundary-sweep-B49 discharges the i2r slot callbacks through X509V3_EXT_print's single row/item resolution; its independent reviewer APPROVE is recorded in review_history (2026-11-01, transcribed verbatim) and applied to the 22 named boundaries",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-046"
+   ],
+   "file": "src/x509/v3_pku.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_PKEY_USAGE_PERIOD",
+   "discharging_boundary": "B49-I2R-012",
+   "discharging_receipt": "boundary-sweep-B49",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_pku.rs, UNSAFE_FN_DEF, i2r_PKEY_USAGE_PERIOD) as discharging boundary B49-I2R-012; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 178-203, sha256 c610f0e2908b23fe), and the discharging record's recorded span_sha256 c610f0e2908b23fe equals that content hash; the older record's coordinate 164 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 164-189)",
+   "discharging_evidence": "boundary-sweep-B49 discharges the i2r slot callbacks through X509V3_EXT_print's single row/item resolution; its independent reviewer APPROVE is recorded in review_history (2026-11-01, transcribed verbatim) and applied to the 22 named boundaries",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-049"
+   ],
+   "file": "src/x509/v3_sda.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ATTRIBUTES_SYNTAX",
+   "discharging_boundary": "B49-I2R-013",
+   "discharging_receipt": "boundary-sweep-B49",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_sda.rs, UNSAFE_FN_DEF, i2r_ATTRIBUTES_SYNTAX) as discharging boundary B49-I2R-013; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 154-235, sha256 24d4b77385bbb59b), and the discharging record's recorded span_sha256 24d4b77385bbb59b equals that content hash; the older record's coordinate 140 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 140-221)",
+   "discharging_evidence": "boundary-sweep-B49 discharges the i2r slot callbacks through X509V3_EXT_print's single row/item resolution; its independent reviewer APPROVE is recorded in review_history (2026-11-01, transcribed verbatim) and applied to the 22 named boundaries",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-060"
+   ],
+   "file": "src/x509/v3_sxnet.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sxnet_i2r",
+   "discharging_boundary": "B49-I2R-016",
+   "discharging_receipt": "boundary-sweep-B49",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_sxnet.rs, UNSAFE_FN_DEF, sxnet_i2r) as discharging boundary B49-I2R-016; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 346-413, sha256 37d39b967d35e2fd), and the discharging record's recorded span_sha256 37d39b967d35e2fd equals that content hash; the older record's coordinate 332 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 332-399)",
+   "discharging_evidence": "boundary-sweep-B49 discharges the i2r slot callbacks through X509V3_EXT_print's single row/item resolution; its independent reviewer APPROVE is recorded in review_history (2026-11-01, transcribed verbatim) and applied to the 22 named boundaries",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-062"
+   ],
+   "file": "src/x509/v3_usernotice.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_USER_NOTICE_SYNTAX",
+   "discharging_boundary": "B49-I2R-022",
+   "discharging_receipt": "boundary-sweep-B49",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_usernotice.rs, UNSAFE_FN_DEF, i2r_USER_NOTICE_SYNTAX) as discharging boundary B49-I2R-022; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 300-328, sha256 f782a40e33853b81), and the discharging record's recorded span_sha256 f782a40e33853b81 equals that content hash; the older record's coordinate 287 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 287-315)",
+   "discharging_evidence": "boundary-sweep-B49 discharges the i2r slot callbacks through X509V3_EXT_print's single row/item resolution; its independent reviewer APPROVE is recorded in review_history (2026-11-01, transcribed verbatim) and applied to the 22 named boundaries",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  }
+ ],
+ "supersedes_note": "B67-G1 disposition-conflict resolution against the b61 openssh closure. Each entry names ONE older boundary id plus the single boundary of this receipt that carries the same (file, kind, operation); the loader attaches a receipt's supersedes list to every boundary it declares, so every id was checked to match exactly one boundary here, namely the named discharging_boundary. Each entry records the content-addressed binding at S=b6f38f13 and the specific reason the older record is stale; no boundary disposition, span hash or verdict of this receipt is changed by this block."
 }

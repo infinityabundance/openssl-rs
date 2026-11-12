@@ -3342,5 +3342,488 @@
     }
   ],
   "note": "Re-pinned to S' = cdaf16816 after the 2026-11-10 test repair was committed; the 13 files_sha256 remain computed over that same tree and were verified against it before pinning.",
-  "state": "DISCHARGED (scoped to the named boundaries); B48-RC2-001 remains BLOCKED"
+  "state": "DISCHARGED (scoped to the named boundaries); B48-RC2-001 remains BLOCKED",
+  "supersedes": [
+    {
+      "receipt": "p25-evp-legacy-md-init-sites",
+      "ids": [
+        "P25-EVP-LEGACY-MD-002"
+      ],
+      "file": "src/evp/legacy_md4.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "md4_update",
+      "discharging_boundary": "B48-MD4-001",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_md4.rs, UNSAFE_FN_DEF, md4_update) as discharging boundary B48-MD4-001; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 212-231, sha256 ddcda45ea5773b1f), and the discharging record's recorded span_sha256 ddcda45ea5773b1f equals that content hash; the older record's coordinate 191 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 191-194)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record states the callback is 'Not guarded - the caller contract remains' and its residual is 'caller contract ... is not enforced by the callback'. That is exactly the defect D-LEGACY-MD-CALLBACK-MD-DATA-1 repaired: the body at S obtains the block through init_md_data and answers 0 before the primitive for a NULL ctx, a fresh/zero context, a NULL method or an undersized ctx_size."
+    },
+    {
+      "receipt": "p25-evp-legacy-md-init-sites",
+      "ids": [
+        "P25-EVP-LEGACY-MD-003"
+      ],
+      "file": "src/evp/legacy_md4.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "md4_final",
+      "discharging_boundary": "B48-MD4-002",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_md4.rs, UNSAFE_FN_DEF, md4_final) as discharging boundary B48-MD4-002; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 248-262, sha256 ceacaf7c0232871f), and the discharging record's recorded span_sha256 ceacaf7c0232871f equals that content hash; the older record's coordinate 198 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 198-201)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record states the callback is 'Not guarded - the caller contract remains' and its residual is 'caller contract ... is not enforced by the callback'. That is exactly the defect D-LEGACY-MD-CALLBACK-MD-DATA-1 repaired: the body at S obtains the block through init_md_data and answers 0 before the primitive for a NULL ctx, a fresh/zero context, a NULL method or an undersized ctx_size."
+    },
+    {
+      "receipt": "p25-evp-legacy-md-init-sites",
+      "ids": [
+        "P25-EVP-LEGACY-MD-005"
+      ],
+      "file": "src/evp/legacy_ripemd.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "ripe_update",
+      "discharging_boundary": "B48-RIPE-001",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_ripemd.rs, UNSAFE_FN_DEF, ripe_update) as discharging boundary B48-RIPE-001; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 213-234, sha256 5f0b24cbc48029ed), and the discharging record's recorded span_sha256 5f0b24cbc48029ed equals that content hash; the older record's coordinate 192 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 192-195)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record states the callback is 'Not guarded - the caller contract remains' and its residual is 'caller contract ... is not enforced by the callback'. That is exactly the defect D-LEGACY-MD-CALLBACK-MD-DATA-1 repaired: the body at S obtains the block through init_md_data and answers 0 before the primitive for a NULL ctx, a fresh/zero context, a NULL method or an undersized ctx_size."
+    },
+    {
+      "receipt": "p25-evp-legacy-md-init-sites",
+      "ids": [
+        "P25-EVP-LEGACY-MD-006"
+      ],
+      "file": "src/evp/legacy_ripemd.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "ripe_final",
+      "discharging_boundary": "B48-RIPE-002",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_ripemd.rs, UNSAFE_FN_DEF, ripe_final) as discharging boundary B48-RIPE-002; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 250-265, sha256 225d51dda37618df), and the discharging record's recorded span_sha256 225d51dda37618df equals that content hash; the older record's coordinate 199 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 199-202)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record states the callback is 'Not guarded - the caller contract remains' and its residual is 'caller contract ... is not enforced by the callback'. That is exactly the defect D-LEGACY-MD-CALLBACK-MD-DATA-1 repaired: the body at S obtains the block through init_md_data and answers 0 before the primitive for a NULL ctx, a fresh/zero context, a NULL method or an undersized ctx_size."
+    },
+    {
+      "receipt": "openssh-v1i",
+      "ids": [
+        "OSSH-V1I-031"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1_update",
+      "discharging_boundary": "B48-SHA-001",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha1_update) as discharging boundary B48-SHA-001; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 310-329, sha256 460d7ad8966f8919), and the discharging record's recorded span_sha256 460d7ad8966f8919 equals that content hash; the older record's coordinate 262 lies inside this operation's definition span at its own identity 876900e47 (there: lines 262-265)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1j",
+      "ids": [
+        "OSSH-V1J-001"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1_update",
+      "discharging_boundary": "B48-SHA-001",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha1_update) as discharging boundary B48-SHA-001; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 310-329, sha256 460d7ad8966f8919), and the discharging record's recorded span_sha256 460d7ad8966f8919 equals that content hash; the older record's coordinate 262 lies inside this operation's definition span at its own identity bcafae7dc (there: lines 262-265)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1i",
+      "ids": [
+        "OSSH-V1I-032"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1_final",
+      "discharging_boundary": "B48-SHA-002",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha1_final) as discharging boundary B48-SHA-002; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 346-360, sha256 1219cfb6ecf6558f), and the discharging record's recorded span_sha256 1219cfb6ecf6558f equals that content hash; the older record's coordinate 269 lies inside this operation's definition span at its own identity 876900e47 (there: lines 269-272)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1j",
+      "ids": [
+        "OSSH-V1J-002"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1_final",
+      "discharging_boundary": "B48-SHA-002",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha1_final) as discharging boundary B48-SHA-002; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 346-360, sha256 1219cfb6ecf6558f), and the discharging record's recorded span_sha256 1219cfb6ecf6558f equals that content hash; the older record's coordinate 269 lies inside this operation's definition span at its own identity bcafae7dc (there: lines 269-272)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1i",
+      "ids": [
+        "OSSH-V1I-033"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1_int_ctrl",
+      "discharging_boundary": "B48-SHA-003",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha1_int_ctrl) as discharging boundary B48-SHA-003; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 384-414, sha256 bccaff366a6b7686), and the discharging record's recorded span_sha256 bccaff366a6b7686 equals that content hash; the older record's coordinate 277 lies inside this operation's definition span at its own identity 876900e47 (there: lines 277-296)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1j",
+      "ids": [
+        "OSSH-V1J-003"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1_int_ctrl",
+      "discharging_boundary": "B48-SHA-003",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha1_int_ctrl) as discharging boundary B48-SHA-003; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 384-414, sha256 bccaff366a6b7686), and the discharging record's recorded span_sha256 bccaff366a6b7686 equals that content hash; the older record's coordinate 277 lies inside this operation's definition span at its own identity bcafae7dc (there: lines 277-296)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1i",
+      "ids": [
+        "OSSH-V1I-034"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha224_update",
+      "discharging_boundary": "B48-SHA-004",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha224_update) as discharging boundary B48-SHA-004; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 460-479, sha256 1cd42f1cdd15e534), and the discharging record's recorded span_sha256 1cd42f1cdd15e534 equals that content hash; the older record's coordinate 324 lies inside this operation's definition span at its own identity 876900e47 (there: lines 324-327)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1j",
+      "ids": [
+        "OSSH-V1J-004"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha224_update",
+      "discharging_boundary": "B48-SHA-004",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha224_update) as discharging boundary B48-SHA-004; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 460-479, sha256 1cd42f1cdd15e534), and the discharging record's recorded span_sha256 1cd42f1cdd15e534 equals that content hash; the older record's coordinate 324 lies inside this operation's definition span at its own identity bcafae7dc (there: lines 324-327)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1i",
+      "ids": [
+        "OSSH-V1I-035"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha224_final",
+      "discharging_boundary": "B48-SHA-005",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha224_final) as discharging boundary B48-SHA-005; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 493-507, sha256 0899c0b723ef2f8e), and the discharging record's recorded span_sha256 0899c0b723ef2f8e equals that content hash; the older record's coordinate 330 lies inside this operation's definition span at its own identity 876900e47 (there: lines 330-333)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1j",
+      "ids": [
+        "OSSH-V1J-005"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha224_final",
+      "discharging_boundary": "B48-SHA-005",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha224_final) as discharging boundary B48-SHA-005; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 493-507, sha256 0899c0b723ef2f8e), and the discharging record's recorded span_sha256 0899c0b723ef2f8e equals that content hash; the older record's coordinate 330 lies inside this operation's definition span at its own identity bcafae7dc (there: lines 330-333)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1i",
+      "ids": [
+        "OSSH-V1I-037"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha256_update",
+      "discharging_boundary": "B48-SHA-006",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha256_update) as discharging boundary B48-SHA-006; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 552-571, sha256 7a50ba228c71b9f9), and the discharging record's recorded span_sha256 7a50ba228c71b9f9 equals that content hash; the older record's coordinate 342 lies inside this operation's definition span at its own identity 876900e47 (there: lines 342-345)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1j",
+      "ids": [
+        "OSSH-V1J-007"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha256_update",
+      "discharging_boundary": "B48-SHA-006",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha256_update) as discharging boundary B48-SHA-006; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 552-571, sha256 7a50ba228c71b9f9), and the discharging record's recorded span_sha256 7a50ba228c71b9f9 equals that content hash; NOTE the older record's coordinate 360 lies below this operation's definition at its own identity bcafae7dc (there: lines 342-345, i.e. the recorded line names a sibling's definition line); its operation field is unambiguous and the same obligation's companion receipt carries an in-span coordinate",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1i",
+      "ids": [
+        "OSSH-V1I-038"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha256_final",
+      "discharging_boundary": "B48-SHA-007",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha256_final) as discharging boundary B48-SHA-007; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 585-599, sha256 9ca09735c2b7a614), and the discharging record's recorded span_sha256 9ca09735c2b7a614 equals that content hash; the older record's coordinate 348 lies inside this operation's definition span at its own identity 876900e47 (there: lines 348-351)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1j",
+      "ids": [
+        "OSSH-V1J-008"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha256_final",
+      "discharging_boundary": "B48-SHA-007",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha256_final) as discharging boundary B48-SHA-007; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 585-599, sha256 9ca09735c2b7a614), and the discharging record's recorded span_sha256 9ca09735c2b7a614 equals that content hash; NOTE the older record's coordinate 366 lies below this operation's definition at its own identity bcafae7dc (there: lines 348-351, i.e. the recorded line names a sibling's definition line); its operation field is unambiguous and the same obligation's companion receipt carries an in-span coordinate",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1i",
+      "ids": [
+        "OSSH-V1I-040"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha384_update",
+      "discharging_boundary": "B48-SHA-008",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha384_update) as discharging boundary B48-SHA-008; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 646-670, sha256 7fc4b9411875973d), and the discharging record's recorded span_sha256 7fc4b9411875973d equals that content hash; the older record's coordinate 360 lies inside this operation's definition span at its own identity 876900e47 (there: lines 360-363)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1j",
+      "ids": [
+        "OSSH-V1J-010"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha384_update",
+      "discharging_boundary": "B48-SHA-008",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha384_update) as discharging boundary B48-SHA-008; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 646-670, sha256 7fc4b9411875973d), and the discharging record's recorded span_sha256 7fc4b9411875973d equals that content hash; NOTE the older record's coordinate 396 lies below this operation's definition at its own identity bcafae7dc (there: lines 360-363, i.e. the recorded line names a sibling's definition line); its operation field is unambiguous and the same obligation's companion receipt carries an in-span coordinate",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1i",
+      "ids": [
+        "OSSH-V1I-041"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha384_final",
+      "discharging_boundary": "B48-SHA-009",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha384_final) as discharging boundary B48-SHA-009; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 684-698, sha256 1d5bba90006127de), and the discharging record's recorded span_sha256 1d5bba90006127de equals that content hash; the older record's coordinate 366 lies inside this operation's definition span at its own identity 876900e47 (there: lines 366-369)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1j",
+      "ids": [
+        "OSSH-V1J-011"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha384_final",
+      "discharging_boundary": "B48-SHA-009",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha384_final) as discharging boundary B48-SHA-009; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 684-698, sha256 1d5bba90006127de), and the discharging record's recorded span_sha256 1d5bba90006127de equals that content hash; NOTE the older record's coordinate 402 lies below this operation's definition at its own identity bcafae7dc (there: lines 366-369, i.e. the recorded line names a sibling's definition line); its operation field is unambiguous and the same obligation's companion receipt carries an in-span coordinate",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1i",
+      "ids": [
+        "OSSH-V1I-043"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_update",
+      "discharging_boundary": "B48-SHA-010",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha512_update) as discharging boundary B48-SHA-010; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 743-762, sha256 d2a2fdb53a31f279), and the discharging record's recorded span_sha256 d2a2fdb53a31f279 equals that content hash; the older record's coordinate 378 lies inside this operation's definition span at its own identity 876900e47 (there: lines 378-381)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1j",
+      "ids": [
+        "OSSH-V1J-013"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_update",
+      "discharging_boundary": "B48-SHA-010",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha512_update) as discharging boundary B48-SHA-010; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 743-762, sha256 d2a2fdb53a31f279), and the discharging record's recorded span_sha256 d2a2fdb53a31f279 equals that content hash; NOTE the older record's coordinate 432 lies below this operation's definition at its own identity bcafae7dc (there: lines 378-381, i.e. the recorded line names a sibling's definition line); its operation field is unambiguous and the same obligation's companion receipt carries an in-span coordinate",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1i",
+      "ids": [
+        "OSSH-V1I-044"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_final",
+      "discharging_boundary": "B48-SHA-011",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha512_final) as discharging boundary B48-SHA-011; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 776-790, sha256 c47047f63e41a7ef), and the discharging record's recorded span_sha256 c47047f63e41a7ef equals that content hash; the older record's coordinate 384 lies inside this operation's definition span at its own identity 876900e47 (there: lines 384-387)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1j",
+      "ids": [
+        "OSSH-V1J-014"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_final",
+      "discharging_boundary": "B48-SHA-011",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha512_final) as discharging boundary B48-SHA-011; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 776-790, sha256 c47047f63e41a7ef), and the discharging record's recorded span_sha256 c47047f63e41a7ef equals that content hash; NOTE the older record's coordinate 438 lies below this operation's definition at its own identity bcafae7dc (there: lines 384-387, i.e. the recorded line names a sibling's definition line); its operation field is unambiguous and the same obligation's companion receipt carries an in-span coordinate",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1i",
+      "ids": [
+        "OSSH-V1I-046"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_224_int_final",
+      "discharging_boundary": "B48-SHA-012",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha512_224_int_final) as discharging boundary B48-SHA-012; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 837-851, sha256 b303a49f195d99e2), and the discharging record's recorded span_sha256 b303a49f195d99e2 equals that content hash; the older record's coordinate 399 lies inside this operation's definition span at its own identity 876900e47 (there: lines 399-402)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1j",
+      "ids": [
+        "OSSH-V1J-016"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_224_int_final",
+      "discharging_boundary": "B48-SHA-012",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha512_224_int_final) as discharging boundary B48-SHA-012; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 837-851, sha256 b303a49f195d99e2), and the discharging record's recorded span_sha256 b303a49f195d99e2 equals that content hash; NOTE the older record's coordinate 471 lies below this operation's definition at its own identity bcafae7dc (there: lines 399-402, i.e. the recorded line names a sibling's definition line); its operation field is unambiguous and the same obligation's companion receipt carries an in-span coordinate",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1i",
+      "ids": [
+        "OSSH-V1I-048"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_256_int_final",
+      "discharging_boundary": "B48-SHA-013",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha512_256_int_final) as discharging boundary B48-SHA-013; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 895-909, sha256 07ffa718ebee0bc9), and the discharging record's recorded span_sha256 07ffa718ebee0bc9 equals that content hash; the older record's coordinate 411 lies inside this operation's definition span at its own identity 876900e47 (there: lines 411-414)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "openssh-v1j",
+      "ids": [
+        "OSSH-V1J-018"
+      ],
+      "file": "src/evp/legacy_sha.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_256_int_final",
+      "discharging_boundary": "B48-SHA-013",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_sha.rs, UNSAFE_FN_DEF, sha512_256_int_final) as discharging boundary B48-SHA-013; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 895-909, sha256 07ffa718ebee0bc9), and the discharging record's recorded span_sha256 07ffa718ebee0bc9 equals that content hash; NOTE the older record's coordinate 501 lies below this operation's definition at its own identity bcafae7dc (there: lines 411-414, i.e. the recorded line names a sibling's definition line); its operation field is unambiguous and the same obligation's companion receipt carries an in-span coordinate",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record's blocking criterion is UNVALIDATED_MD_DATA: 'The body still dereferences md_data without checking it ... A fresh, C-valid EVP_MD_CTX_new() has md_data == NULL, and the exported EVP_MD_meth_get_update/get_final/get_ctrl accessors hand these function pointers to any C caller.' B48 repaired exactly that defect: the body at S calls init_md_data and returns 0 before SHA*_Update/SHA*_Final when the block is not established."
+    },
+    {
+      "receipt": "p25-evp-legacy-md-init-sites",
+      "ids": [
+        "P25-EVP-LEGACY-MD-008"
+      ],
+      "file": "src/evp/legacy_wp.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "wp_update",
+      "discharging_boundary": "B48-WP-001",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_wp.rs, UNSAFE_FN_DEF, wp_update) as discharging boundary B48-WP-001; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 216-237, sha256 d2a5cceba9066c39), and the discharging record's recorded span_sha256 d2a5cceba9066c39 equals that content hash; the older record's coordinate 194 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 194-197)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record states the callback is 'Not guarded - the caller contract remains' and its residual is 'caller contract ... is not enforced by the callback'. That is exactly the defect D-LEGACY-MD-CALLBACK-MD-DATA-1 repaired: the body at S obtains the block through init_md_data and answers 0 before the primitive for a NULL ctx, a fresh/zero context, a NULL method or an undersized ctx_size."
+    },
+    {
+      "receipt": "p25-evp-legacy-md-init-sites",
+      "ids": [
+        "P25-EVP-LEGACY-MD-009"
+      ],
+      "file": "src/evp/legacy_wp.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "wp_final",
+      "discharging_boundary": "B48-WP-002",
+      "discharging_receipt": "boundary-sweep-B48",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/evp/legacy_wp.rs, UNSAFE_FN_DEF, wp_final) as discharging boundary B48-WP-002; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 253-268, sha256 0ae07c781e63819b), and the discharging record's recorded span_sha256 0ae07c781e63819b equals that content hash; the older record's coordinate 201 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 201-204)",
+      "discharging_evidence": "boundary-sweep-B48 documents D-LEGACY-MD-CALLBACK-MD-DATA-1 and its review_history records the fifth adjudication DISCHARGE at S'=cdaf16816 (evidence commit 77e1a3024), after the four earlier rejections were repaired",
+      "reason": "the older record states the callback is 'Not guarded - the caller contract remains' and its residual is 'caller contract ... is not enforced by the callback'. That is exactly the defect D-LEGACY-MD-CALLBACK-MD-DATA-1 repaired: the body at S obtains the block through init_md_data and answers 0 before the primitive for a NULL ctx, a fresh/zero context, a NULL method or an undersized ctx_size."
+    }
+  ],
+  "supersedes_note": "B67-G1 disposition-conflict resolution against the b61 openssh closure. Each entry names ONE older boundary id plus the single boundary of this receipt that carries the same (file, kind, operation); the loader attaches a receipt's supersedes list to every boundary it declares, so every id was checked to match exactly one boundary here, namely the named discharging_boundary. Each entry records the content-addressed binding at S=b6f38f13 and the specific reason the older record is stale; no boundary disposition, span hash or verdict of this receipt is changed by this block."
 }
