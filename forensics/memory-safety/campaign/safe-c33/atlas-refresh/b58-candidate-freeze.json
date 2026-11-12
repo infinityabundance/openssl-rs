@@ -335,5 +335,7 @@
  "non_claims": [
   "This freeze records a negative measurement. It does not promote any obligation, does not withdraw any receipt, and does not assert SAFE_COMPATIBLE.",
   "The consumer binaries' digests differ from b53 because the install prefix name changed (court/freeze-b58/install) and that string is embedded in each binary's RUNPATH."
- ]
+ ],
+ "superseded_by": "atlas-refresh/b60-candidate-freeze.json",
+ "correction": "This receipt is internally inconsistent and is superseded. It records tool 8f0379bb and closure hashes e8932799.../175-148/78, while the files produced at that time were tool e2e4eed1 and 912fcd82.../305-18/32. The authoritative candidate-bound freeze is b60 (same source, tool 84551e78, 323/323/0/0). The values here are left as recorded rather than overwritten."
 }

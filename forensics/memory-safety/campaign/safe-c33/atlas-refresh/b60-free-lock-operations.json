@@ -1,0 +1,245 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/boundary-receipt/v1",
+ "receipt": "b60-free-lock-operations",
+ "date": "2026-11-12",
+ "campaign": "safe-c33",
+ "subphase": "b60-free-lock-operations",
+ "candidate": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+ "source": {
+  "ledger": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json#/scoped_boundary_discharges[receipt=boundary-sweep-B56]",
+  "verdict_receipt": "atlas-refresh/boundary-sweep-B56.json#/rows",
+  "prior_span_evidence": "atlas-refresh/b59-close18.json#/causes/thread-free_lock-cfg-duplicate",
+  "span_source": "git blob at census identity.source_head (never the worktree)",
+  "source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+  "span_schema": "safe-c33/operation-span-sha256/v1",
+  "span_set_schema": "safe-c33/operation-span-set-sha256/v1",
+  "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+  "span_set_hash_rule": "sha256 over the UTF-8 bytes of 'start-end:sha256' lines for every resolved definition, ordered by start line and joined with '\\n' (no trailing newline). It identifies the exact definition set a declared-span boundary was bound to; the per-definition span hashes remain the acceptance evidence."
+ },
+ "resolution_rule": {
+  "instrument": "forensics/tools/consumer_closure.py",
+  "function": "resolve_declared_spans",
+  "rule": "an operation is bound when every declared definition span matches the current blob AND the set of definitions found matches the declared set exactly, one-to-one, with no declared extent absent and no live extent undeclared",
+  "generality": "the field is a boundary-row property, not an operation special case: any multiply-defined item may carry declared_spans",
+  "cfg_is_metadata": "the cfg predicates are recorded and reported but never evaluated; the instrument does not know which profile a consumer binary was built for, so every definition must match"
+ },
+ "bound_span_set": {
+  "item": "free_lock",
+  "file": "src/runtime/thread.rs",
+  "kind": "UNSAFE_FN_DEF",
+  "definition_count": 2,
+  "set_sha256": "66d303aa533ca63db74f98193a456292031f984792e1f81a255dc79cf58d3951",
+  "definitions": [
+   {
+    "cfg": "#[cfg(all(\n    target_os = \"linux\",\n    target_arch = \"x86_64\",\n    target_env = \"gnu\",\n    target_pointer_width = \"64\"\n))]",
+    "cfg_source": "git blob, attribute lines verbatim",
+    "cfg_prior_rendering": "B59 recorded this predicate on one line",
+    "start_line": 673,
+    "end_line": 684,
+    "span_sha256": "e905dce107e67f2bfb9ccb615de7bc1976fd5db0a14421b56bf4bf29b0cd117e",
+    "def_line": 679,
+    "qualified_identity": "free_lock",
+    "span_schema": "safe-c33/operation-span-sha256/v1",
+    "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+    "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+    "source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+   },
+   {
+    "cfg": "#[cfg(not(all(\n    target_os = \"linux\",\n    target_arch = \"x86_64\",\n    target_env = \"gnu\",\n    target_pointer_width = \"64\"\n)))]",
+    "cfg_source": "git blob, attribute lines verbatim",
+    "cfg_prior_rendering": "B59 recorded this predicate on one line",
+    "start_line": 694,
+    "end_line": 704,
+    "span_sha256": "996b71e7162c2bf28589af2f778a57277db4c25c7893d2f504daa2043fd8d82f",
+    "def_line": 700,
+    "qualified_identity": "free_lock",
+    "span_schema": "safe-c33/operation-span-sha256/v1",
+    "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+    "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+    "source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+   }
+  ]
+ },
+ "per_definition_verdicts": [
+  {
+   "definition_line": 679,
+   "span_start_line": 673,
+   "span_end_line": 684,
+   "span_sha256": "e905dce107e67f2bfb9ccb615de7bc1976fd5db0a14421b56bf4bf29b0cd117e",
+   "cfg": "#[cfg(all(\n    target_os = \"linux\",\n    target_arch = \"x86_64\",\n    target_env = \"gnu\",\n    target_pointer_width = \"64\"\n))]",
+   "b56_row_id": "V1:src/runtime/thread.rs:666:UNSAFE_FN_DEF",
+   "b56_line": 666,
+   "b56_operation": "free_lock (linux/x86_64/gnu/64-bit)",
+   "verdict": "SAFETY_DISCHARGED",
+   "evidence": "Contract added. Measured: B56-C4 records exactly one release of the block address and no double release across a successful free and a NULL free; mutation M3 (a second `CRYPTO_free` of the same pointer) makes the probe fail with `left: 2, right: 1`.",
+   "caller": "One caller: `CRYPTO_THREAD_lock_free` (src/runtime/thread.rs:724), whose `# Safety` requires NULL or a live lock not used again.",
+   "registration": "No registration; the sized variant is selected by the cfg at :671-676 and pairs with `alloc_lock`'s `CRYPTO_zalloc` + `block.write(new_inner())` at :441-457.",
+   "obligation": "`lock` is `CRYPTO_zalloc`'s whole `AUTHORITY_CRYPTO_RWLOCK_SIZE` block, exclusively owned by this call, first `size_of::<RwlockInner>()` bytes initialised. Two disjoint releases: `drop_in_place` drops the embedded state and never the block; the `BlockRelease` guard (constructed first) is the block's one `CRYPTO_free`.",
+   "ledger_coordinate": "src/runtime/thread.rs:679"
+  },
+  {
+   "definition_line": 700,
+   "span_start_line": 694,
+   "span_end_line": 704,
+   "span_sha256": "996b71e7162c2bf28589af2f778a57277db4c25c7893d2f504daa2043fd8d82f",
+   "cfg": "#[cfg(not(all(\n    target_os = \"linux\",\n    target_arch = \"x86_64\",\n    target_env = \"gnu\",\n    target_pointer_width = \"64\"\n)))]",
+   "b56_row_id": "V1:src/runtime/thread.rs:679:UNSAFE_FN_DEF",
+   "b56_line": 679,
+   "b56_operation": "free_lock (other profiles)",
+   "verdict": "SAFETY_DISCHARGED",
+   "evidence": "Contract added. This variant does not compile on the measured profile, so it is verified by inspection only; the compensation is that `alloc_lock`/`free_lock` are the only pair that name the representation, and both are cfg-selected together.",
+   "caller": "The same single caller: `CRYPTO_THREAD_lock_free` (:724).",
+   "registration": "No registration; the `Box` variant, selected by the `not(all(...))` cfg at :694-700.",
+   "obligation": "`lock` came from `Box::into_raw(Box::new(new_inner()))` (`alloc_lock`, :468-470) and this is its only `Box::from_raw`, which is the block's single release.",
+   "ledger_coordinate": "src/runtime/thread.rs:700"
+  }
+ ],
+ "ledger": {
+  "receipt": "boundary-sweep-B56",
+  "state": "SAFETY_DISCHARGED (scoped, 21); 1 ELIMINATED",
+  "discharged_boundaries_named": [
+   "src/runtime/thread.rs:679",
+   "src/runtime/thread.rs:700"
+  ],
+  "adjudication": {
+   "reviewer": "orchestrating agent (independent of the sweep author)",
+   "verdict": "21 DISCHARGE + 1 ELIMINATED of 22",
+   "control": "seven controls, five production mutations (C1-C7)",
+   "level": "fast (fmt, clippy -D warnings, focused module suites). BOUNDARY/SEAL not run."
+  }
+ },
+ "controls": [
+  "b60-C1: a synthetic multiply-defined item with BOTH declared span hashes matching binds (DISCHARGED)",
+  "b60-C2: the same item with ONE declared span hash mutated to 64 zeros is REFUSED (BLOCKED, span-hash-mismatch)",
+  "b60-C3: the same item with only one of its two live definitions declared is REFUSED (BLOCKED, ambiguous-identity)",
+  "b60-C4: the single-span shape (span_sha256, no declared_spans) is REFUSED (BLOCKED, ambiguous-identity) -- the pre-change behaviour is load-bearing",
+  "b60-C5: B56's per-definition probe (B56-C4) and its mutation M3 are transcribed unchanged; this batch does not re-run the Rust court"
+ ],
+ "boundaries": [
+  {
+   "id": "src/runtime/thread.rs:679",
+   "file": "src/runtime/thread.rs",
+   "line": 679,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "free_lock",
+   "mechanism": "RUNTIME_CONCURRENCY",
+   "cfg": "#[cfg(all(\n    target_os = \"linux\",\n    target_arch = \"x86_64\",\n    target_env = \"gnu\",\n    target_pointer_width = \"64\"\n))]",
+   "disposition": "SAFETY_DISCHARGED (scoped to this site by ledger row boundary-sweep-B56; recorded row verdict SAFETY_DISCHARGED; the operation is bound by its complete declared definition set, both spans content-matched at S)",
+   "recorded_verdict": "SAFETY_DISCHARGED",
+   "ledger_receipt": "boundary-sweep-B56",
+   "ledger_coordinate": "src/runtime/thread.rs:679",
+   "source_receipt": "boundary-sweep-B56",
+   "source_row_id": "V1:src/runtime/thread.rs:666:UNSAFE_FN_DEF",
+   "source_row_key": "rows",
+   "source_row_coordinates": {
+    "line": 666,
+    "line_current": 679,
+    "current_line": null
+   },
+   "declared_spans": [
+    {
+     "cfg": "#[cfg(all(\n    target_os = \"linux\",\n    target_arch = \"x86_64\",\n    target_env = \"gnu\",\n    target_pointer_width = \"64\"\n))]",
+     "start_line": 673,
+     "end_line": 684,
+     "span_sha256": "e905dce107e67f2bfb9ccb615de7bc1976fd5db0a14421b56bf4bf29b0cd117e",
+     "span_schema": "safe-c33/operation-span-sha256/v1",
+     "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+     "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+     "source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+     "def_line": 679
+    },
+    {
+     "cfg": "#[cfg(not(all(\n    target_os = \"linux\",\n    target_arch = \"x86_64\",\n    target_env = \"gnu\",\n    target_pointer_width = \"64\"\n)))]",
+     "start_line": 694,
+     "end_line": 704,
+     "span_sha256": "996b71e7162c2bf28589af2f778a57277db4c25c7893d2f504daa2043fd8d82f",
+     "span_schema": "safe-c33/operation-span-sha256/v1",
+     "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+     "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+     "source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+     "def_line": 700
+    }
+   ],
+   "span_set_sha256": "66d303aa533ca63db74f98193a456292031f984792e1f81a255dc79cf58d3951",
+   "span_set_schema": "safe-c33/operation-span-set-sha256/v1",
+   "span_set_hash_rule": "sha256 over the UTF-8 bytes of 'start-end:sha256' lines for every resolved definition, ordered by start line and joined with '\\n' (no trailing newline). It identifies the exact definition set a declared-span boundary was bound to; the per-definition span hashes remain the acceptance evidence.",
+   "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+   "controls": [
+    "b60-C1: a synthetic multiply-defined item with BOTH declared span hashes matching binds (DISCHARGED)",
+    "b60-C2: the same item with ONE declared span hash mutated to 64 zeros is REFUSED (BLOCKED, span-hash-mismatch)",
+    "b60-C3: the same item with only one of its two live definitions declared is REFUSED (BLOCKED, ambiguous-identity)",
+    "b60-C4: the single-span shape (span_sha256, no declared_spans) is REFUSED (BLOCKED, ambiguous-identity) -- the pre-change behaviour is load-bearing",
+    "b60-C5: B56's per-definition probe (B56-C4) and its mutation M3 are transcribed unchanged; this batch does not re-run the Rust court"
+   ]
+  },
+  {
+   "id": "src/runtime/thread.rs:700",
+   "file": "src/runtime/thread.rs",
+   "line": 700,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "free_lock",
+   "mechanism": "RUNTIME_CONCURRENCY",
+   "cfg": "#[cfg(not(all(\n    target_os = \"linux\",\n    target_arch = \"x86_64\",\n    target_env = \"gnu\",\n    target_pointer_width = \"64\"\n)))]",
+   "disposition": "SAFETY_DISCHARGED (scoped to this site by ledger row boundary-sweep-B56; recorded row verdict SAFETY_DISCHARGED; the operation is bound by its complete declared definition set, both spans content-matched at S)",
+   "recorded_verdict": "SAFETY_DISCHARGED",
+   "ledger_receipt": "boundary-sweep-B56",
+   "ledger_coordinate": "src/runtime/thread.rs:700",
+   "source_receipt": "boundary-sweep-B56",
+   "source_row_id": "V1:src/runtime/thread.rs:679:UNSAFE_FN_DEF",
+   "source_row_key": "rows",
+   "source_row_coordinates": {
+    "line": 679,
+    "line_current": 700,
+    "current_line": null
+   },
+   "declared_spans": [
+    {
+     "cfg": "#[cfg(all(\n    target_os = \"linux\",\n    target_arch = \"x86_64\",\n    target_env = \"gnu\",\n    target_pointer_width = \"64\"\n))]",
+     "start_line": 673,
+     "end_line": 684,
+     "span_sha256": "e905dce107e67f2bfb9ccb615de7bc1976fd5db0a14421b56bf4bf29b0cd117e",
+     "span_schema": "safe-c33/operation-span-sha256/v1",
+     "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+     "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+     "source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+     "def_line": 679
+    },
+    {
+     "cfg": "#[cfg(not(all(\n    target_os = \"linux\",\n    target_arch = \"x86_64\",\n    target_env = \"gnu\",\n    target_pointer_width = \"64\"\n)))]",
+     "start_line": 694,
+     "end_line": 704,
+     "span_sha256": "996b71e7162c2bf28589af2f778a57277db4c25c7893d2f504daa2043fd8d82f",
+     "span_schema": "safe-c33/operation-span-sha256/v1",
+     "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+     "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+     "source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+     "def_line": 700
+    }
+   ],
+   "span_set_sha256": "66d303aa533ca63db74f98193a456292031f984792e1f81a255dc79cf58d3951",
+   "span_set_schema": "safe-c33/operation-span-set-sha256/v1",
+   "span_set_hash_rule": "sha256 over the UTF-8 bytes of 'start-end:sha256' lines for every resolved definition, ordered by start line and joined with '\\n' (no trailing newline). It identifies the exact definition set a declared-span boundary was bound to; the per-definition span hashes remain the acceptance evidence.",
+   "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+   "controls": [
+    "b60-C1: a synthetic multiply-defined item with BOTH declared span hashes matching binds (DISCHARGED)",
+    "b60-C2: the same item with ONE declared span hash mutated to 64 zeros is REFUSED (BLOCKED, span-hash-mismatch)",
+    "b60-C3: the same item with only one of its two live definitions declared is REFUSED (BLOCKED, ambiguous-identity)",
+    "b60-C4: the single-span shape (span_sha256, no declared_spans) is REFUSED (BLOCKED, ambiguous-identity) -- the pre-change behaviour is load-bearing",
+    "b60-C5: B56's per-definition probe (B56-C4) and its mutation M3 are transcribed unchanged; this batch does not re-run the Rust court"
+   ]
+  }
+ ],
+ "unresolved": [],
+ "non_claims": [
+  "This receipt transcribes B56's two per-definition verdicts and supplies the missing declared-definition-set binding. It creates, widens and withdraws no verdict.",
+  "Both boundary rows declare the same two definition spans because the resolution rule requires the declared set to equal the live set. Each row's discharge authority is the ledger row that names that coordinate; the per-definition verdict for BOTH definitions is SAFETY_DISCHARGED in B56, so neither row claims a definition the adjudication did not already discharge.",
+  "The off-profile (`Box`) definition does not compile on the measured profile; B56 verified it by inspection and its row says so. That limitation is transcribed, not removed.",
+  "RUNTIME_CONCURRENCY remains OWNERSHIP_RECONSTRUCTED; this batch promotes no mechanism state."
+ ],
+ "kind": "adjudication-transcription",
+ "loader_visibility": {
+  "loaded_by_consumer_closure": false,
+  "reason": "load_boundaries admits boundary-sweep-B*.json and *-sites.json only; this file is the named receipt the ledger row cites",
+  "loader_projection": "atlas-refresh/b60-free-lock-operations-sites.json"
+ }
+}

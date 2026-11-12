@@ -24748,9 +24748,13 @@ class EdgeRecordStream:
 
 
 def _tool_identity() -> dict:
-    """The exact validator identity bound into every receipt (AGENTS.md 22)."""
+    """The exact validator identity bound into every receipt (AGENTS.md 22).
+
+    Version 6 adds the declared-definition-set resolution rule
+    (``declared_spans``); version 5 receipts remain valid and unchanged.
+    """
     path = Path(__file__).resolve()
-    return {"path": TOOL, "version": 5,
+    return {"path": TOOL, "version": 6,
             "sha256": sha256_file(path),
             "schema": EDGE_RECORD_SCHEMA}
 
@@ -27222,8 +27226,15 @@ def load_boundaries(boundary_dir: Path) -> tuple[dict, dict]:
                 "span_normalisation": b.get("span_normalisation"),
                 "span_claim_scope": b.get("span_claim_scope"),
                 "span_hash_source": ("receipt" if b.get("span_sha256") else None),
+                # A boundary for an item with more than one live definition (a
+                # pair of `#[cfg]`-gated definitions) may declare the whole set
+                # of definition spans it is about.  The list is carried
+                # verbatim and validated by resolve_declared_spans; the loader
+                # never interprets it, and it never substitutes for the
+                # single-span hash above.
+                "declared_spans": b.get("declared_spans"),
             }
-            if not rec["span_sha256"]:
+            if not rec["span_sha256"] and not rec["declared_spans"]:
                 migrated = migration.get(f"{receipt}::{rec['id']}")
                 if migrated:
                     rec["span_sha256"] = migrated.get("span_sha256")
@@ -27333,6 +27344,12 @@ def scope_item(name) -> str | None:
 # --------------------------------------------------------------------------- #
 
 SPAN_HASH_SCHEMA = "safe-c33/operation-span-sha256/v1"
+SPAN_SET_SCHEMA = "safe-c33/operation-span-set-sha256/v1"
+SPAN_SET_HASH_RULE = (
+    "sha256 over the UTF-8 bytes of 'start-end:sha256' lines for every resolved "
+    "definition, ordered by start line and joined with '\\n' (no trailing "
+    "newline). It identifies the exact definition set a declared-span boundary "
+    "was bound to; the per-definition span hashes remain the acceptance evidence.")
 SPAN_NORMALISATION = (
     "split on universal newlines (Python str.splitlines), rstrip() every line, "
     "join with '\\n', sha256 over UTF-8 bytes (no trailing newline)")
@@ -27901,6 +27918,162 @@ def resolve_operation_span(repo, file, operation, item, locators=None,
     return dict(result)
 
 
+def _declared_spans_validated(declared) -> list[dict]:
+    """Validate a boundary's ``declared_spans`` list; refuse anything malformed."""
+    entries: list[dict] = []
+    seen: set[tuple[int, int]] = set()
+    for entry in declared:
+        if not isinstance(entry, dict):
+            raise SpanResolutionError(
+                "span-unparsable", "a declared_spans entry is not an object")
+        start, end = entry.get("start_line"), entry.get("end_line")
+        if (not isinstance(start, int) or not isinstance(end, int)
+                or isinstance(start, bool) or isinstance(end, bool)
+                or start < 1 or end < start):
+            raise SpanResolutionError(
+                "span-unparsable",
+                f"declared span coordinates {start!r}-{end!r} are not a "
+                "1-based inclusive line range")
+        sha = entry.get("span_sha256")
+        if sha is None or sha == "":
+            raise SpanResolutionError(
+                "unmigrated",
+                (f"the declared span {start}-{end} carries no span_sha256; a "
+                 "coordinate cannot establish a content-addressed discharge"))
+        if not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{64}", sha):
+            raise SpanResolutionError(
+                "span-unparsable",
+                (f"the declared span {start}-{end} span_sha256 is not 64 "
+                 "lowercase hex characters"))
+        if (start, end) in seen:
+            raise SpanResolutionError(
+                "span-unparsable",
+                f"the declared span {start}-{end} is listed more than once")
+        seen.add((start, end))
+        cfg = entry.get("cfg")
+        if cfg is not None and not isinstance(cfg, str):
+            raise SpanResolutionError(
+                "span-unparsable",
+                f"the declared span {start}-{end} cfg predicate is not a string")
+        entries.append({"cfg": cfg, "start_line": start, "end_line": end,
+                        "span_sha256": sha})
+    return entries
+
+
+def resolve_declared_spans(repo, file, item, declared_spans, source_text=None,
+                           source_commit=None, allow_worktree=False) -> dict:
+    """Resolve a multiply-defined item against a receipt's declared span set.
+
+    An item may have more than one live definition (two ``#[cfg]``-gated
+    definitions selected by complementary predicates).  It has no single "the"
+    definition, so :func:`resolve_operation_span` refuses it as
+    ``ambiguous-identity`` before any recorded hash is compared.  A receipt may
+    instead declare the *set* of definition spans it is about::
+
+        "declared_spans": [
+          {"cfg": "#[cfg(all(...))]", "start_line": 673, "end_line": 684,
+           "span_sha256": "<hash at S>"},
+          {"cfg": "#[cfg(not(all(...)))]", "start_line": 694, "end_line": 704,
+           "span_sha256": "<hash at S>"}]
+
+    Binding rule, all of it on every call:
+
+    1. the live definitions of ``item`` in ``file`` number exactly as many as
+       the declaration;
+    2. the line extents agree one-to-one: every live ``(start_line, end_line)``
+       is declared exactly once and no declared extent is absent from the blob;
+    3. every declared ``span_sha256`` equals the normalised content hash of the
+       live span at those coordinates (and the span-hash rule is the same one
+       the single-definition path uses).
+
+    A receipt therefore cannot bind while only one of several live definitions
+    matches: an undeclared live definition breaks (1)/(2), and a moved or
+    edited definition breaks (3).  The rule is about an item's definition set,
+    so it is not specific to any one operation.
+
+    ``cfg`` is declaration metadata: it is validated, reported back and never
+    evaluated.  This instrument does not know which profile a consumer binary
+    was built for, so requiring *every* definition to match is the only sound
+    reading of a declaration that names more than one.
+    """
+    _require_span_source(repo, file, source_text, source_commit, allow_worktree)
+    declared = _declared_spans_validated(declared_spans)
+    text, masked, starts, candidates, containers, meta = _span_source_and_candidates(
+        repo, file, item, source_text=source_text, source_commit=source_commit)
+    if not candidates:
+        raise SpanResolutionError(
+            "span-unparsable", f"no brace-delimited definition of {item!r} in {file}")
+    lines = text.splitlines()
+    live: dict[tuple[int, int], dict] = {}
+    for c in candidates:
+        if not c.get("has_body", False):
+            raise SpanResolutionError(
+                "span-unparsable",
+                (f"{item!r} at line {c['def_line'] + 1} has no balanced body "
+                 "brace before a top-level `;`; the declared definition set "
+                 "cannot be bounded exactly"))
+        body = lines[c["start"]:c["end"] + 1]
+        norm = "\n".join(x.rstrip() for x in body)
+        live[(c["start"] + 1, c["end"] + 1)] = {
+            "start_line": c["start"] + 1,
+            "end_line": c["end"] + 1,
+            "def_line": c["def_line"] + 1,
+            "sha256": hashlib.sha256(norm.encode("utf-8")).hexdigest(),
+            "qualified_identity": _span_qualified_identity(c, containers, item),
+        }
+    declared_extents = [(d["start_line"], d["end_line"]) for d in declared]
+    if len(declared_extents) != len(live) or set(declared_extents) != set(live):
+        raise SpanResolutionError(
+            "ambiguous-identity",
+            (f"{item!r} in {file} has {len(live)} live definition(s) "
+             f"({', '.join(f'{a}-{b}' for a, b in sorted(live))}) but the "
+             f"receipt declares {len(declared_extents)} "
+             f"({', '.join(f'{a}-{b}' for a, b in sorted(declared_extents))}); a "
+             "declared definition set must name every live definition exactly "
+             "once and nothing else"),
+            collision={"last_component": item,
+                       "declared_extents": [list(x) for x in sorted(declared_extents)],
+                       "live_extents": [list(x) for x in sorted(live)]})
+    definitions = []
+    for d in sorted(declared, key=lambda x: x["start_line"]):
+        found = live[(d["start_line"], d["end_line"])]
+        if d["span_sha256"] != found["sha256"]:
+            raise SpanResolutionError(
+                "span-hash-mismatch",
+                (f"declared span {d['start_line']}-{d['end_line']} of {item!r} "
+                 f"records {d['span_sha256'][:16]} but the bound source hashes "
+                 f"to {found['sha256'][:16]}"),
+                collision={"last_component": item,
+                           "declared_span": [d["start_line"], d["end_line"]],
+                           "recorded_hash": d["span_sha256"],
+                           "current_hash": found["sha256"]})
+        definitions.append({
+            "cfg": d["cfg"],
+            "start_line": found["start_line"],
+            "end_line": found["end_line"],
+            "def_line": found["def_line"],
+            "sha256": found["sha256"],
+            "qualified_identity": found["qualified_identity"],
+        })
+    set_digest = hashlib.sha256("\n".join(
+        f"{d['start_line']}-{d['end_line']}:{d['sha256']}"
+        for d in definitions).encode("utf-8")).hexdigest()
+    return {
+        "schema": SPAN_SET_SCHEMA,
+        "sha256": set_digest,
+        "start_line": definitions[0]["start_line"],
+        "end_line": definitions[-1]["end_line"],
+        "def_line": definitions[0]["def_line"],
+        "qualified_identity": definitions[0]["qualified_identity"],
+        "resolution": "declared-spans",
+        "collision": None,
+        "definitions": definitions,
+        "source": meta,
+        "normalisation": SPAN_NORMALISATION,
+        "claim_scope": SPAN_CLAIM_SCOPE,
+    }
+
+
 def resolve_operation_at_line(repo, file, item, line, source_text=None,
                               source_commit=None, allow_worktree=False) -> dict:
     """Resolve the definition of ``item`` that occupies census ``line``.
@@ -28140,16 +28313,29 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
         span_detail = None
         span_info = {}
         source_commit = _EVIDENCE_ENV.get("source_commit")
+        # A boundary may declare the complete set of definition spans of a
+        # multiply-defined item instead of a single span hash.  When it does,
+        # the declaration itself is the binding evidence: every declared
+        # definition must be live at these coordinates and match its recorded
+        # hash (see resolve_declared_spans), so a declaration that names only
+        # one of several live definitions cannot bind.
+        declared_spans = b.get("declared_spans") or None
         if item_match:
             try:
-                boundary_span = resolve_operation_span(
-                    repo, obligation["file"], b.get("operation"),
-                    obligation.get("item"),
-                    locators=(b.get("line"), b.get("inventory_line"),
-                              b.get("line_current"), current_line,
-                              obligation["line"]),
-                    source_commit=source_commit,
-                    allow_worktree=allow_worktree_span)
+                if declared_spans:
+                    boundary_span = resolve_declared_spans(
+                        repo, obligation["file"], obligation.get("item"),
+                        declared_spans, source_commit=source_commit,
+                        allow_worktree=allow_worktree_span)
+                else:
+                    boundary_span = resolve_operation_span(
+                        repo, obligation["file"], b.get("operation"),
+                        obligation.get("item"),
+                        locators=(b.get("line"), b.get("inventory_line"),
+                                  b.get("line_current"), current_line,
+                                  obligation["line"]),
+                        source_commit=source_commit,
+                        allow_worktree=allow_worktree_span)
             except SpanResolutionError as exc:
                 span_classification = exc.classification
                 span_detail = exc.detail
@@ -28188,7 +28374,16 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                             "obligation_qualified_identity":
                                 obligation_span["qualified_identity"]}}
                 except SpanResolutionError as exc:
-                    if exc.classification == "ambiguous-identity":
+                    if declared_spans and exc.classification == "span-unparsable":
+                        # The whole point of a declared set is that it names
+                        # every live definition and each one matched.  A stale
+                        # carry-forward coordinate (the previous applied
+                        # closure's enumeration line) then names no definition
+                        # at all; the obligation's identity is still the item,
+                        # and every definition of that item is bound above, so
+                        # the binding is the complete declared definition set.
+                        binding = "declared-definition-set"
+                    elif exc.classification == "ambiguous-identity":
                         span_classification = exc.classification
                         span_detail = exc.detail
                         span_info = dict(exc.info)
@@ -28205,7 +28400,8 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                             f"{boundary_span['start_line']}-"
                             f"{boundary_span['end_line']}: {exc.detail}")
                         span_info = dict(exc.info)
-                if binding is not None and span_classification is None:
+                if (binding is not None and span_classification is None
+                        and not declared_spans):
                     recorded = b.get("span_sha256")
                     if not recorded:
                         span_classification = "unmigrated"
@@ -28243,6 +28439,8 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
             "span_hash_present": bool(b.get("span_sha256")),
             "span_hash": b.get("span_sha256"),
             "span_hash_source": b.get("span_hash_source"),
+            "declared_span_count": (len(declared_spans) if declared_spans else 0),
+            "observed_definition_count": len((span or {}).get("definitions") or []),
             "span_current_hash": (span or {}).get("sha256"),
             "span_lines": ((span or {}).get("start_line"),
                            (span or {}).get("end_line")),
@@ -28320,16 +28518,28 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                     obligation["discharge_receipt"] = (rec.get("receipt")
                                                        or rec.get("artifact"))
                     obligation["discharge_boundary_id"] = b["id"]
+                    if declared_spans:
+                        content_clause = (
+                            f"every one of its {len(boundary_span['definitions'])} "
+                            f"declared definition span(s) matches the current "
+                            f"content (set {boundary_span['sha256'][:16]}: " +
+                            ", ".join(f"{d['start_line']}-{d['end_line']}"
+                                      for d in boundary_span["definitions"]) +
+                            f", source {boundary_span['source']['source']})")
+                    else:
+                        content_clause = (
+                            f"its recorded span hash matches the current content "
+                            f"({boundary_span['sha256'][:16]}, source "
+                            f"{boundary_span['source']['source']})")
                     obligation["status_reason"] = (
                         f"boundary {b['id']} is scoped-SAFETY_DISCHARGED; the operation "
                         f"is bound to the boundary site by {binding} "
                         f"({obligation['file']}, {obligation.get('kind')}, "
                         f"{boundary_span['qualified_identity']}, lines "
                         f"{boundary_span['start_line']}-"
-                        f"{boundary_span['end_line']}) and its recorded span hash "
-                        f"matches the current content ({boundary_span['sha256'][:16]}, "
-                        f"source {boundary_span['source']['source']}); the declared "
-                        f"coordinate {current_line} is not part of acceptance")
+                        f"{boundary_span['end_line']}) and {content_clause}; the "
+                        f"declared coordinate {current_line} is not part of "
+                        f"acceptance")
                     obligation["span_discharge"] = {
                         "sha256": boundary_span["sha256"],
                         "start_line": boundary_span["start_line"],
@@ -28344,6 +28554,14 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                         "claim_scope": SPAN_CLAIM_SCOPE,
                         "schema": SPAN_HASH_SCHEMA,
                     }
+                    if declared_spans:
+                        obligation["span_discharge"].update({
+                            "schema": SPAN_SET_SCHEMA,
+                            "set_sha256": boundary_span["sha256"],
+                            "span_set_hash_rule": SPAN_SET_HASH_RULE,
+                            "definition_count": len(boundary_span["definitions"]),
+                            "definitions": boundary_span["definitions"],
+                        })
                     obligation["scoped_discharge_attempts"] = scoped_attempt
                     return obligation
         if item_match and span_classification is not None:
@@ -28367,6 +28585,7 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                 "span_lines": ((span or {}).get("start_line"),
                                (span or {}).get("end_line")),
                 "recorded_hash": b.get("span_sha256"),
+                "declared_spans": declared_spans,
                 "current_hash": (span or {}).get("sha256"),
             })
         if (not covers_current and covers_previous
@@ -30932,13 +31151,15 @@ def self_test() -> int:
             rec["current_census_line"] = current
         return rec
     def bound(file, kind, operation, disposition, span_sha256=None, line=None,
-              receipt=None, superseded_ids=None):
+              receipt=None, superseded_ids=None, declared_spans=None):
         rec = {"id": "B23-WPKT-1", "file": file, "kind": kind,
                "operation": operation, "disposition": disposition,
                "disposition_discharges":
                    boundary_disposition_is_discharge(disposition),
                "superseded_ids": sorted(superseded_ids or []),
                "span_sha256": span_sha256}
+        if declared_spans is not None:
+            rec["declared_spans"] = declared_spans
         if receipt is not None:
             rec["receipt"] = receipt
         if line is not None:
@@ -31069,6 +31290,76 @@ def self_test() -> int:
     check("stale range does not discharge a hashless drifted coordinate",
           (stale_ob["status"], bool(stale_ob.get("stale_discharge_rejections"))),
           ("BLOCKED", True))
+
+    # ---- declared definition sets (multiply-defined items) ------------------ #
+    # An item with two cfg-gated definitions has no single "the" definition, so
+    # the single-span path refuses it as ambiguous-identity before any recorded
+    # hash is compared.  A receipt may declare the whole definition set; the
+    # binding requires the declared set to equal the live set exactly and every
+    # declared hash to match, so one matching definition can never carry the
+    # others.
+    (span_repo / "src/ssl/dup.rs").write_text(
+        "#[cfg(all(unix))]\n"
+        "pub unsafe fn d() -> u8 {\n"
+        "    1\n"
+        "}\n\n"
+        "#[cfg(not(all(unix)))]\n"
+        "pub unsafe fn d() -> u8 {\n"
+        "    2\n"
+        "}\n")
+    clear_span_cache()
+    d_first = resolve_operation_at_line(span_repo, "src/ssl/dup.rs", "d", 2,
+                                       allow_worktree=True)
+    d_second = resolve_operation_at_line(span_repo, "src/ssl/dup.rs", "d", 7,
+                                        allow_worktree=True)
+    declared_pair = [
+        {"cfg": "#[cfg(all(unix))]", "start_line": d_first["start_line"],
+         "end_line": d_first["end_line"], "span_sha256": d_first["sha256"]},
+        {"cfg": "#[cfg(not(all(unix)))]", "start_line": d_second["start_line"],
+         "end_line": d_second["end_line"], "span_sha256": d_second["sha256"]},
+    ]
+    pair_ok = adj(ob("src/ssl/dup.rs", 2, "SSL_SESSION", item="d"),
+                  [bound("src/ssl/dup.rs", "UNSAFE_FN_DEF", "d",
+                         "SAFETY_DISCHARGED (scope: src/ssl/dup.rs:1-7)",
+                         declared_spans=declared_pair)])
+    check("declared definition set binds when every span matches",
+          (pair_ok["status"], (pair_ok.get("span_discharge") or {}).get(
+              "definition_count")),
+          ("DISCHARGED", 2))
+    # Adversarial control: mutate ONE declared hash.  The set is complete but the
+    # mutated definition no longer matches, so the whole row must be refused.
+    mutated_pair = [dict(declared_pair[0]), dict(declared_pair[1])]
+    mutated_pair[1]["span_sha256"] = "0" * 64
+    pair_mutated = adj(ob("src/ssl/dup.rs", 2, "SSL_SESSION", item="d"),
+                       [bound("src/ssl/dup.rs", "UNSAFE_FN_DEF", "d",
+                              "SAFETY_DISCHARGED (scope: src/ssl/dup.rs:1-7)",
+                              declared_spans=mutated_pair)])
+    check("one mutated definition span refuses the whole declaration",
+          (pair_mutated["status"],
+           (pair_mutated.get("span_discharge_rejections") or [{}])[0].get(
+               "classification")),
+          ("BLOCKED", "span-hash-mismatch"))
+    # Incomplete declaration: only one of the two live definitions is named, so
+    # the matching one must not carry the row either.
+    pair_partial = adj(ob("src/ssl/dup.rs", 2, "SSL_SESSION", item="d"),
+                       [bound("src/ssl/dup.rs", "UNSAFE_FN_DEF", "d",
+                              "SAFETY_DISCHARGED (scope: src/ssl/dup.rs:1-7)",
+                              span_sha256=d_first["sha256"])])
+    check("a single span cannot bind a multiply-defined item",
+          (pair_partial["status"],
+           (pair_partial.get("span_discharge_rejections") or [{}])[0].get(
+               "classification")),
+          ("BLOCKED", "ambiguous-identity"))
+    # A stale carry-forward coordinate names no definition; the complete declared
+    # set is then the binding (this is the free_lock obligation shape).
+    pair_stale = adj(ob("src/ssl/dup.rs", 99, "SSL_SESSION", item="d"),
+                     [bound("src/ssl/dup.rs", "UNSAFE_FN_DEF", "d",
+                            "SAFETY_DISCHARGED (scope: src/ssl/dup.rs:1-7)",
+                            declared_spans=declared_pair)])
+    check("a stale coordinate binds through the complete declared set",
+          (pair_stale["status"], (pair_stale.get("span_discharge") or {}).get(
+              "binding")),
+          ("DISCHARGED", "declared-definition-set"))
 
     # ---- B67-G1 disposition gates ----------------------------------------- #
     # Every fixture goes through the real load_boundaries path so the parsed

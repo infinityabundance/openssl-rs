@@ -1,0 +1,497 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/freeze/v1",
+ "candidate_tag": "b60",
+ "generated_utc": "2026-11-12T06:45:24Z",
+ "freeze_kind": "tool-only re-freeze",
+ "freeze_reason": "forensics/tools/consumer_closure.py changed (declared_spans, the declared-definition-set resolution rule). The tool is build-relevant evidence, so the candidate identity moves even though no Rust source, census or artefact did.",
+ "source": {
+  "head": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+  "head_subject": "analysis(e7): fix the cfg(test) item extent -> element 7 PASS, and say why",
+  "source_unchanged_since_b58": true,
+  "src_diff_vs_S": null,
+  "crate_version": "0.0.46",
+  "src_rs_files": 878,
+  "src_content_sha256": "2290c59c0ec5a5ba69b8d6f7ff38bef68eb727f0c6013d15630fa5e04de6293e",
+  "src_content_hash_rule": "sha256('openssl-rs/src-rs/v1\\0' + sorted relpath\\0bytes\\0)",
+  "source_tree_digest": {
+   "count": 888,
+   "sha256": "af8e60feb0d208a240a52b9d538852bb668f29a8b45005ee473f877672f526c4",
+   "matches_b58_freeze": true,
+   "rule": "sha256 over canonical JSON of sorted [relpath,size,sha256] for src/, Cargo.toml, Cargo.lock, build.rs (forensics/tools/phase7_courts.py::_source_tree_digest)"
+  }
+ },
+ "candidate_identity": {
+  "source_head": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+  "tool_sha256": "84551e785980695a7165c92d26512c1590aa788519fb8bc6d6bb50bf13251471",
+  "census_sha256": "7dc8c19deceb664334c799cab130cb875b2608e2ab70b705d307f7773cd9180c",
+  "libcrypto_so_3_sha256": "f3061a4fccdf96370e8c0e41891555f76f0e1612bd402d34a49ece1ae555a7ec",
+  "libssl_so_3_sha256": "906ca753e14be84667cb6f8d700df2659ff99f8db49e9b85504530cb734a8ad5",
+  "ssh_sha256": "77975f469c9409ac43a0213ae9f0530488d28a343c6fb78f94e34625efa543b7",
+  "sshd_sha256": "11a41af8d5cff2e9dc693ae43b082a28134fff327bf271b671566b418bcc4a0d",
+  "rule": "source head + instrument sha + census sha + measured artefact digests; a change to any one of them is a new candidate"
+ },
+ "tool": {
+  "path": "forensics/tools/consumer_closure.py",
+  "sha256": "84551e785980695a7165c92d26512c1590aa788519fb8bc6d6bb50bf13251471",
+  "version": 6,
+  "sha256_at_b58_freeze_record": "8f0379bb8151654cb44d60c236463e089b594177376f69d7f5b69baead5be5c4",
+  "changed_since_b58_freeze_record": true,
+  "change_scope": "additive: load_boundaries carries declared_spans; resolve_declared_spans + _declared_spans_validated implement the set rule; adjudicate uses them and records the declared definitions in span_discharge; self-test cases added. No existing classification, threshold or accepted path changed.",
+  "b60_generator": {
+   "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b60_generate.py",
+   "sha256": "46721dbaeca698083a7ceeb8ee45458b49aff84c4b4450f7f6587cfc8b5e4756",
+   "size": 22450
+  },
+  "b60_receipt": {
+   "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b60-free-lock-operations.json",
+   "sha256": "4ff99526dfc13b7180777e5c7953f9c96eff34c0c80214fc24908ae462a0800c",
+   "size": 18863
+  },
+  "b60_loader_projection": {
+   "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b60-free-lock-operations-sites.json",
+   "sha256": "3ddf63d39fe567afc37ba3ecf0e7eafa49db935010a7cb8ccc8a576bb966a2f8",
+   "size": 18843
+  },
+  "version_note": "version 5 -> 6 marks the added resolution rule; the sha is the binding identity and every receipt below carries both",
+  "inputs": {
+   "ledger": {
+    "path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+    "sha256": "b6f0de17c6ac42e1ad7bbc7b5c1a911456510f2e6c8f23362d18c1e34aacb872",
+    "size": 221113
+   },
+   "state": {
+    "path": "forensics/memory-safety/campaign/safe-c33/state.json",
+    "sha256": "508095bcb91f439fc126cf964d31a4f0f656f997587234d5bfbb07ec0cbc8273",
+    "size": 53598
+   },
+   "enrolment_blockers": {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json",
+    "sha256": "46d1e5fcd00a0a96c4346f01302f938b74e12cd3e92986ee7743e007d232c652",
+    "size": 71165,
+    "note": "an uncommitted working-tree input: the b59 admission-coordinate correction (sha 46d1e5fc..., also recorded in atlas-refresh/b59-close18.json). It is what the two closures above actually ran with; recorded so the identity is not silent about a working-tree input"
+   }
+  }
+ },
+ "artefacts": {
+  "install_prefix": "court/freeze-b58/install",
+  "artefact_checks": {
+   "libcrypto.so.3": {
+    "sha256": "f3061a4fccdf96370e8c0e41891555f76f0e1612bd402d34a49ece1ae555a7ec",
+    "matches_b58_freeze": true,
+    "b58_recorded_sha256": "f3061a4fccdf96370e8c0e41891555f76f0e1612bd402d34a49ece1ae555a7ec"
+   },
+   "libssl.so.3": {
+    "sha256": "906ca753e14be84667cb6f8d700df2659ff99f8db49e9b85504530cb734a8ad5",
+    "matches_b58_freeze": true,
+    "b58_recorded_sha256": "906ca753e14be84667cb6f8d700df2659ff99f8db49e9b85504530cb734a8ad5"
+   },
+   "libcrypto.a": {
+    "sha256": "92531e5ed935bfce20d58cae5061e1553bece2b26a5689eb2ae44653c482f5a8",
+    "matches_b58_freeze": true,
+    "b58_recorded_sha256": "92531e5ed935bfce20d58cae5061e1553bece2b26a5689eb2ae44653c482f5a8"
+   },
+   "libssl.a": {
+    "sha256": "508a70bd4918b68311b8ffe3dbf4c7b5de7de4e7c6ab3b9332cc1877576a0f51",
+    "matches_b58_freeze": true,
+    "b58_recorded_sha256": "508a70bd4918b68311b8ffe3dbf4c7b5de7de4e7c6ab3b9332cc1877576a0f51"
+   },
+   "legacy.so": {
+    "sha256": "e7c3572e25ffd2886e8706b0556b69d5c5fd6faf77174e4549c188c5a948623c",
+    "matches_b58_freeze": true,
+    "b58_recorded_sha256": "e7c3572e25ffd2886e8706b0556b69d5c5fd6faf77174e4549c188c5a948623c"
+   },
+   "openssl": {
+    "sha256": "21114f392d839286728e877f4a30ede8ec3fc1919044202cdd24970c3b9ecd6b",
+    "matches_b58_freeze": true,
+    "b58_recorded_sha256": "21114f392d839286728e877f4a30ede8ec3fc1919044202cdd24970c3b9ecd6b"
+   },
+   "ssh": {
+    "sha256": "77975f469c9409ac43a0213ae9f0530488d28a343c6fb78f94e34625efa543b7",
+    "matches_b58_freeze": true,
+    "b58_recorded_sha256": "77975f469c9409ac43a0213ae9f0530488d28a343c6fb78f94e34625efa543b7"
+   },
+   "sshd": {
+    "sha256": "11a41af8d5cff2e9dc693ae43b082a28134fff327bf271b671566b418bcc4a0d",
+    "matches_b58_freeze": true,
+    "b58_recorded_sha256": "11a41af8d5cff2e9dc693ae43b082a28134fff327bf271b671566b418bcc4a0d"
+   },
+   "sshd_session": {
+    "sha256": "b70d81bab5c2d5abce2a6dc6e629a18cf0e1cb6ddd25fc70cbdd28b0d3b66ced",
+    "matches_b58_freeze": true,
+    "b58_recorded_sha256": "b70d81bab5c2d5abce2a6dc6e629a18cf0e1cb6ddd25fc70cbdd28b0d3b66ced"
+   }
+  },
+  "all_artefacts_match_b58": true,
+  "files": {
+   "libcrypto.so.3": {
+    "path": "court/freeze-b58/install/lib/libcrypto.so.3",
+    "sha256": "f3061a4fccdf96370e8c0e41891555f76f0e1612bd402d34a49ece1ae555a7ec",
+    "size": 16874864
+   },
+   "libssl.so.3": {
+    "path": "court/freeze-b58/install/lib/libssl.so.3",
+    "sha256": "906ca753e14be84667cb6f8d700df2659ff99f8db49e9b85504530cb734a8ad5",
+    "size": 16583840
+   },
+   "libcrypto.a": {
+    "path": "court/freeze-b58/install/lib/libcrypto.a",
+    "sha256": "92531e5ed935bfce20d58cae5061e1553bece2b26a5689eb2ae44653c482f5a8",
+    "size": 44447714
+   },
+   "libssl.a": {
+    "path": "court/freeze-b58/install/lib/libssl.a",
+    "sha256": "508a70bd4918b68311b8ffe3dbf4c7b5de7de4e7c6ab3b9332cc1877576a0f51",
+    "size": 44448266
+   },
+   "legacy.so": {
+    "path": "court/freeze-b58/install/lib/ossl-modules/legacy.so",
+    "sha256": "e7c3572e25ffd2886e8706b0556b69d5c5fd6faf77174e4549c188c5a948623c",
+    "size": 16546752
+   },
+   "openssl": {
+    "path": "court/freeze-b58/install/bin/openssl",
+    "sha256": "21114f392d839286728e877f4a30ede8ec3fc1919044202cdd24970c3b9ecd6b",
+    "size": 12385360
+   },
+   "ssh": {
+    "path": "court/tmp/openssh-closure/client-b58/openssh-9.9p1/ssh",
+    "sha256": "77975f469c9409ac43a0213ae9f0530488d28a343c6fb78f94e34625efa543b7",
+    "size": 3401744
+   },
+   "sshd": {
+    "path": "court/tmp/openssh-closure/server-b58/openssh-9.9p1/sshd",
+    "sha256": "11a41af8d5cff2e9dc693ae43b082a28134fff327bf271b671566b418bcc4a0d",
+    "size": 1763248
+   },
+   "sshd_session": {
+    "path": "court/tmp/openssh-closure/server-b58/openssh-9.9p1/sshd-session",
+    "sha256": "b70d81bab5c2d5abce2a6dc6e629a18cf0e1cb6ddd25fc70cbdd28b0d3b66ced",
+    "size": 3594840
+   }
+  },
+  "resolved_libcrypto_sha256": "f3061a4fccdf96370e8c0e41891555f76f0e1612bd402d34a49ece1ae555a7ec",
+  "consumer_source": "OpenSSH 9.9p1, pinned tarball court/tmp/openssh-closure/openssh-9.9p1.tar.gz",
+  "note": "not rebuilt by this batch. Each digest was recomputed here and compared with the b58 record; the comparison result is recorded per artefact"
+ },
+ "census": {
+  "path": "court/freeze-b58/census-b58.json",
+  "sha256": "7dc8c19deceb664334c799cab130cb875b2608e2ab70b705d307f7773cd9180c",
+  "bytes": 13443756,
+  "source_head": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+  "matches_b58_freeze": true,
+  "note": "unchanged: the census is source-derived and the source did not move"
+ },
+ "closures": {
+  "ssh": {
+   "receipt": "evidence/closure-ssh-b60.json",
+   "sha256": "a99aae4c11c0d9687dee4f5478706aff9bd6e75afb703d34cfd03c08a3b736f6",
+   "bytes": 12727081,
+   "artifact": "court/tmp/openssh-closure/client-b58/openssh-9.9p1/ssh",
+   "artifact_sha256": "77975f469c9409ac43a0213ae9f0530488d28a343c6fb78f94e34625efa543b7",
+   "tool_sha256": "84551e785980695a7165c92d26512c1590aa788519fb8bc6d6bb50bf13251471",
+   "counts": {
+    "reachable_files": 627,
+    "reachable_production_obligations": 323,
+    "DISCHARGED": 323,
+    "BLOCKED": 0,
+    "UNKNOWN": 0,
+    "v1_production_operations_total": 100,
+    "v1_uncontracted_operations_total": 315,
+    "carried_forward": 150,
+    "carried_forward_removed": 55,
+    "stale_discharge_rejections": 0
+   },
+   "by_mechanism": {
+    "ASN1_OCSP": 1,
+    "BIO": 2,
+    "C_ABI_CONTRACT": 19,
+    "EVP_PKEY_PROVIDER": 116,
+    "RAND_CMS_STORE_KEYFMT": 45,
+    "RUNTIME_CONCURRENCY": 4,
+    "SSL_SESSION": 14,
+    "X509_VERIFY_POLICY": 122
+   },
+   "verdict": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "refusals": [],
+   "element_7": {
+    "established": false,
+    "status": "FAIL",
+    "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+    "reachable_unresolved_sites": 153,
+    "target_bounded_unresolved_sites": 32,
+    "contract_bounded_sites": 121,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 12,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    },
+    "unclassified_reachable_sites": 0,
+    "target_sets_remain_unbounded": true,
+    "why": "32 reachable unresolved site(s) are not contract-bounded, and/or an unclassified site is reachable"
+   },
+   "movement_vs_b59": {
+    "identities_before": 323,
+    "identities_after": 323,
+    "identity_sets_equal": true,
+    "stable_identity_sets_equal": true,
+    "discharged_to_blocked": [],
+    "discharged_boundary_changed": [],
+    "blocked_to_discharged": [
+     "V1:src/runtime/thread.rs:531:UNSAFE_FN_DEF",
+     "V1:src/runtime/thread.rs:544:UNSAFE_FN_DEF"
+    ],
+    "rows": [
+     {
+      "id": "V1:src/runtime/thread.rs:531:UNSAFE_FN_DEF",
+      "stable_id": "src/runtime/thread.rs::UNSAFE_FN_DEF::free_lock",
+      "file": "src/runtime/thread.rs",
+      "item": "free_lock",
+      "previous_status": "BLOCKED",
+      "status": "DISCHARGED",
+      "discharge_receipt": "boundary-sweep-B56",
+      "discharge_boundary_id": "src/runtime/thread.rs:679",
+      "binding": "declared-definition-set",
+      "definitions": 2
+     },
+     {
+      "id": "V1:src/runtime/thread.rs:544:UNSAFE_FN_DEF",
+      "stable_id": "src/runtime/thread.rs::UNSAFE_FN_DEF::free_lock",
+      "file": "src/runtime/thread.rs",
+      "item": "free_lock",
+      "previous_status": "BLOCKED",
+      "status": "DISCHARGED",
+      "discharge_receipt": "boundary-sweep-B56",
+      "discharge_boundary_id": "src/runtime/thread.rs:679",
+      "binding": "declared-definition-set",
+      "definitions": 2
+     }
+    ]
+   }
+  },
+  "sshd": {
+   "receipt": "evidence/closure-sshd-b60.json",
+   "sha256": "dd866e23673a7a6eeacfd7e0f303984dfc610b3dad72204e7b2578130a4bb85a",
+   "bytes": 12561960,
+   "artifact": "court/tmp/openssh-closure/server-b58/openssh-9.9p1/sshd",
+   "artifact_sha256": "11a41af8d5cff2e9dc693ae43b082a28134fff327bf271b671566b418bcc4a0d",
+   "tool_sha256": "84551e785980695a7165c92d26512c1590aa788519fb8bc6d6bb50bf13251471",
+   "counts": {
+    "reachable_files": 626,
+    "reachable_production_obligations": 323,
+    "DISCHARGED": 323,
+    "BLOCKED": 0,
+    "UNKNOWN": 0,
+    "v1_production_operations_total": 100,
+    "v1_uncontracted_operations_total": 315,
+    "carried_forward": 150,
+    "carried_forward_removed": 55,
+    "stale_discharge_rejections": 0
+   },
+   "by_mechanism": {
+    "ASN1_OCSP": 1,
+    "BIO": 2,
+    "C_ABI_CONTRACT": 19,
+    "EVP_PKEY_PROVIDER": 116,
+    "RAND_CMS_STORE_KEYFMT": 45,
+    "RUNTIME_CONCURRENCY": 4,
+    "SSL_SESSION": 14,
+    "X509_VERIFY_POLICY": 122
+   },
+   "verdict": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "refusals": [],
+   "element_7": {
+    "established": false,
+    "status": "FAIL",
+    "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+    "reachable_unresolved_sites": 153,
+    "target_bounded_unresolved_sites": 32,
+    "contract_bounded_sites": 121,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 12,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    },
+    "unclassified_reachable_sites": 0,
+    "target_sets_remain_unbounded": true,
+    "why": "32 reachable unresolved site(s) are not contract-bounded, and/or an unclassified site is reachable"
+   },
+   "movement_vs_b59": {
+    "identities_before": 323,
+    "identities_after": 323,
+    "identity_sets_equal": true,
+    "stable_identity_sets_equal": true,
+    "discharged_to_blocked": [],
+    "discharged_boundary_changed": [],
+    "blocked_to_discharged": [
+     "V1:src/runtime/thread.rs:531:UNSAFE_FN_DEF",
+     "V1:src/runtime/thread.rs:544:UNSAFE_FN_DEF"
+    ],
+    "rows": [
+     {
+      "id": "V1:src/runtime/thread.rs:531:UNSAFE_FN_DEF",
+      "stable_id": "src/runtime/thread.rs::UNSAFE_FN_DEF::free_lock",
+      "file": "src/runtime/thread.rs",
+      "item": "free_lock",
+      "previous_status": "BLOCKED",
+      "status": "DISCHARGED",
+      "discharge_receipt": "boundary-sweep-B56",
+      "discharge_boundary_id": "src/runtime/thread.rs:679",
+      "binding": "declared-definition-set",
+      "definitions": 2
+     },
+     {
+      "id": "V1:src/runtime/thread.rs:544:UNSAFE_FN_DEF",
+      "stable_id": "src/runtime/thread.rs::UNSAFE_FN_DEF::free_lock",
+      "file": "src/runtime/thread.rs",
+      "item": "free_lock",
+      "previous_status": "BLOCKED",
+      "status": "DISCHARGED",
+      "discharge_receipt": "boundary-sweep-B56",
+      "discharge_boundary_id": "src/runtime/thread.rs:679",
+      "binding": "declared-definition-set",
+      "definitions": 2
+     }
+    ]
+   }
+  },
+  "run_script": {
+   "path": "court/freeze-b60/run_closure_b60.sh",
+   "sha256": "f36017689875bc573ca20292ba157233134865fbe639ee2b1ce3a3d8603e0439",
+   "size": 1323
+  },
+  "same_flags_as_b58": true,
+  "safe_compatible": false,
+  "safe_compatible_reason": "consumer_closure.py never promotes: verdict.safe_compatible is a hard-coded False. Measured at this candidate: 0 BLOCKED / 0 UNKNOWN in both closures, but element 7 is FAIL on 32 target-bounded reachable unresolved sites and AGENTS.md section 7 additionally requires a discharged dependency closure, which this instrument does not establish."
+ },
+ "bound_operation": {
+  "receipt": "atlas-refresh/b60-free-lock-operations.json",
+  "loader_projection": "atlas-refresh/b60-free-lock-operations-sites.json",
+  "item": "free_lock",
+  "file": "src/runtime/thread.rs",
+  "definition_count": 2,
+  "set_sha256": "66d303aa533ca63db74f98193a456292031f984792e1f81a255dc79cf58d3951",
+  "definitions": [
+   {
+    "start_line": 673,
+    "end_line": 684,
+    "def_line": 679,
+    "span_sha256": "e905dce107e67f2bfb9ccb615de7bc1976fd5db0a14421b56bf4bf29b0cd117e",
+    "cfg_predicate_sha256": "48107e169fcaec2f2b3f03a6ad39f38484075dc8a5b4bc107ec554c0553647d2",
+    "cfg_predicate": "verbatim in the receipt (bound_span_set.definitions[].cfg); the digest above is over that exact text"
+   },
+   {
+    "start_line": 694,
+    "end_line": 704,
+    "def_line": 700,
+    "span_sha256": "996b71e7162c2bf28589af2f778a57277db4c25c7893d2f504daa2043fd8d82f",
+    "cfg_predicate_sha256": "cd7ae8d6d523f31cbc098257095ebe20b93a448fbb198e2542797f0fccf4ae12",
+    "cfg_predicate": "verbatim in the receipt (bound_span_set.definitions[].cfg); the digest above is over that exact text"
+   }
+  ],
+  "ledger_verdict_source": "boundary-sweep-B56 (rows)",
+  "field_precedence": "when a boundary row carries both span_sha256 and declared_spans, the declared set is the acceptance evidence and span_sha256 is not consulted (there is no single span to compare for a multiply-defined item). No row in the corpus carries both; the precedence is stated so it is not an implicit assumption",
+  "note": "the definitions and hashes are inside the receipt; this is the summary a reader needs to re-run the resolution"
+ },
+ "controls_run": {
+  "command": "python3 forensics/memory-safety/campaign/safe-c33/atlas-refresh/b60_generate.py --controls",
+  "returncode": 0,
+  "stdout": [
+   "[b60] synthetic item: 2 live definitions 1-4 51944a7082dfd311, 6-9 ad741aa0f14b3847",
+   "[b60] b60-C1 both declared spans match: status=DISCHARGED classification=None binding=qualified-identity",
+   "[b60] b60-C2 one declared span hash mutated: status=BLOCKED classification=span-hash-mismatch binding=None",
+   "        refusal: declared span 6-9 of 'dup_lock' records 0000000000000000 but the bound source hashes to ad741aa0f14b3847",
+   "[b60] b60-C3 only one live definition declared: status=BLOCKED classification=ambiguous-identity binding=None",
+   "        refusal: 'dup_lock' in src/ctl/dup.rs has 2 live definition(s) (1-4, 6-9) but the receipt declares 1 (1-4); a declared definition set must name every live definition exactly once and nothing else",
+   "[b60] b60-C4 single-span shape, no declared set: status=BLOCKED classification=ambiguous-identity binding=None",
+   "        refusal: 'dup_lock' is defined 2 times in src/ctl/dup.rs (2, 7); operation 'dup_lock' does not resolve exactly one",
+   "[b60] controls: PASS"
+  ],
+  "stderr_tail": []
+ },
+ "self_test": {
+  "command": "python3 forensics/tools/consumer_closure.py --self-test",
+  "returncode": 1,
+  "observed": "FAILED (pre-existing)",
+  "failure": "KeyError: 5267120",
+  "note": "still fails with KeyError 5267120 in _pbe_outparam_self_test -> _insns_copy, the fixture/pin mismatch b59 reported. The declared-span self-test cases execute before that call and raise nothing, but their pass/fail list is never printed because the process aborts later; the observable control is the --controls run above. Not fixed by this batch."
+ },
+ "identity_findings": [
+  {
+   "finding": "the b58 freeze receipt atlas-refresh/b58-candidate-freeze.json records tool sha 8f0379bb... while the closures it names were produced by tool e2e4eed1..., and its closure digests (e8932799... / 209e6f55...) and counts (175 DISCHARGED / 148 BLOCKED, 78 target-bounded) do not match the files on disk (912fcd82... / 3c49c224..., 305/18, 32 target-bounded)",
+   "action": "recorded here, not repaired: rewriting a past freeze is an adjudication decision, not a measurement. b60 binds every digest to the file this batch actually produced",
+   "impact": "none on b60: its source, census and artefacts are independently recomputed and compared above"
+  }
+ ],
+ "oom": {
+  "available_gib_before": "93 (ssh), 98 (sshd)",
+  "cap": "OPENSSL_RS_COURT_MEM=8g OPENSSL_RS_COURT_MEMSWAP=8g",
+  "closure_rlimit_data_kib": 6291456,
+  "self_test_rlimit_data_kib": 4194304,
+  "court_cgroup": {
+   "memory_max": "8589934592",
+   "oom_events_before": 0,
+   "oom_events_after": 0
+  },
+  "one_heavy_command_at_a_time": true,
+  "wall_seconds": {
+   "ssh": 2228,
+   "sshd": 2041
+  }
+ },
+ "gates": {
+  "rust_source": "not run: no Rust source changed",
+  "fmt_clippy": "not run: no Rust source changed",
+  "closure_runs": {
+   "ssh": "ACCEPTED, 0 refusals",
+   "sshd": "ACCEPTED, 0 refusals"
+  },
+  "python_syntax": "py_compile of the instrument: OK",
+  "declared_span_controls": "b60-C1..C4 via the real adjudicate() path: PASS"
+ },
+ "counts": {
+  "ssh": {
+   "obligations": 323,
+   "DISCHARGED": 323,
+   "BLOCKED": 0,
+   "UNKNOWN": 0
+  },
+  "sshd": {
+   "obligations": 323,
+   "DISCHARGED": 323,
+   "BLOCKED": 0,
+   "UNKNOWN": 0
+  }
+ },
+ "not_run": [
+  "cargo fmt / clippy / library tests: no Rust source changed, and the instrument is Python; the Rust court is unchanged since b58",
+  "BOUNDARY / SEAL evidence for RUNTIME_CONCURRENCY: not claimed here",
+  "element 7 remediation: untouched, still FAIL on 32 target-bounded sites"
+ ],
+ "non_claims": [
+  "The instrument change is additive and exercises only the declared-definition-set path; no existing classification, threshold or accepted path was altered. That a pre-existing discharge still binds at b60 is shown by the per-id movement lists, not asserted.",
+  "0 BLOCKED / 0 UNKNOWN is a statement about this instrument's queue at this candidate, not a SAFE_COMPATIBLE promotion.",
+  "B56's off-profile (`Box`) definition is verified by inspection only; the verdict is transcribed, not re-earned."
+ ]
+}
