@@ -1,0 +1,2035 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/e7-discharge/v1",
+ "receipt": "e7-32-sites",
+ "generated_utc": "2026-11-12T17:49:38Z",
+ "purpose": "Adjudicate the 32 reachable unresolved sites that were target-bounded at b60 (element 7 FAIL) with a per-call-site witness (AGENTS.md section 22): the slot object, the field, the single in-image writer, the documented interface that fills it, and the target set's unboundedness.  No site is absorbed by a class without its own witness; no existing contract was widened to cover a site it does not describe.",
+ "candidate_identity": {
+  "source_head": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+  "note": "the source candidate did not change in this batch; the instrument did, so the evidence identity is (source head + tool sha + artefact hashes) and a new freeze is required before promotion",
+  "tool_sha256": "010467396d845c094c6019ca29bc72ec3a55ea9b13ae49ebc17d705582b147a8",
+  "artefacts": {
+   "libcrypto.so.3": "f3061a4fccdf96370e8c0e41891555f76f0e1612bd402d34a49ece1ae555a7ec",
+   "libssl.so.3": "906ca753e14be84667cb6f8d700df2659ff99f8db49e9b85504530cb734a8ad5",
+   "ssh": "77975f469c9409ac43a0213ae9f0530488d28a343c6fb78f94e34625efa543b7",
+   "sshd": "11a41af8d5cff2e9dc693ae43b082a28134fff327bf271b671566b418bcc4a0d"
+  },
+  "install_prefix": "court/freeze-b58/install"
+ },
+ "closures": {
+  "ssh": {
+   "receipt": "evidence/closure-ssh-b61.json",
+   "sha256": "f689638649ce29d782b92f2551c46146bf88ed440cd86b47f705b891f19729de",
+   "counts": {
+    "reachable_files": 627,
+    "reachable_production_obligations": 323,
+    "DISCHARGED": 323,
+    "BLOCKED": 0,
+    "UNKNOWN": 0
+   },
+   "element_7": {
+    "status": "PASS (contract-bounded)",
+    "reachable_unresolved_sites": 153,
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 153,
+    "unclassified_reachable_sites": 0,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 17,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    }
+   },
+   "verdict": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "refusals": []
+  },
+  "sshd": {
+   "receipt": "evidence/closure-sshd-b61.json",
+   "sha256": "b7c16b5b4c4d2a1e6febe692f8e249ac2e80e5d898c3eb9e78428e20e93fde3a",
+   "counts": {
+    "reachable_files": 626,
+    "reachable_production_obligations": 323,
+    "DISCHARGED": 323,
+    "BLOCKED": 0,
+    "UNKNOWN": 0
+   },
+   "element_7": {
+    "status": "PASS (contract-bounded)",
+    "reachable_unresolved_sites": 153,
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 153,
+    "unclassified_reachable_sites": 0,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 17,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    }
+   },
+   "verdict": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "refusals": []
+  }
+ },
+ "predicate_element_7": {
+  "before": {
+   "ssh": {
+    "status": "FAIL",
+    "reachable_unresolved_sites": 153,
+    "target_bounded_unresolved_sites": 32,
+    "contract_bounded_sites": 121,
+    "unclassified_reachable_sites": 0,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 12,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    }
+   },
+   "sshd": {
+    "status": "FAIL",
+    "reachable_unresolved_sites": 153,
+    "target_bounded_unresolved_sites": 32,
+    "contract_bounded_sites": 121,
+    "unclassified_reachable_sites": 0,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 12,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    }
+   }
+  },
+  "after": {
+   "ssh": {
+    "status": "PASS (contract-bounded)",
+    "reachable_unresolved_sites": 153,
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 153,
+    "unclassified_reachable_sites": 0,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 17,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    }
+   },
+   "sshd": {
+    "status": "PASS (contract-bounded)",
+    "reachable_unresolved_sites": 153,
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 153,
+    "unclassified_reachable_sites": 0,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 17,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    }
+   }
+  },
+  "target_bounded_by_family": {
+   "before": {
+    "ssh": 32,
+    "sshd": 32
+   },
+   "after": {
+    "ssh": 0,
+    "sshd": 0
+   }
+  }
+ },
+ "sites": [
+  {
+   "id": "libcrypto.so.3::evp_signature_from_algorithm::ChildProvGlobals.c_prov_up_ref",
+   "address": "0x189d28",
+   "function": "evp_signature_from_algorithm",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs3evp9signature28evp_signature_from_algorithm.llvm.4277877334683979457",
+   "function_address": "0x189c70",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "operand": "call   *%rax",
+   "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "ChildProvGlobals",
+    "field": "c_prov_up_ref",
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "file": "src/provider/child.rs",
+    "line": 534,
+    "function": "ossl_provider_init_as_child",
+    "value": "Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+    "slots": [
+     "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:534 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_UP_REF and OSSL_CORE_MAKE_FUNC(..., provider_up_ref, ...)",
+    "null_guard": {
+     "guard_block": "0x189d19",
+     "test": "test   %rax,%rax",
+     "test_address": "0x189d1d",
+     "branch": "je     18a340 <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs3evp9signature28evp_signature_from_algorithm.llvm.4277877334683979457+0x6d0>",
+     "branch_address": "0x189d20",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::construct_loader::ChildProvGlobals.c_prov_up_ref",
+   "address": "0x1d5130",
+   "function": "construct_loader",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs5store10store_meth16construct_loader",
+   "function_address": "0x1d5000",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "operand": "call   *%rax",
+   "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "ChildProvGlobals",
+    "field": "c_prov_up_ref",
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "file": "src/provider/child.rs",
+    "line": 534,
+    "function": "ossl_provider_init_as_child",
+    "value": "Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+    "slots": [
+     "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:534 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_UP_REF and OSSL_CORE_MAKE_FUNC(..., provider_up_ref, ...)",
+    "null_guard": {
+     "guard_block": "0x1d5121",
+     "test": "test   %rax,%rax",
+     "test_address": "0x1d5125",
+     "branch": "je     1d5310 <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs5store10store_meth16construct_loader+0x310>",
+     "branch_address": "0x1d5128",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::ossl_provider_find::ChildProvGlobals.c_prov_up_ref",
+   "address": "0x2808e2",
+   "function": "ossl_provider_find",
+   "function_symbol": "_RNvNtCsfUQpk6SBn4K_10openssl_rs8provider18ossl_provider_find",
+   "function_address": "0x280720",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "operand": "call   *%rcx",
+   "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "ChildProvGlobals",
+    "field": "c_prov_up_ref",
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "file": "src/provider/child.rs",
+    "line": 534,
+    "function": "ossl_provider_init_as_child",
+    "value": "Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+    "slots": [
+     "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:534 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_UP_REF and OSSL_CORE_MAKE_FUNC(..., provider_up_ref, ...)",
+    "null_guard": {
+     "guard_block": "0x2808d7",
+     "test": "test   %rcx,%rcx",
+     "test_address": "0x2808db",
+     "branch": "je     2808ed <_RNvNtCsfUQpk6SBn4K_10openssl_rs8provider18ossl_provider_find+0x1cd>",
+     "branch_address": "0x2808de",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::ossl_provider_free::ChildProvGlobals.c_prov_free",
+   "address": "0x2809c1",
+   "function": "ossl_provider_free",
+   "function_symbol": "_RNvNtCsfUQpk6SBn4K_10openssl_rs8provider18ossl_provider_free",
+   "function_address": "0x280960",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_free (offset 0x50, OSSL_FUNC_PROVIDER_FREE)",
+   "operand": "jmp    *%rax",
+   "slot": "ChildProvGlobals.c_prov_free (offset 0x50, OSSL_FUNC_PROVIDER_FREE)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "ChildProvGlobals",
+    "field": "c_prov_free",
+    "function_id": "OSSL_FUNC_PROVIDER_FREE",
+    "file": "src/provider/child.rs",
+    "line": 538,
+    "function": "ossl_provider_init_as_child",
+    "value": "Some(core::mem::transmute::<*mut c_void, ChildFreeFn>(f))"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_free (offset 0x50, OSSL_FUNC_PROVIDER_FREE)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_free (offset 0x50, OSSL_FUNC_PROVIDER_FREE)",
+    "slots": [
+     "ChildProvGlobals.c_prov_free (offset 0x50, OSSL_FUNC_PROVIDER_FREE)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_FREE",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:538 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildFreeFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_FREE and OSSL_CORE_MAKE_FUNC(..., provider_free, ...)",
+    "null_guard": {
+     "guard_block": "0x2809ad",
+     "test": "test   %rax,%rax",
+     "test_address": "0x2809b1",
+     "branch": "je     2809c3 <_RNvNtCsfUQpk6SBn4K_10openssl_rs8provider18ossl_provider_free+0x63>",
+     "branch_address": "0x2809b4",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::ossl_provider_up_ref::ChildProvGlobals.c_prov_up_ref",
+   "address": "0x280cef",
+   "function": "ossl_provider_up_ref",
+   "function_symbol": "_RNvNtCsfUQpk6SBn4K_10openssl_rs8provider20ossl_provider_up_ref",
+   "function_address": "0x280c90",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "operand": "call   *%rax",
+   "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "ChildProvGlobals",
+    "field": "c_prov_up_ref",
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "file": "src/provider/child.rs",
+    "line": 534,
+    "function": "ossl_provider_init_as_child",
+    "value": "Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+    "slots": [
+     "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:534 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_UP_REF and OSSL_CORE_MAKE_FUNC(..., provider_up_ref, ...)",
+    "null_guard": {
+     "guard_block": "0x280ce1",
+     "test": "test   %rax,%rax",
+     "test_address": "0x280ce5",
+     "branch": "je     280cfc <_RNvNtCsfUQpk6SBn4K_10openssl_rs8provider20ossl_provider_up_ref+0x6c>",
+     "branch_address": "0x280ce8",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::ossl_provider_add_to_store::ChildProvGlobals.c_prov_up_ref",
+   "address": "0x281379",
+   "function": "ossl_provider_add_to_store",
+   "function_symbol": "_RNvNtCsfUQpk6SBn4K_10openssl_rs8provider26ossl_provider_add_to_store",
+   "function_address": "0x2811e0",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "operand": "call   *%rax",
+   "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "ChildProvGlobals",
+    "field": "c_prov_up_ref",
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "file": "src/provider/child.rs",
+    "line": 534,
+    "function": "ossl_provider_init_as_child",
+    "value": "Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+    "slots": [
+     "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:534 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_UP_REF and OSSL_CORE_MAKE_FUNC(..., provider_up_ref, ...)",
+    "null_guard": {
+     "guard_block": "0x28136a",
+     "test": "test   %rax,%rax",
+     "test_address": "0x28136e",
+     "branch": "je     28145a <_RNvNtCsfUQpk6SBn4K_10openssl_rs8provider26ossl_provider_add_to_store+0x27a>",
+     "branch_address": "0x281371",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::provider_activate::ChildProvGlobals.c_prov_up_ref",
+   "address": "0x2a01da",
+   "function": "provider_activate",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider8activate17provider_activate.llvm.14339939854103238893",
+   "function_address": "0x2a0160",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "operand": "call   *%rax",
+   "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "ChildProvGlobals",
+    "field": "c_prov_up_ref",
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "file": "src/provider/child.rs",
+    "line": 534,
+    "function": "ossl_provider_init_as_child",
+    "value": "Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+    "slots": [
+     "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:534 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_UP_REF and OSSL_CORE_MAKE_FUNC(..., provider_up_ref, ...)",
+    "null_guard": {
+     "guard_block": "0x2a01c8",
+     "test": "test   %rax,%rax",
+     "test_address": "0x2a01cc",
+     "branch": "je     2a0343 <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider8activate17provider_activate.llvm.14339939854103238893+0x1e3>",
+     "branch_address": "0x2a01cf",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::provider_activate::ChildProvGlobals.c_prov_free",
+   "address": "0x2a0301",
+   "function": "provider_activate",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider8activate17provider_activate.llvm.14339939854103238893",
+   "function_address": "0x2a0160",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_free (offset 0x50, OSSL_FUNC_PROVIDER_FREE)",
+   "operand": "call   *%rax",
+   "slot": "ChildProvGlobals.c_prov_free (offset 0x50, OSSL_FUNC_PROVIDER_FREE)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "ChildProvGlobals",
+    "field": "c_prov_free",
+    "function_id": "OSSL_FUNC_PROVIDER_FREE",
+    "file": "src/provider/child.rs",
+    "line": 538,
+    "function": "ossl_provider_init_as_child",
+    "value": "Some(core::mem::transmute::<*mut c_void, ChildFreeFn>(f))"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_free (offset 0x50, OSSL_FUNC_PROVIDER_FREE)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_free (offset 0x50, OSSL_FUNC_PROVIDER_FREE)",
+    "slots": [
+     "ChildProvGlobals.c_prov_free (offset 0x50, OSSL_FUNC_PROVIDER_FREE)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_FREE",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:538 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildFreeFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_FREE and OSSL_CORE_MAKE_FUNC(..., provider_free, ...)",
+    "null_guard": {
+     "guard_block": "0x2a02f3",
+     "test": "test   %rax,%rax",
+     "test_address": "0x2a02f7",
+     "branch": "je     2a0343 <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider8activate17provider_activate.llvm.14339939854103238893+0x1e3>",
+     "branch_address": "0x2a02fa",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::provider_deactivate::ChildProvGlobals.c_prov_free",
+   "address": "0x2a04c3",
+   "function": "provider_deactivate",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider8activate19provider_deactivate.llvm.14339939854103238893",
+   "function_address": "0x2a0360",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_free (offset 0x50, OSSL_FUNC_PROVIDER_FREE)",
+   "operand": "call   *%rax",
+   "slot": "ChildProvGlobals.c_prov_free (offset 0x50, OSSL_FUNC_PROVIDER_FREE)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "ChildProvGlobals",
+    "field": "c_prov_free",
+    "function_id": "OSSL_FUNC_PROVIDER_FREE",
+    "file": "src/provider/child.rs",
+    "line": 538,
+    "function": "ossl_provider_init_as_child",
+    "value": "Some(core::mem::transmute::<*mut c_void, ChildFreeFn>(f))"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_free (offset 0x50, OSSL_FUNC_PROVIDER_FREE)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_free (offset 0x50, OSSL_FUNC_PROVIDER_FREE)",
+    "slots": [
+     "ChildProvGlobals.c_prov_free (offset 0x50, OSSL_FUNC_PROVIDER_FREE)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_FREE",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:538 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildFreeFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_FREE and OSSL_CORE_MAKE_FUNC(..., provider_free, ...)",
+    "null_guard": {
+     "guard_block": "0x2a04b5",
+     "test": "test   %rax,%rax",
+     "test_address": "0x2a04b9",
+     "branch": "je     2a04c5 <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider8activate19provider_deactivate.llvm.14339939854103238893+0x165>",
+     "branch_address": "0x2a04bc",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::provider_up_ref_intern::ChildProvGlobals.c_prov_up_ref",
+   "address": "0x2a07c6",
+   "function": "provider_up_ref_intern",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider8activate22provider_up_ref_intern",
+   "function_address": "0x2a0750",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "operand": "call   *%rax",
+   "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "ChildProvGlobals",
+    "field": "c_prov_up_ref",
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "file": "src/provider/child.rs",
+    "line": 534,
+    "function": "ossl_provider_init_as_child",
+    "value": "Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+    "slots": [
+     "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:534 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_UP_REF and OSSL_CORE_MAKE_FUNC(..., provider_up_ref, ...)",
+    "null_guard": {
+     "guard_block": "0x2a07b8",
+     "test": "test   %rax,%rax",
+     "test_address": "0x2a07bc",
+     "branch": "je     2a07d3 <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider8activate22provider_up_ref_intern+0x83>",
+     "branch_address": "0x2a07bf",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::OSSL_LIB_CTX_free::ChildProvGlobals.c_provider_deregister_child_cb",
+   "address": "0x2adc7c",
+   "function": "OSSL_LIB_CTX_free",
+   "function_symbol": "OSSL_LIB_CTX_free",
+   "function_address": "0x2adb30",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_provider_deregister_child_cb (offset 0x28, OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB)",
+   "operand": "call   *%rcx",
+   "slot": "ChildProvGlobals.c_provider_deregister_child_cb (offset 0x28, OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "BioCoreGlobals",
+    "field": "up_ref",
+    "function_id": "OSSL_FUNC_BIO_UP_REF",
+    "file": "src/context/core_bio.rs",
+    "line": 435,
+    "function": "ossl_bio_init_core",
+    "value": "entry_function::<OsslFuncBioUpRef>(p)"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_provider_deregister_child_cb (offset 0x28, OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_provider_deregister_child_cb (offset 0x28, OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB)",
+    "slots": [
+     "ChildProvGlobals.c_provider_deregister_child_cb (offset 0x28, OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:517 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, DeregisterChildCbFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB and OSSL_CORE_MAKE_FUNC(..., provider_deregister_child_cb, ...)",
+    "null_guard": {
+     "guard_block": "0x2adc70",
+     "test": "test   %rcx,%rcx",
+     "test_address": "0x2adc74",
+     "branch": "je     2adc7e <OSSL_LIB_CTX_free+0x14e>",
+     "branch_address": "0x2adc77",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::do_pk8pkey::do_pk8pkey's `cb` parameter",
+   "address": "0x30ef0c",
+   "function": "do_pk8pkey",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs3pem7pem_pk810do_pk8pkey.llvm.18041568364190874738",
+   "function_address": "0x30ec70",
+   "edge_witness_id": "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT:do_pk8pkey's `cb` parameter (stack argument 7) and the NULL-selected PEM_def_callback default",
+   "operand": "call   *%rbx",
+   "slot": "do_pk8pkey's `cb` parameter (stack argument 7) and the NULL-selected PEM_def_callback default",
+   "writer": {
+    "kind": "exported-parameter",
+    "file": "src/pem/pem_pk8.rs (do_pk8pkey) / src/pem/pem_lib.rs",
+    "function": "do_pk8pkey and the exported PEM writers",
+    "value": "the pen_password_cb parameter, with the NULL arm selecting PEM_def_callback"
+   },
+   "evidence_class": "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT",
+    "reason": "external ABI contract witness: do_pk8pkey's `cb` parameter (stack argument 7) and the NULL-selected PEM_def_callback default"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "do_pk8pkey's `cb` parameter (stack argument 7) and the NULL-selected PEM_def_callback default",
+    "slots": [
+     "do_pk8pkey's `cb` parameter (stack argument 7) and the NULL-selected PEM_def_callback default"
+    ],
+    "merged": false,
+    "function_id": null,
+    "function_ids": [],
+    "writer": "the exported PEM PKCS#8 writers forward their own `cb` parameter; do_pk8pkey installs PEM_def_callback when both the key string and cb are NULL",
+    "interface": "include/openssl/types.h:237 pem_password_cb; include/openssl/pem.h:439-440 PEM_def_callback and pem.h:492-503/514-521 the writer prototypes",
+    "null_guard": null,
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::OSSL_STORE_open_ex::OsslStoreLoader.p_close",
+   "address": "0x3dd619",
+   "function": "OSSL_STORE_open_ex",
+   "function_symbol": "OSSL_STORE_open_ex",
+   "function_address": "0x3dce40",
+   "edge_witness_id": "ABI_CONTRACT_PROVIDER:OsslStoreLoader.p_close (offset 0xb8)",
+   "operand": "call   *%rax",
+   "slot": "OsslStoreLoader.p_close (offset 0xb8)",
+   "writer": {
+    "kind": "source-store",
+    "file": "src/store/store_meth.rs",
+    "function": "loader_from_algorithm",
+    "value": "OSSL_FUNC_STORE_CLOSE dispatch entry"
+   },
+   "evidence_class": "ABI_CONTRACT_PROVIDER",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_PROVIDER",
+    "reason": "external ABI contract witness: OsslStoreLoader.p_close (offset 0xb8)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "OsslStoreLoader.p_close (offset 0xb8)",
+    "slots": [
+     "OsslStoreLoader.p_close (offset 0xb8)"
+    ],
+    "merged": false,
+    "function_id": null,
+    "function_ids": [],
+    "writer": "loader_from_algorithm stores the OSSL_FUNC_STORE_CLOSE dispatch entry into p_close",
+    "interface": "OSSL_provider_init (include/openssl/core.h:186-195) and OSSL_FUNC_STORE_CLOSE (include/openssl/core_dispatch.h)",
+    "null_guard": null,
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::evp_asym_cipher_from_algorithm::ChildProvGlobals.c_prov_up_ref",
+   "address": "0x3e9774",
+   "function": "evp_asym_cipher_from_algorithm",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs3evp10asymcipher30evp_asym_cipher_from_algorithm",
+   "function_address": "0x3e96c0",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "operand": "call   *%rax",
+   "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "ChildProvGlobals",
+    "field": "c_prov_up_ref",
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "file": "src/provider/child.rs",
+    "line": 534,
+    "function": "ossl_provider_init_as_child",
+    "value": "Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+    "slots": [
+     "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:534 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_UP_REF and OSSL_CORE_MAKE_FUNC(..., provider_up_ref, ...)",
+    "null_guard": {
+     "guard_block": "0x3e9765",
+     "test": "test   %rax,%rax",
+     "test_address": "0x3e9769",
+     "branch": "je     3e9a68 <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs3evp10asymcipher30evp_asym_cipher_from_algorithm+0x3a8>",
+     "branch_address": "0x3e976c",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::evp_kem_init::EvpKem.newctx",
+   "address": "0x3ec729",
+   "function": "evp_kem_init",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs3evp3kem12evp_kem_init.llvm.15916066407162242060",
+   "function_address": "0x3ec150",
+   "edge_witness_id": "ABI_CONTRACT_PROVIDER:EvpKem.newctx (offset 0x28, OSSL_FUNC_KEM_NEWCTX)",
+   "operand": "call   *%rax",
+   "slot": "EvpKem.newctx (offset 0x28, OSSL_FUNC_KEM_NEWCTX)",
+   "writer": {
+    "kind": "dispatch-entry",
+    "file": "src/evp/kem.rs",
+    "function": "evp_kem_from_algorithm",
+    "value": "the provider's OSSL_DISPATCH entry for the field's id"
+   },
+   "evidence_class": "ABI_CONTRACT_PROVIDER",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_PROVIDER",
+    "reason": "provider fetch-slot witness: EvpKem.newctx (offset 0x28, OSSL_FUNC_KEM_NEWCTX)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "EvpKem.newctx (offset 0x28, OSSL_FUNC_KEM_NEWCTX)",
+    "slots": [
+     "EvpKem.newctx (offset 0x28, OSSL_FUNC_KEM_NEWCTX)"
+    ],
+    "merged": false,
+    "function_id": null,
+    "function_ids": [],
+    "writer": "src/evp/kem.rs:311 in evp_kem_from_algorithm: (*kem).newctx = entry_function::<KemNewctxFn>(entry);",
+    "interface": "the provider's returned OSSL_DISPATCH table -- include/openssl/core.h:40-44 and core_dispatch.h's OSSL_FUNC_kem_* ids; src/evp/kem.rs:155-196 is the #[repr(C)] EvpKem the fetch builds",
+    "null_guard": null,
+    "target_set": null,
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::evp_kem_init::EvpKem.auth_encapsulate_init",
+   "address": "0x3ec78e",
+   "function": "evp_kem_init",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs3evp3kem12evp_kem_init.llvm.15916066407162242060",
+   "function_address": "0x3ec150",
+   "edge_witness_id": "ABI_CONTRACT_PROVIDER:EvpKem.auth_encapsulate_init (offset 0x80, OSSL_FUNC_KEM_AUTH_ENCAPSULATE_INIT) + EvpKem.auth_decapsulate_init (offset 0x88, OSSL_FUNC_KEM_AUTH_DECAPSULATE_INIT) (merged call site)",
+   "operand": "call   *%r8",
+   "slot": "EvpKem.auth_encapsulate_init (offset 0x80, OSSL_FUNC_KEM_AUTH_ENCAPSULATE_INIT) + EvpKem.auth_decapsulate_init (offset 0x88, OSSL_FUNC_KEM_AUTH_DECAPSULATE_INIT) (merged call site)",
+   "writer": {
+    "kind": "dispatch-entry",
+    "file": "src/evp/kem.rs",
+    "function": "evp_kem_from_algorithm",
+    "value": "the provider's OSSL_DISPATCH entry for the field's id"
+   },
+   "evidence_class": "ABI_CONTRACT_PROVIDER",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_PROVIDER",
+    "reason": "provider merged-slot witness: EvpKem.auth_encapsulate_init (offset 0x80, OSSL_FUNC_KEM_AUTH_ENCAPSULATE_INIT) + EvpKem.auth_decapsulate_init (offset 0x88, OSSL_FUNC_KEM_AUTH_DECAPSULATE_INIT) (merged call site)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "EvpKem.auth_encapsulate_init (offset 0x80, OSSL_FUNC_KEM_AUTH_ENCAPSULATE_INIT) + EvpKem.auth_decapsulate_init (offset 0x88, OSSL_FUNC_KEM_AUTH_DECAPSULATE_INIT) (merged call site)",
+    "slots": [
+     "EvpKem.auth_encapsulate_init (offset 0x80, OSSL_FUNC_KEM_AUTH_ENCAPSULATE_INIT)",
+     "EvpKem.auth_decapsulate_init (offset 0x88, OSSL_FUNC_KEM_AUTH_DECAPSULATE_INIT)"
+    ],
+    "merged": true,
+    "function_id": null,
+    "function_ids": [
+     "OSSL_FUNC_KEM_AUTH_ENCAPSULATE_INIT",
+     "OSSL_FUNC_KEM_AUTH_DECAPSULATE_INIT"
+    ],
+    "writer": "src/evp/kem.rs:319 in evp_kem_from_algorithm: (*kem).auth_encapsulate_init =; src/evp/kem.rs:332 in evp_kem_from_algorithm: (*kem).auth_decapsulate_init =",
+    "interface": "the provider's returned OSSL_DISPATCH table -- include/openssl/core.h:40-44 and core_dispatch.h's OSSL_FUNC_kem_* ids; src/evp/kem.rs:155-196 is the #[repr(C)] EvpKem the fetch builds",
+    "null_guard": null,
+    "target_set": null,
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::evp_kem_init::EvpKem.encapsulate_init",
+   "address": "0x3ec7c9",
+   "function": "evp_kem_init",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs3evp3kem12evp_kem_init.llvm.15916066407162242060",
+   "function_address": "0x3ec150",
+   "edge_witness_id": "ABI_CONTRACT_PROVIDER:EvpKem.encapsulate_init (offset 0x30, OSSL_FUNC_KEM_ENCAPSULATE_INIT) + EvpKem.decapsulate_init (offset 0x40, OSSL_FUNC_KEM_DECAPSULATE_INIT) (merged call site)",
+   "operand": "call   *%rcx",
+   "slot": "EvpKem.encapsulate_init (offset 0x30, OSSL_FUNC_KEM_ENCAPSULATE_INIT) + EvpKem.decapsulate_init (offset 0x40, OSSL_FUNC_KEM_DECAPSULATE_INIT) (merged call site)",
+   "writer": {
+    "kind": "dispatch-entry",
+    "file": "src/evp/kem.rs",
+    "function": "evp_kem_from_algorithm",
+    "value": "the provider's OSSL_DISPATCH entry for the field's id"
+   },
+   "evidence_class": "ABI_CONTRACT_PROVIDER",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_PROVIDER",
+    "reason": "provider merged-slot witness: EvpKem.encapsulate_init (offset 0x30, OSSL_FUNC_KEM_ENCAPSULATE_INIT) + EvpKem.decapsulate_init (offset 0x40, OSSL_FUNC_KEM_DECAPSULATE_INIT) (merged call site)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "EvpKem.encapsulate_init (offset 0x30, OSSL_FUNC_KEM_ENCAPSULATE_INIT) + EvpKem.decapsulate_init (offset 0x40, OSSL_FUNC_KEM_DECAPSULATE_INIT) (merged call site)",
+    "slots": [
+     "EvpKem.encapsulate_init (offset 0x30, OSSL_FUNC_KEM_ENCAPSULATE_INIT)",
+     "EvpKem.decapsulate_init (offset 0x40, OSSL_FUNC_KEM_DECAPSULATE_INIT)"
+    ],
+    "merged": true,
+    "function_id": null,
+    "function_ids": [
+     "OSSL_FUNC_KEM_ENCAPSULATE_INIT",
+     "OSSL_FUNC_KEM_DECAPSULATE_INIT"
+    ],
+    "writer": "src/evp/kem.rs:315 in evp_kem_from_algorithm: (*kem).encapsulate_init = entry_function::<KemEncapsulateInitFn>(entry);; src/evp/kem.rs:328 in evp_kem_from_algorithm: (*kem).decapsulate_init = entry_function::<KemDecapsulateInitFn>(entry);",
+    "interface": "the provider's returned OSSL_DISPATCH table -- include/openssl/core.h:40-44 and core_dispatch.h's OSSL_FUNC_kem_* ids; src/evp/kem.rs:155-196 is the #[repr(C)] EvpKem the fetch builds",
+    "null_guard": null,
+    "target_set": null,
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::evp_kem_from_algorithm::ChildProvGlobals.c_prov_up_ref",
+   "address": "0x3ec8e4",
+   "function": "evp_kem_from_algorithm",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs3evp3kem22evp_kem_from_algorithm",
+   "function_address": "0x3ec830",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "operand": "call   *%rax",
+   "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "ChildProvGlobals",
+    "field": "c_prov_up_ref",
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "file": "src/provider/child.rs",
+    "line": 534,
+    "function": "ossl_provider_init_as_child",
+    "value": "Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+    "slots": [
+     "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:534 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_UP_REF and OSSL_CORE_MAKE_FUNC(..., provider_up_ref, ...)",
+    "null_guard": {
+     "guard_block": "0x3ec8d5",
+     "test": "test   %rax,%rax",
+     "test_address": "0x3ec8d9",
+     "branch": "je     3ecc28 <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs3evp3kem22evp_kem_from_algorithm+0x3f8>",
+     "branch_address": "0x3ec8dc",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::evp_keyexch_from_algorithm::ChildProvGlobals.c_prov_up_ref",
+   "address": "0x3ee2fd",
+   "function": "evp_keyexch_from_algorithm",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs3evp8exchange26evp_keyexch_from_algorithm",
+   "function_address": "0x3ee260",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "operand": "call   *%rax",
+   "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "ChildProvGlobals",
+    "field": "c_prov_up_ref",
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "file": "src/provider/child.rs",
+    "line": 534,
+    "function": "ossl_provider_init_as_child",
+    "value": "Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+    "slots": [
+     "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:534 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_UP_REF and OSSL_CORE_MAKE_FUNC(..., provider_up_ref, ...)",
+    "null_guard": {
+     "guard_block": "0x3ee2ee",
+     "test": "test   %rax,%rax",
+     "test_address": "0x3ee2f2",
+     "branch": "je     3ee555 <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs3evp8exchange26evp_keyexch_from_algorithm+0x2f5>",
+     "branch_address": "0x3ee2f5",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::ossl_child_provider_init::ChildProvGlobals.c_prov_get0_provider_ctx",
+   "address": "0x4343f7",
+   "function": "ossl_child_provider_init",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider5child24ossl_child_provider_init",
+   "function_address": "0x434390",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_get0_provider_ctx (offset 0x38, OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX)",
+   "operand": "call   *%rcx",
+   "slot": "ChildProvGlobals.c_prov_get0_provider_ctx (offset 0x38, OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "ChildProvGlobals",
+    "field": "c_prov_get0_provider_ctx",
+    "function_id": "OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX",
+    "file": "src/provider/child.rs",
+    "line": 524,
+    "function": "ossl_provider_init_as_child",
+    "value": "Some(core::mem::transmute::<"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "provider-contract-witness-missing:an in-image value in this frame; this image carries no documented provider interface that writes it"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_get0_provider_ctx (offset 0x38, OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_get0_provider_ctx (offset 0x38, OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX)",
+    "slots": [
+     "ChildProvGlobals.c_prov_get0_provider_ctx (offset 0x38, OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:524 in ossl_provider_init_as_child: Some(core::mem::transmute::<",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX and OSSL_CORE_MAKE_FUNC(..., provider_get0_provider_ctx, ...)",
+    "null_guard": {
+     "guard_block": "0x4343de",
+     "test": "test   %rcx,%rcx",
+     "test_address": "0x4343e2",
+     "branch": "je     43440c <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider5child24ossl_child_provider_init+0x7c>",
+     "branch_address": "0x4343e5",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::ossl_child_provider_init::ChildProvGlobals.c_prov_get0_dispatch",
+   "address": "0x434401",
+   "function": "ossl_child_provider_init",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider5child24ossl_child_provider_init",
+   "function_address": "0x434390",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_get0_dispatch (offset 0x40, OSSL_FUNC_PROVIDER_GET0_DISPATCH)",
+   "operand": "call   *%r15",
+   "slot": "ChildProvGlobals.c_prov_get0_dispatch (offset 0x40, OSSL_FUNC_PROVIDER_GET0_DISPATCH)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "ChildProvGlobals",
+    "field": "c_prov_get0_dispatch",
+    "function_id": "OSSL_FUNC_PROVIDER_GET0_DISPATCH",
+    "file": "src/provider/child.rs",
+    "line": 530,
+    "function": "ossl_provider_init_as_child",
+    "value": "Some(core::mem::transmute::<*mut c_void, ChildGet0DispatchFn>(f))"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "provider-contract-witness-missing:an in-image value in this frame; this image carries no documented provider interface that writes it"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_get0_dispatch (offset 0x40, OSSL_FUNC_PROVIDER_GET0_DISPATCH)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_get0_dispatch (offset 0x40, OSSL_FUNC_PROVIDER_GET0_DISPATCH)",
+    "slots": [
+     "ChildProvGlobals.c_prov_get0_dispatch (offset 0x40, OSSL_FUNC_PROVIDER_GET0_DISPATCH)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_GET0_DISPATCH",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:530 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildGet0DispatchFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_GET0_DISPATCH and OSSL_CORE_MAKE_FUNC(..., provider_get0_dispatch, ...)",
+    "null_guard": {
+     "guard_block": "0x4343e7",
+     "test": "test   %r15,%r15",
+     "test_address": "0x4343eb",
+     "branch": "je     43440c <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider5child24ossl_child_provider_init+0x7c>",
+     "branch_address": "0x4343ee",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::provider_create_child_cb::ChildProvGlobals.c_prov_name",
+   "address": "0x43446d",
+   "function": "provider_create_child_cb",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider5child24provider_create_child_cb",
+   "function_address": "0x434420",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_name (offset 0x30, OSSL_FUNC_PROVIDER_NAME)",
+   "operand": "call   *%rax",
+   "slot": "ChildProvGlobals.c_prov_name (offset 0x30, OSSL_FUNC_PROVIDER_NAME)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "BioCoreGlobals",
+    "field": "free",
+    "function_id": "OSSL_FUNC_BIO_FREE",
+    "file": "src/context/core_bio.rs",
+    "line": 438,
+    "function": "ossl_bio_init_core",
+    "value": "entry_function::<OsslFuncBioFree>(p)"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_name (offset 0x30, OSSL_FUNC_PROVIDER_NAME)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_name (offset 0x30, OSSL_FUNC_PROVIDER_NAME)",
+    "slots": [
+     "ChildProvGlobals.c_prov_name (offset 0x30, OSSL_FUNC_PROVIDER_NAME)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_NAME",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:521 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildNameFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_NAME and OSSL_CORE_MAKE_FUNC(..., provider_name, ...)",
+    "null_guard": {
+     "guard_block": "0x43445d",
+     "test": "test   %rax,%rax",
+     "test_address": "0x434461",
+     "branch": "je     43451b <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider5child24provider_create_child_cb+0xfb>",
+     "branch_address": "0x434464",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::provider_remove_child_cb::ChildProvGlobals.c_prov_name",
+   "address": "0x43457b",
+   "function": "provider_remove_child_cb",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider5child24provider_remove_child_cb",
+   "function_address": "0x434550",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_name (offset 0x30, OSSL_FUNC_PROVIDER_NAME)",
+   "operand": "call   *%rax",
+   "slot": "ChildProvGlobals.c_prov_name (offset 0x30, OSSL_FUNC_PROVIDER_NAME)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "BioCoreGlobals",
+    "field": "free",
+    "function_id": "OSSL_FUNC_BIO_FREE",
+    "file": "src/context/core_bio.rs",
+    "line": 438,
+    "function": "ossl_bio_init_core",
+    "value": "entry_function::<OsslFuncBioFree>(p)"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_name (offset 0x30, OSSL_FUNC_PROVIDER_NAME)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_name (offset 0x30, OSSL_FUNC_PROVIDER_NAME)",
+    "slots": [
+     "ChildProvGlobals.c_prov_name (offset 0x30, OSSL_FUNC_PROVIDER_NAME)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_NAME",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:521 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildNameFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_NAME and OSSL_CORE_MAKE_FUNC(..., provider_name, ...)",
+    "null_guard": {
+     "guard_block": "0x43456f",
+     "test": "test   %rax,%rax",
+     "test_address": "0x434573",
+     "branch": "je     4345d5 <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider5child24provider_remove_child_cb+0x85>",
+     "branch_address": "0x434576",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::ossl_provider_init_as_child::ChildProvGlobals.c_provider_register_child_cb",
+   "address": "0x4347b0",
+   "function": "ossl_provider_init_as_child",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider5child27ossl_provider_init_as_child",
+   "function_address": "0x4346a0",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_provider_register_child_cb (offset 0x20, OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB)",
+   "operand": "call   *%rax",
+   "slot": "ChildProvGlobals.c_provider_register_child_cb (offset 0x20, OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "BioCoreGlobals",
+    "field": "ctrl",
+    "function_id": "OSSL_FUNC_BIO_CTRL",
+    "file": "src/context/core_bio.rs",
+    "line": 432,
+    "function": "ossl_bio_init_core",
+    "value": "entry_function::<OsslFuncBioCtrl>(p)"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "provider-contract-witness-missing:an in-image value in this frame; this image carries no documented provider interface that writes it"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_provider_register_child_cb (offset 0x20, OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_provider_register_child_cb (offset 0x20, OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB)",
+    "slots": [
+     "ChildProvGlobals.c_provider_register_child_cb (offset 0x20, OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:513 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, RegisterChildCbFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB and OSSL_CORE_MAKE_FUNC(..., provider_register_child_cb, ...)",
+    "null_guard": {
+     "guard_block": "0x434788",
+     "test": "test   %rax,%rax",
+     "test_address": "0x434790",
+     "branch": "je     4347bb <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider5child27ossl_provider_init_as_child+0x11b>",
+     "branch_address": "0x434793",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::ossl_provider_up_ref_parent::ChildProvGlobals.c_prov_up_ref",
+   "address": "0x434829",
+   "function": "ossl_provider_up_ref_parent",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider5child27ossl_provider_up_ref_parent",
+   "function_address": "0x4347d0",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "operand": "jmp    *%rax",
+   "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "ChildProvGlobals",
+    "field": "c_prov_up_ref",
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "file": "src/provider/child.rs",
+    "line": 534,
+    "function": "ossl_provider_init_as_child",
+    "value": "Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)",
+    "slots": [
+     "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_PROVIDER_UP_REF",
+    "function_ids": [],
+    "writer": "src/provider/child.rs:534 in ossl_provider_init_as_child: Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_PROVIDER_UP_REF and OSSL_CORE_MAKE_FUNC(..., provider_up_ref, ...)",
+    "null_guard": {
+     "guard_block": "0x434814",
+     "test": "test   %rax,%rax",
+     "test_address": "0x434818",
+     "branch": "je     43482b <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider5child27ossl_provider_up_ref_parent+0x5b>",
+     "branch_address": "0x43481b",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::bio_core_ctrl::BioCoreGlobals.ctrl",
+   "address": "0x46a0a4",
+   "function": "bio_core_ctrl",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs7context8core_bio13bio_core_ctrl",
+   "function_address": "0x46a060",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:BioCoreGlobals.ctrl (offset 0x20, OSSL_FUNC_BIO_CTRL)",
+   "operand": "call   *%r8",
+   "slot": "BioCoreGlobals.ctrl (offset 0x20, OSSL_FUNC_BIO_CTRL)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "BioCoreGlobals",
+    "field": "ctrl",
+    "function_id": "OSSL_FUNC_BIO_CTRL",
+    "file": "src/context/core_bio.rs",
+    "line": 432,
+    "function": "ossl_bio_init_core",
+    "value": "entry_function::<OsslFuncBioCtrl>(p)"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: BioCoreGlobals.ctrl (offset 0x20, OSSL_FUNC_BIO_CTRL)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "BioCoreGlobals.ctrl (offset 0x20, OSSL_FUNC_BIO_CTRL)",
+    "slots": [
+     "BioCoreGlobals.ctrl (offset 0x20, OSSL_FUNC_BIO_CTRL)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_BIO_CTRL",
+    "function_ids": [],
+    "writer": "src/context/core_bio.rs:432 in ossl_bio_init_core: entry_function::<OsslFuncBioCtrl>(p)",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_BIO_CTRL and OSSL_CORE_MAKE_FUNC(..., BIO_ctrl, ...)",
+    "null_guard": {
+     "guard_block": "0x46a08f",
+     "test": "test   %r8,%r8",
+     "test_address": "0x46a093",
+     "branch": "je     46a0a9 <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs7context8core_bio13bio_core_ctrl+0x49>",
+     "branch_address": "0x46a096",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::bio_core_free::BioCoreGlobals.free",
+   "address": "0x46a0f2",
+   "function": "bio_core_free",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs7context8core_bio13bio_core_free",
+   "function_address": "0x46a0c0",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:BioCoreGlobals.free (offset 0x30, OSSL_FUNC_BIO_FREE)",
+   "operand": "call   *%rax",
+   "slot": "BioCoreGlobals.free (offset 0x30, OSSL_FUNC_BIO_FREE)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "BioCoreGlobals",
+    "field": "free",
+    "function_id": "OSSL_FUNC_BIO_FREE",
+    "file": "src/context/core_bio.rs",
+    "line": 438,
+    "function": "ossl_bio_init_core",
+    "value": "entry_function::<OsslFuncBioFree>(p)"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: BioCoreGlobals.free (offset 0x30, OSSL_FUNC_BIO_FREE)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "BioCoreGlobals.free (offset 0x30, OSSL_FUNC_BIO_FREE)",
+    "slots": [
+     "BioCoreGlobals.free (offset 0x30, OSSL_FUNC_BIO_FREE)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_BIO_FREE",
+    "function_ids": [],
+    "writer": "src/context/core_bio.rs:438 in ossl_bio_init_core: entry_function::<OsslFuncBioFree>(p)",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_BIO_FREE and OSSL_CORE_MAKE_FUNC(..., BIO_free, ...)",
+    "null_guard": {
+     "guard_block": "0x46a0d9",
+     "test": "test   %rax,%rax",
+     "test_address": "0x46a0e9",
+     "branch": "je     46a0f8 <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs7context8core_bio13bio_core_free+0x38>",
+     "branch_address": "0x46a0ec",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::bio_core_gets::BioCoreGlobals.gets",
+   "address": "0x46a147",
+   "function": "bio_core_gets",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs7context8core_bio13bio_core_gets",
+   "function_address": "0x46a110",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:BioCoreGlobals.gets (offset 0x10, OSSL_FUNC_BIO_GETS)",
+   "operand": "jmp    *%rax",
+   "slot": "BioCoreGlobals.gets (offset 0x10, OSSL_FUNC_BIO_GETS)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "BioCoreGlobals",
+    "field": "gets",
+    "function_id": "OSSL_FUNC_BIO_GETS",
+    "file": "src/context/core_bio.rs",
+    "line": 426,
+    "function": "ossl_bio_init_core",
+    "value": "entry_function::<OsslFuncBioGets>(p)"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: BioCoreGlobals.gets (offset 0x10, OSSL_FUNC_BIO_GETS)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "BioCoreGlobals.gets (offset 0x10, OSSL_FUNC_BIO_GETS)",
+    "slots": [
+     "BioCoreGlobals.gets (offset 0x10, OSSL_FUNC_BIO_GETS)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_BIO_GETS",
+    "function_ids": [],
+    "writer": "src/context/core_bio.rs:426 in ossl_bio_init_core: entry_function::<OsslFuncBioGets>(p)",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_BIO_GETS and OSSL_CORE_MAKE_FUNC(..., BIO_gets, ...)",
+    "null_guard": {
+     "guard_block": "0x46a130",
+     "test": "test   %rax,%rax",
+     "test_address": "0x46a134",
+     "branch": "je     46a149 <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs7context8core_bio13bio_core_gets+0x39>",
+     "branch_address": "0x46a137",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::bio_core_puts::BioCoreGlobals.puts",
+   "address": "0x46a194",
+   "function": "bio_core_puts",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs7context8core_bio13bio_core_puts",
+   "function_address": "0x46a160",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:BioCoreGlobals.puts (offset 0x18, OSSL_FUNC_BIO_PUTS)",
+   "operand": "jmp    *%rax",
+   "slot": "BioCoreGlobals.puts (offset 0x18, OSSL_FUNC_BIO_PUTS)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "BioCoreGlobals",
+    "field": "puts",
+    "function_id": "OSSL_FUNC_BIO_PUTS",
+    "file": "src/context/core_bio.rs",
+    "line": 429,
+    "function": "ossl_bio_init_core",
+    "value": "entry_function::<OsslFuncBioPuts>(p)"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: BioCoreGlobals.puts (offset 0x18, OSSL_FUNC_BIO_PUTS)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "BioCoreGlobals.puts (offset 0x18, OSSL_FUNC_BIO_PUTS)",
+    "slots": [
+     "BioCoreGlobals.puts (offset 0x18, OSSL_FUNC_BIO_PUTS)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_BIO_PUTS",
+    "function_ids": [],
+    "writer": "src/context/core_bio.rs:429 in ossl_bio_init_core: entry_function::<OsslFuncBioPuts>(p)",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_BIO_PUTS and OSSL_CORE_MAKE_FUNC(..., BIO_puts, ...)",
+    "null_guard": {
+     "guard_block": "0x46a17d",
+     "test": "test   %rax,%rax",
+     "test_address": "0x46a181",
+     "branch": "je     46a196 <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs7context8core_bio13bio_core_puts+0x36>",
+     "branch_address": "0x46a184",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::bio_core_read_ex::BioCoreGlobals.read_ex",
+   "address": "0x46a1f8",
+   "function": "bio_core_read_ex",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs7context8core_bio16bio_core_read_ex",
+   "function_address": "0x46a1b0",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:BioCoreGlobals.read_ex (offset 0x0, OSSL_FUNC_BIO_READ_EX)",
+   "operand": "jmp    *%rax",
+   "slot": "BioCoreGlobals.read_ex (offset 0x0, OSSL_FUNC_BIO_READ_EX)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "BioCoreGlobals",
+    "field": "read_ex",
+    "function_id": "OSSL_FUNC_BIO_READ_EX",
+    "file": "src/context/core_bio.rs",
+    "line": 420,
+    "function": "ossl_bio_init_core",
+    "value": "entry_function::<OsslFuncBioReadEx>(p)"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: BioCoreGlobals.read_ex (offset 0x0, OSSL_FUNC_BIO_READ_EX)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "BioCoreGlobals.read_ex (offset 0x0, OSSL_FUNC_BIO_READ_EX)",
+    "slots": [
+     "BioCoreGlobals.read_ex (offset 0x0, OSSL_FUNC_BIO_READ_EX)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_BIO_READ_EX",
+    "function_ids": [],
+    "writer": "src/context/core_bio.rs:420 in ossl_bio_init_core: entry_function::<OsslFuncBioReadEx>(p)",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_BIO_READ_EX and OSSL_CORE_MAKE_FUNC(..., BIO_read_ex, ...)",
+    "null_guard": {
+     "guard_block": "0x46a1d7",
+     "test": "test   %rax,%rax",
+     "test_address": "0x46a1da",
+     "branch": "je     46a1fa <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs7context8core_bio16bio_core_read_ex+0x4a>",
+     "branch_address": "0x46a1dd",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::bio_core_write_ex::BioCoreGlobals.write_ex",
+   "address": "0x46a259",
+   "function": "bio_core_write_ex",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs7context8core_bio17bio_core_write_ex",
+   "function_address": "0x46a210",
+   "edge_witness_id": "ABI_CONTRACT_CORE_DISPATCH:BioCoreGlobals.write_ex (offset 0x8, OSSL_FUNC_BIO_WRITE_EX)",
+   "operand": "jmp    *%rax",
+   "slot": "BioCoreGlobals.write_ex (offset 0x8, OSSL_FUNC_BIO_WRITE_EX)",
+   "writer": {
+    "kind": "source-store",
+    "slot_object": "BioCoreGlobals",
+    "field": "write_ex",
+    "function_id": "OSSL_FUNC_BIO_WRITE_EX",
+    "file": "src/context/core_bio.rs",
+    "line": 423,
+    "function": "ossl_bio_init_core",
+    "value": "entry_function::<OsslFuncBioWriteEx>(p)"
+   },
+   "evidence_class": "ABI_CONTRACT_CORE_DISPATCH",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "reg-top"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "reason": "core-dispatch ABI contract witness: BioCoreGlobals.write_ex (offset 0x8, OSSL_FUNC_BIO_WRITE_EX)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "BioCoreGlobals.write_ex (offset 0x8, OSSL_FUNC_BIO_WRITE_EX)",
+    "slots": [
+     "BioCoreGlobals.write_ex (offset 0x8, OSSL_FUNC_BIO_WRITE_EX)"
+    ],
+    "merged": false,
+    "function_id": "OSSL_FUNC_BIO_WRITE_EX",
+    "function_ids": [],
+    "writer": "src/context/core_bio.rs:423 in ossl_bio_init_core: entry_function::<OsslFuncBioWriteEx>(p)",
+    "interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child (include/openssl/crypto.h:601-604); include/openssl/core_dispatch.h declares OSSL_FUNC_BIO_WRITE_EX and OSSL_CORE_MAKE_FUNC(..., BIO_write_ex, ...)",
+    "null_guard": {
+     "guard_block": "0x46a237",
+     "test": "test   %rax,%rax",
+     "test_address": "0x46a23b",
+     "branch": "je     46a25b <_RNvNtNtCsfUQpk6SBn4K_10openssl_rs7context8core_bio17bio_core_write_ex+0x4b>",
+     "branch_address": "0x46a23e",
+     "skip_target_does_not_reach_the_call": true
+    },
+    "target_set": [],
+    "contract_bounded": true
+   }
+  },
+  {
+   "id": "libcrypto.so.3::provider_init::OsslProvider.init_function",
+   "address": "0x4f21b4",
+   "function": "provider_init",
+   "function_symbol": "_RNvNtNtCsfUQpk6SBn4K_10openssl_rs8provider4init13provider_init",
+   "function_address": "0x4f2140",
+   "edge_witness_id": "ABI_CONTRACT_PROVIDER:OsslProvider.init_function (offset 0x40)",
+   "operand": "call   *%rax",
+   "slot": "OsslProvider.init_function (offset 0x40)",
+   "writer": {
+    "kind": "source-store",
+    "file": "src/provider/init.rs:307 / src/provider/mod.rs:1891",
+    "function": "provider_init / provider_new",
+    "value": "DSO_bind_func(module, \"OSSL_provider_init\") / the OSSL_PROVIDER_add_builtin parameter"
+   },
+   "evidence_class": "ABI_CONTRACT_PROVIDER",
+   "target_set": [],
+   "verdict": "contract-bounded (target set unbounded by the documented interface)",
+   "before": {
+    "class": "materialised",
+    "reason": "provider-contract-witness-missing:an in-image value in this frame; this image carries no documented provider interface that writes it"
+   },
+   "after": {
+    "class": "ABI_CONTRACT_PROVIDER",
+    "reason": "provider ABI contract witness: OsslProvider.init_function (offset 0x40)"
+   },
+   "families": [
+    "ssh",
+    "sshd"
+   ],
+   "witness": {
+    "slot": "OsslProvider.init_function (offset 0x40)",
+    "slots": [
+     "OsslProvider.init_function (offset 0x40)"
+    ],
+    "merged": false,
+    "function_id": null,
+    "function_ids": [],
+    "writer": "provider_new stores the caller's init_function (src/provider/mod.rs:1891, reached from the exported OSSL_PROVIDER_add_builtin); provider_init binds the loaded module's OSSL_provider_init into the same slot (src/provider/init.rs:307)",
+    "interface": "OSSL_provider_init_fn -- include/openssl/core.h:186-195; OSSL_PROVIDER_add_builtin(OSSL_LIB_CTX *, const char *, OSSL_provider_init_fn *) -- include/openssl/provider.h:78-85; a loadable module exports the same entry point as OSSL_provider_init",
+    "null_guard": null,
+    "target_set": [],
+    "contract_bounded": true
+   }
+  }
+ ],
+ "composition": {
+  "total": 32,
+  "by_evidence_class": {
+   "ABI_CONTRACT_CORE_DISPATCH": 26,
+   "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+   "ABI_CONTRACT_PROVIDER": 5
+  }
+ },
+ "controls": {
+  "run": "python3 -c 'import consumer_closure as cc; cc._e7core_self_test()'",
+  "failures": [],
+  "summary": "e7core controls: 26 cohort sites across 24 functions resolve to ABI_CONTRACT_CORE_DISPATCH; two further unreachable sites carry the same class; offset, libctx-index, writer-id, second-source-store, header-id and NULL-guard mutations each refuse and are restored; the provider-init rule refuses a store-offset and an extra-writer mutation and is restored; the store-loader wrapper refuses a non-forwarding source and is restored; the register-agnostic PEM witness refuses a wrong-default-symbol and a wrong-copy-source mutation and is restored",
+  "mutations": [
+   {
+    "rule": "core-dispatch: slot offset",
+    "mutation": "the slot load's displacement 0x50 -> 0x58",
+    "observed": "offset-is-not-a-field-of-the-documented-table",
+    "restored": "the unmutated site resolves"
+   },
+   {
+    "rule": "core-dispatch: libctx slot index",
+    "mutation": "the accessor's index argument 0x12 -> 0x13",
+    "observed": "libctx-data-index-is-not-a-documented-core-table",
+    "restored": "the unmutated site resolves"
+   },
+   {
+    "rule": "core-dispatch: writer id",
+    "mutation": "the OSSL_FUNC_PROVIDER_FREE match arm renamed to OSSL_FUNC_PROVIDER_UP_REF",
+    "observed": "store-is-not-under-the-documented-function-id",
+    "restored": "the unmutated site resolves"
+   },
+   {
+    "rule": "core-dispatch: writer uniqueness",
+    "mutation": "a second (*gbl).c_prov_free store in another function",
+    "observed": "field-does-not-have-exactly-one-source-store",
+    "restored": "the unmutated site resolves"
+   },
+   {
+    "rule": "core-dispatch: header id",
+    "mutation": "OSSL_FUNC_PROVIDER_FREE renumbered 111 -> 999 in the admitted header",
+    "observed": "function-id-is-not-in-the-admitted-header",
+    "restored": "the unmutated site resolves"
+   },
+   {
+    "rule": "core-dispatch: NULL guard",
+    "mutation": "the slot's test replaced by nop",
+    "observed": "slot-load-is-not-null-guarded",
+    "restored": "the unmutated site resolves"
+   },
+   {
+    "rule": "provider-init: bind store",
+    "mutation": "the DSO_bind_func result stored to 0x48 instead of 0x40",
+    "observed": "module-bind-result-is-not-stored-into-the-field",
+    "restored": "the unmutated site resolves"
+   },
+   {
+    "rule": "provider-init: writer set",
+    "mutation": "a third function stores init_function",
+    "observed": "field-has-a-store-outside-the-enumerated-writers",
+    "restored": "the unmutated site resolves"
+   },
+   {
+    "rule": "store-loader: fetch wrapper",
+    "mutation": "OSSL_STORE_LOADER_fetch no longer forwards to inner_loader_fetch",
+    "observed": "loader-fetch-wrapper-is-not-a-transparent-forwarder",
+    "restored": "the unmutated site resolves"
+   },
+   {
+    "rule": "PEM: default target",
+    "mutation": "PEM_def_callback removed from the image's exported symbols",
+    "observed": "default-target-is-missing-or-not-in-image",
+    "restored": "the unmutated site resolves"
+   },
+   {
+    "rule": "PEM: callback source",
+    "mutation": "the callback copy reads %rdx instead of the cb parameter register",
+    "observed": "callback-source-definition-set-is-not-enumerated",
+    "restored": "the unmutated site resolves"
+   },
+   {
+    "rule": "PEM: operand register",
+    "mutation": "the call operand is a stack slot instead of a register",
+    "observed": "operand-is-not-a-callback-register",
+    "restored": "the unmutated site resolves"
+   }
+  ]
+ },
+ "not_run": [
+  "a new candidate freeze S' (the instrument is build-relevant evidence under AGENTS.md section 22; this batch did not commit and did not re-freeze)",
+  "cargo fmt / clippy / library tests: no Rust source changed",
+  "BOUNDARY/SEAL regeneration and the full Phase-25 forensic seal",
+  "re-pin of the pre-existing e7pbe and e7abi self-test fixtures (stale absolute addresses; see self_test_state)",
+  "ASan/Miri/Loom: this batch changed a Python instrument, not generated code",
+  "L7 consumer promotion: element 7 is a precondition, not the L7 evidence itself"
+ ],
+ "self_test_state": {
+  "command": "python3 forensics/tools/consumer_closure.py --self-test",
+  "e7core_controls": "PASS: 26 cohort sites across 24 functions; 12 mutation/restore controls",
+  "e7pbe": "FAIL (fixture): the pins describe a different libcrypto (pinned artefact sha 1362035..., admitted f3061a4...); the fixture now reports the mismatch instead of raising KeyError; no PBE refusal control executed",
+  "e7abi": "FAIL (pre-existing, identical before and after this batch): 20 stale-fixture checks in the pristine b60 instrument sha 84551e78"
+ },
+ "limits": [
+  "a contract-bounded class is not a resolved edge: the site keeps an unbounded target set and remains in the residual list",
+  "the core-dispatch witness records writer reachability in the closure but does not gate on it; the load-bearing fact is the NULL guard plus sole-writer uniqueness (an executed call implies the writer ran)",
+  "the witness does not establish which core/module supplies the `in` table; that is the C ABI's contract and the provider's obligation",
+  "element 7 PASS is a statement about the unresolved-site precision predicate, not a SAFE_COMPATIBLE promotion"
+ ]
+}

@@ -2167,8 +2167,17 @@ ABI_CONTRACT_CONF_MODULE = "ABI_CONTRACT_CONF_MODULE"
 # gets its own class and records the default target explicitly.
 ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT = \
     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT"
+# The core-to-provider `in` dispatch table of `OSSL_provider_init`: the entries
+# the Core supplies *to* a provider, which a provider that needs its own
+# `OSSL_LIB_CTX` forwards to `OSSL_LIB_CTX_new_from_dispatch`/
+# `OSSL_LIB_CTX_new_child`.  This is the opposite direction to
+# `ABI_CONTRACT_PROVIDER` (the table the provider returns), so it is a separate
+# class: the *caller* supplies these function values, the documented
+# `OSSL_FUNC_*` ids name their signatures, and the target set is unbounded.
+ABI_CONTRACT_CORE_DISPATCH = "ABI_CONTRACT_CORE_DISPATCH"
 
 ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
+                                  ABI_CONTRACT_CORE_DISPATCH,
                                   ABI_CONTRACT_EXPORT_CALLBACK,
                                   ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK,
                                   ABI_CONTRACT_SLH_METHOD_TABLE,
@@ -2239,6 +2248,70 @@ ABI_CONTRACTS = {
             "literal-field conservative pattern does not see it and it is not "
             "refused; no such macro exists in the candidate's "
             "`OsslStoreLoader`-naming files",
+        ],
+    },
+    ABI_CONTRACT_CORE_DISPATCH: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "the core-to-provider `in` dispatch table passed to "
+            "`OSSL_provider_init` (and forwarded by the provider to "
+            "`OSSL_LIB_CTX_new_from_dispatch`/`OSSL_LIB_CTX_new_child`)"),
+        "citation": [
+            "include/openssl/core.h:186-195 -- typedef int(OSSL_provider_init_fn)("
+            "const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in, "
+            "const OSSL_DISPATCH **out, void **provctx); the header's own comment "
+            "says |in| 'is the array of functions that the Core passes to the "
+            "provider'",
+            "include/openssl/core_dispatch.h:73-78 -- 'Core function identities, "
+            "for the two OSSL_DISPATCH tables being passed in the "
+            "OSSL_provider_init call. ... Functions provided by the Core to the "
+            "provider, reserved numbers 1-1023'",
+            "include/openssl/core_dispatch.h:153-161 -- the OSSL_FUNC_BIO_* ids "
+            "(42, 43, 44, 45, 48, 49, 50) with their OSSL_CORE_MAKE_FUNC "
+            "signatures (BIO_read_ex, BIO_write_ex, BIO_up_ref, BIO_free, "
+            "BIO_puts, BIO_gets, BIO_ctrl)",
+            "include/openssl/core_dispatch.h:202-227 -- the "
+            "OSSL_FUNC_PROVIDER_* ids (105-111) and their signatures "
+            "(provider_register_child_cb, provider_deregister_child_cb, "
+            "provider_name, provider_get0_provider_ctx, provider_get0_dispatch, "
+            "provider_up_ref, provider_free)",
+            "include/openssl/crypto.h:601-604 -- OSSL_LIB_CTX_new_from_dispatch("
+            "const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in) and "
+            "OSSL_LIB_CTX_new_child(const OSSL_CORE_HANDLE *handle, const "
+            "OSSL_DISPATCH *in): the caller passes the same `in` table on",
+            "src/context/core_bio.rs:402-447 -- `ossl_bio_init_core` is the only "
+            "writer of BioCoreGlobals, one field per OSSL_FUNC_BIO_* id, from "
+            "the caller's `fns` array; reached from "
+            "`OSSL_LIB_CTX_new_from_dispatch` (src/context/mod.rs)",
+            "src/provider/child.rs:470-560 -- `ossl_provider_init_as_child` is "
+            "the only writer of ChildProvGlobals' callback fields, one field per "
+            "OSSL_FUNC_* id, from the caller's `in` array; reached from "
+            "`OSSL_LIB_CTX_new_child` (src/context/mod.rs:1234)",
+        ],
+        "provider_obligation": (
+            "the caller (the Core, or a provider acting as the Core for a "
+            "nested child) supplies the function for each documented id and owns "
+            "its correctness and lifetime; the crate forwards the entry and "
+            "invokes it with the documented signature, and never substitutes an "
+            "in-image target"),
+        "covers": (
+            "the exact libctx slot objects (slot 17 `BioCoreGlobals`, slot 18 "
+            "`ChildProvGlobals`), the exact field each enumerated site reads, "
+            "the single in-image writer of that field, and the documented "
+            "`OSSL_FUNC_*` id that writer stores into it"),
+        "does_not_cover": [
+            "which core/module supplies the `in` table; the target set is "
+            "unbounded by the C ABI",
+            "the behaviour or lifetime of the supplied upcall, which is the "
+            "supplying core's obligation",
+            "a site whose base register is not proven to be the slot-17/18 "
+            "libctx data object",
+            "a site whose offset is not a field of the documented table, or "
+            "whose in-image writer is not the enumerated init function",
+            "a field with a second source store, a macro-expanded store, or a "
+            "store under a different `OSSL_FUNC_*` id; the witness refuses it",
+            "reachability from these two workloads, or that a configuration "
+            "file exists at run time",
         ],
     },
     ABI_CONTRACT_EXPORT_CALLBACK: {
@@ -5688,10 +5761,21 @@ def _fetch_family_by_callee(name: str):
 
 
 def _is_generic_fetch_wrapper(name: str) -> bool:
-    """The public ``evp_generic_fetch`` wrapper, not the inner/from_prov forms."""
+    """A family-agnostic generic fetch entry point, not the inner form.
+
+    `evp_generic_fetch` (the public wrapper) and `evp_generic_fetch_from_prov`
+    (the provider-restricted wrapper) both build the method object with the
+    caller's `new_method` callback, so the returned object is the family
+    object whose fields the family writer assigns.  The family is still bound
+    by the writer reference at the call site, not by the callee's name.
+    `inner_evp_generic_fetch` is the shared implementation and is matched
+    separately.
+    """
     base = re.sub(r"\.llvm(?:\.[0-9]+)?$", "", name or "")
+    if "inner_evp_generic_fetch" in base:
+        return False
     return (base.endswith("evp_generic_fetch")
-            and "inner_evp_generic_fetch" not in base)
+            or base.endswith("evp_generic_fetch_from_prov"))
 
 
 def _writer_reference(g: "DsoGraph", fstart: int, call_idx: int):
@@ -15167,6 +15251,192 @@ def allocator_contract_witness(g: "DsoGraph", site: dict, name: str) -> dict | N
     )
 
 
+PROVIDER_INIT_SLOT_FUNCTION = "provider_init"
+PROVIDER_INIT_SLOT_OFFSET = 0x40
+PROVIDER_INIT_SLOT_FIELD = "init_function"
+PROVIDER_INIT_SLOT_BIND = "DSO_bind_func"
+PROVIDER_INIT_SLOT_SYMBOL = "OSSL_provider_init"
+
+
+def provider_init_slot_witness(g: "DsoGraph", site: dict, name: str):
+    """The `provider_init` entry-point call through `init_function` (0x40).
+
+    The site's operand register has exactly two reaching definitions in this
+    build: the load of `OsslProvider.init_function`, and the return of
+    `DSO_bind_func(module, "OSSL_provider_init")` which is stored into that
+    same field immediately after the call.  Both are the documented provider
+    entry point:
+
+      * `OSSL_PROVIDER_add_builtin(..., OSSL_provider_init_fn *)` stores the
+        application's (or another provider's) entry point;
+      * a loadable module exports `OSSL_provider_init` under the name the ABI
+        fixes.
+
+    The source side is checked as well: the field's stores are confined to the
+    enumerated in-image writers, the bind is the documented symbol, and the
+    exported `OSSL_PROVIDER_add_builtin` seam is defined in this image.
+    """
+    if _external_function_leaf(name) != PROVIDER_INIT_SLOT_FUNCTION:
+        return None
+    if not _has_insns(g):
+        return None
+    cls = ABI_CONTRACT_PROVIDER
+    fstart = site["func"]
+    idx = _external_insn_index(g, site)
+    if idx is None:
+        return None
+    opnd = _site_operand(site)
+    reg = _canon(opnd)
+    if reg not in _REGS:
+        return None
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None or not defs or _ENTRY_DEF in defs:
+        return None
+    insns = g.precision.insns_by_func[fstart]
+
+    def refuse(reason, **extra):
+        rec = _external_refusal(cls, name, site, reason, **extra)
+        site["provider_init_slot_refusal"] = rec
+        return None
+
+    shapes = []
+    for k in sorted(defs):
+        text = insns[k][1]
+        mn, _rest, ops = _insn_parts(text)
+        if mn in ("mov", "movq") and len(ops) >= 2:
+            m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[0])
+            if m and int(m.group(1) or "0", 16) == PROVIDER_INIT_SLOT_OFFSET \
+                    and _canon(ops[-1]) == reg:
+                origin = _reg_origin(g, fstart, k, _canon(m.group(2)))
+                if origin.get("kind") != "param" or origin.get("index") != 0:
+                    return refuse("field-load-base-is-not-the-provider-parameter",
+                                  definition=text, origin=origin)
+                shapes.append({"kind": "field-load",
+                               "definition": hex(insns[k][0]),
+                               "text": text})
+                continue
+        if mn.startswith("call"):
+            symbol = _s1_call_symbol(g, fstart, k)
+            if _external_function_leaf(symbol) == PROVIDER_INIT_SLOT_BIND:
+                if k + 1 >= len(insns):
+                    return refuse("module-bind-has-no-store")
+                smn, _sr, sops = _insn_parts(insns[k + 1][1])
+                sm = (re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", sops[1])
+                      if smn in ("mov", "movq") and len(sops) == 2 else None)
+                if (sm is None or _canon(sops[0]) != "%rax"
+                        or int(sm.group(1) or "0", 16)
+                        != PROVIDER_INIT_SLOT_OFFSET):
+                    return refuse("module-bind-result-is-not-stored-into-the-field",
+                                  store=insns[k + 1][1])
+                origin = _reg_origin(g, fstart, k + 1, _canon(sm.group(2)))
+                if origin.get("kind") != "param" or origin.get("index") != 0:
+                    return refuse("module-bind-store-base-is-not-the-provider",
+                                  origin=origin)
+                arg, why = _provider_init_bind_symbol(g, fstart, k)
+                if arg is None:
+                    return refuse("module-bind-symbol-is-not-proven",
+                                  detail=why)
+                if arg != PROVIDER_INIT_SLOT_SYMBOL:
+                    return refuse("module-binds-a-different-symbol",
+                                  symbol=arg)
+                shapes.append({"kind": "module-bind",
+                               "definition": hex(insns[k][0]),
+                               "call": _insn(g, fstart, k),
+                               "store": insns[k + 1][1],
+                               "symbol": arg})
+                continue
+        return refuse("operand-definition-is-not-the-init-function-slot",
+                      definition=hex(insns[k][0]), text=text)
+    if not shapes:
+        return refuse("no-enumerated-init-function-definition")
+
+    writes, err = _external_field_writers(
+        g, "OsslProvider", {PROVIDER_INIT_SLOT_FIELD},
+        owner_tokens=("OsslProvider", "provider_new", "provider_init"))
+    if writes is None:
+        return refuse("source-writer-scan-unavailable", detail=err)
+    macro = [w for w in writes if w["kind"] == "macro-slot"]
+    if macro:
+        return refuse("macro-expanded-slot-store-unattributed", writers=macro)
+    stores = [w for w in writes if w["kind"] == "store"]
+    allowed = {("src/provider/init.rs", "provider_init"),
+               ("src/provider/mod.rs", "provider_new")}
+    stray = [w for w in stores if (w["file"], w["function"]) not in allowed]
+    if stray:
+        return refuse("field-has-a-store-outside-the-enumerated-writers",
+                      writers=stray)
+    bind_store = [w for w in stores
+                  if w["file"] == "src/provider/init.rs"
+                  and "transmute" in (w["value"] or "")]
+    if len(bind_store) != 1:
+        return refuse("the-module-bind-store-is-not-enumerated",
+                      writers=stores)
+    bind_text, _bl, err = _external_source(g, "src/provider/init.rs")
+    if bind_text is None:
+        return refuse("source-unavailable", detail=err)
+    if "DSO_bind_func" not in bind_text \
+            or f'"{PROVIDER_INIT_SLOT_SYMBOL}"' not in bind_text:
+        return refuse("the-source-does-not-bind-the-documented-symbol")
+    if _external_exported(g, "OSSL_PROVIDER_add_builtin") is None:
+        return refuse("the-builtin-registration-seam-is-not-exported")
+
+    witness = _external_witness(
+        cls, name, site,
+        slot=(f"OsslProvider.{PROVIDER_INIT_SLOT_FIELD} (offset "
+              f"{PROVIDER_INIT_SLOT_OFFSET:#x})"),
+        writer=(
+            "provider_new stores the caller's init_function "
+            "(src/provider/mod.rs:1891, reached from the exported "
+            "OSSL_PROVIDER_add_builtin); provider_init binds the loaded "
+            f"module's {PROVIDER_INIT_SLOT_SYMBOL} into the same slot "
+            f"(src/provider/init.rs:{bind_store[0]['line']})"),
+        interface=(
+            "OSSL_provider_init_fn -- include/openssl/core.h:186-195; "
+            "OSSL_PROVIDER_add_builtin(OSSL_LIB_CTX *, const char *, "
+            "OSSL_provider_init_fn *) -- include/openssl/provider.h:78-85; "
+            "a loadable module exports the same entry point as "
+            "OSSL_provider_init"),
+        basis=(
+            "the call operand has exactly two reaching definitions: the load "
+            "of the documented init_function field, and the return of "
+            f"DSO_bind_func(module, \"{PROVIDER_INIT_SLOT_SYMBOL}\") stored "
+            "back into that same field; every store of the field in the "
+            "source is one of the enumerated in-image writers, and the "
+            "public registration seam is exported"),
+        conditions={
+            "site": f"{name} {hex(site.get('addr') or 0)}",
+            "operand": opnd,
+            "slot_offset": hex(PROVIDER_INIT_SLOT_OFFSET),
+            "definitions": shapes,
+            "source_writers": stores,
+            "builtin_seam_exported": True,
+            "target_set_unbounded": ("an application-supplied "
+                                     "OSSL_provider_init_fn, or a module's "
+                                     "exported OSSL_provider_init"),
+        },
+        does_not_cover=ABI_CONTRACTS[cls]["does_not_cover"],
+        target_set=[],
+    )
+    return witness
+
+
+def _provider_init_bind_symbol(g: "DsoGraph", fstart: int, call_idx: int):
+    """The NUL-terminated symbol name passed to `DSO_bind_func`, or a refusal."""
+    defs = _reaching_defs(g, fstart, call_idx, "%rsi")
+    if defs is None or len(defs) != 1 or _ENTRY_DEF in defs:
+        return None, "the %rsi argument has no single reaching definition"
+    insns = g.precision.insns_by_func[fstart]
+    k = next(iter(defs))
+    text = insns[k][1]
+    m = re.search(r"#\s*([0-9a-f]+)", text)
+    if m is None:
+        return None, f"the %rsi writer names no literal address: {text}"
+    name = g.cstring_at(int(m.group(1), 16))
+    if not name:
+        return None, f"the literal at {m.group(1)} is not a string"
+    return name, None
+
+
 def provider_contract_witness(g: "DsoGraph", site: dict, name: str) -> dict | None:
     """Witness for an OSSL_provider_init dispatch slot at this exact site."""
     fetch = fetch_slot_witness(g, site, name)
@@ -15175,6 +15445,9 @@ def provider_contract_witness(g: "DsoGraph", site: dict, name: str) -> dict | No
     merged = fetch_merged_slot_witness(g, site, name)
     if merged is not None and merged.get("resolved"):
         return merged
+    init_slot = provider_init_slot_witness(g, site, name)
+    if init_slot is not None:
+        return init_slot
     offsets = site.get("field_offsets") or set()
     for spec in PROVIDER_SLOTS:
         if spec["function"] not in (name or ""):
@@ -15668,6 +15941,10 @@ STORE_LOADER_GET0 = "ossl_store_get0_loader_int"
 STORE_LOADER_REGISTER = "OSSL_STORE_register_loader"
 STORE_LOADER_REGISTER_INT = "ossl_store_register_loader_int"
 STORE_LOADER_FETCH = "inner_loader_fetch"
+# The exported public entry points that resolve a loader by forwarding to
+# `inner_loader_fetch`.  A call to one of these is the same base object; the
+# witness verifies the forwarding shape in the source before accepting it.
+STORE_LOADER_FETCH_WRAPPERS = ("OSSL_STORE_LOADER_fetch",)
 STORE_LOADER_LEGACY_SITES = {
     0x3DD2D8: {
         "field": "open_ex",
@@ -16905,6 +17182,29 @@ def store_loader_legacy_witness(g: "DsoGraph", site: dict, name: str):
     return cls, witness, None
 
 
+def _loader_fetch_wrapper_is_transparent(text: str, name: str):
+    """Whether ``name`` forwards straight to `inner_loader_fetch` and returns it."""
+    m = re.search(r"\bfn\s+" + re.escape(name) + r"\s*\(", text)
+    if not m:
+        return False, f"no definition of {name} in the source"
+    brace = text.find("{", m.end())
+    if brace < 0:
+        return False, "the definition has no body"
+    end = _s1_brace_span(text, brace)
+    if end is None:
+        return False, "the definition body is not balanced"
+    body = text[brace + 1:end - 1]
+    if not re.search(r"let\s+method\s*=\s*unsafe\s*\{\s*"
+                     + re.escape(STORE_LOADER_FETCH) + r"\(", body):
+        return False, (f"{name} does not bind its result to "
+                       f"{STORE_LOADER_FETCH}")
+    tail = [ln.strip() for ln in body.splitlines()
+            if ln.strip() and not ln.strip().startswith("//")]
+    if not tail or tail[-1] != "method":
+        return False, f"{name} does not return the fetched method"
+    return True, None
+
+
 def store_loader_provider_witness(g: "DsoGraph", site: dict, name: str):
     """The provider `OsslStoreLoader.p_close` dispatch (OSSL_FUNC_STORE_CLOSE)."""
     if not _external_site_matches(site, name, STORE_LOADER_FUNCTION,
@@ -16952,8 +17252,46 @@ def store_loader_provider_witness(g: "DsoGraph", site: dict, name: str):
     if len(fetch) != 1:
         return cls, None, _external_refusal(
             cls, name, site, "fetched-loader-is-not-a-call-return")
-    fetch_sym = _external_def_call(g, site, fetch[0] - 1)
-    if _external_function_leaf(fetch_sym) != STORE_LOADER_FETCH:
+    # The fetch call is whatever single definition %rax has immediately before
+    # the assignment.  It is not necessarily the adjacent instruction: the
+    # builder tests the result before moving it.
+    rax_defs = _external_reg_defs(g, fstart, fetch[0], "%rax")
+    if rax_defs is None or len(rax_defs) != 1 or _ENTRY_DEF in rax_defs:
+        return cls, None, _external_refusal(
+            cls, name, site, "fetched-loader-is-not-a-single-call-return",
+            definitions=sorted(rax_defs or ()))
+    fetch_call = next(iter(rax_defs))
+    fetch_sym = _external_call_symbol(g, fstart, fetch_call)
+    if fetch_sym is None:
+        return cls, None, _external_refusal(
+            cls, name, site, "fetched-loader-is-not-a-call-return",
+            definition=hex(insns[fetch_call][0]),
+            text=insns[fetch_call][1])
+    fetch_leaf = _external_function_leaf(fetch_sym)
+    fetch_callee = fetch_leaf
+    if fetch_leaf in STORE_LOADER_FETCH_WRAPPERS:
+        # The exported `OSSL_STORE_LOADER_fetch` wrapper is the documented
+        # public entry point; it forwards straight to the same private
+        # `inner_loader_fetch` the witness already understands.  Accepting the
+        # name alone would widen the rule, so the wrapper's source is checked
+        # here: it must call `inner_loader_fetch` with its own arguments and
+        # return that result, and it must be an exported symbol of this image.
+        if _external_exported(g, fetch_leaf) is None:
+            return cls, None, _external_refusal(
+                cls, name, site, "loader-fetch-wrapper-is-not-exported",
+                callee=fetch_sym)
+        meth_text, _ml, err = _external_source(g, STORE_LOADER_METH_SOURCE)
+        if meth_text is None:
+            return cls, None, _external_refusal(
+                cls, name, site, "source-unavailable", detail=err)
+        ok, why = _loader_fetch_wrapper_is_transparent(meth_text, fetch_leaf)
+        if not ok:
+            return cls, None, _external_refusal(
+                cls, name, site,
+                "loader-fetch-wrapper-is-not-a-transparent-forwarder",
+                callee=fetch_sym, detail=why)
+        fetch_leaf = STORE_LOADER_FETCH
+    if fetch_leaf != STORE_LOADER_FETCH:
         return cls, None, _external_refusal(
             cls, name, site, "wrong-base-constructor", callee=fetch_sym)
     guard, why = _external_guard_chain(g, fstart, site["addr"], False)
@@ -17083,7 +17421,8 @@ def store_loader_provider_witness(g: "DsoGraph", site: dict, name: str):
                  "base_reg": load["base_reg"],
                  "offset": hex(load["offset"])},
         object={"type": STORE_LOADER_OWNER,
-                "constructor": STORE_LOADER_FETCH,
+                "constructor": fetch_callee,
+                "constructor_offset_hint": STORE_LOADER_FETCH,
                 "definitions": [hex(insns[d][0]) for d in sorted(base_defs)],
                 "fetched_loader_definitions": [
                     hex(insns[d][0]) for d in sorted(r12_defs)]},
@@ -17636,27 +17975,36 @@ def pem_password_default_witness(g: "DsoGraph", site: dict, name: str):
     fstart = site["func"]
     insns = g.precision.insns_by_func[fstart]
     opnd = _site_operand(site)
-    if _canon(opnd) != "%r14":
+    # The callback register is whatever the site actually calls through.  It is
+    # not pinned: register allocation is a compiler choice, and the same source
+    # shape (`if cb.is_null() { cb = PEM_def_callback } cb(...)`) compiles to
+    # different registers between builds.  The *shape* -- exactly two reaching
+    # definitions, one a copy of the declared stack parameter and one the
+    # in-image PEM_def_callback load -- is what the witness requires.
+    reg = _canon(opnd)
+    if reg not in _REGS or reg in ("%rsp", "%rbp"):
         return cls, None, _external_refusal(
-            cls, name, site, "operand-is-not-the-enumerated-callback-register",
+            cls, name, site, "operand-is-not-a-callback-register",
             operand=opnd)
-    defs = _external_reg_defs(g, fstart, idx, "%r14")
+    defs = _external_reg_defs(g, fstart, idx, reg)
     if defs is None or len(defs) != 2:
         return cls, None, _external_refusal(
             cls, name, site, "callback-register-definition-set-is-not-enumerated",
             definitions=sorted(defs or ()))
-    copy = [d for d in defs if insns[d][1].strip() == "mov    %rcx,%r14"]
+    copy_re = re.compile(r"mov\s+(%r[a-z0-9]+)," + re.escape(reg) + r"$")
+    copy = [d for d in defs if copy_re.match(insns[d][1].strip())]
     default = [d for d in defs if "PEM_def_callback" in insns[d][1]]
     if len(copy) != 1 or len(default) != 1:
         return cls, None, _external_refusal(
             cls, name, site, "callback-load-shape-is-not-enumerated",
             definitions=[insns[d][1] for d in sorted(defs)])
     copy_def, default_def = copy[0], default[0]
-    rcx_defs = _external_reg_defs(g, fstart, copy_def, "%rcx")
+    source_reg = _canon(copy_re.match(insns[copy_def][1].strip()).group(1))
+    rcx_defs = _external_reg_defs(g, fstart, copy_def, source_reg)
     if rcx_defs is None or len(rcx_defs) != 3:
         return cls, None, _external_refusal(
             cls, name, site, "callback-source-definition-set-is-not-enumerated",
-            definitions=sorted(rcx_defs or ()))
+            definitions=sorted(rcx_defs or ()), source_register=source_reg)
     param = [d for d in rcx_defs if "(%rsp)" in insns[d][1]
              and insns[d][1].lstrip().startswith("mov")]
     if len(param) != 1:
@@ -17754,7 +18102,8 @@ def pem_password_default_witness(g: "DsoGraph", site: dict, name: str):
                "default target is recorded and the target set is unbounded"),
         conditions={
             "site_enumerated": f"{PEM_FUNCTION} {hex(PEM_SITE)}",
-            "operand_is_the_cb_register": "%r14",
+            "operand_is_the_cb_register": {"register": reg,
+                                          "source_register": source_reg},
             "cb_is_stack_parameter": f"index {PEM_CB_STACK_INDEX}",
             "default_arm": (f"{insns[default_def][1]} -> "
                             f"{PEM_DEFAULT} at {hex(default_addr)}"),
@@ -17765,8 +18114,9 @@ def pem_password_default_witness(g: "DsoGraph", site: dict, name: str):
         },
         does_not_cover=ABI_CONTRACTS[cls]["does_not_cover"],
         target_set=[],
-        operand={"reg": "%r14", "definitions": [hex(insns[d][0])
-                                                 for d in sorted(defs)]},
+        operand={"reg": reg, "source_register": source_reg,
+                 "definitions": [hex(insns[d][0])
+                                 for d in sorted(defs)]},
         parameter={"name": "cb", "index": PEM_CB_STACK_INDEX,
                    "source": insns[param[0]][1]},
         default_target={"symbol": PEM_DEFAULT, "address": hex(default_addr),
@@ -17783,6 +18133,533 @@ def pem_password_default_witness(g: "DsoGraph", site: dict, name: str):
                     source_text, "cb.unwrap_or(PEM_def_callback)")},
     )
     return cls, witness, None
+
+
+# --------------------------------------------------------------------------- #
+# E7/core: the core-to-provider `in` dispatch table (AGENTS.md section 22)
+# --------------------------------------------------------------------------- #
+#
+# `OSSL_provider_init` receives `in`, the array of functions the Core passes to
+# the provider (include/openssl/core.h:186-195).  A provider that needs an
+# `OSSL_LIB_CTX` of its own forwards that same array to
+# `OSSL_LIB_CTX_new_from_dispatch`/`OSSL_LIB_CTX_new_child`
+# (include/openssl/crypto.h:601-604), and two in-image writers copy the entries
+# they recognise into a per-libctx object:
+#
+#   * `ossl_bio_init_core` fills `BioCoreGlobals` (libctx slot 17) from the
+#     OSSL_FUNC_BIO_* ids (src/context/core_bio.rs:402-447);
+#   * `ossl_provider_init_as_child` fills `ChildProvGlobals` (libctx slot 18)
+#     from the OSSL_FUNC_CORE_*/OSSL_FUNC_PROVIDER_* ids
+#     (src/provider/child.rs:470-560).
+#
+# Every later indirect call through one of those fields therefore targets a
+# function the *supplying core* chose; the C ABI places no bound on it.  The
+# per-call-site witness below proves the three facts section 22 requires: the
+# site's operand reads exactly this field of exactly this object, the field's
+# only in-image writer is the enumerated init function, and that writer stored
+# the dispatch entry whose documented id names this field.
+
+CORE_DISPATCH_HEADER = "include/openssl/core_dispatch.h"
+CORE_DISPATCH_ACCESSORS = ("lib_ctx_get_data", "OSSL_LIB_CTX_get_data")
+
+CORE_DISPATCH_TABLES = {
+    17: {
+        "object": "BioCoreGlobals",
+        "source": "src/context/core_bio.rs",
+        "writer": "ossl_bio_init_core",
+        "owner_tokens": ("ossl_bio_init_core", "get_globals"),
+        "index_const": "OSSL_LIB_CTX_BIO_CORE_INDEX",
+        "index_source": "src/context/mod.rs",
+        "index_literal": 17,
+        "fields": {
+            0x00: ("read_ex", "OSSL_FUNC_BIO_READ_EX", 42, "BIO_read_ex"),
+            0x08: ("write_ex", "OSSL_FUNC_BIO_WRITE_EX", 43, "BIO_write_ex"),
+            0x10: ("gets", "OSSL_FUNC_BIO_GETS", 49, "BIO_gets"),
+            0x18: ("puts", "OSSL_FUNC_BIO_PUTS", 48, "BIO_puts"),
+            0x20: ("ctrl", "OSSL_FUNC_BIO_CTRL", 50, "BIO_ctrl"),
+            0x28: ("up_ref", "OSSL_FUNC_BIO_UP_REF", 44, "BIO_up_ref"),
+            0x30: ("free", "OSSL_FUNC_BIO_FREE", 45, "BIO_free"),
+        },
+    },
+    18: {
+        "object": "ChildProvGlobals",
+        "source": "src/provider/child.rs",
+        "writer": "ossl_provider_init_as_child",
+        "owner_tokens": ("ossl_provider_init_as_child",),
+        "index_const": "OSSL_LIB_CTX_CHILD_PROVIDER_INDEX",
+        "index_source": "src/provider/child.rs",
+        "index_literal": 18,
+        "fields": {
+            0x18: ("c_get_libctx", "OSSL_FUNC_CORE_GET_LIBCTX", 4,
+                   "core_get_libctx"),
+            0x20: ("c_provider_register_child_cb",
+                   "OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB", 105,
+                   "provider_register_child_cb"),
+            0x28: ("c_provider_deregister_child_cb",
+                   "OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB", 106,
+                   "provider_deregister_child_cb"),
+            0x30: ("c_prov_name", "OSSL_FUNC_PROVIDER_NAME", 107,
+                   "provider_name"),
+            0x38: ("c_prov_get0_provider_ctx",
+                   "OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX", 108,
+                   "provider_get0_provider_ctx"),
+            0x40: ("c_prov_get0_dispatch",
+                   "OSSL_FUNC_PROVIDER_GET0_DISPATCH", 109,
+                   "provider_get0_dispatch"),
+            0x48: ("c_prov_up_ref", "OSSL_FUNC_PROVIDER_UP_REF", 110,
+                   "provider_up_ref"),
+            0x50: ("c_prov_free", "OSSL_FUNC_PROVIDER_FREE", 111,
+                   "provider_free"),
+        },
+    },
+}
+
+
+def _core_dispatch_refusal(name: str, site: dict, reason: str, **extra) -> dict:
+    rec = {"class": ABI_CONTRACT_CORE_DISPATCH,
+           "contract_bounded": False,
+           "function": name,
+           "call_site": hex(site.get("addr") or 0),
+           "reason": reason}
+    rec.update(extra)
+    return rec
+
+
+def _core_index_arg(g: "DsoGraph", fstart: int, call_idx: int):
+    """The literal libctx data index an accessor call is given, or None."""
+    cfg = _function_cfg(g, fstart)
+    bi = cfg["block_of"].get(call_idx)
+    if bi is None:
+        return None
+    lo, _hi = cfg["blocks"][bi]
+    for k in range(call_idx - 1, lo - 1, -1):
+        mn, _rest, ops = _insn_parts(_insn(g, fstart, k))
+        if (mn in ("mov", "movq", "movl") and len(ops) == 2
+                and _canon(ops[-1]) == "%rsi" and ops[0].startswith("$")):
+            try:
+                return int(ops[0][1:], 16)
+            except ValueError:
+                return None
+        if "%rsi" in _defined_regs_at(_insn(g, fstart, k)):
+            return None
+    return None
+
+
+def _core_globals_origin(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                         depth: int = 0):
+    """The libctx data slot index a register provably holds, or a refusal.
+
+    Every reaching definition must independently be a call to a documented
+    libctx data accessor with a literal index; a copy is followed.  A NULL
+    definition refuses: a NULL base cannot be dereferenced, so a site that can
+    see one is not the shape this witness describes.
+    """
+    if depth > 4:
+        return None, "provenance depth bound", None
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None:
+        return None, "open or non-convergent CFG at the slot base", None
+    if not defs or _ENTRY_DEF in defs:
+        return None, "the slot base is not defined in this function", None
+    indexes, evidence = set(), []
+    for k in sorted(defs):
+        text = _insn(g, fstart, k)
+        mn, _rest, ops = _insn_parts(text)
+        if mn in ("xor", "sub") and len(ops) == 2 and ops[0] == ops[1]:
+            return None, "the slot base can be NULL at the load", None
+        if mn in ("mov", "movq") and len(ops) >= 2 and ops[0] in _REGS:
+            index, why, ev = _core_globals_origin(
+                g, fstart, k, _canon(ops[0]), depth + 1)
+            if index is None:
+                return None, why, None
+            indexes.add(index)
+            evidence.extend(ev or [])
+            continue
+        if not mn.startswith("call"):
+            return None, (f"the slot base writer is {mn!r}, not a libctx "
+                          "data accessor call"), None
+        symbol = _s1_call_symbol(g, fstart, k)
+        leaf = _external_function_leaf(symbol)
+        if leaf not in CORE_DISPATCH_ACCESSORS:
+            return None, (f"the slot base is the result of {symbol!r}, not a "
+                          "libctx data accessor"), None
+        index = _core_index_arg(g, fstart, k)
+        if index is None:
+            return None, "the accessor's index argument is not a literal", None
+        indexes.add(index)
+        evidence.append({"accessor": leaf,
+                         "call_site": hex(_insn_pc(g, fstart, k)),
+                         "index": index})
+    if len(indexes) != 1:
+        return None, ("the slot base merges different libctx data indexes: "
+                      + ", ".join(str(i) for i in sorted(indexes))), None
+    return indexes.pop(), None, evidence
+
+
+def _insn_pc(g: "DsoGraph", fstart: int, idx: int) -> int:
+    insns = g.precision.insns_by_func.get(fstart, ())
+    return insns[idx][0] if 0 <= idx < len(insns) else 0
+
+
+def _core_cfg_preds(cfg: dict, bi: int) -> list:
+    return [b for b, ss in cfg["succ"].items() if bi in ss]
+
+
+def _core_slot_load(g: "DsoGraph", fstart: int, idx: int, reg: str):
+    """The reaching `mov disp(%base),reg` of a core-dispatch call operand.
+
+    A tail `jmp *reg` ends a block the shared CFG marks *open*, so the reaching
+    table refuses it.  A tail jump has no in-function successor; when its block
+    has exactly one predecessor and that predecessor is not itself open, the
+    value at the site is the value at the end of that predecessor, and the
+    predecessor's last write to the register is the reaching definition.  Any
+    other open shape refuses.
+    """
+    cfg = _function_cfg(g, fstart)
+    bi = cfg["block_of"].get(idx)
+    if bi is None:
+        return None, "the call is not in a basic block of this function"
+    _lo, hi = cfg["blocks"][bi]
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None:
+        if hi - 1 != idx:
+            return None, ("the operand is in an open block that is not the "
+                          "tail jump")
+        mn, rest, _ops = _insn_parts(cfg["insns"][idx][1])
+        if mn != "jmp" or not rest.startswith("*"):
+            return None, "the open block does not end in a tail jump"
+        preds = _core_cfg_preds(cfg, bi)
+        if len(preds) != 1:
+            return None, (f"the tail block has {len(preds)} predecessors; the "
+                          "operand has more than one possible origin")
+        p = preds[0]
+        if p in cfg["open_reach"]:
+            return None, "the tail block's predecessor is itself open"
+        plo, phi = cfg["blocks"][p]
+        for k in range(phi - 1, plo - 1, -1):
+            if reg in _defined_regs_at(cfg["insns"][k][1]):
+                return k, None
+        return None, "the tail block's predecessor does not define the operand"
+    if not defs or _ENTRY_DEF in defs:
+        return None, f"{reg} has an entry definition at the call"
+    if len(defs) != 1:
+        return None, (f"{reg} has {len(defs)} reaching definitions; the "
+                      "witness requires exactly one slot load")
+    return next(iter(defs)), None
+
+
+def _core_dispatch_writer(g: "DsoGraph", table: dict, field: str,
+                          function_id: str):
+    """The single source store of ``field``, bound to its dispatched id."""
+    writes, err = _external_field_writers(
+        g, table["object"], {field}, owner_tokens=table["owner_tokens"])
+    if writes is None:
+        return None, _core_dispatch_refusal("", {}, "source-scan-unavailable",
+                                            detail=err)
+    macro = [w for w in writes if w["kind"] == "macro-slot"]
+    if macro:
+        return None, _core_dispatch_refusal(
+            "", {}, "macro-expanded-slot-store-unattributed", writers=macro)
+    stores = [w for w in writes if w["kind"] == "store"]
+    if len(stores) != 1:
+        return None, _core_dispatch_refusal(
+            "", {}, "field-does-not-have-exactly-one-source-store",
+            writers=stores)
+    w = stores[0]
+    if (w["file"] != table["source"] or w["function"] != table["writer"]
+            or w["attribution"] != "owner"):
+        return None, _core_dispatch_refusal(
+            "", {}, "store-is-not-the-enumerated-writer", writer=w)
+    text, _lines, err = _external_source(g, table["source"])
+    if text is None:
+        return None, _core_dispatch_refusal("", {}, "source-unavailable",
+                                            detail=err)
+    lines = text.splitlines()
+    arm, arm_line = None, None
+    for j in range(w["line"] - 1, -1, -1):
+        m = re.search(r"(OSSL_FUNC_[A-Z0-9_]+)", lines[j])
+        if m:
+            arm, arm_line = m.group(1), j + 1
+            break
+    if arm != function_id:
+        return None, _core_dispatch_refusal(
+            "", {}, "store-is-not-under-the-documented-function-id",
+            expected=function_id, observed=arm, line=arm_line)
+    return {"file": table["source"], "line": w["line"],
+            "function": w["function"], "value": w["value"],
+            "function_id": arm, "function_id_line": arm_line}, None
+
+
+def _core_dispatch_header(g: "DsoGraph", function_id: str, number: int,
+                          lower: str):
+    """Whether the admitted header declares the id (at its documented value)
+    and its OSSL_CORE_MAKE_FUNC signature."""
+    root = _install_root(g)
+    if root is None:
+        return False, "install root unavailable"
+    path = Path(root) / CORE_DISPATCH_HEADER
+    if not path.is_file():
+        return False, f"header {CORE_DISPATCH_HEADER} is absent"
+    try:
+        text = path.read_text(errors="replace")
+    except OSError as e:
+        return False, f"cannot read {CORE_DISPATCH_HEADER}: {e}"
+    if not re.search(r"#define\s+" + re.escape(function_id) + r"\s+"
+                     + str(number) + r"\b", text):
+        return False, (f"{function_id} is not declared as {number} in the "
+                       "header")
+    if not re.search(r"OSSL_CORE_MAKE_FUNC\([^;]*\b" + re.escape(lower) + r"\s*,",
+                     text, re.S):
+        return False, (f"the header declares no OSSL_CORE_MAKE_FUNC entry for "
+                       f"{lower}")
+    return True, None
+
+
+def _core_index_binding(g: "DsoGraph", table: dict):
+    """Whether the slot index constant really is the documented literal."""
+    text, _lines, err = _external_source(g, table["index_source"])
+    if text is None:
+        return False, err
+    pat = (r"const\s+" + re.escape(table["index_const"])
+           + r"\s*:\s*c_int\s*=\s*" + str(table["index_literal"]) + r"\s*;")
+    if not re.search(pat, text):
+        return False, (f"{table['index_const']} is not declared as "
+                       f"{table['index_literal']} in {table['index_source']}")
+    return True, None
+
+
+def _cfg_dominators(g: "DsoGraph", fstart: int) -> dict:
+    """Block dominators for one function (iterative over the block CFG)."""
+    cache = getattr(g, "_e7core_dom_cache", None)
+    if cache is None:
+        cache = {}
+        g._e7core_dom_cache = cache
+    if fstart in cache:
+        return cache[fstart]
+    cfg = _function_cfg(g, fstart)
+    n = len(cfg["blocks"])
+    preds = {b: [] for b in range(n)}
+    for b, ss in cfg["succ"].items():
+        for s in ss:
+            preds[s].append(b)
+    universe = set(range(n))
+    dom = {0: {0}}
+    for b in range(1, n):
+        dom[b] = set(universe)
+    changed = True
+    while changed:
+        changed = False
+        for b in range(1, n):
+            ps = preds[b]
+            new = {b} | (set.intersection(*(dom[p] for p in ps)) if ps else set())
+            if new != dom[b]:
+                dom[b] = new
+                changed = True
+    cache[fstart] = dom
+    return dom
+
+
+def _cfg_reachable_from(cfg: dict, block: int) -> set:
+    seen = {block}
+    work = [block]
+    while work:
+        b = work.pop()
+        for s in cfg["succ"].get(b, ()):
+            if s not in seen:
+                seen.add(s)
+                work.append(s)
+    return seen
+
+
+def _core_null_guard(g: "DsoGraph", fstart: int, load_k: int,
+                     site_idx: int, reg: str):
+    """Whether a NULL test of the *loaded slot* dominates the call.
+
+    This is what turns "the only writer is the init" into "if the call
+    executes, that writer ran": the slot is an `Option<fn>`, and a NULL value
+    takes the branch that does not reach the call.  The guard block must be
+    dominated by the slot-load block (so the test really tests the loaded
+    value, not an earlier value in the same register) and must dominate the
+    call; the NULL branch target must not be able to reach the call.
+    """
+    cfg = _function_cfg(g, fstart)
+    lb = cfg["block_of"].get(load_k)
+    sb = cfg["block_of"].get(site_idx)
+    if lb is None or sb is None:
+        return False, "the slot load or the call is outside the function"
+    dom = _cfg_dominators(g, fstart)
+    for gb in sorted(dom.get(sb, ())):
+        if lb not in dom.get(gb, ()):
+            continue
+        lo, hi = cfg["blocks"][gb]
+        test_k = None
+        for k in range(lo, hi):
+            mn, _rest, ops = _insn_parts(cfg["insns"][k][1])
+            if (mn.startswith("test") and len(ops) == 2
+                    and _canon(ops[0]) == reg and _canon(ops[1]) == reg):
+                test_k = k
+                break
+            if (mn.startswith("cmp") and len(ops) == 2
+                    and ops[0] in ("$0x0", "$0") and _canon(ops[1]) == reg):
+                test_k = k
+                break
+        if test_k is None:
+            continue
+        j = None
+        for k in range(test_k + 1, hi):
+            mn, rest, _ops = _insn_parts(cfg["insns"][k][1])
+            if mn.startswith("j") and not rest.startswith("*"):
+                j = k
+                break
+            if reg in _defined_regs_at(cfg["insns"][k][1]):
+                break
+        if j is None:
+            continue
+        mn, rest, _ops = _insn_parts(cfg["insns"][j][1])
+        m = re.match(r"^([0-9a-f]+)", rest)
+        if m is None:
+            continue
+        ti = next((i for i, (a, _t) in enumerate(cfg["insns"])
+                   if a == int(m.group(1), 16)), None)
+        if ti is None:
+            continue
+        skip_block = cfg["block_of"].get(ti)
+        if skip_block is None:
+            continue
+        if sb in _cfg_reachable_from(cfg, skip_block):
+            continue
+        return True, {"guard_block": hex(cfg["insns"][lo][0]),
+                      "test": cfg["insns"][test_k][1],
+                      "test_address": hex(cfg["insns"][test_k][0]),
+                      "branch": cfg["insns"][j][1],
+                      "branch_address": hex(cfg["insns"][j][0]),
+                      "skip_target_does_not_reach_the_call": True}
+    return False, ("no dominating NULL guard whose NULL path skips the call")
+
+
+def core_dispatch_witness(g: "DsoGraph", site: dict, name: str,
+                          reachable: set | None = None):
+    """Per-call-site witness for a core-to-provider dispatch slot.
+
+    Returns ``(witness, None)``, ``(None, refusal)`` when the site's shape is
+    the one this rule describes but a fact fails, and ``(None, None)`` when the
+    site is not this shape at all (another rule may own it).
+    """
+    if site.get("kind") not in ("call", "jmp"):
+        return None, None
+    if not _has_insns(g):
+        return None, None
+    fstart = site["func"]
+    idx = _external_insn_index(g, site)
+    if idx is None:
+        return None, None
+    opnd = _site_operand(site)
+    reg = _canon(opnd)
+    if reg not in _REGS:
+        return None, None
+    load_k, why = _core_slot_load(g, fstart, idx, reg)
+    if load_k is None:
+        # A site that cannot even produce one slot load is not this shape; the
+        # other rules keep their chance.  The reason is recorded by the caller
+        # only when the base proves to be a core-dispatch object below.
+        return None, None
+    mn, _rest, ops = _insn_parts(_insn(g, fstart, load_k))
+    m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[0]) \
+        if (mn in ("mov", "movq") and len(ops) >= 2) else None
+    if m is None:
+        return None, None
+    offset = int(m.group(1), 16) if m.group(1) else 0
+    base = _canon(m.group(2))
+    index, why, accessors = _core_globals_origin(g, fstart, load_k, base)
+    if index is None:
+        return None, None
+    table = CORE_DISPATCH_TABLES.get(index)
+    if table is None:
+        return None, _core_dispatch_refusal(
+            name, site, "libctx-data-index-is-not-a-documented-core-table",
+            index=index, load=_insn(g, fstart, load_k))
+    ok, bind_why = _core_index_binding(g, table)
+    if not ok:
+        return None, _core_dispatch_refusal(
+            name, site, "slot-index-is-not-source-bound", detail=bind_why)
+    spec = table["fields"].get(offset)
+    if spec is None:
+        return None, _core_dispatch_refusal(
+            name, site, "offset-is-not-a-field-of-the-documented-table",
+            offset=hex(offset), object=table["object"])
+    field, function_id, number, lower = spec
+    header_ok, header_why = _core_dispatch_header(g, function_id, number,
+                                                  lower)
+    if not header_ok:
+        return None, _core_dispatch_refusal(
+            name, site, "function-id-is-not-in-the-admitted-header",
+            detail=header_why)
+    writer, writer_refusal = _core_dispatch_writer(
+        g, table, field, function_id)
+    if writer is None:
+        rec = dict(writer_refusal)
+        rec.update(function=name, call_site=hex(site.get("addr") or 0))
+        return None, rec
+    writer_addr = _external_function_address(g, table["writer"])
+    if writer_addr is None:
+        return None, _core_dispatch_refusal(
+            name, site, "slot-writer-is-not-an-in-image-function",
+            writer=table["writer"])
+    guarded, guard = _core_null_guard(g, fstart, load_k, idx, reg)
+    if not guarded:
+        return None, _core_dispatch_refusal(
+            name, site, "slot-load-is-not-null-guarded", detail=guard)
+    # Reachability of the writer is recorded, not gated: the NULL guard is the
+    # load-bearing fact (a non-NULL slot implies the sole writer ran).  The
+    # closure's reachable set is an under-approximation of the run-time set
+    # (a module loaded at run time is not a static root), so refusing on it
+    # would discard a proven in-flow fact.
+    writer_reachable = (None if reachable is None
+                        else writer_addr in reachable)
+    slot = f"{table['object']}.{field} (offset {offset:#x}, {function_id})"
+    witness = _external_witness(
+        ABI_CONTRACT_CORE_DISPATCH, name, site,
+        slot=slot,
+        writer=(f"{writer['file']}:{writer['line']} in {writer['function']}: "
+                f"{writer['value']}"),
+        interface=(
+            "the core-to-provider `in` OSSL_DISPATCH table of "
+            "OSSL_provider_init (include/openssl/core.h:186-195), forwarded to "
+            "OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child "
+            "(include/openssl/crypto.h:601-604); "
+            f"include/openssl/core_dispatch.h declares {function_id} and "
+            f"OSSL_CORE_MAKE_FUNC(..., {lower}, ...)"),
+        basis=(
+            "the indirect operand reads this exact field of the libctx "
+            f"data object at slot {index}, whose only in-image writer is "
+            f"{writer['function']} storing the OSSL_DISPATCH entry for "
+            f"{function_id}; the slot is NULL-tested and a NULL skips the "
+            "call, so an executed call means that writer ran; the target is "
+            "the supplying core's function and the C ABI bounds nothing"),
+        conditions={
+            "site": f"{name} {hex(site.get('addr') or 0)}",
+            "operand": opnd,
+            "slot_load": _insn(g, fstart, load_k),
+            "libctx_data_index": index,
+            "slot_object": table["object"],
+            "slot_offset": hex(offset),
+            "field": field,
+            "function_id": function_id,
+            "writer": writer,
+            "writer_address": hex(writer_addr),
+            "writer_reachable_in_closure": writer_reachable,
+            "null_guard": guard,
+            "in_flow": ("the slot is NULL-tested and a NULL skips the call, so "
+                        "if the indirect call executes at least one writer "
+                        "ran; the sole writer is the enumerated init"),
+        },
+        does_not_cover=ABI_CONTRACTS[ABI_CONTRACT_CORE_DISPATCH][
+            "does_not_cover"],
+        target_set=[],
+        base_origin={"libctx_index": index, "accessor_calls": accessors},
+        unreachable_reason=why,
+    )
+    return witness, None
 
 
 EXTERNAL_ABI_WITNESSES = (
@@ -21973,6 +22850,24 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
         if atexit_refusal:
             site["registration_atexit_refusal"] = atexit_refusal
             stats["E7_registration_atexit_refused"] += 1
+        # E7/core: a call through the core-to-provider `in` dispatch table.
+        # The witness proves the slot object (libctx data slot 17/18), the
+        # field, its single in-image writer and the documented OSSL_FUNC_* id
+        # that writer stored there.  A refusal records its own reason and
+        # leaves the site target-bounded; a site of another shape is ignored.
+        core, core_refusal = core_dispatch_witness(g, site, name, reachable)
+        if core is not None:
+            site["targets"] |= residual
+            site["class"] = ABI_CONTRACT_CORE_DISPATCH
+            site["unresolved"] = True
+            site["reason"] = ("core-dispatch ABI contract witness: "
+                              + core["slot"])
+            site["witness"] = core
+            stats["E7_core_dispatch_contract_bounded"] += 1
+            continue
+        if core_refusal:
+            site["core_dispatch_refusal"] = core_refusal
+            stats["E7_core_dispatch_refused"] += 1
         if _match(name, A1_FUNCTIONS):
             witness = contract_witness(ABI_CONTRACT_PROVIDER, g, site, name)
             if witness is not None:
@@ -30796,6 +31691,25 @@ def _pbe_outparam_self_test():
             failures.append(
                 f"e7pbe target {addr:#x}: does not match pin {leaf!r}; re-pin")
 
+    if failures:
+        # The pins are absolute addresses.  When one no longer resolves, the
+        # fixture is describing a different libcrypto, and every later control
+        # (instruction windows, GOT slot, builtin table, non-widening sites)
+        # is off by the same drift.  Report that fact and stop, instead of
+        # raising KeyError from the first window lookup.  This is a *failure*,
+        # never a skip: the PBE refusal controls did not run.
+        pinned_sha = "136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5dbe88d09a9a44"
+        observed_sha = sha256_file(dso)
+        failures.append(
+            "e7pbe controls: the fixture pins are stale for this candidate "
+            f"(pinned artefact sha {pinned_sha[:16]}..., observed {observed_sha[:16]}...); "
+            "the site, target, GOT-slot, table and instruction-window "
+            "addresses all moved, so no PBE refusal control was executed.  "
+            "Re-pin against the admitted install (this is a fixture defect, "
+            "not a witness failure)")
+        return failures, ("e7pbe controls: REFUSED (stale fixture pins; "
+                          "witness not exercised at this candidate)")
+
     def wit(addr, graph=None):
         gr = graph or g
         func = site_func[addr]
@@ -31083,6 +31997,395 @@ def _pbe_outparam_self_test():
         "slot-overlap-store as applicable and each mutation flips it to "
         "accepted; the KDF selection control distinguishes 5 from 2; the "
         "plain keygen site and all eight b65 ABI sites are unchanged")
+
+
+# --------------------------------------------------------------------------- #
+# E7/core self-test: the core-dispatch, provider-init, store-wrapper and PEM
+# register rules (AGENTS.md section 16).
+# --------------------------------------------------------------------------- #
+
+# Function leaves and the number of core-dispatch sites each must produce at
+# the admitted candidate.  Keyed to the stable function leaf, never to a VA.
+CORE_DISPATCH_EXPECTED = {
+    "evp_signature_from_algorithm": 1,
+    "construct_loader": 1,
+    "ossl_provider_find": 1,
+    "ossl_provider_free": 1,
+    "ossl_provider_up_ref": 1,
+    "ossl_provider_add_to_store": 1,
+    "provider_activate": 2,
+    "provider_deactivate": 1,
+    "provider_up_ref_intern": 1,
+    "OSSL_LIB_CTX_free": 1,
+    "evp_asym_cipher_from_algorithm": 1,
+    "evp_kem_from_algorithm": 1,
+    "evp_keyexch_from_algorithm": 1,
+    "ossl_child_provider_init": 2,
+    "provider_create_child_cb": 1,
+    "provider_remove_child_cb": 1,
+    "ossl_provider_init_as_child": 1,
+    "ossl_provider_up_ref_parent": 1,
+    "bio_core_ctrl": 1,
+    "bio_core_free": 1,
+    "bio_core_gets": 1,
+    "bio_core_puts": 1,
+    "bio_core_read_ex": 1,
+    "bio_core_write_ex": 1,
+}
+
+
+def _e7core_self_test():
+    """Positive coverage plus a load-bearing mutation for every new rule."""
+    root = Path(__file__).resolve().parents[2]
+    dso = root / "artifacts/phase2/install/lib/libcrypto.so.3"
+    install = root / "artifacts/phase2/install"
+    if not dso.is_file() or not (install / CORE_DISPATCH_HEADER).is_file():
+        return [], "e7core controls: skipped (candidate or install absent)"
+    if not (shutil.which("nm") and shutil.which("objdump")):
+        return [], "e7core controls: skipped (nm/objdump absent)"
+    failures = []
+
+    def chk(name, got, want):
+        if got != want:
+            failures.append(f"{name}: got {got!r}, want {want!r}")
+
+    class _Prec:
+        def __init__(self, insns):
+            self.insns_by_func = insns
+
+    class _Proxy:
+        """A graph view with one fact replaced, or the base graph itself."""
+
+        def __init__(self, base, *, insns=None, source_root=None,
+                     install_prefix=None):
+            self.funcs = base.funcs
+            self._base = base
+            self.start_set = base.start_set
+            self.names_at = base.names_at
+            self.dynamic_defs = dict(base.dynamic_defs)
+            self.slot_syms = base.slot_syms
+            self.sections = base.sections
+            self.source_root = (str(source_root) if source_root is not None
+                                else str(base.source_root))
+            self.install_prefix = (str(install_prefix)
+                                   if install_prefix is not None
+                                   else str(base.install_prefix))
+            self.precision = _Prec(insns if insns is not None
+                                   else base.precision.insns_by_func)
+            self._fn_cfg_cache = {}
+            self._reaching_cache = {}
+            self._e7core_dom_cache = {}
+            self._e7source_cache = {}
+
+        def __getattr__(self, name):
+            return getattr(object.__getattribute__(self, "_base"), name)
+
+    try:
+        g = DsoGraph(dso, root / "court/tmp/e7core-selftest-work")
+    except Exception as e:  # noqa: BLE001 -- a missing tool is a skip
+        return [], f"e7core controls: skipped (graph unavailable: {e})"
+    g.source_root = str(root)
+    g.install_prefix = str(install)
+    g.precision = PrecisionResolver(g)
+
+    def site(gx, fstart, addr, text):
+        return {"kind": ("jmp" if text.strip().startswith("jmp") else "call"),
+                "func": fstart, "addr": addr, "text": text,
+                "targets": set(), "unresolved": True,
+                "reason": "materialised", "class": "materialised",
+                "field_offsets": set(), "seam": None,
+                "arg_deps": set(), "arg_targets": set()}
+
+    def sites_of(gx, leaf, witness):
+        f = _external_function_address(gx, leaf)
+        out = []
+        if f is None:
+            return out
+        for a, text in gx.precision.insns_by_func.get(f, ()):
+            if not re.match(r"\s*(call|jmp)\s+\*%r", text):
+                continue
+            s = site(gx, f, a, text)
+            try:
+                w = witness(gx, s, gx.funcs.get(f, ""))
+            except Exception:  # noqa: BLE001
+                w = None
+            if isinstance(w, tuple):
+                w = None
+            if w is not None:
+                out.append((s, w))
+        return out
+
+    # ---- positive coverage ------------------------------------------------- #
+    core_sites = {}
+    for leaf, want in CORE_DISPATCH_EXPECTED.items():
+        got = sites_of(g, leaf, lambda gx, s, n: core_dispatch_witness(
+            gx, s, n, None)[0])
+        core_sites[leaf] = got
+        chk(f"e7core {leaf} site count", len(got), want)
+        for _s, w in got:
+            chk(f"e7core {leaf} class", w.get("class"),
+                ABI_CONTRACT_CORE_DISPATCH)
+            chk(f"e7core {leaf} contract_bounded",
+                w.get("contract_bounded"), True)
+    chk("e7core cohort total",
+        sum(len(v) for v in core_sites.values()), 26)
+
+    # Two additional unresolved-but-unreachable sites in the same image carry
+    # the same class; they were never in the reachable residual set and are
+    # checked here so the rule's coverage is not silently narrower.
+    for leaf in ("ossl_provider_deinit_child", "BIO_new_from_core_bio"):
+        got = sites_of(g, leaf, lambda gx, s, n: core_dispatch_witness(
+            gx, s, n, None)[0])
+        chk(f"e7core extra {leaf} site count", len(got) >= 1, True)
+
+    a_free, w_free = core_sites["ossl_provider_free"][0]
+    a_find, w_find = core_sites["ossl_provider_find"][0]
+
+    def mutate_insns(base, addr, new_text):
+        f = base["func"] if isinstance(base, dict) else base
+        insns = dict(g.precision.insns_by_func)
+        insns[f] = [(a, new_text if a == addr else t)
+                    for a, t in insns[f]]
+        return insns
+
+    def core_run(gx, s):
+        w = core_dispatch_witness(gx, dict(s), gx.funcs.get(s["func"], ""),
+                                  None)
+        return w[0], (w[1] or {}).get("reason")
+
+    # control core-offset: the load names an undeclared field offset
+    guard = w_free["conditions"]["null_guard"]
+    off_insn = next(a for a, t in g.precision.insns_by_func[a_free["func"]]
+                    if t.strip() == "mov    0x50(%rax),%rax")
+    px = _Proxy(g, insns=mutate_insns(a_free, off_insn,
+                                      "mov    0x58(%rax),%rax"))
+    got, why = core_run(px, a_free)
+    chk("e7core offset mutation refusal", (got, why),
+        (None, "offset-is-not-a-field-of-the-documented-table"))
+    chk("e7core offset restored", core_run(g, a_free)[0] is not None, True)
+
+    # control core-index: the accessor is asked for a different libctx slot
+    a32 = next(a for a, t in g.precision.insns_by_func[a_free["func"]]
+               if t.strip() == "mov    $0x12,%esi")
+    px = _Proxy(g, insns=mutate_insns(a_free, a32, "mov    $0x13,%esi"))
+    got, why = core_run(px, a_free)
+    chk("e7core index mutation refusal", (got, why),
+        (None, "libctx-data-index-is-not-a-documented-core-table"))
+    chk("e7core index restored", core_run(g, a_free)[0] is not None, True)
+
+    # control core-guard: the NULL test is replaced by a nop, so a zero slot
+    # could reach the call
+    test_addr = int(guard["test_address"], 16)
+    px = _Proxy(g, insns=mutate_insns(a_free, test_addr, "nop"))
+    got, why = core_run(px, a_free)
+    chk("e7core guard mutation refusal", (got, why),
+        (None, "slot-load-is-not-null-guarded"))
+    chk("e7core guard restored", core_run(g, a_free)[0] is not None, True)
+
+    # control core-writer-id: the writer's store sits under the wrong
+    # OSSL_FUNC_* arm
+    total_src = (root / "src/provider/child.rs").read_text()
+    td = Path(tempfile.mkdtemp(prefix="e7core-source-", dir=root / "court/tmp"))
+    try:
+        (td / "src/provider").mkdir(parents=True)
+        mutated = total_src.replace(
+            "                OSSL_FUNC_PROVIDER_FREE => {",
+            "                OSSL_FUNC_PROVIDER_UP_REF => {")
+        chk("e7core writer-id fixture applied", mutated != total_src, True)
+        (td / "src/provider/child.rs").write_text(mutated)
+        px = _Proxy(g, source_root=td)
+        got, why = core_run(px, a_free)
+        chk("e7core writer-id mutation refusal", (got, why),
+            (None, "store-is-not-under-the-documented-function-id"))
+        chk("e7core writer-id restored", core_run(g, a_free)[0] is not None,
+            True)
+    finally:
+        shutil.rmtree(td, ignore_errors=True)
+
+    # control core-second-store: a second store of the same field
+    td = Path(tempfile.mkdtemp(prefix="e7core-store-", dir=root / "court/tmp"))
+    try:
+        (td / "src/provider").mkdir(parents=True)
+        mutated = total_src.replace(
+            "pub(crate) unsafe fn ossl_provider_deinit_child(ctx: *mut c_void) {",
+            "pub(crate) unsafe fn ossl_provider_deinit_child(ctx: *mut c_void) {\n"
+            "    let mut gbl = lib_ctx_get_data(ctx, "
+            "OSSL_LIB_CTX_CHILD_PROVIDER_INDEX).cast::<ChildProvGlobals>();\n"
+            "    if !gbl.is_null() { (*gbl).c_prov_free = None; }", 1)
+        chk("e7core second-store fixture applied", mutated != total_src, True)
+        (td / "src/provider/child.rs").write_text(mutated)
+        px = _Proxy(g, source_root=td)
+        got, why = core_run(px, a_free)
+        chk("e7core second-store mutation refusal", (got, why),
+            (None, "field-does-not-have-exactly-one-source-store"))
+        chk("e7core second-store restored",
+            core_run(g, a_free)[0] is not None, True)
+    finally:
+        shutil.rmtree(td, ignore_errors=True)
+
+    # control core-header: the admitted header no longer declares the id
+    td = Path(tempfile.mkdtemp(prefix="e7core-install-", dir=root / "court/tmp"))
+    try:
+        (td / "include/openssl").mkdir(parents=True)
+        hdr = (install / CORE_DISPATCH_HEADER).read_text()
+        mutated = hdr.replace("#define OSSL_FUNC_PROVIDER_FREE 111",
+                              "#define OSSL_FUNC_PROVIDER_FREE 999")
+        chk("e7core header fixture applied", mutated != hdr, True)
+        (td / CORE_DISPATCH_HEADER).write_text(mutated)
+        px = _Proxy(g, install_prefix=td)
+        got, why = core_run(px, a_free)
+        chk("e7core header mutation refusal", (got, why),
+            (None, "function-id-is-not-in-the-admitted-header"))
+        chk("e7core header restored", core_run(g, a_free)[0] is not None, True)
+    finally:
+        shutil.rmtree(td, ignore_errors=True)
+
+    # ---- provider-init rule ------------------------------------------------ #
+    init_sites = sites_of(g, PROVIDER_INIT_SLOT_FUNCTION,
+                          lambda gx, s, n: provider_init_slot_witness(gx, s, n))
+    chk("e7init site count", len(init_sites), 1)
+    if init_sites:
+        s_init, w_init = init_sites[0]
+        chk("e7init class", w_init.get("class"), ABI_CONTRACT_PROVIDER)
+        store_addr = next(
+            a for a, t in g.precision.insns_by_func[s_init["func"]]
+            if t.strip() == "mov    %rax,0x40(%rbx)")
+        px = _Proxy(g, insns=mutate_insns(
+            s_init, store_addr, "mov    %rax,0x48(%rbx)"))
+        s_copy = dict(s_init)
+        got = provider_init_slot_witness(px, s_copy, px.funcs[s_init["func"]])
+        chk("e7init store-offset mutation refusal", (got,
+            (s_copy.get("provider_init_slot_refusal") or {}).get("reason")),
+            (None, "module-bind-result-is-not-stored-into-the-field"))
+        chk("e7init store-offset restored",
+            provider_init_slot_witness(g, dict(s_init),
+                                       g.funcs[s_init["func"]]) is not None,
+            True)
+        td = Path(tempfile.mkdtemp(prefix="e7init-source-",
+                                   dir=root / "court/tmp"))
+        try:
+            (td / "src/provider").mkdir(parents=True)
+            for name in ("mod.rs", "init.rs"):
+                shutil.copy(root / "src/provider" / name, td / "src/provider" / name)
+            init_src = (td / "src/provider/init.rs").read_text()
+            mutated = init_src + (
+                "\n\npub(crate) unsafe fn e7core_fixture_extra_writer("
+                "p: *mut OsslProvider) {\n"
+                "    (*p).init_function = None;\n}\n")
+            chk("e7init extra-writer fixture applied",
+                mutated != init_src, True)
+            (td / "src/provider/init.rs").write_text(mutated)
+            px = _Proxy(g, source_root=td)
+            s_copy = dict(s_init)
+            got = provider_init_slot_witness(px, s_copy,
+                                             px.funcs[s_init["func"]])
+            chk("e7init extra-writer mutation refusal", (got,
+                (s_copy.get("provider_init_slot_refusal") or {}).get("reason")),
+                (None, "field-has-a-store-outside-the-enumerated-writers"))
+            chk("e7init extra-writer restored",
+                provider_init_slot_witness(g, dict(s_init),
+                                           g.funcs[s_init["func"]]) is not None,
+                True)
+        finally:
+            shutil.rmtree(td, ignore_errors=True)
+
+    # ---- store-loader wrapper rule ---------------------------------------- #
+    store_sites = sites_of(g, STORE_LOADER_FUNCTION,
+                           lambda gx, s, n: (store_loader_provider_witness(
+                               gx, s, n) or (None, None))[1])
+    prof_sites = [(s, w) for s, w in store_sites
+                  if (w or {}).get("scope") == "store-loader-p_close"]
+    chk("e7store provider p_close site count", len(prof_sites), 1)
+    if prof_sites:
+        s_st, w_st = prof_sites[0]
+        meth = (root / STORE_LOADER_METH_SOURCE).read_text()
+        td = Path(tempfile.mkdtemp(prefix="e7store-source-",
+                                   dir=root / "court/tmp"))
+        try:
+            (td / "src/store").mkdir(parents=True)
+            for rel in ("mod.rs", "store_register.rs", "store_lib.rs"):
+                shutil.copy(root / "src/store" / rel, td / "src/store" / rel)
+            mutated = meth.replace(
+                "    let method = unsafe { inner_loader_fetch(&mut methdata, scheme, properties) };",
+                "    let method: *mut OsslStoreLoader = ptr::null_mut();", 1)
+            chk("e7store wrapper fixture applied", mutated != meth, True)
+            (td / STORE_LOADER_METH_SOURCE).write_text(mutated)
+            px = _Proxy(g, source_root=td)
+            got = store_loader_provider_witness(px, dict(s_st),
+                                                px.funcs[s_st["func"]])
+            chk("e7store wrapper mutation refusal",
+                ((got or (None, None, {}))[2] or {}).get("reason"),
+                "loader-fetch-wrapper-is-not-a-transparent-forwarder")
+            chk("e7store wrapper restored",
+                (store_loader_provider_witness(g, dict(s_st),
+                                               g.funcs[s_st["func"]]) or
+                 (None, None, {}))[1] is not None, True)
+        finally:
+            shutil.rmtree(td, ignore_errors=True)
+
+    # ---- PEM register-agnostic rule --------------------------------------- #
+    pem_sites = sites_of(g, PEM_FUNCTION,
+                         lambda gx, s, n: (pem_password_default_witness(
+                             gx, s, n) or (None, None))[1])
+    chk("e7pemreg site count", len(pem_sites), 1)
+    if pem_sites:
+        s_pem, w_pem = pem_sites[0]
+        chk("e7pemreg class", w_pem.get("class"),
+            ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT)
+        chk("e7pemreg operand is register-derived",
+            w_pem.get("operand", {}).get("reg"),
+            (w_pem.get("conditions", {}).get(
+                "operand_is_the_cb_register") or {}).get("register"))
+        # control: the NULL-selected default is not an exported target
+        px = _Proxy(g)
+        px.dynamic_defs.pop(PEM_DEFAULT, None)
+        got = pem_password_default_witness(px, dict(s_pem),
+                                           px.funcs[s_pem["func"]])
+        chk("e7pemreg default-target mutation refusal",
+            ((got or (None, None, {}))[2] or {}).get("reason"),
+            "default-target-is-missing-or-not-in-image")
+        chk("e7pemreg default-target restored",
+            (pem_password_default_witness(g, dict(s_pem),
+                                          g.funcs[s_pem["func"]]) or
+             (None, None, {}))[1] is not None, True)
+        copy_addr = next(a for a, t in g.precision.insns_by_func[s_pem["func"]]
+                         if t.strip() == "mov    %rcx,%rbx")
+        px = _Proxy(g, insns=mutate_insns(s_pem, copy_addr,
+                                          "mov    %rdx,%rbx"))
+        got = pem_password_default_witness(px, dict(s_pem),
+                                           px.funcs[s_pem["func"]])
+        chk("e7pemreg copy-source mutation refusal",
+            ((got or (None, None, {}))[2] or {}).get("reason"),
+            "callback-source-definition-set-is-not-enumerated")
+        chk("e7pemreg copy-source restored",
+            (pem_password_default_witness(g, dict(s_pem),
+                                          g.funcs[s_pem["func"]]) or
+             (None, None, {}))[1] is not None, True)
+        # control: the operand is not a register at all
+        px = _Proxy(g, insns=mutate_insns(s_pem, s_pem["addr"],
+                                          "call   *0x10(%rsp)"))
+        s_copy = dict(s_pem)
+        s_copy["text"] = "call   *0x10(%rsp)"
+        got = pem_password_default_witness(px, s_copy,
+                                           px.funcs[s_pem["func"]])
+        chk("e7pemreg non-register-operand mutation refusal",
+            ((got or (None, None, {}))[2] or {}).get("reason"),
+            "operand-is-not-a-callback-register")
+        chk("e7pemreg non-register-operand restored",
+            (pem_password_default_witness(g, dict(s_pem),
+                                          g.funcs[s_pem["func"]]) or
+             (None, None, {}))[1] is not None, True)
+
+    return failures, (
+        "e7core controls: 26 cohort sites across 24 functions resolve to "
+        "ABI_CONTRACT_CORE_DISPATCH; two further unreachable sites carry the "
+        "same class; offset, libctx-index, writer-id, second-source-store, "
+        "header-id and NULL-guard mutations each refuse and are restored; "
+        "the provider-init rule refuses a store-offset and an extra-writer "
+        "mutation and is restored; the store-loader wrapper refuses a "
+        "non-forwarding source and is restored; the register-agnostic PEM "
+        "witness refuses a wrong-default-symbol and a wrong-copy-source "
+        "mutation and is restored")
 
 
 def self_test() -> int:
@@ -35840,6 +37143,10 @@ def self_test() -> int:
     _e7pbe_failures, _e7pbe_line = _pbe_outparam_self_test()
     failures.extend(_e7pbe_failures)
     print(f"[consumer-closure] {_e7pbe_line}")
+
+    _e7core_failures, _e7core_line = _e7core_self_test()
+    failures.extend(_e7core_failures)
+    print(f"[consumer-closure] {_e7core_line}")
 
     if failures:
         print("[consumer-closure] SELF-TEST FAILED")
