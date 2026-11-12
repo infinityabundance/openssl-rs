@@ -33,6 +33,13 @@
     "sshd_sha256": "ed0c7aa884225eb4eac740450e6d27dd7e572db9bbc22949a2b309762cb0d185"
   },
   "scope": "all 18 reachable production unsafe-fn sites in src/evp/legacy_sha.rs at their S'' coordinates: five initialisers repaired and discharged, thirteen update/final/ctrl callbacks retained BLOCKED",
+  "coordinate_review_2026_11_12": {
+    "subject": "B67-G6 alleged coordinate drift",
+    "finding": "NOT REPRODUCED; no coordinate was changed.",
+    "identity": "S'' = this receipt's own file_blob_sha256 a25d3a49b527893657bbbfe788e24c783fd06cf74de3908497aed31105fdcb80 (the SHA-256 of src/evp/legacy_sha.rs at 5163f564f, the candidate whose libcrypto/libssl/legacy/openssl/ssh/sshd hashes this receipt records)",
+    "detail": "At S'' the eight coordinates B67-G6 names are the correct definitions: sha256_update 360, sha256_final 366, sha384_update 396, sha384_final 402, sha512_update 432, sha512_final 438, sha512_224_int_final 471, sha512_256_int_final 501. B67-G6 compared against base_commit bcafae7dc, whose sha256_update is 342; that base commit is not this receipt's candidate identity. Correcting the eight to the base-commit lines would have made them wrong at S''.",
+    "disposition": "B67-G6 is a false positive. See atlas-refresh/boundary-sweep-B72.json#/receipt_integrity_findings[B72-F1]."
+  },
   "method": "the defect was confirmed by the v1i probe (fresh EVP_MD_CTX, md_data NULL, SIGSEGV in the unguarded sha256_init child). Each initialiser now calls init_md_data and answers 0 when no writable block exists; valid inputs are unchanged. The five sites are contracted and therefore leave the uncontracted-operation census (production blockers 325 -> 320).",
   "file_summary": [
     {
