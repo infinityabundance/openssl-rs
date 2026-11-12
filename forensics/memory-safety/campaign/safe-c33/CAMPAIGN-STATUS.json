@@ -1012,6 +1012,7 @@
    "base_head": "a736c4ccf",
    "source_state": "committed",
    "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+   "adjudicated": true,
    "discharged_boundaries": [
     "B49-I2R-001",
     "B49-I2R-002",

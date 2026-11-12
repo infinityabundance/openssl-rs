@@ -3283,21 +3283,16 @@
     "verdict": "DISCHARGE",
     "applied": true,
     "date": "2026-11-10",
-    "decisive_reason": "The discharge is false for two of the 36 sites. sha1_int_ctrl and shake_ctrl validate NULL but not block type/size, and an exported path lets a C caller supply an undersized block, turning them into out-of-bounds writes. That is an unchecked-precondition defect of the same class as SSL_CONF, and it is reachable, so the batch stops.",
+    "operative_review_history_entry": "review_history[4]",
+    "decisive_reason": "Operative verdict: DISCHARGE at S' = cdaf16816 (evidence commit 77e1a3024), recorded in review_history[4]. The four prior REJECTs each named a real defect and all were repaired and independently re-verified; 76 of the receipt's 77 boundaries are SAFETY_DISCHARGED and B48-RC2-001 remains BLOCKED. The earlier decisive_reason, failing_checks and prohibitions are historical, are preserved verbatim in review_history[0..3], and are superseded by this entry; they are NOT the operative verdict.",
     "passing_checks": [
-      "scope exactness: 36/36 dispositions parse to one file and one line, and the union equals the 36 BLOCKED EVP_PKEY_PROVIDER ids for those files",
-      "four sampled update/final guards refuse before the first dereference, are side-effect free, retryable, and do not change the value returned for a valid call",
-      "the sha1_update canary is mutation-sensitive (disabling the refusal fails the test at legacy_sha.rs:1108)"
+      "76 of 77 boundaries applied as SAFETY_DISCHARGED; B48-RC2-001 retained BLOCKED",
+      "13 files_sha256 verified against S' = cdaf16816",
+      "all substantive evidence accepted by the independent adjudicator: 76 discharged rows, every one load-bearing, coordinates verified, six previously-masked setters now mutation-proven"
     ],
-    "failing_checks": {
-      "precondition_established": "FAIL: the dispatch guarantees only liveness; the block precondition is carried by the callback, and for ctrl it is not established at all",
-      "guard_correctness": "FAIL: sha1_int_ctrl and shake_ctrl are NULL-only guards over an undersized-block path",
-      "contract_truth": "FAIL: sha1_int_ctrl's 'imposes no writable-block precondition' is false; the defect_class.extension claim is false for it and shake_ctrl; blake2b_int_update's 'without touching either pointer' overstates",
-      "receipt_integrity": "FAIL: hidden_obligations 0, safe_callers_can_cause_ub false, and two per-site claims contradicted the reachable OOB; coordinates are census-drifted against current source"
-    },
     "prohibition": [
-      "Do not apply B48. All 36 sites stay BLOCKED and EVP_PKEY_PROVIDER stays OWNERSHIP_RECONSTRUCTED.",
-      "Do not reclassify the OOB write as an acceptable residual; fix the two ctrl guards or keep the sites blocked."
+      "Do not apply B48-RC2-001; it remains BLOCKED.",
+      "Do not read review_history[0..3] as the operative verdict: those REJECTs are dated, preserved unchanged, and superseded by review_history[4]."
     ]
   },
   "repair_for_review": {
@@ -3305,9 +3300,35 @@
     "state": "REPAIRED, NOT APPLIED",
     "what_changed": "The candidate now names S' = cdaf16816 (the commit that contains the test repair); the 13 files_sha256 describe that tree and were re-verified against it.",
     "review_verdict_retained": "REJECT",
-    "next": "independent re-review against candidate.files_sha256; CAMPAIGN-STATUS.json untouched and closure not run"
+    "next": "independent re-review against candidate.files_sha256; CAMPAIGN-STATUS.json untouched and closure not run",
+    "historical": true,
+    "superseded_by": "review (2026-11-10, DISCHARGE, applied, S' = cdaf16816; review_history[4])"
   },
   "review_history": [
+    {
+      "reviewer": "independent adversarial reviewer (not the author)",
+      "date": "2026-10-30",
+      "verdict": "REJECT",
+      "applied": false,
+      "decisive_reason": "The discharge is false for two of the 36 sites. sha1_int_ctrl and shake_ctrl validate NULL but not block type/size, and an exported path lets a C caller supply an undersized block, turning them into out-of-bounds writes. That is an unchecked-precondition defect of the same class as SSL_CONF, and it is reachable, so the batch stops.",
+      "passing_checks": [
+        "scope exactness: 36/36 dispositions parse to one file and one line, and the union equals the 36 BLOCKED EVP_PKEY_PROVIDER ids for those files",
+        "four sampled update/final guards refuse before the first dereference, are side-effect free, retryable, and do not change the value returned for a valid call",
+        "the sha1_update canary is mutation-sensitive (disabling the refusal fails the test at legacy_sha.rs:1108)"
+      ],
+      "failing_checks": {
+        "precondition_established": "FAIL: the dispatch guarantees only liveness; the block precondition is carried by the callback, and for ctrl it is not established at all",
+        "guard_correctness": "FAIL: sha1_int_ctrl and shake_ctrl are NULL-only guards over an undersized-block path",
+        "contract_truth": "FAIL: sha1_int_ctrl's 'imposes no writable-block precondition' is false; the defect_class.extension claim is false for it and shake_ctrl; blake2b_int_update's 'without touching either pointer' overstates",
+        "receipt_integrity": "FAIL: hidden_obligations 0, safe_callers_can_cause_ub false, and two per-site claims contradicted the reachable OOB; coordinates are census-drifted against current source"
+      },
+      "prohibition": [
+        "Do not apply B48. All 36 sites stay BLOCKED and EVP_PKEY_PROVIDER stays OWNERSHIP_RECONSTRUCTED.",
+        "Do not reclassify the OOB write as an acceptable residual; fix the two ctrl guards or keep the sites blocked."
+      ],
+      "superseded": true,
+      "superseded_by": "review_history[4] (2026-11-10, DISCHARGE, applied, source cdaf16816)"
+    },
     {
       "reviewer": "independent adversarial reviewer (re-review of the repaired surface)",
       "date": "2026-10-30",
@@ -3330,7 +3351,45 @@
       "prohibition": [
         "Do not apply B48. All sites stay BLOCKED.",
         "Do not fix this by deleting the vacuous tests; install the callbacks and make them exercise the guards."
-      ]
+      ],
+      "superseded": true,
+      "superseded_by": "review_history[4] (2026-11-10, DISCHARGE, applied, source cdaf16816)"
+    },
+    {
+      "reviewer": "independent adversarial reviewer (re-review of the repaired surface)",
+      "date": "2026-11-10",
+      "verdict": "REJECT",
+      "applied": false,
+      "source": "d45c7eed2",
+      "provenance": "atlas-refresh/B48-rereview-2026-11-10.md (verbatim excerpts; this rejection was recorded in that document, not previously in this receipt)",
+      "decisive_reason": "Condition 3 of the discharge — *every guard has a load-bearing mutation test* — fails.",
+      "required_work_before_reapplication": [
+        "Add a test in `src/evp/legacy_sha3.rs` + `legacy_digest_callback_surface.rs` that builds a method with `app_datasize >= size_of::<KeccakCtx>()` and `result_size` of `0` and `-1`, drives `sha3_int_init`/`shake_init`/`sha3_int_final` through the exported getters, asserts `0` and an unchanged block, and **fails if `legacy_sha3.rs:162` is deleted**.",
+        "Add the analogous targeted test for the negative-`ctx_size` branch (`legacy_sha3.rs:156`, `legacy_sha.rs:157`), noting it is reachable only through a hand-built context.",
+        "Add a `const` assertion that every owner table passed to `init_md_data` / `init_keccak` has `ctx_size == 0`, since the owner arm bypasses the extent check.",
+        "Raise the `EVP_ORIG_GLOBAL` mutation as its own boundary and either add an origin check in `EVP_MD_meth_set_app_datasize` or re-justify the `Sync` claim in light of a writer existing."
+      ],
+      "prohibition_note": "The review states required work rather than a prohibition; the four items above are the verbatim requirements of its 'Required work before re-application (ordered)' section.",
+      "superseded": true,
+      "superseded_by": "review_history[4] (2026-11-10, DISCHARGE, applied, source cdaf16816)"
+    },
+    {
+      "reviewer": "independent adjudicator (identity review; not the author)",
+      "date": "2026-11-10",
+      "verdict": "REJECT",
+      "applied": false,
+      "sources": [
+        "5ff1257a9",
+        "77e1a3024"
+      ],
+      "provenance": "commit messages 5ff1257a9 ('evidence: pin the B48 receipt to S' = cdaf16816') and 77e1a3024 ('evidence: correct B48 identity statements to name S' = cdaf16816'); this rejection was recorded in those commits, not previously in this receipt",
+      "decisive_reason": "The independent adjudicator accepted all substantive evidence (76 discharged rows, every one load-bearing, coordinates verified, six previously-masked setters now mutation-proven) and blocked only on identity drift inside the receipt. Three statements still named 7e235f09d while the recorded hashes describe cdaf16816 -- and demonstrably do not describe 7e235f09d (git show 7e235f09d:src/evp/digest.rs is eb475905..., the receipt records e7b4c30...).",
+      "prohibition": [
+        "Verdict stays REJECT, applied false; the ledger remains untouched at 157/221/0. Re-application still requires a fresh independent adjudication of S'.",
+        "Verdict stays REJECT and applied stays false -- re-application awaits the adjudication of this state."
+      ],
+      "superseded": true,
+      "superseded_by": "review_history[4] (2026-11-10, DISCHARGE, applied, source cdaf16816)"
     },
     {
       "date": "2026-11-10",
@@ -3338,6 +3397,8 @@
       "applied": true,
       "source": "cdaf16816",
       "evidence_commit": "77e1a3024",
+      "operative": true,
+      "supersedes": "review_history[0..3]",
       "basis": "Fifth adjudication, first DISCHARGE. The four prior REJECTs each named a real defect: undersized block via the exported path; three vacuous surface tests; an unguarded global write in set_app_datasize; nine further ungated setters; six gates not load-bearing plus 38 stale coordinates and a false candidate identity; then identity statements naming the wrong commit. All were repaired and independently re-verified. B48-RC2-001 remains BLOCKED."
     }
   ],

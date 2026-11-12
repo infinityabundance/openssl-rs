@@ -1876,7 +1876,19 @@
    "verdict": "UNAPPLIED",
    "applied": false,
    "date": "2026-11-11",
-   "prohibition": "Do not apply these dispositions to CAMPAIGN-STATUS.json or run the closure against them in this subphase."
+   "prohibition": "Do not apply these dispositions to CAMPAIGN-STATUS.json or run the closure against them in this subphase.",
+   "superseded": true,
+   "superseded_by": "review_history[1] (APPLIED, 2026-11-11, commit 7e8e11879)"
+  },
+  {
+   "reviewer": "orchestrating agent (ledger application record; not the author of the sweep)",
+   "verdict": "APPLIED",
+   "applied": true,
+   "date": "2026-11-11",
+   "commit": "7e8e11879",
+   "subject": "ledger: discharge 30 slh_dsa method-table sites -> BLOCKED 135 -> 105",
+   "basis": "B53 was applied in commit 7e8e11879 (2026-11-11). The same commit adds this receipt, whose top-level applied is true and whose review.state is adjudicated-fast (DISCHARGE 30/30, with the mutation-proven ADRS canary every_adrs_writer_stays_inside_the_32_byte_blob); CAMPAIGN-STATUS.json#/scoped_boundary_discharges carries receipt boundary-sweep-B53 with adjudicated: true and all 30 boundaries; the commit records DISCHARGED 189 -> 219 and BLOCKED 135 -> 105 with no other obligation changing. The 30 discharge rows are live in evidence/closure-ssh-b58.json (305/18/0), closure-ssh-b59.json (321/2/0), closure-ssh-b60.json and closure-ssh-b61.json (323/0/0), and in their sshd twins. The earlier UNAPPLIED entry was written before adjudication; it is preserved unchanged above, dated, and marked superseded by this entry rather than deleted.",
+   "supersedes": "review_history[0] (UNAPPLIED, 2026-11-11)"
   }
  ]
 }
