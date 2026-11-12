@@ -1,0 +1,339 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/freeze/v1",
+ "candidate_tag": "b58",
+ "generated_utc": "2026-11-11T22:35:20Z",
+ "source": {
+  "head": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+  "head_subject": "analysis(e7): fix the cfg(test) item extent -> element 7 PASS, and say why",
+  "branch": "main",
+  "tree": "26f02df16ca5ed5a2a291a9d7ed310c74a27b975",
+  "crate_version": "0.0.46",
+  "src_rs_files": 878,
+  "src_content_sha256": "2290c59c0ec5a5ba69b8d6f7ff38bef68eb727f0c6013d15630fa5e04de6293e",
+  "src_content_hash_rule": "sha256('openssl-rs/src-rs/v1\\0' + sorted relpath\\0bytes\\0)",
+  "source_tree_digest": {
+   "count": 888,
+   "sha256": "af8e60feb0d208a240a52b9d538852bb668f29a8b45005ee473f877672f526c4",
+   "rule": "sha256 over canonical JSON of sorted [relpath,size,sha256] for src/, Cargo.toml, Cargo.lock, build.rs (forensics/tools/phase7_courts.py::_source_tree_digest)"
+  }
+ },
+ "tracked_tree_clean": false,
+ "tracked_tree": {
+  "clean": false,
+  "build_relevant_inputs_clean": true,
+  "modified_paths": [
+   "rtifacts/phase2/install/bin/openssl",
+   "artifacts/phase2/install/lib/libcrypto.a",
+   "artifacts/phase2/install/lib/libcrypto.so",
+   "artifacts/phase2/install/lib/libcrypto.so.3",
+   "artifacts/phase2/install/lib/libssl.a",
+   "artifacts/phase2/install/lib/libssl.so",
+   "artifacts/phase2/install/lib/libssl.so.3",
+   "artifacts/phase2/install/lib/ossl-modules/legacy.so",
+   "artifacts/phase2/openssl",
+   "forensics/atlas/implemented-surface.json"
+  ],
+  "note": "the only tracked modifications are the rebuild outputs of S (the install's artefacts, artifacts/phase2/openssl and forensics/atlas/implemented-surface.json); src/, Cargo.toml, Cargo.lock, build.rs and rust-toolchain.toml are unmodified, so the working-tree bytes hashed by the census are the HEAD blobs"
+ },
+ "artefacts": {
+  "install_prefix": "court/freeze-b58/install",
+  "install_prefix_basis": "build_phase2.sh rebuilt artifacts/phase2/install from S; that tree was copied to court/freeze-b58/install and the consumers were relinked against, and resolve, this copy (ldd shows libcrypto.so.3 => /work/court/freeze-b58/install/lib/libcrypto.so.3)",
+  "libcrypto.so.3": {
+   "path": "court/freeze-b58/install/lib/libcrypto.so.3",
+   "sha256": "f3061a4fccdf96370e8c0e41891555f76f0e1612bd402d34a49ece1ae555a7ec",
+   "size": 16874864
+  },
+  "libssl.so.3": {
+   "path": "court/freeze-b58/install/lib/libssl.so.3",
+   "sha256": "906ca753e14be84667cb6f8d700df2659ff99f8db49e9b85504530cb734a8ad5",
+   "size": 16583840
+  },
+  "libcrypto.a": {
+   "path": "court/freeze-b58/install/lib/libcrypto.a",
+   "sha256": "92531e5ed935bfce20d58cae5061e1553bece2b26a5689eb2ae44653c482f5a8",
+   "size": 44447714
+  },
+  "libssl.a": {
+   "path": "court/freeze-b58/install/lib/libssl.a",
+   "sha256": "508a70bd4918b68311b8ffe3dbf4c7b5de7de4e7c6ab3b9332cc1877576a0f51",
+   "size": 44448266
+  },
+  "legacy.so": {
+   "path": "court/freeze-b58/install/lib/ossl-modules/legacy.so",
+   "sha256": "e7c3572e25ffd2886e8706b0556b69d5c5fd6faf77174e4549c188c5a948623c",
+   "size": 16546752
+  },
+  "openssl": {
+   "path": "court/freeze-b58/install/bin/openssl",
+   "sha256": "21114f392d839286728e877f4a30ede8ec3fc1919044202cdd24970c3b9ecd6b",
+   "size": 12385360
+  },
+  "ssh": {
+   "path": "court/tmp/openssh-closure/client-b58/openssh-9.9p1/ssh",
+   "sha256": "77975f469c9409ac43a0213ae9f0530488d28a343c6fb78f94e34625efa543b7",
+   "size": 3401744
+  },
+  "sshd": {
+   "path": "court/tmp/openssh-closure/server-b58/openssh-9.9p1/sshd",
+   "sha256": "11a41af8d5cff2e9dc693ae43b082a28134fff327bf271b671566b418bcc4a0d",
+   "size": 1763248
+  },
+  "sshd_session": {
+   "path": "court/tmp/openssh-closure/server-b58/openssh-9.9p1/sshd-session",
+   "sha256": "b70d81bab5c2d5abce2a6dc6e629a18cf0e1cb6ddd25fc70cbdd28b0d3b66ced",
+   "size": 3594840
+  },
+  "resolved_libcrypto_sha256": "f3061a4fccdf96370e8c0e41891555f76f0e1612bd402d34a49ece1ae555a7ec",
+  "consumer_source": "OpenSSH 9.9p1, pinned tarball court/tmp/openssh-closure/openssh-9.9p1.tar.gz"
+ },
+ "build": {
+  "recipe": "bash forensics/tools/build_phase2.sh in the court container with CARGO_BUILD_JOBS=4",
+  "log": {
+   "path": "court/freeze-b58/build-b58.log",
+   "sha256": "e47e5171492e2ccabe35176c4d87635f8116b8a2356d5415e11aca4eadc32367",
+   "size": 12933
+  },
+  "phase2_courts_all_pass": true,
+  "phase2_courts_note": "the log ends '-> artifacts/phase2/COURTS.json all_pass=True' (11 ABI courts)",
+  "openssh_relink_script": {
+   "path": "court/freeze-b58/build-openssh-b58.sh",
+   "sha256": "6a2dac9628011229d2541569af938a349296a90166828e1c7812346408ebb581",
+   "size": 3093
+  },
+  "openssh_timings": {
+   "path": "court/freeze-b58/openssh-build-timings.json",
+   "sha256": "4dd215289b3813f43652ebb6b4b4e5f0bdf0c1357b1ffd2c9f5ed5b7e2d05c6c",
+   "size": 327
+  },
+  "rebuilt_twice": false,
+  "reproducibility": "NOT_RUN (a single build of S)"
+ },
+ "census": {
+  "path": "court/freeze-b58/census-b58.json",
+  "sha256": "7dc8c19deceb664334c799cab130cb875b2608e2ab70b705d307f7773cd9180c",
+  "bytes": 13443756,
+  "source_head": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+  "compiler_input": {
+   "path": "court/freeze-b58/clippy-b58.jsonl",
+   "sha256": "060510e2f5b72fce1f63c4c7385b6c65dc49d0b90f7a0832cfe0374598b74b3c",
+   "size": 278656711
+  },
+  "compiler_input_stderr": {
+   "path": "court/freeze-b58/clippy-b58.err",
+   "sha256": "18c24a99c8c634a28cebe990ef56b25ce5ee2c44e7a14382485dfe6da9e68060",
+   "size": 113
+  },
+  "capture_script": {
+   "path": "court/freeze-b58/census-clippy-b58.sh",
+   "sha256": "8dd208c5e5b8d739e1121172b968b4976121d455f4c91d7a0b2eefc9a8828899",
+   "size": 908
+  },
+  "command": "python3 forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1_census.py --root /work --compiler-json court/freeze-b58/clippy-b58.jsonl --delta-vs court/freeze-311/census-311.json --out court/freeze-b58/census-b58.json",
+  "reconciliation_by_kind": {
+   "UNSAFE_EXTERN_BLOCK": {
+    "compiler_unique": 9,
+    "lexical_all_partitions": 9
+   },
+   "UNSAFE_FN_DEF": {
+    "compiler_unique": 13488,
+    "lexical_all_partitions": 13408
+   },
+   "UNSAFE_TRAIT": {
+    "compiler_unique": 9,
+    "lexical_all_partitions": 9
+   },
+   "UNSAFE_BLOCK": {
+    "compiler_unique": 47695,
+    "lexical_all_partitions": 47766
+   },
+   "UNSAFE_IMPL": {
+    "compiler_unique": 336,
+    "lexical_all_partitions": 336
+   }
+  },
+  "files_with_kind_mismatch": 35,
+  "operation_counts": {
+   "production_blockers": 100,
+   "test_only_blockers": 215,
+   "allocator_seam_blockers": 0,
+   "total_blockers": 315
+  },
+  "partition": {
+   "ZERO_UNSAFE": 92,
+   "BOUNDARY_COVERED": 18,
+   "PARTIAL": 761,
+   "TEST_ONLY": 6
+  },
+  "delta_vs": {
+   "path": "court/freeze-311/census-311.json",
+   "source_head": "6eec8a175742d72bf7691e0eb13d4d15e2dbf40c",
+   "files_added": 0,
+   "files_removed": 0,
+   "classification_change_count": 24
+  }
+ },
+ "closures": {
+  "ssh": {
+   "receipt": "evidence/closure-ssh-b58.json",
+   "sha256": "e8932799d502bdd668109597537cce8610911a4e400b38c2f55b929b7c6a7176",
+   "bytes": 11319814,
+   "artifact": "court/tmp/openssh-closure/client-b58/openssh-9.9p1/ssh",
+   "artifact_sha256": "77975f469c9409ac43a0213ae9f0530488d28a343c6fb78f94e34625efa543b7",
+   "counts": {
+    "reachable_files": 627,
+    "reachable_production_obligations": 323,
+    "DISCHARGED": 175,
+    "BLOCKED": 148,
+    "UNKNOWN": 0,
+    "v1_production_operations_total": 100,
+    "v1_uncontracted_operations_total": 315,
+    "carried_forward": 151,
+    "carried_forward_removed": 55,
+    "stale_discharge_rejections": 0
+   },
+   "by_mechanism": {
+    "ASN1_OCSP": 1,
+    "BIO": 2,
+    "C_ABI_CONTRACT": 19,
+    "EVP_PKEY_PROVIDER": 116,
+    "RAND_CMS_STORE_KEYFMT": 45,
+    "RUNTIME_CONCURRENCY": 4,
+    "SSL_SESSION": 14,
+    "X509_VERIFY_POLICY": 122
+   },
+   "verdict": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "refusals": [],
+   "element_7": {
+    "established": false,
+    "status": "FAIL",
+    "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+    "reachable_unresolved_sites": 156,
+    "target_bounded_unresolved_sites": 78,
+    "contract_bounded_sites": 78,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_PROVIDER": 12
+    },
+    "unclassified_reachable_sites": 0,
+    "target_sets_remain_unbounded": true,
+    "why": "78 reachable unresolved site(s) are not contract-bounded, and/or an unclassified site is reachable"
+   }
+  },
+  "sshd": {
+   "receipt": "evidence/closure-sshd-b58.json",
+   "sha256": "209e6f55d78769bb5668675594bf6d3c03dd8e725c9d576f8cf040bdc093fc53",
+   "bytes": 11132070,
+   "artifact": "court/tmp/openssh-closure/server-b58/openssh-9.9p1/sshd",
+   "artifact_sha256": "11a41af8d5cff2e9dc693ae43b082a28134fff327bf271b671566b418bcc4a0d",
+   "counts": {
+    "reachable_files": 626,
+    "reachable_production_obligations": 323,
+    "DISCHARGED": 175,
+    "BLOCKED": 148,
+    "UNKNOWN": 0,
+    "v1_production_operations_total": 100,
+    "v1_uncontracted_operations_total": 315,
+    "carried_forward": 151,
+    "carried_forward_removed": 55,
+    "stale_discharge_rejections": 0
+   },
+   "by_mechanism": {
+    "ASN1_OCSP": 1,
+    "BIO": 2,
+    "C_ABI_CONTRACT": 19,
+    "EVP_PKEY_PROVIDER": 116,
+    "RAND_CMS_STORE_KEYFMT": 45,
+    "RUNTIME_CONCURRENCY": 4,
+    "SSL_SESSION": 14,
+    "X509_VERIFY_POLICY": 122
+   },
+   "verdict": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "refusals": [],
+   "element_7": {
+    "established": false,
+    "status": "FAIL",
+    "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+    "reachable_unresolved_sites": 156,
+    "target_bounded_unresolved_sites": 78,
+    "contract_bounded_sites": 78,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_PROVIDER": 12
+    },
+    "unclassified_reachable_sites": 0,
+    "target_sets_remain_unbounded": true,
+    "why": "78 reachable unresolved site(s) are not contract-bounded, and/or an unclassified site is reachable"
+   }
+  },
+  "run_script": {
+   "path": "court/freeze-b58/run_closure_b58.sh",
+   "sha256": "71b0628aeafa5ef03788ee97e5b26d99d02ef1914541bea42e0b60a33a568022",
+   "size": 1483
+  },
+  "reconcile": {
+   "path": "court/freeze-b58/reconcile-b58.json",
+   "sha256": "f248daf886a530fc4c1eddd2d4cb85ba7cee6b2e489fec542ffdf649229d782c",
+   "against": [
+    "evidence/closure-ssh-311.json",
+    "evidence/closure-sshd-311.json"
+   ],
+   "note": "the id-level comparison against the receipt the ledger cites; it changes nothing"
+  },
+  "safe_compatible": false,
+  "safe_compatible_reason": "consumer_closure.py never promotes: verdict.safe_compatible is a hard-coded False and its non_claims call the receipt a reachability measurement, not a SAFE_COMPATIBLE promotion. The tool's own reason string is 'no refusal condition fired' (both closures: 0 refusals, state ACCEPTED), which is a statement about refusals only. The substantive blockers measured at S are 148 BLOCKED obligations and element 7 FAIL (78 target-bounded reachable unresolved sites), plus AGENTS.md section 7's full dependency-closure requirement, which is not part of this instrument."
+ },
+ "tool": {
+  "path": "forensics/tools/consumer_closure.py",
+  "sha256": "8f0379bb8151654cb44d60c236463e089b594177376f69d7f5b69baead5be5c4",
+  "census_tool": {
+   "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1_census.py",
+   "sha256": "072ebad3a3ac86efbf63183c61fabd17155beefce158355421f6498765fd4b6d",
+   "size": 70291
+  },
+  "ledger_inputs": {
+   "path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+   "sha256": "b6f0de17c6ac42e1ad7bbc7b5c1a911456510f2e6c8f23362d18c1e34aacb872",
+   "state": {
+    "path": "forensics/memory-safety/campaign/safe-c33/state.json",
+    "sha256": "508095bcb91f439fc126cf964d31a4f0f656f997587234d5bfbb07ec0cbc8273",
+    "size": 53598
+   }
+  },
+  "enrolment_blockers": {
+   "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json",
+   "sha256": "1d06c1f048dc016d3f5dc6f2a5c375f9485d46a20d956b07e22a5ade5603f9be",
+   "size": 69658
+  }
+ },
+ "oom": {
+  "container": "docker/openssl-rs-court.sh",
+  "OPENSSL_RS_COURT_MEM": "8g",
+  "OPENSSL_RS_COURT_MEMSWAP": "8g",
+  "OPENSSL_RS_COURT_DATA": "default 4194304 KiB for build/clippy/census; 6291456 KiB for both closures",
+  "cap_basis": "min(8g, MemAvailable - 16g) with 54 GiB available",
+  "oom_kills": 0
+ },
+ "not_run": [
+  "cargo test --lib (no library test suite was run at S)",
+  "cargo clippy --all-targets -- -D warnings (only the census-input --lib --tests capture was run, exit 0)",
+  "cargo fmt --all -- --check",
+  "ASan / Miri / Loom / mutation controls",
+  "element-7 predicate re-establishment at this candidate (measured FAIL)",
+  "L7 functional replay of the relinked ssh/sshd against this install",
+  "a second rebuild of S (reproducibility not measured)",
+  "FRF-Fuzz residual differential across this conversion",
+  "the ledger reconciliation itself (measured numbers are recorded; CAMPAIGN-STATUS.json and state.json were not edited by instruction)"
+ ],
+ "non_claims": [
+  "This freeze records a negative measurement. It does not promote any obligation, does not withdraw any receipt, and does not assert SAFE_COMPATIBLE.",
+  "The consumer binaries' digests differ from b53 because the install prefix name changed (court/freeze-b58/install) and that string is embedded in each binary's RUNPATH."
+ ]
+}
