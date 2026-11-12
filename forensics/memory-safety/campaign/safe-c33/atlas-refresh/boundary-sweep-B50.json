@@ -811,5 +811,83 @@
   {"id": "ADJ-R7", "state": "RETAINED", "why": "Stated caller obligations B50-R1..R5 (caller-owned row lifetime; declared item versus expected type; result must be one whole NUL-terminated seam block; usr_data pairing; direct method->i2s calls outside the dispatcher get no hold) plus authority divergences B50-R6/R7. All stated; none hidden."},
   {"id": "ADJ-R8", "state": "OPEN", "required_gate": "next regeneration", "why": "Baseline status_reason prose on these sites says the V1 operation is uncontracted while the same rows record contract = contracted. The generated closures are not hand-edited; the text is corrected by the closure tool's next run."}
  ],
- "schema_note": "safe_callers_can_cause_ub is a retained-unsafe-entry-point marker, not a safe-caller-UB assertion: B45 (callbacks private/unreachable) is false; B48, B49 and B50 (unsafe ABI edge) are true. The name is misleading and should be renamed in a future schema revision. Adjudicated COND3-SATISFIED."
+ "schema_note": "safe_callers_can_cause_ub is a retained-unsafe-entry-point marker, not a safe-caller-UB assertion: B45 (callbacks private/unreachable) is false; B48, B49 and B50 (unsafe ABI edge) are true. The name is misleading and should be renamed in a future schema revision. Adjudicated COND3-SATISFIED.",
+ "supersedes": [
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-016"
+   ],
+   "file": "src/x509/v3_enum.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "enum_i2s",
+   "discharging_boundary": "B50-I2S-001",
+   "discharging_receipt": "boundary-sweep-B50",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_enum.rs, UNSAFE_FN_DEF, enum_i2s) as discharging boundary B50-I2S-001; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 134-138, sha256 198b9565130e5b3d), and the discharging record's recorded span_sha256 198b9565130e5b3d equals that content hash; the older record's coordinate 120 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 120-124)",
+   "discharging_evidence": "boundary-sweep-B50 discharges the i2s slot callbacks through the same dispatcher; its independent adversarial adjudicator returned APPROVE (applied) and the NULL-decode refusal is canaried",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-023"
+   ],
+   "file": "src/x509/v3_ia5.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ia5_i2s",
+   "discharging_boundary": "B50-I2S-003",
+   "discharging_receipt": "boundary-sweep-B50",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_ia5.rs, UNSAFE_FN_DEF, ia5_i2s) as discharging boundary B50-I2S-003; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 191-194, sha256 19efe0cb8eaf7d8c), and the discharging record's recorded span_sha256 19efe0cb8eaf7d8c equals that content hash; the older record's coordinate 180 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 180-183)",
+   "discharging_evidence": "boundary-sweep-B50 discharges the i2s slot callbacks through the same dispatcher; its independent adversarial adjudicator returned APPROVE (applied) and the NULL-decode refusal is canaried",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-031"
+   ],
+   "file": "src/x509/v3_int.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "int_i2s",
+   "discharging_boundary": "B50-I2S-005",
+   "discharging_receipt": "boundary-sweep-B50",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_int.rs, UNSAFE_FN_DEF, int_i2s) as discharging boundary B50-I2S-005; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 41-45, sha256 bc20b700cd53cd92), and the discharging record's recorded span_sha256 bc20b700cd53cd92 equals that content hash; the older record's coordinate 29 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 29-33)",
+   "discharging_evidence": "boundary-sweep-B50 discharges the i2s slot callbacks through the same dispatcher; its independent adversarial adjudicator returned APPROVE (applied) and the NULL-decode refusal is canaried",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-055"
+   ],
+   "file": "src/x509/v3_skid.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "skid_i2s",
+   "discharging_boundary": "B50-I2S-009",
+   "discharging_receipt": "boundary-sweep-B50",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_skid.rs, UNSAFE_FN_DEF, skid_i2s) as discharging boundary B50-I2S-009; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 262-266, sha256 71c73a334b6a424b), and the discharging record's recorded span_sha256 71c73a334b6a424b equals that content hash; the older record's coordinate 249 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 249-253)",
+   "discharging_evidence": "boundary-sweep-B50 discharges the i2s slot callbacks through the same dispatcher; its independent adversarial adjudicator returned APPROVE (applied) and the NULL-decode refusal is canaried",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-063"
+   ],
+   "file": "src/x509/v3_utf8.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "utf8_i2s",
+   "discharging_boundary": "B50-I2S-011",
+   "discharging_receipt": "boundary-sweep-B50",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_utf8.rs, UNSAFE_FN_DEF, utf8_i2s) as discharging boundary B50-I2S-011; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 176-179, sha256 0809fb2c6144261c), and the discharging record's recorded span_sha256 0809fb2c6144261c equals that content hash; the older record's coordinate 164 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 164-167)",
+   "discharging_evidence": "boundary-sweep-B50 discharges the i2s slot callbacks through the same dispatcher; its independent adversarial adjudicator returned APPROVE (applied) and the NULL-decode refusal is canaried",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  }
+ ],
+ "supersedes_note": "B67-G1 disposition-conflict resolution against the b61 openssh closure. Each entry names ONE older boundary id plus the single boundary of this receipt that carries the same (file, kind, operation); the loader attaches a receipt's supersedes list to every boundary it declares, so every id was checked to match exactly one boundary here, namely the named discharging_boundary. Each entry records the content-addressed binding at S=b6f38f13 and the specific reason the older record is stale; no boundary disposition, span hash or verdict of this receipt is changed by this block."
 }

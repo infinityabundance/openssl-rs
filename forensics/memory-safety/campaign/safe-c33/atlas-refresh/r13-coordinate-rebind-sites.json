@@ -4044,9 +4044,1692 @@
   }
  ],
  "non_claims": [
-  "This receipt supplies a coordinate binding, not a new adjudication. It neither promotes nor withdraws any verdict.",
+  "This receipt supplies a coordinate binding, not a new adjudication. It neither promotes nor withdraws the recorded row verdict of any B53-B57 ledger row. Its supersedes block declares, site by site and with a recorded witness, that an older different receipt's non-discharging disposition is stale for that exact (file, kind, operation); it creates no verdict.",
   "A boundary id is the ledger's join key; the acceptance predicate is the operation span's content hash at S plus the closure's identity and disposition checks.",
   "It does not discharge a site whose ledger row is absent, nor one whose recorded row verdict is not a discharge.",
   "It does not touch the 14 sslconf-exclusivity ledger coordinates, which name no receipt in this directory and are outside the B53-B57 scope."
- ]
+ ],
+ "supersedes": [
+  {
+   "receipt": "b52-gap-ct_sct-sites",
+   "ids": [
+    "B52GAP::src/ct/ct_sct.rs::UNSAFE_FN_DEF::SCT_LIST_free"
+   ],
+   "file": "src/ct/ct_sct.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "SCT_LIST_free",
+   "discharging_boundary": "src/ct/ct_sct.rs:247",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/ct/ct_sct.rs, UNSAFE_FN_DEF, SCT_LIST_free) as discharging boundary src/ct/ct_sct.rs:247; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 246-250, sha256 c6349e4d30da9b91), and the discharging record's recorded span_sha256 c6349e4d30da9b91 equals that content hash; the older record's coordinate 247 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 246-250)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/ct/ct_sct.rs:247 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-ct_x509v3-sites",
+   "ids": [
+    "B52GAP::src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::i2r_SCT_LIST"
+   ],
+   "file": "src/ct/ct_x509v3.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_SCT_LIST",
+   "discharging_boundary": "src/ct/ct_x509v3.rs:86",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/ct/ct_x509v3.rs, UNSAFE_FN_DEF, i2r_SCT_LIST) as discharging boundary src/ct/ct_x509v3.rs:86; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 100-110, sha256 18d457038e107750), and the discharging record's recorded span_sha256 18d457038e107750 equals that content hash; the older record's coordinate 84 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 84-94)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/ct/ct_x509v3.rs:86 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-ct_x509v3-sites",
+   "ids": [
+    "B52GAP::src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::i2s_poison"
+   ],
+   "file": "src/ct/ct_x509v3.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_poison",
+   "discharging_boundary": "src/ct/ct_x509v3.rs:59",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/ct/ct_x509v3.rs, UNSAFE_FN_DEF, i2s_poison) as discharging boundary src/ct/ct_x509v3.rs:59; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 70-73, sha256 c2ece281fdee44f5), and the discharging record's recorded span_sha256 c2ece281fdee44f5 equals that content hash; the older record's coordinate 59 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 59-62)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/ct/ct_x509v3.rs:59 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-ct_x509v3-sites",
+   "ids": [
+    "B52GAP::src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::s2i_poison"
+   ],
+   "file": "src/ct/ct_x509v3.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_poison",
+   "discharging_boundary": "src/ct/ct_x509v3.rs:70",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/ct/ct_x509v3.rs, UNSAFE_FN_DEF, s2i_poison) as discharging boundary src/ct/ct_x509v3.rs:70; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 86-92, sha256 371ce3362f5d9bab), and the discharging record's recorded span_sha256 371ce3362f5d9bab equals that content hash; the older record's coordinate 70 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 70-76)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/ct/ct_x509v3.rs:70 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "openssh-asn1-ocsp-sites",
+   "ids": [
+    "B52SITE::src/ocsp/v3_ocsp.rs::UNSAFE_FN_DEF::i2r_ocsp_acutoff"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ocsp_acutoff",
+   "discharging_boundary": "src/ocsp/v3_ocsp.rs:187",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/ocsp/v3_ocsp.rs, UNSAFE_FN_DEF, i2r_ocsp_acutoff) as discharging boundary src/ocsp/v3_ocsp.rs:187; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 187-202, sha256 7414f17d7bc8a099), and the discharging record's recorded span_sha256 7414f17d7bc8a099 equals that content hash; the older record's coordinate 187 is its own rebind target at tree c3b697959 (a tree, not a commit, so no span source), which is why the coordinate is checked against the S definition start 187; the older record's coordinate equals the S definition start line 187",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/ocsp/v3_ocsp.rs:187 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: disposition 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note; the receipt enumerates sites for ownership and claims no discharge. It records no defect, so it is stale once a site-scoped discharge for the same operation exists.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "openssh-asn1-ocsp-sites",
+   "ids": [
+    "B52SITE::src/ocsp/v3_ocsp.rs::UNSAFE_FN_DEF::ocsp_nonce_free"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ocsp_nonce_free",
+   "discharging_boundary": "src/ocsp/v3_ocsp.rs:325",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/ocsp/v3_ocsp.rs, UNSAFE_FN_DEF, ocsp_nonce_free) as discharging boundary src/ocsp/v3_ocsp.rs:325; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 325-330, sha256 59ffedcd34fe6b9f), and the discharging record's recorded span_sha256 59ffedcd34fe6b9f equals that content hash; the older record's coordinate 325 is its own rebind target at tree c3b697959 (a tree, not a commit, so no span source), which is why the coordinate is checked against the S definition start 325; the older record's coordinate equals the S definition start line 325",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/ocsp/v3_ocsp.rs:325 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: disposition 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note; the receipt enumerates sites for ownership and claims no discharge. It records no defect, so it is stale once a site-scoped discharge for the same operation exists.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "openssh-asn1-ocsp-sites",
+   "ids": [
+    "B52SITE::src/ocsp/v3_ocsp.rs::UNSAFE_FN_DEF::i2r_ocsp_nonce"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ocsp_nonce",
+   "discharging_boundary": "src/ocsp/v3_ocsp.rs:344",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/ocsp/v3_ocsp.rs, UNSAFE_FN_DEF, i2r_ocsp_nonce) as discharging boundary src/ocsp/v3_ocsp.rs:344; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 344-359, sha256 927eba777f96e0ad), and the discharging record's recorded span_sha256 927eba777f96e0ad equals that content hash; the older record's coordinate 344 is its own rebind target at tree c3b697959 (a tree, not a commit, so no span source), which is why the coordinate is checked against the S definition start 344; the older record's coordinate equals the S definition start line 344",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/ocsp/v3_ocsp.rs:344 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: disposition 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note; the receipt enumerates sites for ownership and claims no discharge. It records no defect, so it is stale once a site-scoped discharge for the same operation exists.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-001"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_layer_address",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:119",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrs_set_layer_address) as discharging boundary src/slh_dsa/adrs.rs:119; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 136-139, sha256 9756e0af07f26cf8), and the discharging record's recorded span_sha256 9756e0af07f26cf8 equals that content hash; the older record's coordinate 119 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 119-122)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:119 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-002"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_tree_address",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:128",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrs_set_tree_address) as discharging boundary src/slh_dsa/adrs.rs:128; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 154-157, sha256 74cdb644f3363e04), and the discharging record's recorded span_sha256 74cdb644f3363e04 equals that content hash; the older record's coordinate 128 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 128-131)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:128 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-003"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_type_and_clear",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:134",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrs_set_type_and_clear) as discharging boundary src/slh_dsa/adrs.rs:134; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 165-175, sha256 693dd4afb38ff592), and the discharging record's recorded span_sha256 693dd4afb38ff592 equals that content hash; the older record's coordinate 134 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 134-144)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:134 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-004"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_keypair_address",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:147",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrs_set_keypair_address) as discharging boundary src/slh_dsa/adrs.rs:147; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 183-186, sha256 da9acd4b689027da), and the discharging record's recorded span_sha256 da9acd4b689027da equals that content hash; the older record's coordinate 147 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 147-150)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:147 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-005"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_copy_keypair_address",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:154",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrs_copy_keypair_address) as discharging boundary src/slh_dsa/adrs.rs:154; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 196-205, sha256 f1da23ff0c5eae1b), and the discharging record's recorded span_sha256 f1da23ff0c5eae1b equals that content hash; the older record's coordinate 154 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 154-163)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:154 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-006"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_chain_address",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:166",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrs_set_chain_address) as discharging boundary src/slh_dsa/adrs.rs:166; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 215-218, sha256 9b344dda5c1f7793), and the discharging record's recorded span_sha256 9b344dda5c1f7793 equals that content hash; the older record's coordinate 166 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 166-169)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:166 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-007"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_set_hash_address",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:172",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrs_set_hash_address) as discharging boundary src/slh_dsa/adrs.rs:172; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 228-231, sha256 ebf7bc41aef36e20), and the discharging record's recorded span_sha256 ebf7bc41aef36e20 equals that content hash; the older record's coordinate 172 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 172-175)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:172 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-008"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_zero",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:178",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrs_zero) as discharging boundary src/slh_dsa/adrs.rs:178; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 239-242, sha256 1187889ec1f2d7ed), and the discharging record's recorded span_sha256 1187889ec1f2d7ed equals that content hash; the older record's coordinate 178 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 178-181)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:178 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-009"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrs_copy",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:184",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrs_copy) as discharging boundary src/slh_dsa/adrs.rs:184; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 251-254, sha256 0970edff68ca0b3b), and the discharging record's recorded span_sha256 0970edff68ca0b3b equals that content hash; the older record's coordinate 184 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 184-187)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:184 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-010"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_layer_address",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:193",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrsc_set_layer_address) as discharging boundary src/slh_dsa/adrs.rs:193; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 265-268, sha256 e1e89e9583ea3bae), and the discharging record's recorded span_sha256 e1e89e9583ea3bae equals that content hash; the older record's coordinate 193 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 193-196)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:193 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-011"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_tree_address",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:200",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrsc_set_tree_address) as discharging boundary src/slh_dsa/adrs.rs:200; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 278-281, sha256 3ef23bd60484cc58), and the discharging record's recorded span_sha256 3ef23bd60484cc58 equals that content hash; the older record's coordinate 200 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 200-203)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:200 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-012"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_type_and_clear",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:207",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrsc_set_type_and_clear) as discharging boundary src/slh_dsa/adrs.rs:207; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 291-301, sha256 ab61d2d3ea20f607), and the discharging record's recorded span_sha256 ab61d2d3ea20f607 equals that content hash; the older record's coordinate 207 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 207-217)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:207 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-013"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_keypair_address",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:221",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrsc_set_keypair_address) as discharging boundary src/slh_dsa/adrs.rs:221; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 310-313, sha256 5bca8433d57c997f), and the discharging record's recorded span_sha256 5bca8433d57c997f equals that content hash; the older record's coordinate 221 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 221-224)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:221 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-014"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_copy_keypair_address",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:228",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrsc_copy_keypair_address) as discharging boundary src/slh_dsa/adrs.rs:228; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 323-332, sha256 65a991be8b06688a), and the discharging record's recorded span_sha256 65a991be8b06688a equals that content hash; the older record's coordinate 228 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 228-237)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:228 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-015"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_chain_address",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:241",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrsc_set_chain_address) as discharging boundary src/slh_dsa/adrs.rs:241; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 344-347, sha256 5f415d59c58b5db7), and the discharging record's recorded span_sha256 5f415d59c58b5db7 equals that content hash; the older record's coordinate 241 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 241-244)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:241 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-016"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_set_hash_address",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:248",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrsc_set_hash_address) as discharging boundary src/slh_dsa/adrs.rs:248; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 359-362, sha256 cdb191e4dd07ead8), and the discharging record's recorded span_sha256 cdb191e4dd07ead8 equals that content hash; the older record's coordinate 248 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 248-251)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:248 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-017"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_zero",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:254",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrsc_zero) as discharging boundary src/slh_dsa/adrs.rs:254; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 370-373, sha256 5ef9e056dab4c8a3), and the discharging record's recorded span_sha256 5ef9e056dab4c8a3 equals that content hash; the older record's coordinate 254 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 254-257)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:254 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-018"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_adrsc_copy",
+   "discharging_boundary": "src/slh_dsa/adrs.rs:260",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/adrs.rs, UNSAFE_FN_DEF, slh_adrsc_copy) as discharging boundary src/slh_dsa/adrs.rs:260; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 382-385, sha256 64938fd8103782bf), and the discharging record's recorded span_sha256 64938fd8103782bf equals that content hash; the older record's coordinate 260 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 260-263)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/adrs.rs:260 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-hash-sites",
+   "ids": [
+    "P25-SLH-HASH-001"
+   ],
+   "file": "src/slh_dsa/hash.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_hmsg_shake",
+   "discharging_boundary": "src/slh_dsa/hash.rs:179",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/hash.rs, UNSAFE_FN_DEF, slh_hmsg_shake) as discharging boundary src/slh_dsa/hash.rs:179; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 191-221, sha256 6648bf9884ead39a), and the discharging record's recorded span_sha256 6648bf9884ead39a equals that content hash; the older record's coordinate 179 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 179-209)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/hash.rs:179 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-hash-sites",
+   "ids": [
+    "P25-SLH-HASH-002"
+   ],
+   "file": "src/slh_dsa/hash.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_prf_shake",
+   "discharging_boundary": "src/slh_dsa/hash.rs:212",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/hash.rs, UNSAFE_FN_DEF, slh_prf_shake) as discharging boundary src/slh_dsa/hash.rs:212; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 230-255, sha256 673ed9b7fa64309c), and the discharging record's recorded span_sha256 673ed9b7fa64309c equals that content hash; the older record's coordinate 212 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 212-237)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/hash.rs:212 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-hash-sites",
+   "ids": [
+    "P25-SLH-HASH-003"
+   ],
+   "file": "src/slh_dsa/hash.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_prf_msg_shake",
+   "discharging_boundary": "src/slh_dsa/hash.rs:240",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/hash.rs, UNSAFE_FN_DEF, slh_prf_msg_shake) as discharging boundary src/slh_dsa/hash.rs:240; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 264-293, sha256 43fb339b48729654), and the discharging record's recorded span_sha256 43fb339b48729654 equals that content hash; the older record's coordinate 240 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 240-269)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/hash.rs:240 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-hash-sites",
+   "ids": [
+    "P25-SLH-HASH-004"
+   ],
+   "file": "src/slh_dsa/hash.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_f_shake",
+   "discharging_boundary": "src/slh_dsa/hash.rs:272",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/hash.rs, UNSAFE_FN_DEF, slh_f_shake) as discharging boundary src/slh_dsa/hash.rs:272; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 302-328, sha256 004792ae69d480ff), and the discharging record's recorded span_sha256 004792ae69d480ff equals that content hash; the older record's coordinate 272 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 272-298)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/hash.rs:272 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-hash-sites",
+   "ids": [
+    "P25-SLH-HASH-005"
+   ],
+   "file": "src/slh_dsa/hash.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_h_shake",
+   "discharging_boundary": "src/slh_dsa/hash.rs:301",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/hash.rs, UNSAFE_FN_DEF, slh_h_shake) as discharging boundary src/slh_dsa/hash.rs:301; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 337-365, sha256 e95ecce61b8f4384), and the discharging record's recorded span_sha256 e95ecce61b8f4384 equals that content hash; the older record's coordinate 301 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 301-329)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/hash.rs:301 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-hash-sites",
+   "ids": [
+    "P25-SLH-HASH-006"
+   ],
+   "file": "src/slh_dsa/hash.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_t_shake",
+   "discharging_boundary": "src/slh_dsa/hash.rs:332",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/hash.rs, UNSAFE_FN_DEF, slh_t_shake) as discharging boundary src/slh_dsa/hash.rs:332; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 374-400, sha256 714bcb8e05f7e5ea), and the discharging record's recorded span_sha256 714bcb8e05f7e5ea equals that content hash; the older record's coordinate 332 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 332-358)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/hash.rs:332 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-hash-sites",
+   "ids": [
+    "P25-SLH-HASH-007"
+   ],
+   "file": "src/slh_dsa/hash.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_hmsg_sha2",
+   "discharging_boundary": "src/slh_dsa/hash.rs:392",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/hash.rs, UNSAFE_FN_DEF, slh_hmsg_sha2) as discharging boundary src/slh_dsa/hash.rs:392; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 440-487, sha256 6c5cb81a88661154), and the discharging record's recorded span_sha256 6c5cb81a88661154 equals that content hash; the older record's coordinate 392 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 392-439)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/hash.rs:392 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-hash-sites",
+   "ids": [
+    "P25-SLH-HASH-008"
+   ],
+   "file": "src/slh_dsa/hash.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_prf_msg_sha2",
+   "discharging_boundary": "src/slh_dsa/hash.rs:442",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/hash.rs, UNSAFE_FN_DEF, slh_prf_msg_sha2) as discharging boundary src/slh_dsa/hash.rs:442; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 496-543, sha256 526b9c09e976ed8a), and the discharging record's recorded span_sha256 526b9c09e976ed8a equals that content hash; the older record's coordinate 442 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 442-489)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/hash.rs:442 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-hash-sites",
+   "ids": [
+    "P25-SLH-HASH-009"
+   ],
+   "file": "src/slh_dsa/hash.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_prf_sha2",
+   "discharging_boundary": "src/slh_dsa/hash.rs:531",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/hash.rs, UNSAFE_FN_DEF, slh_prf_sha2) as discharging boundary src/slh_dsa/hash.rs:531; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 593-617, sha256 3d6ed1f4c67769ca), and the discharging record's recorded span_sha256 3d6ed1f4c67769ca equals that content hash; the older record's coordinate 531 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 531-555)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/hash.rs:531 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-hash-sites",
+   "ids": [
+    "P25-SLH-HASH-010"
+   ],
+   "file": "src/slh_dsa/hash.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_f_sha2",
+   "discharging_boundary": "src/slh_dsa/hash.rs:558",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/hash.rs, UNSAFE_FN_DEF, slh_f_sha2) as discharging boundary src/slh_dsa/hash.rs:558; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 627-652, sha256 c6bd6f53142e3952), and the discharging record's recorded span_sha256 c6bd6f53142e3952 equals that content hash; the older record's coordinate 558 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 558-583)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/hash.rs:558 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-hash-sites",
+   "ids": [
+    "P25-SLH-HASH-011"
+   ],
+   "file": "src/slh_dsa/hash.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_h_sha2",
+   "discharging_boundary": "src/slh_dsa/hash.rs:586",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/hash.rs, UNSAFE_FN_DEF, slh_h_sha2) as discharging boundary src/slh_dsa/hash.rs:586; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 663-692, sha256 aa390f2059131343), and the discharging record's recorded span_sha256 aa390f2059131343 equals that content hash; the older record's coordinate 586 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 586-615)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/hash.rs:586 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "p25-slh-dsa-hash-sites",
+   "ids": [
+    "P25-SLH-HASH-012"
+   ],
+   "file": "src/slh_dsa/hash.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_t_sha2",
+   "discharging_boundary": "src/slh_dsa/hash.rs:618",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/slh_dsa/hash.rs, UNSAFE_FN_DEF, slh_t_sha2) as discharging boundary src/slh_dsa/hash.rs:618; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 702-727, sha256 d1fe7cacd91e6611), and the discharging record's recorded span_sha256 d1fe7cacd91e6611 equals that content hash; the older record's coordinate 618 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 618-643)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/slh_dsa/hash.rs:618 (ledger row boundary-sweep-B53, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B53 supplies the per-site contract, the closed caller enumeration and the mutation-proven extent canary B53-C1.",
+   "reason": "the older record enumerates this accessor/primitive with its extent and aliasing precondition and records no defect; every entry is BLOCKED for want of a discharge. The discharge is site-scoped to this operation and rests on a closed caller enumeration plus the mutation-proven canary B53-C1 (every writer lands inside the 32-byte blob).",
+   "ledger_row_receipt": "boundary-sweep-B53"
+  },
+  {
+   "receipt": "b52-gap-v3_ac_tgt-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_ISSUER_SERIAL"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ISSUER_SERIAL",
+   "discharging_boundary": "src/x509/v3_ac_tgt.rs:624",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_ac_tgt.rs, UNSAFE_FN_DEF, i2r_ISSUER_SERIAL) as discharging boundary src/x509/v3_ac_tgt.rs:624; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 624-680, sha256 a7b6d21cacf9db2f), and the discharging record's recorded span_sha256 a7b6d21cacf9db2f equals that content hash; the older record's coordinate 624 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 624-680); the older record's coordinate equals the S definition start line 624",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_ac_tgt.rs:624 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_ac_tgt-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_OBJECT_DIGEST_INFO"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_OBJECT_DIGEST_INFO",
+   "discharging_boundary": "src/x509/v3_ac_tgt.rs:688",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_ac_tgt.rs, UNSAFE_FN_DEF, i2r_OBJECT_DIGEST_INFO) as discharging boundary src/x509/v3_ac_tgt.rs:688; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 688-817, sha256 e2e7eb1c9deebe80), and the discharging record's recorded span_sha256 e2e7eb1c9deebe80 equals that content hash; the older record's coordinate 688 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 688-817); the older record's coordinate equals the S definition start line 688",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_ac_tgt.rs:688 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_ac_tgt-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_TARGET_CERT"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_TARGET_CERT",
+   "discharging_boundary": "src/x509/v3_ac_tgt.rs:825",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_ac_tgt.rs, UNSAFE_FN_DEF, i2r_TARGET_CERT) as discharging boundary src/x509/v3_ac_tgt.rs:825; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 825-881, sha256 3a4f8cf614918872), and the discharging record's recorded span_sha256 3a4f8cf614918872 equals that content hash; the older record's coordinate 825 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 825-881); the older record's coordinate equals the S definition start line 825",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_ac_tgt.rs:825 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_ac_tgt-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_TARGET"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_TARGET",
+   "discharging_boundary": "src/x509/v3_ac_tgt.rs:889",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_ac_tgt.rs, UNSAFE_FN_DEF, i2r_TARGET) as discharging boundary src/x509/v3_ac_tgt.rs:889; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 889-926, sha256 8ea9941f3d784e5b), and the discharging record's recorded span_sha256 8ea9941f3d784e5b equals that content hash; the older record's coordinate 889 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 889-926); the older record's coordinate equals the S definition start line 889",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_ac_tgt.rs:889 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_ac_tgt-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_TARGETS"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_TARGETS",
+   "discharging_boundary": "src/x509/v3_ac_tgt.rs:934",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_ac_tgt.rs, UNSAFE_FN_DEF, i2r_TARGETS) as discharging boundary src/x509/v3_ac_tgt.rs:934; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 934-954, sha256 31e75e7ec911475e), and the discharging record's recorded span_sha256 31e75e7ec911475e equals that content hash; the older record's coordinate 934 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 934-954); the older record's coordinate equals the S definition start line 934",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_ac_tgt.rs:934 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_ac_tgt-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_ac_tgt.rs::UNSAFE_FN_DEF::i2r_TARGETING_INFORMATION"
+   ],
+   "file": "src/x509/v3_ac_tgt.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_TARGETING_INFORMATION",
+   "discharging_boundary": "src/x509/v3_ac_tgt.rs:962",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_ac_tgt.rs, UNSAFE_FN_DEF, i2r_TARGETING_INFORMATION) as discharging boundary src/x509/v3_ac_tgt.rs:962; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 962-982, sha256 e133d37adb084a40), and the discharging record's recorded span_sha256 e133d37adb084a40 equals that content hash; the older record's coordinate 962 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 962-982); the older record's coordinate equals the S definition start line 962",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_ac_tgt.rs:962 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_addr-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_addr.rs::UNSAFE_FN_DEF::v2i_IPAddrBlocks"
+   ],
+   "file": "src/x509/v3_addr.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_IPAddrBlocks",
+   "discharging_boundary": "src/x509/v3_addr.rs:2241",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_addr.rs, UNSAFE_FN_DEF, v2i_IPAddrBlocks) as discharging boundary src/x509/v3_addr.rs:2241; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 2241-2563, sha256 d16f1092c15e9bc7), and the discharging record's recorded span_sha256 d16f1092c15e9bc7 equals that content hash; the older record's coordinate 2241 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 2241-2563); the older record's coordinate equals the S definition start line 2241",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_addr.rs:2241 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_addr-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_addr.rs::UNSAFE_FN_DEF::i2r_IPAddrBlocks"
+   ],
+   "file": "src/x509/v3_addr.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_IPAddrBlocks",
+   "discharging_boundary": "src/x509/v3_addr.rs:921",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_addr.rs, UNSAFE_FN_DEF, i2r_IPAddrBlocks) as discharging boundary src/x509/v3_addr.rs:921; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 921-1024, sha256 27f62db47addcc00), and the discharging record's recorded span_sha256 27f62db47addcc00 equals that content hash; the older record's coordinate 921 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 921-1024); the older record's coordinate equals the S definition start line 921",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_addr.rs:921 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_admis-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_admis.rs::UNSAFE_FN_DEF::i2r_NAMING_AUTHORITY"
+   ],
+   "file": "src/x509/v3_admis.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_NAMING_AUTHORITY",
+   "discharging_boundary": "src/x509/v3_admis.rs:557",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_admis.rs, UNSAFE_FN_DEF, i2r_NAMING_AUTHORITY) as discharging boundary src/x509/v3_admis.rs:557; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 557-630, sha256 4015ad17501f08ce), and the discharging record's recorded span_sha256 4015ad17501f08ce equals that content hash; the older record's coordinate 557 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 557-630); the older record's coordinate equals the S definition start line 557",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_admis.rs:557 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_admis-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_admis.rs::UNSAFE_FN_DEF::i2r_ADMISSION_SYNTAX"
+   ],
+   "file": "src/x509/v3_admis.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ADMISSION_SYNTAX",
+   "discharging_boundary": "src/x509/v3_admis.rs:640",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_admis.rs, UNSAFE_FN_DEF, i2r_ADMISSION_SYNTAX) as discharging boundary src/x509/v3_admis.rs:640; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 640-825, sha256 8c8f883bc5ee6002), and the discharging record's recorded span_sha256 8c8f883bc5ee6002 equals that content hash; the older record's coordinate 640 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 640-825); the older record's coordinate equals the S definition start line 640",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_admis.rs:640 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "openssh-v1l-sites",
+   "ids": [
+    "B52SITE::src/x509/v3_akid.rs::UNSAFE_FN_DEF::i2v_AUTHORITY_KEYID"
+   ],
+   "file": "src/x509/v3_akid.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2v_AUTHORITY_KEYID",
+   "discharging_boundary": "src/x509/v3_akid.rs:231",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_akid.rs, UNSAFE_FN_DEF, i2v_AUTHORITY_KEYID) as discharging boundary src/x509/v3_akid.rs:231; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 231-324, sha256 46f6b2d0d3b02331), and the discharging record's recorded span_sha256 46f6b2d0d3b02331 equals that content hash; the older record's coordinate 231 lies inside this operation's definition span at its own identity 8a54aba58 (there: lines 231-324); the older record's coordinate equals the S definition start line 231",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_akid.rs:231 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: disposition 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note; the receipt enumerates sites for ownership and claims no discharge. It records no defect, so it is stale once a site-scoped discharge for the same operation exists.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "openssh-v1l-sites",
+   "ids": [
+    "B52SITE::src/x509/v3_akid.rs::UNSAFE_FN_DEF::v2i_AUTHORITY_KEYID"
+   ],
+   "file": "src/x509/v3_akid.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_AUTHORITY_KEYID",
+   "discharging_boundary": "src/x509/v3_akid.rs:359",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_akid.rs, UNSAFE_FN_DEF, v2i_AUTHORITY_KEYID) as discharging boundary src/x509/v3_akid.rs:359; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 359-567, sha256 005ce1d3cccf675f), and the discharging record's recorded span_sha256 005ce1d3cccf675f equals that content hash; the older record's coordinate 359 lies inside this operation's definition span at its own identity 8a54aba58 (there: lines 359-567); the older record's coordinate equals the S definition start line 359",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_akid.rs:359 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: disposition 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note; the receipt enumerates sites for ownership and claims no discharge. It records no defect, so it is stale once a site-scoped discharge for the same operation exists.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "openssh-receipts-3",
+   "ids": [
+    "OSSH-R3-011"
+   ],
+   "file": "src/x509/v3_asid.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ASIdentifiers",
+   "discharging_boundary": "src/x509/v3_asid.rs:817",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_asid.rs, UNSAFE_FN_DEF, i2r_ASIdentifiers) as discharging boundary src/x509/v3_asid.rs:817; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 817-849, sha256 6cf679c86d7c652c), and the discharging record's recorded span_sha256 6cf679c86d7c652c equals that content hash; the older record's coordinate 804 is its own rebind target at tree c3b697959 (a tree, not a commit, so no span source), which is why the coordinate is checked against the S definition start 817",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_asid.rs:817 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record's own site_disposition is CONTRACTED with residual null and its closure note is 'BLOCKED: X509_VERIFY_POLICY is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site'; it records no defect. B54's PRINT_i2r row names this operation's dispatch establishment (X509V3_EXT_print resolves one row and its item, decodes through that item and refuses a NULL decode before the slot) and records DISPATCH_DISCHARGED.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "openssh-receipts-3",
+   "ids": [
+    "B52SITE::src/x509/v3_asid.rs::UNSAFE_FN_DEF::i2r_ASIdentifiers"
+   ],
+   "file": "src/x509/v3_asid.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ASIdentifiers",
+   "discharging_boundary": "src/x509/v3_asid.rs:817",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_asid.rs, UNSAFE_FN_DEF, i2r_ASIdentifiers) as discharging boundary src/x509/v3_asid.rs:817; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 817-849, sha256 6cf679c86d7c652c), and the discharging record's recorded span_sha256 6cf679c86d7c652c equals that content hash; the older record's coordinate 817 is its own rebind target at tree c3b697959 (a tree, not a commit, so no span source), which is why the coordinate is checked against the S definition start 817; the older record's coordinate equals the S definition start line 817",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_asid.rs:817 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record's own site_disposition is CONTRACTED with residual null and its closure note is 'BLOCKED: X509_VERIFY_POLICY is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site'; it records no defect. B54's PRINT_i2r row names this operation's dispatch establishment (X509V3_EXT_print resolves one row and its item, decodes through that item and refuses a NULL decode before the slot) and records DISPATCH_DISCHARGED.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_attrdesc-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_HASH"
+   ],
+   "file": "src/x509/v3_attrdesc.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_HASH",
+   "discharging_boundary": "src/x509/v3_attrdesc.rs:637",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_attrdesc.rs, UNSAFE_FN_DEF, i2r_HASH) as discharging boundary src/x509/v3_attrdesc.rs:637; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 637-691, sha256 cf21d791daf44ebd), and the discharging record's recorded span_sha256 cf21d791daf44ebd equals that content hash; the older record's coordinate 637 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 637-691); the older record's coordinate equals the S definition start line 637",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_attrdesc.rs:637 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_attrdesc-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_INFO_SYNTAX_POINTER"
+   ],
+   "file": "src/x509/v3_attrdesc.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_INFO_SYNTAX_POINTER",
+   "discharging_boundary": "src/x509/v3_attrdesc.rs:699",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_attrdesc.rs, UNSAFE_FN_DEF, i2r_INFO_SYNTAX_POINTER) as discharging boundary src/x509/v3_attrdesc.rs:699; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 699-730, sha256 dfcd6d9b66226ffb), and the discharging record's recorded span_sha256 dfcd6d9b66226ffb equals that content hash; the older record's coordinate 699 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 699-730); the older record's coordinate equals the S definition start line 699",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_attrdesc.rs:699 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_attrdesc-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_INFO_SYNTAX"
+   ],
+   "file": "src/x509/v3_attrdesc.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_OSSL_INFO_SYNTAX",
+   "discharging_boundary": "src/x509/v3_attrdesc.rs:738",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_attrdesc.rs, UNSAFE_FN_DEF, i2r_OSSL_INFO_SYNTAX) as discharging boundary src/x509/v3_attrdesc.rs:738; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 738-786, sha256 e3f08302763a4c99), and the discharging record's recorded span_sha256 e3f08302763a4c99 equals that content hash; the older record's coordinate 738 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 738-786); the older record's coordinate equals the S definition start line 738",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_attrdesc.rs:738 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_attrdesc-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_PRIVILEGE_POLICY_ID"
+   ],
+   "file": "src/x509/v3_attrdesc.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_OSSL_PRIVILEGE_POLICY_ID",
+   "discharging_boundary": "src/x509/v3_attrdesc.rs:794",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_attrdesc.rs, UNSAFE_FN_DEF, i2r_OSSL_PRIVILEGE_POLICY_ID) as discharging boundary src/x509/v3_attrdesc.rs:794; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 794-842, sha256 5f7d97527b289018), and the discharging record's recorded span_sha256 5f7d97527b289018 equals that content hash; the older record's coordinate 794 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 794-842); the older record's coordinate equals the S definition start line 794",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_attrdesc.rs:794 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_attrdesc-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_ATTRIBUTE_DESCRIPTOR"
+   ],
+   "file": "src/x509/v3_attrdesc.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
+   "discharging_boundary": "src/x509/v3_attrdesc.rs:850",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_attrdesc.rs, UNSAFE_FN_DEF, i2r_OSSL_ATTRIBUTE_DESCRIPTOR) as discharging boundary src/x509/v3_attrdesc.rs:850; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 850-946, sha256 9b34e92c6f53fc83), and the discharging record's recorded span_sha256 9b34e92c6f53fc83 equals that content hash; the older record's coordinate 850 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 850-946); the older record's coordinate equals the S definition start line 850",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_attrdesc.rs:850 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_attrmap-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_attrmap.rs::UNSAFE_FN_DEF::i2r_ATTRIBUTE_MAPPING"
+   ],
+   "file": "src/x509/v3_attrmap.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ATTRIBUTE_MAPPING",
+   "discharging_boundary": "src/x509/v3_attrmap.rs:576",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_attrmap.rs, UNSAFE_FN_DEF, i2r_ATTRIBUTE_MAPPING) as discharging boundary src/x509/v3_attrmap.rs:576; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 576-645, sha256 ccebc768068d9250), and the discharging record's recorded span_sha256 ccebc768068d9250 equals that content hash; the older record's coordinate 576 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 576-645); the older record's coordinate equals the S definition start line 576",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_attrmap.rs:576 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_attrmap-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_attrmap.rs::UNSAFE_FN_DEF::i2r_ATTRIBUTE_MAPPINGS"
+   ],
+   "file": "src/x509/v3_attrmap.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ATTRIBUTE_MAPPINGS",
+   "discharging_boundary": "src/x509/v3_attrmap.rs:653",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_attrmap.rs, UNSAFE_FN_DEF, i2r_ATTRIBUTE_MAPPINGS) as discharging boundary src/x509/v3_attrmap.rs:653; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 653-681, sha256 dbef7f7b7e940a18), and the discharging record's recorded span_sha256 dbef7f7b7e940a18 equals that content hash; the older record's coordinate 653 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 653-681); the older record's coordinate equals the S definition start line 653",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_attrmap.rs:653 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-004"
+   ],
+   "file": "src/x509/v3_audit_id.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "audit_i2s",
+   "discharging_boundary": "src/x509/v3_audit_id.rs:30",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_audit_id.rs, UNSAFE_FN_DEF, audit_i2s) as discharging boundary src/x509/v3_audit_id.rs:30; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 37-41, sha256 91e76fd7ba4d40e2), and the discharging record's recorded span_sha256 91e76fd7ba4d40e2 equals that content hash; the older record's coordinate 30 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 30-34)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_audit_id.rs:30 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-005"
+   ],
+   "file": "src/x509/v3_audit_id.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "audit_s2i",
+   "discharging_boundary": "src/x509/v3_audit_id.rs:37",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_audit_id.rs, UNSAFE_FN_DEF, audit_s2i) as discharging boundary src/x509/v3_audit_id.rs:37; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 52-59, sha256 1349a298d08bf205), and the discharging record's recorded span_sha256 1349a298d08bf205 equals that content hash; the older record's coordinate 37 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 37-44)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_audit_id.rs:37 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_authattid-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_authattid.rs::UNSAFE_FN_DEF::i2r_ISSUER_SERIAL"
+   ],
+   "file": "src/x509/v3_authattid.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ISSUER_SERIAL",
+   "discharging_boundary": "src/x509/v3_authattid.rs:164",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_authattid.rs, UNSAFE_FN_DEF, i2r_ISSUER_SERIAL) as discharging boundary src/x509/v3_authattid.rs:164; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 164-220, sha256 e72c8a48bd22a018), and the discharging record's recorded span_sha256 e72c8a48bd22a018 equals that content hash; the older record's coordinate 164 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 164-220); the older record's coordinate equals the S definition start line 164",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_authattid.rs:164 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_authattid-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_authattid.rs::UNSAFE_FN_DEF::i2r_auth_attr_id"
+   ],
+   "file": "src/x509/v3_authattid.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_auth_attr_id",
+   "discharging_boundary": "src/x509/v3_authattid.rs:229",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_authattid.rs, UNSAFE_FN_DEF, i2r_auth_attr_id) as discharging boundary src/x509/v3_authattid.rs:229; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 229-257, sha256 6208ffe6d7213afa), and the discharging record's recorded span_sha256 6208ffe6d7213afa equals that content hash; the older record's coordinate 229 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 229-257); the older record's coordinate equals the S definition start line 229",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_authattid.rs:229 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-006"
+   ],
+   "file": "src/x509/v3_battcons.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2v_OSSL_BASIC_ATTR_CONSTRAINTS",
+   "discharging_boundary": "src/x509/v3_battcons.rs:191",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_battcons.rs, UNSAFE_FN_DEF, i2v_OSSL_BASIC_ATTR_CONSTRAINTS) as discharging boundary src/x509/v3_battcons.rs:191; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 198-211, sha256 813870ddf14862df), and the discharging record's recorded span_sha256 813870ddf14862df equals that content hash; the older record's coordinate 191 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 191-204)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_battcons.rs:191 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-008"
+   ],
+   "file": "src/x509/v3_bcons.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2v_BASIC_CONSTRAINTS",
+   "discharging_boundary": "src/x509/v3_bcons.rs:192",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_bcons.rs, UNSAFE_FN_DEF, i2v_BASIC_CONSTRAINTS) as discharging boundary src/x509/v3_bcons.rs:192; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 199-212, sha256 0691b43de060776c), and the discharging record's recorded span_sha256 0691b43de060776c equals that content hash; the older record's coordinate 192 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 192-205)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_bcons.rs:192 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-010"
+   ],
+   "file": "src/x509/v3_bitst.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2v_ASN1_BIT_STRING",
+   "discharging_boundary": "src/x509/v3_bitst.rs:234",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_bitst.rs, UNSAFE_FN_DEF, i2v_ASN1_BIT_STRING) as discharging boundary src/x509/v3_bitst.rs:234; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 233-260, sha256 6dbecd1c474c1cfa), and the discharging record's recorded span_sha256 6dbecd1c474c1cfa equals that content hash; the older record's coordinate 234 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 233-260)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_bitst.rs:234 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-011"
+   ],
+   "file": "src/x509/v3_bitst.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_ASN1_BIT_STRING",
+   "discharging_boundary": "src/x509/v3_bitst.rs:288",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_bitst.rs, UNSAFE_FN_DEF, v2i_ASN1_BIT_STRING) as discharging boundary src/x509/v3_bitst.rs:288; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 287-346, sha256 01cc04579a71010a), and the discharging record's recorded span_sha256 01cc04579a71010a equals that content hash; the older record's coordinate 288 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 287-346)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_bitst.rs:288 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-012"
+   ],
+   "file": "src/x509/v3_bitst.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "bitst_i2v",
+   "discharging_boundary": "src/x509/v3_bitst.rs:349",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_bitst.rs, UNSAFE_FN_DEF, bitst_i2v) as discharging boundary src/x509/v3_bitst.rs:349; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 356-364, sha256 0d6cce7197665c94), and the discharging record's recorded span_sha256 0d6cce7197665c94 equals that content hash; the older record's coordinate 349 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 349-357)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_bitst.rs:349 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-013"
+   ],
+   "file": "src/x509/v3_bitst.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "bitst_v2i",
+   "discharging_boundary": "src/x509/v3_bitst.rs:360",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_bitst.rs, UNSAFE_FN_DEF, bitst_v2i) as discharging boundary src/x509/v3_bitst.rs:360; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 374-381, sha256 8e35a19f921c8f52), and the discharging record's recorded span_sha256 8e35a19f921c8f52 equals that content hash; the older record's coordinate 360 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 360-367)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_bitst.rs:360 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-014"
+   ],
+   "file": "src/x509/v3_cpols.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "r2i_certpol",
+   "discharging_boundary": "src/x509/v3_cpols.rs:1249",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_cpols.rs, UNSAFE_FN_DEF, r2i_certpol) as discharging boundary src/x509/v3_cpols.rs:1249; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 1249-1363, sha256 49d1e032aa3bdf54), and the discharging record's recorded span_sha256 49d1e032aa3bdf54 equals that content hash; the older record's coordinate 1247 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 1247-1359)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_cpols.rs:1249 (ledger row boundary-sweep-B55, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B55 supplies the NULL-ctx refusal guard in X509V3_get_section plus per-row NULL-ctx controls.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B55"
+  },
+  {
+   "receipt": "b52-gap-v3_crld-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_crld.rs::UNSAFE_FN_DEF::v2i_crld"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_crld",
+   "discharging_boundary": "src/x509/v3_crld.rs:1333",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_crld.rs, UNSAFE_FN_DEF, v2i_crld) as discharging boundary src/x509/v3_crld.rs:1333; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 1333-1427, sha256 2620246834b62acb), and the discharging record's recorded span_sha256 2620246834b62acb equals that content hash; the older record's coordinate 1325 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 1325-1417)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_crld.rs:1333 (ledger row boundary-sweep-B55, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B55 supplies the NULL-ctx refusal guard in X509V3_get_section plus per-row NULL-ctx controls.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B55"
+  },
+  {
+   "receipt": "b52-gap-v3_crld-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_crld.rs::UNSAFE_FN_DEF::i2r_idp"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_idp",
+   "discharging_boundary": "src/x509/v3_crld.rs:1471",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_crld.rs, UNSAFE_FN_DEF, i2r_idp) as discharging boundary src/x509/v3_crld.rs:1471; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 1481-1552, sha256 4946507c9e9e7669), and the discharging record's recorded span_sha256 4946507c9e9e7669 equals that content hash; the older record's coordinate 1471 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 1471-1542)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_crld.rs:1471 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_crld-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_crld.rs::UNSAFE_FN_DEF::v2i_idp"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_idp",
+   "discharging_boundary": "src/x509/v3_crld.rs:1566",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_crld.rs, UNSAFE_FN_DEF, v2i_idp) as discharging boundary src/x509/v3_crld.rs:1566; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 1566-1640, sha256 e5239524ecefe65f), and the discharging record's recorded span_sha256 e5239524ecefe65f equals that content hash; the older record's coordinate 1554 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 1554-1628)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_crld.rs:1566 (ledger row boundary-sweep-B57, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B57 supplies the inline-boolean template repair with per-test pre-fix SIGABRT reproduction.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B57"
+  },
+  {
+   "receipt": "b52-gap-v3_crld-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_crld.rs::UNSAFE_FN_DEF::i2r_crldp"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_crldp",
+   "discharging_boundary": "src/x509/v3_crld.rs:1638",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_crld.rs, UNSAFE_FN_DEF, i2r_crldp) as discharging boundary src/x509/v3_crld.rs:1638; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 1650-1687, sha256 7e5d369914428e45), and the discharging record's recorded span_sha256 7e5d369914428e45 equals that content hash; the older record's coordinate 1638 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 1638-1675)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_crld.rs:1638 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_crld-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_crld.rs::UNSAFE_FN_DEF::i2r_crl_invdate"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_crl_invdate",
+   "discharging_boundary": "src/x509/v3_crld.rs:1685",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_crld.rs, UNSAFE_FN_DEF, i2r_crl_invdate) as discharging boundary src/x509/v3_crld.rs:1685; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 1697-1712, sha256 0913890fb1a07006), and the discharging record's recorded span_sha256 0913890fb1a07006 equals that content hash; the older record's coordinate 1685 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 1685-1700)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_crld.rs:1685 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_crld-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_crld.rs::UNSAFE_FN_DEF::i2r_object"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_object",
+   "discharging_boundary": "src/x509/v3_crld.rs:1710",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_crld.rs, UNSAFE_FN_DEF, i2r_object) as discharging boundary src/x509/v3_crld.rs:1710; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 1722-1737, sha256 a561f1df88f78e48), and the discharging record's recorded span_sha256 a561f1df88f78e48 equals that content hash; the older record's coordinate 1710 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 1710-1725)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_crld.rs:1710 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_crld-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_crld.rs::UNSAFE_FN_DEF::v2i_aaidp"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_aaidp",
+   "discharging_boundary": "src/x509/v3_crld.rs:1928",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_crld.rs, UNSAFE_FN_DEF, v2i_aaidp) as discharging boundary src/x509/v3_crld.rs:1928; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 1927-2010, sha256 f53bb0c9875d5c9e), and the discharging record's recorded span_sha256 f53bb0c9875d5c9e equals that content hash; the older record's coordinate 1913 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 1912-1993)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_crld.rs:1928 (ledger row boundary-sweep-B57, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B57 supplies the inline-boolean template repair with per-test pre-fix SIGABRT reproduction.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B57"
+  },
+  {
+   "receipt": "b52-gap-v3_crld-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_crld.rs::UNSAFE_FN_DEF::i2r_aaidp"
+   ],
+   "file": "src/x509/v3_crld.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_aaidp",
+   "discharging_boundary": "src/x509/v3_crld.rs:2003",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_crld.rs, UNSAFE_FN_DEF, i2r_aaidp) as discharging boundary src/x509/v3_crld.rs:2003; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 2020-2088, sha256 d8cbcd9eeb5f45b2), and the discharging record's recorded span_sha256 d8cbcd9eeb5f45b2 equals that content hash; the older record's coordinate 2003 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 2003-2071)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_crld.rs:2003 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "B52SITE::src/x509/v3_enum.rs::UNSAFE_FN_DEF::i2s_ASN1_ENUMERATED_TABLE"
+   ],
+   "file": "src/x509/v3_enum.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_ASN1_ENUMERATED_TABLE",
+   "discharging_boundary": "src/x509/v3_enum.rs:156",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_enum.rs, UNSAFE_FN_DEF, i2s_ASN1_ENUMERATED_TABLE) as discharging boundary src/x509/v3_enum.rs:156; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 155-181, sha256 ffad6a8d803e0630), and the discharging record's recorded span_sha256 ffad6a8d803e0630 equals that content hash; the older record's coordinate 156 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 141-167)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_enum.rs:156 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-017"
+   ],
+   "file": "src/x509/v3_extku.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2v_EXTENDED_KEY_USAGE",
+   "discharging_boundary": "src/x509/v3_extku.rs:184",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_extku.rs, UNSAFE_FN_DEF, i2v_EXTENDED_KEY_USAGE) as discharging boundary src/x509/v3_extku.rs:184; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 191-212, sha256 3f3631b066d6d812), and the discharging record's recorded span_sha256 3f3631b066d6d812 equals that content hash; the older record's coordinate 184 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 184-205)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_extku.rs:184 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "B52SITE::src/x509/v3_ia5.rs::UNSAFE_FN_DEF::s2i_ASN1_IA5STRING"
+   ],
+   "file": "src/x509/v3_ia5.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_ASN1_IA5STRING",
+   "discharging_boundary": "src/x509/v3_ia5.rs:113",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_ia5.rs, UNSAFE_FN_DEF, s2i_ASN1_IA5STRING) as discharging boundary src/x509/v3_ia5.rs:113; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 112-137, sha256 bdfdc81468560c42), and the discharging record's recorded span_sha256 bdfdc81468560c42 equals that content hash; the older record's coordinate 113 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 112-137)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_ia5.rs:113 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "B52SITE::src/x509/v3_ia5.rs::UNSAFE_FN_DEF::i2s_ASN1_IA5STRING"
+   ],
+   "file": "src/x509/v3_ia5.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_ASN1_IA5STRING",
+   "discharging_boundary": "src/x509/v3_ia5.rs:77",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_ia5.rs, UNSAFE_FN_DEF, i2s_ASN1_IA5STRING) as discharging boundary src/x509/v3_ia5.rs:77; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 76-104, sha256 40829e9a16758350), and the discharging record's recorded span_sha256 40829e9a16758350 equals that content hash; the older record's coordinate 77 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 76-104)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_ia5.rs:77 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-029"
+   ],
+   "file": "src/x509/v3_info.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2v_AUTHORITY_INFO_ACCESS",
+   "discharging_boundary": "src/x509/v3_info.rs:323",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_info.rs, UNSAFE_FN_DEF, i2v_AUTHORITY_INFO_ACCESS) as discharging boundary src/x509/v3_info.rs:323; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 331-396, sha256 a8134583c407c2fc), and the discharging record's recorded span_sha256 a8134583c407c2fc equals that content hash; the older record's coordinate 323 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 323-388)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_info.rs:323 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_ncons-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_ncons.rs::UNSAFE_FN_DEF::v2i_NAME_CONSTRAINTS"
+   ],
+   "file": "src/x509/v3_ncons.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_NAME_CONSTRAINTS",
+   "discharging_boundary": "src/x509/v3_ncons.rs:393",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_ncons.rs, UNSAFE_FN_DEF, v2i_NAME_CONSTRAINTS) as discharging boundary src/x509/v3_ncons.rs:393; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 393-497, sha256 907272de5879ea76), and the discharging record's recorded span_sha256 907272de5879ea76 equals that content hash; the older record's coordinate 390 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 390-494)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_ncons.rs:393 (ledger row boundary-sweep-B55, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B55 supplies the NULL-ctx refusal guard in X509V3_get_section plus per-row NULL-ctx controls.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B55"
+  },
+  {
+   "receipt": "b52-gap-v3_ncons-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_ncons.rs::UNSAFE_FN_DEF::i2r_NAME_CONSTRAINTS"
+   ],
+   "file": "src/x509/v3_ncons.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_NAME_CONSTRAINTS",
+   "discharging_boundary": "src/x509/v3_ncons.rs:588",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_ncons.rs, UNSAFE_FN_DEF, i2r_NAME_CONSTRAINTS) as discharging boundary src/x509/v3_ncons.rs:588; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 591-624, sha256 f69592530f160a28), and the discharging record's recorded span_sha256 f69592530f160a28 equals that content hash; the older record's coordinate 588 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 588-621)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_ncons.rs:588 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_pci-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_pci.rs::UNSAFE_FN_DEF::i2r_pci"
+   ],
+   "file": "src/x509/v3_pci.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_pci",
+   "discharging_boundary": "src/x509/v3_pci.rs:581",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_pci.rs, UNSAFE_FN_DEF, i2r_pci) as discharging boundary src/x509/v3_pci.rs:581; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 581-636, sha256 3c559576ca38a2d0), and the discharging record's recorded span_sha256 3c559576ca38a2d0 equals that content hash; the older record's coordinate 581 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 581-636); the older record's coordinate equals the S definition start line 581",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_pci.rs:581 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_pci-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_pci.rs::UNSAFE_FN_DEF::r2i_pci"
+   ],
+   "file": "src/x509/v3_pci.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "r2i_pci",
+   "discharging_boundary": "src/x509/v3_pci.rs:649",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_pci.rs, UNSAFE_FN_DEF, r2i_pci) as discharging boundary src/x509/v3_pci.rs:649; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 649-774, sha256 dcc94c9d14319a85), and the discharging record's recorded span_sha256 dcc94c9d14319a85 equals that content hash; the older record's coordinate 647 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 647-771)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_pci.rs:649 (ledger row boundary-sweep-B55, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B55 supplies the NULL-ctx refusal guard in X509V3_get_section plus per-row NULL-ctx controls.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B55"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-044"
+   ],
+   "file": "src/x509/v3_pcons.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2v_POLICY_CONSTRAINTS",
+   "discharging_boundary": "src/x509/v3_pcons.rs:154",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_pcons.rs, UNSAFE_FN_DEF, i2v_POLICY_CONSTRAINTS) as discharging boundary src/x509/v3_pcons.rs:154; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 160-181, sha256 1fa7d0dbc0d176cc), and the discharging record's recorded span_sha256 1fa7d0dbc0d176cc equals that content hash; the older record's coordinate 154 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 154-175)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_pcons.rs:154 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-047"
+   ],
+   "file": "src/x509/v3_pmaps.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2v_POLICY_MAPPINGS",
+   "discharging_boundary": "src/x509/v3_pmaps.rs:200",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_pmaps.rs, UNSAFE_FN_DEF, i2v_POLICY_MAPPINGS) as discharging boundary src/x509/v3_pmaps.rs:200; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 206-231, sha256 35685d8d2a5539bd), and the discharging record's recorded span_sha256 35685d8d2a5539bd equals that content hash; the older record's coordinate 200 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 200-225)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_pmaps.rs:200 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_rolespec-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_rolespec.rs::UNSAFE_FN_DEF::i2r_OSSL_ROLE_SPEC_CERT_ID"
+   ],
+   "file": "src/x509/v3_rolespec.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_OSSL_ROLE_SPEC_CERT_ID",
+   "discharging_boundary": "src/x509/v3_rolespec.rs:297",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_rolespec.rs, UNSAFE_FN_DEF, i2r_OSSL_ROLE_SPEC_CERT_ID) as discharging boundary src/x509/v3_rolespec.rs:297; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 297-380, sha256 023239c61739e893), and the discharging record's recorded span_sha256 023239c61739e893 equals that content hash; the older record's coordinate 297 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 297-380); the older record's coordinate equals the S definition start line 297",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_rolespec.rs:297 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_rolespec-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_rolespec.rs::UNSAFE_FN_DEF::i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX"
+   ],
+   "file": "src/x509/v3_rolespec.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX",
+   "discharging_boundary": "src/x509/v3_rolespec.rs:392",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_rolespec.rs, UNSAFE_FN_DEF, i2r_OSSL_ROLE_SPEC_CERT_ID_SYNTAX) as discharging boundary src/x509/v3_rolespec.rs:392; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 392-431, sha256 7f0f5abe0090025d), and the discharging record's recorded span_sha256 7f0f5abe0090025d equals that content hash; the older record's coordinate 392 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 392-431); the older record's coordinate equals the S definition start line 392",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_rolespec.rs:392 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "openssh-v1l-sites",
+   "ids": [
+    "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAME_ex"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_GENERAL_NAME_ex",
+   "discharging_boundary": "src/x509/v3_san.rs:1069",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_san.rs, UNSAFE_FN_DEF, v2i_GENERAL_NAME_ex) as discharging boundary src/x509/v3_san.rs:1069; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 1068-1117, sha256 095944c0642818b9), and the discharging record's recorded span_sha256 095944c0642818b9 equals that content hash; the older record's coordinate 1058 lies inside this operation's definition span at its own identity 8a54aba58 (there: lines 1057-1106)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_san.rs:1069 (ledger row boundary-sweep-B55, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B55 supplies the NULL-ctx refusal guard in X509V3_get_section plus per-row NULL-ctx controls.",
+   "reason": "the older record is an ownership enumeration: disposition 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note; the receipt enumerates sites for ownership and claims no discharge. It records no defect, so it is stale once a site-scoped discharge for the same operation exists.",
+   "ledger_row_receipt": "boundary-sweep-B55"
+  },
+  {
+   "receipt": "openssh-v1l-sites",
+   "ids": [
+    "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAME"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_GENERAL_NAME",
+   "discharging_boundary": "src/x509/v3_san.rs:1127",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_san.rs, UNSAFE_FN_DEF, v2i_GENERAL_NAME) as discharging boundary src/x509/v3_san.rs:1127; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 1126-1134, sha256 cfea39b622d6844b), and the discharging record's recorded span_sha256 cfea39b622d6844b equals that content hash; the older record's coordinate 1115 lies inside this operation's definition span at its own identity 8a54aba58 (there: lines 1114-1122)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_san.rs:1127 (ledger row boundary-sweep-B55, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B55 supplies the NULL-ctx refusal guard in X509V3_get_section plus per-row NULL-ctx controls.",
+   "reason": "the older record is an ownership enumeration: disposition 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note; the receipt enumerates sites for ownership and claims no discharge. It records no defect, so it is stale once a site-scoped discharge for the same operation exists.",
+   "ledger_row_receipt": "boundary-sweep-B55"
+  },
+  {
+   "receipt": "openssh-v1l-sites",
+   "ids": [
+    "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAMES"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_GENERAL_NAMES",
+   "discharging_boundary": "src/x509/v3_san.rs:1144",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_san.rs, UNSAFE_FN_DEF, v2i_GENERAL_NAMES) as discharging boundary src/x509/v3_san.rs:1144; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 1143-1173, sha256 4bc959090092b15c), and the discharging record's recorded span_sha256 4bc959090092b15c equals that content hash; the older record's coordinate 1131 lies inside this operation's definition span at its own identity 8a54aba58 (there: lines 1130-1160)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_san.rs:1144 (ledger row boundary-sweep-B55, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B55 supplies the NULL-ctx refusal guard in X509V3_get_section plus per-row NULL-ctx controls.",
+   "reason": "the older record is an ownership enumeration: disposition 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note; the receipt enumerates sites for ownership and claims no discharge. It records no defect, so it is stale once a site-scoped discharge for the same operation exists.",
+   "ledger_row_receipt": "boundary-sweep-B55"
+  },
+  {
+   "receipt": "openssh-v1l-sites",
+   "ids": [
+    "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_issuer_alt"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_issuer_alt",
+   "discharging_boundary": "src/x509/v3_san.rs:1246",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_san.rs, UNSAFE_FN_DEF, v2i_issuer_alt) as discharging boundary src/x509/v3_san.rs:1246; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 1246-1296, sha256 91c9c2fe9bdbcc20), and the discharging record's recorded span_sha256 91c9c2fe9bdbcc20 equals that content hash; the older record's coordinate 1231 lies inside this operation's definition span at its own identity 8a54aba58 (there: lines 1231-1281)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_san.rs:1246 (ledger row boundary-sweep-B55, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B55 supplies the NULL-ctx refusal guard in X509V3_get_section plus per-row NULL-ctx controls.",
+   "reason": "the older record is an ownership enumeration: disposition 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note; the receipt enumerates sites for ownership and claims no discharge. It records no defect, so it is stale once a site-scoped discharge for the same operation exists.",
+   "ledger_row_receipt": "boundary-sweep-B55"
+  },
+  {
+   "receipt": "openssh-v1l-sites",
+   "ids": [
+    "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_subject_alt"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_subject_alt",
+   "discharging_boundary": "src/x509/v3_san.rs:1372",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_san.rs, UNSAFE_FN_DEF, v2i_subject_alt) as discharging boundary src/x509/v3_san.rs:1372; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 1372-1429, sha256 dcb9f32ccf1f2859), and the discharging record's recorded span_sha256 dcb9f32ccf1f2859 equals that content hash; the older record's coordinate 1355 lies inside this operation's definition span at its own identity 8a54aba58 (there: lines 1355-1412)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_san.rs:1372 (ledger row boundary-sweep-B55, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B55 supplies the NULL-ctx refusal guard in X509V3_get_section plus per-row NULL-ctx controls.",
+   "reason": "the older record is an ownership enumeration: disposition 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note; the receipt enumerates sites for ownership and claims no discharge. It records no defect, so it is stale once a site-scoped discharge for the same operation exists.",
+   "ledger_row_receipt": "boundary-sweep-B55"
+  },
+  {
+   "receipt": "openssh-v1l-sites",
+   "ids": [
+    "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::i2v_GENERAL_NAMES"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2v_GENERAL_NAMES",
+   "discharging_boundary": "src/x509/v3_san.rs:317",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_san.rs, UNSAFE_FN_DEF, i2v_GENERAL_NAMES) as discharging boundary src/x509/v3_san.rs:317; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 316-346, sha256 4e1d2a03cb3d1798), and the discharging record's recorded span_sha256 4e1d2a03cb3d1798 equals that content hash; the older record's coordinate 317 lies inside this operation's definition span at its own identity 8a54aba58 (there: lines 316-346)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_san.rs:317 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: disposition 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note; the receipt enumerates sites for ownership and claims no discharge. It records no defect, so it is stale once a site-scoped discharge for the same operation exists.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "openssh-v1l-sites",
+   "ids": [
+    "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::i2v_GENERAL_NAME"
+   ],
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2v_GENERAL_NAME",
+   "discharging_boundary": "src/x509/v3_san.rs:356",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_san.rs, UNSAFE_FN_DEF, i2v_GENERAL_NAME) as discharging boundary src/x509/v3_san.rs:356; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 355-629, sha256 1a27c17918064681), and the discharging record's recorded span_sha256 1a27c17918064681 equals that content hash; the older record's coordinate 356 lies inside this operation's definition span at its own identity 8a54aba58 (there: lines 355-629)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_san.rs:356 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: disposition 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note; the receipt enumerates sites for ownership and claims no discharge. It records no defect, so it is stale once a site-scoped discharge for the same operation exists.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-054"
+   ],
+   "file": "src/x509/v3_skid.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_skey_id",
+   "discharging_boundary": "src/x509/v3_skid.rs:206",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_skid.rs, UNSAFE_FN_DEF, s2i_skey_id) as discharging boundary src/x509/v3_skid.rs:206; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 206-247, sha256 350b8bbb830f881e), and the discharging record's recorded span_sha256 350b8bbb830f881e equals that content hash; the older record's coordinate 206 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 206-247); the older record's coordinate equals the S definition start line 206",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_skid.rs:206 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "B52SITE::src/x509/v3_skid.rs::UNSAFE_FN_DEF::i2s_ASN1_OCTET_STRING"
+   ],
+   "file": "src/x509/v3_skid.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_ASN1_OCTET_STRING",
+   "discharging_boundary": "src/x509/v3_skid.rs:73",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_skid.rs, UNSAFE_FN_DEF, i2s_ASN1_OCTET_STRING) as discharging boundary src/x509/v3_skid.rs:73; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 72-80, sha256 477c044bf3558ab3), and the discharging record's recorded span_sha256 477c044bf3558ab3 equals that content hash; the older record's coordinate 73 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 72-80)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_skid.rs:73 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "B52SITE::src/x509/v3_skid.rs::UNSAFE_FN_DEF::s2i_ASN1_OCTET_STRING"
+   ],
+   "file": "src/x509/v3_skid.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_ASN1_OCTET_STRING",
+   "discharging_boundary": "src/x509/v3_skid.rs:90",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_skid.rs, UNSAFE_FN_DEF, s2i_ASN1_OCTET_STRING) as discharging boundary src/x509/v3_skid.rs:90; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 89-116, sha256 04c19a8d5a15c1da), and the discharging record's recorded span_sha256 04c19a8d5a15c1da equals that content hash; the older record's coordinate 90 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 89-116)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_skid.rs:90 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "B52SITE::src/x509/v3_utf8.rs::UNSAFE_FN_DEF::s2i_ASN1_UTF8STRING"
+   ],
+   "file": "src/x509/v3_utf8.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_ASN1_UTF8STRING",
+   "discharging_boundary": "src/x509/v3_utf8.rs:114",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_utf8.rs, UNSAFE_FN_DEF, s2i_ASN1_UTF8STRING) as discharging boundary src/x509/v3_utf8.rs:114; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 113-140, sha256 88be2dfb494f0b5a), and the discharging record's recorded span_sha256 88be2dfb494f0b5a equals that content hash; the older record's coordinate 114 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 113-140)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_utf8.rs:114 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "B52SITE::src/x509/v3_utf8.rs::UNSAFE_FN_DEF::i2s_ASN1_UTF8STRING"
+   ],
+   "file": "src/x509/v3_utf8.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_ASN1_UTF8STRING",
+   "discharging_boundary": "src/x509/v3_utf8.rs:74",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_utf8.rs, UNSAFE_FN_DEF, i2s_ASN1_UTF8STRING) as discharging boundary src/x509/v3_utf8.rs:74; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 73-105, sha256 ee2dcf0afd1849c2), and the discharging record's recorded span_sha256 ee2dcf0afd1849c2 equals that content hash; the older record's coordinate 74 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 73-105)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_utf8.rs:74 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_utl-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_utl.rs::UNSAFE_FN_DEF::i2s_ASN1_ENUMERATED"
+   ],
+   "file": "src/x509/v3_utl.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_ASN1_ENUMERATED",
+   "discharging_boundary": "src/x509/v3_utl.rs:501",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_utl.rs, UNSAFE_FN_DEF, i2s_ASN1_ENUMERATED) as discharging boundary src/x509/v3_utl.rs:501; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 500-526, sha256 fe7a08cae1ee465d), and the discharging record's recorded span_sha256 fe7a08cae1ee465d equals that content hash; the older record's coordinate 501 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 500-526)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_utl.rs:501 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_utl-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_utl.rs::UNSAFE_FN_DEF::i2s_ASN1_INTEGER"
+   ],
+   "file": "src/x509/v3_utl.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_ASN1_INTEGER",
+   "discharging_boundary": "src/x509/v3_utl.rs:535",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_utl.rs, UNSAFE_FN_DEF, i2s_ASN1_INTEGER) as discharging boundary src/x509/v3_utl.rs:535; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 534-560, sha256 f52722fbe9d528f8), and the discharging record's recorded span_sha256 f52722fbe9d528f8 equals that content hash; the older record's coordinate 535 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 534-560)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_utl.rs:535 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "b52-gap-v3_utl-sites",
+   "ids": [
+    "B52GAP::src/x509/v3_utl.rs::UNSAFE_FN_DEF::s2i_ASN1_INTEGER"
+   ],
+   "file": "src/x509/v3_utl.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_ASN1_INTEGER",
+   "discharging_boundary": "src/x509/v3_utl.rs:573",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_utl.rs, UNSAFE_FN_DEF, s2i_ASN1_INTEGER) as discharging boundary src/x509/v3_utl.rs:573; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 572-645, sha256 04477bd16e6b163a), and the discharging record's recorded span_sha256 04477bd16e6b163a equals that content hash; the older record's coordinate 573 lies inside this operation's definition span at its own identity a8716b4f2 (there: lines 572-645)",
+   "discharging_evidence": "r13-coordinate-rebind declares the ledger key src/x509/v3_utl.rs:573 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's verdict. The row's own receipt is adjudicated-fast by the orchestrating agent (not the author) and records its BOUNDARY/SEAL obligations NOT_RUN. B54 supplies the per-path dispatch adjudication with four mutation-proven production controls and 11 explicit rejections.",
+   "reason": "the older record is an ownership enumeration: its receipt states in its scope and non_claims that it claims no discharge, no contract and no new reachability finding, and the boundary disposition is 'RETAINED (BLOCKED) - enumerated, not discharged' with only a 'hazard' note. It records no defect, so it is stale once a site-scoped SAFETY_DISCHARGED exists for the same operation.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  }
+ ],
+ "supersedes_note": "B67-G1 disposition-conflict resolution against the b61 openssh closure. Each entry names ONE older boundary id plus the single boundary of this receipt that carries the same (file, kind, operation); the loader attaches a receipt's supersedes list to every boundary it declares, so every id was checked to match exactly one boundary here, namely the named discharging_boundary. Each entry records the content-addressed binding at S=b6f38f13 and the specific reason the older record is stale; no boundary disposition, span hash or verdict of this receipt is changed by this block. This receipt declares the ledger join-key boundary records for B53-B57 (the substantive per-site evidence lives in each entry's ledger_row_receipt), so a supersession can only be declared here: the accepted record is this receipt's, not the source receipt's. The block withdraws only an older, different receipt's non-discharging disposition for the same operation; it creates no verdict of its own."
 }

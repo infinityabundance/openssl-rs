@@ -1012,5 +1012,128 @@
   "issue": "the receipt said applied=false while the ledger already carried an APPROVE row",
   "resolution": "applied=true; review.applied=true; review_history and every REJECT preserved unchanged. The applied measurement is evidence/closure-ssh-b51-applied.json (177/135 -> measured), and the later b52 baseline (177/135) is consistent with it.",
   "reviewed_by": "orchestrator transcription; no verdict changed"
- }
+ },
+ "supersedes": [
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-007"
+   ],
+   "file": "src/x509/v3_battcons.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_OSSL_BASIC_ATTR_CONSTRAINTS",
+   "discharging_boundary": "B51-V2I-002",
+   "discharging_receipt": "boundary-sweep-B51",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_battcons.rs, UNSAFE_FN_DEF, v2i_OSSL_BASIC_ATTR_CONSTRAINTS) as discharging boundary B51-V2I-002; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 248-295, sha256 2a306bf301a49413), and the discharging record's recorded span_sha256 2a306bf301a49413 equals that content hash; the older record's coordinate 208 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 208-255)",
+   "discharging_evidence": "boundary-sweep-B51 discharges the v2i slot callbacks through do_ext_nconf's single row resolution and registry read hold; its independent adversarial adjudicator returned APPROVE (applied, 2026-11-02)",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-009"
+   ],
+   "file": "src/x509/v3_bcons.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_BASIC_CONSTRAINTS",
+   "discharging_boundary": "B51-V2I-003",
+   "discharging_receipt": "boundary-sweep-B51",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_bcons.rs, UNSAFE_FN_DEF, v2i_BASIC_CONSTRAINTS) as discharging boundary B51-V2I-003; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 249-296, sha256 27f004feb49a5375), and the discharging record's recorded span_sha256 27f004feb49a5375 equals that content hash; the older record's coordinate 209 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 209-256)",
+   "discharging_evidence": "boundary-sweep-B51 discharges the v2i slot callbacks through do_ext_nconf's single row resolution and registry read hold; its independent adversarial adjudicator returned APPROVE (applied, 2026-11-02)",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-018"
+   ],
+   "file": "src/x509/v3_extku.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_EXTENDED_KEY_USAGE",
+   "discharging_boundary": "B51-V2I-004",
+   "discharging_receipt": "boundary-sweep-B51",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_extku.rs, UNSAFE_FN_DEF, v2i_EXTENDED_KEY_USAGE) as discharging boundary B51-V2I-004; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 252-293, sha256 2c67932b8fee909f), and the discharging record's recorded span_sha256 2c67932b8fee909f equals that content hash; the older record's coordinate 212 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 212-253)",
+   "discharging_evidence": "boundary-sweep-B51 discharges the v2i slot callbacks through do_ext_nconf's single row resolution and registry read hold; its independent adversarial adjudicator returned APPROVE (applied, 2026-11-02)",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-030"
+   ],
+   "file": "src/x509/v3_info.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_AUTHORITY_INFO_ACCESS",
+   "discharging_boundary": "B51-V2I-005",
+   "discharging_receipt": "boundary-sweep-B51",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_info.rs, UNSAFE_FN_DEF, v2i_AUTHORITY_INFO_ACCESS) as discharging boundary B51-V2I-005; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 460-551, sha256 070893b8d932de42), and the discharging record's recorded span_sha256 070893b8d932de42 equals that content hash; the older record's coordinate 414 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 414-505)",
+   "discharging_evidence": "boundary-sweep-B51 discharges the v2i slot callbacks through do_ext_nconf's single row resolution and registry read hold; its independent adversarial adjudicator returned APPROVE (applied, 2026-11-02)",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation. NOTE (B67-G8): B54-X1 recommended reopening this row because v2i_GENERAL_NAME_ex's 'ctx NULL or live' contract was false. B55 repaired the callee instead (X509V3_get_section now refuses a NULL ctx and do_dirname names that refusal), so the sentence v2i_AUTHORITY_INFO_ACCESS relies on is true at S. Had that repair not landed, this entry would be DISCHARGE_INVALID."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-034"
+   ],
+   "file": "src/x509/v3_ist.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_issuer_sign_tool",
+   "discharging_boundary": "B51-V2I-006",
+   "discharging_receipt": "boundary-sweep-B51",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_ist.rs, UNSAFE_FN_DEF, v2i_issuer_sign_tool) as discharging boundary B51-V2I-006; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 280-361, sha256 f53b7f8d4280b4fd), and the discharging record's recorded span_sha256 f53b7f8d4280b4fd equals that content hash; the older record's coordinate 246 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 246-327)",
+   "discharging_evidence": "boundary-sweep-B51 discharges the v2i slot callbacks through do_ext_nconf's single row resolution and registry read hold; its independent adversarial adjudicator returned APPROVE (applied, 2026-11-02)",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-045"
+   ],
+   "file": "src/x509/v3_pcons.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_POLICY_CONSTRAINTS",
+   "discharging_boundary": "B51-V2I-007",
+   "discharging_receipt": "boundary-sweep-B51",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_pcons.rs, UNSAFE_FN_DEF, v2i_POLICY_CONSTRAINTS) as discharging boundary B51-V2I-007; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 218-276, sha256 2e56bbde1a65eb68), and the discharging record's recorded span_sha256 2e56bbde1a65eb68 equals that content hash; the older record's coordinate 179 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 179-237)",
+   "discharging_evidence": "boundary-sweep-B51 discharges the v2i slot callbacks through do_ext_nconf's single row resolution and registry read hold; its independent adversarial adjudicator returned APPROVE (applied, 2026-11-02)",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-048"
+   ],
+   "file": "src/x509/v3_pmaps.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "v2i_POLICY_MAPPINGS",
+   "discharging_boundary": "B51-V2I-008",
+   "discharging_receipt": "boundary-sweep-B51",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_pmaps.rs, UNSAFE_FN_DEF, v2i_POLICY_MAPPINGS) as discharging boundary B51-V2I-008; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 269-327, sha256 d48172585cbaf516), and the discharging record's recorded span_sha256 d48172585cbaf516 equals that content hash; the older record's coordinate 229 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 229-287)",
+   "discharging_evidence": "boundary-sweep-B51 discharges the v2i slot callbacks through do_ext_nconf's single row resolution and registry read hold; its independent adversarial adjudicator returned APPROVE (applied, 2026-11-02)",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-061"
+   ],
+   "file": "src/x509/v3_sxnet.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sxnet_v2i",
+   "discharging_boundary": "B51-V2I-009",
+   "discharging_receipt": "boundary-sweep-B51",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_sxnet.rs, UNSAFE_FN_DEF, sxnet_v2i) as discharging boundary B51-V2I-009; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 453-475, sha256 e91dd5a8b890319d), and the discharging record's recorded span_sha256 e91dd5a8b890319d equals that content hash; the older record's coordinate 406 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 406-428)",
+   "discharging_evidence": "boundary-sweep-B51 discharges the v2i slot callbacks through do_ext_nconf's single row resolution and registry read hold; its independent adversarial adjudicator returned APPROVE (applied, 2026-11-02)",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  }
+ ],
+ "supersedes_note": "B67-G1 disposition-conflict resolution against the b61 openssh closure. Each entry names ONE older boundary id plus the single boundary of this receipt that carries the same (file, kind, operation); the loader attaches a receipt's supersedes list to every boundary it declares, so every id was checked to match exactly one boundary here, namely the named discharging_boundary. Each entry records the content-addressed binding at S=b6f38f13 and the specific reason the older record is stale; no boundary disposition, span hash or verdict of this receipt is changed by this block."
 }
