@@ -1,0 +1,427 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/freeze/v1",
+ "candidate_tag": "b73",
+ "generated_utc": "2026-11-12T22:38:48Z",
+ "freeze_kind": "source-and-artefact freeze",
+ "freeze_reason": "S is the eng_list TOCTOU repair. The libcrypto/libssl install, the OpenSSH consumer binaries and the census were rebuilt at S; the element-7 re-pin record was regenerated against the b73 DSO.",
+ "source": {
+  "head": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+  "head_subject": "Ledger: 223 supported / 98 review-required / 2 blocked; candidate moved to 0d39697ae",
+  "branch": "main",
+  "src_rs_files": 878,
+  "crate_version": "0.0.46",
+  "src_content_sha256": "8ee037be6789bd8e2731d5081b787dda2ebfa190a873c1366f1aac01f7ba7374",
+  "src_content_hash_rule": "sha256('openssl-rs/src-rs/v1\\0' + sorted relpath\\0bytes\\0)",
+  "source_tree_digest": {
+   "count": 888,
+   "sha256": "088f1ca6024e558560f07a8b076459445722f63f7887b88c71d373a1e4d320cd",
+   "rule": "sha256 over canonical JSON of sorted [relpath,size,sha256] for src/, Cargo.toml, Cargo.lock, build.rs (forensics/tools/phase7_courts.py::_source_tree_digest)"
+  },
+  "working_tree": {
+   "repository_head": "cd83e0c2a2583fb511c4bac0f0249c2909fdc7d2",
+   "branch": "main",
+   "tracked_dirty": true,
+   "modified_paths": [
+    "forensics/downstream/build-link-atlas.json",
+    "forensics/tools/consumer_closure.py"
+   ]
+  },
+  "src_diff_vs_frozen_candidate": null
+ },
+ "candidate_identity": {
+  "source_head": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+  "tool_sha256": "edadf43b71285612cf53c9895c7beb751f270949e2f093dec8fa6e1bbd3fb483",
+  "census_sha256": "654f9559ce48874015574cfaf0af7dea4e72e4d585299992aac7e3a7473080ed",
+  "libcrypto_so_3_sha256": "e8a90ba4bd1e597ed22adbfef56c7336b80a65477393ba5a74afbbe428b985cb",
+  "libssl_so_3_sha256": "f7b4975225b59306e507b8e2ec14071748700f7f56f99c9a7d9fdcaf3a43ac2f",
+  "ssh_sha256": "bff896e3f8511be1f81f33deae4b62052ba40cb803be7ddff9f332c815f78c35",
+  "sshd_sha256": "64e0a4cc190fc3897aabcd2f95cdc630d25b3dc11b2a9635973449fe84164f92",
+  "rule": "source head + instrument sha + census sha + measured artefact digests; a change to any one of them is a new candidate"
+ },
+ "tool": {
+  "path": "forensics/tools/consumer_closure.py",
+  "sha256": "edadf43b71285612cf53c9895c7beb751f270949e2f093dec8fa6e1bbd3fb483",
+  "version": 6,
+  "closure_bound_sha256": "c65cbab5d8812eee6199ee96703881ca2f14d576981341bbbfb095abd9be19c4",
+  "changed_since_closures": true,
+  "change_note": "the two b73 closures were produced by c65cbab5d8812eee6199ee96703881ca2f14d576981341bbbfb095abd9be19c4; this freeze is written after the element-7 re-pin and the mechanism-carry fix, so a re-run is required to bind the current instrument (AGENTS.md section 22)",
+  "inputs": {
+   "census": {
+    "path": "court/freeze-b73/census-b73.json",
+    "sha256": "654f9559ce48874015574cfaf0af7dea4e72e4d585299992aac7e3a7473080ed",
+    "size": 13434332
+   },
+   "state": {
+    "path": "forensics/memory-safety/campaign/safe-c33/state.json",
+    "sha256": "508095bcb91f439fc126cf964d31a4f0f656f997587234d5bfbb07ec0cbc8273",
+    "size": 53598
+   },
+   "campaign_status": {
+    "path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+    "sha256": "cf2948af3b630fa7998e5364a099f13232a2a076dcc900c4cc33aad0559241fb",
+    "size": 232685
+   },
+   "enrolment_blockers": {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json",
+    "sha256": "46d1e5fcd00a0a96c4346f01302f938b74e12cd3e92986ee7743e007d232c652",
+    "size": 71165
+   }
+  }
+ },
+ "artefacts": {
+  "install_prefix": "court/freeze-b73/install",
+  "files": {
+   "libcrypto.so.3": {
+    "path": "court/freeze-b73/install/lib/libcrypto.so.3",
+    "sha256": "e8a90ba4bd1e597ed22adbfef56c7336b80a65477393ba5a74afbbe428b985cb",
+    "size": 16874240
+   },
+   "libssl.so.3": {
+    "path": "court/freeze-b73/install/lib/libssl.so.3",
+    "sha256": "f7b4975225b59306e507b8e2ec14071748700f7f56f99c9a7d9fdcaf3a43ac2f",
+    "size": 16587312
+   },
+   "libcrypto.a": {
+    "path": "court/freeze-b73/install/lib/libcrypto.a",
+    "sha256": "8a151deb0b52e3364e55c2f188e99c7df67e83c57f577d3774ab72c81b5a5fcb",
+    "size": 44454624
+   },
+   "libssl.a": {
+    "path": "court/freeze-b73/install/lib/libssl.a",
+    "sha256": "4da4d92029c90288e923c7be3a815d81fd75ec1f4922ff28527ad67f82f21bb3",
+    "size": 44455174
+   },
+   "legacy.so": {
+    "path": "court/freeze-b73/install/lib/ossl-modules/legacy.so",
+    "sha256": "93f9a117f5fe957f80470f04ecfed096902ec0392aa5392f1623e7e0bdad8500",
+    "size": 16550224
+   },
+   "openssl": {
+    "path": "court/freeze-b73/install/bin/openssl",
+    "sha256": "45bdbfd15b1f31cc13aac7159a708e7b36eae8d027f9199351bfd63858897872",
+    "size": 12386800
+   },
+   "ssh": {
+    "path": "court/tmp/openssh-closure/client-b73/openssh-9.9p1/ssh",
+    "sha256": "bff896e3f8511be1f81f33deae4b62052ba40cb803be7ddff9f332c815f78c35",
+    "size": 3401744
+   },
+   "sshd": {
+    "path": "court/tmp/openssh-closure/server-b73/openssh-9.9p1/sshd",
+    "sha256": "64e0a4cc190fc3897aabcd2f95cdc630d25b3dc11b2a9635973449fe84164f92",
+    "size": 1763248
+   },
+   "sshd_session": {
+    "path": "court/tmp/openssh-closure/server-b73/openssh-9.9p1/sshd-session",
+    "sha256": "bf9635edc0517233b8141d3124184ecf51b9d734a61ac90eb01572cc01891266",
+    "size": 3594840
+   }
+  },
+  "install_matches_census": {
+   "libcrypto.so.3": true,
+   "libssl.so.3": true,
+   "legacy.so": true,
+   "openssl": true
+  },
+  "all_install_artefacts_match_census": true,
+  "resolved_libcrypto_sha256": "e8a90ba4bd1e597ed22adbfef56c7336b80a65477393ba5a74afbbe428b985cb",
+  "consumer_source": "OpenSSH 9.9p1, relinked by court/freeze-b73/build-openssh-b73.sh",
+  "note": "each digest is recomputed from the file named in this working tree; the comparison against the census's binary artefact digests is recorded per file"
+ },
+ "build": {
+  "openssh_relink_script": {
+   "path": "court/freeze-b73/build-openssh-b73.sh",
+   "sha256": "efc650eeb744a8af14e4721d532204b11f0976871aaa9d60aa9f1d9c668a6d76",
+   "size": 3092
+  },
+  "openssh_build_log": {
+   "path": "court/freeze-b73/build-openssh-b73.log",
+   "sha256": "533dde48a95706de7a12b0d7b3255d0b1f063f61b8812b45ea0195beeee78ecb",
+   "size": 697
+  },
+  "openssh_timings": {
+   "path": "court/freeze-b73/openssh-build-timings.json",
+   "sha256": "dded4e867147c94ba89d34bd6a35348d2ca23fdd249c0ba5f687629d799b2d7b",
+   "size": 327
+  },
+  "build_log": {
+   "path": "court/freeze-b73/build-b73.log",
+   "sha256": "e576c65a54e2e05b8bca8005deb1da70ae2f55687af99c9f57869c104fd5243b",
+   "size": 12904
+  },
+  "census_script": {
+   "path": "court/freeze-b73/census-clippy-b73.sh",
+   "sha256": "1e87c0d52e1e2852cbb46393cc9c242707cbad21ada5359cb289f8343fbc4d1d",
+   "size": 912
+  }
+ },
+ "census": {
+  "path": "court/freeze-b73/census-b73.json",
+  "sha256": "654f9559ce48874015574cfaf0af7dea4e72e4d585299992aac7e3a7473080ed",
+  "bytes": 13434332,
+  "source_head": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+  "delta_vs": {
+   "path": "court/freeze-b58/census-b58.json",
+   "source_head": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+   "src_content_sha256": "2290c59c0ec5a5ba69b8d6f7ff38bef68eb727f0c6013d15630fa5e04de6293e",
+   "libcrypto_so_3_sha256": "f3061a4fccdf96370e8c0e41891555f76f0e1612bd402d34a49ece1ae555a7ec",
+   "census_carried_forward": false,
+   "census_basis": "the previous document's census was generated at its source head",
+   "previous_rebind": null
+  },
+  "operation_counts": {
+   "production_blockers": 100,
+   "test_only_blockers": 216,
+   "allocator_seam_blockers": 0,
+   "total_blockers": 316
+  }
+ },
+ "closures": {
+  "ssh": {
+   "receipt": "evidence/closure-ssh-b73.json",
+   "sha256": "5d1784271dafcb4a6af1f2c225252aa48833bd97de327983a2e19304813ed587",
+   "bytes": 13558522,
+   "artifact": "court/tmp/openssh-closure/client-b73/openssh-9.9p1/ssh",
+   "artifact_sha256": "bff896e3f8511be1f81f33deae4b62052ba40cb803be7ddff9f332c815f78c35",
+   "closure_bound_tool_sha256": "c65cbab5d8812eee6199ee96703881ca2f14d576981341bbbfb095abd9be19c4",
+   "counts": {
+    "reachable_files": 631,
+    "reachable_production_obligations": 323,
+    "DISCHARGED": 320,
+    "BLOCKED": 3,
+    "UNKNOWN": 0,
+    "v1_production_operations_total": 100,
+    "v1_uncontracted_operations_total": 316,
+    "carried_forward": 213,
+    "carried_forward_removed": 3,
+    "stale_discharge_rejections": 0
+   },
+   "by_mechanism": {
+    "<unmapped>": 1,
+    "ASN1_OCSP": 6,
+    "BIO": 2,
+    "C_ABI_CONTRACT": 19,
+    "EVP_PKEY_PROVIDER": 116,
+    "RAND_CMS_STORE_KEYFMT": 45,
+    "RUNTIME_CONCURRENCY": 4,
+    "SSL_SESSION": 14,
+    "X509_VERIFY_POLICY": 116
+   },
+   "verdict": {
+    "state": "REFUSED",
+    "safe_compatible": false,
+    "reason": "closure refused: UNKNOWN_MECHANISM (1 reachable file(s) with production obligations map to no registered mechanism)"
+   },
+   "refusals": [
+    {
+     "code": "UNKNOWN_MECHANISM",
+     "detail": "1 reachable file(s) with production obligations map to no registered mechanism",
+     "files": [
+      "src/ct/ct_x509v3.rs"
+     ]
+    }
+   ],
+   "element_7": {
+    "established": false,
+    "status": "FAIL",
+    "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+    "reachable_unresolved_sites": 154,
+    "target_bounded_unresolved_sites": 38,
+    "contract_bounded_sites": 116,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 17,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    },
+    "unclassified_reachable_sites": 0,
+    "target_sets_remain_unbounded": true,
+    "why": "38 reachable unresolved site(s) are not contract-bounded, and/or an unclassified site is reachable"
+   },
+   "source_identity": {
+    "repository_head": "e65cdc224d29e033615f9a01a6523c0321ffc38f",
+    "inventory_source_head": "15bebabc90e1c4a8f0cb496813030c1415891f7c"
+   }
+  },
+  "sshd": {
+   "receipt": "evidence/closure-sshd-b73.json",
+   "sha256": "cbfc0b7d10c58b1d555ab1def114e299e14fb24cd344dca142cbe8a7e112bdaa",
+   "bytes": 13372100,
+   "artifact": "court/tmp/openssh-closure/server-b73/openssh-9.9p1/sshd",
+   "artifact_sha256": "64e0a4cc190fc3897aabcd2f95cdc630d25b3dc11b2a9635973449fe84164f92",
+   "closure_bound_tool_sha256": "c65cbab5d8812eee6199ee96703881ca2f14d576981341bbbfb095abd9be19c4",
+   "counts": {
+    "reachable_files": 630,
+    "reachable_production_obligations": 323,
+    "DISCHARGED": 320,
+    "BLOCKED": 3,
+    "UNKNOWN": 0,
+    "v1_production_operations_total": 100,
+    "v1_uncontracted_operations_total": 316,
+    "carried_forward": 213,
+    "carried_forward_removed": 3,
+    "stale_discharge_rejections": 0
+   },
+   "by_mechanism": {
+    "<unmapped>": 1,
+    "ASN1_OCSP": 6,
+    "BIO": 2,
+    "C_ABI_CONTRACT": 19,
+    "EVP_PKEY_PROVIDER": 116,
+    "RAND_CMS_STORE_KEYFMT": 45,
+    "RUNTIME_CONCURRENCY": 4,
+    "SSL_SESSION": 14,
+    "X509_VERIFY_POLICY": 116
+   },
+   "verdict": {
+    "state": "REFUSED",
+    "safe_compatible": false,
+    "reason": "closure refused: UNKNOWN_MECHANISM (1 reachable file(s) with production obligations map to no registered mechanism)"
+   },
+   "refusals": [
+    {
+     "code": "UNKNOWN_MECHANISM",
+     "detail": "1 reachable file(s) with production obligations map to no registered mechanism",
+     "files": [
+      "src/ct/ct_x509v3.rs"
+     ]
+    }
+   ],
+   "element_7": {
+    "established": false,
+    "status": "FAIL",
+    "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+    "reachable_unresolved_sites": 154,
+    "target_bounded_unresolved_sites": 38,
+    "contract_bounded_sites": 116,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 17,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    },
+    "unclassified_reachable_sites": 0,
+    "target_sets_remain_unbounded": true,
+    "why": "38 reachable unresolved site(s) are not contract-bounded, and/or an unclassified site is reachable"
+   },
+   "source_identity": {
+    "repository_head": "e65cdc224d29e033615f9a01a6523c0321ffc38f",
+    "inventory_source_head": "15bebabc90e1c4a8f0cb496813030c1415891f7c"
+   }
+  },
+  "run_script": {
+   "path": "court/freeze-b73/run_closure_b73.sh",
+   "sha256": "3e9ced8b270cc3c3d0834e9168d167cbd30a448fd9fd01969299c2967522a398",
+   "size": 1873
+  },
+  "safe_compatible": false,
+  "safe_compatible_reason": "consumer_closure.py never promotes: verdict.safe_compatible is a hard-coded False. Measured at this candidate: ssh 320/323 DISCHARGED, 3 BLOCKED, 0 UNKNOWN, element 7 FAIL (38 target-bounded, 116 contract-bounded); sshd 320/323 DISCHARGED, 3 BLOCKED, 0 UNKNOWN, element 7 FAIL (38 target-bounded, 116 contract-bounded). AGENTS.md section 7 additionally requires a discharged dependency closure, which this instrument does not establish."
+ },
+ "element7_repin": {
+  "path": "atlas-refresh/element7-b73-repin2.json",
+  "sha256": "ca71e2dd60cdf8664aa1ab7a74514f369b6b62f17349ba1d3a19ed3110162ce8",
+  "artifact_sha256": "e8a90ba4bd1e597ed22adbfef56c7336b80a65477393ba5a74afbbe428b985cb",
+  "reconciliation": {
+   "b61_contract_bounded": 153,
+   "b73_contract_bounded_before_repin": 116,
+   "b73_contract_bounded_after_repin": 153,
+   "b73_target_bounded_before_repin": 38,
+   "b73_target_bounded_after_repin": 0,
+   "lost_classes_total": 37,
+   "recovered_total": 37,
+   "new_site_from_e7bs": 1,
+   "surviving_classes_b61_counts": {
+    "ABI_CONTRACT_CONF_MODULE": 2,
+    "ABI_CONTRACT_CORE_DISPATCH": 26,
+    "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+    "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+    "ABI_CONTRACT_PBE_REGISTRY": 1,
+    "ABI_CONTRACT_PROVIDER": 17,
+    "ABI_CONTRACT_STORE_LOADER": 3
+   },
+   "surviving_total": 116,
+   "explanation": "the seven classes the first re-pin did cover are unchanged at their b61 counts (116 total). The five skipped classes account for 37 sites and the E7BS msblob site for the one extra target-bounded site, so after this re-pin every element-7 site is recovered and the contract-bounded total returns to 153."
+  },
+  "class_counts": {
+   "ABI_CONTRACT_SLH_METHOD_TABLE": {
+    "b61_count": 6,
+    "b73_recovered": 6
+   },
+   "ABI_CONTRACT_PROVIDER_HW_TABLE": {
+    "b61_count": 25,
+    "b73_recovered": 25
+   },
+   "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": {
+    "b61_count": 2,
+    "b73_recovered": 2
+   },
+   "ABI_CONTRACT_DECODER_METHOD_OBJECT": {
+    "b61_count": 3,
+    "b73_recovered": 3
+   },
+   "ABI_CONTRACT_REGISTRATION_ATEXIT": {
+    "b61_count": 1,
+    "b73_recovered": 1
+   }
+  }
+ },
+ "ledger_binding": {
+  "source": "forensics/downstream/build-link-atlas.json",
+  "lookup": "body.runs[family_id=family:openssh, subject=candidate]",
+  "run_id": "run:build-link:candidate:openssh",
+  "artifact_rel": "ssh",
+  "recorded_artifact_sha256": "bff896e3f8511be1f81f33deae4b62052ba40cb803be7ddff9f332c815f78c35",
+  "recorded_candidate_install_libcrypto_sha256": "be578c866e20f78e4f2241ced9e9c1b0d7283d2e3aa3d3d99e26c0635beb16d3",
+  "freeze_proven_artifact_sha256": "bff896e3f8511be1f81f33deae4b62052ba40cb803be7ddff9f332c815f78c35",
+  "freeze_proven_install_libcrypto_sha256": "e8a90ba4bd1e597ed22adbfef56c7336b80a65477393ba5a74afbbe428b985cb",
+  "ssh_receipt_artifact_sha256": "bff896e3f8511be1f81f33deae4b62052ba40cb803be7ddff9f332c815f78c35",
+  "sshd_receipt_artifact_sha256": "64e0a4cc190fc3897aabcd2f95cdc630d25b3dc11b2a9635973449fe84164f92",
+  "recorded_matches_freeze_proven_ssh": true,
+  "note": "the ledger row names artifact_rel='ssh'; one row cannot also bind the sshd digest. The row is updated to the freeze-proven ssh digest so the ssh closure's artifact_matches_this_build can be a real comparison; sshd's binding is recorded as a residual until the ledger join is per-artifact."
+ },
+ "gates": {
+  "closure_verdicts": {
+   "ssh": "REFUSED",
+   "sshd": "REFUSED"
+  },
+  "python_syntax": "py_compile of the instrument: OK",
+  "self_test": {
+   "returncode": 0,
+   "tail": [
+    "[consumer-closure] e7pbe controls: both sites resolve to the builtin table sets (5 / 2); wrong callee, wrong argument index, non-null registry keygen_ex, data row target, second slot writer, 4-byte zero store, 4-byte reload, partial overlap store and non-in-image GOT binding each refuse with slot-width-is-not-64-bit or slot-overlap-store as applicable and each mutation flips it to accepted; the KDF selection control distinguishes 5 from 2; the plain keygen site and all eight b65 ABI sites are unchanged",
+    "[consumer-closure] e7core controls: 26 cohort sites across 24 functions resolve to ABI_CONTRACT_CORE_DISPATCH; two further unreachable sites carry the same class; offset, libctx-index, writer-id, second-source-store, header-id and NULL-guard mutations each refuse and are restored; the provider-init rule refuses a store-offset and an extra-writer mutation and is restored; the store-loader wrapper refuses a non-forwarding source and is restored; the register-agnostic PEM witness refuses a wrong-default-symbol and a wrong-copy-source mutation and is restored",
+    "[consumer-closure] self-test ok: parsing, adjudication truth table, module/file mapping, export-site index, mechanism routing, precision narrowing, unclassified-site negative control, R1/R2/R3/A2/O1 evidence-class controls, the per-call-site witness rule (AGENTS.md section 22), the in-image slot target rule (reachable-writer and static-initialiser negative controls), reachable-caller target bounding (fixed-vs-parameter caller controls), per-edge provenance records (unaccounted/unwitnessed exclusion refusal), mutually redundant target accounting, the closed derivation vocabulary, the final-upper-bound reachability oracle (writer-exclusion negative and positive controls), the v1.2 subject-scoped claim controls (H1 target/evidence binding, H2 module binding, H3 ICF aliases, H4 caller-count exemption removal, H5 self-contradicting evidence, H6 audit coverage, H7 candidate deletion, H8 vacuous-set demotion, H9 duplicate identities, H10 v1m caller-scoped positive control), the v1.3 row-kind and target-binding controls (row kind, reason vocabulary, structured declared targets, target attribution, recomputed caller contributions, candidate equality, writer would_store_targets, derived target_reachability, sidecar default and tool identity), the least-fixed-point residual admission (nested unresolved dispatch, non-convergence refusal), the monotone class-independent site bound, the analysis identity (DSO digest is not an identity; sections, relocations, defined and dynamic symbols and loader entries are bound), admission by refutation (refuted caller admitted and closure recomputed, surviving exclusion validated, infinite contribution demoted to UNRESOLVED), the symbolic-target dispositions (blocking refusal, names-at alias, dynamic symbol, PLT stub, external contract), and the mutation matrix (single pass, class-narrowed bound, refusal removed, admission disabled, unconditional admission, unresolved-symbol refusal removed), and the source-backed S2/S3/S4 witness controls (exported-callback parameter, fetched provider slot, local function-pointer assignment; every refusal condition is mutation-tested), and the site-address-bound OPENSSL_atexit registration witness (positive shape, second-call R1 control, constructor-store and computed-value refusals, each with its load-bearing mutation switch), and the two E7-BS base-slot-partial witnesses (msblob closed descriptor table and rcu closed writer list; the required refusal controls are mutation/fixture-tested and residuals are recorded), and the E7-PKCS12 private-parameter assignment-set witness (both call sites resolve to the same finite target set; closed in-image caller enumeration; unique stack-argument provenance; a dominating NULL guard per site; mandatory source declaration with missing-source and non-callback refusals; non-function/forwarded/computed/dropped-store/no-guard/tail-jump refusals; exported and address-taken refusals; the foreign-function non-widening control; and the three recorded residuals, each mutation- and fixture-tested), and the eight E7-ABI external-application/provider/DSO-registerable witnesses (positive shape for all eight sites; type-alias, continuation-line, split-line `use ... as`, function-pointer registration, macro-expanded slot store and forwarded-parameter counterexamples, each with its own load-bearing mutation switch), and the E7-PBE keygen_ex out-parameter witness (both sites resolve to the builtin table sets 5 and 2; wrong callee, wrong argument index, non-null registry keygen_ex, data row target, second slot writer, 4-byte zero store, 4-byte reload, partial overlap store and non-in-image GOT binding refusals, each with its load-bearing mutation switch; the KDF selection control distinguishes 5 from 2; the plain keygen site and the eight b65 ABI sites are unchanged)"
+   ]
+  },
+  "rust_source": "not run by this generator: no Rust source changed"
+ },
+ "oom": {
+  "generator_run": {
+   "cap_env": {
+    "OPENSSL_RS_COURT_MEM": null,
+    "OPENSSL_RS_COURT_MEMSWAP": null,
+    "OPENSSL_RS_COURT_DATA": null
+   },
+   "cgroup_memory_max": "8589934592",
+   "cgroup_memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0"
+  },
+  "closure_runs": {
+   "note": "the b73 closure cap was set by the caller of run_closure_b73.sh; the receipts do not record it and it is not derivable here, so it is not asserted"
+  }
+ },
+ "not_run": [
+  "no Rust source changed by this freeze; fmt/clippy/library tests belong to the source candidate and are unchanged",
+  "the two b73 closures are bound to the older instrument and must be re-run after this freeze"
+ ],
+ "non_claims": [
+  "the closures named here are measurements of the candidate at S with the closure-bound instrument; they are not re-measured by this generator",
+  "3 BLOCKED / 0 UNKNOWN (ssh) and 3 BLOCKED / 0 UNKNOWN (sshd) is a statement about this instrument's queue at this candidate, not a SAFE_COMPATIBLE promotion",
+  "element 7 is reported exactly as the receipts measured it; the re-pin record is separate evidence about the instrument and is not substituted for a re-run"
+ ]
+}

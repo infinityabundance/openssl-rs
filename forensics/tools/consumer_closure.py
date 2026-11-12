@@ -11987,7 +11987,7 @@ SLH_HASH_CTX_KEY_OFF = 0x00
 # --------------------------------------------------------------------------- #
 # Address re-pin.  The site tables below and REGISTRATION_ATEXIT_CALL_SITE are
 # keyed by virtual address in one exact artefact: libcrypto.so.3 with sha256
-# 136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5dbe88d09a9a44.
+# e8a90ba4bd1e597ed22adbfef56c7336b80a65477393ba5a74afbbe428b985cb (b73).
 # A virtual address is not stable across a rebuild.  Every row MUST be
 # re-pinned by (symbol, offset): resolve the named symbol (demangled path with
 # the per-build crate hash stripped) in the new image, add the recorded offset, then require the new address to be an instruction start,
@@ -11997,21 +11997,21 @@ SLH_HASH_CTX_KEY_OFF = 0x00
 # --------------------------------------------------------------------------- #
 
 SLH_METHOD_TABLE_SITES = {
-    0x1F537E: ("ossl_slh_ht_sign", 0xA8, 0x48),
-    0x1F5729: ("ossl_slh_ht_verify", 0xA8, 0x48),
-    0x313BB7: ("slh_fors_node", 0xA8, 0x50),
-    0x313E8F: ("ossl_slh_fors_sign", 0xA8, 0x50),
-    0x314111: ("ossl_slh_fors_sign", 0xA8, 0x50),
-    0x3147FD: ("ossl_slh_fors_pk_from_sig", 0xB0, 0x28),
+    0x3D192E: ("ossl_slh_ht_sign", 0xA8, 0x48),
+    0x3D1CD9: ("ossl_slh_ht_verify", 0xA8, 0x48),
+    0x4B2737: ("slh_fors_node", 0xA8, 0x50),
+    0x4B2A0F: ("ossl_slh_fors_sign", 0xA8, 0x50),
+    0x4B2C91: ("ossl_slh_fors_sign", 0xA8, 0x50),
+    0x4B337D: ("ossl_slh_fors_pk_from_sig", 0xB0, 0x28),
 }
 
 SLH_METHOD_TABLE_SITE_PINS = {
-    0x1F537E: ("openssl_rs::slh_dsa::hypertree::ossl_slh_ht_sign", 0x8E),
-    0x1F5729: ("openssl_rs::slh_dsa::hypertree::ossl_slh_ht_verify", 0x89),
-    0x313BB7: ("openssl_rs::slh_dsa::fors::slh_fors_node", 0x2C7),
-    0x313E8F: ("openssl_rs::slh_dsa::fors::ossl_slh_fors_sign", 0x1AF),
-    0x314111: ("openssl_rs::slh_dsa::fors::ossl_slh_fors_sign", 0x431),
-    0x3147FD: ("openssl_rs::slh_dsa::fors::ossl_slh_fors_pk_from_sig", 0x51D),
+    0x3D192E: ("openssl_rs::slh_dsa::hypertree::ossl_slh_ht_sign", 0x8E),
+    0x3D1CD9: ("openssl_rs::slh_dsa::hypertree::ossl_slh_ht_verify", 0x89),
+    0x4B2737: ("openssl_rs::slh_dsa::fors::slh_fors_node", 0x2C7),
+    0x4B2A0F: ("openssl_rs::slh_dsa::fors::ossl_slh_fors_sign", 0x1AF),
+    0x4B2C91: ("openssl_rs::slh_dsa::fors::ossl_slh_fors_sign", 0x431),
+    0x4B337D: ("openssl_rs::slh_dsa::fors::ossl_slh_fors_pk_from_sig", 0x51D),
 }
 
 SLH_METHOD_KEY_FIELDS = {
@@ -12480,12 +12480,12 @@ PROVIDER_HW_FIELD_WRITERS = {
 # the table member; `targets` is the complete function set the context closure
 # resolves that member to.
 PROVIDER_HW_SITES = {
-    0x246D4E: {
+    0x39453E: {
         "function": "ossl_gcm_one_shot", "ctx": "ProvGcmCtx", "hw_off": 0xF0,
         "read": 0x10, "type": "ProvGcmHw", "field": "aadupdate",
         "targets": ("ossl_gcm_aad_update",),
     },
-    0x246D64: {
+    0x394554: {
         "function": "ossl_gcm_one_shot", "ctx": "ProvGcmCtx", "hw_off": 0xF0,
         "read": 0x18, "type": "ProvGcmHw", "field": "cipherupdate",
         "targets": ("ossl_gcm_cipher_update", "sm4_gcm_cipher_update"),
@@ -12494,49 +12494,49 @@ PROVIDER_HW_SITES = {
                          "folds into sm4_gcm_cipher_update; the two table "
                          "slots hold the same address"),
     },
-    0x246D7C: {
+    0x39456C: {
         "function": "ossl_gcm_one_shot", "ctx": "ProvGcmCtx", "hw_off": 0xF0,
         "read": 0x20, "type": "ProvGcmHw", "field": "cipherfinal",
         "targets": ("ossl_gcm_cipher_final",),
     },
-    0x24A22B: {
+    0x396E4B: {
         "function": "aes_ocb_", "ctx": "ProvAesOcbCtx", "hw_off": 0xA8,
         "read": 0x0, "type": "ProvCipherHw", "field": "init",
         "targets": ("cipher_hw_aes_ocb_generic_initkey",),
     },
-    0x24A32E: {
+    0x396F4E: {
         "function": "aes_ocb_", "ctx": "ProvAesOcbCtx", "hw_off": 0xA8,
         "read": 0x0, "type": "ProvCipherHw", "field": "init",
         "targets": ("cipher_hw_aes_ocb_generic_initkey",),
     },
-    0x24A77F: {
+    0x39739F: {
         "function": "sm4_xts_", "ctx": "ProvSm4XtsCtx", "hw_off": 0xA8,
         "read": 0x0, "type": "ProvCipherHw", "field": "init",
         "targets": ("cipher_hw_sm4_xts_generic_initkey",),
     },
-    0x24A852: {
+    0x397472: {
         "function": "sm4_xts_", "ctx": "ProvSm4XtsCtx", "hw_off": 0xA8,
         "read": 0x0, "type": "ProvCipherHw", "field": "init",
         "targets": ("cipher_hw_sm4_xts_generic_initkey",),
     },
-    0x24B822: {
+    0x398442: {
         "function": "aes_siv_freectx", "ctx": "ProvAesSivCtx",
         "hw_off": 0x68, "read": 0x20, "type": "ProvSivHw",
         "field": "cleanup", "targets": ("aes_siv_cleanup",),
         "impl_fn": "destroy_body",
     },
-    0x24EFBD: {
+    0x39BB1D: {
         "function": "cts128_cs2_decrypt", "ctx": "ProvCipherCtx",
         "hw_off": 0xA8, "read": 0x8, "type": "ProvCipherHw",
         "field": "cipher", "targets": ("ossl_cipher_hw_generic_cbc",),
     },
-    0x254B30: {
+    0x3A1650: {
         "function": "chacha20_poly1305_initiv",
         "ctx": "ProvChacha20Poly1305Ctx", "base_first": True,
         "hw_off": 0x168, "read": 0x18, "type": "ProvCipherHwChacha20",
         "field": "initiv", "targets": ("chacha20_initiv",),
     },
-    0x254C56: {
+    0x3A1776: {
         "function": "chacha20_poly1305_update",
         "ctx": "ProvChacha20Poly1305Ctx",
         "inline_from": ("chacha20_poly1305_cipher", "vctx",
@@ -12545,31 +12545,31 @@ PROVIDER_HW_SITES = {
         "type": "ProvCipherHwChacha20Poly1305", "field": "aead_cipher",
         "targets": ("chacha20_poly1305_aead_cipher",),
     },
-    0x254DC8: {
+    0x3A18E8: {
         "function": "ossl_aes_gcm_siv_freectx", "ctx": "ProvAesGcmSivCtx",
         "hw_off": 0x8, "read": 0x18, "type": "ProvCipherHwAesGcmSiv",
         "field": "clean_ctx", "targets": ("aes_gcm_siv_clean_ctx",),
         "impl_fn": "destroy_body",
     },
-    0x255729: {
+    0x3A2249: {
         "function": "chacha20_poly1305_initkey",
         "ctx": "ProvChacha20Poly1305Ctx", "base_first": True,
         "hw_off": 0x168, "read": 0x0, "type": "ProvCipherHwChacha20",
         "field": "base.init", "targets": ("chacha20_initkey",),
     },
-    0x2580CF: {
+    0x3A4BEF: {
         "function": "chacha20_poly1305_aead_cipher",
         "ctx": "ProvChacha20Poly1305Ctx", "base_first": True,
         "hw_off": 0x168, "read": 0x8, "type": "ProvCipherHwChacha20",
         "field": "base.cipher", "targets": ("chacha20_cipher",),
     },
-    0x258281: {
+    0x3A4DA1: {
         "function": "chacha20_poly1305_aead_cipher",
         "ctx": "ProvChacha20Poly1305Ctx", "base_first": True,
         "hw_off": 0x168, "read": 0x8, "type": "ProvCipherHwChacha20",
         "field": "base.cipher", "targets": ("chacha20_cipher",),
     },
-    0x25A5CF: {
+    0x3A70EF: {
         "function": "ossl_cipher_generic_block_final",
         "ctx": "ProvCipherCtx", "hw_off": 0xA8, "read": 0x8,
         "type": "ProvCipherHw", "field": "cipher",
@@ -12584,7 +12584,7 @@ PROVIDER_HW_SITES = {
                     "cipher_hw_blowfish_cbc_cipher",
                     "cipher_hw_blowfish_ecb_cipher"),
     },
-    0x25A6A4: {
+    0x3A71C4: {
         "function": "ossl_cipher_generic_block_final",
         "ctx": "ProvCipherCtx", "hw_off": 0xA8, "read": 0x8,
         "type": "ProvCipherHw", "field": "cipher",
@@ -12599,19 +12599,19 @@ PROVIDER_HW_SITES = {
                     "cipher_hw_blowfish_cbc_cipher",
                     "cipher_hw_blowfish_ecb_cipher"),
     },
-    0x25AE47: {
+    0x3A7967: {
         "function": "chacha20_poly1305_set_ctx_params",
         "ctx": "ProvChacha20Poly1305Ctx", "hw_off": 0xA8, "read": 0x28,
         "type": "ProvCipherHwChacha20Poly1305", "field": "tls_init",
         "targets": ("chacha_poly1305_tls_init",),
     },
-    0x25AE88: {
+    0x3A79A8: {
         "function": "chacha20_poly1305_set_ctx_params",
         "ctx": "ProvChacha20Poly1305Ctx", "hw_off": 0xA8, "read": 0x30,
         "type": "ProvCipherHwChacha20Poly1305", "field": "tls_iv_set_fixed",
         "targets": ("chacha_poly1305_tls_iv_set_fixed",),
     },
-    0x25B17C: {
+    0x3A7C9C: {
         "function": "ossl_cipher_generic_block_update",
         "ctx": "ProvCipherCtx", "hw_off": 0xA8, "read": 0x8,
         "type": "ProvCipherHw", "field": "cipher",
@@ -12626,7 +12626,7 @@ PROVIDER_HW_SITES = {
                     "cipher_hw_blowfish_cbc_cipher",
                     "cipher_hw_blowfish_ecb_cipher"),
     },
-    0x25B1CC: {
+    0x3A7CEC: {
         "function": "ossl_cipher_generic_block_update",
         "ctx": "ProvCipherCtx", "hw_off": 0xA8, "read": 0x8,
         "type": "ProvCipherHw", "field": "cipher",
@@ -12641,23 +12641,23 @@ PROVIDER_HW_SITES = {
                     "cipher_hw_blowfish_cbc_cipher",
                     "cipher_hw_blowfish_ecb_cipher"),
     },
-    0x2674C0: {
+    0x3B33F0: {
         "function": "rc4_hmac_md5_set_ctx_params", "ctx": "ProvRc4HmacMd5Ctx",
         "hw_off": 0xA8, "read": 0x18, "type": "ProvCipherHwRc4HmacMd5",
         "field": "tls_init", "targets": ("cipher_hw_rc4_hmac_md5_tls_init",),
     },
-    0x267507: {
+    0x3B3437: {
         "function": "rc4_hmac_md5_set_ctx_params", "ctx": "ProvRc4HmacMd5Ctx",
         "hw_off": 0xA8, "read": 0x20, "type": "ProvCipherHwRc4HmacMd5",
         "field": "init_mackey",
         "targets": ("cipher_hw_rc4_hmac_md5_init_mackey",),
     },
-    0x268C42: {
+    0x3B4B72: {
         "function": "des_", "ctx": "ProvCipherCtx", "hw_off": 0xA8,
         "read": 0x0, "type": "ProvCipherHw", "field": "init",
         "targets": ("cipher_hw_des_initkey",),
     },
-    0x268D31: {
+    0x3B4C61: {
         "function": "des_", "ctx": "ProvCipherCtx", "hw_off": 0xA8,
         "read": 0x0, "type": "ProvCipherHw", "field": "init",
         "targets": ("cipher_hw_des_initkey",),
@@ -12665,31 +12665,31 @@ PROVIDER_HW_SITES = {
 }
 
 PROVIDER_HW_SITE_PINS = {
-    0x246D4E: ("openssl_rs::provider::cipher_gcm::ossl_gcm_one_shot", 0x1E),
-    0x246D64: ("openssl_rs::provider::cipher_gcm::ossl_gcm_one_shot", 0x34),
-    0x246D7C: ("openssl_rs::provider::cipher_gcm::ossl_gcm_one_shot", 0x4C),
-    0x24A22B: ("openssl_rs::provider::cipher::aes_ocb_dinit", 0xAB),
-    0x24A32E: ("openssl_rs::provider::cipher::aes_ocb_einit", 0xAE),
-    0x24A77F: ("openssl_rs::provider::cipher::sm4_xts_dinit", 0x7F),
-    0x24A852: ("openssl_rs::provider::cipher::sm4_xts_einit", 0x82),
-    0x24B822: ("openssl_rs::provider::cipher::aes_siv_freectx", 0x12),
-    0x24EFBD: ("openssl_rs::provider::cipher::cts128_cs2_decrypt", 0x1D),
-    0x254B30: ("openssl_rs::provider::cipher::chacha20_poly1305_initiv", 0xE0),
-    0x254C56: ("openssl_rs::provider::cipher::chacha20_poly1305_update", 0x36),
-    0x254DC8: ("openssl_rs::provider::cipher::ossl_aes_gcm_siv_freectx", 0xB8),
-    0x255729: ("openssl_rs::provider::cipher::chacha20_poly1305_initkey", 0x139),
-    0x2580CF: ("openssl_rs::provider::cipher::chacha20_poly1305_aead_cipher", 0x75F),
-    0x258281: ("openssl_rs::provider::cipher::chacha20_poly1305_aead_cipher", 0x911),
-    0x25A5CF: ("openssl_rs::provider::cipher::ossl_cipher_generic_block_final", 0x6F),
-    0x25A6A4: ("openssl_rs::provider::cipher::ossl_cipher_generic_block_final", 0x144),
-    0x25AE47: ("openssl_rs::provider::cipher::chacha20_poly1305_set_ctx_params", 0x2F7),
-    0x25AE88: ("openssl_rs::provider::cipher::chacha20_poly1305_set_ctx_params", 0x338),
-    0x25B17C: ("openssl_rs::provider::cipher::ossl_cipher_generic_block_update", 0x16C),
-    0x25B1CC: ("openssl_rs::provider::cipher::ossl_cipher_generic_block_update", 0x1BC),
-    0x2674C0: ("openssl_rs::provider::cipher::legacy::rc4_hmac_md5_set_ctx_params", 0xE0),
-    0x267507: ("openssl_rs::provider::cipher::legacy::rc4_hmac_md5_set_ctx_params", 0x127),
-    0x268C42: ("openssl_rs::provider::cipher::legacy::des_dinit", 0xA2),
-    0x268D31: ("openssl_rs::provider::cipher::legacy::des_einit", 0xA1),
+    0x39453E: ("openssl_rs::provider::cipher_gcm::ossl_gcm_one_shot", 0x1E),
+    0x394554: ("openssl_rs::provider::cipher_gcm::ossl_gcm_one_shot", 0x34),
+    0x39456C: ("openssl_rs::provider::cipher_gcm::ossl_gcm_one_shot", 0x4C),
+    0x396E4B: ("openssl_rs::provider::cipher::aes_ocb_dinit", 0xAB),
+    0x396F4E: ("openssl_rs::provider::cipher::aes_ocb_einit", 0xAE),
+    0x39739F: ("openssl_rs::provider::cipher::sm4_xts_dinit", 0x7F),
+    0x397472: ("openssl_rs::provider::cipher::sm4_xts_einit", 0x82),
+    0x398442: ("openssl_rs::provider::cipher::aes_siv_freectx", 0x12),
+    0x39BB1D: ("openssl_rs::provider::cipher::cts128_cs2_decrypt", 0x1D),
+    0x3A1650: ("openssl_rs::provider::cipher::chacha20_poly1305_initiv", 0xE0),
+    0x3A1776: ("openssl_rs::provider::cipher::chacha20_poly1305_update", 0x36),
+    0x3A18E8: ("openssl_rs::provider::cipher::ossl_aes_gcm_siv_freectx", 0xB8),
+    0x3A2249: ("openssl_rs::provider::cipher::chacha20_poly1305_initkey", 0x139),
+    0x3A4BEF: ("openssl_rs::provider::cipher::chacha20_poly1305_aead_cipher", 0x75F),
+    0x3A4DA1: ("openssl_rs::provider::cipher::chacha20_poly1305_aead_cipher", 0x911),
+    0x3A70EF: ("openssl_rs::provider::cipher::ossl_cipher_generic_block_final", 0x6F),
+    0x3A71C4: ("openssl_rs::provider::cipher::ossl_cipher_generic_block_final", 0x144),
+    0x3A7967: ("openssl_rs::provider::cipher::chacha20_poly1305_set_ctx_params", 0x2F7),
+    0x3A79A8: ("openssl_rs::provider::cipher::chacha20_poly1305_set_ctx_params", 0x338),
+    0x3A7C9C: ("openssl_rs::provider::cipher::ossl_cipher_generic_block_update", 0x16C),
+    0x3A7CEC: ("openssl_rs::provider::cipher::ossl_cipher_generic_block_update", 0x1BC),
+    0x3B33F0: ("openssl_rs::provider::cipher::legacy::rc4_hmac_md5_set_ctx_params", 0xE0),
+    0x3B3437: ("openssl_rs::provider::cipher::legacy::rc4_hmac_md5_set_ctx_params", 0x127),
+    0x3B4B72: ("openssl_rs::provider::cipher::legacy::des_dinit", 0xA2),
+    0x3B4C61: ("openssl_rs::provider::cipher::legacy::des_einit", 0xA1),
 }
 
 
@@ -14231,14 +14231,14 @@ LED_ZERO_INITIALISERS = {
 # is `repr(C)`) and the image stores at that displacement bind it to the named
 # field.  `dat_off` is `EVP_CIPHER_CTX::cipher_data`.
 LEGACY_EVP_DATA_SITES = {
-    0x33D451: {
+    0x32B741: {
         "function": "aes_ecb_cipher", "ctx": "EvpCipherCtx",
         "dat_off": 0x78, "type": "EvpAesKey", "field": "block",
         "read": 0x0, "init": "aes_init_key",
         "targets": ("aes_decrypt_block", "aes_encrypt_block"),
         "source": "src/evp/e_aes.rs",
     },
-    0x562702: {
+    0x382D72: {
         "function": "sm4_ecb_cipher", "ctx": "EvpCipherCtx",
         "dat_off": 0x78, "type": "EvpSm4Key", "field": "block",
         "read": 0x0, "init": "sm4_init_key",
@@ -14248,8 +14248,8 @@ LEGACY_EVP_DATA_SITES = {
 }
 
 LEGACY_EVP_DATA_SITE_PINS = {
-    0x33D451: ("openssl_rs::evp::e_aes::aes_ecb_cipher", 0x61),
-    0x562702: ("openssl_rs::evp::e_sm4::sm4_ecb_cipher", 0x92),
+    0x32B741: ("openssl_rs::evp::e_aes::aes_ecb_cipher", 0x61),
+    0x382D72: ("openssl_rs::evp::e_sm4::sm4_ecb_cipher", 0x92),
 }
 
 # The one source constructor of the decoder objects this site uses, and the
@@ -14263,24 +14263,24 @@ DECODER_METHOD_TABLES = frozenset((
 ))
 
 DECODER_METHOD_SITES = {
-    0x1D831D: {
+    0x24DFED: {
         "function": "file_load", "slot": "newctx", "read": 0x30,
         "dispatch_id": 1, "targets": ("any2obj_newctx",),
     },
-    0x1D8373: {
+    0x24E046: {
         "function": "file_load", "slot": "set_ctx_params", "read": 0x50,
         "dispatch_id": 5, "targets": ("any2obj_set_ctx_params",),
     },
-    0x1D83BD: {
+    0x24E090: {
         "function": "file_load", "slot": "freectx", "read": 0x38,
         "dispatch_id": 2, "targets": ("any2obj_freectx",),
     },
 }
 
 DECODER_METHOD_SITE_PINS = {
-    0x1D831D: ("openssl_rs::provider::file_store::file_load", 0x5ED),
-    0x1D8373: ("openssl_rs::provider::file_store::file_load", 0x643),
-    0x1D83BD: ("openssl_rs::provider::file_store::file_load", 0x68D),
+    0x24DFED: ("openssl_rs::provider::file_store::file_load", 0x64D),
+    0x24E046: ("openssl_rs::provider::file_store::file_load", 0x6A6),
+    0x24E090: ("openssl_rs::provider::file_store::file_load", 0x6F0),
 }
 
 
@@ -15495,7 +15495,7 @@ REGISTRATION_ATEXIT_LIST = "STOP_HANDLERS"
 REGISTRATION_ATEXIT_DRAIN = "run_atexit_handlers"
 # The class is site-enumerated by address, exactly like the SLH and provider hw
 # witnesses.  A second `call *(%reg)` in the same function is a different site.
-REGISTRATION_ATEXIT_CALL_SITE = 0x271154
+REGISTRATION_ATEXIT_CALL_SITE = 0x2D9C94
 REGISTRATION_ATEXIT_CALL_SITE_PIN = ('OPENSSL_cleanup', 0x64)
 
 
@@ -18948,8 +18948,8 @@ E7BS_WRITER_LIST_SCHEMA = (
 # (symbol leaf, offset) key that survives a re-freeze.  Either selects the
 # site, so a stale literal VA cannot silently stop the witness firing (the
 # 0.0.46 re-pin missed these two constants).
-E7BS_MSBLOB_SITE = 0x2C6181
-E7BS_MSBLOB_SITE_PIN = ("msblob2key_decode", 0x331)
+E7BS_MSBLOB_SITE = 0x556FC0
+E7BS_MSBLOB_SITE_PIN = ("msblob2key_decode", 0x350)
 E7BS_RCU_SITE = 0x2C2228
 E7BS_RCU_SITE_PIN = ("ossl_synchronize_rcu", 0x5A8)
 E7BS_MSBLOB_SOURCE = "src/provider/decode_msblob2key.rs"
@@ -27591,6 +27591,15 @@ def carry_forward_candidates(previous: dict, contracts: dict,
                 "item": item,
                 "partition": V1_PARTITION_PRODUCTION,
                 "v1_reason": prev.get("v1_reason"),
+                # The supplementary callback-enumeration gate classified this
+                # stable identity and the previous applied closure recorded the
+                # classification.  Carry it with the identity: the admission
+                # source still names this operation, but the live admission is
+                # skipped because carry-forward already queued it, so dropping
+                # the field would make a file with no directory rule
+                # UNKNOWN_MECHANISM.  This only classifies; the mechanism's own
+                # state and receipts still decide discharge.
+                "enrolment_mechanism": prev.get("enrolment_mechanism"),
                 "contract": state,
                 "contract_basis": basis,
                 "site_receipt": None,
@@ -36324,8 +36333,8 @@ def self_test() -> int:
                 (0x426AC2, "mov    0x8(%r15),%rsi"),
                 (0x426AC4, "mov    %rsi,0x8(%rsp)"),
                 (0x426AC6, "mov    0x8(%rsp),%rax"),
-                (0x426AD1, "call   *0x18(%rax)"),
-                (0x426AD3, "ret"),
+                (0x426AF0, "call   *0x18(%rax)"),
+                (0x426AF2, "ret"),
             ]
         else:
             decode_insns = [
@@ -36334,8 +36343,8 @@ def self_test() -> int:
                 (0x426AC4, "mov    %rsi,0x8(%rsp)"),
                 (0x426AC6, "nop"),
                 (0x426AC8, "mov    0x8(%rsp),%rax"),
-                (0x426AD1, "call   *0x18(%rax)"),
-                (0x426AD3, "ret"),
+                (0x426AF0, "call   *0x18(%rax)"),
+                (0x426AF2, "ret"),
             ]
         insns = {
             0x4267A0: decode_insns,
@@ -36368,7 +36377,7 @@ def self_test() -> int:
                      "var": "ctx", "type": owner_type, "param": "vctx",
                      "param_index": 0,
                      "declared": "vctx: *mut c_void"}}
-        site = {"kind": "call", "func": 0x4267A0, "addr": 0x426AD1,
+        site = {"kind": "call", "func": 0x4267A0, "addr": 0x426AF0,
                 "text": "call   *0x18(%rax)", "targets": set(),
                 "unresolved": True, "reason": "base-slot-partial",
                 "class": "field", "field_offsets": {0x18}, "seam": None,
