@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -149,6 +150,97 @@ def main() -> int:
             "movement_vs_b59": movement(prev[name], doc),
         }
 
+    def run_log(fam: str) -> dict:
+        """The `run_closure_b61.sh` output for this family, if it was retained.
+
+        The closure receipts carry no wall-clock or return-code field, so those
+        figures are only derivable from the captured run log.  When the log is
+        absent the value is reported as unknown, never inferred.
+        """
+        log = REPO / f"court/freeze-b61/b61-{fam}.log"
+        info = {"path": str(log.relative_to(REPO)), "present": log.is_file(),
+                "wall_seconds": None, "rc": None}
+        if not info["present"]:
+            info["note"] = ("run log absent: wall seconds and return code are "
+                            "not derivable from the closure receipt")
+            return info
+        for line in log.read_text(errors="replace").splitlines():
+            key, _, value = line.partition("=")
+            if key == "WALL_SECONDS" and value.strip().isdigit():
+                info["wall_seconds"] = int(value.strip())
+            elif key == "RC" and value.strip().lstrip("-").isdigit():
+                info["rc"] = int(value.strip())
+        if info["wall_seconds"] is None:
+            info["note"] = "log present but carries no WALL_SECONDS= line"
+        return info
+
+    logs = {fam: run_log(fam) for fam in ("ssh", "sshd")}
+
+    cgroup = Path("/sys/fs/cgroup")
+
+    def cg(name: str) -> str | None:
+        p = cgroup / name
+        return p.read_text().strip() if p.is_file() else None
+
+    oom_events = {
+        parts[0]: int(parts[1])
+        for parts in (line.split() for line in (cg("memory.events") or "").splitlines())
+        if len(parts) == 2 and parts[1].isdigit()}
+    generator_run = {
+        "cap_env": {k: os.environ.get(k) for k in (
+            "OPENSSL_RS_COURT_MEM", "OPENSSL_RS_COURT_MEMSWAP",
+            "OPENSSL_RS_COURT_DATA")},
+        "cgroup_memory_max": cg("memory.max"),
+        "cgroup_memory_events": oom_events,
+        "note": ("the cap this generator actually ran under; the closure runs "
+                 "themselves were executed earlier and their cap was not "
+                 "captured"),
+    }
+
+    self_test_output = (self_test.stderr or "") + (self_test.stdout or "")
+    self_test_failure = (
+        next((line for line in reversed(self_test_output.splitlines())
+              if line.strip()), None))
+    if self_test.returncode == 0:
+        self_test_note = "the instrument's own --self-test exited 0"
+    elif "5267120" in self_test_output:
+        self_test_note = (
+            "the instrument's own --self-test fails with the pre-existing "
+            "fixture/pin mismatch b59 reported (KeyError 5267120 in "
+            "_pbe_outparam_self_test -> _insns_copy); the declared-span "
+            "self-test cases execute before the failing call and raise "
+            "nothing, but their pass/fail list is never printed because the "
+            "process aborts later. The observable control is the --controls "
+            "run above. Not fixed by this batch.")
+    else:
+        self_test_note = (
+            "the instrument's own --self-test exited non-zero; its last "
+            "output line is recorded in `failure`. The observable control is "
+            "the --controls run above.")
+    py_compile = subprocess.run(
+        [sys.executable, "-m", "py_compile",
+         "forensics/tools/consumer_closure.py"],
+        cwd=str(REPO), text=True, capture_output=True)
+    controls_gate = ("b60-C1..C5 via the real adjudicate() path: "
+                     + ("PASS" if controls.returncode == 0
+                        else f"FAILED (rc={controls.returncode})"))
+    element_7 = {fam: e7(d) for fam, d in (("ssh", ssh), ("sshd", sshd))}
+    safe_compatible_reason = (
+        "consumer_closure.py never promotes: verdict.safe_compatible is a "
+        "hard-coded False. Measured at this candidate: "
+        + "; ".join(
+            f"{fam} {d['counts']['DISCHARGED']}/"
+            f"{d['counts']['reachable_production_obligations']} DISCHARGED, "
+            f"{d['counts']['BLOCKED']} BLOCKED, "
+            f"{d['counts']['UNKNOWN']} UNKNOWN, element 7 "
+            f"{element_7[fam]['status']} "
+            f"({element_7[fam]['target_bounded_unresolved_sites']} "
+            f"target-bounded, {element_7[fam]['contract_bounded_sites']} "
+            "contract-bounded)"
+            for fam, d in (("ssh", ssh), ("sshd", sshd)))
+        + ". AGENTS.md section 7 additionally requires a discharged "
+          "dependency closure, which this instrument does not establish.")
+
     doc = {
         "schema": "openssl-rs/campaign/safe-c33/freeze/v1",
         "candidate_tag": "b61",
@@ -163,7 +255,7 @@ def main() -> int:
         "source": {
             "head": S,
             "head_subject": git("log", "-1", "--format=%s", S),
-            "source_unchanged_since_b58": True,
+            "source_unchanged_since_b58": not src_vs_s,
             "src_diff_vs_S": src_vs_s or None,
             "crate_version": census["identity"]["crate_version"],
             "src_rs_files": census["identity"]["src_rs_files"],
@@ -195,7 +287,7 @@ def main() -> int:
         "tool": {
             "path": "forensics/tools/consumer_closure.py",
             "sha256": sha,
-            "version": 6,
+            "version": ssh["tool"]["version"],
             "sha256_at_b58_freeze_record": (old.get("tool") or {}).get("sha256"),
             "changed_since_b58_freeze_record": (
                 sha != (old.get("tool") or {}).get("sha256")),
@@ -205,15 +297,20 @@ def main() -> int:
                 "set rule; adjudicate uses them and records the declared "
                 "definitions in span_discharge; self-test cases added. No "
                 "existing classification, threshold or accepted path changed."),
-            "b61_generator": art(
+            "receipt_generator": art(
                 "forensics/memory-safety/campaign/safe-c33/atlas-refresh/"
-                "b61_generate.py"),
-            "b61_receipt": art(
+                "b60_generate.py"),
+            "receipt": art(
                 "forensics/memory-safety/campaign/safe-c33/atlas-refresh/"
-                "b61-free-lock-operations.json"),
-            "b61_loader_projection": art(
+                "b60-free-lock-operations.json"),
+            "loader_projection": art(
                 "forensics/memory-safety/campaign/safe-c33/atlas-refresh/"
-                "b61-free-lock-operations-sites.json"),
+                "b60-free-lock-operations-sites.json"),
+            "declaration_note": (
+                "b61 declares no new boundary receipt. The b60 free_lock "
+                "generator, receipt and loader projection are the declarations "
+                "still in force, and the digests above are those b60 files as "
+                "they exist on disk"),
             "version_note": (
                 "version 5 -> 6 marks the added resolution rule; the sha is the "
                 "binding identity and every receipt below carries both"),
@@ -259,13 +356,7 @@ def main() -> int:
             "run_script": art("court/freeze-b61/run_closure_b61.sh"),
             "same_flags_as_b58": True,
             "safe_compatible": False,
-            "safe_compatible_reason": (
-                "consumer_closure.py never promotes: verdict.safe_compatible is a "
-                "hard-coded False. Measured at this candidate: 0 BLOCKED / 0 "
-                "UNKNOWN in both closures, but element 7 is FAIL on 32 "
-                "target-bounded reachable unresolved sites and AGENTS.md section 7 "
-                "additionally requires a discharged dependency closure, which this "
-                "instrument does not establish."),
+            "safe_compatible_reason": safe_compatible_reason,
         },
         "bound_operation": {
             "receipt": "atlas-refresh/b60-free-lock-operations.json",
@@ -303,15 +394,9 @@ def main() -> int:
         "self_test": {
             "command": "python3 forensics/tools/consumer_closure.py --self-test",
             "returncode": self_test.returncode,
-            "observed": "FAILED (pre-existing)",
-            "failure": (self_test.stderr.strip().splitlines()[-1]
-                        if self_test.stderr.strip() else None),
-            "note": ("still fails with KeyError 5267120 in _pbe_outparam_self_test "
-                     "-> _insns_copy, the fixture/pin mismatch b59 reported. The "
-                     "declared-span self-test cases execute before that call and "
-                     "raise nothing, but their pass/fail list is never printed "
-                     "because the process aborts later; the observable control is "
-                     "the --controls run above. Not fixed by this batch."),
+            "observed": "PASS" if self_test.returncode == 0 else "FAILED",
+            "failure": self_test_failure,
+            "note": self_test_note,
         },
         "identity_findings": [
             {
@@ -332,14 +417,37 @@ def main() -> int:
             }
         ],
         "oom": {
-            "available_gib_before": "93 (ssh), 98 (sshd)",
-            "cap": "OPENSSL_RS_COURT_MEM=8g OPENSSL_RS_COURT_MEMSWAP=8g",
-            "closure_rlimit_data_kib": 6291456,
-            "self_test_rlimit_data_kib": 4194304,
-            "court_cgroup": {"memory_max": "8589934592",
-                             "oom_events_before": 0, "oom_events_after": 0},
-            "one_heavy_command_at_a_time": True,
-            "wall_seconds": {"ssh": 2228, "sshd": 2041},
+            "closure_runs": {
+                "cap": {
+                    "value": None,
+                    "note": ("the b61 closure runs were executed before this "
+                             "generator; their cap was not captured by "
+                             "run_closure_b61.sh and is not recorded in either "
+                             "receipt, so it is unknown rather than guessed")},
+                "available_gib_before": {
+                    "value": None,
+                    "note": ("not measured when the b61 closures ran and not "
+                             "derivable from the closure receipts")},
+                "closure_rlimit_data_kib": {
+                    "value": None,
+                    "note": ("run_closure_b61.sh sets no RLIMIT_DATA and the "
+                             "receipts do not record one")},
+                "wall_seconds": {fam: logs[fam]["wall_seconds"]
+                                 for fam in ("ssh", "sshd")},
+                "returncodes": {fam: logs[fam]["rc"]
+                                for fam in ("ssh", "sshd")},
+                "wall_seconds_source": {fam: logs[fam]["path"]
+                                        for fam in ("ssh", "sshd")},
+                "wall_seconds_derivation": (
+                    "read from WALL_SECONDS= / RC= in the retained "
+                    "run_closure_b61.sh output named by "
+                    "wall_seconds_source; court/ is git-ignored, so those "
+                    "logs are local run artefacts and not part of the "
+                    "evidence commit. When a log is absent the value is null "
+                    "rather than inferred"),
+                "one_heavy_command_at_a_time": True,
+            },
+            "generator_run": generator_run,
         },
         "gates": {
             "rust_source": "not run: no Rust source changed",
@@ -348,9 +456,12 @@ def main() -> int:
                 "ssh": f"{ssh['verdict']['state']}, {len(ssh['refusals'])} refusals",
                 "sshd": f"{sshd['verdict']['state']}, {len(sshd['refusals'])} refusals",
             },
-            "python_syntax": "py_compile of the instrument: OK",
-            "declared_span_controls": ("b61-C1..C4 via the real adjudicate() "
-                                       "path: PASS"),
+            "python_syntax": ("py_compile of the instrument: OK"
+                              if py_compile.returncode == 0 else
+                              f"py_compile of the instrument: FAILED "
+                              f"(rc={py_compile.returncode})"),
+            "declared_span_controls": controls_gate,
+            "element_7": element_7,
         },
         "counts": {
             "ssh": {"obligations": ssh["counts"]["reachable_production_obligations"],
@@ -366,16 +477,18 @@ def main() -> int:
             "cargo fmt / clippy / library tests: no Rust source changed, and the "
             "instrument is Python; the Rust court is unchanged since b58",
             "BOUNDARY / SEAL evidence for RUNTIME_CONCURRENCY: not claimed here",
-            "element 7 remediation: untouched, still FAIL on 32 target-bounded "
-            "sites",
         ],
         "non_claims": [
             ("The instrument change is additive and exercises only the "
              "declared-definition-set path; no existing classification, threshold "
              "or accepted path was altered. That a pre-existing discharge still "
              "binds at b61 is shown by the per-id movement lists, not asserted."),
-            ("0 BLOCKED / 0 UNKNOWN is a statement about this instrument's queue "
-             "at this candidate, not a SAFE_COMPATIBLE promotion."),
+            (f"{ssh['counts']['BLOCKED']} BLOCKED / "
+             f"{ssh['counts']['UNKNOWN']} UNKNOWN (ssh) and "
+             f"{sshd['counts']['BLOCKED']} BLOCKED / "
+             f"{sshd['counts']['UNKNOWN']} UNKNOWN (sshd) is a statement "
+             "about this instrument's queue at this candidate, not a "
+             "SAFE_COMPATIBLE promotion."),
             ("B56's off-profile (`Box`) definition is verified by inspection only; "
              "the verdict is transcribed, not re-earned."),
         ],
