@@ -2485,6 +2485,11 @@ pub unsafe extern "C" fn EVP_DigestInit_ex(
 /// The legacy test is `digest == NULL || digest->prov == NULL || NO_INIT`, which is why a
 /// hand-built method takes the `ctx->update` pointer rather than the provider callback.
 ///
+/// **A provider context whose `newctx` refused is refused here.** `EVP_DigestInit_ex` sets
+/// `digest` before calling `newctx`, so a failed init leaves `digest` set and `algctx == NULL`.
+/// The authority calls the provider `update` with that NULL and faults; this transcription answers
+/// 0 without touching `data` (`docs/SECURITY_DIVERGENCE_POLICY.md`, D-DIGEST-NULL-ALGCTX-1).
+///
 /// # Safety
 /// `ctx` must be a live context; `data` readable for `count` bytes (or `count` zero).
 #[no_mangle]
@@ -2554,6 +2559,15 @@ pub unsafe extern "C" fn EVP_DigestUpdate(
         unsafe { raise_site(&err_sites::DIGEST_422) };
         return 0;
     };
+    // A provider context whose `newctx` refused has `digest` set and `algctx` NULL -- the state
+    // `evp_md_init_internal` leaves on its failed-init path. Every provider `update` dereferences
+    // the context it is handed, so calling it here would be the NULL dereference the authority
+    // performs. Refuse the state instead of reproducing the fault
+    // (`docs/SECURITY_DIVERGENCE_POLICY.md`, D-DIGEST-NULL-ALGCTX-1).
+    // SAFETY: `ctx` is live per the contract, so `algctx` is its own pointer.
+    if unsafe { (*ctx).algctx }.is_null() {
+        return 0;
+    }
     // SAFETY: `dupdate` is the provider's own callback, `algctx` is the context its `newctx`
     // handed back, and `data`/`count` are the caller's.
     unsafe { dupdate((*ctx).algctx, data.cast::<c_uchar>(), count) }
@@ -2593,6 +2607,10 @@ pub unsafe extern "C" fn EVP_DigestFinal(
 ///
 /// The `OPENSSL_assert(mdsize <= EVP_MAX_MD_SIZE)` in the legacy arm has no effect: the authority
 /// compiles with `NDEBUG`, where it is `(x) != 0` and non-fatal.
+///
+/// **A provider context whose `newctx` refused is refused here**, before the provider `dfinal`:
+/// the authority calls that callback with `algctx == NULL` and faults, while this answers 0 and
+/// leaves the `FINALISED` flag unset (D-DIGEST-NULL-ALGCTX-1).
 ///
 /// # Safety
 /// `ctx` must be a live context; `md` writable for the digest's size; `isize` NULL or writable.
@@ -2634,6 +2652,15 @@ pub unsafe extern "C" fn EVP_DigestFinal_ex(
     if finalised {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::DIGEST_464) };
+        return 0;
+    }
+
+    // A provider context whose `newctx` refused has `digest` set and `algctx` NULL. Every provider
+    // `dfinal` dereferences the context it is handed, so calling it here would reproduce the
+    // authority's NULL dereference; refuse instead (D-DIGEST-NULL-ALGCTX-1). The flag below is
+    // deliberately not set: nothing was finalised.
+    // SAFETY: `ctx` is live per the contract.
+    if unsafe { (*ctx).algctx }.is_null() {
         return 0;
     }
 
@@ -2722,6 +2749,10 @@ unsafe fn evp_md_final_legacy(
 /// own return survives, so a provider that refuses `xoflen` still gets called. That is the
 /// authority's `if (ossl_likely(EVP_MD_CTX_set_params(ctx, params) >= 0))` and is not a typo.
 ///
+/// A failed provider init (`digest` set, `algctx` NULL) is refused with 0 before either
+/// `set_params` or `dfinal` is reached, both of which would dereference that NULL in the authority
+/// (D-DIGEST-NULL-ALGCTX-1).
+///
 /// # Safety
 /// `ctx` must be a live context; `md` writable for `size` bytes; `size` the requested length.
 #[no_mangle]
@@ -2757,6 +2788,15 @@ pub unsafe extern "C" fn EVP_DigestFinalXOF(
     if finalised {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::DIGEST_518) };
+        return 0;
+    }
+
+    // A failed provider init leaves `digest` set and `algctx` NULL. Both `EVP_MD_CTX_set_params`
+    // (through the method's `set_ctx_params`) and the provider's `dfinal` dereference that
+    // context, so the authority faults twice over on this state. Refuse before either
+    // (D-DIGEST-NULL-ALGCTX-1).
+    // SAFETY: `ctx` is live per the contract.
+    if unsafe { (*ctx).algctx }.is_null() {
         return 0;
     }
 
@@ -2858,6 +2898,9 @@ unsafe fn evp_digest_final_xof_not_xof() -> c_int {
 /// distinction between them is a contract fact, because a caller that wants to know whether it can
 /// squeeze at all reads the reason.
 ///
+/// A failed provider init (`digest` set, `algctx` NULL) is refused with 0 before the provider
+/// `dsqueeze`, which would dereference that NULL in the authority (D-DIGEST-NULL-ALGCTX-1).
+///
 /// # Safety
 /// `ctx` must be a live context; `md` writable for `size` bytes.
 #[no_mangle]
@@ -2885,6 +2928,13 @@ pub unsafe extern "C" fn EVP_DigestSqueeze(
         unsafe { raise_site(&err_sites::DIGEST_568) };
         return 0;
     };
+    // A failed provider init leaves `digest` set and `algctx` NULL; the provider's `dsqueeze`
+    // dereferences that context (`sha3`'s reads `(*ctx).xof_state`), so the authority faults.
+    // Refuse instead (D-DIGEST-NULL-ALGCTX-1).
+    // SAFETY: `ctx` is live per the contract.
+    if unsafe { (*ctx).algctx }.is_null() {
+        return 0;
+    }
     let mut outlen = size;
     // SAFETY: `dsqueeze` is the provider's own callback, `algctx` is its context, `md` is the
     // caller's buffer, and `outlen`/`size` are this frame's.
@@ -2954,6 +3004,13 @@ pub unsafe extern "C" fn EVP_MD_CTX_copy(out: *mut EvpMdCtx, in_: *const EvpMdCt
 ///
 /// The `FAIL_IF_NULL(in->digest)` is not a check but a **contract**: the third arm dereferences
 /// `in->digest` unconditionally, and a NULL there is a caller error on both sides.
+///
+/// **A provider source whose `newctx` refused is refused here.** Such a source has `digest` set
+/// and `algctx == NULL`; the authority's in-place arm passes both pointers to the provider's
+/// `copyctx` (which copies `size_of::<Ctx>()` bytes through NULL) and its re-acquiring arm copies
+/// the NULL into the destination. This transcription answers 0 for that state
+/// (D-DIGEST-NULL-ALGCTX-1). A non-NULL source whose destination is in the same failed state is
+/// refused at the in-place arm's own check.
 ///
 /// **Same-context copy follows the authority's decision order.** An uninitialised source is
 /// reset (the authority's `*out = *in` is a self-assignment); a provider source with no `dupctx`
@@ -3028,6 +3085,17 @@ pub unsafe extern "C" fn EVP_MD_CTX_copy_ex(out: *mut EvpMdCtx, in_: *const EvpM
         return 0;
     };
 
+    // A source whose provider `newctx` refused has `digest` set (`in_prov` non-NULL) and `algctx`
+    // NULL. The authority's in-place arm then hands both pointers to the provider's `copyctx`,
+    // which copies `size_of::<Ctx>()` bytes and so reads and writes through NULL; its re-acquiring
+    // arm would copy the NULL into a destination that then believes it is initialised. Both are
+    // error states, so refuse the copy rather than reproduce the fault
+    // (`docs/SECURITY_DIVERGENCE_POLICY.md`, D-DIGEST-NULL-ALGCTX-1).
+    // SAFETY: `in_` is live per the contract.
+    if unsafe { (*in_).algctx }.is_null() {
+        return 0;
+    }
+
     if ptr::eq(out.cast_const(), in_) {
         // Provider self-copy, with `dupctx` present. Reproduce the arm's side effects rather than
         // short-circuiting: the in-place arm may run the method's `copyctx` (with the same
@@ -3073,6 +3141,14 @@ pub unsafe extern "C" fn EVP_MD_CTX_copy_ex(out: *mut EvpMdCtx, in_: *const EvpM
 
     // SAFETY: `out` is live per the contract.
     if unsafe { (*out).digest } == in_digest {
+        // The source `algctx` is non-NULL (checked above), but a destination initialised with the
+        // same method can still be in its own failed-init state. `copyctx` would write
+        // `size_of::<Ctx>()` bytes through that NULL destination, so refuse
+        // (D-DIGEST-NULL-ALGCTX-1).
+        // SAFETY: `out` is live per the contract.
+        if unsafe { (*out).algctx }.is_null() {
+            return 0;
+        }
         if let Some(copyctx) = in_copyctx {
             // SAFETY: `copyctx` is the method's own callback, and both algorithm contexts belong
             // to that method -- which is what the branch's test established.
@@ -7082,6 +7158,155 @@ mod tests {
             assert_eq!(ossl_hmac2mdnid(NID_sha512), NID_undef);
             assert_eq!(ossl_md2hmacnid(NID_hmacWithSHA1), NID_undef);
             assert_eq!(ossl_hmac2mdnid(12345), NID_undef);
+        }
+    }
+
+    /// A provider context left by a **failed initialise** -- `digest` set, `algctx` NULL -- is
+    /// refused by every operation that would hand that NULL to a provider callback. Without the
+    /// guards each call reaches a provider body that dereferences the context (the authority's
+    /// behaviour, `docs/SECURITY_DIVERGENCE_POLICY.md` D-DIGEST-NULL-ALGCTX-1); here every call
+    /// answers 0, no callback runs, and no output byte is written.
+    #[test]
+    fn a_failed_provider_init_is_refused_by_the_digest_entry_points() {
+        static CALLS: AtomicI32 = AtomicI32::new(0);
+
+        /// `static int update(void *, const unsigned char *, size_t)` -- counts.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn update(
+            _ctx: *mut c_void,
+            _data: *const c_uchar,
+            _count: usize,
+        ) -> c_int {
+            CALLS.fetch_add(1, Ordering::AcqRel);
+            1
+        }
+
+        /// `static int final(void *, unsigned char *, size_t *, size_t)` -- counts.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn final_(
+            _ctx: *mut c_void,
+            _out: *mut u8,
+            _outl: *mut usize,
+            _outlen: usize,
+        ) -> c_int {
+            CALLS.fetch_add(1, Ordering::AcqRel);
+            1
+        }
+
+        /// `static int squeeze(void *, unsigned char *, size_t *, size_t)` -- counts.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn squeeze(
+            _ctx: *mut c_void,
+            _out: *mut u8,
+            _outl: *mut usize,
+            _outlen: usize,
+        ) -> c_int {
+            CALLS.fetch_add(1, Ordering::AcqRel);
+            1
+        }
+
+        /// `static void *dupctx(void *)` -- counts and refuses.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn dup(_ctx: *mut c_void) -> *mut c_void {
+            CALLS.fetch_add(1, Ordering::AcqRel);
+            ptr::null_mut()
+        }
+
+        /// `static void copyctx(void *, void *)` -- counts.
+        ///
+        /// # Notes
+        /// The ABI is the authority's; the pointers are not read.
+        extern "C" fn copyctx(_out: *mut c_void, _in: *mut c_void) {
+            CALLS.fetch_add(1, Ordering::AcqRel);
+        }
+
+        let fake = evp_md_new();
+        let ctx = EVP_MD_CTX_new();
+        let dst = EVP_MD_CTX_new();
+        let data = [0u8; 4];
+        let mut out = [0xA5u8; 8];
+        assert!(!fake.is_null() && !ctx.is_null() && !dst.is_null());
+        // SAFETY: every object is this test's own; the provider pointer is only null-checked.
+        unsafe {
+            (*fake).md_size = 32;
+            (*fake).prov = ptr::dangling_mut::<OsslProvider>();
+            (*fake).dupdate = Some(update);
+            (*fake).dfinal = Some(final_);
+            (*fake).dsqueeze = Some(squeeze);
+            (*fake).dupctx = Some(dup);
+            (*fake).copyctx = Some(copyctx);
+            (*ctx).digest = fake;
+            (*ctx).reqdigest = fake;
+            assert!((*ctx).algctx.is_null(), "the failed-init state");
+
+            assert_eq!(EVP_DigestUpdate(ctx, data.as_ptr().cast(), data.len()), 0);
+            assert_eq!(
+                EVP_DigestFinal_ex(ctx, out.as_mut_ptr(), ptr::null_mut()),
+                0
+            );
+            assert_eq!(EVP_DigestFinalXOF(ctx, out.as_mut_ptr(), out.len()), 0);
+            assert_eq!(EVP_DigestSqueeze(ctx, out.as_mut_ptr(), out.len()), 0);
+            assert_eq!(EVP_MD_CTX_copy_ex(dst, ctx), 0);
+            assert_eq!(EVP_MD_CTX_copy_ex(ctx, ctx), 0);
+            assert_eq!(
+                CALLS.load(Ordering::Acquire),
+                0,
+                "no provider callback saw the NULL algorithm context"
+            );
+            assert_eq!(out, [0xA5u8; 8], "no output byte was written");
+
+            (*fake).prov = ptr::null_mut();
+            EVP_MD_CTX_free(dst);
+            EVP_MD_CTX_free(ctx);
+            EVP_MD_free(fake);
+        }
+    }
+
+    /// A fixed-size SHA3-256 method has a 32-byte digest; asking `EVP_DigestFinalXOF` for 16
+    /// bytes reaches the provider with `outlen == 16` and `md_size == 32`. The authority's
+    /// `keccak_final` writes `md_size` bytes regardless, overflowing the caller's buffer, so this
+    /// test fills the 16 declared bytes and 16 guard bytes with a canary and requires all 32 to
+    /// survive. The provider refuses the mismatch instead (`D-SHA3-FINAL-OUTLEN-1`).
+    #[test]
+    fn a_final_xof_shorter_than_the_digest_is_refused_without_writing() {
+        // SAFETY: the name is a literal, and the default context and NULL properties are accepted.
+        let md = unsafe { EVP_MD_fetch(ptr::null_mut(), c"SHA3-256".as_ptr(), ptr::null()) };
+        assert!(
+            !md.is_null(),
+            "SHA3-256 is published by the default provider"
+        );
+        // SAFETY: `md` is the fetched method this test owns.
+        let provider_backed = unsafe { !(*md).prov.is_null() };
+        assert!(
+            provider_backed,
+            "the fetched method is provider-backed, so the provider arm is the one under test"
+        );
+        let ctx = EVP_MD_CTX_new();
+        assert!(!ctx.is_null());
+        // 16 bytes the caller declares, plus 16 guard bytes the provider must not touch.
+        let mut buf = [0xA5u8; 32];
+        // SAFETY: `ctx` and `md` are live; every buffer has the length passed.
+        unsafe {
+            assert_eq!(EVP_DigestInit_ex(ctx, md, ptr::null_mut()), 1);
+            assert_eq!(
+                EVP_DigestFinalXOF(ctx, buf.as_mut_ptr(), 16),
+                0,
+                "the provider refuses a write past the requested extent"
+            );
+            assert_eq!(
+                buf, [0xA5u8; 32],
+                "not one byte was written, guard bytes included"
+            );
+            EVP_MD_CTX_free(ctx);
+            EVP_MD_free(md);
         }
     }
 }

@@ -1818,3 +1818,81 @@ D334's state, when the column was recorded as a NULL rather than resolved.
   value). Removing any single origin gate makes the corresponding assertions fail; the
   empirically checked gates are `set_copy`, `set_cleanup` and `set_ctrl`.
 - **Trigger:** none planned: permanent, deliberate safety divergence.
+
+### D-DIGEST-NULL-ALGCTX-1 — the `EVP_Digest*` provider arms descend into a failed initialise
+
+- **Obligation:** `EVP_DigestUpdate`, `EVP_DigestFinal_ex`, `EVP_DigestFinalXOF`,
+  `EVP_DigestSqueeze` and `EVP_MD_CTX_copy_ex` on a context left by a **failed provider
+  initialise**: `digest`/`reqdigest` set, `algctx == NULL`.
+- **Authority:** **faults.** `evp_md_init_internal` stores `ctx->digest = type`
+  (`crypto/evp/digest.c:288`) and only then calls `type->newctx`; a NULL answer raises and
+  returns 0 (`:289-294`), leaving `digest` set and `algctx` NULL. None of the five entry points
+  tests `algctx`:
+  - `EVP_DigestUpdate` calls `ctx->digest->dupdate(ctx->algctx, ...)` (`:425`);
+  - `EVP_DigestFinal_ex` calls `ctx->digest->dfinal(ctx->algctx, ...)` (`:468`);
+  - `EVP_DigestFinalXOF` passes the same NULL to `EVP_MD_CTX_set_params` and then to `dfinal`
+    (`:530-531`);
+  - `EVP_DigestSqueeze` calls `ctx->digest->dsqueeze(ctx->algctx, ...)` (`:572`);
+  - `EVP_MD_CTX_copy_ex`'s in-place arm calls `in->digest->copyctx(out->algctx, in->algctx)`
+    (`:620-622`) and `copyctx` is a `ptr::copy` of `size_of::<Ctx>()` bytes, so a NULL on either
+    side is a read **and** a write through NULL. Its re-acquiring arm copies the source's NULL
+    into the destination (`:639-650`).
+
+  The recursive `sha3`/`sha1`/`md5_sha1`/legacy-provider bodies all dereference the context they
+  are given. The observation is source-derived from the pinned authority; this batch did not
+  re-run a fault probe, and the existing `RT-FETCH` `NOT_MEASURED_AUTHORITY_FAULTS` markers are
+  not extended by this entry.
+- **Crate:** answers 0 at each entry point, before any provider callback or `set_params` is
+  reached, and writes nothing. `EVP_MD_CTX_copy_ex` refuses when the **source** `algctx` is NULL
+  and, separately, when a same-method **destination** `algctx` is NULL at the in-place arm. The
+  `FINALISED` flag is not set by a refused final, so the context is reusable after a successful
+  re-initialise.
+- **Reason:** an indirect call through a NULL pointer, and a `ptr::copy` through NULL, are not
+  contracts to reproduce. This is the same class as D-MD-NULL-CALLBACK-1, reached through the same
+  failed-init state; `AGENTS.md` §17 requires the UB mechanism to be eliminated and the
+  compatibility consequence recorded.
+- **Compatibility consequence:** a C caller that ignored the failing `EVP_DigestInit_ex` and then
+  called Update/Final/FinalXOF/Squeeze/Copy now gets 0 where the authority has undefined
+  behaviour (a fault in every provider body except the `NULL` digest, whose `final` ignores its
+  context and which the authority would let answer 1). A caller that checks the init's return —
+  the documented contract — sees no change: every successfully initialised context has a non-NULL
+  `algctx`. The re-acquiring copy arm also refuses a source that the authority would have copied
+  as an all-NULL context; that state is only reachable through the same ignored failure.
+- **Evidence:** `evp::digest::tests::a_failed_provider_init_is_refused_by_the_digest_entry_points`
+  builds the state in-crate and drives all five entry points, asserting 0, zero callback
+  invocations, and no output write. Without the guards the callbacks run and the calls answer 1.
+- **Trigger:** none planned: permanent, deliberate safety divergence.
+
+### D-SHA3-FINAL-OUTLEN-1 — `keccak_final` writes `md_size` bytes into a shorter caller buffer
+
+- **Obligation:** the `OSSL_FUNC_DIGEST_FINAL` callback of the SHA-3, SHAKE and KECCAK-KMAC rows
+  (`sha3::keccak_final`, `src/provider/digest.rs`) when the caller's declared extent `outlen` is
+  smaller than the context's `md_size`.
+- **Authority:** writes past the caller's extent. `providers/implementations/digests/sha3_prov.c`
+  `keccak_final` (`:115-132`) tests only `outlen > 0` and then calls
+  `ctx->meth.final(ctx, out, ctx->md_size)` (`:128`), i.e. `ossl_sha3_final` writes exactly
+  `md_size` bytes. A fixed SHA3 row never accepts `xoflen` (`sha3_fixed_row` installs no
+  `set_ctx_params`), so `EVP_DigestFinalXOF(EVP_sha3_256(), buf, 16)` reaches the provider with
+  `outlen == 16` and `md_size == 32` and writes 32 bytes into a 16-byte buffer. This is a
+  caller-declared-extent overflow — the same class as D-WRAP-PAD-CLEANSE-1 — not a fault, so it
+  would not be visible as a comparison difference.
+- **Crate:** refuses when `outlen > 0 && md_size > outlen`, answering 0 without writing. The
+  authority's `outlen == 0` arm is kept exactly: it writes nothing and still reports `md_size`
+  through `*outl`. A SHAKE/KMAC row is unaffected for valid use because its `set_ctx_params`
+  writes the requested `xoflen` into `md_size` before `dfinal`, making the two equal; the refusal
+  is reached only when the method fixes a size larger than the caller allowed.
+- **Reason:** `AGENTS.md` §17: a known out-of-bounds write mechanism is eliminated, not
+  reproduced. §5.1's extent rule is the same one D-WRAP-PAD-CLEANSE-1 applies — the provider may
+  write only the storage the caller declared.
+- **Compatibility consequence:** `EVP_DigestFinalXOF` on a fixed SHA3/Keccak method (or KMAC with
+  an `xoflen` that the method's own `set_ctx_params` does not accept) with `size < md_size` now
+  returns 0 and leaves the buffer untouched; the authority returns 1 and writes `md_size` bytes.
+  A caller that passes `size >= md_size`, or that uses SHAKE/KMAC with an accepted `xoflen`, sees
+  no change. No error is raised: the authority has no raise site on this path, and
+  `docs/ERROR_MODEL.md` does not permit inventing one (the same choice D-MD-NULL-CALLBACK-1
+  records for its refusals).
+- **Evidence:** `evp::digest::tests::a_final_xof_shorter_than_the_digest_is_refused_without_writing`
+  fetches SHA3-256 from the default provider, calls `EVP_DigestFinalXOF(ctx, buf, 16)` on a
+  32-byte canary buffer (16 declared + 16 guard) and requires 0 and all 32 bytes unchanged.
+  Without the provider guard the call answers 1 and the guard bytes are overwritten.
+- **Trigger:** none planned: permanent, deliberate safety divergence.
