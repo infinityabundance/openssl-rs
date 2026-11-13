@@ -31,6 +31,14 @@
     "forensics/tools/rebind_consumer_artifact.py"
    ],
    "result": "320/3 -> 323 DISCHARGED / 0 BLOCKED; all eight binding checks pass"
+  },
+  {
+   "what": "B48-RC2-001 / P25-VESTIGIAL-MARKER-002 structural elimination",
+   "how": "read the source at S; the declaration is a safe fn and the build-time control rejects restoring unsafe",
+   "evidence": [
+    "atlas-refresh/b48-rc2-elimination-sites.json"
+   ],
+   "result": "ELIMINATED_STRUCTURALLY; no consumer closure count changes"
   }
  ],
  "blockers": [
@@ -691,7 +699,7 @@
  "not_blocking": [
   {
    "id": "B48-RC2-001",
-   "why": "rc2_magic_to_meth is in src/evp/e_rc2.rs, which is not in the OpenSSH reachable file set; the b74 closure contains no e_rc2 obligation"
+   "why": "ELIMINATED at S: src/evp/e_rc2.rs:352 is a safe fn with span sha256 fb2f310f and a compile-time coercion control at :367-368; the historical B48-RC2-001 / P25-VESTIGIAL-MARKER-002 BLOCKED dispositions are superseded by atlas-refresh/b48-rc2-elimination-sites.json. It was never in the OpenSSH reachable set."
   },
   {
    "id": "B54-F2",
@@ -703,7 +711,7 @@
   "evidence/closure-ssh-b74.json": "87f1dd9ac062d60da6a07c06abc4eec626254217dfd84861c7b495e59357c8ff",
   "evidence/closure-sshd-b73-r2.json": "d0addc72f94904b03e63b2bd1d92dc5506c1ea67f6732b5a51a124f943f5cee5",
   "evidence/sshd-artifact-ledger.json": "34ff5e2eec66d7c522951c9ef639d0e97c1a61501a232b0f579a4fe5fd7dc36e",
-  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "072d2b22982e346cf4f71b21a62297c8720dbef322710a2c347363eaf5c7b15d",
+  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "78714126fd39700a58d1bcd5a0971023cb7416faeca7f6b5185c09a51b51a282",
   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json": "225275e35179c7f475c1031e6a783a9ee4630529127a715da67a1cecab51863e"
  },
  "non_claims": [
