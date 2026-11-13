@@ -122,7 +122,8 @@
        "item": "engine_unregister_all_rsa",
        "status": "DISCHARGED"
       }
-     ]
+     ],
+     "structural_elimination": "all 9 are safe declarations at S4 (receipt atlas-refresh/b45-safe-thunks-elimination-sites.json); projected to leave REVIEW_REQUIRED after re-census; the applied count still includes them"
     },
     {
      "receipt": "openssh-v1i",
@@ -726,12 +727,12 @@
    "why": "the NULL-value contract defect is in src/x509/v3_conf.rs, which is not in the OpenSSH reachable obligation set. It remains an open finding for the wider library and is not fixed here because a source edit would invalidate the frozen candidate without a rebuild; it must be repaired and re-measured at the next source batch."
   }
  ],
- "verdict": "SAFE_COMPATIBLE NOT ESTABLISHED for ssh or sshd. The last measured S = 15bebabc9 has 225 supportable / 98 REVIEW_REQUIRED / 0 BLOCKED / 0 UNKNOWN and element 7 PASS 153/0/153. The current source S3 = df0201be3 adds the B54-F2 fix, 13 CMP constructor eliminations and six v1l helper eliminations, but is unbuilt and unmeasured; the projected review-required count is 79, not applied.",
+ "verdict": "SAFE_COMPATIBLE NOT ESTABLISHED for ssh or sshd. The last measured S = 15bebabc9 has 225 supportable / 98 REVIEW_REQUIRED / 0 BLOCKED / 0 UNKNOWN and element 7 PASS 153/0/153. The current source S4 = ba60ad76a adds the B54-F2 fix, 13 CMP constructor eliminations, six v1l helper eliminations and nine B45 cleanup-thunk eliminations, but is unbuilt and unmeasured; the projected review-required count is 70, not applied.",
  "input_hashes": {
   "evidence/closure-ssh-b74.json": "87f1dd9ac062d60da6a07c06abc4eec626254217dfd84861c7b495e59357c8ff",
   "evidence/closure-sshd-b73-r2.json": "d0addc72f94904b03e63b2bd1d92dc5506c1ea67f6732b5a51a124f943f5cee5",
   "evidence/sshd-artifact-ledger.json": "34ff5e2eec66d7c522951c9ef639d0e97c1a61501a232b0f579a4fe5fd7dc36e",
-  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "d894cb74be8b553f0b0b62acc29a8a96d9a950ca4f09307783fa60a5b95f9803",
+  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "1d4c5ca91ab736992d66d6914b95b7426abc6d43f7a90034b96bbb8861c394c1",
   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json": "225275e35179c7f475c1031e6a783a9ee4630529127a715da67a1cecab51863e"
  },
  "non_claims": [
@@ -812,6 +813,17 @@
    "evidence_bound_to": "S=15bebabc9 (all closure/census/artefact evidence)",
    "projected_effect": "review-required 98 -> 79 after rebuild and re-census (not applied)",
    "required_resolution": "build, test, rebuild consumers, re-census, re-run both closures and L7 at S3"
+  },
+  {
+   "id": "B45-SAFE-9",
+   "commit": "ba60ad76a423c9e8d36cba24535fb578a02dbce3",
+   "previous_S": "df0201be3bf1474bac07463371bf62c491b8f847",
+   "src_content_sha256": "e2d945af520d5b54dd033a5bb2eee05f916fc98c740e2d8353b8c6adc129075f",
+   "what": "nine zero-argument engine cleanup thunks are safe extern fns with compile-time controls",
+   "state": "ELIMINATED IN SOURCE, NOT_BUILT",
+   "evidence_bound_to": "S=15bebabc9 (all closure/census/artefact evidence)",
+   "projected_effect": "review-required 98 -> 70 after rebuild and re-census (not applied); the B45 C5 refusal is preserved but blocks no live obligation",
+   "required_resolution": "build, test, rebuild consumers, re-census, re-run both closures and L7 at S4"
   }
  ]
 }
