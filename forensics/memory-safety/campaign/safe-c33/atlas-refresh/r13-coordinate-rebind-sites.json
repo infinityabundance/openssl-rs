@@ -5747,7 +5747,46 @@
    "ledger_row_receipt": "boundary-sweep-B56",
    "repair_commit": "0d39697ae93d87a67b7b1877ab41ca4914732b1d",
    "repair_receipt": "atlas-refresh/boundary-sweep-B72.json"
+  },
+  {
+   "receipt": "openssh-asn1-ocsp-sites",
+   "ids": [
+    "P25-OSSH-OCSP-3"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ocsp_crlid",
+   "discharging_boundary": "src/ocsp/v3_ocsp.rs:122",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/ocsp/v3_ocsp.rs, UNSAFE_FN_DEF, i2r_ocsp_crlid) as discharging boundary src/ocsp/v3_ocsp.rs:122; at S the operation resolves to exactly one brace-matched definition (span lines 122-174, sha256 b50e4d89db5ce79738af5279ed0bd4bd058bff4cee775901540be9fac0155e42) and the discharging record's recorded span_sha256 b50e4d89 equals that content hash; the older record's coordinate 122 equals the S definition start; its disposition is CONTRACTED for exactly one stated reason, 'No independent BOUNDARY review', which evidence/ocsp-i2r-dispatch-review-2026-11-13.json now supplies, and it states no defect.",
+   "discharging_evidence": "r13 declares the ledger key src/ocsp/v3_ocsp.rs:122 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's DISPATCH_DISCHARGED verdict. B54 adjudicates the PRINT_i2r dispatch path; evidence/ocsp-i2r-dispatch-review-2026-11-13.json independently establishes from source that X509V3_EXT_print decodes with the same row's item, refuses a NULL value, and dispatches that same method and value, that the item type matches the cast, that no other production caller exists, and that the alias copy pairs it and i2r. The discharge remains site-scoped.",
+   "reason": "the older record is a CONTRACTED enumeration whose only blocker was the absence of an independent BOUNDARY review; that review now exists and found no defect. Supersession is per operation, not by class.",
+   "ledger_row_receipt": "boundary-sweep-B54"
+  },
+  {
+   "receipt": "openssh-asn1-ocsp-sites",
+   "ids": [
+    "P25-OSSH-OCSP-7"
+   ],
+   "file": "src/ocsp/v3_ocsp.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ocsp_serviceloc",
+   "discharging_boundary": "src/ocsp/v3_ocsp.rs:406",
+   "discharging_receipt": "r13-coordinate-rebind",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/ocsp/v3_ocsp.rs, UNSAFE_FN_DEF, i2r_ocsp_serviceloc) as discharging boundary src/ocsp/v3_ocsp.rs:406; at S the operation resolves to exactly one brace-matched definition (span lines 406-446, sha256 322bd2bf4972c3a390a295e976eb562b9d942133d69d141fd397c91855007b1f) and the discharging record's recorded span_sha256 322bd2bf equals that content hash; the older record's coordinate 406 equals the S definition start; its disposition is CONTRACTED for exactly one stated reason, 'No independent BOUNDARY review', which evidence/ocsp-i2r-dispatch-review-2026-11-13.json now supplies, and it states no defect.",
+   "discharging_evidence": "r13 declares the ledger key src/ocsp/v3_ocsp.rs:406 (ledger row boundary-sweep-B54, adjudicated true) and transcribes that row's DISPATCH_DISCHARGED verdict. B54 adjudicates the PRINT_i2r dispatch path; evidence/ocsp-i2r-dispatch-review-2026-11-13.json independently establishes from source that X509V3_EXT_print decodes with the same row's item, refuses a NULL value, and dispatches that same method and value, that the item type matches the cast, that no other production caller exists, and that the alias copy pairs it and i2r. The discharge remains site-scoped.",
+   "reason": "the older record is a CONTRACTED enumeration whose only blocker was the absence of an independent BOUNDARY review; that review now exists and found no defect. Supersession is per operation, not by class.",
+   "ledger_row_receipt": "boundary-sweep-B54"
   }
  ],
- "supersedes_note": "B67-G1 disposition-conflict resolution against the b61 openssh closure. Each entry names ONE older boundary id plus the single boundary of this receipt that carries the same (file, kind, operation); the loader attaches a receipt's supersedes list to every boundary it declares, so every id was checked to match exactly one boundary here, namely the named discharging_boundary. Each entry records the content-addressed binding at S=b6f38f13 and the specific reason the older record is stale; no boundary disposition, span hash or verdict of this receipt is changed by this block. This receipt declares the ledger join-key boundary records for B53-B57 (the substantive per-site evidence lives in each entry's ledger_row_receipt), so a supersession can only be declared here: the accepted record is this receipt's, not the source receipt's. The block withdraws only an older, different receipt's non-discharging disposition for the same operation; it creates no verdict of its own. One later entry (ids P25-ENGINE-CB-000, discharging boundary src/engine/eng_list.rs:97) records a repair-based supersession: the older hazard is eliminated at 0d39697ae by the engine_list_cleanup repair and its mutation-sensitive canary, recorded in atlas-refresh/boundary-sweep-B72.json."
+ "supersedes_note": "B67-G1 disposition-conflict resolution against the b61 openssh closure. Each entry names ONE older boundary id plus the single boundary of this receipt that carries the same (file, kind, operation); the loader attaches a receipt's supersedes list to every boundary it declares, so every id was checked to match exactly one boundary here, namely the named discharging_boundary. Each entry records the content-addressed binding at S=b6f38f13 and the specific reason the older record is stale; no boundary disposition, span hash or verdict of this receipt is changed by this block. This receipt declares the ledger join-key boundary records for B53-B57 (the substantive per-site evidence lives in each entry's ledger_row_receipt), so a supersession can only be declared here: the accepted record is this receipt's, not the source receipt's. The block withdraws only an older, different receipt's non-discharging disposition for the same operation; it creates no verdict of its own. One later entry (ids P25-ENGINE-CB-000, discharging boundary src/engine/eng_list.rs:97) records a repair-based supersession: the older hazard is eliminated at 0d39697ae by the engine_list_cleanup repair and its mutation-sensitive canary, recorded in atlas-refresh/boundary-sweep-B72.json. AMENDED 2026-11-13 (B75): the two P25-OSSH-OCSP-3/-7 entries are appended after evidence/ocsp-i2r-dispatch-review-2026-11-13.json supplied the independent BOUNDARY review the older CONTRACTED dispositions named as their only blocker. They are the only entries that supersede a CONTRACTED disposition that is not an ownership enumeration; the b67 record left them NEEDS_DECISION, and that decision is this amendment, not a mechanical reclassification.",
+ "supersedes_amendment_2026_11_13": {
+  "what": "B75: two supersedes entries appended for P25-OSSH-OCSP-3 and P25-OSSH-OCSP-7 after an independent source review",
+  "review": "evidence/ocsp-i2r-dispatch-review-2026-11-13.json",
+  "why": "atlas-refresh/b67-g1-conflict-resolution.json#/unresolved recorded both as NEEDS_DECISION because the discharging B54 row was adjudicated-fast and the conflicting disposition was CONTRACTED (not a stale BLOCKED enumeration). A CONTRACTED disposition can only be superseded by actually obtaining the independent BOUNDARY review it names as its blocker.",
+  "effect": "the two conflicts become superseded under the enforced conflict gate; no existing boundary, span hash, disposition or verdict is rewritten",
+  "applied": true
+ }
 }
