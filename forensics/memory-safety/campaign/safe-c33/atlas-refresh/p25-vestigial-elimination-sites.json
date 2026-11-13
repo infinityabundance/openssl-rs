@@ -1,0 +1,105 @@
+{
+ "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "p25-vestigial-elimination",
+ "subphase": "vestigial-marker completion: four provider/ML-KEM sites already carry safe declarations",
+ "date": "2026-11-13",
+ "candidate": {
+  "source_head": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+  "workspace_head": "a64b0644f (before this record)",
+  "src_content_sha256": "8ee037be6789bd8e2731d5081b787dda2ebfa190a873c1366f1aac01f7ba7374",
+  "files_sha256": {
+   "src/ml_kem/key.rs": "d6ddf75902b1fb7d7716e96e676cd51ccc82b039178f2748c238ea1c1fc27389",
+   "src/provider/eddsa_sig.rs": "2984ee2f5f7157c08d1ec524f13dbc51a6b953ac7a6d98691ac474729e09f411"
+  },
+  "git_blobs": {
+   "src/ml_kem/key.rs": "eed9057ca985143b6966f0b6d81ae2926a931ef6",
+   "src/provider/eddsa_sig.rs": "e8d870ae3cb4dbc31c91be09a52c6bc522cf7f0f"
+  }
+ },
+ "summary": {
+  "historical_obligations": ["P25-VESTIGIAL-MARKER-001", "P25-VESTIGIAL-MARKER-003", "P25-VESTIGIAL-MARKER-004"],
+  "state": "ELIMINATED_STRUCTURALLY",
+  "statement": "All three operations are declared as safe functions at S, each with a compile-time coercion control that rejects a restored unsafe qualifier. The older receipt recorded them as unsafe markers retained; that description no longer matches the source. P25-VESTIGIAL-MARKER-002 is eliminated by b48-rc2-elimination-sites.json, and 005/006 are already SAFETY_DISCHARGED by B67."
+ },
+ "boundaries": [
+  {
+   "id": "P25-VESTIGIAL-MARKER-001-ELIMINATED",
+   "file": "src/ml_kem/key.rs",
+   "line": 293,
+   "line_current": 293,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_ml_kem_get_vinfo",
+   "historical_ids": ["P25-VESTIGIAL-MARKER-001"],
+   "disposition": "ELIMINATED (source: safe fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "`ossl_ml_kem_get_vinfo(evp_type: c_int) -> *const MlKemVinfo`: the body matches the three ML-KEM types to slices of a static table and answers NULL otherwise. It reads no pointer and retains nothing. The returned pointer is process-lifetime and must not be freed or written.",
+   "evidence": {
+    "span_sha256": "da7e11eebe592d36f2fc4278416ef5e76c42060f32bee31d7dce4e9b878ea340",
+    "span_lines": [293, 300],
+    "qualified_identity": "ossl_ml_kem_get_vinfo",
+    "compile_time_control": "src/ml_kem/key.rs:287 — `const _: fn(c_int) -> *const MlKemVinfo = ossl_ml_kem_get_vinfo;`"
+   },
+   "prior_state": "BLOCKED; the receipt recorded an unsafe marker retained because the return is ABI-adjacent",
+   "residuals": ["No Miri/ASan run for this file.", "The control proves the declaration is safe, not the table contents."]
+  },
+  {
+   "id": "P25-VESTIGIAL-MARKER-003-ELIMINATED",
+   "file": "src/provider/eddsa_sig.rs",
+   "line": 942,
+   "line_current": 942,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ed25519_sigalg_query_key_types",
+   "historical_ids": ["P25-VESTIGIAL-MARKER-003"],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "`extern \"C\" fn ed25519_sigalg_query_key_types() -> *mut *const c_char`: returns a process-lifetime, NULL-terminated static name table. The body reads no argument, allocates nothing and retains nothing; the caller must not free, write or mutate the array.",
+   "evidence": {
+    "span_sha256": "b6adb404791eb3b93b872a87c44544913bb0fc8b9975854d88f01349955350fe",
+    "span_lines": [942, 950],
+    "qualified_identity": "ed25519_sigalg_query_key_types",
+    "compile_time_control": "src/provider/eddsa_sig.rs:1674 — `const _: extern \"C\" fn() -> *mut *const c_char = ed25519_sigalg_query_key_types;`"
+   },
+   "prior_state": "BLOCKED; the receipt recorded an unsafe marker retained because the callback address is stored in an OSSL_DISPATCH slot",
+   "residuals": ["No Miri/ASan run for this file."]
+  },
+  {
+   "id": "P25-VESTIGIAL-MARKER-004-ELIMINATED",
+   "file": "src/provider/eddsa_sig.rs",
+   "line": 955,
+   "line_current": 955,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ed448_sigalg_query_key_types",
+   "historical_ids": ["P25-VESTIGIAL-MARKER-004"],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "`extern \"C\" fn ed448_sigalg_query_key_types() -> *mut *const c_char`: identical shape to the Ed25519 row over the ED448 name table.",
+   "evidence": {
+    "span_sha256": "a73a99a14b7d9d9ab957f07c5ec56f078a0be9d3d5cc2d2c872359f2e819c7e8",
+    "span_lines": [955, 963],
+    "qualified_identity": "ed448_sigalg_query_key_types",
+    "compile_time_control": "src/provider/eddsa_sig.rs:1676 — `const _: extern \"C\" fn() -> *mut *const c_char = ed448_sigalg_query_key_types;`"
+   },
+   "prior_state": "BLOCKED; same retained-marker reason as 003",
+   "residuals": ["No Miri/ASan run for this file."]
+  }
+ ],
+ "supersedes": [
+  {"receipt": "p25-vestigial-marker-sites", "ids": ["P25-VESTIGIAL-MARKER-001"], "file": "src/ml_kem/key.rs", "kind": "UNSAFE_FN_DEF", "operation": "ossl_ml_kem_get_vinfo", "discharging_boundary": "P25-VESTIGIAL-MARKER-001-ELIMINATED", "discharging_receipt": "p25-vestigial-elimination", "classification": "ELIMINATED_STRUCTURALLY", "witness": "the operation resolves to a safe `fn` at :293 (span 293-300 sha256 da7e11ee), and the control at :287 rejects a restored unsafe qualifier", "reason": "the older record's retained unsafe marker no longer exists"},
+  {"receipt": "p25-vestigial-marker-sites", "ids": ["P25-VESTIGIAL-MARKER-003"], "file": "src/provider/eddsa_sig.rs", "kind": "UNSAFE_FN_DEF", "operation": "ed25519_sigalg_query_key_types", "discharging_boundary": "P25-VESTIGIAL-MARKER-003-ELIMINATED", "discharging_receipt": "p25-vestigial-elimination", "classification": "ELIMINATED_STRUCTURALLY", "witness": "the operation resolves to a safe `extern \"C\" fn` at :942 (span 942-950 sha256 b6adb404), and the control at :1674 rejects a restored unsafe qualifier", "reason": "the older record's retained unsafe marker no longer exists"},
+  {"receipt": "p25-vestigial-marker-sites", "ids": ["P25-VESTIGIAL-MARKER-004"], "file": "src/provider/eddsa_sig.rs", "kind": "UNSAFE_FN_DEF", "operation": "ed448_sigalg_query_key_types", "discharging_boundary": "P25-VESTIGIAL-MARKER-004-ELIMINATED", "discharging_receipt": "p25-vestigial-elimination", "classification": "ELIMINATED_STRUCTURALLY", "witness": "the operation resolves to a safe `extern \"C\" fn` at :955 (span 955-963 sha256 a73a99a1), and the control at :1676 rejects a restored unsafe qualifier", "reason": "the older record's retained unsafe marker no longer exists"}
+ ],
+ "negative_control": {
+  "id": "P25-VESTIGIAL-ELIM-1",
+  "kind": "compile-time coercion",
+  "observation": "each control const requires a safe fn; restoring `unsafe` fails to type-check"
+ },
+ "non_claims": [
+  "Structural elimination, not SAFETY_DISCHARGED.",
+  "Does not cover P25-VESTIGIAL-MARKER-005/006; those are SAFETY_DISCHARGED by B67 and their declarations are unchanged.",
+  "Does not change any OpenSSH closure count; none of these files is in the OpenSSH reachable obligation set."
+ ]
+}
