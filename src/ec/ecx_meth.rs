@@ -1873,27 +1873,24 @@ mod tests {
     /// `EVP_PKEY_meth_get0_info` publishes and the only field difference between the rows.
     #[test]
     fn pmeth_accessors_are_the_four_ecx_types() {
-        // SAFETY: each accessor answers a `static` of this module.
-        let rows: [(*const EvpPkeyMethod, c_int, c_int); 4] = unsafe {
-            [
-                (
-                    ossl_ecx25519_pkey_method(),
-                    crate::runtime::obj::NID_X25519,
-                    0,
-                ),
-                (ossl_ecx448_pkey_method(), crate::runtime::obj::NID_X448, 0),
-                (
-                    ossl_ed25519_pkey_method(),
-                    crate::runtime::obj::NID_ED25519,
-                    EVP_PKEY_FLAG_SIGCTX_CUSTOM,
-                ),
-                (
-                    ossl_ed448_pkey_method(),
-                    crate::runtime::obj::NID_ED448,
-                    EVP_PKEY_FLAG_SIGCTX_CUSTOM,
-                ),
-            ]
-        };
+        let rows: [(*const EvpPkeyMethod, c_int, c_int); 4] = [
+            (
+                ossl_ecx25519_pkey_method(),
+                crate::runtime::obj::NID_X25519,
+                0,
+            ),
+            (ossl_ecx448_pkey_method(), crate::runtime::obj::NID_X448, 0),
+            (
+                ossl_ed25519_pkey_method(),
+                crate::runtime::obj::NID_ED25519,
+                EVP_PKEY_FLAG_SIGCTX_CUSTOM,
+            ),
+            (
+                ossl_ed448_pkey_method(),
+                crate::runtime::obj::NID_ED448,
+                EVP_PKEY_FLAG_SIGCTX_CUSTOM,
+            ),
+        ];
         for (meth, id, flags) in rows {
             // SAFETY: `meth` is a live `static`.
             unsafe {

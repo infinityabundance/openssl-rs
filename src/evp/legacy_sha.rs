@@ -1731,18 +1731,22 @@ mod tests {
         let mut block = [0u64; 64];
         assert!(core::mem::size_of_val(&block) >= core::mem::size_of::<ShaCtx>());
         let mut ctx = bound_context(md, block.as_mut_ptr().cast());
-        // SAFETY: `ctx` is live and the block has a `SHA_CTX`'s extent; the declared size is
-        // negative, which is the input under test.
         assert_eq!(
-            unsafe { init(&mut ctx) },
+            unsafe {
+                // SAFETY: `ctx` is live and the block has a `SHA_CTX`'s extent; the declared size
+                // is negative, which is the input under test.
+                init(&mut ctx)
+            },
             0,
             "init accepted a negative ctx_size"
         );
         assert_eq!(block, [0u64; 64], "a refused init modified md_data");
         let mut output = [0u8; 20];
-        // SAFETY: the same live context and a writable output buffer.
         assert_eq!(
-            unsafe { final_(&mut ctx, output.as_mut_ptr()) },
+            unsafe {
+                // SAFETY: the same live context and a writable output buffer.
+                final_(&mut ctx, output.as_mut_ptr())
+            },
             0,
             "final accepted a negative ctx_size"
         );

@@ -22,6 +22,7 @@
 
 #![allow(clippy::panic)] // a failing assertion's message is this test's whole report
 #![allow(clippy::assertions_on_constants)] // the `assert!(false, ...)` arms report a missing vector
+#![allow(clippy::expect_used)] // a missing write is this test's whole report
 
 use core::ffi::{c_int, c_uint};
 use core::ptr;

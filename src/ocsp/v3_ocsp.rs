@@ -779,6 +779,7 @@ mod nonce_tests {
 
 #[cfg(test)]
 mod b54_tests {
+    #![allow(clippy::expect_used)]
     use super::*;
 
     /// B54-W1: the print-path type fact, per call site. `X509V3_EXT_print` decodes the value

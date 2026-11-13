@@ -5868,6 +5868,7 @@ pub unsafe extern "C" fn EVP_DigestVerify(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use super::*;
     use crate::runtime::err::ERR_peek_last_error_all;
     use core::ffi::CStr;

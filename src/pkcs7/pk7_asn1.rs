@@ -1828,6 +1828,7 @@ mod tests {
 
 #[cfg(test)]
 mod b56_tests {
+    #![allow(clippy::panic)]
     use super::*;
 
     /// B56-C2 — per-call-site witness for the two `PKCS7` item callbacks.

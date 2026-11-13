@@ -981,10 +981,12 @@ mod tests {
                 let mut c = bound_context(md, block.as_mut_ptr().cast());
                 let mut output = [0u8; 64];
 
-                // SAFETY: `c` is live and its method declares exactly the block's extent, so only
-                // the `md_size <= 0` guard can refuse.
                 assert_eq!(
-                    unsafe { final_(&mut c, output.as_mut_ptr()) },
+                    unsafe {
+                        // SAFETY: `c` is live and its method declares exactly the block's extent,
+                        // so only the `md_size <= 0` guard can refuse.
+                        final_(&mut c, output.as_mut_ptr())
+                    },
                     0,
                     "{label}: final accepted result_size {result_size}"
                 );
@@ -993,9 +995,11 @@ mod tests {
                     "{label}: a refused final modified md_data"
                 );
 
-                // SAFETY: as above, for the initialiser.
                 assert_eq!(
-                    unsafe { init(&mut c) },
+                    unsafe {
+                        // SAFETY: as above, for the initialiser.
+                        init(&mut c)
+                    },
                     0,
                     "{label}: init accepted result_size {result_size}"
                 );
@@ -1005,9 +1009,11 @@ mod tests {
                 );
 
                 if let Some(ctrl) = ctrl {
-                    // SAFETY: `c` is live and the command reads no argument buffer.
                     assert_eq!(
-                        unsafe { ctrl(&mut c, EVP_MD_CTRL_XOF_LEN, 32, core::ptr::null_mut()) },
+                        unsafe {
+                            // SAFETY: `c` is live and the command reads no argument buffer.
+                            ctrl(&mut c, EVP_MD_CTRL_XOF_LEN, 32, core::ptr::null_mut())
+                        },
                         0,
                         "{label}: ctrl accepted result_size {result_size}"
                     );
@@ -1033,9 +1039,11 @@ mod tests {
                 assert_eq!(EVP_MD_meth_set_init(md, Some(init)), 1);
             }
             let mut c = bound_context(md, block.as_mut_ptr().cast());
-            // SAFETY: `c` is live and the block is at least a `KeccakCtx` long.
             assert_eq!(
-                unsafe { init(&mut c) },
+                unsafe {
+                    // SAFETY: `c` is live and the block is at least a `KeccakCtx` long.
+                    init(&mut c)
+                },
                 1,
                 "{label}: the matching extent was refused"
             );
@@ -1092,18 +1100,22 @@ mod tests {
         let mut block = [0u64; 64];
         assert!(core::mem::size_of_val(&block) >= core::mem::size_of::<KeccakCtx>());
         let mut c = bound_context(md, block.as_mut_ptr().cast());
-        // SAFETY: `c` is live and the block has a `KeccakCtx`'s extent; the declared size is
-        // negative, which is the input under test.
         assert_eq!(
-            unsafe { init(&mut c) },
+            unsafe {
+                // SAFETY: `c` is live and the block has a `KeccakCtx`'s extent; the declared size
+                // is negative, which is the input under test.
+                init(&mut c)
+            },
             0,
             "init accepted a negative ctx_size"
         );
         assert_eq!(block, [0u64; 64], "a refused init modified md_data");
         let mut output = [0u8; 32];
-        // SAFETY: the same live context and a writable output buffer.
         assert_eq!(
-            unsafe { final_(&mut c, output.as_mut_ptr()) },
+            unsafe {
+                // SAFETY: the same live context and a writable output buffer.
+                final_(&mut c, output.as_mut_ptr())
+            },
             0,
             "final accepted a negative ctx_size"
         );

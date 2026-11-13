@@ -1519,6 +1519,7 @@ unsafe extern "C" fn copy_email(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::expect_used)]
     use super::*;
 
     /// B54-W3: the config-decode type fact, per call site. `do_ext_nconf` resolves the row by
@@ -1531,14 +1532,18 @@ mod tests {
         let general_names = GENERAL_NAMES_it();
         assert_eq!(ossl_v3_alt[0].ext_nid, NID_subject_alt_name);
         assert_eq!(ossl_v3_alt[1].ext_nid, NID_issuer_alt_name);
-        // SAFETY: both rows' `it` accessors answer the static `GENERAL_NAMES` item.
         assert_eq!(
-            unsafe { ossl_v3_alt[0].it.expect("an item")() },
+            unsafe {
+                // SAFETY: both rows' `it` accessors answer the static `GENERAL_NAMES` item.
+                ossl_v3_alt[0].it.expect("an item")()
+            },
             general_names
         );
-        // SAFETY: as above.
         assert_eq!(
-            unsafe { ossl_v3_alt[1].it.expect("an item")() },
+            unsafe {
+                // SAFETY: as above.
+                ossl_v3_alt[1].it.expect("an item")()
+            },
             general_names
         );
         assert_eq!(

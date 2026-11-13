@@ -2152,6 +2152,7 @@ unsafe fn free_cert_filename(c: &mut SslConfCtx) {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use super::*;
     use crate::runtime::mem::free_probe;
     use crate::ssl::methods::TLS_method;

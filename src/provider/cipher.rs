@@ -22341,6 +22341,10 @@ pub(crate) mod legacy {
     }
 }
 
+// Compile-time control: the converted dispatcher keeps its exact C signature.
+#[cfg(test)]
+const _: extern "C" fn(*mut c_void) -> *const OsslParam = ossl_cipher_generic_gettable_params;
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
@@ -24383,7 +24387,3 @@ mod tests {
         assert_eq!(out[8..], [0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11]);
     }
 }
-
-// Compile-time control: the converted dispatcher keeps its exact C signature.
-#[cfg(test)]
-const _: extern "C" fn(*mut c_void) -> *const OsslParam = ossl_cipher_generic_gettable_params;

@@ -513,10 +513,8 @@ mod tests {
             // SAFETY: every accessor takes no pointers.
             assert_eq!(unsafe { accessor() }, unsafe { accessor() }, "{name}");
         }
-        // SAFETY: both take no pointers, and the two calls must not be one object.
-        assert_ne!(unsafe { ossl_bignum_ffdhe2048_p() }, unsafe {
-            ossl_bignum_ffdhe2048_q()
-        });
+        // Both take no pointers, and the two calls must not be one object.
+        assert_ne!(ossl_bignum_ffdhe2048_p(), ossl_bignum_ffdhe2048_q());
     }
 
     /// The eleven safe-prime groups really are safe primes: odd, `p = 2q + 1`, and
@@ -532,8 +530,7 @@ mod tests {
     /// group the authority's own validator rejects.
     #[test]
     fn the_safe_prime_groups_are_safe_primes() {
-        // SAFETY: the accessor takes no pointers.
-        let two = unsafe { ossl_bignum_const_2() };
+        let two = ossl_bignum_const_2();
         for (p_of, q_of, bits) in SAFE_PRIMES {
             // SAFETY: both accessors take no pointers.
             let (p, q) = unsafe { (p_of(), q_of()) };
@@ -558,29 +555,25 @@ mod tests {
                 BN_free(q2);
             }
         }
-        // SAFETY: `two` is the shared object and the accessor takes no pointers.
-        assert_eq!(two, unsafe { ossl_bignum_const_2() });
+        // `two` is the shared object.
+        assert_eq!(two, ossl_bignum_const_2());
     }
 
     /// `ossl_bignum_const_2` is 2, which `ffc_dh.c` points the eleven safe-prime
     /// families' `g` at, and the three RFC 5114 groups do **not** use it.
     #[test]
     fn the_shared_generator_is_two_and_the_rfc5114_groups_have_their_own() {
-        // SAFETY: the accessor takes no pointers.
-        let two = unsafe { ossl_bignum_const_2() };
+        let two = ossl_bignum_const_2();
         // SAFETY: `two` is the shared object.
         unsafe {
             assert_eq!(BN_num_bits(two), 2);
             assert_ne!(BN_is_word(two, 2), 0);
         }
-        // SAFETY: the three accessors take no pointers.
-        for g in unsafe {
-            [
-                ossl_bignum_dh1024_160_g(),
-                ossl_bignum_dh2048_224_g(),
-                ossl_bignum_dh2048_256_g(),
-            ]
-        } {
+        for g in [
+            ossl_bignum_dh1024_160_g(),
+            ossl_bignum_dh2048_224_g(),
+            ossl_bignum_dh2048_256_g(),
+        ] {
             assert_ne!(
                 g, two,
                 "an RFC 5114 group must not share `ossl_bignum_const_2`"
@@ -607,8 +600,7 @@ mod tests {
             ossl_bignum_dh2048_224_q,
             ossl_bignum_dh2048_256_q,
         ] {
-            // SAFETY: the accessor takes no pointers.
-            let v = unsafe { q() };
+            let v = q();
             // SAFETY: `v` is shared storage and `ctx` is this test's own context.
             assert_eq!(unsafe { BN_check_prime(v, ctx, ptr::null_mut()) }, 1);
         }
@@ -624,8 +616,7 @@ mod tests {
         // SAFETY: `BN_CTX_new_ex(NULL)` reads no caller pointer.
         let ctx = unsafe { BN_CTX_new_ex(ptr::null_mut()) };
         assert!(!ctx.is_null());
-        // SAFETY: the accessor takes no pointers.
-        let q = unsafe { ossl_bignum_dh1024_160_q() };
+        let q = ossl_bignum_dh1024_160_q();
         // SAFETY: `sq` is this test's own allocation; `q` is live and `ctx` is live.
         let sq = unsafe {
             let sq = BN_new();
@@ -649,12 +640,11 @@ mod tests {
     /// object, so it asserts the observable half: the object survives with its value.
     #[test]
     fn freeing_a_shared_constant_leaves_it_alone() {
-        // SAFETY: the accessor takes no pointers.
-        let p = unsafe { ossl_bignum_ffdhe2048_p() }.cast_mut();
+        let p = ossl_bignum_ffdhe2048_p().cast_mut();
         // SAFETY: `p` is one of the shared constants, which `BN_free` must leave alone.
         unsafe { BN_free(p) };
-        // SAFETY: the accessor takes no pointers and `p` is the same object.
-        assert_eq!(unsafe { ossl_bignum_ffdhe2048_p() }.cast_mut(), p);
+        // `p` must still be the same shared object.
+        assert_eq!(ossl_bignum_ffdhe2048_p().cast_mut(), p);
         // SAFETY: `p` is live — that is the claim under test.
         assert_eq!(unsafe { BN_num_bits(p) }, 2048);
     }

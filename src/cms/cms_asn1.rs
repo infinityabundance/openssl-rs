@@ -2867,6 +2867,7 @@ pub(crate) unsafe extern "C" fn CMS_CMSORIforKEMOtherInfo_encode(
 
 #[cfg(test)]
 mod b56_tests {
+    #![allow(clippy::panic)]
     use super::*;
     use core::mem::size_of;
 

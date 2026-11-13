@@ -25,6 +25,8 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+#![allow(clippy::panic)] // a missing table callback is this test's whole report
+
 use core::ffi::{c_int, c_void};
 
 use crate::evp::digest::{
@@ -694,10 +696,12 @@ fn nonpositive_result_size_is_refused_for_every_sha3_and_shake_surface() {
             let mut c = ctx(md, block.as_mut_ptr().cast());
             let mut output = [0u8; 64];
 
-            // SAFETY: `c` is live and its method declares exactly the block's extent, so only the
-            // `md_size <= 0` guard can refuse.
             assert_eq!(
-                unsafe { final_(&mut c, output.as_mut_ptr()) },
+                unsafe {
+                    // SAFETY: `c` is live and its method declares exactly the block's extent, so
+                    // only the `md_size <= 0` guard can refuse.
+                    final_(&mut c, output.as_mut_ptr())
+                },
                 0,
                 "{name}: final accepted result_size {result_size}"
             );
@@ -706,18 +710,22 @@ fn nonpositive_result_size_is_refused_for_every_sha3_and_shake_surface() {
                 "{name}: a refused final modified md_data"
             );
 
-            // SAFETY: as above, for the initialiser.
             assert_eq!(
-                unsafe { init(&mut c) },
+                unsafe {
+                    // SAFETY: as above, for the initialiser.
+                    init(&mut c)
+                },
                 0,
                 "{name}: init accepted result_size {result_size}"
             );
             assert_eq!(block, [0u64; 64], "{name}: a refused init modified md_data");
 
             if let Some(ctrl) = ctrl {
-                // SAFETY: `c` is live and the command reads no argument buffer.
                 assert_eq!(
-                    unsafe { ctrl(&mut c, EVP_MD_CTRL_XOF_LEN, 32, core::ptr::null_mut()) },
+                    unsafe {
+                        // SAFETY: `c` is live and the command reads no argument buffer.
+                        ctrl(&mut c, EVP_MD_CTRL_XOF_LEN, 32, core::ptr::null_mut())
+                    },
                     0,
                     "{name}: ctrl accepted result_size {result_size}"
                 );
@@ -739,9 +747,11 @@ fn nonpositive_result_size_is_refused_for_every_sha3_and_shake_surface() {
             assert_eq!(EVP_MD_meth_set_init(md, Some(init)), 1);
         }
         let mut c = ctx(md, block.as_mut_ptr().cast());
-        // SAFETY: `c` is live and the block is at least a `KeccakCtx` long.
         assert_eq!(
-            unsafe { init(&mut c) },
+            unsafe {
+                // SAFETY: `c` is live and the block is at least a `KeccakCtx` long.
+                init(&mut c)
+            },
             1,
             "{name}: the matching extent was refused"
         );
