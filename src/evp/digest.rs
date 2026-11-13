@@ -3010,7 +3010,9 @@ pub unsafe extern "C" fn EVP_MD_CTX_copy(out: *mut EvpMdCtx, in_: *const EvpMdCt
 /// `copyctx` (which copies `size_of::<Ctx>()` bytes through NULL) and its re-acquiring arm copies
 /// the NULL into the destination. This transcription answers 0 for that state
 /// (D-DIGEST-NULL-ALGCTX-1). A non-NULL source whose destination is in the same failed state is
-/// refused at the in-place arm's own check.
+/// refused only when the method has a `copyctx` callback, because that is the only arm that would
+/// write through the destination's NULL `algctx`; a method without `copyctx` takes the authority's
+/// re-acquiring arm and succeeds.
 ///
 /// **Same-context copy follows the authority's decision order.** An uninitialised source is
 /// reset (the authority's `*out = *in` is a self-assignment); a provider source with no `dupctx`
@@ -3141,15 +3143,17 @@ pub unsafe extern "C" fn EVP_MD_CTX_copy_ex(out: *mut EvpMdCtx, in_: *const EvpM
 
     // SAFETY: `out` is live per the contract.
     if unsafe { (*out).digest } == in_digest {
-        // The source `algctx` is non-NULL (checked above), but a destination initialised with the
-        // same method can still be in its own failed-init state. `copyctx` would write
-        // `size_of::<Ctx>()` bytes through that NULL destination, so refuse
-        // (D-DIGEST-NULL-ALGCTX-1).
-        // SAFETY: `out` is live per the contract.
-        if unsafe { (*out).algctx }.is_null() {
-            return 0;
-        }
         if let Some(copyctx) = in_copyctx {
+            // The source `algctx` is non-NULL (checked above), but a destination initialised with
+            // the same method can still be in its own failed-init state. `copyctx` would write
+            // `size_of::<Ctx>()` bytes through that NULL destination, so refuse
+            // (D-DIGEST-NULL-ALGCTX-1). The check is *inside* the `copyctx` arm on purpose: a
+            // method with `dupctx` but no `copyctx` takes the authority's re-acquiring arm below,
+            // which never reads the destination's algorithm context.
+            // SAFETY: `out` is live per the contract.
+            if unsafe { (*out).algctx }.is_null() {
+                return 0;
+            }
             // SAFETY: `copyctx` is the method's own callback, and both algorithm contexts belong
             // to that method -- which is what the branch's test established.
             unsafe { copyctx((*out).algctx, (*in_).algctx) };
@@ -3481,6 +3485,37 @@ pub unsafe extern "C" fn EVP_Q_digest(
     ret
 }
 
+/// The failed-provider-initialise state: a provider-backed method with `digest`/`reqdigest` set
+/// and `algctx == NULL`.
+///
+/// `evp_md_init_internal` stores the method before calling its `newctx`; a NULL answer leaves
+/// exactly this state, and every provider context callback would then receive a NULL algorithm
+/// context. A *legacy* context also has a NULL `algctx` (it keeps its state in `md_data`), and the
+/// authority's `EVP_MD_CTX_FLAG_NO_INIT` dispatch leaves a provider method in that shape too; both
+/// are excluded here so that only the failure state is redirected.
+///
+/// # Safety
+/// `ctx` must be a live context.
+unsafe fn evp_md_ctx_algctx_is_missing(ctx: *mut EvpMdCtx) -> bool {
+    // SAFETY: `ctx` is live per the contract.
+    let digest = unsafe { (*ctx).digest };
+    if digest.is_null() {
+        return false;
+    }
+    // SAFETY: `digest` is live; the field read is a pointer.
+    if unsafe { (*digest).prov }.is_null() {
+        return false;
+    }
+    // The legacy `NO_INIT` dispatch keeps its NULL `algctx` deliberately, and the authority's
+    // callbacks tolerate it; do not redirect that reachable state.
+    // SAFETY: `ctx` is live per the contract.
+    if (unsafe { EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_NO_INIT) }) != 0 {
+        return false;
+    }
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { (*ctx).algctx }.is_null()
+}
+
 /// `int EVP_MD_CTX_set_params(EVP_MD_CTX *ctx, const OSSL_PARAM params[])`.
 ///
 /// A method with no `set_ctx_params` answers **0 without an error**, which is a refusal a caller
@@ -3526,6 +3561,12 @@ pub unsafe extern "C" fn EVP_MD_CTX_set_params(
     // SAFETY: `ctx` is live per the contract.
     let digest = unsafe { (*ctx).digest };
     if digest.is_null() {
+        return 0;
+    }
+    // A failed provider initialise left no algorithm context; the authority hands that NULL to
+    // `set_ctx_params`, which is not a contract to forward (D-DIGEST-NULL-ALGCTX-1).
+    // SAFETY: `ctx` is live per the contract.
+    if unsafe { evp_md_ctx_algctx_is_missing(ctx) } {
         return 0;
     }
     // SAFETY: `digest` is live.
@@ -3577,6 +3618,12 @@ pub unsafe extern "C" fn EVP_MD_CTX_settable_params(ctx: *mut EvpMdCtx) -> *cons
     if digest.is_null() {
         return ptr::null();
     }
+    // A failed provider initialise left no algorithm context; the authority hands that NULL to
+    // `settable_ctx_params` (D-DIGEST-NULL-ALGCTX-1). Answer NULL before the provider is reached.
+    // SAFETY: `ctx` is live per the contract.
+    if unsafe { evp_md_ctx_algctx_is_missing(ctx) } {
+        return ptr::null();
+    }
     // SAFETY: `digest` is live.
     let Some(settable) = (unsafe { (*digest).settable_ctx_params }) else {
         return ptr::null();
@@ -3620,6 +3667,12 @@ pub unsafe extern "C" fn EVP_MD_CTX_get_params(
     // SAFETY: `ctx` is live per the contract.
     let digest = unsafe { (*ctx).digest };
     if digest.is_null() {
+        return 0;
+    }
+    // A failed provider initialise left no algorithm context; the authority hands that NULL to
+    // `get_ctx_params`, which is not a contract to forward (D-DIGEST-NULL-ALGCTX-1).
+    // SAFETY: `ctx` is live per the contract.
+    if unsafe { evp_md_ctx_algctx_is_missing(ctx) } {
         return 0;
     }
     // SAFETY: `digest` is live.
@@ -3667,6 +3720,12 @@ pub unsafe extern "C" fn EVP_MD_CTX_gettable_params(ctx: *mut EvpMdCtx) -> *cons
     // SAFETY: `ctx` is live per the contract.
     let digest = unsafe { (*ctx).digest };
     if digest.is_null() {
+        return ptr::null();
+    }
+    // A failed provider initialise left no algorithm context; the authority hands that NULL to
+    // `gettable_ctx_params` (D-DIGEST-NULL-ALGCTX-1). Answer NULL before the provider is reached.
+    // SAFETY: `ctx` is live per the contract.
+    if unsafe { evp_md_ctx_algctx_is_missing(ctx) } {
         return ptr::null();
     }
     // SAFETY: `digest` is live.
@@ -3979,6 +4038,11 @@ pub unsafe extern "C" fn EVP_MD_CTX_get1_md(ctx: *mut EvpMdCtx) -> *mut EvpMd {
 /// overrides the method's constant. The order of the two refusals is what makes an unset XOF a
 /// refusal rather than a zero: a size of zero from the provider is `-1`, not `0`.
 ///
+/// **A failed provider initialise is refused with -1 before either provider callback**, because
+/// both `gettable_params` and `get_params` would forward its NULL `algctx`
+/// (D-DIGEST-NULL-ALGCTX-1). The method-size fall-through is not taken for that state: a context
+/// whose provider never produced an algorithm context has no size to report.
+///
 /// # Safety
 /// `ctx` must be NULL or a live context.
 #[no_mangle]
@@ -3986,6 +4050,15 @@ pub unsafe extern "C" fn EVP_MD_CTX_get_size_ex(ctx: *const EvpMdCtx) -> c_int {
     // The authority casts the const away to ask the context for its gettable parameters, and the
     // cast is sound because neither call mutates the context.
     let c = ctx.cast_mut();
+    // A failed provider initialise left no algorithm context; the authority's gettable/get_params
+    // road would forward that NULL to the provider. Answer this function's own failure (-1) first
+    // (D-DIGEST-NULL-ALGCTX-1).
+    if !c.is_null() {
+        // SAFETY: `c` is live per the check.
+        if unsafe { evp_md_ctx_algctx_is_missing(c) } {
+            return -1;
+        }
+    }
     // SAFETY: `c` is `ctx` with the const taken off, and NULL is accepted by the callee.
     let gettables = unsafe { EVP_MD_CTX_gettable_params(c) };
     if !gettables.is_null() {
@@ -7266,6 +7339,230 @@ mod tests {
             (*fake).prov = ptr::null_mut();
             EVP_MD_CTX_free(dst);
             EVP_MD_CTX_free(ctx);
+            EVP_MD_free(fake);
+        }
+    }
+
+    /// The five **parameter** entry points forward `(*ctx).algctx` to the provider as well, so a
+    /// failed provider initialise must be refused there too -- with each entry point's own failure
+    /// convention (`0` for the get/set forms, NULL for the gettable/settable forms, `-1` for
+    /// `get_size_ex`) -- and without asking the provider (D-DIGEST-NULL-ALGCTX-1). The gettable
+    /// table publishes `size`, which is the entry `get_size_ex` follows; the counter is what
+    /// proves the refusal happens before the callback rather than inside it.
+    ///
+    /// The success control is limited to the two context-parameter calls: they never touch the
+    /// provider record, while the gettable/settable pair dereferences `digest->prov` to build the
+    /// provider context. Their successful path is exercised by the fetch-backed digest tests.
+    #[test]
+    fn a_failed_init_refuses_the_params_entry_points_without_asking_the_provider() {
+        static CALLS: AtomicI32 = AtomicI32::new(0);
+        static TABLE: [OsslParam; 2] = [
+            crate::provider::cipher::param_size_t(c"size".as_ptr()),
+            crate::params::END,
+        ];
+
+        /// `static int set_ctx_params(void *, const OSSL_PARAM *)` -- counts.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn set_params(_ctx: *mut c_void, _params: *const OsslParam) -> c_int {
+            CALLS.fetch_add(1, Ordering::AcqRel);
+            1
+        }
+
+        /// `static int get_ctx_params(void *, OSSL_PARAM *)` -- counts and fills `size`.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; `params` is the caller's array.
+        unsafe extern "C" fn get_params(_ctx: *mut c_void, params: *mut OsslParam) -> c_int {
+            CALLS.fetch_add(1, Ordering::AcqRel);
+            // SAFETY: `params` is the caller's key-terminated array.
+            let p = unsafe { crate::params::OSSL_PARAM_locate(params, c"size".as_ptr()) };
+            if !p.is_null() {
+                // SAFETY: `p` is the located `size` entry, which the caller made writable.
+                unsafe { crate::params::OSSL_PARAM_set_size_t(p, 32) };
+            }
+            1
+        }
+
+        /// `static const OSSL_PARAM *settable_ctx_params(void *, void *)` -- counts.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn settable(
+            _ctx: *mut c_void,
+            _provctx: *mut c_void,
+        ) -> *const OsslParam {
+            CALLS.fetch_add(1, Ordering::AcqRel);
+            TABLE.as_ptr()
+        }
+
+        /// `static const OSSL_PARAM *gettable_ctx_params(void *, void *)` -- counts.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn gettable(
+            _ctx: *mut c_void,
+            _provctx: *mut c_void,
+        ) -> *const OsslParam {
+            CALLS.fetch_add(1, Ordering::AcqRel);
+            TABLE.as_ptr()
+        }
+
+        let fake = evp_md_new();
+        let ctx = EVP_MD_CTX_new();
+        let mut params: [OsslParam; 2] = [OSSL_PARAM_construct_end(); 2];
+        assert!(!fake.is_null() && !ctx.is_null());
+        // SAFETY: the method block and the context are this test's own; the provider pointer is
+        // dangling on purpose and is never dereferenced on the refused paths.
+        unsafe {
+            (*fake).md_size = 32;
+            (*fake).prov = ptr::dangling_mut::<OsslProvider>();
+            (*fake).set_ctx_params = Some(set_params);
+            (*fake).get_ctx_params = Some(get_params);
+            (*fake).settable_ctx_params = Some(settable);
+            (*fake).gettable_ctx_params = Some(gettable);
+            (*ctx).digest = fake;
+            (*ctx).reqdigest = fake;
+            assert!((*ctx).algctx.is_null(), "the failed-init state");
+
+            assert_eq!(EVP_MD_CTX_set_params(ctx, params.as_ptr()), 0);
+            assert_eq!(EVP_MD_CTX_get_params(ctx, params.as_mut_ptr()), 0);
+            assert!(EVP_MD_CTX_settable_params(ctx).is_null());
+            assert!(EVP_MD_CTX_gettable_params(ctx).is_null());
+            assert_eq!(
+                EVP_MD_CTX_get_size_ex(ctx),
+                -1,
+                "get_size_ex's own failure convention"
+            );
+            assert_eq!(
+                CALLS.load(Ordering::Acquire),
+                0,
+                "no provider callback was asked"
+            );
+
+            // Success control: a real algorithm context reaches the two callbacks and their
+            // answers are the provider's.
+            (*ctx).algctx = ptr::dangling_mut::<c_void>();
+            assert_eq!(EVP_MD_CTX_set_params(ctx, params.as_ptr()), 1);
+            assert_eq!(EVP_MD_CTX_get_params(ctx, params.as_mut_ptr()), 1);
+            assert_eq!(CALLS.load(Ordering::Acquire), 2);
+
+            (*ctx).algctx = ptr::null_mut();
+            (*fake).prov = ptr::null_mut();
+            EVP_MD_CTX_free(ctx);
+            EVP_MD_free(fake);
+        }
+    }
+
+    /// A destination initialised with the source's method can be in its own failed-init state.
+    /// The `copyctx` arm would write `size_of::<Ctx>()` bytes through that NULL destination, so
+    /// `EVP_MD_CTX_copy_ex` refuses -- inside the `copyctx` arm only (D1). The counter proves
+    /// `copyctx` was not reached; without the guard it runs and the copy answers 1.
+    #[test]
+    fn a_same_method_destination_without_an_algctx_is_refused_when_copyctx_would_run() {
+        static CALLS: AtomicI32 = AtomicI32::new(0);
+
+        /// `static void copyctx(void *, void *)` -- counts.
+        ///
+        /// # Notes
+        /// The ABI is the authority's; the pointers are not read.
+        extern "C" fn copyctx(_out: *mut c_void, _in: *mut c_void) {
+            CALLS.fetch_add(1, Ordering::AcqRel);
+        }
+
+        /// `static void *dupctx(void *)` -- counts.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn dupctx(_ctx: *mut c_void) -> *mut c_void {
+            CALLS.fetch_add(1, Ordering::AcqRel);
+            ptr::dangling_mut::<c_void>()
+        }
+
+        let fake = evp_md_new();
+        let src = EVP_MD_CTX_new();
+        let dst = EVP_MD_CTX_new();
+        let src_algctx: *mut c_void = ptr::dangling_mut::<c_void>();
+        assert!(!fake.is_null() && !src.is_null() && !dst.is_null());
+        // SAFETY: every object is this test's own; the algorithm-context sentinels are compared,
+        // never read.
+        unsafe {
+            (*fake).prov = ptr::dangling_mut::<OsslProvider>();
+            (*fake).dupctx = Some(dupctx);
+            (*fake).copyctx = Some(copyctx);
+            (*src).digest = fake;
+            (*src).algctx = src_algctx;
+            (*dst).digest = fake;
+            assert!((*dst).algctx.is_null(), "the destination failed-init state");
+
+            assert_eq!(
+                EVP_MD_CTX_copy_ex(dst, src),
+                0,
+                "the destination algctx guard refuses"
+            );
+            assert_eq!(
+                CALLS.load(Ordering::Acquire),
+                0,
+                "neither copyctx nor dupctx saw the NULL destination"
+            );
+            assert_eq!((*src).algctx, src_algctx, "the source keeps its context");
+
+            (*fake).prov = ptr::null_mut();
+            EVP_MD_CTX_free(dst);
+            EVP_MD_CTX_free(src);
+            EVP_MD_free(fake);
+        }
+    }
+
+    /// The partner to the refusal above: with `dupctx` but **no** `copyctx`, the same destination
+    /// is not refused. The authority's re-acquiring arm resets the destination and duplicates the
+    /// source's algorithm context; it never reads the destination's NULL `algctx` (D1).
+    #[test]
+    fn a_same_method_destination_without_an_algctx_is_reacquired_when_copyctx_is_absent() {
+        static DUPS: AtomicI32 = AtomicI32::new(0);
+
+        /// `static void *dupctx(void *)` -- counts and answers a sentinel.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn dupctx(_ctx: *mut c_void) -> *mut c_void {
+            DUPS.fetch_add(1, Ordering::AcqRel);
+            ptr::dangling_mut::<c_void>()
+        }
+
+        let fake = evp_md_new();
+        let src = EVP_MD_CTX_new();
+        let dst = EVP_MD_CTX_new();
+        let src_algctx: *mut c_void = ptr::dangling_mut::<c_void>();
+        assert!(!fake.is_null() && !src.is_null() && !dst.is_null());
+        // SAFETY: every object is this test's own; the sentinel is compared, never read.
+        unsafe {
+            (*fake).prov = ptr::dangling_mut::<OsslProvider>();
+            (*fake).dupctx = Some(dupctx);
+            assert!((*fake).copyctx.is_none(), "the re-acquiring shape");
+            (*src).digest = fake;
+            (*src).algctx = src_algctx;
+            (*dst).digest = fake;
+            assert!((*dst).algctx.is_null());
+
+            assert_eq!(
+                EVP_MD_CTX_copy_ex(dst, src),
+                1,
+                "the re-acquiring arm does not read the destination algctx"
+            );
+            assert_eq!(DUPS.load(Ordering::Acquire), 1, "the source was duplicated");
+            assert_eq!((*dst).digest, fake, "the method was copied");
+            assert!(!(*dst).algctx.is_null(), "the duplicate was installed");
+            assert_eq!(
+                (*src).algctx,
+                src_algctx,
+                "and the source keeps its own context"
+            );
+
+            (*fake).prov = ptr::null_mut();
+            EVP_MD_CTX_free(dst);
+            EVP_MD_CTX_free(src);
             EVP_MD_free(fake);
         }
     }
