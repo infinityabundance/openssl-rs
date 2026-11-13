@@ -2555,10 +2555,10 @@
   "branch": "stage/p25/b53-discharge",
   "evidence_head": "75b1c9e28",
   "evidence_commit": "75b1c9e28",
-  "candidate_S": "5d4a3ff007e711315d2036aab4214989433ba7b5",
+  "candidate_S": "df0201be3bf1474bac07463371bf62c491b8f847",
   "repair_source": "0d39697ae",
   "measured_candidate_S": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
-  "candidate_S_note": "S'' = 5d4a3ff00 is the current source candidate: it adds the B54-F2 NULL-value refusal (S' = cccd64149) and makes 13 zero-argument CMP item constructors safe. Its src_content_sha256 is feb1203547a4a6af4d649e4d39fae97ba331a2271a587c1421a3895b135578a7. ALL existing measurements (census, freeze-b73, b74/b73-r2 closures, B75 evidence-level re-adjudication, artifacts e8a90ba4/f7b49752/93f9a117/45bdbfd1/bff896e3/64e0a4cc) are bound to S = 15bebabc9 / 8ee037be, NOT to S''. No build, test, closure, sanitizer or L7 run has been made at S''.",
+  "candidate_S_note": "S3 = df0201be3 is the current source candidate: B54-F2 NULL-value refusal (S'), 13 CMP constructors safe (S''), and six v1l helpers safe (S3). Its src_content_sha256 is 4a7f7cad17a4dc59e83a7420fd725734bd27ed88c06cde620e057da1f7ec3497. ALL existing measurements (census, freeze-b73, b74/b73-r2 closures, B75 evidence-level re-adjudication, artifacts e8a90ba4/f7b49752/93f9a117/45bdbfd1/bff896e3/64e0a4cc) are bound to S = 15bebabc9 / 8ee037be, NOT to S3. No build, test, closure, sanitizer or L7 run has been made at S3.",
   "artifact_build_S": "15bebabc9",
   "artifact_build_S_note": "Artefacts at this S, measured: libcrypto.so.3 e8a90ba4, libssl.so.3 f7b49752, legacy.so 93f9a117, ssh bff896e3, sshd 64e0a4cc. All 11 ABI courts pass and the court body hash d4b9e824 is unchanged from b58. The eng_list repair is present in the shipped libcrypto by disassembly (lock acquired at 2146ac, head loaded at 2146d0 afterwards), not by inference.",
   "candidate_source_identity": "S = 15bebabc9, measured with instrument forensics/tools/consumer_closure.py sha256 edadf43b71285612cf53c9895c7beb751f270949e2f093dec8fa6e1bbd3fb483. Freeze: court/freeze-b73/FREEZE-b73.json sha256 1926ccdb, census court/freeze-b73/census-b73.json sha256 654f9559 with src_content_sha256 8ee037be, tree digest 088f1ca6, install-matches-census true. The three tool versions used in sequence (01046739 for b61, c65cbab5 for the superseded b73 run 1, edadf43b for the operative b73-r2) each have their own receipts; counts are never carried across a tool change.",
@@ -2714,7 +2714,7 @@
    "BLOCKED": 0,
    "UNKNOWN": 0,
    "disposition_conflicts_unresolved": 0,
-   "note": "The tool-level evidence result at S = 15bebabc9 is now 323 DISCHARGED / 0 BLOCKED / 0 UNKNOWN under the enforced conflict gate after B75 resolved the two OCSP conflicts. Applying the campaign's own review standard subtracts the 98 discharges whose receipts carry no adjudication of the required grade, leaving 225 supportable / 98 REVIEW_REQUIRED / 0 BLOCKED / 0 UNKNOWN. SAFE_COMPATIBLE remains false for: (g) the current source S-double-prime=5d4a3ff00 is unbuilt and unmeasured, so every closure figure is bound to the previous S; (a) the 98 unadjudicated discharges (B45 9, openssh-v1i 74, openssh-v1l 15), which need an independent adversarial review or withdrawal; (b) no mechanism is discharged mechanism-wide; (c) the BOUNDARY review of the OCSP pair is an agent-based source review, not external human review, and no sanitizer/rebuild/L7 ran; (d) sshd's receipt still records artifact_matches_this_build false because no fresh run has applied the per-artefact join, and build_provenance is null for both; the join itself is implemented and verified; (e) no fresh closure run carries 323/0/0 in a receipt; (f) no L7 workload has been replayed against bff896e3 / 64e0a4cc and every BOUNDARY/SEAL gate is NOT_RUN. Closed since the last revision: the 2 OCSP obligations, by obtaining the independent BOUNDARY review their CONTRACTED dispositions named as their only blocker.",
+   "note": "The tool-level evidence result at S = 15bebabc9 is now 323 DISCHARGED / 0 BLOCKED / 0 UNKNOWN under the enforced conflict gate after B75 resolved the two OCSP conflicts. Applying the campaign's own review standard subtracts the 98 discharges whose receipts carry no adjudication of the required grade, leaving 225 supportable / 98 REVIEW_REQUIRED / 0 BLOCKED / 0 UNKNOWN. SAFE_COMPATIBLE remains false for: (g) the current source S3=df0201be3 is unbuilt and unmeasured, so every closure figure is bound to the previous S; (a) the 98 unadjudicated discharges (B45 9, openssh-v1i 74, openssh-v1l 15), which need an independent adversarial review or withdrawal; (b) no mechanism is discharged mechanism-wide; (c) the BOUNDARY review of the OCSP pair is an agent-based source review, not external human review, and no sanitizer/rebuild/L7 ran; (d) sshd's receipt still records artifact_matches_this_build false because no fresh run has applied the per-artefact join, and build_provenance is null for both; the join itself is implemented and verified; (e) no fresh closure run carries 323/0/0 in a receipt; (f) no L7 workload has been replayed against bff896e3 / 64e0a4cc and every BOUNDARY/SEAL gate is NOT_RUN. Closed since the last revision: the 2 OCSP obligations, by obtaining the independent BOUNDARY review their CONTRACTED dispositions named as their only blocker.",
    "review_grade_gap": {
     "what": "98 live discharges whose receipts do not carry an adjudication of the grade the campaign requires, so they cannot support SAFE_COMPATIBLE even though the tool counts them.",
     "boundary-sweep-B45": {
@@ -2743,12 +2743,12 @@
     "B67-G6 was DISPROVED and must not be acted on: the eight openssh-v1j coordinates flagged as naming a sibling's definition line are correct at that receipt's own identity S'' = 5163f564f (file blob a25d3a49), where sha256_update begins at 360 and sha384_update at 396. The prior finding compared against the base commit bcafae7dc, where the same function sits at 342-345. Correcting the coordinates would have made them wrong at the identity the receipt actually records. The disproof is archived at openssh-v1j-sites.json#/coordinate_review_2026_11_12 and as B72-F1."
    ],
    "projected_after_recensus": {
-    "REVIEW_REQUIRED": 85,
-    "why": "13 openssh-v1i constructors are structurally eliminated at S-double-prime; a rebuild and re-census are required before the applied count changes"
+    "REVIEW_REQUIRED": 79,
+    "why": "13 v1i constructors and 6 v1l helpers are structurally eliminated at S3; a rebuild and re-census are required before the applied count changes"
    }
   },
   "pending_operative_action": {
-   "next": "Rebuild at S-double-prime = 5d4a3ff00, run the full FAST/BATCH gates, rebuild both OpenSSH consumers, re-run the census and both closures, then replay L7. This venue has no Rust toolchain, no court container and no ssh/sshd binaries, so none of that can run here.",
+   "next": "Rebuild at S3 = df0201be3, run the full FAST/BATCH gates, rebuild both OpenSSH consumers, re-run the census and both closures, then replay L7. This venue has no Rust toolchain, no court container and no ssh/sshd binaries, so none of that can run here.",
    "then": [
     "Obtain independent adversarial review of boundary-sweep-B45 (9), openssh-v1i (74) and openssh-v1l (15), or withdraw those 98 discharges. B45's C5 (evidence commit and freeze) also remains open.",
     "Re-run the sshd closure at the exact candidate and apply the per-artefact join (evidence/sshd-artifact-ledger.json) to the new receipt; the join tool and sidecar are implemented and self-tested, but the receipt itself is still pending.",
@@ -2910,6 +2910,17 @@
    "state": "ELIMINATED IN SOURCE, NOT_BUILT",
    "projected_effect": "re-census is expected to remove 13 of the 74 openssh-v1i obligations; projected review-required 98 -> 85 (not applied)",
    "required_resolution": "cargo fmt/check/clippy/tests, rebuild, re-census and fresh closures at S-double-prime"
+  },
+  "source_batch_s3": {
+   "date": "2026-11-13",
+   "commit": "df0201be3bf1474bac07463371bf62c491b8f847",
+   "previous_S": "5d4a3ff007e711315d2036aab4214989433ba7b5",
+   "change": "six zero-precondition v1l helpers (dummy_psk, stbl_module_finish, default_is_number, default_to_int, oid_module_finish, ui_method_data_index_init) lose the vestigial unsafe qualifier; one redundant unsafe block removed; compile-time controls added",
+   "src_content_sha256": "4a7f7cad17a4dc59e83a7420fd725734bd27ed88c06cde620e057da1f7ec3497",
+   "receipt": "atlas-refresh/v1l-safe-helpers-elimination-sites.json",
+   "state": "ELIMINATED IN SOURCE, NOT_BUILT",
+   "projected_effect": "re-census is expected to remove 6 of the 15 openssh-v1l obligations; projected review-required 85 -> 79 (not applied)",
+   "required_resolution": "cargo fmt/check/clippy/tests, rebuild, re-census and fresh closures at S3"
   }
  },
  "closure": {
