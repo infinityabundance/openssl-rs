@@ -1823,8 +1823,11 @@ D334's state, when the column was recorded as a NULL rather than resolved.
 
 - **Obligation:** `EVP_DigestUpdate`, `EVP_DigestFinal_ex`, `EVP_DigestFinalXOF`,
   `EVP_DigestSqueeze` and `EVP_MD_CTX_copy_ex` on a context left by a **failed provider
-  initialise**: `digest`/`reqdigest` set, `algctx == NULL`.
-- **Authority:** **faults.** `evp_md_init_internal` stores `ctx->digest = type`
+  initialise**: `digest`/`reqdigest` set, `algctx == NULL`. The same state reaches the provider
+  through the parameter family: `EVP_MD_CTX_set_params`, `EVP_MD_CTX_get_params`,
+  `EVP_MD_CTX_settable_params`, `EVP_MD_CTX_gettable_params`, and `EVP_MD_CTX_get_size_ex`
+  (which reaches `gettable_params`/`get_params` first).
+- **Authority:** **faults or forwards NULL.** `evp_md_init_internal` stores `ctx->digest = type`
   (`crypto/evp/digest.c:288`) and only then calls `type->newctx`; a NULL answer raises and
   returns 0 (`:289-294`), leaving `digest` set and `algctx` NULL. None of the five entry points
   tests `algctx`:
@@ -1838,13 +1841,26 @@ D334's state, when the column was recorded as a NULL rather than resolved.
     side is a read **and** a write through NULL. Its re-acquiring arm copies the source's NULL
     into the destination (`:639-650`).
 
+  The parameter family forwards the same NULL without any test: `set_ctx_params(ctx->algctx, ...)`
+  (`crypto/evp/digest.c:790`), `settable_ctx_params(ctx->algctx, alg)` (`:826`),
+  `get_ctx_params(ctx->algctx, ...)` (`:846`) and `gettable_ctx_params(ctx->algctx, provctx)`
+  (`:884`). `EVP_MD_CTX_get_size_ex` (`crypto/evp/evp_lib.c:1032-1054`) calls
+  `EVP_MD_CTX_gettable_params` and then `EVP_MD_CTX_get_params`, so it takes the same road.
+
   The recursive `sha3`/`sha1`/`md5_sha1`/legacy-provider bodies all dereference the context they
-  are given. The observation is source-derived from the pinned authority; this batch did not
-  re-run a fault probe, and the existing `RT-FETCH` `NOT_MEASURED_AUTHORITY_FAULTS` markers are
-  not extended by this entry.
-- **Crate:** answers 0 at each entry point, before any provider callback or `set_params` is
-  reached, and writes nothing. `EVP_MD_CTX_copy_ex` refuses when the **source** `algctx` is NULL
-  and, separately, when a same-method **destination** `algctx` is NULL at the in-place arm. The
+  are given when they read it; the in-tree parameter callbacks happen to ignore or null-check
+  `vctx`, which is why this is a boundary defect rather than an observed in-tree fault. The
+  observation is source-derived from the pinned authority; this batch did not re-run a fault
+  probe, and the existing `RT-FETCH` `NOT_MEASURED_AUTHORITY_FAULTS` markers are not extended by
+  this entry.
+- **Crate:** each digest entry point answers 0 before its own provider callback, and
+  `EVP_DigestFinal_ex` reaches that refusal through `EVP_MD_CTX_get_size_ex`, which itself refuses
+  the state (-1) before calling `gettable_params`/`get_params`; no provider callback is reached.
+  The four parameter entry points answer their own failure convention (`0`, NULL, `0`, NULL) and
+  `get_size_ex` answers `-1`, all before the provider is asked. `EVP_MD_CTX_copy_ex` refuses when
+  the **source** `algctx` is NULL and, separately, when a same-method **destination** `algctx` is
+  NULL **and the method has a `copyctx` callback** -- the only arm that writes through it; a method
+  with `dupctx` but no `copyctx` takes the authority's re-acquiring arm and succeeds. The
   `FINALISED` flag is not set by a refused final, so the context is reusable after a successful
   re-initialise.
 - **Reason:** an indirect call through a NULL pointer, and a `ptr::copy` through NULL, are not
@@ -1852,15 +1868,22 @@ D334's state, when the column was recorded as a NULL rather than resolved.
   failed-init state; `AGENTS.md` §17 requires the UB mechanism to be eliminated and the
   compatibility consequence recorded.
 - **Compatibility consequence:** a C caller that ignored the failing `EVP_DigestInit_ex` and then
-  called Update/Final/FinalXOF/Squeeze/Copy now gets 0 where the authority has undefined
-  behaviour (a fault in every provider body except the `NULL` digest, whose `final` ignores its
-  context and which the authority would let answer 1). A caller that checks the init's return —
-  the documented contract — sees no change: every successfully initialised context has a non-NULL
-  `algctx`. The re-acquiring copy arm also refuses a source that the authority would have copied
-  as an all-NULL context; that state is only reachable through the same ignored failure.
+  called Update/Final/FinalXOF/Squeeze/Copy, or one of the parameter entry points, now gets the
+  entry point's refusal where the authority has undefined behaviour or forwards NULL to the
+  provider (a fault in every provider body that reads its context, and a NULL `vctx` for the
+  parameter callbacks). A caller that checks the init's return -- the documented contract -- sees
+  no change: every successfully initialised context has a non-NULL `algctx`. The re-acquiring copy
+  arm also refuses a source that the authority would have copied as an all-NULL context; that
+  state is only reachable through the same ignored failure.
 - **Evidence:** `evp::digest::tests::a_failed_provider_init_is_refused_by_the_digest_entry_points`
-  builds the state in-crate and drives all five entry points, asserting 0, zero callback
-  invocations, and no output write. Without the guards the callbacks run and the calls answer 1.
+  builds the state in-crate and drives the five digest entry points, asserting 0, zero callback
+  invocations, and no output write;
+  `evp::digest::tests::a_failed_init_refuses_the_params_entry_points_without_asking_the_provider`
+  does the same for the parameter family, asserting each failure convention and zero callback
+  invocations. `evp::digest::tests`
+  `a_same_method_destination_without_an_algctx_is_refused_when_copyctx_would_run` and
+  `a_same_method_destination_without_an_algctx_is_reacquired_when_copyctx_is_absent` pin the two
+  sides of the destination check. Without the guards the callbacks run and the calls answer 1.
 - **Trigger:** none planned: permanent, deliberate safety divergence.
 
 ### D-SHA3-FINAL-OUTLEN-1 — `keccak_final` writes `md_size` bytes into a shorter caller buffer
