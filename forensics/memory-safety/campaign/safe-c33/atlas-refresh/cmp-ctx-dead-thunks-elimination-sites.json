@@ -1,0 +1,216 @@
+{
+ "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "cmp-ctx-dead-thunks-elimination",
+ "subphase": "openssh-v1i structural reduction: five unreferenced cmp_ctx free thunks deleted",
+ "date": "2026-11-13",
+ "candidate": {
+  "source_head": "69d43bb8d8d4b4641f939c7283eb57d92ca5b89c",
+  "previous_S": "ba60ad76a423c9e8d36cba24535fb578a02dbce3",
+  "src_content_sha256": "65aa47536dc88532da20880dcfe922bc5b3170177ea68f925e734c92f90670f1"
+ },
+ "summary": {
+  "historical_obligations": 5,
+  "state": "ELIMINATED_STRUCTURALLY",
+  "statement": "Five module-local free thunks in cmp_ctx.rs had no reference anywhere in the repository and were deleted. The applied review-required count is unchanged until a rebuild and re-census; projected 70 -> 65."
+ },
+ "boundaries": [
+  {
+   "id": "OSSH-V1I-055-DELETED",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": null,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "x509_free_void",
+   "historical_ids": [
+    "OSSH-V1I-055"
+   ],
+   "disposition": "ELIMINATED (source: unreferenced function deleted)",
+   "source_state": "DELETED",
+   "unsafe_operation_present": false,
+   "contract": "the function no longer exists; it was a module-local free thunk with no reference anywhere in the repository",
+   "evidence": {
+    "repo_wide_references": 0,
+    "file_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "check": "grep -rn over *.rs finds no use of this symbol in cmp_ctx.rs; the same-named definitions in other modules are different file-local functions"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required)",
+   "residuals": [
+    "no build/test at S5; deletion is checked by a repo-wide reference scan"
+   ]
+  },
+  {
+   "id": "OSSH-V1I-056-DELETED",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": null,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "evp_pkey_free_void",
+   "historical_ids": [
+    "OSSH-V1I-056"
+   ],
+   "disposition": "ELIMINATED (source: unreferenced function deleted)",
+   "source_state": "DELETED",
+   "unsafe_operation_present": false,
+   "contract": "the function no longer exists; it was a module-local free thunk with no reference anywhere in the repository",
+   "evidence": {
+    "repo_wide_references": 0,
+    "file_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "check": "grep -rn over *.rs finds no use of this symbol in cmp_ctx.rs; the same-named definitions in other modules are different file-local functions"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required)",
+   "residuals": [
+    "no build/test at S5; deletion is checked by a repo-wide reference scan"
+   ]
+  },
+  {
+   "id": "OSSH-V1I-057-DELETED",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": null,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "evp_md_free_void",
+   "historical_ids": [
+    "OSSH-V1I-057"
+   ],
+   "disposition": "ELIMINATED (source: unreferenced function deleted)",
+   "source_state": "DELETED",
+   "unsafe_operation_present": false,
+   "contract": "the function no longer exists; it was a module-local free thunk with no reference anywhere in the repository",
+   "evidence": {
+    "repo_wide_references": 0,
+    "file_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "check": "grep -rn over *.rs finds no use of this symbol in cmp_ctx.rs; the same-named definitions in other modules are different file-local functions"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required)",
+   "residuals": [
+    "no build/test at S5; deletion is checked by a repo-wide reference scan"
+   ]
+  },
+  {
+   "id": "OSSH-V1I-058-DELETED",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": null,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "octet_string_free_void",
+   "historical_ids": [
+    "OSSH-V1I-058"
+   ],
+   "disposition": "ELIMINATED (source: unreferenced function deleted)",
+   "source_state": "DELETED",
+   "unsafe_operation_present": false,
+   "contract": "the function no longer exists; it was a module-local free thunk with no reference anywhere in the repository",
+   "evidence": {
+    "repo_wide_references": 0,
+    "file_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "check": "grep -rn over *.rs finds no use of this symbol in cmp_ctx.rs; the same-named definitions in other modules are different file-local functions"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required)",
+   "residuals": [
+    "no build/test at S5; deletion is checked by a repo-wide reference scan"
+   ]
+  },
+  {
+   "id": "OSSH-V1I-062-DELETED",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": null,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "x509_store_free_void",
+   "historical_ids": [
+    "OSSH-V1I-062"
+   ],
+   "disposition": "ELIMINATED (source: unreferenced function deleted)",
+   "source_state": "DELETED",
+   "unsafe_operation_present": false,
+   "contract": "the function no longer exists; it was a module-local free thunk with no reference anywhere in the repository",
+   "evidence": {
+    "repo_wide_references": 0,
+    "file_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "check": "grep -rn over *.rs finds no use of this symbol in cmp_ctx.rs; the same-named definitions in other modules are different file-local functions"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required)",
+   "residuals": [
+    "no build/test at S5; deletion is checked by a repo-wide reference scan"
+   ]
+  }
+ ],
+ "supersedes": [
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-055"
+   ],
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "x509_free_void",
+   "discharging_boundary": "OSSH-V1I-055-DELETED",
+   "discharging_receipt": "cmp-ctx-dead-thunks-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "x509_free_void is absent from src/cmp/cmp_ctx.rs at S5 and had no reference anywhere in the repository; the obligation identity is gone",
+   "reason": "dead code deletion, not a conversion"
+  },
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-056"
+   ],
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "evp_pkey_free_void",
+   "discharging_boundary": "OSSH-V1I-056-DELETED",
+   "discharging_receipt": "cmp-ctx-dead-thunks-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "evp_pkey_free_void is absent from src/cmp/cmp_ctx.rs at S5 and had no reference anywhere in the repository; the obligation identity is gone",
+   "reason": "dead code deletion, not a conversion"
+  },
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-057"
+   ],
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "evp_md_free_void",
+   "discharging_boundary": "OSSH-V1I-057-DELETED",
+   "discharging_receipt": "cmp-ctx-dead-thunks-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "evp_md_free_void is absent from src/cmp/cmp_ctx.rs at S5 and had no reference anywhere in the repository; the obligation identity is gone",
+   "reason": "dead code deletion, not a conversion"
+  },
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-058"
+   ],
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "octet_string_free_void",
+   "discharging_boundary": "OSSH-V1I-058-DELETED",
+   "discharging_receipt": "cmp-ctx-dead-thunks-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "octet_string_free_void is absent from src/cmp/cmp_ctx.rs at S5 and had no reference anywhere in the repository; the obligation identity is gone",
+   "reason": "dead code deletion, not a conversion"
+  },
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-062"
+   ],
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "x509_store_free_void",
+   "discharging_boundary": "OSSH-V1I-062-DELETED",
+   "discharging_receipt": "cmp-ctx-dead-thunks-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "x509_store_free_void is absent from src/cmp/cmp_ctx.rs at S5 and had no reference anywhere in the repository; the obligation identity is gone",
+   "reason": "dead code deletion, not a conversion"
+  }
+ ],
+ "negative_control": {
+  "id": "CMP-CTX-DEAD-1",
+  "kind": "repo-wide reference scan",
+  "observation": "no reference to any of the five symbols remains in src/ after deletion; a reference would be a compile error at the next build"
+ },
+ "non_claims": [
+  "Structural elimination, not SAFETY_DISCHARGED.",
+  "No build or closure has run at S5.",
+  "The other 12 cmp_ctx obligations remain review-required."
+ ]
+}
