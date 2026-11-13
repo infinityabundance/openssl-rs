@@ -2825,6 +2825,22 @@
     "L7",
     "SAFE_COMPATIBLE"
    ]
+  },
+  "b48_rc2_elimination": {
+   "date": "2026-11-13",
+   "receipt": "atlas-refresh/b48-rc2-elimination-sites.json",
+   "historical": [
+    "B48-RC2-001",
+    "P25-VESTIGIAL-MARKER-002"
+   ],
+   "state": "ELIMINATED_STRUCTURALLY",
+   "source": "src/evp/e_rc2.rs:352 is a safe fn (span 352-363 sha256 fb2f310f); the compile-time control at :367-368 rejects a restored unsafe qualifier; the body reads no pointer",
+   "effect": "B48-RC2-001 is no longer a blocked unsafe-fn obligation and B48 is complete for its declared surface; no OpenSSH consumer count changes",
+   "does_not_prove": [
+    "a runtime test of the three magic mappings",
+    "Miri/ASan",
+    "SAFE_COMPATIBLE"
+   ]
   }
  },
  "closure": {
