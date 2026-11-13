@@ -373,22 +373,6 @@ unsafe extern "C" fn x509_req_free_void(p: *mut c_void) {
 }
 
 /// `TYPE _free(...)` thunks for `OSSL_CMP_CTX_free`.
-unsafe extern "C" fn x509_free_void(p: *mut c_void) {
-    // SAFETY: per this function's contract.
-    unsafe { X509_free(p.cast()) };
-}
-unsafe extern "C" fn evp_pkey_free_void(p: *mut c_void) {
-    // SAFETY: per this function's contract.
-    unsafe { EVP_PKEY_free(p.cast()) };
-}
-unsafe extern "C" fn evp_md_free_void(p: *mut c_void) {
-    // SAFETY: per this function's contract.
-    unsafe { EVP_MD_free(p.cast()) };
-}
-unsafe extern "C" fn octet_string_free_void(p: *mut c_void) {
-    // SAFETY: per this function's contract.
-    unsafe { ASN1_OCTET_STRING_free(p.cast()) };
-}
 unsafe extern "C" fn general_name_free_void(p: *mut c_void) {
     // SAFETY: per this function's contract.
     unsafe { GENERAL_NAME_free(p.cast()) };
@@ -400,10 +384,6 @@ unsafe extern "C" fn x509_extension_free_void(p: *mut c_void) {
 unsafe extern "C" fn utf8_string_free_void(p: *mut c_void) {
     // SAFETY: per this function's contract.
     unsafe { crate::asn1::string::ASN1_UTF8STRING_free(p.cast()) };
-}
-unsafe extern "C" fn x509_store_free_void(p: *mut c_void) {
-    // SAFETY: per this function's contract.
-    unsafe { X509_STORE_free(p.cast()) };
 }
 unsafe extern "C" fn itav_free_void(p: *mut c_void) {
     // SAFETY: per this function's contract.
