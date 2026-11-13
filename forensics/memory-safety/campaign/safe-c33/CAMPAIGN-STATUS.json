@@ -2858,6 +2858,26 @@
     "the table contents",
     "SAFE_COMPATIBLE"
    ]
+  },
+  "p25_safe_declaration_elimination": {
+   "date": "2026-11-13",
+   "receipt": "atlas-refresh/p25-safe-declaration-elimination-sites.json",
+   "historical_blocked_rows": 26,
+   "state": "ELIMINATED_STRUCTURALLY",
+   "controls": {
+    "with_compile_time_control": 8,
+    "without_control": 18,
+    "why_without": "the X509V3ExtI2s/I2v/R2i/S2i slot types accept unsafe extern fn, so the static row initialiser coerces either form; no build-time control exists"
+   },
+   "excluded": [
+    "s2i_poison (src/ct/ct_x509v3.rs:86) \u2014 already discharged by boundary-sweep-B54; a second non-discharging boundary would block it"
+   ],
+   "effect": "26 stale BLOCKED rows are no longer unsafe-fn obligations; no OpenSSH closure count changes",
+   "does_not_prove": [
+    "Miri/ASan",
+    "a build-time control for the 18 uncontrolled rows",
+    "SAFE_COMPATIBLE"
+   ]
   }
  },
  "closure": {
