@@ -95,6 +95,12 @@
    "claim": "no hidden obligation",
    "result": "PASS",
    "detail": "bp's liveness is the exported X509V3_EXT_print caller obligation and a NULL bp is refused before dispatch; in_'s non-NULL/live/decoded-by-this-row state is established by the dispatcher; the field pointers are the decoder's own and are NULL-checked. The callback's unsafe qualification covers raw-pointer dereference at the C ABI edge, not an unstated precondition."
+  },
+  {
+   "id": "C8",
+   "claim": "runtime reachability and decode refusal at the frozen artifact",
+   "result": "PASS",
+   "detail": "The frozen CLI (openssl sha256 45bdbfd1, libcrypto sha256 e8a90ba4) printed a certificate carrying OCSP CrlID as 'crlUrl: http://example.com/crl' and 'crlTime: Jan  1 00:00:00 2026 GMT', and a certificate carrying OCSP Service Locator as 'Issuer: CN = b75' plus 'OCSP - URI:http://ocsp.example.com'; both outputs match the system authority. Certificates whose extension value is invalid DER (FFFF) printed the unknown-extension fallback '..' with empty stderr and exit 0, so the decode refusal is taken and the callback is not invoked. Record: evidence/b75-ocsp-runtime/probe.json."
   }
  ],
  "decision": {
@@ -106,7 +112,7 @@
  "residuals": [
   "No Miri (Stacked/Tree Borrows), ASan or TSan was run for this review.",
   "No rebuild and no fresh closure run was made in this checkout; the re-adjudication was done with the shipping instrument over the frozen b74 obligation queue by evidence/b75_readjudicate.py (the b67-g1 probe method, exit 0). A clean closure run is still required to carry 323/0/0 in a receipt.",
-  "No OpenSSH L7 workload was replayed against the candidate.",
+  "No OpenSSH L7 workload was replayed against the candidate. A direct CLI print probe at the frozen artifact did exercise both callbacks and both decode-refusal paths (evidence/b75-ocsp-runtime/probe.json); it is a functional probe, not a sanitizer result and not an L7 downstream replay.",
   "The review establishes the dispatch contract for these two sites; it does not establish anything about the other 21 i2r printers or the X509_VERIFY_POLICY mechanism as a whole."
  ],
  "non_claims": [
@@ -120,5 +126,10 @@
   "sha256": "5f91a9e7b9a05ef1642278b813ed5d08b1446ca157690dff2e7c55ecf68c5089",
   "exit": "0",
   "result": "323 DISCHARGED / 0 BLOCKED / 0 UNKNOWN; both conflicts superseded"
+ },
+ "runtime_probe": {
+  "path": "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json",
+  "sha256": "22f7e5935c77b003019e2d2a9f3a6f60aa65f88c852509b4f37409639c5154ed",
+  "result": "4/4 cases exit 0, empty stderr, candidate output matches authority"
  }
 }
