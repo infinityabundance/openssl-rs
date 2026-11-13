@@ -1,0 +1,192 @@
+{
+  "receipt": "boundary-sweep-B73",
+  "kind": "site-enumerating-boundary-receipt",
+  "date": "2026-11-13",
+  "campaign": "safe-c33 shared-contract establishment: a content-addressed scoped discharge for the repaired engine_list_cleanup body",
+  "subphase": "B73 binds the engine cleanup callback at the coordinate and content hash of the repaired body. boundary-sweep-B72 recorded the repair (contract, four C-observable deviations B72-D1..D4, retained obligation B72-R1, verdict REPAIR_RECORDED) but deliberately made no discharge: its boundary id is not in a ledger scoped-discharge row. r13-coordinate-rebind-sites.json declares the ledger key src/engine/eng_list.rs:97 for ledger row boundary-sweep-B56 with span 97-111 / sha256 5a8e4bab..., which is the pre-repair body that existed at b6f38f134. At S=15bebabc9 that coordinate and hash describe a body that no longer exists, so the instrument refuses the obligation V1:src/engine/eng_list.rs:158:UNSAFE_FN_DEF with span-hash-mismatch. This receipt supplies the missing content-addressed binding for the replacement body, under the same frozen ledger join key, and records why the old record is stale without deleting or re-attributing it.",
+  "candidate": {
+    "source_head": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+    "source_head_subject": "Ledger: 223 supported / 98 review-required / 2 blocked; candidate moved to 0d39697ae",
+    "source_head_short": "15bebabc9",
+    "branch": "stage/p25/b53-discharge",
+    "span_source_commit": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+    "span_source_binding": "git-blob",
+    "repair_commit": "0d39697ae93d87a67b7b1877ab41ca4914732b1d",
+    "repair_commit_subject": "eng_list: eliminate the cleanup TOCTOU on the head instead of documenting it",
+    "repair_receipt": "atlas-refresh/boundary-sweep-B72.json",
+    "file_content_sha256": {
+      "src/engine/eng_list.rs": "1e96f04c7dbf58da32fa47c81de4fb2c00295e04ed22a8c841d1b7748eb22a54"
+    },
+    "source_state": "committed; the working tree is clean and src/engine/eng_list.rs hashes identically at the repair commit 0d39697ae and at S, so S contains exactly the repaired body. The authoritative evidence for the pre-repair body is the S=b6f38f134 blob, whose file sha256 is 76050c6d84784db4304dda4b5736728d39a8581184166aae8b747629f7b3e866."
+  },
+  "authority": {
+    "id": "openssl-3.6.4-production",
+    "source": "forensics/authorities/src/openssl-3.6.4/crypto/engine/eng_list.c:42-51",
+    "authority_body": "static void engine_list_cleanup(void) { while (engine_list_head) ENGINE_remove(engine_list_head); }",
+    "note": "The authority reads engine_list_head before ENGINE_remove takes the engine lock. The candidate does not reproduce that split (AGENTS.md section 17: do not reproduce a known-unsafe operation); the four C-observable deviations are enumerated in boundary-sweep-B72.json as B72-D1..B72-D4 and are not restated as new here."
+  },
+  "mechanism": {
+    "id": "C_ABI_CONTRACT",
+    "state": "UNSAFE_OPEN",
+    "state_source": "state.json#/mechanisms[id=C_ABI_CONTRACT]",
+    "discharge": "This receipt supplies the site-scoped content-addressed discharge for the repaired body of engine_list_cleanup at the ledger join key src/engine/eng_list.rs:97 (ledger row boundary-sweep-B56). It does not change the mechanism state, which stays UNSAFE_OPEN at S; a scoped discharge is a site claim, not a mechanism promotion."
+  },
+  "scope": "one unsafe extern \"C\" cleanup callback: engine_list_cleanup in src/engine/eng_list.rs, bound at lines 158-180 at S. No other operation, file or mechanism is claimed.",
+  "boundaries": [
+    {
+      "id": "src/engine/eng_list.rs:97",
+      "record_name": "B73-ENG-LIST-CLEANUP-158",
+      "file": "src/engine/eng_list.rs",
+      "line": 158,
+      "line_current": 158,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_list_cleanup",
+      "mechanism": "C_ABI_CONTRACT",
+      "signature": "unsafe extern \"C\" fn()",
+      "disposition": "SAFETY_DISCHARGED (scoped to src/engine/eng_list.rs:158-180 at S=15bebabc9, span sha256 f1103798b4ca53c49d85fe57b306f6d74d2c7444fbe3ec543086a9977ba7cfa4; the ledger join key src/engine/eng_list.rs:97 is boundary-sweep-B56's row key for operation engine_list_cleanup, not a claim that the body still begins at line 97). The discharge covers the two preconditions this callback owes its caller, established by the caller closure below, and is content-addressed to the repaired body. It does not cover, and does not claim, the retained obligation B72-R1.",
+      "ledger_join": {
+        "ledger_receipt": "boundary-sweep-B56",
+        "ledger_row_id": "V1:src/engine/eng_list.rs:97:UNSAFE_FN_DEF",
+        "current_census_obligation": "V1:src/engine/eng_list.rs:158:UNSAFE_FN_DEF",
+        "status_row_id": "src/engine/eng_list.rs:97",
+        "why_the_id_is_the_join_key": "CAMPAIGN-STATUS.json#/scoped_boundary_discharges names src/engine/eng_list.rs:97 as the discharged boundary of ledger row boundary-sweep-B56; the loader joins a boundary record to that row by this id alone, and the id is a frozen ledger key. Re-using it is the only way to bind the replacement body without editing the status document, which this batch is not permitted to do."
+      },
+      "span_sha256": "f1103798b4ca53c49d85fe57b306f6d74d2c7444fbe3ec543086a9977ba7cfa4",
+      "span_start_line": 158,
+      "span_end_line": 180,
+      "span_schema": "safe-c33/operation-span-sha256/v1",
+      "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+      "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+      "span_source_commit": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+      "span_source_field": "git-blob",
+      "contract": "engine_list_cleanup takes no caller arguments and returns no value. Two preconditions are owed to it and are stated in its own `# Safety` block at src/engine/eng_list.rs:130-158: (1) the engine lock is initialised (non-NULL), and (2) the calling thread does not already hold it, because this body takes it. With a NULL lock, lock() answers false and the cleanup returns with the list intact: a documented no-op and a leak, not undefined behaviour. The body takes the engine write lock first, loads ENGINE_LIST_HEAD under it, checks for null, calls engine_list_remove(head) under the same lock and unlocks after; no head value ever crosses an unlock, so no other thread can unlink the head or release its structural reference between the observation and the removal. The removal is engine_list_remove, the body ENGINE_remove runs while holding the same lock, at the same nesting depth, reaching the same engine_free_util.",
+      "precondition_set": [
+        "the engine lock is initialised (non-NULL)",
+        "the calling thread does not already hold the engine lock"
+      ],
+      "established": [
+        "src/engine/eng_list.rs:158-180 at S=15bebabc9 is the callback body: lock(); ENGINE_LIST_HEAD.load(Acquire); null check; engine_list_remove(head); unlock(). The load and the removal are inside one lock/unlock pair. The instrument's resolve_operation_span returns this span uniquely (resolution 'unique') for locators 158, 97 and no locator alike, at source commit S, sha256 f1103798b4ca53c49d85fe57b306f6d74d2c7444fbe3ec543086a9977ba7cfa4.",
+        "The same query at the repair commit 0d39697ae returns the same extent 158-180 and the same sha256 f1103798..., and src/engine/eng_list.rs hashes to 1e96f04c... at both commits: the frozen candidate contains exactly the repaired body.",
+        "The same query at b6f38f134 returns extent 97-111, sha256 5a8e4bab4b0840ff2a834a440d1144e68428765b616757620a25b4b3e663aafb, file sha256 76050c6d...; that is exactly the extent and hash r13-coordinate-rebind-sites.json records for the ledger key src/engine/eng_list.rs:97. The old record described the body that existed then; it is not wrong, it is stale.",
+        "src/engine/eng_list.rs:86-128 at S is the test-only observation point: mod cleanup_order_probe is #[cfg(test)] and no release build contains it. It records whether the engine write lock was held by the calling thread at every step.",
+        "src/engine/eng_list.rs:855-930 at S (fn at :856, span sha256 c780dcdc213fa52eafa61d85f3d2e478897673f4497bd0e60ad40a5d889ee72d, instrument-verified at both 0d39697ae and S) is tests::cleanup_observes_the_head_under_the_engine_lock.",
+        "The body of the test asserts cleanup_order_probe::steps() >= 1 and cleanup_order_probe::lock_was_held_at_every_step(), i.e. the head was observed and removed by a thread that already held the engine write lock.",
+        "The commit message of 0d39697ae records the mutation observation: restoring the pre-fix ordering (load the head outside the lock, then call ENGINE_remove) makes the canary fail with exit 101.",
+        "With a NULL lock the body returns with the list intact: lock() answers false, nothing is loaded, nothing is freed. That is a no-op/leak, not UB, and the contract states it."
+      ],
+      "caller_closure": {
+        "registration": "The only installation is engine_cleanup_add_last(Some(engine_list_cleanup)) at src/engine/eng_list.rs:237, in engine_list_add, and only on the transition of the list from empty to non-empty.",
+        "only_producer_of_a_list_member": "ENGINE_add -> engine_list_add. Its engine came from ENGINE_new or ENGINE_by_id, both of which run the engine lock initialisation, so precondition (1) is established by the only path that can make the list non-empty.",
+        "invocation": "OPENSSL_cleanup -> engine_cleanup_int -> engine_cleanup_cb_free(item) -> cb(). engine_cleanup_int is withheld in this candidate (src/engine/eng_lib.rs:697-704: 'engine_cleanup_int ... is withheld'), and engine_cleanup_cb_free is marked #[allow(dead_code)] at src/engine/eng_lib.rs:685 with that reason, so the callback is registered but unreachable at S. engine_cleanup_cb_free's own contract (src/engine/eng_lib.rs:676-685) states the engine lock must be initialised and must not be held by the thread that runs the item's callback; it takes no engine lock itself, so precondition (2) holds on the only invocation path.",
+        "no_safe_rust_caller": "engine_list_cleanup is private, is not exported, takes no caller-supplied pointer, and no safe-Rust path registers or invokes it. Registration passes a private fn item; the runner that would invoke it is not landed.",
+        "lock_order": "The only other lock reached under the engine lock is the ex_data registry mutex, which snapshots callbacks under it and drops it before invoking them: engine_lock -> ex_data_registry and never the reverse."
+      },
+      "negative_control": {
+        "id": "B73-C1",
+        "name": "cleanup_observes_the_head_under_the_engine_lock",
+        "kind": "mutation-sensitive regression canary (exact-name test) in src/engine/eng_list.rs::tests",
+        "test_span": "src/engine/eng_list.rs:855-930 at S, fn at :856, span sha256 c780dcdc213fa52eafa61d85f3d2e478897673f4497bd0e60ad40a5d889ee72d",
+        "observation": "Passes at 0d39697ae and at S: the head is observed and removed by a thread that already holds the engine write lock.",
+        "mutation": "Restoring the pre-fix ordering (read ENGINE_LIST_HEAD outside the lock, then call ENGINE_remove) makes the canary fail with exit 101; the repair commit 0d39697ae records that observation.",
+        "load_bearing": true,
+        "note": "This is a FAST-level mutation control. It is not an independent BOUNDARY review and it is not a sanitizer or Miri result."
+      },
+      "retained_obligations": [
+        "B72-R1 (retained, NOT discharged here)"
+      ],
+      "tests": [
+        "src/engine/eng_list.rs::tests::cleanup_observes_the_head_under_the_engine_lock (exact-name test; passes at the repair commit and at S; fails with exit 101 when the pre-fix ordering is restored)"
+      ]
+    }
+  ],
+  "supersedes": [
+    {
+      "receipt": "p25-engine-callback-sites",
+      "ids": [
+        "P25-ENGINE-CB-000"
+      ],
+      "file": "src/engine/eng_list.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_list_cleanup",
+      "discharging_boundary": "src/engine/eng_list.rs:97",
+      "discharging_receipt": "boundary-sweep-B73",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "The older record P25-ENGINE-CB-000 carries disposition BLOCKED because the Acquire load of ENGINE_LIST_HEAD sat outside the critical section ENGINE_remove then entered. At S the load and the removal are inside one lock/unlock pair (src/engine/eng_list.rs:158-180, span sha256 f1103798...), so the hazard the older record states is inexpressible rather than documented away: every unlink of a list member and every release of its structural reference requires the same engine write lock. The mutation-sensitive canary tests::cleanup_observes_the_head_under_the_engine_lock (src/engine/eng_list.rs:855-930 at S, sha256 c780dcdc...) fails with exit 101 when the pre-fix ordering is restored, as recorded in 0d39697ae.",
+      "reason": "The older record is an enumeration that positively asserts the site is not discharged. It is superseded because the code it describes no longer exists at S: the repair commit 0d39697ae replaced the body, and this receipt binds the replacement body's content hash.",
+      "ledger_row_receipt": "boundary-sweep-B56",
+      "repair_commit": "0d39697ae93d87a67b7b1877ab41ca4914732b1d",
+      "repair_receipt": "atlas-refresh/boundary-sweep-B72.json",
+      "discharge_record": "atlas-refresh/boundary-sweep-B73.json#/boundaries/0"
+    }
+  ],
+  "supersedes_note": "Receipt-scoped supersession, in the shape boundary-sweep-B67 and r13-coordinate-rebind established: the loader attaches a receipt's supersedes list to every boundary the receipt declares, so the entry lives here, in the receipt that declares the discharging boundary. It withdraws only an older, different receipt's non-discharging disposition for the same (file, kind, operation); it creates no verdict for any other site. The older disposition is not deleted: P25-ENGINE-CB-000 stays in p25-engine-callback-sites.json exactly as written.",
+  "old_record": {
+    "receipt": "r13-coordinate-rebind-sites.json",
+    "id": "src/engine/eng_list.rs:97",
+    "ledger_receipt": "boundary-sweep-B56",
+    "recorded_span": "97-111",
+    "recorded_span_sha256": "5a8e4bab4b0840ff2a834a440d1144e68428765b616757620a25b4b3e663aafb",
+    "bound_at": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+    "instrument_verification_at_b6f38f134": "resolve_operation_span('src/engine/eng_list.rs', 'engine_list_cleanup') returns def_line 97, start 97, end 111, sha256 5a8e4bab4b0840ff2a834a440d1144e68428765b616757620a25b4b3e663aafb, file sha256 76050c6d84784db4304dda4b5736728d39a8581184166aae8b747629f7b3e866",
+    "status": "LEFT EXACTLY AS WRITTEN. It recorded a real discharge of the body that existed at b6f38f134 and remains the historical binding for that candidate. It is stale at S only because the body was replaced; the instrument's span-hash-mismatch refusal against it is correct behaviour, not a defect in the record.",
+    "why_it_is_not_rewritten": "Overwriting its span_sha256 with the replacement body's hash would make the record assert that the pre-repair body had the post-repair content, destroying the only content-addressed witness that the repair changed anything. r13-coordinate-rebind-sites.json is also generated by atlas-refresh/b58_rebind_generate.py, so a hand edit would be silently reverted on the next regeneration.",
+    "replaced_by": "boundary-sweep-B73.json#/boundaries/0 (record B73-ENG-LIST-CLEANUP-158), same ledger join key, span 158-180, sha256 f1103798b4ca53c49d85fe57b306f6d74d2c7444fbe3ec543086a9977ba7cfa4"
+  },
+  "witness_chain": [
+ "1. b6f38f134: engine_list_cleanup is defined at line 97; brace-matched span 97-111; sha256 5a8e4bab...; src/engine/eng_list.rs sha256 76050c6d.... B56 adjudicated this body SAFETY_DISCHARGED and r13-coordinate-rebind transcribed it under the ledger key src/engine/eng_list.rs:97 with exactly that hash.",
+ "2. 0d39697ae: the body is replaced. It is now defined at line 158; span 158-180; sha256 f1103798...; src/engine/eng_list.rs sha256 1e96f04c.... The coordinate moved by 61 lines and the span hash changed, because the body changed. Neither the old hash nor the new hash is a stale or mistyped value.",
+ "3. S=15bebabc9: the file and the span hash are byte-identical to 0d39697ae (1e96f04c..., f1103798...), so the frozen candidate carries the repaired body and nothing later modified it.",
+ "4. The obligation census follows the definition: the obligation is now V1:src/engine/eng_list.rs:158:UNSAFE_FN_DEF, while the ledger row key remains V1:src/engine/eng_list.rs:97:UNSAFE_FN_DEF / src/engine/eng_list.rs:97.",
+ "5. This receipt binds the ledger key to the replacement body's content at S. The old record keeps the old hash and now points forward here via old_record.replaced_by; this receipt points back via old_record. Both directions are recorded; neither record is deleted or re-attributed."
+  ],
+  "retained_obligations": [
+    {
+      "id": "B72-R1",
+      "severity": "medium",
+      "state": "OPEN, NOT DISCHARGED BY THIS RECEIPT",
+      "obligation": "engine_list_remove -> engine_free_util -> OwnedEngine::drop runs the application destroy hook and the CRYPTO_free_ex_data free_func callbacks while the engine lock is held.",
+      "why_retained": "This is the authority's own ordering and the crate's pre-existing behaviour, not something the repair moved; deferring destruction past unlock would change destroy sequencing. It is an obligation of the destroy-hook / ex_data mechanism family (P25-ENGINE-CB-*), not of the two preconditions this callback owes its caller. It is retained, not discharged, and it is not part of this discharge's scope.",
+      "consequence": "This site's discharge does not imply that the callback is hook-safe: an application destroy hook that re-enters the engine API on its own thread still meets the authority's ordering constraint."
+    }
+  ],
+  "deviations": "The four C-observable deviations from the authority (B72-D1 lock taken before the head read; B72-D2 lock acquired on an empty list; B72-D3 the unreachable removal-failure path raises only ENGINE_R_ENGINE_IS_NOT_IN_LIST; B72-D4 a panic on that path aborts instead of returning 0 with the lock held) are recorded in boundary-sweep-B72.json and are not restated or re-adjudicated here. B72-D1 is the deviation that makes the older BLOCKED record's stated concern inexpressible.",
+  "residuals": [
+    "The discharge is adjudicated at FAST/BATCH level and is not independently BOUNDARY-reviewed; boundary-sweep-B72.json records that review as NOT_RUN and this receipt does not change it.",
+    "The bound evidence receipts under evidence/ (closure-ssh-b73-r2.json, closure-sshd-b73-r2.json) still record this obligation as BLOCKED; they are immutable evidence for S and must be regenerated by a closure run for this record to appear in a closure, not patched.",
+    "engine_cleanup_int remains withheld, so the callback is unreachable at this identity; the invocation half of the caller closure is authority-derived and will need re-checking when the runner lands.",
+    "The retained hook-under-lock obligation B72-R1 stays open."
+  ],
+  "not_run": [
+    "independent BOUNDARY review of the repair and of this discharge",
+    "full library suite, Miri, ASan at S",
+    "closure re-run at S (the 75-minute run that would read this record)",
+    "consumer rebuild and L7 re-measurement",
+    "release build"
+  ],
+  "non_claims": [
+    "This receipt does not promote C_ABI_CONTRACT; the mechanism stays UNSAFE_OPEN at S.",
+    "It does not discharge the retained destroy / ex_data hook-under-lock obligation B72-R1.",
+    "It does not claim that the pre-repair body was safe, nor that B56's adjudication was wrong: that discharge was correct for the body that existed at b6f38f134.",
+    "It does not make either consumer SAFE_COMPATIBLE, and it does not touch the two OCSP obligations, which remain BLOCKED pending an independent BOUNDARY review of the i2r print dispatch.",
+    "It creates no discharge for any other operation in src/engine/eng_list.rs."
+  ],
+  "review": {
+    "state": "discharge-recorded-fast",
+    "reviewer": "the batch author (not an independent reviewer)",
+    "verdict": "SCOPED_DISCHARGE_RECORDED",
+    "checks_observed": [
+      "the instrument's own resolve_operation_span computed the coordinate (158), the extent (158-180) and the sha256 (f1103798...) at S, at the repair commit and at b6f38f134; all three were read from the tool, not from arithmetic",
+      "the instrument's targeted probe re-adjudicates V1:src/engine/eng_list.rs:158:UNSAFE_FN_DEF to DISCHARGED in both the diagnostic and the enforced conflict modes",
+      "the exact-name canary passes at the repair commit and at S, and the repair commit records exit 101 under the restoring mutation",
+      "the caller closure is read from src/engine/eng_list.rs:237 and src/engine/eng_lib.rs:676-704 at S"
+    ],
+    "not_run": [
+      "independent BOUNDARY review",
+      "full suite, Miri, ASan, closure, consumer rebuild"
+    ],
+    "note": "FAST adjudication. Per AGENTS.md section 6 rule 1 a FAST/BATCH result is not a BOUNDARY certificate; the BOUNDARY review stays NOT_RUN and is recorded as such rather than implied."
+  },
+  "applied": false,
+  "applied_note": "Nothing is applied by the batch that wrote this receipt: CAMPAIGN-STATUS.json, state.json and the evidence closures are untouched. The orchestrator applies and commits.",
+  "schema_note": "Same shape as the other site-enumerating boundary-sweep receipts (boundary-sweep-B72 in particular). Its boundary id is the frozen ledger join key src/engine/eng_list.rs:97, because CAMPAIGN-STATUS.json#/scoped_boundary_discharges joins ledger row boundary-sweep-B56 to that id and the status document is out of scope for this batch; the content address, not the coordinate, is the binding. The record therefore states explicitly, in ledger_join, old_record and witness_chain, that the coordinate and span moved and why."
+}
