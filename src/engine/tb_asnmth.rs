@@ -76,10 +76,13 @@ pub unsafe extern "C" fn ENGINE_unregister_pkey_asn1_meths(e: *mut Engine) {
 /// initialised the engine lock, and the lock is not held when the callback runs;
 /// [`engine_table_cleanup`] takes it. If the lock were uninitialised, the cleanup would
 /// return before releasing the table (a documented no-op/leak, not UB).
-unsafe extern "C" fn engine_unregister_all_pkey_asn1_meths() {
+extern "C" fn engine_unregister_all_pkey_asn1_meths() {
     // SAFETY: the table slot is this module's static.
     unsafe { engine_table_cleanup(pkey_asn1_meth_table_slot()) };
 }
+
+#[cfg(test)]
+const _: extern "C" fn() = engine_unregister_all_pkey_asn1_meths;
 
 /// `int ENGINE_register_pkey_asn1_meths(ENGINE *e)` — `:38-49`.
 ///
