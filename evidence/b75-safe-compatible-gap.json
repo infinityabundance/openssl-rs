@@ -726,12 +726,12 @@
    "why": "the NULL-value contract defect is in src/x509/v3_conf.rs, which is not in the OpenSSH reachable obligation set. It remains an open finding for the wider library and is not fixed here because a source edit would invalidate the frozen candidate without a rebuild; it must be repaired and re-measured at the next source batch."
   }
  ],
- "verdict": "SAFE_COMPATIBLE NOT ESTABLISHED for ssh or sshd. 225 supportable / 98 REVIEW_REQUIRED / 0 BLOCKED / 0 UNKNOWN at the tool grade; element 7 PASS 153/0/153. The remaining blockers are evidence-grade, consumer-binding and venue-dependent, not unknown safety mechanisms.",
+ "verdict": "SAFE_COMPATIBLE NOT ESTABLISHED for ssh or sshd. The last measured S = 15bebabc9 has 225 supportable / 98 REVIEW_REQUIRED / 0 BLOCKED / 0 UNKNOWN and element 7 PASS 153/0/153. The current source S-prime = cccd64149 adds the B54-F2 NULL-value fix but is unbuilt and unmeasured; every figure above is bound to S, not S-prime.",
  "input_hashes": {
   "evidence/closure-ssh-b74.json": "87f1dd9ac062d60da6a07c06abc4eec626254217dfd84861c7b495e59357c8ff",
   "evidence/closure-sshd-b73-r2.json": "d0addc72f94904b03e63b2bd1d92dc5506c1ea67f6732b5a51a124f943f5cee5",
   "evidence/sshd-artifact-ledger.json": "34ff5e2eec66d7c522951c9ef639d0e97c1a61501a232b0f579a4fe5fd7dc36e",
-  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "3ad26a833331d26cae0e24e8d12da9a74528da9d701eed44253f3c11db8fc47f",
+  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "cc49ffe47bf97048926cbf90acfef1a185f5e7cea2b2b4263df616fea94ea5cc",
   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json": "225275e35179c7f475c1031e6a783a9ee4630529127a715da67a1cecab51863e"
  },
  "non_claims": [
@@ -778,6 +778,18 @@
    "tool": "systematic blocked-row audit",
    "result": "31 stale rows found: 4 already recorded (RC2 + 3 vestigial), 26 recorded here, 1 excluded (s2i_poison, already B54-discharged)",
    "state": "RECORDED"
+  }
+ ],
+ "source_changes": [
+  {
+   "id": "B54-F2",
+   "commit": "cccd641490499c4cb82e45cbecb789418b749a3c",
+   "previous_S": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+   "src_content_sha256": "a5f85a2bbc730530912fc1c2774dd629632569ee756f72008b2360c9c763d595",
+   "what": "X509V3_EXT_nconf/_nid refuse a NULL value instead of dereferencing it; unit control added; divergence D-V3-CONF-NULL-VALUE-1",
+   "state": "FIXED IN SOURCE, NOT_BUILT",
+   "evidence_bound_to": "S=15bebabc9 (all closure/census/artefact evidence)",
+   "required_resolution": "build, test, rebuild consumers, re-run both closures and L7 at S-prime"
   }
  ]
 }
