@@ -27490,7 +27490,20 @@ def carry_forward_candidates(previous: dict, contracts: dict,
             item = prev.get("item")
             matched = by_stable.get(operation_key(prev), [])
             if not matched:
-                matched = by_exact.get((f, line, kind), [])
+                # Coordinate tolerance for a definition that moved.  The item
+                # is required: a source line is not an operation identity, and
+                # a deleted definition's line is often recycled by the next
+                # definition in the same file (b76: the four retired
+                # `*_free_void` thunks of `OSSL_CMP_CTX_free` were replaced
+                # one-for-one by `general_name_free_void` and siblings).  An
+                # item-blind match would then report the retired operation as
+                # still present, which suppresses the carry instead of
+                # recording its removal.  So the fallback accepts a new line
+                # only for the *same* operation, and a legacy record with no
+                # enclosing item (whose stable identity is its line) still
+                # matches only another itemless record.
+                matched = [pair for pair in by_exact.get((f, line, kind), [])
+                           if pair[1].get("item") == item]
             if reachable_files is not None and f not in reachable_files:
                 census_lines = sorted({r.get("line") for _s, r in matched
                                        if r.get("line") is not None})
@@ -32441,6 +32454,56 @@ def self_test() -> int:
     check("nm defined", parse_nm_line("0000000000000123 T EVP_rc4"), (0x123, "T", "EVP_rc4"))
     check("nm undef", parse_nm_line("                 U EVP_rc4"), None)
 
+    # carry-forward coordinate tolerance.  Obligation identity is
+    # file+kind+enclosing item; a line is provenance.  A moved definition is
+    # re-enrolled, but a recycled line belonging to a *different* operation is
+    # not evidence that the previous operation still exists.
+    def cf_prev(item, line):
+        return {
+            "receipt": "fixture-closure.json", "receipt_sha256": "0" * 64,
+            "obligations": [{
+                "id": f"V1:src/x.rs:{line}:UNSAFE_FN_DEF",
+                "stable_id": f"src/x.rs::UNSAFE_FN_DEF::{item}",
+                "file": "src/x.rs", "line": line, "kind": "UNSAFE_FN_DEF",
+                "item": item, "status": "DISCHARGED",
+                "contract": "contracted", "discharge_receipt": "R-1"}]}
+
+    def cf_census(item, line, contracted=True):
+        rec = {"file": "src/x.rs", "line": line, "kind": "UNSAFE_FN_DEF",
+               "item": item, "partition": V1_PARTITION_PRODUCTION}
+        if contracted:
+            return {"contracted_operations": [rec], "blockers": []}
+        return {"contracted_operations": [],
+                "blockers": [dict(rec, reason="no contract")]}
+
+    # (a) the same operation at a new line -> carried, not removed.
+    out_a, sum_a = carry_forward_candidates(
+        cf_prev("x509_free_void", 376), cf_census("x509_free_void", 640),
+        collections.Counter(), {"src/x.rs"})
+    check("carry-forward moved definition is carried", len(out_a), 1)
+    check("carry-forward moved definition is not removed",
+          sum_a["removed_count"], 0)
+    check("carry-forward moved definition records the census line",
+          out_a[0].get("current_census_line"), 640)
+    check("carry-forward moved definition keeps its identity",
+          out_a[0].get("stable_id"), "src/x.rs::UNSAFE_FN_DEF::x509_free_void")
+
+    # (b) the line is recycled by a different operation (the b76 thunk case):
+    # nothing is carried and the operation is recorded as non-existent.
+    out_b, sum_b = carry_forward_candidates(
+        cf_prev("x509_free_void", 376),
+        cf_census("general_name_free_void", 376, contracted=False),
+        collections.Counter(), {"src/x.rs"})
+    check("carry-forward recycled line carries nothing", len(out_b), 0)
+    check("carry-forward recycled line removes the operation",
+          sum_b["removed_count"], 1)
+    check("carry-forward recycled line names the removed identity",
+          (sum_b["removed"][0].get("item"), sum_b["removed"][0].get("line")),
+          ("x509_free_void", 376))
+    check("carry-forward removal reason names non-existence",
+          "no longer exists as a source unsafe operation"
+          in (sum_b["removed"][0].get("reason") or ""), True)
+
     # adjudication truth table
     mechs = {
         "ERR": {"state": "SAFETY_DISCHARGED"},
@@ -37223,7 +37286,9 @@ def self_test() -> int:
           f"non-in-image GOT binding refusals, each with its load-bearing "
           f"mutation switch; the KDF selection control distinguishes 5 from "
           f"2; the plain keygen site and the eight b65 ABI sites are "
-          f"unchanged)")
+          f"unchanged), and the carry-forward coordinate-tolerance controls "
+          f"(a moved definition is re-enrolled; a recycled line is recorded as "
+          f"removed, never reported present)")
     return 0
 
 
