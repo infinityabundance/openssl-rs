@@ -425,6 +425,53 @@ def boundary_evidence(sweeps, status_json: dict) -> dict:
             scoped.append(label)
             scoped_ids[label] = in_ledger
 
+    # The ledger is authoritative for which boundary-sweep receipts are applied.
+    # Some applied receipts (B54-B57) carry their boundaries in `rows` rather than
+    # `boundaries`, and B60 is a candidate freeze with no sweep document at all, so
+    # a receipt-shape scan cannot count them.  Count the ledger labels directly and
+    # keep the receipt-shape scan above only as the fail-closed disposition check.
+    ledger_ids_by_label = {}
+    for entry in status_json.get("scoped_boundary_discharges") or []:
+        if not isinstance(entry, dict):
+            continue
+        label = str(entry.get("receipt") or "")
+        if label.startswith("boundary-sweep-") and entry.get("discharged_boundaries"):
+            ledger_ids_by_label[label] = [str(i) for i in entry["discharged_boundaries"]]
+    ledger_labels = sorted(
+        (label[len("boundary-sweep-"):] for label in ledger_ids_by_label
+         if label.startswith("boundary-sweep-B")),
+        key=lambda value: int(value[1:]),
+    )
+    sweep_by_label = {f"B{number}": data for number, name, data in sweeps}
+    ledger_only = set()
+    for label in ledger_labels:
+        data = sweep_by_label.get(label)
+        if data is None:
+            ledger_only.add(label)
+            continue
+        review = data.get("review") if isinstance(data.get("review"), dict) else {}
+        verdict = str(review.get("verdict") or "").upper()
+        applied = review.get("applied")
+        if verdict == "REJECT" or applied is False:
+            raise RenderError(
+                f"{label}: CAMPAIGN-STATUS applies a boundary-sweep receipt whose "
+                f"review is {verdict or 'applied=false'}"
+            )
+        boundary_ids = [
+            str(boundary.get("id"))
+            for boundary in data.get("boundaries") or []
+            if str(boundary.get("disposition", "")).startswith("SAFETY_DISCHARGED")
+        ]
+        if not boundary_ids:
+            ledger_only.add(label)
+    scoped = ledger_labels
+    scoped_ids = {
+        label: (scoped_ids.get(label)
+                or ledger_ids_by_label[f"boundary-sweep-{label}"])
+        for label in ledger_labels
+    }
+    proposed = [label for label in proposed if label not in set(ledger_labels)]
+
     # Cross-check the receipt-derived classification against the campaign JSON.
     plane = status_json.get("independently_checked_plane") or []
     plane_states = {
@@ -444,6 +491,7 @@ def boundary_evidence(sweeps, status_json: dict) -> dict:
         "author": author,
         "scoped": scoped,
         "scoped_ids": scoped_ids,
+        "ledger_only": sorted(ledger_only),
         "proposed": proposed,
     }
 
@@ -1026,11 +1074,15 @@ class Evidence:
         )
 
         scoped = b["scoped_ids"]
+        ledger_only = set(b.get("ledger_only") or [])
+
+        def _scoped_cell(label, ids):
+            if label in ledger_only:
+                return f"{label} ({len(ids)} ledger-applied boundaries)"
+            return f"{label} (" + ", ".join(f"`{i}`" for i in ids) + ")"
+
         scoped_text = (
-            ", ".join(
-                f"{label} (" + ", ".join(f"`{i}`" for i in ids) + ")"
-                for label, ids in scoped.items()
-            )
+            ", ".join(_scoped_cell(label, ids) for label, ids in scoped.items())
             if scoped
             else "none"
         )
