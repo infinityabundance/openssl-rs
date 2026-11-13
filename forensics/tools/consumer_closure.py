@@ -11996,6 +11996,280 @@ SLH_HASH_CTX_KEY_OFF = 0x00
 # the mechanical re-pin mechanism; they are not evidence about the artefact.
 # --------------------------------------------------------------------------- #
 
+
+def _pin_leaf(symbol: str) -> str:
+    """Source leaf of a pin symbol: a demangled path or a plain C name."""
+    return (symbol or "").rsplit("::", 1)[-1]
+
+
+# --------------------------------------------------------------------------- #
+# (symbol leaf, offset) re-pin engine
+# --------------------------------------------------------------------------- #
+#
+# ``_repinned`` re-derives this image's address for every pinned row, and
+# ``_pinned_site`` does the same for an enumerated scalar site.  A row that
+# cannot be re-derived keeps its recorded literal, which no site in another
+# image matches, so its witness refuses instead of firing at an unproven
+# address.  The derivation is deliberately strict:
+#
+#   1. the pin's leaf must name exactly one function start in this image (an
+#      ambiguous leaf -- ICF aliases -- is refused, never resolved arbitrarily);
+#   2. ``start + offset`` must be an instruction start in that function;
+#   3. that instruction must be an indirect call/jmp (every pinned site is one).
+#
+# The witness at the re-derived address remains the shape gate: it re-proves
+# the operand, base object, field offset, writer set and target table in this
+# image.  Re-pinning therefore cannot widen a rule; it can only let an
+# already-specified witness run against a moved image.  A *moved* row (the pin
+# offset itself changed) additionally needs a uniqueness proof that no other
+# row in the same table accepts that address -- see ``e7repin_controls``.
+
+_PIN_TABLE_OF = {
+    "SLH_METHOD_TABLE_SITES": "SLH_METHOD_TABLE_SITE_PINS",
+    "PROVIDER_HW_SITES": "PROVIDER_HW_SITE_PINS",
+    "LEGACY_EVP_DATA_SITES": "LEGACY_EVP_DATA_SITE_PINS",
+    "DECODER_METHOD_SITES": "DECODER_METHOD_SITE_PINS",
+    "PBE_EX_SITES": "PBE_EX_SITE_PINS",
+    "STORE_LOADER_LEGACY_SITES": "STORE_LOADER_LEGACY_SITE_PINS",
+    "CONF_SITES": "CONF_SITE_PINS",
+}
+_PINNED_SCALARS = {
+    "PBE_SITE": "PBE_SITE_PIN",
+    "PEM_SITE": "PEM_SITE_PIN",
+    "STORE_LOADER_PROVIDER_SITE": "STORE_LOADER_PROVIDER_SITE_PIN",
+    "REGISTRATION_ATEXIT_CALL_SITE": "REGISTRATION_ATEXIT_CALL_SITE_PIN",
+}
+_SITE_PIN_CACHE = {}
+
+
+def _pin_insns(g, start: int):
+    insns = None
+    if g.precision is not None:
+        insns = g.precision.insns_by_func.get(start)
+    if insns is None:
+        for fstart, body in getattr(g, "functions", ()):  # pragma: no branch
+            if fstart == start:
+                insns = body
+                break
+    return insns
+
+
+def _pin_site_addr(g, pin):
+    """This image's address for a ``(symbol leaf, offset)`` pin, or None.
+
+    None means the pin does not establish a site in this image; the caller
+    keeps the recorded literal and the witness refuses.  The three conditions
+    are the whole rule -- the witness supplies the shape proof at the result.
+    """
+    if not pin:
+        return None
+    symbol, off = pin
+    leaf = _pin_leaf(symbol)
+    starts = sorted(a for a, names in getattr(g, "names_at", {}).items()
+                    if a in g.start_set
+                    and any(_external_function_leaf(n) == leaf for n in names))
+    if len(starts) != 1:
+        return None
+    start = starts[0]
+    insns = _pin_insns(g, start)
+    if not insns:
+        return None
+    addr = start + off
+    text = next((t for a, t in insns if a == addr), None)
+    if text is None:
+        return None
+    mn, rest, _ops = _insn_parts(text)
+    if not (mn.startswith("call") or mn.startswith("jmp")):
+        return None
+    if not rest.strip().startswith("*"):
+        return None
+    return addr
+
+
+def _site_pin_vintage(g):
+    """The per-image cache key, or None for a test double that has no image.
+
+    Several committed controls build a minimal fake graph from literal
+    instruction tuples.  Such a graph cannot establish a symbol+offset pin, so
+    the engine leaves the tables exactly as recorded for it (the old
+    literal-keyed behaviour); a real DsoGraph always carries an image digest.
+    """
+    sha = getattr(g, "sha256", None)
+    if not sha or not getattr(g, "names_at", None) or not hasattr(g, "start_set"):
+        return None
+    return (getattr(g, "name", "?"), sha)
+
+
+def _repinned(name: str, g):
+    """The literal-keyed site table ``name`` re-keyed to this image.
+
+    Rows of the same table that would land on one address are both refused:
+    two rows are never silently collapsed onto one witness.
+    """
+    vintage = _site_pin_vintage(g)
+    if vintage is None:
+        return globals()[name]
+    key = ("table", name, vintage)
+    hit = _SITE_PIN_CACHE.get(key)
+    if hit is not None:
+        return hit
+    table = globals()[name]
+    pins = globals()[_PIN_TABLE_OF[name]]
+    derived = {}
+    for old in table:
+        addr = _pin_site_addr(g, pins.get(old))
+        if addr is not None:
+            derived[old] = addr
+    counts = collections.Counter(derived.values())
+    out = {}
+    for old, spec in table.items():
+        addr = derived.get(old)
+        out[addr if addr is not None and counts[addr] == 1 else old] = spec
+    _SITE_PIN_CACHE[key] = out
+    return out
+
+
+def _pinned_site(name: str, g) -> int:
+    """This image's address for the enumerated scalar site ``name``."""
+    vintage = _site_pin_vintage(g)
+    if vintage is None:
+        return globals()[name]
+    key = ("scalar", name, vintage)
+    hit = _SITE_PIN_CACHE.get(key)
+    if hit is not None:
+        return hit
+    old = globals()[name]
+    addr = _pin_site_addr(g, globals()[_PINNED_SCALARS[name]])
+    val = addr if addr is not None else old
+    _SITE_PIN_CACHE[key] = val
+    return val
+
+
+def _external_abi_index(g) -> dict:
+    """``addr -> documented function leaf`` for this image."""
+    vintage = _site_pin_vintage(g)
+    if vintage is None:
+        return dict(EXTERNAL_ABI_SITE_FUNCTIONS)
+    key = ("external-abi", vintage)
+    hit = _SITE_PIN_CACHE.get(key)
+    if hit is not None:
+        return hit
+    pins = dict(EXTERNAL_ABI_SITE_PINS)
+    pins.setdefault(PBE_SITE, PBE_SITE_PIN)
+    pins.setdefault(STORE_LOADER_PROVIDER_SITE,
+                    STORE_LOADER_PROVIDER_SITE_PIN)
+    pins.setdefault(PEM_SITE, PEM_SITE_PIN)
+    out = {}
+    for old, leaf in EXTERNAL_ABI_SITE_FUNCTIONS.items():
+        addr = _pin_site_addr(g, pins.get(old))
+        out[addr if addr is not None else old] = leaf
+    _SITE_PIN_CACHE[key] = out
+    return out
+
+
+class _RepinProxy:
+    """A read-only view of one graph with a specific field overridden."""
+
+    def __init__(self, base, **overrides):
+        object.__setattr__(self, "_base", base)
+        for k, v in overrides.items():
+            object.__setattr__(self, k, v)
+
+    def __getattr__(self, name):
+        return getattr(object.__getattribute__(self, "_base"), name)
+
+
+def e7repin_controls(g) -> list:
+    """Load-bearing controls for the re-pin rule.
+
+    Each control removes exactly one condition and shows the rule then
+    refuses (or, for the moved-row control, that an address is accepted by at
+    most one row).  Returned failures are strings; an empty list is a pass.
+    """
+    failures = []
+    name = next(iter(_PIN_TABLE_OF))
+    table = globals()[name]
+    pins = globals()[_PIN_TABLE_OF[name]]
+    if not table or not g.start_set:
+        return ["e7repin: empty table or graph"]
+    old = next(iter(table))
+    pin = pins.get(old)
+    good = _pin_site_addr(g, pin)
+    if good is None:
+        return [f"e7repin: positive row {hex(old)} does not re-derive"]
+
+    # 1. symbol: a leaf that names no function start
+    if _pin_site_addr(g, ("e7repin-no-such-symbol", pin[1])) is not None:
+        failures.append("e7repin symbol control: unknown leaf was accepted")
+
+    # 2. offset: perturb to an instruction that is not an indirect call
+    insns = _pin_insns(g, good - pin[1]) or ()
+    offs = sorted({a - (good - pin[1]) for a, t in insns
+                   if a != good and not _is_indirect_transfer(t)})
+    if offs:
+        pert = (pin[0], offs[0])
+        if _pin_site_addr(g, pert) is not None:
+            failures.append("e7repin offset control: non-call offset was accepted")
+    else:
+        failures.append("e7repin offset control: no perturbable instruction")
+
+    # 3. instruction: the same address, changed from an indirect transfer
+    mutated = [(a, "mov    %rax,%rax" if a == good else t) for a, t in insns]
+    proxy = _RepinProxy(g, precision=_RepinProxy(g.precision,
+                                                 insns_by_func={good - pin[1]:
+                                                                mutated}),
+                        sha256=g.sha256 + ":mut")
+    if _pin_site_addr(proxy, pin) is not None:
+        failures.append("e7repin instruction control: a non-call was accepted")
+
+    # 4. moved rows: no address may be accepted by two rows of one table.
+    # The b76 loader call sites moved inside their function, so this is the
+    # control that makes "the witness proves the row, not the offset" real.
+    loader = _repinned("STORE_LOADER_LEGACY_SITES", g)
+    loader_pins = STORE_LOADER_LEGACY_SITE_PINS
+    for addr, spec in loader.items():
+        if addr in loader_pins:      # not re-derived in this image
+            continue
+        fstart = next((a for a, names in g.names_at.items()
+                       if a <= addr and any(
+                           _external_function_leaf(n) == STORE_LOADER_FUNCTION
+                           for n in names)), None)
+        if fstart is None:
+            failures.append("e7repin moved control: function not found")
+            continue
+        text = next((t for a, t in (_pin_insns(g, fstart) or ())
+                     if a == addr), "")
+        site = {"kind": "call", "func": fstart, "addr": addr,
+                "text": text, "targets": set(), "unresolved": True,
+                "reason": "control", "class": "materialised",
+                "field_offsets": set(), "seam": None,
+                "arg_deps": set(), "arg_targets": set()}
+        saved = dict(STORE_LOADER_LEGACY_SITES)
+        try:
+            for other in saved.values():
+                if other is spec:
+                    continue
+                STORE_LOADER_LEGACY_SITES.clear()
+                STORE_LOADER_LEGACY_SITES[addr] = other
+                r = store_loader_legacy_witness(g, site,
+                                               g.funcs.get(fstart, ""))
+                ok = (isinstance(r, tuple) and r[1]
+                      and (r[1] or {}).get("contract_bounded"))
+                if ok:
+                    failures.append(
+                        f"e7repin moved control: {hex(addr)} accepted both "
+                        f"{spec['field']!r} and {other['field']!r}")
+        finally:
+            STORE_LOADER_LEGACY_SITES.clear()
+            STORE_LOADER_LEGACY_SITES.update(saved)
+    return failures
+
+
+def _is_indirect_transfer(text: str) -> bool:
+    mn, rest, _ops = _insn_parts(text or "")
+    return ((mn.startswith("call") or mn.startswith("jmp"))
+            and rest.strip().startswith("*"))
+
 SLH_METHOD_TABLE_SITES = {
     0x3D192E: ("ossl_slh_ht_sign", 0xA8, 0x48),
     0x3D1CD9: ("ossl_slh_ht_verify", 0xA8, 0x48),
@@ -12119,7 +12393,7 @@ def slh_method_table_witness(g: "DsoGraph", site: dict, name: str):
     """
     if site.get("kind") != "call" or not _has_insns(g):
         return None
-    spec = SLH_METHOD_TABLE_SITES.get(site.get("addr"))
+    spec = _repinned("SLH_METHOD_TABLE_SITES", g).get(site.get("addr"))
     if spec is None:
         return None
     want_fn, key_off, member_off = spec
@@ -13813,7 +14087,7 @@ def provider_hw_table_witness(g: "DsoGraph", site: dict, name: str):
     """
     if site.get("kind") != "call" or not _has_insns(g):
         return None
-    spec = PROVIDER_HW_SITES.get(site.get("addr"))
+    spec = _repinned("PROVIDER_HW_SITES", g).get(site.get("addr"))
     if spec is None:
         return None
     fstart = site.get("func")
@@ -14692,7 +14966,7 @@ def legacy_evp_cipher_data_witness(g: "DsoGraph", site: dict, name: str):
     """Prove (or refuse) an enumerated legacy `EVP_CIPHER` data dispatch."""
     if site.get("kind") != "call" or not _has_insns(g):
         return None
-    spec = LEGACY_EVP_DATA_SITES.get(site.get("addr"))
+    spec = _repinned("LEGACY_EVP_DATA_SITES", g).get(site.get("addr"))
     if spec is None:
         return None
     rule, klass = LEGACY_EVP_DATA_WITNESS_RULE, \
@@ -15036,7 +15310,7 @@ def decoder_method_object_witness(g: "DsoGraph", site: dict, name: str):
     """Prove (or refuse) an enumerated `OsslDecoder` method-slot dispatch."""
     if site.get("kind") != "call" or not _has_insns(g):
         return None
-    spec = DECODER_METHOD_SITES.get(site.get("addr"))
+    spec = _repinned("DECODER_METHOD_SITES", g).get(site.get("addr"))
     if spec is None:
         return None
     rule, klass = DECODER_METHOD_WITNESS_RULE, \
@@ -15631,7 +15905,7 @@ def registration_atexit_witness(g: "DsoGraph", site: dict, name: str):
     enumerated site.  Six independent conditions must hold; each failure has
     its own reason.
     """
-    if (site.get("addr") != REGISTRATION_ATEXIT_CALL_SITE
+    if (site.get("addr") != _pinned_site("REGISTRATION_ATEXIT_CALL_SITE", g)
             and "e7-atexit-site-address" not in _MUTED):
         return None, None
     base = re.sub(r"\.llvm(?:\.[0-9]+)?$", "", name or "")
@@ -15976,8 +16250,13 @@ STORE_LOADER_LEGACY_SITES = {
 }
 
 STORE_LOADER_LEGACY_SITE_PINS = {
-    0x1F89E8: ("OSSL_STORE_open_ex", 0x498),
-    0x1F8AA1: ("OSSL_STORE_open_ex", 0x551),
+    # The b73 rows recorded +0x498/+0x551.  In the b76 build the two calls sit
+    # at +0x488/+0x57D: the offsets are re-derived per image (see the re-pin
+    # engine) and the correspondence is proved by the witness, not by the
+    # offset: at each address exactly one of the four loader specs is accepted
+    # and each spec accepts exactly one address (e7repin_controls).
+    0x1F89E8: ("OSSL_STORE_open_ex", 0x488),
+    0x1F8AA1: ("OSSL_STORE_open_ex", 0x57D),
     0x1F8F13: ("OSSL_STORE_open_ex", 0x9C3),
 }
 STORE_LOADER_PROVIDER_SITE = 0x1F8D29
@@ -16021,6 +16300,10 @@ PEM_CB_STACK_SLOT = "0x4b8(%rsp)"
 # The guards that select the two provider/legacy close paths.  These are image
 # addresses, not inferred block numbers; a change to either refuses.
 STORE_LOADER_CLOSE_GUARDS = {
+    # b73 image addresses.  They belong to the closefn/p_close rows, which the
+    # b76 build changed shape and no witness accepts; those two rows stay
+    # target-bounded (atlas-refresh/e7-b76-repin.json#refused) and this guard
+    # pair is therefore not consulted in b76.
     "legacy_je": (0x1F8D11, 0x1F8D14, "%r12", 0x1F8F07),
     "provider_jne": (0x1F8EFE, 0x1F8F01, "%r12", 0x1F8D1A),
 }
@@ -16751,7 +17034,8 @@ def _external_witness(cls: str, name: str, site: dict, *, slot: str,
 
 def pbe_registry_witness(g: "DsoGraph", site: dict, name: str):
     """The `EVP_PBE_CipherInit_ex` plain-keygen dispatch."""
-    if not _external_site_matches(site, name, PBE_FUNCTION, PBE_SITE):
+    if not _external_site_matches(site, name, PBE_FUNCTION,
+                                  _pinned_site("PBE_SITE", g)):
         return None
     cls = ABI_CONTRACT_PBE_REGISTRY
     if not site.get("unresolved"):
@@ -16907,7 +17191,8 @@ def pbe_registry_witness(g: "DsoGraph", site: dict, name: str):
                "rows, and the function-local search key; the exported registry "
                "seam makes the target set unbounded"),
         conditions={
-            "site_enumerated": f"{PBE_FUNCTION} {hex(PBE_SITE)}",
+            "site_enumerated": (f"{PBE_FUNCTION} "
+                                 f"{hex(_pinned_site('PBE_SITE', g))}"),
             "operand_is_the_keygen_local": (
                 f"{load['text']} -> the zeroed frame slot at "
                 f"{hex(slot_abs)}"),
@@ -16949,7 +17234,7 @@ def pbe_registry_witness(g: "DsoGraph", site: dict, name: str):
 
 def store_loader_legacy_witness(g: "DsoGraph", site: dict, name: str):
     """The legacy `OSSL_STORE_LOADER` open/open_ex/closefn dispatch."""
-    spec = STORE_LOADER_LEGACY_SITES.get(site.get("addr"))
+    spec = _repinned("STORE_LOADER_LEGACY_SITES", g).get(site.get("addr"))
     if spec is None or not _external_site_matches(
             site, name, STORE_LOADER_FUNCTION, site.get("addr")):
         return None
@@ -17208,7 +17493,8 @@ def _loader_fetch_wrapper_is_transparent(text: str, name: str):
 def store_loader_provider_witness(g: "DsoGraph", site: dict, name: str):
     """The provider `OsslStoreLoader.p_close` dispatch (OSSL_FUNC_STORE_CLOSE)."""
     if not _external_site_matches(site, name, STORE_LOADER_FUNCTION,
-                                  STORE_LOADER_PROVIDER_SITE):
+                                  _pinned_site("STORE_LOADER_PROVIDER_SITE",
+                                               g)):
         return None
     cls = ABI_CONTRACT_PROVIDER
     if not site.get("unresolved"):
@@ -17397,7 +17683,7 @@ def store_loader_provider_witness(g: "DsoGraph", site: dict, name: str):
                "the provider's OSSL_FUNC_STORE_CLOSE dispatch entry"),
         conditions={
             "site_enumerated": (f"{STORE_LOADER_FUNCTION} "
-                                f"{hex(STORE_LOADER_PROVIDER_SITE)}"),
+                                f"{hex(_pinned_site('STORE_LOADER_PROVIDER_SITE', g))}"),
             "operand_field": (f"{STORE_LOADER_PROVIDER_FIELD} at "
                               f"{hex(STORE_LOADER_PROVIDER_OFFSET)}"),
             "base_object": "the inner_loader_fetch return on the "
@@ -17444,7 +17730,7 @@ def store_loader_provider_witness(g: "DsoGraph", site: dict, name: str):
 
 def conf_module_witness(g: "DsoGraph", site: dict, name: str):
     """The `CONF_MODULE` init/finish dispatch."""
-    spec = CONF_SITES.get(site.get("addr"))
+    spec = _repinned("CONF_SITES", g).get(site.get("addr"))
     if spec is None or not _external_site_matches(
             site, name, CONF_FUNCTION, site.get("addr")):
         return None
@@ -17963,7 +18249,8 @@ def _external_pem_source_chain(g: "DsoGraph", fstart: int, index: int,
 
 def pem_password_default_witness(g: "DsoGraph", site: dict, name: str):
     """The PEM PKCS#8 writer's `cb` parameter with its PEM_def_callback default."""
-    if not _external_site_matches(site, name, PEM_FUNCTION, PEM_SITE):
+    if not _external_site_matches(site, name, PEM_FUNCTION,
+                                  _pinned_site("PEM_SITE", g)):
         return None
     cls = ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT
     if not site.get("unresolved"):
@@ -18101,7 +18388,8 @@ def pem_password_default_witness(g: "DsoGraph", site: dict, name: str):
                "exported writer whose header declares pem_password_cb; the "
                "default target is recorded and the target set is unbounded"),
         conditions={
-            "site_enumerated": f"{PEM_FUNCTION} {hex(PEM_SITE)}",
+            "site_enumerated": (f"{PEM_FUNCTION} "
+                                 f"{hex(_pinned_site('PEM_SITE', g))}"),
             "operand_is_the_cb_register": {"register": reg,
                                           "source_register": source_reg},
             "cb_is_stack_parameter": f"index {PEM_CB_STACK_INDEX}",
@@ -18682,8 +18970,8 @@ EXTERNAL_ABI_SITE_FUNCTIONS = {
 }
 # (site -> containing symbol, offset) for the literal keys above.
 EXTERNAL_ABI_SITE_PINS = {
-    0x1F89E8: ("OSSL_STORE_open_ex", 0x498),
-    0x1F8AA1: ("OSSL_STORE_open_ex", 0x551),
+    0x1F89E8: ("OSSL_STORE_open_ex", 0x488),
+    0x1F8AA1: ("OSSL_STORE_open_ex", 0x57D),
     0x1F8F13: ("OSSL_STORE_open_ex", 0x9C3),
     0x293F25: ("CONF_modules_load", 0x505),
     0x294363: ("CONF_modules_load", 0x943),
@@ -18704,7 +18992,7 @@ def external_abi_contract_witness(g: "DsoGraph", site: dict, name: str):
     returned as ``(class, None, refusal)`` and keeps the site target-bounded;
     it is never absorbed by a same-shaped call elsewhere.
     """
-    expected = EXTERNAL_ABI_SITE_FUNCTIONS.get(site.get("addr"))
+    expected = _external_abi_index(g).get(site.get("addr"))
     if expected is None:
         return None
     if _external_function_leaf(name) != expected:
@@ -21882,7 +22170,7 @@ def pbe_outparam_instance_witness(g: "DsoGraph", site: dict, name: str):
     conjunction: a failed proof returns ``resolved=False`` with its own
     refusal reason and never a partial or widened target set.
     """
-    spec = PBE_EX_SITES.get(site.get("addr"))
+    spec = _repinned("PBE_EX_SITES", g).get(site.get("addr"))
     if spec is None or _external_function_leaf(name) != spec["function"]:
         return None
     if not site.get("unresolved"):
@@ -30128,6 +30416,81 @@ def build_receipt(args) -> dict:
         entry.split(":", 1)[0] for entry in reachable_functions)
     analysis_ident = analysis_identity(graphs)
 
+    # ---- element-7-only fast path (development feedback, never a receipt) - #
+    # The element-7 predicate needs exactly the graph, the precision resolver,
+    # the evidence classes and the reachability closure.  Everything after this
+    # point (the streamed edge-record population, the obligation queue, the
+    # carry-forward, the discharge plane) is unrelated to it and dominates the
+    # wall time and the RSS of a full closure (measured b76: 42 min, 4.45 GiB
+    # peak).  This mode is a FAST-level instrument: its output is explicitly
+    # not a closure receipt and carries none of the closure's claims.
+    if getattr(args, "element7_only", False):
+        e7 = evaluate_predicate_element_7(
+            closure["reachable_residual_sites"], closure["unclassified_sites"])
+        residual = [{"dso": d, "function": hex(s.get("func", 0)),
+                     "call_site": hex(s.get("addr", 0)),
+                     "function_name": graphs[d].funcs.get(s.get("func"), "?"),
+                     "reason": s.get("reason"), "class": s.get("class"),
+                     "text": s.get("text"), "targets": sorted(s.get("targets") or ()),
+                     "witness_rule": (s.get("witness") or {}).get("rule")}
+                    for d, _f, s in closure["reachable_residual_sites"]]
+        residual.sort(key=lambda r: (r["dso"], r["call_site"]))
+        return {
+            "schema": SCHEMA,
+            "tool": tool_identity,
+            "generated_utc": now_utc(),
+            "family": args.family,
+            "mode": "element7-only",
+            "not_a_closure_receipt": True,
+            "artifact_identity": {"path": rel(artifact, repo),
+                                  "sha256": artifact_sha},
+            "candidate_identity": {
+                "install_prefix": rel(install, repo),
+                "libcrypto_so_3_sha256": classification["openssl_sonames"].get(
+                    "libcrypto.so.3", {}).get("resolved_sha256"),
+            },
+            "refusals": refusals + closure_refusals(closure),
+            "precision": {
+                "residual_sites": residual,
+                "reachable_residual_sites": len(
+                    closure["reachable_residual_sites"]),
+                "predicate_element_7": e7,
+                "totals": {
+                    "indirect_sites": sum(len(g.sites) for g in graphs.values()),
+                    "resolved_sites": sum(1 for g in graphs.values()
+                                          for s in g.sites.values()
+                                          if not s["unresolved"]),
+                    "unresolved_sites": sum(1 for g in graphs.values()
+                                            for s in g.sites.values()
+                                            if s["unresolved"]),
+                    "reachable_unresolved_sites": len(
+                        closure["reachable_residual_sites"]),
+                    "reachable_target_bounded_unresolved_sites": e7[
+                        "target_bounded_unresolved_sites"],
+                    "reachable_contract_bounded_sites": e7[
+                        "contract_bounded_sites"],
+                    "unclassified_reachable_sites": len(
+                        closure["unclassified_sites"]),
+                },
+            },
+            "graph": {"closure": {
+                "closure_rounds": closure["closure_rounds"],
+                "converged": closure["converged"],
+                "reachable_functions_count": len(reachable_functions),
+                "reachable_functions_sha256": reachable_functions_sha256,
+                "analysis_identity": analysis_ident,
+            }},
+            "non_claims": [
+                "this is a FAST-level element-7 probe, not a closure receipt: it "
+                "runs none of the edge-record, obligation, carry-forward or "
+                "discharge stages, and its counts are not DISCHARGED/BLOCKED "
+                "counts",
+                "the residual set is produced by the same resolver, evidence "
+                "classes and reachability closure as the full run, but the two "
+                "must still be compared before this output is cited",
+            ],
+        }
+
     # ---- edge provenance records ----------------------------------------- #
     # Every indirect site emits a semantic record.  The *final upper bound* is
     # the authoritative oracle for every negative reachability claim: the
@@ -31361,10 +31724,6 @@ def build_receipt(args) -> dict:
 # self-test
 # --------------------------------------------------------------------------- #
 
-def _pin_leaf(symbol: str) -> str:
-    """Source leaf of a pin symbol: a demangled path or a plain C name."""
-    return (symbol or "").rsplit("::", 1)[-1]
-
 
 def _e7abi_self_test():
     """Committed positive and negative controls for the E7-ABI witnesses.
@@ -31399,30 +31758,33 @@ def _e7abi_self_test():
     g.install_prefix = str(install)
     g.precision = PrecisionResolver(g)
     # (site -> containing symbol, offset) for the literal keys below.  The
-    # literal VAs identify one exact artefact (libcrypto.so.3, sha256
-    # e8a90ba4bd1e597ed22adbfef56c7336b80a65477393ba5a74afbbe428b985cb); the
-    # pins are the mechanical re-pin key.  Each literal is checked against its
-    # pin against the graph, so a stale VA fails loudly instead of silently
-    # retiring the control.
+    # literal VAs identify one exact artefact (recorded in the closure receipt
+    # and in atlas-refresh/e7-b76-repin.json); the pins are the mechanical
+    # re-pin key.  Each literal is checked against its pin against the graph,
+    # so a stale VA fails loudly instead of silently retiring the control.
     site_pins = {
-        0x17AF7D: ("EVP_PBE_CipherInit_ex", 0x19D),
-        0x1F89E8: ("OSSL_STORE_open_ex", 0x498),
-        0x1F8AA1: ("OSSL_STORE_open_ex", 0x551),
+        0x541C2D: ("EVP_PBE_CipherInit_ex", 0x19D),
+        0x455C88: ("OSSL_STORE_open_ex", 0x488),
+        0x455D7D: ("OSSL_STORE_open_ex", 0x57D),
+        # Deliberately NOT re-pinned: the b76 build changed the shape of these
+        # two call sites and no witness accepts their address, so the fixture
+        # keeps the b73 literal and the self-test reports the refusal.  See
+        # atlas-refresh/e7-b76-repin.json#refused.
         0x1F8F13: ("OSSL_STORE_open_ex", 0x9C3),
         0x1F8D29: ("OSSL_STORE_open_ex", 0x7D9),
-        0x293F25: ("CONF_modules_load", 0x505),
-        0x294363: ("CONF_modules_load", 0x943),
-        0x4AD30C: ("openssl_rs::pem::pem_pk8::do_pk8pkey", 0x29C),
+        0x22CB65: ("CONF_modules_load", 0x505),
+        0x22CFA3: ("CONF_modules_load", 0x943),
+        0x384BBC: ("openssl_rs::pem::pem_pk8::do_pk8pkey", 0x29C),
     }
     site_specs = (
-        (0x17AF7D, 0x17ADE0, "call   *%rax"),
-        (0x1F89E8, 0x1F8550, "call   *%rax"),
-        (0x1F8AA1, 0x1F8550, "call   *%rax"),
+        (0x541C2D, 0x541A90, "call   *%rax"),
+        (0x455C88, 0x455800, "call   *%rax"),
+        (0x455D7D, 0x455800, "call   *%rax"),
         (0x1F8F13, 0x1F8550, "call   *%rax"),
         (0x1F8D29, 0x1F8550, "call   *%rax"),
-        (0x293F25, 0x293A20, "call   *%r15"),
-        (0x294363, 0x293A20, "call   *%rax"),
-        (0x4AD30C, 0x4AD070, "call   *%rbx"),
+        (0x22CB65, 0x22C660, "call   *%r15"),
+        (0x22CFA3, 0x22C660, "call   *%rax"),
+        (0x384BBC, 0x384920, "call   *%rbx"),
     )
     g.sites = {}
     for addr, func, text in site_specs:
@@ -31433,14 +31795,14 @@ def _e7abi_self_test():
             "field_offsets": set(), "seam": None,
             "arg_deps": set(), "arg_targets": set()}
     expected = {
-        0x17AF7D: ABI_CONTRACT_PBE_REGISTRY,
-        0x1F89E8: ABI_CONTRACT_STORE_LOADER,
-        0x1F8AA1: ABI_CONTRACT_STORE_LOADER,
+        0x541C2D: ABI_CONTRACT_PBE_REGISTRY,
+        0x455C88: ABI_CONTRACT_STORE_LOADER,
+        0x455D7D: ABI_CONTRACT_STORE_LOADER,
         0x1F8F13: ABI_CONTRACT_STORE_LOADER,
         0x1F8D29: ABI_CONTRACT_PROVIDER,
-        0x293F25: ABI_CONTRACT_CONF_MODULE,
-        0x294363: ABI_CONTRACT_CONF_MODULE,
-        0x4AD30C: ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
+        0x22CB65: ABI_CONTRACT_CONF_MODULE,
+        0x22CFA3: ABI_CONTRACT_CONF_MODULE,
+        0x384BBC: ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
     }
     for addr, func, _text in site_specs:
         pin = site_pins[addr]
@@ -31478,7 +31840,7 @@ def _e7abi_self_test():
         ((wit(0x1F8D29) or (None, {}))[1] or {}).get("scope"),
         "store-loader-p_close")
     chk("e7abi site 8 default",
-        ((wit(0x4AD30C) or (None, {}))[1] or {}).get("default_target",
+        ((wit(0x384BBC) or (None, {}))[1] or {}).get("default_target",
                                                     {}).get("symbol"),
         PEM_DEFAULT)
 
@@ -31540,7 +31902,7 @@ def _e7abi_self_test():
            "#[allow(dead_code)]\n"
            "unsafe fn e7abi_alias(row: *mut E7AliasPbe, "
            "k: Option<EvpPbeKeygen>) { unsafe { (*row).keygen = k; } }")
-    cases.append(("PBE type alias", d, 0x17AF7D, "e7abi-type-alias",
+    cases.append(("PBE type alias", d, 0x541C2D, "e7abi-type-alias",
                   "keygen-field-writer-set-is-not-exactly-the-registry"))
 
     d = fixture("store-alias", ["src/store/mod.rs",
@@ -31552,7 +31914,7 @@ def _e7abi_self_test():
            "#[allow(dead_code)]\n"
            "unsafe fn e7abi_alias(loader: *mut E7AliasLoader, "
            "f: Option<OsslStoreOpenExFn>) { unsafe { (*loader).open_ex = f; } }")
-    cases.append(("STORE type alias", d, 0x1F89E8, "e7abi-type-alias",
+    cases.append(("STORE type alias", d, 0x455C88, "e7abi-type-alias",
                   "open_ex-writer-set-is-not-the-setter"))
 
     d = fixture("conf-alias", ["src/runtime/confmod/mod.rs"])
@@ -31561,7 +31923,7 @@ def _e7abi_self_test():
            "#[allow(dead_code)]\n"
            "unsafe fn e7abi_alias(m: *mut E7AliasModule, "
            "f: Option<ConfInitFn>) { unsafe { (*m).init = f; } }")
-    cases.append(("CONF type alias", d, 0x293F25, "e7abi-type-alias",
+    cases.append(("CONF type alias", d, 0x22CB65, "e7abi-type-alias",
                   "init-writer-set-is-not-module-add"))
 
     d = fixture("pbe-cont", ["src/evp/evp_pbe.rs"])
@@ -31570,7 +31932,7 @@ def _e7abi_self_test():
            "unsafe fn e7abi_cont(row: *mut EvpPbeCtl, "
            "k: Option<EvpPbeKeygen>) {\n"
            "    unsafe { (*row)\n        .keygen = k; }\n}")
-    cases.append(("PBE continuation writer", d, 0x17AF7D,
+    cases.append(("PBE continuation writer", d, 0x541C2D,
                   "e7abi-continuation",
                   "keygen-field-writer-set-is-not-exactly-the-registry"))
 
@@ -31579,7 +31941,7 @@ def _e7abi_self_test():
            "macro_rules! e7abi_m {\n"
            "    ($p:ident, $v:expr) => { unsafe { (*$p).keygen = $v; } };\n"
            "}")
-    cases.append(("PBE macro-expanded slot store", d, 0x17AF7D,
+    cases.append(("PBE macro-expanded slot store", d, 0x541C2D,
                   "e7abi-macro-slot",
                   "macro-expanded-slot-store-unattributed"))
 
@@ -31598,7 +31960,7 @@ def _e7abi_self_test():
         "    let f = "
         "crate::store::store_register::OSSL_STORE_register_loader;\n"
         "    unsafe { f(loader); }\n}\n")
-    cases.append(("STORE registration alias", d, 0x1F89E8,
+    cases.append(("STORE registration alias", d, 0x455C88,
                   "e7abi-registration-alias",
                   "in-image-registration-reference"))
 
@@ -31612,7 +31974,7 @@ def _e7abi_self_test():
         "#[allow(dead_code)]\n"
         "unsafe fn e7abi_reg_split(loader: *mut "
         "crate::store::OsslStoreLoader) { unsafe { reg(loader); } }\n")
-    cases.append(("STORE split-line registration alias", d, 0x1F89E8,
+    cases.append(("STORE split-line registration alias", d, 0x455C88,
                   "e7abi-registration-alias",
                   "in-image-registration-reference"))
 
@@ -31623,7 +31985,7 @@ def _e7abi_self_test():
         "do_pk8pkey(bp, x, 0, -1, enc, kstr, klen, cb, u, ptr::null())",
         "do_pk8pkey(bp, x, 0, -1, enc, kstr, klen, u, u, ptr::null())")
     p.write_text(text)
-    cases.append(("PEM forwarded non-cb", d, 0x4AD30C,
+    cases.append(("PEM forwarded non-cb", d, 0x384BBC,
                   "e7abi-forward-binding",
                   "callback-chain-forwarded-argument-is-not-the-cb-parameter"))
 
@@ -31680,24 +32042,24 @@ def _pbe_outparam_self_test():
                 "arg_deps": set(), "arg_targets": set()}
 
     # (site -> containing symbol, offset) and target symbols for this exact
-    # artefact (libcrypto.so.3 sha256
-    # e8a90ba4bd1e597ed22adbfef56c7336b80a65477393ba5a74afbbe428b985cb).
+    # artefact (the admitted candidate's digest is recorded in the re-pin
+    # record and in the closure receipt).
     # Site 2's offset is 0x208 in this build: the previous fixture recorded
     # 0x1C2 for an older image whose inlined cipher-fetch region differed, so
     # the pin records the window-verified offset for the current candidate.  A
     # literal that stops matching its pin is reported, never silently accepted.
     site_pins = {
-        0x17B1F5: ("EVP_PBE_CipherInit_ex", 0x415),
-        0x17CEE8: ("PKCS5_v2_PBE_keyivgen_ex", 0x208),
+        0x541EA5: ("EVP_PBE_CipherInit_ex", 0x415),
+        0x544D28: ("PKCS5_v2_PBE_keyivgen_ex", 0x208),
     }
     target_pins = {
-        0x542380: ("PKCS12_PBE_keyivgen_ex", 0),
-        0x17CCE0: ("PKCS5_v2_PBE_keyivgen_ex", 0),
-        0x194FE0: ("PKCS5_v2_PBKDF2_keyivgen_ex", 0),
-        0x31E7E0: ("PKCS5_PBE_keyivgen_ex", 0),
-        0x1B93D0: ("PKCS5_v2_scrypt_keyivgen_ex", 0),
+        0x1E1830: ("PKCS12_PBE_keyivgen_ex", 0),
+        0x544B20: ("PKCS5_v2_PBE_keyivgen_ex", 0),
+        0x55F050: ("openssl_rs::evp::p5_crpt2::PKCS5_v2_PBKDF2_keyivgen_ex", 0),
+        0x23C5A0: ("PKCS5_PBE_keyivgen_ex", 0),
+        0x364800: ("PKCS5_v2_scrypt_keyivgen_ex", 0),
     }
-    site_func = {0x17B1F5: 0x17ADE0, 0x17CEE8: 0x17CCE0}
+    site_func = {0x541EA5: 0x541A90, 0x544D28: 0x544B20}
     for addr, func in site_func.items():
         pin = site_pins[addr]
         names = getattr(g, "names_at", {}).get(func) or {g.funcs.get(func, "")}
@@ -31720,7 +32082,7 @@ def _pbe_outparam_self_test():
         # is off by the same drift.  Report that fact and stop, instead of
         # raising KeyError from the first window lookup.  This is a *failure*,
         # never a skip: the PBE refusal controls did not run.
-        pinned_sha = "e8a90ba4bd1e597ed22adbfef56c7336b80a65477393ba5a74afbbe428b985cb"
+        pinned_sha = "8f18871713a80cc58babcd2f539f273fe9a88807acfa15bb165fb4c8fc1f4aef"
         observed_sha = sha256_file(dso)
         failures.append(
             "e7pbe controls: the fixture pins are stale for this candidate "
@@ -31798,10 +32160,10 @@ def _pbe_outparam_self_test():
                 out.append((r[0], r[1], r[2], r[3], value))
         return out
 
-    w1 = wit(0x17B1F5)
-    w2 = wit(0x17CEE8)
-    want1 = ["0x17cce0", "0x194fe0", "0x1b93d0", "0x31e7e0", "0x542380"]
-    want2 = ["0x194fe0", "0x1b93d0"]
+    w1 = wit(0x541EA5)
+    w2 = wit(0x544D28)
+    want1 = ["0x1e1830", "0x23c5a0", "0x364800", "0x544b20", "0x55f050"]
+    want2 = ["0x364800", "0x55f050"]
     chk("e7pbe site 1 resolved", (w1 or {}).get("resolved"), True)
     chk("e7pbe site 1 targets", (w1 or {}).get("targets"), want1)
     chk("e7pbe site 2 resolved", (w2 or {}).get("resolved"), True)
@@ -31828,28 +32190,28 @@ def _pbe_outparam_self_test():
     # Wrong callee: the GOT relocation names another in-image function while
     # the disassembly annotation still names EVP_PBE_find_ex.
     # The GOT slot is pinned by its relocation symbol (EVP_PBE_find_ex); the
-    # 0x896b80 literal is the slot the candidate's site-1 load names.
+    # 0x89db78 literal is the slot the candidate's site-1 load names.
     wrong = _PbeProxy(g, relocs=_relocs_with_symbol(
-        0x896B80, "EVP_PBE_alg_add_type@@OPENSSL_3.0.0", 0x17B610))
-    rec = wit(0x17B1F5, graph=wrong)
+        0x89DB78, "EVP_PBE_alg_add_type@@OPENSSL_3.0.0", 0x5422C0))
+    rec = wit(0x541EA5, graph=wrong)
     chk("e7pbe wrong callee refusal", (rec or {}).get("refusal"),
         "pbe-find-ex-callee-is-not-the-documented-symbol")
-    acc = _mut("e7pbe-outparam-callee", lambda: wit(0x17B1F5, graph=wrong))
+    acc = _mut("e7pbe-outparam-callee", lambda: wit(0x541EA5, graph=wrong))
     chk("e7pbe wrong callee control is load-bearing",
         (acc or {}).get("resolved"), True)
-    chk("e7pbe wrong callee restored", (wit(0x17B1F5) or {}).get("targets"),
+    chk("e7pbe wrong callee restored", (wit(0x541EA5) or {}).get("targets"),
         want1)
 
     # Wrong argument index: the same slot escapes in %r8 (the plain keygen
     # argument) instead of %r9 (pkeygen_ex).
-    arg_insns = _replace_insn(_insns_copy(0x17ADE0), 0x17AE55,
+    arg_insns = _replace_insn(_insns_copy(0x541A90), 0x541B05,
                               "lea    0xa0(%rsp),%r8")
-    wrong_arg = _PbeProxy(g, precision=_PbePrecision({0x17ADE0: arg_insns}))
-    rec = wit(0x17B1F5, graph=wrong_arg)
+    wrong_arg = _PbeProxy(g, precision=_PbePrecision({0x541A90: arg_insns}))
+    rec = wit(0x541EA5, graph=wrong_arg)
     chk("e7pbe wrong argument refusal", (rec or {}).get("refusal"),
         "escaped-slot-is-not-the-pkeygen-ex-argument")
     acc = _mut("e7pbe-outparam-arg-index",
-               lambda: wit(0x17B1F5, graph=wrong_arg))
+               lambda: wit(0x541EA5, graph=wrong_arg))
     chk("e7pbe wrong argument control is load-bearing",
         (acc or {}).get("resolved"), True)
 
@@ -31867,108 +32229,108 @@ def _pbe_outparam_self_test():
             failures.append("e7pbe registry fixture: store not found")
         (fixture / PBE_SOURCE).write_text(mutated)
         bad_registry = _PbeProxy(g, source_root=str(fixture))
-        rec = wit(0x17B1F5, graph=bad_registry)
+        rec = wit(0x541EA5, graph=bad_registry)
         chk("e7pbe registry non-null refusal", (rec or {}).get("refusal"),
             "pbe-registry-writes-a-non-null-keygen-ex")
         acc = _mut("e7pbe-outparam-registry",
-                   lambda: wit(0x17B1F5, graph=bad_registry))
+                   lambda: wit(0x541EA5, graph=bad_registry))
         chk("e7pbe registry non-null control is load-bearing",
             (acc or {}).get("resolved"), True)
         chk("e7pbe registry non-null restored",
-            (wit(0x17B1F5) or {}).get("targets"), want1)
+            (wit(0x541EA5) or {}).get("targets"), want1)
     finally:
         shutil.rmtree(fixture, ignore_errors=True)
 
     # One selected row member is a data address, not a function start.
-    # 0x7BE4D0 is BUILTIN_PBE + 0x418 (row 32, member 0x18); 0x7BE0B8 is the
+    # 0x894990 is BUILTIN_PBE + 0x418 (row 32, member 0x18); 0x894578 is the
     # BUILTIN_PBE data object, which is not an in-image function start.
-    bad_row = _PbeProxy(g, relocs=_relocs_with_value(0x7BE4D0, 0x7BE0B8))
-    rec = wit(0x17CEE8, graph=bad_row)
+    bad_row = _PbeProxy(g, relocs=_relocs_with_value(0x894990, 0x894578))
+    rec = wit(0x544D28, graph=bad_row)
     chk("e7pbe row data target refusal", (rec or {}).get("refusal"),
         "row-member-not-a-function-start")
     acc = _mut("e7pbe-outparam-row-target",
-               lambda: wit(0x17CEE8, graph=bad_row))
+               lambda: wit(0x544D28, graph=bad_row))
     chk("e7pbe row data target control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe row data target restored",
-        (wit(0x17CEE8) or {}).get("targets"), want2)
+        (wit(0x544D28) or {}).get("targets"), want2)
 
     # A second writer of the same frame slot.
-    second_insns = _insert_insn(_insns_copy(0x17ADE0), 0x17AE28, 0x17AE2C,
+    second_insns = _insert_insn(_insns_copy(0x541A90), 0x541AD8, 0x541ADC,
                                 "movq   $0x0,0xa0(%rsp)")
-    second = _PbeProxy(g, precision=_PbePrecision({0x17ADE0: second_insns}))
-    rec = wit(0x17B1F5, graph=second)
+    second = _PbeProxy(g, precision=_PbePrecision({0x541A90: second_insns}))
+    rec = wit(0x541EA5, graph=second)
     chk("e7pbe second writer refusal", (rec or {}).get("refusal"),
         "slot-has-a-second-writer")
     acc = _mut("e7pbe-outparam-second-writer",
-               lambda: wit(0x17B1F5, graph=second))
+               lambda: wit(0x541EA5, graph=second))
     chk("e7pbe second writer control is load-bearing",
         (acc or {}).get("resolved"), True)
-    chk("e7pbe second writer restored", (wit(0x17B1F5) or {}).get("targets"),
+    chk("e7pbe second writer restored", (wit(0x541EA5) or {}).get("targets"),
         want1)
 
     # A 4-byte zero store leaves the upper half of the pointer slot stale.
-    zero_width_insns = _replace_insn(_insns_copy(0x17ADE0), 0x17AE28,
+    zero_width_insns = _replace_insn(_insns_copy(0x541A90), 0x541AD8,
                                      "movl   $0x0,0xa0(%rsp)")
     zero_width = _PbeProxy(
-        g, precision=_PbePrecision({0x17ADE0: zero_width_insns}))
-    rec = wit(0x17B1F5, graph=zero_width)
+        g, precision=_PbePrecision({0x541A90: zero_width_insns}))
+    rec = wit(0x541EA5, graph=zero_width)
     chk("e7pbe zero store width refusal", (rec or {}).get("refusal"),
         "slot-width-is-not-64-bit")
     acc = _mut("e7pbe-outparam-zero-width",
-               lambda: wit(0x17B1F5, graph=zero_width))
+               lambda: wit(0x541EA5, graph=zero_width))
     chk("e7pbe zero store width control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe zero store width restored",
-        (wit(0x17B1F5) or {}).get("targets"), want1)
+        (wit(0x541EA5) or {}).get("targets"), want1)
 
     # A 4-byte reload truncates the pointer in the call-target register.
-    reload_width_insns = _replace_insn(_insns_copy(0x17ADE0), 0x17AF2B,
+    reload_width_insns = _replace_insn(_insns_copy(0x541A90), 0x541BDB,
                                        "mov    0xa0(%rsp),%eax")
     reload_width = _PbeProxy(
-        g, precision=_PbePrecision({0x17ADE0: reload_width_insns}))
-    rec = wit(0x17B1F5, graph=reload_width)
+        g, precision=_PbePrecision({0x541A90: reload_width_insns}))
+    rec = wit(0x541EA5, graph=reload_width)
     chk("e7pbe reload width refusal", (rec or {}).get("refusal"),
         "slot-width-is-not-64-bit")
     acc = _mut("e7pbe-outparam-reload-width",
-               lambda: wit(0x17B1F5, graph=reload_width))
+               lambda: wit(0x541EA5, graph=reload_width))
     chk("e7pbe reload width control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe reload width restored",
-        (wit(0x17B1F5) or {}).get("targets"), want1)
+        (wit(0x541EA5) or {}).get("targets"), want1)
 
     # A partial 4-byte write at slot+4 leaves the upper half of the pointer
     # stale even though the exact-offset scan sees only the zero store.
-    overlap_insns = _insert_insn(_insns_copy(0x17ADE0), 0x17AE28, 0x17AE2C,
+    overlap_insns = _insert_insn(_insns_copy(0x541A90), 0x541AD8, 0x541ADC,
                                  "movl   $0xdead,0xa4(%rsp)")
     overlap = _PbeProxy(
-        g, precision=_PbePrecision({0x17ADE0: overlap_insns}))
-    rec = wit(0x17B1F5, graph=overlap)
+        g, precision=_PbePrecision({0x541A90: overlap_insns}))
+    rec = wit(0x541EA5, graph=overlap)
     chk("e7pbe overlap store refusal", (rec or {}).get("refusal"),
         "slot-overlap-store")
     acc = _mut("e7pbe-outparam-overlap",
-               lambda: wit(0x17B1F5, graph=overlap))
+               lambda: wit(0x541EA5, graph=overlap))
     chk("e7pbe overlap store control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe overlap store restored",
-        (wit(0x17B1F5) or {}).get("targets"), want1)
+        (wit(0x541EA5) or {}).get("targets"), want1)
 
     # The GOT binding is not in this image.
     dyn = dict(g.dynamic_defs)
     dyn.pop("EVP_PBE_find_ex", None)
     bad_got = _PbeProxy(g, dynamic_defs=dyn)
-    rec = wit(0x17B1F5, graph=bad_got)
+    rec = wit(0x541EA5, graph=bad_got)
     chk("e7pbe got not in image refusal", (rec or {}).get("refusal"),
         "pbe-find-ex-callee-is-not-in-image")
     acc = _mut("e7pbe-outparam-got-not-in-image",
-               lambda: wit(0x17B1F5, graph=bad_got))
+               lambda: wit(0x541EA5, graph=bad_got))
     chk("e7pbe got not in image control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe got not in image restored",
-        (wit(0x17B1F5) or {}).get("targets"), want1)
+        (wit(0x541EA5) or {}).get("targets"), want1)
 
     # The site-2 KDF selection is load-bearing: all rows gives 5, not 2.
-    all_rows = _mut("e7pbe-outparam-all-rows", lambda: wit(0x17CEE8))
+    all_rows = _mut("e7pbe-outparam-all-rows", lambda: wit(0x544D28))
     chk("e7pbe site 2 all-row control count",
         len((all_rows or {}).get("targets") or []), 5)
     chk("e7pbe site 2 all-row control set",
@@ -31981,14 +32343,14 @@ def _pbe_outparam_self_test():
     # their contract class and unbounded target set; the new witness does not
     # absorb any of them.
     abi_specs = (
-        (0x17AF7D, 0x17ADE0, "call   *%rax", ABI_CONTRACT_PBE_REGISTRY),
-        (0x1F89E8, 0x1F8550, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
-        (0x1F8AA1, 0x1F8550, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
+        (0x541C2D, 0x541A90, "call   *%rax", ABI_CONTRACT_PBE_REGISTRY),
+        (0x455C88, 0x455800, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
+        (0x455D7D, 0x455800, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
         (0x1F8F13, 0x1F8550, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
         (0x1F8D29, 0x1F8550, "call   *%rax", ABI_CONTRACT_PROVIDER),
-        (0x293F25, 0x293A20, "call   *%r15", ABI_CONTRACT_CONF_MODULE),
-        (0x294363, 0x293A20, "call   *%rax", ABI_CONTRACT_CONF_MODULE),
-        (0x4AD30C, 0x4AD070, "call   *%rbx",
+        (0x22CB65, 0x22C660, "call   *%r15", ABI_CONTRACT_CONF_MODULE),
+        (0x22CFA3, 0x22C660, "call   *%rax", ABI_CONTRACT_CONF_MODULE),
+        (0x384BBC, 0x384920, "call   *%rbx",
          ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT),
     )
     for addr, func, text, cls in abi_specs:
@@ -32054,6 +32416,40 @@ CORE_DISPATCH_EXPECTED = {
     "bio_core_read_ex": 1,
     "bio_core_write_ex": 1,
 }
+
+
+def _e7repin_self_test():
+    """Controls for the (symbol leaf, offset) re-pin rule.
+
+    The positive case is that every pinned row of the enumerated tables still
+    re-derives in the admitted install; the negative cases perturb one pin
+    condition at a time (unknown leaf, non-call offset, non-call instruction)
+    and the moved-row case checks that no address is accepted by two rows.
+    """
+    root = Path(__file__).resolve().parents[2]
+    dso = root / "artifacts/phase2/install/lib/libcrypto.so.3"
+    if not dso.is_file():
+        return [], "e7repin controls: skipped (candidate absent)"
+    workdir = root / "court/tmp/e7repin-selftest-work"
+    workdir.mkdir(parents=True, exist_ok=True)
+    try:
+        g = DsoGraph(dso, workdir)
+    except Exception as e:  # noqa: BLE001 -- a missing tool is a skip, not a fail
+        return [], f"e7repin controls: skipped (graph unavailable: {e})"
+    g.source_root = str(root)
+    g.install_prefix = str(root / "artifacts/phase2/install")
+    g.precision = PrecisionResolver(g)
+    failures = list(e7repin_controls(g))
+    refused = 0
+    for name, pin_name in _PIN_TABLE_OF.items():
+        for old, pin in globals()[pin_name].items():
+            if _pin_site_addr(g, pin) is None:
+                refused += 1
+    return failures, (
+        "e7repin controls: every pinned row re-derives or is refused by name; "
+        "unknown-leaf, non-call-offset and non-call-instruction mutations each "
+        "refuse; no moved row is accepted by two rows "
+        f"({refused} pin(s) refused in this image)")
 
 
 def _e7core_self_test():
@@ -32399,8 +32795,10 @@ def _e7core_self_test():
              (None, None, {}))[1] is not None, True)
 
     return failures, (
-        "e7core controls: 26 cohort sites across 24 functions resolve to "
-        "ABI_CONTRACT_CORE_DISPATCH; two further unreachable sites carry the "
+        "e7core controls: the recorded cohort is 26 sites across 24 functions; "
+        "this image resolves 25 of them (ossl_provider_up_ref_parent changed "
+        "shape and is refused by name, which the count fixtures report as a "
+        "failure, not a skip); two further unreachable sites carry the "
         "same class; offset, libctx-index, writer-id, second-source-store, "
         "header-id and NULL-guard mutations each refuse and are restored; "
         "the provider-init rule refuses a store-offset and an extra-writer "
@@ -37212,6 +37610,10 @@ def self_test() -> int:
     failures.extend(_e7abi_failures)
     print(f"[consumer-closure] {_e7abi_line}")
 
+    _e7repin_failures, _e7repin_line = _e7repin_self_test()
+    failures.extend(_e7repin_failures)
+    print(f"[consumer-closure] {_e7repin_line}")
+
     _e7pbe_failures, _e7pbe_line = _pbe_outparam_self_test()
     failures.extend(_e7pbe_failures)
     print(f"[consumer-closure] {_e7pbe_line}")
@@ -37320,6 +37722,11 @@ def main(argv=None) -> int:
     ap.add_argument("--workdir", default="court/tmp/v4-consumer-closure")
     ap.add_argument("--skip-graph-on-refusal", action="store_true",
                     help="stop after identity/import refusals; used for negative controls")
+    ap.add_argument("--element7-only", action="store_true",
+                    help="FAST path: run only the resolver, the evidence classes and "
+                         "the reachability closure, then report the element-7 "
+                         "predicate.  Skips the edge-record, obligation and "
+                         "discharge stages, so the output is NOT a closure receipt")
     ap.add_argument("--output")
     ap.add_argument("--edge-records",
                     help="explicit JSONL sidecar path; the default is "
@@ -37375,6 +37782,22 @@ def main(argv=None) -> int:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(receipt, indent=2) + "\n")
         print(f"[consumer-closure] wrote {out}")
+    if receipt.get("mode") == "element7-only":
+        p = receipt["precision"]
+        e7 = p["predicate_element_7"]
+        print(f"[consumer-closure] element7-only family={receipt['family']} "
+              f"status={e7['status']}")
+        print(f"  reachable_unresolved={e7['reachable_unresolved_sites']} "
+              f"target_bounded={e7['target_bounded_unresolved_sites']} "
+              f"contract_bounded={e7['contract_bounded_sites']} "
+              f"unclassified={e7['unclassified_reachable_sites']}")
+        print(f"  by_class={e7['contract_bounded_by_class']}")
+        for r in p["residual_sites"]:
+            if r["class"] not in ABI_CONTRACT_CLASSES:
+                print(f"  TARGET-BOUNDED {r['call_site']} "
+                      f"{r.get('function_name', '?')} reason={r['reason']}")
+        print("  NOTE: element7-only is a FAST probe, not a closure receipt")
+        return 0 if e7["established"] else 1
     if args.summary or not args.output:
         c = receipt["counts"]
         print(f"[consumer-closure] family={receipt['family']} "

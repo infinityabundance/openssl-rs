@@ -1,0 +1,2880 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/e7-rederive/v1",
+ "run_id": "76dac272ec5a486e91d9e5adb5523582",
+ "generated_utc": "2026-11-13T14:21:19Z",
+ "wall_seconds": 210.9,
+ "image": {
+  "path": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+  "sha256": "8f18871713a80cc58babcd2f539f273fe9a88807acfa15bb165fb4c8fc1f4aef",
+  "size": 16894632
+ },
+ "symbol_table": {
+  "readelf_tables": [
+   ".dynsym",
+   ".symtab"
+  ],
+  "readelf_func_symbols": 23854,
+  "readelf_func_starts": 16388,
+  "nm_func_starts": 16388,
+  "cross_check": "agree",
+  "used": ".symtab (single name per address from readelf -sW; nm cross-checked the function-start set)",
+  "note": "readelf -sW reports both .dynsym and .symtab; .symtab carries the local Rust symbols the pins name"
+ },
+ "b73_source": {
+  "git_ref": "HEAD",
+  "tool_blob_sha256": "2da749e1ed68df19127b98c11cccbbbe0cd19aff6c8ebaa6ca5cd63b65472496",
+  "repin_record": {
+   "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/element7-b73-repin2.json",
+   "sha256": "ca71e2dd60cdf8664aa1ab7a74514f369b6b62f17349ba1d3a19ed3110162ce8"
+  },
+  "row_count": 38,
+  "fixture_pin_count": 15
+ },
+ "closure": {
+  "path": "evidence/closure-ssh-b76b.json",
+  "artifact_sha256": "0384f983b392b450a135b960c7b8f991636d509bf9ef5ff841e3d3b7367545d4",
+  "target_bounded_sites": 48
+ },
+ "sites": [
+  {
+   "call_site": "0x16eac4",
+   "function": "0x16ea60",
+   "function_name": "OPENSSL_cleanup",
+   "offset": "0x64",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *(%rbx)",
+   "instruction_bytes": [
+    "ff",
+    "13"
+   ],
+   "b73_row": {
+    "pin": [
+     "OPENSSL_cleanup",
+     "0x64"
+    ],
+    "class": "ABI_CONTRACT_REGISTRATION_ATEXIT",
+    "literal": "0x2d9c94",
+    "instruction_bytes": "ff 13"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "registration-atexit",
+    "class": "ABI_CONTRACT_REGISTRATION_ATEXIT",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "OpenSslInitStop.handler (offset 0) -- the node field `OPENSSL_atexit` writes and the `OPENSSL_cleanup` dispatch reads",
+    "targets": null,
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "OPENSSL_cleanup",
+      "0x64"
+     ],
+     "class": "ABI_CONTRACT_REGISTRATION_ATEXIT"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the registration-atexit witness accepts it"
+  },
+  {
+   "call_site": "0x1edf6e",
+   "function": "0x1edee0",
+   "function_name": "ossl_slh_ht_sign",
+   "offset": "0x8e",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x48(%rdx)",
+   "instruction_bytes": [
+    "ff",
+    "52",
+    "48"
+   ],
+   "b73_row": {
+    "pin": [
+     "ossl_slh_ht_sign",
+     "0x8e"
+    ],
+    "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+    "literal": "0x3d192e",
+    "instruction_bytes": "ff 52 48"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "slh",
+    "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "SlhDsaKey.adrs_func@0xa8 -> ossl_slh_get_adrs_fn METHODS[0..1][0x48]",
+    "targets": [
+     "0x3fd720",
+     "0x3fd740"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "ossl_slh_ht_sign",
+      "0x8e"
+     ],
+     "class": "ABI_CONTRACT_SLH_METHOD_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the slh witness accepts it"
+  },
+  {
+   "call_site": "0x1ee319",
+   "function": "0x1ee290",
+   "function_name": "ossl_slh_ht_verify",
+   "offset": "0x89",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x48(%rdx)",
+   "instruction_bytes": [
+    "ff",
+    "52",
+    "48"
+   ],
+   "b73_row": {
+    "pin": [
+     "ossl_slh_ht_verify",
+     "0x89"
+    ],
+    "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+    "literal": "0x3d1cd9",
+    "instruction_bytes": "ff 52 48"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "slh",
+    "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "SlhDsaKey.adrs_func@0xa8 -> ossl_slh_get_adrs_fn METHODS[0..1][0x48]",
+    "targets": [
+     "0x3fd720",
+     "0x3fd740"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "ossl_slh_ht_verify",
+      "0x89"
+     ],
+     "class": "ABI_CONTRACT_SLH_METHOD_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the slh witness accepts it"
+  },
+  {
+   "call_site": "0x22cb65",
+   "function": "0x22c660",
+   "function_name": "CONF_modules_load",
+   "offset": "0x505",
+   "reason": "reg-top",
+   "class": "materialised",
+   "text": "call   *%r15",
+   "instruction_bytes": [
+    "41",
+    "ff",
+    "d7"
+   ],
+   "b73_row": {
+    "pin": [
+     "CONF_modules_load",
+     "0x505"
+    ],
+    "class": "E7_ABI_FIXTURE",
+    "literal": "0x293f25",
+    "instruction_bytes": null
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "external-abi",
+    "class": "ABI_CONTRACT_CONF_MODULE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ConfModule.init (offset 0x10)",
+    "targets": [],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "CONF_modules_load",
+      "0x505"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    },
+    {
+     "pin": [
+      "CONF_modules_load",
+      "0x943"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the external-abi witness accepts it"
+  },
+  {
+   "call_site": "0x22cfa3",
+   "function": "0x22c660",
+   "function_name": "CONF_modules_load",
+   "offset": "0x943",
+   "reason": "reg-top",
+   "class": "materialised",
+   "text": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "b73_row": {
+    "pin": [
+     "CONF_modules_load",
+     "0x943"
+    ],
+    "class": "E7_ABI_FIXTURE",
+    "literal": "0x294363",
+    "instruction_bytes": null
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "external-abi",
+    "class": "ABI_CONTRACT_CONF_MODULE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ConfModule.finish (offset 0x18)",
+    "targets": [],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "CONF_modules_load",
+      "0x505"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    },
+    {
+     "pin": [
+      "CONF_modules_load",
+      "0x943"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the external-abi witness accepts it"
+  },
+  {
+   "call_site": "0x28c7a1",
+   "function": "0x28c740",
+   "function_name": "aes_ecb_cipher",
+   "offset": "0x61",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x0(%rbp)",
+   "instruction_bytes": [
+    "ff",
+    "55",
+    "00"
+   ],
+   "b73_row": {
+    "pin": [
+     "aes_ecb_cipher",
+     "0x61"
+    ],
+    "class": "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA",
+    "literal": "0x32b741",
+    "instruction_bytes": "ff 55 00"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "legacy-evp",
+    "class": "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "EvpAesKey.block@0x0 stored by aes_init_key over 3 image store(s)",
+    "targets": [
+     "0x28e9e0",
+     "0x28e9f0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "aes_ecb_cipher",
+      "0x61"
+     ],
+     "class": "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the legacy-evp witness accepts it"
+  },
+  {
+   "call_site": "0x384bbc",
+   "function": "0x384920",
+   "function_name": "do_pk8pkey",
+   "offset": "0x29c",
+   "reason": "reg-top",
+   "class": "materialised",
+   "text": "call   *%rbx",
+   "instruction_bytes": [
+    "ff",
+    "d3"
+   ],
+   "b73_row": {
+    "pin": [
+     "openssl_rs::pem::pem_pk8::do_pk8pkey",
+     "0x29c"
+    ],
+    "class": "E7_ABI_FIXTURE",
+    "literal": "0x4ad30c",
+    "instruction_bytes": null
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "external-abi",
+    "class": "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "do_pk8pkey's `cb` parameter (stack argument 7) and the NULL-selected PEM_def_callback default",
+    "targets": [],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "openssl_rs::pem::pem_pk8::do_pk8pkey",
+      "0x29c"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the external-abi witness accepts it"
+  },
+  {
+   "call_site": "0x389f67",
+   "function": "0x389ca0",
+   "function_name": "slh_fors_node",
+   "offset": "0x2c7",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x50(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "50"
+   ],
+   "b73_row": {
+    "pin": [
+     "slh_fors_node",
+     "0x2c7"
+    ],
+    "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+    "literal": "0x4b2737",
+    "instruction_bytes": "ff 50 50"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "slh",
+    "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "SlhDsaKey.adrs_func@0xa8 -> ossl_slh_get_adrs_fn METHODS[0..1][0x50]",
+    "targets": [
+     "0x3fd710",
+     "0x3fd730"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "slh_fors_node",
+      "0x2c7"
+     ],
+     "class": "ABI_CONTRACT_SLH_METHOD_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the slh witness accepts it"
+  },
+  {
+   "call_site": "0x38a23f",
+   "function": "0x38a090",
+   "function_name": "ossl_slh_fors_sign",
+   "offset": "0x1af",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x50(%rcx)",
+   "instruction_bytes": [
+    "ff",
+    "51",
+    "50"
+   ],
+   "b73_row": {
+    "pin": [
+     "ossl_slh_fors_sign",
+     "0x1af"
+    ],
+    "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+    "literal": "0x4b2a0f",
+    "instruction_bytes": "ff 51 50"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "slh",
+    "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "SlhDsaKey.adrs_func@0xa8 -> ossl_slh_get_adrs_fn METHODS[0..1][0x50]",
+    "targets": [
+     "0x3fd710",
+     "0x3fd730"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "ossl_slh_fors_sign",
+      "0x1af"
+     ],
+     "class": "ABI_CONTRACT_SLH_METHOD_TABLE"
+    },
+    {
+     "pin": [
+      "ossl_slh_fors_sign",
+      "0x431"
+     ],
+     "class": "ABI_CONTRACT_SLH_METHOD_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the slh witness accepts it"
+  },
+  {
+   "call_site": "0x38a4c1",
+   "function": "0x38a090",
+   "function_name": "ossl_slh_fors_sign",
+   "offset": "0x431",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x50(%rcx)",
+   "instruction_bytes": [
+    "ff",
+    "51",
+    "50"
+   ],
+   "b73_row": {
+    "pin": [
+     "ossl_slh_fors_sign",
+     "0x431"
+    ],
+    "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+    "literal": "0x4b2c91",
+    "instruction_bytes": "ff 51 50"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "slh",
+    "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "SlhDsaKey.adrs_func@0xa8 -> ossl_slh_get_adrs_fn METHODS[0..1][0x50]",
+    "targets": [
+     "0x3fd710",
+     "0x3fd730"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "ossl_slh_fors_sign",
+      "0x1af"
+     ],
+     "class": "ABI_CONTRACT_SLH_METHOD_TABLE"
+    },
+    {
+     "pin": [
+      "ossl_slh_fors_sign",
+      "0x431"
+     ],
+     "class": "ABI_CONTRACT_SLH_METHOD_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the slh witness accepts it"
+  },
+  {
+   "call_site": "0x38abad",
+   "function": "0x38a690",
+   "function_name": "ossl_slh_fors_pk_from_sig",
+   "offset": "0x51d",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x28(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "28"
+   ],
+   "b73_row": {
+    "pin": [
+     "ossl_slh_fors_pk_from_sig",
+     "0x51d"
+    ],
+    "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+    "literal": "0x4b337d",
+    "instruction_bytes": "ff 50 28"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "slh",
+    "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "SlhDsaKey.hash_func@0xb0 -> ossl_slh_get_hash_fn METHODS[0..1][0x28]",
+    "targets": [
+     "0x477d10",
+     "0x477dd0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "ossl_slh_fors_pk_from_sig",
+      "0x51d"
+     ],
+     "class": "ABI_CONTRACT_SLH_METHOD_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the slh witness accepts it"
+  },
+  {
+   "call_site": "0x41cf1e",
+   "function": "0x41cf00",
+   "function_name": "ossl_gcm_one_shot",
+   "offset": "0x1e",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x10(%r13)",
+   "instruction_bytes": [
+    "41",
+    "ff",
+    "55",
+    "10"
+   ],
+   "b73_row": {
+    "pin": [
+     "ossl_gcm_one_shot",
+     "0x1e"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x39453e",
+    "instruction_bytes": "41 ff 55 10"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvGcmHw.aadupdate@0x10 over 3 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x41d3f0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "ossl_gcm_one_shot",
+      "0x1e"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    },
+    {
+     "pin": [
+      "ossl_gcm_one_shot",
+      "0x34"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    },
+    {
+     "pin": [
+      "ossl_gcm_one_shot",
+      "0x4c"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x41cf34",
+   "function": "0x41cf00",
+   "function_name": "ossl_gcm_one_shot",
+   "offset": "0x34",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x18(%r13)",
+   "instruction_bytes": [
+    "41",
+    "ff",
+    "55",
+    "18"
+   ],
+   "b73_row": {
+    "pin": [
+     "ossl_gcm_one_shot",
+     "0x34"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x394554",
+    "instruction_bytes": "41 ff 55 18"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvGcmHw.cipherupdate@0x18 over 3 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x41d520",
+     "0x41d5c0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "ossl_gcm_one_shot",
+      "0x1e"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    },
+    {
+     "pin": [
+      "ossl_gcm_one_shot",
+      "0x34"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    },
+    {
+     "pin": [
+      "ossl_gcm_one_shot",
+      "0x4c"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x41cf4c",
+   "function": "0x41cf00",
+   "function_name": "ossl_gcm_one_shot",
+   "offset": "0x4c",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x20(%r13)",
+   "instruction_bytes": [
+    "41",
+    "ff",
+    "55",
+    "20"
+   ],
+   "b73_row": {
+    "pin": [
+     "ossl_gcm_one_shot",
+     "0x4c"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x39456c",
+    "instruction_bytes": "41 ff 55 20"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvGcmHw.cipherfinal@0x20 over 3 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x41d470"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "ossl_gcm_one_shot",
+      "0x1e"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    },
+    {
+     "pin": [
+      "ossl_gcm_one_shot",
+      "0x34"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    },
+    {
+     "pin": [
+      "ossl_gcm_one_shot",
+      "0x4c"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x41f72b",
+   "function": "0x41f680",
+   "function_name": "aes_ocb_dinit",
+   "offset": "0xab",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "10"
+   ],
+   "b73_row": {
+    "pin": [
+     "aes_ocb_dinit",
+     "0xab"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x396e4b",
+    "instruction_bytes": "ff 10"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHw.init@0x0 over 1 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x430b40"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "aes_ocb_dinit",
+      "0xab"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x41f82e",
+   "function": "0x41f780",
+   "function_name": "aes_ocb_einit",
+   "offset": "0xae",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "10"
+   ],
+   "b73_row": {
+    "pin": [
+     "aes_ocb_einit",
+     "0xae"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x396f4e",
+    "instruction_bytes": "ff 10"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHw.init@0x0 over 1 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x430b40"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "aes_ocb_einit",
+      "0xae"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x41fc7f",
+   "function": "0x41fc00",
+   "function_name": "sm4_xts_dinit",
+   "offset": "0x7f",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "10"
+   ],
+   "b73_row": {
+    "pin": [
+     "sm4_xts_dinit",
+     "0x7f"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x39739f",
+    "instruction_bytes": "ff 10"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHw.init@0x0 over 1 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x4311b0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "sm4_xts_dinit",
+      "0x7f"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x41fd52",
+   "function": "0x41fcd0",
+   "function_name": "sm4_xts_einit",
+   "offset": "0x82",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "10"
+   ],
+   "b73_row": {
+    "pin": [
+     "sm4_xts_einit",
+     "0x82"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x397472",
+    "instruction_bytes": "ff 10"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHw.init@0x0 over 1 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x4311b0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "sm4_xts_einit",
+      "0x82"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x420d22",
+   "function": "0x420d10",
+   "function_name": "aes_siv_freectx",
+   "offset": "0x12",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x20(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "20"
+   ],
+   "b73_row": {
+    "pin": [
+     "aes_siv_freectx",
+     "0x12"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x398442",
+    "instruction_bytes": "ff 50 20"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvSivHw.cleanup@0x20 over 1 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x420b50"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "aes_siv_freectx",
+      "0x12"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x4244bd",
+   "function": "0x4244a0",
+   "function_name": "cts128_cs2_decrypt",
+   "offset": "0x1d",
+   "reason": "static-instance-refused:ctx-not-proven-parameter",
+   "class": "field",
+   "text": "call   *0x8(%r8)",
+   "instruction_bytes": [
+    "41",
+    "ff",
+    "50",
+    "08"
+   ],
+   "b73_row": {
+    "pin": [
+     "cts128_cs2_decrypt",
+     "0x1d"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x39bb1d",
+    "instruction_bytes": "41 ff 50 08"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHw.cipher@0x8 over 2 closed-context table(s), closure entry-table-pairing",
+    "targets": [
+     "0x42ba00"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "cts128_cs2_decrypt",
+      "0x1d"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x42a030",
+   "function": "0x429f50",
+   "function_name": "chacha20_poly1305_initiv",
+   "offset": "0xe0",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x18(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "18"
+   ],
+   "b73_row": {
+    "pin": [
+     "chacha20_poly1305_initiv",
+     "0xe0"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x3a1650",
+    "instruction_bytes": "ff 50 18"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHwChacha20.initiv@0x18 over 1 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x421a70"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "chacha20_poly1305_initiv",
+      "0xe0"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x42a156",
+   "function": "0x42a120",
+   "function_name": "chacha20_poly1305_update",
+   "offset": "0x36",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x18(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "18"
+   ],
+   "b73_row": {
+    "pin": [
+     "chacha20_poly1305_update",
+     "0x36"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x3a1776",
+    "instruction_bytes": "ff 50 18"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHwChacha20Poly1305.aead_cipher@0x18 over 1 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x42ce70"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "chacha20_poly1305_update",
+      "0x36"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x42a2c8",
+   "function": "0x42a210",
+   "function_name": "ossl_aes_gcm_siv_freectx",
+   "offset": "0xb8",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x18(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "18"
+   ],
+   "b73_row": {
+    "pin": [
+     "ossl_aes_gcm_siv_freectx",
+     "0xb8"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x3a18e8",
+    "instruction_bytes": "ff 50 18"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHwAesGcmSiv.clean_ctx@0x18 over 1 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x4270f0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "ossl_aes_gcm_siv_freectx",
+      "0xb8"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x42ac29",
+   "function": "0x42aaf0",
+   "function_name": "chacha20_poly1305_initkey",
+   "offset": "0x139",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "10"
+   ],
+   "b73_row": {
+    "pin": [
+     "chacha20_poly1305_initkey",
+     "0x139"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x3a2249",
+    "instruction_bytes": "ff 10"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHwChacha20.base.init@0x0 over 1 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x422bd0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "chacha20_poly1305_initkey",
+      "0x139"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x42d5cf",
+   "function": "0x42ce70",
+   "function_name": "chacha20_poly1305_aead_cipher",
+   "offset": "0x75f",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x8(%rbx)",
+   "instruction_bytes": [
+    "ff",
+    "53",
+    "08"
+   ],
+   "b73_row": {
+    "pin": [
+     "chacha20_poly1305_aead_cipher",
+     "0x75f"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x3a4bef",
+    "instruction_bytes": "ff 53 08"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHwChacha20.base.cipher@0x8 over 1 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x4215c0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "chacha20_poly1305_aead_cipher",
+      "0x75f"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    },
+    {
+     "pin": [
+      "chacha20_poly1305_aead_cipher",
+      "0x911"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x42d781",
+   "function": "0x42ce70",
+   "function_name": "chacha20_poly1305_aead_cipher",
+   "offset": "0x911",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x8(%rbx)",
+   "instruction_bytes": [
+    "ff",
+    "53",
+    "08"
+   ],
+   "b73_row": {
+    "pin": [
+     "chacha20_poly1305_aead_cipher",
+     "0x911"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x3a4da1",
+    "instruction_bytes": "ff 53 08"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHwChacha20.base.cipher@0x8 over 1 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x4215c0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "chacha20_poly1305_aead_cipher",
+      "0x75f"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    },
+    {
+     "pin": [
+      "chacha20_poly1305_aead_cipher",
+      "0x911"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x42facf",
+   "function": "0x42fa60",
+   "function_name": "ossl_cipher_generic_block_final",
+   "offset": "0x6f",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x8(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "08"
+   ],
+   "b73_row": {
+    "pin": [
+     "ossl_cipher_generic_block_final",
+     "0x6f"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x3a70ef",
+    "instruction_bytes": "ff 50 08"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHw.cipher@0x8 over 25 closed-context table(s), closure entry-table-pairing",
+    "targets": [
+     "0x429970",
+     "0x429b40",
+     "0x42b890",
+     "0x42ba00",
+     "0x42bb10",
+     "0x439b70",
+     "0x43ac60",
+     "0x43ad60",
+     "0x43adf0",
+     "0x43aea0",
+     "0x43b160",
+     "0x43b210",
+     "0x43b2c0",
+     "0x43b3b0",
+     "0x43b4f0",
+     "0x43b5a0",
+     "0x43c040",
+     "0x43c0f0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "ossl_cipher_generic_block_final",
+      "0x6f"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    },
+    {
+     "pin": [
+      "ossl_cipher_generic_block_final",
+      "0x144"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x42fba4",
+   "function": "0x42fa60",
+   "function_name": "ossl_cipher_generic_block_final",
+   "offset": "0x144",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x8(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "08"
+   ],
+   "b73_row": {
+    "pin": [
+     "ossl_cipher_generic_block_final",
+     "0x144"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x3a71c4",
+    "instruction_bytes": "ff 50 08"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHw.cipher@0x8 over 25 closed-context table(s), closure entry-table-pairing",
+    "targets": [
+     "0x429970",
+     "0x429b40",
+     "0x42b890",
+     "0x42ba00",
+     "0x42bb10",
+     "0x439b70",
+     "0x43ac60",
+     "0x43ad60",
+     "0x43adf0",
+     "0x43aea0",
+     "0x43b160",
+     "0x43b210",
+     "0x43b2c0",
+     "0x43b3b0",
+     "0x43b4f0",
+     "0x43b5a0",
+     "0x43c040",
+     "0x43c0f0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "ossl_cipher_generic_block_final",
+      "0x6f"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    },
+    {
+     "pin": [
+      "ossl_cipher_generic_block_final",
+      "0x144"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x430347",
+   "function": "0x430050",
+   "function_name": "chacha20_poly1305_set_ctx_params",
+   "offset": "0x2f7",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x28(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "28"
+   ],
+   "b73_row": {
+    "pin": [
+     "chacha20_poly1305_set_ctx_params",
+     "0x2f7"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x3a7967",
+    "instruction_bytes": "ff 50 28"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHwChacha20Poly1305.tls_init@0x28 over 1 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x42a170"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "chacha20_poly1305_set_ctx_params",
+      "0x2f7"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    },
+    {
+     "pin": [
+      "chacha20_poly1305_set_ctx_params",
+      "0x338"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x430388",
+   "function": "0x430050",
+   "function_name": "chacha20_poly1305_set_ctx_params",
+   "offset": "0x338",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x30(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "30"
+   ],
+   "b73_row": {
+    "pin": [
+     "chacha20_poly1305_set_ctx_params",
+     "0x338"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x3a79a8",
+    "instruction_bytes": "ff 50 30"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHwChacha20Poly1305.tls_iv_set_fixed@0x30 over 1 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x4303e0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "chacha20_poly1305_set_ctx_params",
+      "0x2f7"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    },
+    {
+     "pin": [
+      "chacha20_poly1305_set_ctx_params",
+      "0x338"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x43067c",
+   "function": "0x430510",
+   "function_name": "ossl_cipher_generic_block_update",
+   "offset": "0x16c",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x8(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "08"
+   ],
+   "b73_row": {
+    "pin": [
+     "ossl_cipher_generic_block_update",
+     "0x16c"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x3a7c9c",
+    "instruction_bytes": "ff 50 08"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHw.cipher@0x8 over 25 closed-context table(s), closure entry-table-pairing",
+    "targets": [
+     "0x429970",
+     "0x429b40",
+     "0x42b890",
+     "0x42ba00",
+     "0x42bb10",
+     "0x439b70",
+     "0x43ac60",
+     "0x43ad60",
+     "0x43adf0",
+     "0x43aea0",
+     "0x43b160",
+     "0x43b210",
+     "0x43b2c0",
+     "0x43b3b0",
+     "0x43b4f0",
+     "0x43b5a0",
+     "0x43c040",
+     "0x43c0f0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "ossl_cipher_generic_block_update",
+      "0x16c"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    },
+    {
+     "pin": [
+      "ossl_cipher_generic_block_update",
+      "0x1bc"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x4306cc",
+   "function": "0x430510",
+   "function_name": "ossl_cipher_generic_block_update",
+   "offset": "0x1bc",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x8(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "08"
+   ],
+   "b73_row": {
+    "pin": [
+     "ossl_cipher_generic_block_update",
+     "0x1bc"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x3a7cec",
+    "instruction_bytes": "ff 50 08"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHw.cipher@0x8 over 25 closed-context table(s), closure entry-table-pairing",
+    "targets": [
+     "0x429970",
+     "0x429b40",
+     "0x42b890",
+     "0x42ba00",
+     "0x42bb10",
+     "0x439b70",
+     "0x43ac60",
+     "0x43ad60",
+     "0x43adf0",
+     "0x43aea0",
+     "0x43b160",
+     "0x43b210",
+     "0x43b2c0",
+     "0x43b3b0",
+     "0x43b4f0",
+     "0x43b5a0",
+     "0x43c040",
+     "0x43c0f0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "ossl_cipher_generic_block_update",
+      "0x16c"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    },
+    {
+     "pin": [
+      "ossl_cipher_generic_block_update",
+      "0x1bc"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x43bc90",
+   "function": "0x43bbb0",
+   "function_name": "rc4_hmac_md5_set_ctx_params",
+   "offset": "0xe0",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x18(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "18"
+   ],
+   "b73_row": {
+    "pin": [
+     "rc4_hmac_md5_set_ctx_params",
+     "0xe0"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x3b33f0",
+    "instruction_bytes": "ff 50 18"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHwRc4HmacMd5.tls_init@0x18 over 1 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x43cf20"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "rc4_hmac_md5_set_ctx_params",
+      "0xe0"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    },
+    {
+     "pin": [
+      "rc4_hmac_md5_set_ctx_params",
+      "0x127"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x43bcd7",
+   "function": "0x43bbb0",
+   "function_name": "rc4_hmac_md5_set_ctx_params",
+   "offset": "0x127",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *0x20(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "20"
+   ],
+   "b73_row": {
+    "pin": [
+     "rc4_hmac_md5_set_ctx_params",
+     "0x127"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x3b3437",
+    "instruction_bytes": "ff 50 20"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHwRc4HmacMd5.init_mackey@0x20 over 1 closed-context table(s), closure type-closure",
+    "targets": [
+     "0x43d000"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "rc4_hmac_md5_set_ctx_params",
+      "0xe0"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    },
+    {
+     "pin": [
+      "rc4_hmac_md5_set_ctx_params",
+      "0x127"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x43d412",
+   "function": "0x43d370",
+   "function_name": "des_dinit",
+   "offset": "0xa2",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "10"
+   ],
+   "b73_row": {
+    "pin": [
+     "des_dinit",
+     "0xa2"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x3b4b72",
+    "instruction_bytes": "ff 10"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHw.init@0x0 over 6 closed-context table(s), closure entry-table-pairing",
+    "targets": [
+     "0x43a660"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "des_dinit",
+      "0xa2"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x43d501",
+   "function": "0x43d460",
+   "function_name": "des_einit",
+   "offset": "0xa1",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "10"
+   ],
+   "b73_row": {
+    "pin": [
+     "des_einit",
+     "0xa1"
+    ],
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "literal": "0x3b4c61",
+    "instruction_bytes": "ff 10"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "provider-hw",
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "ProvCipherHw.init@0x0 over 6 closed-context table(s), closure entry-table-pairing",
+    "targets": [
+     "0x43a660"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "des_einit",
+      "0xa1"
+     ],
+     "class": "ABI_CONTRACT_PROVIDER_HW_TABLE"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the provider-hw witness accepts it"
+  },
+  {
+   "call_site": "0x455c88",
+   "function": "0x455800",
+   "function_name": "OSSL_STORE_open_ex",
+   "offset": "0x488",
+   "reason": "reg-top",
+   "class": "materialised",
+   "text": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "b73_row": null,
+   "derivation": "witness-proved-moved-row",
+   "witness": {
+    "rule": "external-abi",
+    "class": "ABI_CONTRACT_STORE_LOADER",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "OsslStoreLoader.open_ex (offset 0x58)",
+    "targets": [],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "OSSL_STORE_open_ex",
+      "0x498"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    },
+    {
+     "pin": [
+      "OSSL_STORE_open_ex",
+      "0x551"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    },
+    {
+     "pin": [
+      "OSSL_STORE_open_ex",
+      "0x9c3"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    },
+    {
+     "pin": [
+      "OSSL_STORE_open_ex",
+      "0x7d9"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "the witness accepts this address and no b73 row's offset does; the row moved inside its function and the correspondence is proved by the witness, not by the offset"
+  },
+  {
+   "call_site": "0x455d7d",
+   "function": "0x455800",
+   "function_name": "OSSL_STORE_open_ex",
+   "offset": "0x57d",
+   "reason": "reg-top",
+   "class": "materialised",
+   "text": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "b73_row": null,
+   "derivation": "witness-proved-moved-row",
+   "witness": {
+    "rule": "external-abi",
+    "class": "ABI_CONTRACT_STORE_LOADER",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "OsslStoreLoader.open (offset 0x10)",
+    "targets": [],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "OSSL_STORE_open_ex",
+      "0x498"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    },
+    {
+     "pin": [
+      "OSSL_STORE_open_ex",
+      "0x551"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    },
+    {
+     "pin": [
+      "OSSL_STORE_open_ex",
+      "0x9c3"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    },
+    {
+     "pin": [
+      "OSSL_STORE_open_ex",
+      "0x7d9"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "the witness accepts this address and no b73 row's offset does; the row moved inside its function and the correspondence is proved by the witness, not by the offset"
+  },
+  {
+   "call_site": "0x456007",
+   "function": "0x455800",
+   "function_name": "OSSL_STORE_open_ex",
+   "offset": "0x807",
+   "reason": "reg-top",
+   "class": "materialised",
+   "text": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "b73_row": null,
+   "derivation": "no-exact-pin",
+   "witness": null,
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "OSSL_STORE_open_ex",
+      "0x498"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    },
+    {
+     "pin": [
+      "OSSL_STORE_open_ex",
+      "0x551"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    },
+    {
+     "pin": [
+      "OSSL_STORE_open_ex",
+      "0x9c3"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    },
+    {
+     "pin": [
+      "OSSL_STORE_open_ex",
+      "0x7d9"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    }
+   ],
+   "classification": "SHAPE_MISMATCH",
+   "why": "the function has b73 rows but none of their offsets is this call and no witness accepts the address: the call moved inside the function and cannot be re-derived from its pin"
+  },
+  {
+   "call_site": "0x4561f3",
+   "function": "0x455800",
+   "function_name": "OSSL_STORE_open_ex",
+   "offset": "0x9f3",
+   "reason": "reg-top",
+   "class": "materialised",
+   "text": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "b73_row": null,
+   "derivation": "no-exact-pin",
+   "witness": null,
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "OSSL_STORE_open_ex",
+      "0x498"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    },
+    {
+     "pin": [
+      "OSSL_STORE_open_ex",
+      "0x551"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    },
+    {
+     "pin": [
+      "OSSL_STORE_open_ex",
+      "0x9c3"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    },
+    {
+     "pin": [
+      "OSSL_STORE_open_ex",
+      "0x7d9"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    }
+   ],
+   "classification": "SHAPE_MISMATCH",
+   "why": "the function has b73 rows but none of their offsets is this call and no witness accepts the address: the call moved inside the function and cannot be re-derived from its pin"
+  },
+  {
+   "call_site": "0x479c4d",
+   "function": "0x479600",
+   "function_name": "file_load",
+   "offset": "0x64d",
+   "reason": "reg-top",
+   "class": "materialised",
+   "text": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "b73_row": {
+    "pin": [
+     "file_load",
+     "0x64d"
+    ],
+    "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+    "literal": "0x24dfed",
+    "instruction_bytes": "ff d0"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "decoder",
+    "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "OsslDecoder.newctx@0x30 over 3 closed algorithm table(s)",
+    "targets": [
+     "0x4dc300"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "file_load",
+      "0x64d"
+     ],
+     "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT"
+    },
+    {
+     "pin": [
+      "file_load",
+      "0x6a6"
+     ],
+     "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT"
+    },
+    {
+     "pin": [
+      "file_load",
+      "0x6f0"
+     ],
+     "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the decoder witness accepts it"
+  },
+  {
+   "call_site": "0x479ca6",
+   "function": "0x479600",
+   "function_name": "file_load",
+   "offset": "0x6a6",
+   "reason": "reg-top",
+   "class": "materialised",
+   "text": "call   *%r12",
+   "instruction_bytes": [
+    "41",
+    "ff",
+    "d4"
+   ],
+   "b73_row": {
+    "pin": [
+     "file_load",
+     "0x6a6"
+    ],
+    "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+    "literal": "0x24e046",
+    "instruction_bytes": "41 ff d4"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "decoder",
+    "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "OsslDecoder.set_ctx_params@0x50 over 3 closed algorithm table(s)",
+    "targets": [
+     "0x4dccf0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "file_load",
+      "0x64d"
+     ],
+     "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT"
+    },
+    {
+     "pin": [
+      "file_load",
+      "0x6a6"
+     ],
+     "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT"
+    },
+    {
+     "pin": [
+      "file_load",
+      "0x6f0"
+     ],
+     "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the decoder witness accepts it"
+  },
+  {
+   "call_site": "0x479cf0",
+   "function": "0x479600",
+   "function_name": "file_load",
+   "offset": "0x6f0",
+   "reason": "reg-top",
+   "class": "materialised",
+   "text": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "b73_row": {
+    "pin": [
+     "file_load",
+     "0x6f0"
+    ],
+    "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+    "literal": "0x24e090",
+    "instruction_bytes": "ff d0"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "decoder",
+    "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "OsslDecoder.freectx@0x38 over 3 closed algorithm table(s)",
+    "targets": [
+     "0x4dc7c0"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "file_load",
+      "0x64d"
+     ],
+     "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT"
+    },
+    {
+     "pin": [
+      "file_load",
+      "0x6a6"
+     ],
+     "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT"
+    },
+    {
+     "pin": [
+      "file_load",
+      "0x6f0"
+     ],
+     "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the decoder witness accepts it"
+  },
+  {
+   "call_site": "0x47caaa",
+   "function": "0x47ca10",
+   "function_name": "ossl_provider_up_ref_parent",
+   "offset": "0x9a",
+   "reason": "reg-top",
+   "class": "materialised",
+   "text": "jmp    *%rcx",
+   "instruction_bytes": [
+    "ff",
+    "e1"
+   ],
+   "b73_row": null,
+   "derivation": "no-exact-pin",
+   "witness": null,
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [],
+   "classification": "NO_EQUIVALENT",
+   "why": "no b73 row names this function and no witness claims this site"
+  },
+  {
+   "call_site": "0x541c2d",
+   "function": "0x541a90",
+   "function_name": "EVP_PBE_CipherInit_ex",
+   "offset": "0x19d",
+   "reason": "reg-top",
+   "class": "materialised",
+   "text": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "b73_row": {
+    "pin": [
+     "EVP_PBE_CipherInit_ex",
+     "0x19d"
+    ],
+    "class": "E7_ABI_FIXTURE",
+    "literal": "0x17af7d",
+    "instruction_bytes": null
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "external-abi",
+    "class": "ABI_CONTRACT_PBE_REGISTRY",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "EvpPbeCtl.keygen (offset 0x10) copied through EVP_PBE_find_ex's `pkeygen` out-parameter",
+    "targets": [],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "EVP_PBE_CipherInit_ex",
+      "0x19d"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    },
+    {
+     "pin": [
+      "EVP_PBE_CipherInit_ex",
+      "0x415"
+     ],
+     "class": "HEAD:_pbe_outparam_self_test.site_pins"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the external-abi witness accepts it"
+  },
+  {
+   "call_site": "0x541ea5",
+   "function": "0x541a90",
+   "function_name": "EVP_PBE_CipherInit_ex",
+   "offset": "0x415",
+   "reason": "reg-top",
+   "class": "materialised",
+   "text": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "b73_row": {
+    "pin": [
+     "EVP_PBE_CipherInit_ex",
+     "0x415"
+    ],
+    "class": "E7_ABI_FIXTURE",
+    "literal": "0x17b1f5",
+    "instruction_bytes": null
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "pbe-outparam",
+    "class": "pbe-outparam-builtin-table",
+    "accepted": true,
+    "contract_bounded": false,
+    "slot": null,
+    "targets": [
+     "0x1e1830",
+     "0x23c5a0",
+     "0x364800",
+     "0x544b20",
+     "0x55f050"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "EVP_PBE_CipherInit_ex",
+      "0x19d"
+     ],
+     "class": "HEAD:_e7abi_self_test.site_pins"
+    },
+    {
+     "pin": [
+      "EVP_PBE_CipherInit_ex",
+      "0x415"
+     ],
+     "class": "HEAD:_pbe_outparam_self_test.site_pins"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the pbe-outparam witness accepts it"
+  },
+  {
+   "call_site": "0x544d28",
+   "function": "0x544b20",
+   "function_name": "PKCS5_v2_PBE_keyivgen_ex",
+   "offset": "0x208",
+   "reason": "reg-top",
+   "class": "materialised",
+   "text": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "b73_row": {
+    "pin": [
+     "PKCS5_v2_PBE_keyivgen_ex",
+     "0x208"
+    ],
+    "class": "E7_ABI_FIXTURE",
+    "literal": "0x17cee8",
+    "instruction_bytes": null
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "pbe-outparam",
+    "class": "pbe-outparam-builtin-table",
+    "accepted": true,
+    "contract_bounded": false,
+    "slot": null,
+    "targets": [
+     "0x364800",
+     "0x55f050"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "PKCS5_v2_PBE_keyivgen_ex",
+      "0x208"
+     ],
+     "class": "HEAD:_pbe_outparam_self_test.site_pins"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the pbe-outparam witness accepts it"
+  },
+  {
+   "call_site": "0x55e8b2",
+   "function": "0x55e820",
+   "function_name": "sm4_ecb_cipher",
+   "offset": "0x92",
+   "reason": "base-slot-partial",
+   "class": "field",
+   "text": "call   *(%r12)",
+   "instruction_bytes": [
+    "41",
+    "ff",
+    "14",
+    "24"
+   ],
+   "b73_row": {
+    "pin": [
+     "sm4_ecb_cipher",
+     "0x92"
+    ],
+    "class": "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA",
+    "literal": "0x382d72",
+    "instruction_bytes": "41 ff 14 24"
+   },
+   "derivation": "pin-exact",
+   "witness": {
+    "rule": "legacy-evp",
+    "class": "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA",
+    "accepted": true,
+    "contract_bounded": true,
+    "slot": "EvpSm4Key.block@0x0 stored by sm4_init_key over 1 image store(s)",
+    "targets": [
+     "0x55ea70",
+     "0x55ea80"
+    ],
+    "refusal": null
+   },
+   "targets_after": [],
+   "unresolved_after": true,
+   "b73_rows_in_function": [
+    {
+     "pin": [
+      "sm4_ecb_cipher",
+      "0x92"
+     ],
+     "class": "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA"
+    }
+   ],
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer and the legacy-evp witness accepts it"
+  }
+ ],
+ "fixtures": [
+  {
+   "source": "HEAD:_e7abi_self_test.site_pins",
+   "kind": "site",
+   "b73_literal": "0x17af7d",
+   "pin": [
+    "EVP_PBE_CipherInit_ex",
+    "0x19d"
+   ],
+   "new_address": "0x541c2d",
+   "symbol_tables": [],
+   "instruction": "call   *%rax",
+   "error": null,
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer"
+  },
+  {
+   "source": "HEAD:_e7abi_self_test.site_pins",
+   "kind": "site",
+   "b73_literal": "0x1f89e8",
+   "pin": [
+    "OSSL_STORE_open_ex",
+    "0x498"
+   ],
+   "new_address": null,
+   "symbol_tables": [],
+   "instruction": null,
+   "error": "pin-lands-outside-instruction",
+   "classification": "SHAPE_MISMATCH",
+   "why": "pin-lands-outside-instruction"
+  },
+  {
+   "source": "HEAD:_e7abi_self_test.site_pins",
+   "kind": "site",
+   "b73_literal": "0x1f8aa1",
+   "pin": [
+    "OSSL_STORE_open_ex",
+    "0x551"
+   ],
+   "new_address": null,
+   "symbol_tables": [],
+   "instruction": null,
+   "error": "pin-lands-outside-instruction",
+   "classification": "SHAPE_MISMATCH",
+   "why": "pin-lands-outside-instruction"
+  },
+  {
+   "source": "HEAD:_e7abi_self_test.site_pins",
+   "kind": "site",
+   "b73_literal": "0x1f8f13",
+   "pin": [
+    "OSSL_STORE_open_ex",
+    "0x9c3"
+   ],
+   "new_address": null,
+   "symbol_tables": [],
+   "instruction": null,
+   "error": "pin-lands-outside-instruction",
+   "classification": "SHAPE_MISMATCH",
+   "why": "pin-lands-outside-instruction"
+  },
+  {
+   "source": "HEAD:_e7abi_self_test.site_pins",
+   "kind": "site",
+   "b73_literal": "0x1f8d29",
+   "pin": [
+    "OSSL_STORE_open_ex",
+    "0x7d9"
+   ],
+   "new_address": null,
+   "symbol_tables": [],
+   "instruction": null,
+   "error": "pin-lands-outside-instruction",
+   "classification": "SHAPE_MISMATCH",
+   "why": "pin-lands-outside-instruction"
+  },
+  {
+   "source": "HEAD:_e7abi_self_test.site_pins",
+   "kind": "site",
+   "b73_literal": "0x293f25",
+   "pin": [
+    "CONF_modules_load",
+    "0x505"
+   ],
+   "new_address": "0x22cb65",
+   "symbol_tables": [],
+   "instruction": "call   *%r15",
+   "error": null,
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer"
+  },
+  {
+   "source": "HEAD:_e7abi_self_test.site_pins",
+   "kind": "site",
+   "b73_literal": "0x294363",
+   "pin": [
+    "CONF_modules_load",
+    "0x943"
+   ],
+   "new_address": "0x22cfa3",
+   "symbol_tables": [],
+   "instruction": "call   *%rax",
+   "error": null,
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer"
+  },
+  {
+   "source": "HEAD:_e7abi_self_test.site_pins",
+   "kind": "site",
+   "b73_literal": "0x4ad30c",
+   "pin": [
+    "openssl_rs::pem::pem_pk8::do_pk8pkey",
+    "0x29c"
+   ],
+   "new_address": "0x384bbc",
+   "symbol_tables": [],
+   "instruction": "call   *%rbx",
+   "error": null,
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer"
+  },
+  {
+   "source": "HEAD:_pbe_outparam_self_test.site_pins",
+   "kind": "site",
+   "b73_literal": "0x17b1f5",
+   "pin": [
+    "EVP_PBE_CipherInit_ex",
+    "0x415"
+   ],
+   "new_address": "0x541ea5",
+   "symbol_tables": [],
+   "instruction": "call   *%rax",
+   "error": null,
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer"
+  },
+  {
+   "source": "HEAD:_pbe_outparam_self_test.site_pins",
+   "kind": "site",
+   "b73_literal": "0x17cee8",
+   "pin": [
+    "PKCS5_v2_PBE_keyivgen_ex",
+    "0x208"
+   ],
+   "new_address": "0x544d28",
+   "symbol_tables": [],
+   "instruction": "call   *%rax",
+   "error": null,
+   "classification": "REDERIVED",
+   "why": "pin re-derives an indirect transfer"
+  },
+  {
+   "source": "HEAD:_pbe_outparam_self_test.target_pins",
+   "kind": "target",
+   "b73_literal": "0x542380",
+   "pin": [
+    "PKCS12_PBE_keyivgen_ex",
+    "0x0"
+   ],
+   "new_address": "0x1e1830",
+   "symbol_tables": [
+    ".dynsym",
+    ".symtab"
+   ],
+   "instruction": "push   %rbp",
+   "error": null,
+   "classification": "REDERIVED",
+   "why": "pin names exactly one function start"
+  },
+  {
+   "source": "HEAD:_pbe_outparam_self_test.target_pins",
+   "kind": "target",
+   "b73_literal": "0x17cce0",
+   "pin": [
+    "PKCS5_v2_PBE_keyivgen_ex",
+    "0x0"
+   ],
+   "new_address": "0x544b20",
+   "symbol_tables": [
+    ".dynsym",
+    ".symtab"
+   ],
+   "instruction": "push   %rbp",
+   "error": null,
+   "classification": "REDERIVED",
+   "why": "pin names exactly one function start"
+  },
+  {
+   "source": "HEAD:_pbe_outparam_self_test.target_pins",
+   "kind": "target",
+   "b73_literal": "0x194fe0",
+   "pin": [
+    "PKCS5_v2_PBKDF2_keyivgen_ex",
+    "0x0"
+   ],
+   "new_address": "0x55f050",
+   "symbol_tables": [
+    ".symtab"
+   ],
+   "instruction": "push   %rbp",
+   "error": null,
+   "classification": "REDERIVED",
+   "why": "pin names exactly one function start"
+  },
+  {
+   "source": "HEAD:_pbe_outparam_self_test.target_pins",
+   "kind": "target",
+   "b73_literal": "0x31e7e0",
+   "pin": [
+    "PKCS5_PBE_keyivgen_ex",
+    "0x0"
+   ],
+   "new_address": "0x23c5a0",
+   "symbol_tables": [
+    ".dynsym",
+    ".symtab"
+   ],
+   "instruction": "push   %rbp",
+   "error": null,
+   "classification": "REDERIVED",
+   "why": "pin names exactly one function start"
+  },
+  {
+   "source": "HEAD:_pbe_outparam_self_test.target_pins",
+   "kind": "target",
+   "b73_literal": "0x1b93d0",
+   "pin": [
+    "PKCS5_v2_scrypt_keyivgen_ex",
+    "0x0"
+   ],
+   "new_address": "0x364800",
+   "symbol_tables": [
+    ".dynsym",
+    ".symtab"
+   ],
+   "instruction": "push   %rbp",
+   "error": null,
+   "classification": "REDERIVED",
+   "why": "pin names exactly one function start"
+  }
+ ],
+ "counts": {
+  "sites": {
+   "NO_EQUIVALENT": 1,
+   "REDERIVED": 45,
+   "SHAPE_MISMATCH": 2
+  },
+  "fixtures": {
+   "REDERIVED": 11,
+   "SHAPE_MISMATCH": 4
+  }
+ },
+ "residue": [
+  {
+   "call_site": "0x456007",
+   "function_name": "OSSL_STORE_open_ex",
+   "offset": "0x807",
+   "classification": "SHAPE_MISMATCH",
+   "reason": "the function has b73 rows but none of their offsets is this call and no witness accepts the address: the call moved inside the function and cannot be re-derived from its pin"
+  },
+  {
+   "call_site": "0x4561f3",
+   "function_name": "OSSL_STORE_open_ex",
+   "offset": "0x9f3",
+   "classification": "SHAPE_MISMATCH",
+   "reason": "the function has b73 rows but none of their offsets is this call and no witness accepts the address: the call moved inside the function and cannot be re-derived from its pin"
+  },
+  {
+   "call_site": "0x47caaa",
+   "function_name": "ossl_provider_up_ref_parent",
+   "offset": "0x9a",
+   "classification": "NO_EQUIVALENT",
+   "reason": "no b73 row names this function and no witness claims this site"
+  }
+ ],
+ "does_not_prove": [
+  "a REDERIVED verdict proves the site's witness contract in this image; it does not prove the witness rule itself is complete",
+  "the fixture re-pins prove the fixture addresses moved; they do not re-run the refused control bodies",
+  "reachability is taken from the b76b closure receipt, not recomputed here",
+  "no build, test or cryptographic court was run"
+ ]
+}

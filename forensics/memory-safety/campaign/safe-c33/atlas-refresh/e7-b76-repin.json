@@ -1,0 +1,1238 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/e7-repin/v1",
+ "candidate_tag": "b76",
+ "image": {
+  "path": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+  "sha256": "8f18871713a80cc58babcd2f539f273fe9a88807acfa15bb165fb4c8fc1f4aef",
+  "size": 16894632
+ },
+ "artifact": {
+  "path": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+  "sha256": "8f18871713a80cc58babcd2f539f273fe9a88807acfa15bb165fb4c8fc1f4aef",
+  "size": 16894632
+ },
+ "tool_sha256": "2fcf9247008abf5057beeed5f5beb2819c962547bd93d923289fe0279c8ad431",
+ "b73_source": {
+  "git_ref": "HEAD",
+  "tool_blob_sha256": "2da749e1ed68df19127b98c11cccbbbe0cd19aff6c8ebaa6ca5cd63b65472496",
+  "repin_record": {
+   "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/element7-b73-repin2.json",
+   "sha256": "ca71e2dd60cdf8664aa1ab7a74514f369b6b62f17349ba1d3a19ed3110162ce8"
+  },
+  "row_count": 38,
+  "fixture_pin_count": 15
+ },
+ "closure": {
+  "path": "evidence/closure-ssh-b76b.json",
+  "artifact_sha256": "0384f983b392b450a135b960c7b8f991636d509bf9ef5ff841e3d3b7367545d4",
+  "target_bounded_sites": 48
+ },
+ "rule": "each row is re-derived from its (symbol leaf, offset) pin in the exact b76 image; start+offset must be an instruction start and an indirect call/jmp, and the row's own witness must re-prove the operand, base, field and writer/target set at that address.  A row whose offset moved is applied only when exactly one row of the table accepts that address (e7repin moved-row uniqueness); an unprovable row keeps its b73 literal and stays target-bounded",
+ "controls": [
+  "e7repin-symbol-control",
+  "e7repin-offset-control",
+  "e7repin-instruction-control",
+  "e7repin-moved-row-uniqueness"
+ ],
+ "controls_result": "pass: `python3 forensics/tools/consumer_closure.py --self-test` prints the e7repin control line, and `python3 court/freeze-b76/e7_rederive.py --controls` re-runs it",
+ "counts": {
+  "sites": {
+   "NO_EQUIVALENT": 1,
+   "REDERIVED": 45,
+   "SHAPE_MISMATCH": 2
+  },
+  "fixtures": {
+   "REDERIVED": 11,
+   "SHAPE_MISMATCH": 4
+  }
+ },
+ "rows": [
+  {
+   "table": "REGISTRATION_ATEXIT_CALL_SITE",
+   "class": "ABI_CONTRACT_REGISTRATION_ATEXIT",
+   "witness_rule": "registration-atexit",
+   "witness_slot": "OpenSslInitStop.handler (offset 0) -- the node field `OPENSSL_atexit` writes and the `OPENSSL_cleanup` dispatch reads",
+   "old_literal": "0x2d9c94",
+   "old_pin": [
+    "OPENSSL_cleanup",
+    "0x64"
+   ],
+   "new_address": "0x16eac4",
+   "new_pin": [
+    "OPENSSL_cleanup",
+    "0x64"
+   ],
+   "instruction": "call   *(%rbx)",
+   "instruction_bytes": [
+    "ff",
+    "13"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "SLH_METHOD_TABLE_SITES",
+   "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+   "witness_rule": "slh",
+   "witness_slot": "SlhDsaKey.adrs_func@0xa8 -> ossl_slh_get_adrs_fn METHODS[0..1][0x48]",
+   "old_literal": "0x3d192e",
+   "old_pin": [
+    "ossl_slh_ht_sign",
+    "0x8e"
+   ],
+   "new_address": "0x1edf6e",
+   "new_pin": [
+    "ossl_slh_ht_sign",
+    "0x8e"
+   ],
+   "instruction": "call   *0x48(%rdx)",
+   "instruction_bytes": [
+    "ff",
+    "52",
+    "48"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "SLH_METHOD_TABLE_SITES",
+   "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+   "witness_rule": "slh",
+   "witness_slot": "SlhDsaKey.adrs_func@0xa8 -> ossl_slh_get_adrs_fn METHODS[0..1][0x48]",
+   "old_literal": "0x3d1cd9",
+   "old_pin": [
+    "ossl_slh_ht_verify",
+    "0x89"
+   ],
+   "new_address": "0x1ee319",
+   "new_pin": [
+    "ossl_slh_ht_verify",
+    "0x89"
+   ],
+   "instruction": "call   *0x48(%rdx)",
+   "instruction_bytes": [
+    "ff",
+    "52",
+    "48"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "CONF_SITES",
+   "class": "ABI_CONTRACT_CONF_MODULE",
+   "witness_rule": "external-abi",
+   "witness_slot": "ConfModule.init (offset 0x10)",
+   "old_literal": "0x293f25",
+   "old_pin": [
+    "CONF_modules_load",
+    "0x505"
+   ],
+   "new_address": "0x22cb65",
+   "new_pin": [
+    "CONF_modules_load",
+    "0x505"
+   ],
+   "instruction": "call   *%r15",
+   "instruction_bytes": [
+    "41",
+    "ff",
+    "d7"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "CONF_SITES",
+   "class": "ABI_CONTRACT_CONF_MODULE",
+   "witness_rule": "external-abi",
+   "witness_slot": "ConfModule.finish (offset 0x18)",
+   "old_literal": "0x294363",
+   "old_pin": [
+    "CONF_modules_load",
+    "0x943"
+   ],
+   "new_address": "0x22cfa3",
+   "new_pin": [
+    "CONF_modules_load",
+    "0x943"
+   ],
+   "instruction": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "LEGACY_EVP_DATA_SITES",
+   "class": "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA",
+   "witness_rule": "legacy-evp",
+   "witness_slot": "EvpAesKey.block@0x0 stored by aes_init_key over 3 image store(s)",
+   "old_literal": "0x32b741",
+   "old_pin": [
+    "aes_ecb_cipher",
+    "0x61"
+   ],
+   "new_address": "0x28c7a1",
+   "new_pin": [
+    "aes_ecb_cipher",
+    "0x61"
+   ],
+   "instruction": "call   *0x0(%rbp)",
+   "instruction_bytes": [
+    "ff",
+    "55",
+    "00"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PEM_SITE",
+   "class": "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT",
+   "witness_rule": "external-abi",
+   "witness_slot": "do_pk8pkey's `cb` parameter (stack argument 7) and the NULL-selected PEM_def_callback default",
+   "old_literal": "0x4ad30c",
+   "old_pin": [
+    "openssl_rs::pem::pem_pk8::do_pk8pkey",
+    "0x29c"
+   ],
+   "new_address": "0x384bbc",
+   "new_pin": [
+    "do_pk8pkey",
+    "0x29c"
+   ],
+   "instruction": "call   *%rbx",
+   "instruction_bytes": [
+    "ff",
+    "d3"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "SLH_METHOD_TABLE_SITES",
+   "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+   "witness_rule": "slh",
+   "witness_slot": "SlhDsaKey.adrs_func@0xa8 -> ossl_slh_get_adrs_fn METHODS[0..1][0x50]",
+   "old_literal": "0x4b2737",
+   "old_pin": [
+    "slh_fors_node",
+    "0x2c7"
+   ],
+   "new_address": "0x389f67",
+   "new_pin": [
+    "slh_fors_node",
+    "0x2c7"
+   ],
+   "instruction": "call   *0x50(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "50"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "SLH_METHOD_TABLE_SITES",
+   "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+   "witness_rule": "slh",
+   "witness_slot": "SlhDsaKey.adrs_func@0xa8 -> ossl_slh_get_adrs_fn METHODS[0..1][0x50]",
+   "old_literal": "0x4b2a0f",
+   "old_pin": [
+    "ossl_slh_fors_sign",
+    "0x1af"
+   ],
+   "new_address": "0x38a23f",
+   "new_pin": [
+    "ossl_slh_fors_sign",
+    "0x1af"
+   ],
+   "instruction": "call   *0x50(%rcx)",
+   "instruction_bytes": [
+    "ff",
+    "51",
+    "50"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "SLH_METHOD_TABLE_SITES",
+   "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+   "witness_rule": "slh",
+   "witness_slot": "SlhDsaKey.adrs_func@0xa8 -> ossl_slh_get_adrs_fn METHODS[0..1][0x50]",
+   "old_literal": "0x4b2c91",
+   "old_pin": [
+    "ossl_slh_fors_sign",
+    "0x431"
+   ],
+   "new_address": "0x38a4c1",
+   "new_pin": [
+    "ossl_slh_fors_sign",
+    "0x431"
+   ],
+   "instruction": "call   *0x50(%rcx)",
+   "instruction_bytes": [
+    "ff",
+    "51",
+    "50"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "SLH_METHOD_TABLE_SITES",
+   "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+   "witness_rule": "slh",
+   "witness_slot": "SlhDsaKey.hash_func@0xb0 -> ossl_slh_get_hash_fn METHODS[0..1][0x28]",
+   "old_literal": "0x4b337d",
+   "old_pin": [
+    "ossl_slh_fors_pk_from_sig",
+    "0x51d"
+   ],
+   "new_address": "0x38abad",
+   "new_pin": [
+    "ossl_slh_fors_pk_from_sig",
+    "0x51d"
+   ],
+   "instruction": "call   *0x28(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "28"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvGcmHw.aadupdate@0x10 over 3 closed-context table(s), closure type-closure",
+   "old_literal": "0x39453e",
+   "old_pin": [
+    "ossl_gcm_one_shot",
+    "0x1e"
+   ],
+   "new_address": "0x41cf1e",
+   "new_pin": [
+    "ossl_gcm_one_shot",
+    "0x1e"
+   ],
+   "instruction": "call   *0x10(%r13)",
+   "instruction_bytes": [
+    "41",
+    "ff",
+    "55",
+    "10"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvGcmHw.cipherupdate@0x18 over 3 closed-context table(s), closure type-closure",
+   "old_literal": "0x394554",
+   "old_pin": [
+    "ossl_gcm_one_shot",
+    "0x34"
+   ],
+   "new_address": "0x41cf34",
+   "new_pin": [
+    "ossl_gcm_one_shot",
+    "0x34"
+   ],
+   "instruction": "call   *0x18(%r13)",
+   "instruction_bytes": [
+    "41",
+    "ff",
+    "55",
+    "18"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvGcmHw.cipherfinal@0x20 over 3 closed-context table(s), closure type-closure",
+   "old_literal": "0x39456c",
+   "old_pin": [
+    "ossl_gcm_one_shot",
+    "0x4c"
+   ],
+   "new_address": "0x41cf4c",
+   "new_pin": [
+    "ossl_gcm_one_shot",
+    "0x4c"
+   ],
+   "instruction": "call   *0x20(%r13)",
+   "instruction_bytes": [
+    "41",
+    "ff",
+    "55",
+    "20"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHw.init@0x0 over 1 closed-context table(s), closure type-closure",
+   "old_literal": "0x396e4b",
+   "old_pin": [
+    "aes_ocb_dinit",
+    "0xab"
+   ],
+   "new_address": "0x41f72b",
+   "new_pin": [
+    "aes_ocb_dinit",
+    "0xab"
+   ],
+   "instruction": "call   *(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "10"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHw.init@0x0 over 1 closed-context table(s), closure type-closure",
+   "old_literal": "0x396f4e",
+   "old_pin": [
+    "aes_ocb_einit",
+    "0xae"
+   ],
+   "new_address": "0x41f82e",
+   "new_pin": [
+    "aes_ocb_einit",
+    "0xae"
+   ],
+   "instruction": "call   *(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "10"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHw.init@0x0 over 1 closed-context table(s), closure type-closure",
+   "old_literal": "0x39739f",
+   "old_pin": [
+    "sm4_xts_dinit",
+    "0x7f"
+   ],
+   "new_address": "0x41fc7f",
+   "new_pin": [
+    "sm4_xts_dinit",
+    "0x7f"
+   ],
+   "instruction": "call   *(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "10"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHw.init@0x0 over 1 closed-context table(s), closure type-closure",
+   "old_literal": "0x397472",
+   "old_pin": [
+    "sm4_xts_einit",
+    "0x82"
+   ],
+   "new_address": "0x41fd52",
+   "new_pin": [
+    "sm4_xts_einit",
+    "0x82"
+   ],
+   "instruction": "call   *(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "10"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvSivHw.cleanup@0x20 over 1 closed-context table(s), closure type-closure",
+   "old_literal": "0x398442",
+   "old_pin": [
+    "aes_siv_freectx",
+    "0x12"
+   ],
+   "new_address": "0x420d22",
+   "new_pin": [
+    "aes_siv_freectx",
+    "0x12"
+   ],
+   "instruction": "call   *0x20(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "20"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHw.cipher@0x8 over 2 closed-context table(s), closure entry-table-pairing",
+   "old_literal": "0x39bb1d",
+   "old_pin": [
+    "cts128_cs2_decrypt",
+    "0x1d"
+   ],
+   "new_address": "0x4244bd",
+   "new_pin": [
+    "cts128_cs2_decrypt",
+    "0x1d"
+   ],
+   "instruction": "call   *0x8(%r8)",
+   "instruction_bytes": [
+    "41",
+    "ff",
+    "50",
+    "08"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHwChacha20.initiv@0x18 over 1 closed-context table(s), closure type-closure",
+   "old_literal": "0x3a1650",
+   "old_pin": [
+    "chacha20_poly1305_initiv",
+    "0xe0"
+   ],
+   "new_address": "0x42a030",
+   "new_pin": [
+    "chacha20_poly1305_initiv",
+    "0xe0"
+   ],
+   "instruction": "call   *0x18(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "18"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHwChacha20Poly1305.aead_cipher@0x18 over 1 closed-context table(s), closure type-closure",
+   "old_literal": "0x3a1776",
+   "old_pin": [
+    "chacha20_poly1305_update",
+    "0x36"
+   ],
+   "new_address": "0x42a156",
+   "new_pin": [
+    "chacha20_poly1305_update",
+    "0x36"
+   ],
+   "instruction": "call   *0x18(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "18"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHwAesGcmSiv.clean_ctx@0x18 over 1 closed-context table(s), closure type-closure",
+   "old_literal": "0x3a18e8",
+   "old_pin": [
+    "ossl_aes_gcm_siv_freectx",
+    "0xb8"
+   ],
+   "new_address": "0x42a2c8",
+   "new_pin": [
+    "ossl_aes_gcm_siv_freectx",
+    "0xb8"
+   ],
+   "instruction": "call   *0x18(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "18"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHwChacha20.base.init@0x0 over 1 closed-context table(s), closure type-closure",
+   "old_literal": "0x3a2249",
+   "old_pin": [
+    "chacha20_poly1305_initkey",
+    "0x139"
+   ],
+   "new_address": "0x42ac29",
+   "new_pin": [
+    "chacha20_poly1305_initkey",
+    "0x139"
+   ],
+   "instruction": "call   *(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "10"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHwChacha20.base.cipher@0x8 over 1 closed-context table(s), closure type-closure",
+   "old_literal": "0x3a4bef",
+   "old_pin": [
+    "chacha20_poly1305_aead_cipher",
+    "0x75f"
+   ],
+   "new_address": "0x42d5cf",
+   "new_pin": [
+    "chacha20_poly1305_aead_cipher",
+    "0x75f"
+   ],
+   "instruction": "call   *0x8(%rbx)",
+   "instruction_bytes": [
+    "ff",
+    "53",
+    "08"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHwChacha20.base.cipher@0x8 over 1 closed-context table(s), closure type-closure",
+   "old_literal": "0x3a4da1",
+   "old_pin": [
+    "chacha20_poly1305_aead_cipher",
+    "0x911"
+   ],
+   "new_address": "0x42d781",
+   "new_pin": [
+    "chacha20_poly1305_aead_cipher",
+    "0x911"
+   ],
+   "instruction": "call   *0x8(%rbx)",
+   "instruction_bytes": [
+    "ff",
+    "53",
+    "08"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHw.cipher@0x8 over 25 closed-context table(s), closure entry-table-pairing",
+   "old_literal": "0x3a70ef",
+   "old_pin": [
+    "ossl_cipher_generic_block_final",
+    "0x6f"
+   ],
+   "new_address": "0x42facf",
+   "new_pin": [
+    "ossl_cipher_generic_block_final",
+    "0x6f"
+   ],
+   "instruction": "call   *0x8(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "08"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHw.cipher@0x8 over 25 closed-context table(s), closure entry-table-pairing",
+   "old_literal": "0x3a71c4",
+   "old_pin": [
+    "ossl_cipher_generic_block_final",
+    "0x144"
+   ],
+   "new_address": "0x42fba4",
+   "new_pin": [
+    "ossl_cipher_generic_block_final",
+    "0x144"
+   ],
+   "instruction": "call   *0x8(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "08"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHwChacha20Poly1305.tls_init@0x28 over 1 closed-context table(s), closure type-closure",
+   "old_literal": "0x3a7967",
+   "old_pin": [
+    "chacha20_poly1305_set_ctx_params",
+    "0x2f7"
+   ],
+   "new_address": "0x430347",
+   "new_pin": [
+    "chacha20_poly1305_set_ctx_params",
+    "0x2f7"
+   ],
+   "instruction": "call   *0x28(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "28"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHwChacha20Poly1305.tls_iv_set_fixed@0x30 over 1 closed-context table(s), closure type-closure",
+   "old_literal": "0x3a79a8",
+   "old_pin": [
+    "chacha20_poly1305_set_ctx_params",
+    "0x338"
+   ],
+   "new_address": "0x430388",
+   "new_pin": [
+    "chacha20_poly1305_set_ctx_params",
+    "0x338"
+   ],
+   "instruction": "call   *0x30(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "30"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHw.cipher@0x8 over 25 closed-context table(s), closure entry-table-pairing",
+   "old_literal": "0x3a7c9c",
+   "old_pin": [
+    "ossl_cipher_generic_block_update",
+    "0x16c"
+   ],
+   "new_address": "0x43067c",
+   "new_pin": [
+    "ossl_cipher_generic_block_update",
+    "0x16c"
+   ],
+   "instruction": "call   *0x8(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "08"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHw.cipher@0x8 over 25 closed-context table(s), closure entry-table-pairing",
+   "old_literal": "0x3a7cec",
+   "old_pin": [
+    "ossl_cipher_generic_block_update",
+    "0x1bc"
+   ],
+   "new_address": "0x4306cc",
+   "new_pin": [
+    "ossl_cipher_generic_block_update",
+    "0x1bc"
+   ],
+   "instruction": "call   *0x8(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "08"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHwRc4HmacMd5.tls_init@0x18 over 1 closed-context table(s), closure type-closure",
+   "old_literal": "0x3b33f0",
+   "old_pin": [
+    "rc4_hmac_md5_set_ctx_params",
+    "0xe0"
+   ],
+   "new_address": "0x43bc90",
+   "new_pin": [
+    "rc4_hmac_md5_set_ctx_params",
+    "0xe0"
+   ],
+   "instruction": "call   *0x18(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "18"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHwRc4HmacMd5.init_mackey@0x20 over 1 closed-context table(s), closure type-closure",
+   "old_literal": "0x3b3437",
+   "old_pin": [
+    "rc4_hmac_md5_set_ctx_params",
+    "0x127"
+   ],
+   "new_address": "0x43bcd7",
+   "new_pin": [
+    "rc4_hmac_md5_set_ctx_params",
+    "0x127"
+   ],
+   "instruction": "call   *0x20(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "50",
+    "20"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHw.init@0x0 over 6 closed-context table(s), closure entry-table-pairing",
+   "old_literal": "0x3b4b72",
+   "old_pin": [
+    "des_dinit",
+    "0xa2"
+   ],
+   "new_address": "0x43d412",
+   "new_pin": [
+    "des_dinit",
+    "0xa2"
+   ],
+   "instruction": "call   *(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "10"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PROVIDER_HW_SITES",
+   "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+   "witness_rule": "provider-hw",
+   "witness_slot": "ProvCipherHw.init@0x0 over 6 closed-context table(s), closure entry-table-pairing",
+   "old_literal": "0x3b4c61",
+   "old_pin": [
+    "des_einit",
+    "0xa1"
+   ],
+   "new_address": "0x43d501",
+   "new_pin": [
+    "des_einit",
+    "0xa1"
+   ],
+   "instruction": "call   *(%rax)",
+   "instruction_bytes": [
+    "ff",
+    "10"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "STORE_LOADER_LEGACY_SITES",
+   "class": "ABI_CONTRACT_STORE_LOADER",
+   "witness_rule": "external-abi",
+   "witness_slot": "OsslStoreLoader.open_ex (offset 0x58)",
+   "old_literal": "0x1f89e8",
+   "old_pin": [
+    "OSSL_STORE_open_ex",
+    "0x498"
+   ],
+   "new_address": "0x455c88",
+   "new_pin": [
+    "OSSL_STORE_open_ex",
+    "0x488"
+   ],
+   "instruction": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "derivation": "witness-proved-moved-row",
+   "control": "e7repin moved-row uniqueness",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "STORE_LOADER_LEGACY_SITES",
+   "class": "ABI_CONTRACT_STORE_LOADER",
+   "witness_rule": "external-abi",
+   "witness_slot": "OsslStoreLoader.open (offset 0x10)",
+   "old_literal": "0x1f8aa1",
+   "old_pin": [
+    "OSSL_STORE_open_ex",
+    "0x551"
+   ],
+   "new_address": "0x455d7d",
+   "new_pin": [
+    "OSSL_STORE_open_ex",
+    "0x57d"
+   ],
+   "instruction": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "derivation": "witness-proved-moved-row",
+   "control": "e7repin moved-row uniqueness",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "DECODER_METHOD_SITES",
+   "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+   "witness_rule": "decoder",
+   "witness_slot": "OsslDecoder.newctx@0x30 over 3 closed algorithm table(s)",
+   "old_literal": "0x24dfed",
+   "old_pin": [
+    "file_load",
+    "0x64d"
+   ],
+   "new_address": "0x479c4d",
+   "new_pin": [
+    "file_load",
+    "0x64d"
+   ],
+   "instruction": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "DECODER_METHOD_SITES",
+   "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+   "witness_rule": "decoder",
+   "witness_slot": "OsslDecoder.set_ctx_params@0x50 over 3 closed algorithm table(s)",
+   "old_literal": "0x24e046",
+   "old_pin": [
+    "file_load",
+    "0x6a6"
+   ],
+   "new_address": "0x479ca6",
+   "new_pin": [
+    "file_load",
+    "0x6a6"
+   ],
+   "instruction": "call   *%r12",
+   "instruction_bytes": [
+    "41",
+    "ff",
+    "d4"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "DECODER_METHOD_SITES",
+   "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+   "witness_rule": "decoder",
+   "witness_slot": "OsslDecoder.freectx@0x38 over 3 closed algorithm table(s)",
+   "old_literal": "0x24e090",
+   "old_pin": [
+    "file_load",
+    "0x6f0"
+   ],
+   "new_address": "0x479cf0",
+   "new_pin": [
+    "file_load",
+    "0x6f0"
+   ],
+   "instruction": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PBE_SITE",
+   "class": "ABI_CONTRACT_PBE_REGISTRY",
+   "witness_rule": "external-abi",
+   "witness_slot": "EvpPbeCtl.keygen (offset 0x10) copied through EVP_PBE_find_ex's `pkeygen` out-parameter",
+   "old_literal": "0x17af7d",
+   "old_pin": [
+    "EVP_PBE_CipherInit_ex",
+    "0x19d"
+   ],
+   "new_address": "0x541c2d",
+   "new_pin": [
+    "EVP_PBE_CipherInit_ex",
+    "0x19d"
+   ],
+   "instruction": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  },
+  {
+   "table": "PBE_EX_SITES",
+   "class": "pbe-outparam-builtin-table",
+   "witness_rule": "pbe-outparam",
+   "witness_slot": null,
+   "old_literal": "0x17b1f5",
+   "old_pin": [
+    "EVP_PBE_CipherInit_ex",
+    "0x415"
+   ],
+   "new_address": "0x541ea5",
+   "new_pin": [
+    "EVP_PBE_CipherInit_ex",
+    "0x415"
+   ],
+   "instruction": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": false
+  },
+  {
+   "table": "PBE_EX_SITES",
+   "class": "pbe-outparam-builtin-table",
+   "witness_rule": "pbe-outparam",
+   "witness_slot": null,
+   "old_literal": "0x17cee8",
+   "old_pin": [
+    "PKCS5_v2_PBE_keyivgen_ex",
+    "0x208"
+   ],
+   "new_address": "0x544d28",
+   "new_pin": [
+    "PKCS5_v2_PBE_keyivgen_ex",
+    "0x208"
+   ],
+   "instruction": "call   *%rax",
+   "instruction_bytes": [
+    "ff",
+    "d0"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": false
+  },
+  {
+   "table": "LEGACY_EVP_DATA_SITES",
+   "class": "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA",
+   "witness_rule": "legacy-evp",
+   "witness_slot": "EvpSm4Key.block@0x0 stored by sm4_init_key over 1 image store(s)",
+   "old_literal": "0x382d72",
+   "old_pin": [
+    "sm4_ecb_cipher",
+    "0x92"
+   ],
+   "new_address": "0x55e8b2",
+   "new_pin": [
+    "sm4_ecb_cipher",
+    "0x92"
+   ],
+   "instruction": "call   *(%r12)",
+   "instruction_bytes": [
+    "41",
+    "ff",
+    "14",
+    "24"
+   ],
+   "derivation": "pin-exact",
+   "control": "e7repin symbol/offset/instruction controls",
+   "targets_after": [],
+   "contract_bounded": true
+  }
+ ],
+ "refused": [
+  {
+   "call_site": "0x456007",
+   "function": "OSSL_STORE_open_ex",
+   "offset": "0x807",
+   "classification": "SHAPE_MISMATCH",
+   "reason": "the function has b73 rows but none of their offsets is this call and no witness accepts the address: the call moved inside the function and cannot be re-derived from its pin"
+  },
+  {
+   "call_site": "0x4561f3",
+   "function": "OSSL_STORE_open_ex",
+   "offset": "0x9f3",
+   "classification": "SHAPE_MISMATCH",
+   "reason": "the function has b73 rows but none of their offsets is this call and no witness accepts the address: the call moved inside the function and cannot be re-derived from its pin"
+  },
+  {
+   "call_site": "0x47caaa",
+   "function": "ossl_provider_up_ref_parent",
+   "offset": "0x9a",
+   "classification": "NO_EQUIVALENT",
+   "reason": "no b73 row names this function and no witness claims this site"
+  }
+ ],
+ "does_not_prove": [
+  "a row proves its witness contract in this image, not that the witness rule is complete or that the field's writer set is exhaustive beyond its stated source/module scope",
+  "the two loader rows were re-derived by witness uniqueness, not by the pinned offset; their b73 literal is recorded from the b73 fixture and the correspondence is the witness's field proof",
+  "the element-7 residual is a FAST probe (--element7-only); it is not a closure receipt and carries no DISCHARGED/BLOCKED counts",
+  "no build, test, Miri, ASan or cryptographic court was run"
+ ]
+}
