@@ -333,6 +333,15 @@ macro_rules! legacy_digest_impl {
                 ret.into_raw().cast()
             }
 
+            /// `OSSL_FUNC_digest_copyctx_fn` for this construction.
+            ///
+            /// # Safety
+            /// `outctx` is writable and `inctx` readable for `size_of::<$ctx>()` bytes; both are
+            /// whole blocks this row's `newctx`/`dupctx` produced (or a prior `copyctx`
+            /// destination on this row), correctly aligned for `$ctx`, and neither is NULL. They may
+            /// alias only by being the same block: the core's provider self-copy arm calls
+            /// `copyctx(algctx, algctx)`, which is why the body uses `ptr::copy`. The core never
+            /// passes a failed-init NULL context here (D-DIGEST-NULL-ALGCTX-1).
             unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
                 // SAFETY: both regions are valid for `size_of::<$ctx>()` bytes. They may be the
                 // same block: `EVP_MD_CTX_copy_ex`'s provider self-copy arm calls
@@ -541,6 +550,14 @@ mod mdc2 {
         ret.into_raw().cast()
     }
 
+    /// `OSSL_FUNC_digest_copyctx_fn` for the MDC-2 row.
+    ///
+    /// # Safety
+    /// `outctx` is writable and `inctx` readable for `size_of::<Mdc2Ctx>()` bytes; both are whole
+    /// blocks this row's `newctx`/`dupctx` produced, correctly aligned for `Mdc2Ctx`, and neither
+    /// is NULL. They may alias only by being the same block (the core's provider self-copy passes
+    /// `copyctx(algctx, algctx)`). The core never passes a failed-init NULL context here
+    /// (D-DIGEST-NULL-ALGCTX-1).
     unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
         // SAFETY: both regions are valid for `size_of::<Mdc2Ctx>()` bytes and may be the same
         // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.

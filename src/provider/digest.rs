@@ -443,9 +443,15 @@ macro_rules! digest_impl {
                 ret.into_raw().cast()
             }
 
+            /// `OSSL_FUNC_digest_copyctx_fn` for this construction.
+            ///
             /// # Safety
-            /// `outctx` is writable and `inctx` readable for `size_of::<$ctx>()` bytes. They may
-            /// alias: `EVP_MD_CTX_copy_ex`'s provider self-copy arm passes the same pointer.
+            /// `outctx` is writable and `inctx` readable for `size_of::<$ctx>()` bytes; both are
+            /// whole blocks this row's `newctx`/`dupctx` produced (or a prior `copyctx`
+            /// destination on this row), correctly aligned for `$ctx`, and neither is NULL. They may
+            /// alias only by being the same block: the core's provider self-copy arm calls
+            /// `copyctx(algctx, algctx)`, which is why the body uses `ptr::copy`. The core never
+            /// passes a failed-init NULL context here (D-DIGEST-NULL-ALGCTX-1).
             unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
                 // SAFETY: both regions are valid for `size_of::<$ctx>()` bytes. They may be the
                 // same block: `EVP_MD_CTX_copy_ex`'s provider self-copy arm calls
@@ -655,6 +661,14 @@ mod sha1 {
         ret.into_raw().cast()
     }
 
+    /// `OSSL_FUNC_digest_copyctx_fn` for the SHA-1 row.
+    ///
+    /// # Safety
+    /// `outctx` is writable and `inctx` readable for `size_of::<ShaCtx>()` bytes; both are whole
+    /// blocks this row's `newctx`/`dupctx` produced, correctly aligned for `ShaCtx`, and neither is
+    /// NULL. They may alias only by being the same block (the core's provider self-copy passes
+    /// `copyctx(algctx, algctx)`). The core never passes a failed-init NULL context here
+    /// (D-DIGEST-NULL-ALGCTX-1).
     unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
         // SAFETY: both regions are valid for `size_of::<ShaCtx>()` bytes and may be the same
         // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.
@@ -967,6 +981,14 @@ mod nullmd {
         ret.into_raw().cast()
     }
 
+    /// `OSSL_FUNC_digest_copyctx_fn` for the NULL row.
+    ///
+    /// # Safety
+    /// `outctx` is writable and `inctx` readable for `size_of::<NullMdCtx>()` bytes; both are
+    /// whole blocks this row's `newctx`/`dupctx` produced, correctly aligned for `NullMdCtx`, and
+    /// neither is NULL. They may alias only by being the same block (the core's provider self-copy
+    /// passes `copyctx(algctx, algctx)`). The core never passes a failed-init NULL context here
+    /// (D-DIGEST-NULL-ALGCTX-1).
     unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
         // SAFETY: both regions are valid for `size_of::<NullMdCtx>()` bytes and may be the same
         // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.
@@ -1162,6 +1184,14 @@ mod md5_sha1 {
         ret.into_raw().cast()
     }
 
+    /// `OSSL_FUNC_digest_copyctx_fn` for the MD5-SHA1 row.
+    ///
+    /// # Safety
+    /// `outctx` is writable and `inctx` readable for `size_of::<Md5Sha1Ctx>()` bytes; both are
+    /// whole blocks this row's `newctx`/`dupctx` produced, correctly aligned for `Md5Sha1Ctx`, and
+    /// neither is NULL. They may alias only by being the same block (the core's provider self-copy
+    /// passes `copyctx(algctx, algctx)`). The core never passes a failed-init NULL context here
+    /// (D-DIGEST-NULL-ALGCTX-1).
     unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
         // SAFETY: both regions are valid for `size_of::<Md5Sha1Ctx>()` bytes and may be the same
         // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.
@@ -1345,6 +1375,14 @@ mod sha3 {
         ret.into_raw().cast()
     }
 
+    /// `OSSL_FUNC_digest_copyctx_fn` for the SHA-3/SHAKE/KMAC rows.
+    ///
+    /// # Safety
+    /// `outctx` is writable and `inctx` readable for `size_of::<KeccakCtx>()` bytes; both are
+    /// whole blocks this row's `newctx`/`dupctx` produced, correctly aligned for `KeccakCtx`, and
+    /// neither is NULL. They may alias only by being the same block (the core's provider self-copy
+    /// passes `copyctx(algctx, algctx)`). The core never passes a failed-init NULL context here
+    /// (D-DIGEST-NULL-ALGCTX-1).
     unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
         // SAFETY: both regions are valid for `size_of::<KeccakCtx>()` bytes and may be the same
         // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.
@@ -1385,16 +1423,27 @@ mod sha3 {
         }
         let c = ctx.cast::<KeccakCtx>();
         // SAFETY: `c` is the provider's context.
-        if unsafe { (*c).md_size } == usize::MAX {
+        let md_size = unsafe { (*c).md_size };
+        if md_size == usize::MAX {
+            return 0;
+        }
+        // `ossl_sha3_final` writes exactly `md_size` bytes, and the authority forwards `outlen`
+        // without ever comparing it to `md_size`. So `EVP_DigestFinalXOF(SHA3-256, buf, 16)`
+        // reaches the provider with `outlen == 16` and `md_size == 32` and writes 32 bytes into a
+        // 16-byte buffer -- a caller-declared-extent overflow. A provider must never write past the
+        // extent it was given, so refuse the mismatch (`docs/SECURITY_DIVERGENCE_POLICY.md`,
+        // D-SHA3-FINAL-OUTLEN-1). The authority's `outlen == 0` arm is kept unchanged: it writes
+        // nothing and still reports `md_size`.
+        if outlen > 0 && md_size > outlen {
             return 0;
         }
         let mut ret = 1;
-        // SAFETY: `c` is live and `out` is writable for `outlen`.
+        // SAFETY: `c` is live and `out` is writable for `outlen >= md_size`.
         unsafe {
             if outlen > 0 {
-                ret = ossl_sha3_final(c, out, (*c).md_size);
+                ret = ossl_sha3_final(c, out, md_size);
             }
-            *outl = (*c).md_size;
+            *outl = md_size;
         }
         ret
     }
@@ -1895,6 +1944,15 @@ mod blake2 {
                     ret.into_raw().cast()
                 }
 
+                /// `OSSL_FUNC_digest_copyctx_fn` for this BLAKE2 row.
+                ///
+                /// # Safety
+                /// `outctx` is writable and `inctx` readable for `size_of::<$flavour::MdData>()`
+                /// bytes; both are whole blocks this row's `newctx`/`dupctx` produced, correctly
+                /// aligned for `$flavour::MdData`, and neither is NULL. They may alias only by
+                /// being the same block (the core's provider self-copy passes
+                /// `copyctx(algctx, algctx)`). The core never passes a failed-init NULL context
+                /// here (D-DIGEST-NULL-ALGCTX-1).
                 unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
                     // SAFETY: both regions are valid for the same size and may be the same
                     // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.
