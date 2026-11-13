@@ -12054,6 +12054,32 @@ def _pin_insns(g, start: int):
     return insns
 
 
+def _pin_insn_addr(g, pin):
+    """This image's address for an instruction ``(symbol leaf, offset)`` pin.
+
+    Unlike [`_pin_site_addr`] the pinned instruction need not be an indirect
+    transfer: the close guard is a `test`/`je` pair.  The same three
+    conditions apply -- a unique function start for the leaf, an instruction
+    at ``start + offset`` -- and the caller proves the instruction's shape.
+    """
+    if not pin:
+        return None
+    symbol, off = pin
+    leaf = _pin_leaf(symbol)
+    start_set = getattr(g, "start_set", set())
+    starts = sorted(a for a, names in getattr(g, "names_at", {}).items()
+                    if a in start_set
+                    and any(_external_function_leaf(n) == leaf for n in names))
+    if len(starts) != 1:
+        return None
+    start = starts[0]
+    insns = _pin_insns(g, start)
+    if not insns:
+        return None
+    addr = start + off
+    return addr if any(a == addr for a, _t in insns) else None
+
+
 def _pin_site_addr(g, pin):
     """This image's address for a ``(symbol leaf, offset)`` pin, or None.
 
@@ -16250,17 +16276,23 @@ STORE_LOADER_LEGACY_SITES = {
 }
 
 STORE_LOADER_LEGACY_SITE_PINS = {
-    # The b73 rows recorded +0x498/+0x551.  In the b76 build the two calls sit
-    # at +0x488/+0x57D: the offsets are re-derived per image (see the re-pin
-    # engine) and the correspondence is proved by the witness, not by the
-    # offset: at each address exactly one of the four loader specs is accepted
-    # and each spec accepts exactly one address (e7repin_controls).
+    # The b73 rows recorded +0x498/+0x551.  In the b76 build the calls sit at
+    # +0x488/+0x57D (legacy open/open_ex) and +0x9F3 (legacy closefn): the
+    # offsets are re-derived per image (see the re-pin engine) and the
+    # correspondence is proved by the witness, not by the offset: at each
+    # address exactly one of the four loader specs is accepted and each spec
+    # accepts exactly one address (e7repin_controls).  The b73 closefn row was
+    # +0x9C3; b76 moved the call to 0x4561f3 (+0x9F3) and the close guard from
+    # a je/jne pair to one `test %r12,%r12; je <legacy>` with the provider
+    # block as the fallthrough (see STORE_LOADER_CLOSE_GUARD).
     0x1F89E8: ("OSSL_STORE_open_ex", 0x488),
     0x1F8AA1: ("OSSL_STORE_open_ex", 0x57D),
-    0x1F8F13: ("OSSL_STORE_open_ex", 0x9C3),
+    0x1F8F13: ("OSSL_STORE_open_ex", 0x9F3),
 }
 STORE_LOADER_PROVIDER_SITE = 0x1F8D29
-STORE_LOADER_PROVIDER_SITE_PIN = ("OSSL_STORE_open_ex", 0x7D9)
+# b73 recorded +0x7D9; b76 addresses the `mov 0xb8(%r14),%rax` slot load and
+# the `call *%rax` at 0x456007 (+0x807) on the fetched_loader != NULL path.
+STORE_LOADER_PROVIDER_SITE_PIN = ("OSSL_STORE_open_ex", 0x807)
 STORE_LOADER_PROVIDER_FIELD = "p_close"
 STORE_LOADER_PROVIDER_OFFSET = 0xB8
 STORE_LOADER_PROVIDER_WRITER = "loader_from_algorithm"
@@ -16297,23 +16329,24 @@ PEM_DEFAULT = "PEM_def_callback"
 PEM_CB_STACK_INDEX = 7
 PEM_CB_STACK_SLOT = "0x4b8(%rsp)"
 
-# The guards that select the two provider/legacy close paths.  These are image
-# addresses, not inferred block numbers; a change to either refuses.
-STORE_LOADER_CLOSE_GUARDS = {
-    # b73 image addresses.  They belong to the closefn/p_close rows, which the
-    # b76 build changed shape and no witness accepts; those two rows stay
-    # target-bounded (atlas-refresh/e7-b76-repin.json#refused) and this guard
-    # pair is therefore not consulted in b76.
-    "legacy_je": (0x1F8D11, 0x1F8D14, "%r12", 0x1F8F07),
-    "provider_jne": (0x1F8EFE, 0x1F8F01, "%r12", 0x1F8D1A),
-}
-STORE_LOADER_CLOSE_GUARD_PINS = {
-    "legacy_je": (("OSSL_STORE_open_ex", 0x7C1),
-                  ("OSSL_STORE_open_ex", 0x7C4),
-                  ("OSSL_STORE_open_ex", 0x9B7)),
-    "provider_jne": (("OSSL_STORE_open_ex", 0x9AE),
-                     ("OSSL_STORE_open_ex", 0x9B1),
-                     ("OSSL_STORE_open_ex", 0x7CA)),
+# The guard that selects the two provider/legacy close paths.  The b73 build
+# had a je/jne pair; the b76 build emits one `test %r12,%r12` + `je <legacy>`
+# with the provider p_close block as the fallthrough.  The four addresses are
+# pinned by (symbol, offset), like every other site, so a move is re-derived
+# and a changed shape refuses; a plain absolute address would silently follow a
+# new instruction.
+#
+# b76 image (OSSL_STORE_open_ex at 0x455800):
+#   0x455fef  test %r12,%r12
+#   0x455ff2  je   0x4561e7        (fetched_loader == NULL -> legacy closefn)
+#   0x455ff8  provider p_close block (fallthrough, fetched_loader != NULL)
+#   0x4561e7  legacy closefn block
+STORE_LOADER_CLOSE_GUARD = {
+    "reg": "%r12",
+    "test": ("OSSL_STORE_open_ex", 0x7EF),
+    "branch": ("OSSL_STORE_open_ex", 0x7F2),
+    "zero_block": ("OSSL_STORE_open_ex", 0x9E7),
+    "nonzero_block": ("OSSL_STORE_open_ex", 0x7F8),
 }
 
 _EXTERNAL_PRIM_SIZES = {
@@ -16956,26 +16989,39 @@ def _external_guard_chain(g: "DsoGraph", fstart: int, site_addr: int,
                           want_zero: bool):
     """Prove the `%r12` guard polarity that selects this close path.
 
-    Both close sites sit under the same pair of `test %r12,%r12` branches:
-    check they name: 0x3e23f3 `je` to the legacy block and 0x3e2636 `jne` to the
-    provider block.  The witness checks those exact instructions and targets; a
-    new or moved predecessor refuses.
+    b76 shape: one `test %r12,%r12` followed by `je <zero_block>`; the provider
+    block is the fallthrough.  b73 used a je/jne pair and its two blocks; the
+    b76 build folded the pair into one conditional because the two close arms
+    are the only successors of the guard block.  The witness names the exact
+    four instructions by (symbol, offset) pins and proves the CFG shape: a
+    moved or changed guard, a different target, or a site in neither arm
+    refuses.  This is a shape proof for *this* slot, not a class widening.
     """
-    je = STORE_LOADER_CLOSE_GUARDS["legacy_je"]
-    jne = STORE_LOADER_CLOSE_GUARDS["provider_jne"]
+    spec = STORE_LOADER_CLOSE_GUARD
+    reg = spec["reg"]
+    test_addr = _pin_insn_addr(g, spec["test"])
+    branch_addr = _pin_insn_addr(g, spec["branch"])
+    zero_addr = _pin_insn_addr(g, spec["zero_block"])
+    nonzero_addr = _pin_insn_addr(g, spec["nonzero_block"])
+    if None in (test_addr, branch_addr, zero_addr, nonzero_addr):
+        return None, ("one of the close-guard pins does not land on an "
+                      "instruction in this image")
     insns = g.precision.insns_by_func.get(fstart, ())
     by_addr = {a: t for a, t in insns}
-    for test_addr, branch_addr, reg, target in (je, jne):
-        text = by_addr.get(test_addr, "").strip()
-        if not re.fullmatch(r"test\s+" + re.escape(reg) + r"," +
-                            re.escape(reg), text):
-            return None, f"guard test at {hex(test_addr)} is not test {reg},{reg}"
-        mn, tgt, text = _external_branch(g, fstart, branch_addr)
-        if mn not in ("je", "jne") or tgt != target:
-            return None, (f"guard branch at {hex(branch_addr)} is not the "
-                          f"enumerated {target:#x} branch: {text!r}")
-    # je taken / jne not taken selects the legacy block (r12 == 0); je not
-    # taken / jne taken selects the provider block (r12 != 0).
+    text = by_addr.get(test_addr, "").strip()
+    if not re.fullmatch(r"test\s+" + re.escape(reg) + r"," +
+                        re.escape(reg), text):
+        return None, (f"guard test at {hex(test_addr)} is not test {reg},{reg}"
+                      f": {text!r}")
+    mn, tgt, text = _external_branch(g, fstart, branch_addr)
+    if mn != "je" or tgt != zero_addr:
+        return None, (f"guard branch at {hex(branch_addr)} is not the "
+                      f"enumerated je {zero_addr:#x}: {text!r}")
+    addrs = [a for a, _t in insns]
+    bi = addrs.index(branch_addr)
+    if bi + 1 >= len(addrs) or addrs[bi + 1] != nonzero_addr:
+        return None, ("the enumerated provider block is not the je "
+                      "fallthrough")
     cfg = _function_cfg(g, fstart)
     idx = None
     for i, (a, _t) in enumerate(insns):
@@ -16984,20 +17030,29 @@ def _external_guard_chain(g: "DsoGraph", fstart: int, site_addr: int,
             break
     if idx is None:
         return None, "site instruction not found"
-    preds = [p for p, ss in cfg["succ"].items() if cfg["block_of"][idx] in ss]
-    if len(preds) != 1:
-        return None, (f"site {hex(site_addr)} has {len(preds)} predecessor "
-                      "blocks, not one")
-    block_start = insns[cfg["blocks"][preds[0]][0]][0]
-    expected = je[3] if want_zero else jne[3]
-    if block_start != expected:
-        return None, (f"site {hex(site_addr)} is preceded by block "
-                      f"{hex(block_start)}, not the enumerated "
-                      f"{hex(expected)} block")
+    sb = cfg["block_of"].get(idx)
+    zb = cfg["block_of"].get(addrs.index(zero_addr))
+    nb = cfg["block_of"].get(addrs.index(nonzero_addr))
+    if sb is None or zb is None or nb is None:
+        return None, "the site or a close arm is outside the function CFG"
+    reach_zero = _cfg_reachable_from(cfg, zb)
+    reach_nonzero = _cfg_reachable_from(cfg, nb)
+    # The site must lie under exactly one close arm.  The b76 blocks are
+    # split by the slot's own NULL test (`mov slot; test; je`) into a
+    # load/test block and a call block, so the site is usually one block
+    # after the arm entry; reachability, not block identity, is the fact.
+    expected, other = ((reach_zero, reach_nonzero) if want_zero
+                       else (reach_nonzero, reach_zero))
+    if sb not in expected or sb in other:
+        return None, (f"site {hex(site_addr)} is not under exactly the "
+                      f"{'fetched_loader == NULL' if want_zero else 'fetched_loader != NULL'}"
+                      " close arm")
     return {"guard_zero": want_zero,
-            "tests": [hex(je[0]), hex(jne[0])],
-            "branches": [hex(je[1]), hex(jne[1])],
-            "targets": [hex(je[3]), hex(jne[3])]}, None
+            "test": f"{hex(test_addr)}: {(by_addr.get(test_addr) or '').strip()}",
+            "branch": (f"{hex(branch_addr)}: je {hex(zero_addr)} (fallthrough "
+                       f"{hex(nonzero_addr)})"),
+            "zero_block": hex(zero_addr),
+            "nonzero_block": hex(nonzero_addr)}, None
 
 
 def _external_base_defs(g: "DsoGraph", site: dict, load: dict):
@@ -18477,6 +18532,15 @@ CORE_DISPATCH_TABLES = {
         "index_const": "OSSL_LIB_CTX_CHILD_PROVIDER_INDEX",
         "index_source": "src/provider/child.rs",
         "index_literal": 18,
+        # The b76 `ossl_provider_up_ref_parent` inlines the default-context
+        # arm of `ossl_lib_ctx_get_data`: when the defensive
+        # `ossl_provider_libctx` sees a NULL `prov` it reads slot 18 straight
+        # out of `DEFAULT_CONTEXT.child_provider`.  That is the same slot-18
+        # object the explicit arm obtains through `lib_ctx_get_data`, so the
+        # witness admits it only at the source-declared `OsslLibCtx` offset
+        # and only when the base is the process-global/thread-local default.
+        "libctx_source": "src/context/mod.rs",
+        "default_context_field": "child_provider",
         "fields": {
             0x18: ("c_get_libctx", "OSSL_FUNC_CORE_GET_LIBCTX", 4,
                    "core_get_libctx"),
@@ -18563,6 +18627,31 @@ def _core_globals_origin(g: "DsoGraph", fstart: int, idx: int, reg: str,
             indexes.add(index)
             evidence.extend(ev or [])
             continue
+        # A direct `mov <disp>(<base>),reg` is the inlined default-context arm
+        # of `ossl_lib_ctx_get_data`.  It is admitted only when the field
+        # offset is the source-declared `OsslLibCtx` slot for a documented
+        # index and the base is provably the default context; otherwise this
+        # is an unqualified load and refuses.  It does not widen the class: it
+        # recognises a second encoding of the same slot object.
+        m = (re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[0])
+             if (mn in ("mov", "movq", "movl") and len(ops) >= 2) else None)
+        if m is not None:
+            offset = int(m.group(1), 16) if m.group(1) else 0
+            base_reg = _canon(m.group(2))
+            slot = _core_default_context_slot(g, offset)
+            if slot is None:
+                return None, ("the slot base is a memory load, not a libctx "
+                              "data accessor call"), None
+            index, field, fld = slot
+            if not _core_default_context_base(g, fstart, k, base_reg):
+                return None, ("the slot base is a memory load whose base is "
+                              "not the default library context"), None
+            indexes.add(index)
+            evidence.append({"default_context": True,
+                             "field": field, "offset": hex(fld["offset"]),
+                             "call_site": hex(_insn_pc(g, fstart, k)),
+                             "index": index})
+            continue
         if not mn.startswith("call"):
             return None, (f"the slot base writer is {mn!r}, not a libctx "
                           "data accessor call"), None
@@ -18587,6 +18676,86 @@ def _core_globals_origin(g: "DsoGraph", fstart: int, idx: int, reg: str,
 def _insn_pc(g: "DsoGraph", fstart: int, idx: int) -> int:
     insns = g.precision.insns_by_func.get(fstart, ())
     return insns[idx][0] if 0 <= idx < len(insns) else 0
+
+
+def _core_default_context_slot(g: "DsoGraph", offset: int):
+    """`(index, field, layout-row)` for a direct `OsslLibCtx` slot read.
+
+    The displacement must equal the source-declared offset of the table's
+    `default_context_field`, and exactly one documented table may claim it.
+    A hard-coded 0x78 would silently follow a layout change; deriving it from
+    the `#[repr(C)]` struct is what makes the arm a proof about this source.
+    """
+    layout, _err = _external_struct_layout(g, "OsslLibCtx")
+    if layout is None:
+        return None
+    hits = []
+    for index, table in CORE_DISPATCH_TABLES.items():
+        field = table.get("default_context_field")
+        if field is None:
+            continue
+        fld = next((f for f in layout["fields"] if f["name"] == field), None)
+        if fld is not None and fld["offset"] == offset:
+            hits.append((index, field, fld))
+    return hits[0] if len(hits) == 1 else None
+
+
+def _core_default_context_base(g: "DsoGraph", fstart: int, idx: int,
+                               reg: str, depth: int = 0) -> bool:
+    """Whether ``reg`` provably holds the default library context.
+
+    The accepted origins are exactly the authority's `DEFAULT_CONTEXT`
+    global, a copy of it, and `pthread_getspecific(DEFAULT_CONTEXT_THREAD_LOCAL)`
+    (the thread-local default).  Anything else refuses: this is not a
+    catch-all for "some pointer came from a load".
+    """
+    if depth > 4:
+        return False
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None or not defs or _ENTRY_DEF in defs:
+        return False
+    for k in sorted(defs):
+        text = _insn(g, fstart, k)
+        mn, _rest, ops = _insn_parts(text)
+        if mn == "lea" and len(ops) >= 2:
+            comment = text.split("#", 1)[1] if "#" in text else ""
+            if ("DEFAULT_CONTEXT" in comment
+                    and "DEFAULT_CONTEXT_THREAD_LOCAL" not in comment):
+                continue
+            return False
+        if mn in ("mov", "movq") and len(ops) >= 2 and ops[0] in _REGS:
+            if not _core_default_context_base(
+                    g, fstart, k, _canon(ops[0]), depth + 1):
+                return False
+            continue
+        if mn.startswith("call"):
+            symbol = _s1_call_symbol(g, fstart, k)
+            if _external_function_leaf(symbol) != "pthread_getspecific":
+                return False
+            if not _core_thread_default_arg(g, fstart, k):
+                return False
+            continue
+        return False
+    return True
+
+
+def _core_thread_default_arg(g: "DsoGraph", fstart: int, k: int) -> bool:
+    """Whether the `pthread_getspecific` at ``k`` uses the default key."""
+    cfg = _function_cfg(g, fstart)
+    bi = cfg["block_of"].get(k)
+    if bi is None:
+        return False
+    lo, _hi = cfg["blocks"][bi]
+    for j in range(k - 1, lo - 1, -1):
+        text = _insn(g, fstart, j)
+        mn, _rest, ops = _insn_parts(text)
+        if (mn in ("mov", "movq", "movl") and len(ops) == 2
+                and ops[-1] == "%edi"
+                and "DEFAULT_CONTEXT_THREAD_LOCAL" in text):
+            return True
+        if _canon("%edi") in _defined_regs_at(text):
+            return False
+    return False
 
 
 def _core_cfg_preds(cfg: dict, bi: int) -> list:
@@ -18972,7 +19141,7 @@ EXTERNAL_ABI_SITE_FUNCTIONS = {
 EXTERNAL_ABI_SITE_PINS = {
     0x1F89E8: ("OSSL_STORE_open_ex", 0x488),
     0x1F8AA1: ("OSSL_STORE_open_ex", 0x57D),
-    0x1F8F13: ("OSSL_STORE_open_ex", 0x9C3),
+    0x1F8F13: ("OSSL_STORE_open_ex", 0x9F3),
     0x293F25: ("CONF_modules_load", 0x505),
     0x294363: ("CONF_modules_load", 0x943),
 }
@@ -31766,12 +31935,15 @@ def _e7abi_self_test():
         0x541C2D: ("EVP_PBE_CipherInit_ex", 0x19D),
         0x455C88: ("OSSL_STORE_open_ex", 0x488),
         0x455D7D: ("OSSL_STORE_open_ex", 0x57D),
-        # Deliberately NOT re-pinned: the b76 build changed the shape of these
-        # two call sites and no witness accepts their address, so the fixture
-        # keeps the b73 literal and the self-test reports the refusal.  See
-        # atlas-refresh/e7-b76-repin.json#refused.
-        0x1F8F13: ("OSSL_STORE_open_ex", 0x9C3),
-        0x1F8D29: ("OSSL_STORE_open_ex", 0x7D9),
+        # b76 re-pin: the closefn call moved from b73 +0x9C3 to +0x9F3 and
+        # the p_close call from +0x7D9 to +0x807 (0x4561F3 / 0x456007).
+        # The corresponding guard changed from a je/jne pair to one
+        # `test %r12,%r12; je <legacy>` with the provider block as the
+        # fallthrough; the witness proves that shape (see
+        # STORE_LOADER_CLOSE_GUARD), so the moved rows are re-pinned, not
+        # retired.
+        0x4561F3: ("OSSL_STORE_open_ex", 0x9F3),
+        0x456007: ("OSSL_STORE_open_ex", 0x807),
         0x22CB65: ("CONF_modules_load", 0x505),
         0x22CFA3: ("CONF_modules_load", 0x943),
         0x384BBC: ("openssl_rs::pem::pem_pk8::do_pk8pkey", 0x29C),
@@ -31780,8 +31952,8 @@ def _e7abi_self_test():
         (0x541C2D, 0x541A90, "call   *%rax"),
         (0x455C88, 0x455800, "call   *%rax"),
         (0x455D7D, 0x455800, "call   *%rax"),
-        (0x1F8F13, 0x1F8550, "call   *%rax"),
-        (0x1F8D29, 0x1F8550, "call   *%rax"),
+        (0x4561F3, 0x455800, "call   *%rax"),
+        (0x456007, 0x455800, "call   *%rax"),
         (0x22CB65, 0x22C660, "call   *%r15"),
         (0x22CFA3, 0x22C660, "call   *%rax"),
         (0x384BBC, 0x384920, "call   *%rbx"),
@@ -31798,8 +31970,8 @@ def _e7abi_self_test():
         0x541C2D: ABI_CONTRACT_PBE_REGISTRY,
         0x455C88: ABI_CONTRACT_STORE_LOADER,
         0x455D7D: ABI_CONTRACT_STORE_LOADER,
-        0x1F8F13: ABI_CONTRACT_STORE_LOADER,
-        0x1F8D29: ABI_CONTRACT_PROVIDER,
+        0x4561F3: ABI_CONTRACT_STORE_LOADER,
+        0x456007: ABI_CONTRACT_PROVIDER,
         0x22CB65: ABI_CONTRACT_CONF_MODULE,
         0x22CFA3: ABI_CONTRACT_CONF_MODULE,
         0x384BBC: ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
@@ -31837,7 +32009,7 @@ def _e7abi_self_test():
             w.get("contract_bounded"), True)
         chk(f"e7abi {addr:#x} target set", w.get("target_set"), [])
     chk("e7abi site 5 scope",
-        ((wit(0x1F8D29) or (None, {}))[1] or {}).get("scope"),
+        ((wit(0x456007) or (None, {}))[1] or {}).get("scope"),
         "store-loader-p_close")
     chk("e7abi site 8 default",
         ((wit(0x384BBC) or (None, {}))[1] or {}).get("default_target",
@@ -32346,8 +32518,8 @@ def _pbe_outparam_self_test():
         (0x541C2D, 0x541A90, "call   *%rax", ABI_CONTRACT_PBE_REGISTRY),
         (0x455C88, 0x455800, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
         (0x455D7D, 0x455800, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
-        (0x1F8F13, 0x1F8550, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
-        (0x1F8D29, 0x1F8550, "call   *%rax", ABI_CONTRACT_PROVIDER),
+        (0x4561F3, 0x455800, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
+        (0x456007, 0x455800, "call   *%rax", ABI_CONTRACT_PROVIDER),
         (0x22CB65, 0x22C660, "call   *%r15", ABI_CONTRACT_CONF_MODULE),
         (0x22CFA3, 0x22C660, "call   *%rax", ABI_CONTRACT_CONF_MODULE),
         (0x384BBC, 0x384920, "call   *%rbx",
@@ -32600,6 +32772,21 @@ def _e7core_self_test():
         (None, "slot-load-is-not-null-guarded"))
     chk("e7core guard restored", core_run(g, a_free)[0] is not None, True)
 
+    # control core-default-context: the inlined default-context arm of
+    # `ossl_lib_ctx_get_data` reads a different `OsslLibCtx` field, so the
+    # slot index is no longer source-bound and the site must stop resolving.
+    if core_sites.get("ossl_provider_up_ref_parent"):
+        a_core, _w_core = core_sites["ossl_provider_up_ref_parent"][0]
+        dc_off = next(a for a, t in g.precision.insns_by_func[a_core["func"]]
+                      if t.strip() == "mov    0x78(%rax),%rcx")
+        px = _Proxy(g, insns=mutate_insns(a_core, dc_off,
+                                          "mov    0x70(%rax),%rcx"))
+        got, _why = core_run(px, a_core)
+        chk("e7core default-context offset mutation refusal", got is None,
+            True)
+        chk("e7core default-context offset restored",
+            core_run(g, a_core)[0] is not None, True)
+
     # control core-writer-id: the writer's store sits under the wrong
     # OSSL_FUNC_* arm
     total_src = (root / "src/provider/child.rs").read_text()
@@ -32716,30 +32903,52 @@ def _e7core_self_test():
     chk("e7store provider p_close site count", len(prof_sites), 1)
     if prof_sites:
         s_st, w_st = prof_sites[0]
-        meth = (root / STORE_LOADER_METH_SOURCE).read_text()
-        td = Path(tempfile.mkdtemp(prefix="e7store-source-",
-                                   dir=root / "court/tmp"))
-        try:
-            (td / "src/store").mkdir(parents=True)
-            for rel in ("mod.rs", "store_register.rs", "store_lib.rs"):
-                shutil.copy(root / "src/store" / rel, td / "src/store" / rel)
-            mutated = meth.replace(
-                "    let method = unsafe { inner_loader_fetch(&mut methdata, scheme, properties) };",
-                "    let method: *mut OsslStoreLoader = ptr::null_mut();", 1)
-            chk("e7store wrapper fixture applied", mutated != meth, True)
-            (td / STORE_LOADER_METH_SOURCE).write_text(mutated)
-            px = _Proxy(g, source_root=td)
-            got = store_loader_provider_witness(px, dict(s_st),
-                                                px.funcs[s_st["func"]])
-            chk("e7store wrapper mutation refusal",
-                ((got or (None, None, {}))[2] or {}).get("reason"),
-                "loader-fetch-wrapper-is-not-a-transparent-forwarder")
-            chk("e7store wrapper restored",
-                (store_loader_provider_witness(g, dict(s_st),
-                                               g.funcs[s_st["func"]]) or
-                 (None, None, {}))[1] is not None, True)
-        finally:
-            shutil.rmtree(td, ignore_errors=True)
+        # The b76 image resolves the provider loader through
+        # `inner_loader_fetch` directly (OSSL_STORE_open_ex inlines the
+        # exported wrapper), so the wrapper-source control is not exercised at
+        # this candidate and is recorded as NOT_RUN rather than silently
+        # dropped.  The load-bearing control for the b76 shape is the fetch
+        # call itself: retarget it and the constructor proof must refuse.
+        insns_st = g.precision.insns_by_func[s_st["func"]]
+        fetch_addr = next(a for a, t in insns_st if "inner_loader_fetch" in t)
+        other = next(t for _a, t in insns_st
+                     if t.strip().startswith("call") and "<" in t
+                     and "ossl_store_get0_loader_int" in t)
+        bad_addr = re.search(r"call\s+([0-9a-f]+)", other).group(1)
+        px = _Proxy(g, insns=mutate_insns(s_st, fetch_addr,
+                                          "call   " + bad_addr))
+        got = store_loader_provider_witness(px, dict(s_st),
+                                            px.funcs[s_st["func"]])
+        chk("e7store fetch mutation refusal",
+            ((got or (None, None, {}))[2] or {}).get("reason"),
+            "wrong-base-constructor")
+        chk("e7store fetch restored",
+            (store_loader_provider_witness(g, dict(s_st),
+                                           g.funcs[s_st["func"]]) or
+             (None, None, {}))[1] is not None, True)
+
+        # control e7store guard: move the `je` target off the legacy close
+        # block.  Then the provider p_close site is not under the
+        # fetched_loader != NULL arm and the legacy closefn site is not under
+        # the fetched_loader == NULL arm, so both witnesses must refuse.
+        s_leg = site(g, 0x455800, 0x4561f3, "call   *%rax")
+        br_addr = next(a for a, t in g.precision.insns_by_func[0x455800]
+                       if t.strip().startswith("je") and "4561e7" in t)
+        px = _Proxy(g, insns=mutate_insns(s_leg, br_addr, "je     455ff8"))
+        got = store_loader_provider_witness(px, dict(s_st),
+                                            px.funcs[s_st["func"]])
+        chk("e7store guard mutation refusal",
+            ((got or (None, None, {}))[2] or {}).get("reason"),
+            "p_close-guard-is-not-the-enumerated-pair")
+        got = store_loader_legacy_witness(px, dict(s_leg),
+                                          px.funcs[s_leg["func"]])
+        chk("e7store legacy guard mutation refusal",
+            ((got or (None, None, {}))[2] or {}).get("reason"),
+            "closefn-guard-is-not-the-enumerated-pair")
+        chk("e7store guard restored",
+            (store_loader_provider_witness(g, dict(s_st),
+                                           g.funcs[s_st["func"]]) or
+             (None, None, {}))[1] is not None, True)
 
     # ---- PEM register-agnostic rule --------------------------------------- #
     pem_sites = sites_of(g, PEM_FUNCTION,
@@ -32796,14 +33005,19 @@ def _e7core_self_test():
 
     return failures, (
         "e7core controls: the recorded cohort is 26 sites across 24 functions; "
-        "this image resolves 25 of them (ossl_provider_up_ref_parent changed "
-        "shape and is refused by name, which the count fixtures report as a "
-        "failure, not a skip); two further unreachable sites carry the "
-        "same class; offset, libctx-index, writer-id, second-source-store, "
-        "header-id and NULL-guard mutations each refuse and are restored; "
+        "this image resolves all 26 (ossl_provider_up_ref_parent's inlined "
+        "default-context arm is admitted only at the source-declared "
+        "OsslLibCtx.child_provider offset, and a perturbed offset refuses); "
+        "two further unreachable sites carry the same class; offset, "
+        "libctx-index, writer-id, second-source-store, header-id, "
+        "default-context-offset and NULL-guard mutations each refuse and are "
+        "restored; "
         "the provider-init rule refuses a store-offset and an extra-writer "
-        "mutation and is restored; the store-loader wrapper refuses a "
-        "non-forwarding source and is restored; the register-agnostic PEM "
+        "mutation and is restored; the store-loader close guard refuses a "
+        "perturbed je target and is restored; the b76 direct "
+        "inner_loader_fetch call refuses a retargeted call (the wrapper-source "
+        "arm is NOT_RUN at this candidate because the wrapper is inlined); "
+        "the register-agnostic PEM "
         "witness refuses a wrong-default-symbol and a wrong-copy-source "
         "mutation and is restored")
 
