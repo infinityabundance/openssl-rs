@@ -674,7 +674,11 @@
     }
    ],
    "required_resolution": "an independent adversarial review at BOUNDARY level of each receipt group, by a reviewer that is not the author, recorded as an adjudication entry; or withdraw the discharges. Adding an \"adjudicated\" flag without the review is a weakened instrument and is refused.",
-   "state": "REVIEW_REQUIRED, excluded from the supportable count"
+   "state": "REVIEW_REQUIRED, excluded from the supportable count",
+   "audit": {
+    "path": "evidence/b75-review-blocker-audit.json",
+    "result": "0 of the 98 are structurally eliminated; 321/323 spans audited; the two free_lock spans are a valid set hash; s2i_poison is the only safe declaration outside the 98 and is already B54-discharged"
+   }
   },
   {
    "id": "B75-G2",
