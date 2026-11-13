@@ -1,0 +1,93 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/evidence-readjudication/v1",
+ "kind": "evidence-readjudication-probe",
+ "date": "2026-11-13",
+ "candidate": {
+  "src_content_sha256": "8ee037be6789bd8e2731d5081b787dda2ebfa190a873c1366f1aac01f7ba7374",
+  "src_rs_files": 878,
+  "source_head": "15bebabc90e1c4a8f0cb496813030c1415891f7c"
+ },
+ "instrument": {
+  "path": "forensics/tools/consumer_closure.py",
+  "sha256": "edadf43b71285612cf53c9895c7beb751f270949e2f093dec8fa6e1bbd3fb483",
+  "version": 6
+ },
+ "probe": {
+  "path": "forensics/memory-safety/campaign/safe-c33/evidence/b75_readjudicate.py",
+  "sha256": "5f91a9e7b9a05ef1642278b813ed5d08b1446ca157690dff2e7c55ecf68c5089",
+  "exit": 0
+ },
+ "inputs": {
+  "evidence/closure-ssh-b74.json": "87f1dd9ac062d60da6a07c06abc4eec626254217dfd84861c7b495e59357c8ff",
+  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "28396a3ff18e0d71950f7fa8b99edfc635af30fa5ab22c780090bd191054a115",
+  "forensics/memory-safety/campaign/safe-c33/state.json": "508095bcb91f439fc126cf964d31a4f0f656f997587234d5bfbb07ec0cbc8273",
+  "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json": "225275e35179c7f475c1031e6a783a9ee4630529127a715da67a1cecab51863e",
+  "forensics/memory-safety/campaign/safe-c33/evidence/ocsp-i2r-dispatch-review-2026-11-13.json": "acf9d8cdec1a973b96a717955b986471fba987c4b4c81c475a7872074f00e860",
+  "forensics/memory-safety/campaign/safe-c33/evidence/b75_readjudicate.py": "5f91a9e7b9a05ef1642278b813ed5d08b1446ca157690dff2e7c55ecf68c5089"
+ },
+ "method": "import the shipping tool's load_obligation_mechanisms, discharge_plane, load_boundaries and adjudicate; run every obligation in the frozen b74 receipt with enforce_conflicts=True, repo=worktree, allow_worktree_span=True. No rebuild and no binary analysis.",
+ "before": {
+  "DISCHARGED": 321,
+  "BLOCKED": 2,
+  "UNKNOWN": 0
+ },
+ "after": {
+  "DISCHARGED": 323
+ },
+ "sites": [
+  {
+   "obligation": "V1:src/ocsp/v3_ocsp.rs:122:UNSAFE_FN_DEF",
+   "status": "DISCHARGED",
+   "discharge_boundary": "src/ocsp/v3_ocsp.rs:122",
+   "discharge_receipt": "boundary-sweep-B54",
+   "span_sha256": "b50e4d89db5ce79738af5279ed0bd4bd058bff4cee775901540be9fac0155e42",
+   "span_lines": [
+    122,
+    174
+   ],
+   "conflicts": [
+    {
+     "boundary": "P25-OSSH-OCSP-3",
+     "receipt": "openssh-asn1-ocsp-sites",
+     "keyword": "CONTRACTED",
+     "superseded": true
+    }
+   ],
+   "status_reason": "boundary src/ocsp/v3_ocsp.rs:122 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by same-resolved-definition (src/ocsp/v3_ocsp.rs, UNSAFE_FN_DEF, i2r_ocsp_crlid, lines 122-174) and its recorded span hash matches the current content (b50e4d89db5ce797, source worktree); the declared coordinate 122 is not part of acceptance"
+  },
+  {
+   "obligation": "V1:src/ocsp/v3_ocsp.rs:406:UNSAFE_FN_DEF",
+   "status": "DISCHARGED",
+   "discharge_boundary": "src/ocsp/v3_ocsp.rs:406",
+   "discharge_receipt": "boundary-sweep-B54",
+   "span_sha256": "322bd2bf4972c3a390a295e976eb562b9d942133d69d141fd397c91855007b1f",
+   "span_lines": [
+    406,
+    446
+   ],
+   "conflicts": [
+    {
+     "boundary": "P25-OSSH-OCSP-7",
+     "receipt": "openssh-asn1-ocsp-sites",
+     "keyword": "CONTRACTED",
+     "superseded": true
+    }
+   ],
+   "status_reason": "boundary src/ocsp/v3_ocsp.rs:406 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by same-resolved-definition (src/ocsp/v3_ocsp.rs, UNSAFE_FN_DEF, i2r_ocsp_serviceloc, lines 406-446) and its recorded span hash matches the current content (322bd2bf4972c3a3, source worktree); the declared coordinate 406 is not part of acceptance"
+  }
+ ],
+ "unchanged_obligations": 320,
+ "explanation": "the 321 previously discharged obligations are unchanged; the two previously blocked OCSP obligations are now discharged because the appended per-obligation supersedes entries mark the CONTRACTED dispositions superseded. The count moves 321/2 -> 323/0.",
+ "does_not_prove": [
+  "a fresh closure run",
+  "any BOUNDARY/SEAL runtime instrument (Miri, ASan, TSan, authority differential)",
+  "a rebuilt library or a rebuilt ssh/sshd",
+  "anything about the other 21 i2r printers",
+  "SAFE_COMPATIBLE for ssh or sshd"
+ ],
+ "non_claims": [
+  "The probe is evidence about the evidence ledger, not a new closure receipt.",
+  "The b74 receipt remains immutable and still states 321/2.",
+  "The 98 REVIEW_REQUIRED discharges are untouched."
+ ]
+}

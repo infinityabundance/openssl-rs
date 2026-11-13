@@ -1,0 +1,124 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/boundary-review/v1",
+ "kind": "independent-boundary-review",
+ "receipt": "ocsp-i2r-dispatch-review-2026-11-13",
+ "date": "2026-11-13",
+ "campaign": "safe-c33",
+ "subphase": "b75-ocsp-dispatch-decision",
+ "subject": "P25-OSSH-OCSP-3 (i2r_ocsp_crlid, src/ocsp/v3_ocsp.rs:122) and P25-OSSH-OCSP-7 (i2r_ocsp_serviceloc, src/ocsp/v3_ocsp.rs:406): whether the X509V3_EXT_print dispatch actually establishes the two callbacks' caller contract",
+ "continues": [
+  "atlas-refresh/b67-g1-conflict-resolution.json#/unresolved (both entries verdict NEEDS_DECISION)",
+  "atlas-refresh/openssh-asn1-ocsp-sites.json (P25-OSSH-OCSP-3 and -7 disposition CONTRACTED, blocker 'No independent BOUNDARY review')",
+  "atlas-refresh/boundary-sweep-B54.json (both rows DISPATCH_DISCHARGED, applied, discharged through the r13 ledger key)"
+ ],
+ "candidate": {
+  "source_head": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+  "source_head_provenance": "the census identity the b74 closure and court/freeze-b73 bind; this checkout has no git object store, so the binding used here is the content digest, which reproduces exactly",
+  "src_content_sha256": "8ee037be6789bd8e2731d5081b787dda2ebfa190a873c1366f1aac01f7ba7374",
+  "src_content_hash_rule": "sha256('openssl-rs/src-rs/v1\\0' + sorted relpath\\0bytes\\0)",
+  "src_files": 878,
+  "files_sha256": {
+   "src/ocsp/v3_ocsp.rs": "b97508ed451e344c3584f53fbfcbb340eef47e8e3c7e72441ce133e3877f3679",
+   "src/x509/v3_prn.rs": "6ec4b248d64d7a82f9a33f34ca24be51a0a45bcd7512366d53bd44f1983de757",
+   "src/x509/v3_lib.rs": "cb33498a08768e8e90368a0ab9dc6e639d931a92d178dd4d8d8eba91da619d0e",
+   "src/ocsp/ocsp_asn.rs": "e84974ef9359c2d9e2951bd76779b801d72f68c6f2f4f541143401e78883a4cd",
+   "src/x509/v3_iobo.rs": "911a3390f67597887ceb6bc7a77c661909a9144f7d1e0ac7687d67aa223755fb"
+  }
+ },
+ "reviewers": [
+  {
+   "session": "review-1",
+   "role": "independent adversarial reviewer; read-only; not the author of boundary-sweep-B54 and not the orchestrating session that prepared this record",
+   "verdict": "DISCHARGE both for the dispatch preconditions; B (item/type identity) and D (mutation control) reported NOT_RUN because they lay outside the authorised read set",
+   "confirmed": [
+    "X509V3_EXT_print resolves one row, decodes with that same row's it/d2i, refuses a NULL decoded value before any slot, and dispatches that same method and value",
+    "the only references to either callback are the definitions, the two row slots, documentation, and in-file tests; no other production caller",
+    "each callback checks the field pointers it reads for NULL before dereference"
+   ],
+   "withheld": [
+    "OCSP_CRLID_it / OCSP_SERVICELOC_it describe the cast-to struct",
+    "whether deleting the dispatcher NULL refusal makes the cited test fail",
+    "whether X509V3_EXT_add_alias pairs it and i2r together"
+   ]
+  },
+  {
+   "session": "review-2",
+   "role": "independent adversarial reviewer; read-only; separate session from review-1 and from the author",
+   "verdict": "FULL DISCHARGE CONFIRMED",
+   "confirmed": [
+    "B PASS: OCSP_CRLID_ITEM.size = size_of::<OcspCrlId>() (src/ocsp/ocsp_asn.rs:1660), tcount 3 (:1658) against template offsets 0/8/16 (:1633,:1640,:1647) matching the struct asserts (:356-359); d2i_OCSP_CRLID returns *mut OcspCrlId from the same item (:1701); the printer casts to OcspCrlId (src/ocsp/v3_ocsp.rs:128). OCSP_SERVICELOC_ITEM size (:1746), tcount 2 (:1744), offsets 0/8 (:1725,:1732) match (:372-374); d2i returns *mut OcspServiceLoc (:1787); the printer casts to OcspServiceLoc (src/ocsp/v3_ocsp.rs:412-413)",
+    "D PASS: i2r_printer_is_refused_when_the_value_does_not_decode (src/x509/v3_prn.rs:647-654) asserts ret == 0 for a value that fails the row's item decode; removing src/x509/v3_prn.rs:317-320 dispatches NULL into i2r_ISSUED_ON_BEHALF_OF (src/x509/v3_iobo.rs:89) and reaches GENERAL_NAME_print(out, NULL) -> gen_type(NULL) -> (*gen).type_ (src/x509/v3_san.rs:199), a NULL dereference that aborts the test, so the control fails rather than passing",
+    "E PASS: X509V3_EXT_add_alias copies the whole source row with ptr::write(p, ptr::read(ext)) (src/x509/v3_lib.rs:901), overwrites only ext_nid and ORs X509V3_EXT_DYNAMIC (:902-903), so it and i2r (and i2s) travel together and cannot be cross-paired"
+   ]
+  }
+ ],
+ "independence_note": "Both reviewers are separate agent sessions with read-only instructions, neither is the author of the boundary-sweep-B54 sweep, and the second was required to close every condition the first withheld before a discharge was recorded. This is an agent-based independent source review in the sense of AGENTS.md section 15 (separation of judgment); it is not external human review, and it ran no code.",
+ "checks": [
+  {
+   "id": "C1",
+   "claim": "exact site coverage",
+   "result": "PASS",
+   "detail": "The two obligations resolve to unique brace-matched definitions: i2r_ocsp_crlid span lines 122-174 sha256 b50e4d89db5ce79738af5279ed0bd4bd058bff4cee775901540be9fac0155e42, i2r_ocsp_serviceloc span lines 406-446 sha256 322bd2bf4972c3a390a295e976eb562b9d942133d69d141fd397c91855007b1f. Both match the r13 recorded span hashes and bind by same-resolved-definition."
+  },
+  {
+   "id": "C2",
+   "claim": "caller closure",
+   "result": "PASS",
+   "detail": "grep -rn 'i2r_ocsp_crlid\\|i2r_ocsp_serviceloc' src returns only module documentation, the two definitions, the two row slots (src/ocsp/v3_ocsp.rs:467, :552), and in-file tests (:803,:813,:818,:826). No other production installation or invocation exists."
+  },
+  {
+   "id": "C3",
+   "claim": "the dispatcher establishes the value and the method",
+   "result": "PASS",
+   "detail": "X509V3_EXT_print refuses a NULL out/ext (:263-265), resolves one row (X509V3_EXT_get, :283), resolves that row's item (:296), decodes with it (:308) or that row's old-style d2i (:311-314), refuses a NULL decoded value (:317-320), and dispatches that same method pointer and value to the i2r slot (:362-364). The method and value cannot come from different rows."
+  },
+  {
+   "id": "C4",
+   "claim": "the decoded type is the cast-to type",
+   "result": "PASS",
+   "detail": "See review-2 B: the item descriptor sizes, counts and offsets match OcspCrlId / OcspServiceLoc, and the d2i helpers return those types through the same item."
+  },
+  {
+   "id": "C5",
+   "claim": "dynamic aliases cannot cross-pair a decoder and a printer",
+   "result": "PASS",
+   "detail": "X509V3_EXT_add_alias copies the whole row and edits only ext_nid and ext_flags; it and i2r are copied together and the registry read hold keeps the alias live across the dispatch (B49/B51)."
+  },
+  {
+   "id": "C6",
+   "claim": "load-bearing negative control",
+   "result": "PASS",
+   "detail": "src/x509/v3_prn.rs:647-654. The control is crash-enforced rather than assertion-enforced: deleting the NULL refusal sends NULL into a printer that dereferences it, so the test aborts (fails) instead of passing. It is not a vacuous assertion."
+  },
+  {
+   "id": "C7",
+   "claim": "no hidden obligation",
+   "result": "PASS",
+   "detail": "bp's liveness is the exported X509V3_EXT_print caller obligation and a NULL bp is refused before dispatch; in_'s non-NULL/live/decoded-by-this-row state is established by the dispatcher; the field pointers are the decoder's own and are NULL-checked. The callback's unsafe qualification covers raw-pointer dereference at the C ABI edge, not an unstated precondition."
+  }
+ ],
+ "decision": {
+  "verdict": "DISCHARGE",
+  "scope": "P25-OSSH-OCSP-3 and P25-OSSH-OCSP-7 only",
+  "effect": "the CONTRACTED dispositions in openssh-asn1-ocsp-sites are superseded by the already-applied B54 scoped discharge; the r13 receipt declares both ids in supersedes with a per-obligation witness; no boundary disposition, span hash, or verdict of any existing receipt is rewritten",
+  "applied": true
+ },
+ "residuals": [
+  "No Miri (Stacked/Tree Borrows), ASan or TSan was run for this review.",
+  "No rebuild and no fresh closure run was made in this checkout; the re-adjudication was done with the shipping instrument over the frozen b74 obligation queue by evidence/b75_readjudicate.py (the b67-g1 probe method, exit 0). A clean closure run is still required to carry 323/0/0 in a receipt.",
+  "No OpenSSH L7 workload was replayed against the candidate.",
+  "The review establishes the dispatch contract for these two sites; it does not establish anything about the other 21 i2r printers or the X509_VERIFY_POLICY mechanism as a whole."
+ ],
+ "non_claims": [
+  "This review does not claim SAFE_COMPATIBLE for ssh or sshd.",
+  "This review does not discharge the 98 receipts the applied ledger holds at REVIEW_REQUIRED.",
+  "A source-level agent review is not a sanitizer result and is not external human review.",
+  "The discharge is site-scoped; it does not promote the mechanism or any consumer family."
+ ],
+ "probe": {
+  "path": "forensics/memory-safety/campaign/safe-c33/evidence/b75_readjudicate.py",
+  "sha256": "5f91a9e7b9a05ef1642278b813ed5d08b1446ca157690dff2e7c55ecf68c5089",
+  "exit": "0",
+  "result": "323 DISCHARGED / 0 BLOCKED / 0 UNKNOWN; both conflicts superseded"
+ }
+}
