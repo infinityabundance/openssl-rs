@@ -1686,12 +1686,21 @@ unsafe extern "C" fn ossl_cmp_msg_cb(
 // Allocation / free helpers for the internal item types
 // ---------------------------------------------------------------------------------------------
 
+// The thirteen item allocators below were declared `unsafe` only because their bodies call
+// `ASN1_item_new`. They impose no caller precondition, so the qualifier was vestigial and is
+// removed. Each removal is pinned by a compile-time coercion control that fails to build if the
+// signature, ABI or return type drifts.
+
 /// `OSSL_CMP_ITAV_new` — the `IMPLEMENT_ASN1_FUNCTIONS(OSSL_CMP_ITAV)` allocator, crate-internal
 /// because `cmp.h` does not declare it.
-unsafe fn itav_new() -> *mut CmpItav {
-    // SAFETY: the accessor answers a static item.
+fn itav_new() -> *mut CmpItav {
+    // SAFETY: `cmp_itav_it()` is a static in-crate item descriptor, so this call has no caller
+    // precondition; the returned block is the caller's ownership transfer.
     unsafe { ASN1_item_new(cmp_itav_it()) }.cast()
 }
+
+#[cfg(test)]
+const _: fn() -> *mut CmpItav = itav_new;
 
 /// `OSSL_CMP_ITAV_free` — the item free.
 unsafe fn itav_free(itav: *mut CmpItav) {
@@ -1700,10 +1709,14 @@ unsafe fn itav_free(itav: *mut CmpItav) {
 }
 
 /// `OSSL_CMP_ROOTCAKEYUPDATE_new` — internal.
-unsafe fn rootcakeyupdate_new() -> *mut CmpRootCaKeyUpdate {
-    // SAFETY: the accessor answers a static item.
+fn rootcakeyupdate_new() -> *mut CmpRootCaKeyUpdate {
+    // SAFETY: `cmp_rootcakeyupdate_it()` is a static in-crate item descriptor, so this call has no
+    // caller precondition; the returned block is the caller's ownership transfer.
     unsafe { ASN1_item_new(cmp_rootcakeyupdate_it()) }.cast()
 }
+
+#[cfg(test)]
+const _: fn() -> *mut CmpRootCaKeyUpdate = rootcakeyupdate_new;
 
 /// `OSSL_CMP_ROOTCAKEYUPDATE_free` — internal.
 unsafe fn rootcakeyupdate_free(p: *mut CmpRootCaKeyUpdate) {
@@ -1712,16 +1725,24 @@ unsafe fn rootcakeyupdate_free(p: *mut CmpRootCaKeyUpdate) {
 }
 
 /// `OSSL_CMP_CERTREQTEMPLATE_new` — internal.
-unsafe fn certreqtemplate_new() -> *mut CmpCertReqTemplate {
-    // SAFETY: the accessor answers a static item.
+fn certreqtemplate_new() -> *mut CmpCertReqTemplate {
+    // SAFETY: `cmp_certreqtemplate_it()` is a static in-crate item descriptor, so this call has no
+    // caller precondition; the returned block is the caller's ownership transfer.
     unsafe { ASN1_item_new(cmp_certreqtemplate_it()) }.cast()
 }
 
+#[cfg(test)]
+const _: fn() -> *mut CmpCertReqTemplate = certreqtemplate_new;
+
 /// `OSSL_CMP_CRLSTATUS_new` — internal.
-unsafe fn crlstatus_new() -> *mut CmpCrlStatus {
-    // SAFETY: the accessor answers a static item.
+fn crlstatus_new() -> *mut CmpCrlStatus {
+    // SAFETY: `cmp_crlstatus_it()` is a static in-crate item descriptor, so this call has no
+    // caller precondition; the returned block is the caller's ownership transfer.
     unsafe { ASN1_item_new(cmp_crlstatus_it()) }.cast()
 }
+
+#[cfg(test)]
+const _: fn() -> *mut CmpCrlStatus = crlstatus_new;
 
 /// `OSSL_CMP_CRLSTATUS_free` — the item free.
 ///
@@ -1739,34 +1760,54 @@ unsafe fn crlstatus_free(p: *mut CmpCrlStatus) {
 // ---------------------------------------------------------------------------------------------
 
 /// `OSSL_CMP_CERTREPMESSAGE_new` — internal item allocator.
-pub(crate) unsafe fn OSSL_CMP_CERTREPMESSAGE_new() -> *mut CmpCertRepMessage {
-    // SAFETY: the accessor answers a static item.
+pub(crate) fn OSSL_CMP_CERTREPMESSAGE_new() -> *mut CmpCertRepMessage {
+    // SAFETY: `cmp_certrepmessage_it()` is a static in-crate item descriptor, so this call has no
+    // caller precondition; the returned block is the caller's ownership transfer.
     unsafe { ASN1_item_new(cmp_certrepmessage_it()) }.cast()
 }
 
+#[cfg(test)]
+const _: fn() -> *mut CmpCertRepMessage = OSSL_CMP_CERTREPMESSAGE_new;
+
 /// `OSSL_CMP_REVREPCONTENT_new` — internal item allocator.
-pub(crate) unsafe fn OSSL_CMP_REVREPCONTENT_new() -> *mut CmpRevRepContent {
-    // SAFETY: the accessor answers a static item.
+pub(crate) fn OSSL_CMP_REVREPCONTENT_new() -> *mut CmpRevRepContent {
+    // SAFETY: `cmp_revrepcontent_it()` is a static in-crate item descriptor, so this call has no
+    // caller precondition; the returned block is the caller's ownership transfer.
     unsafe { ASN1_item_new(cmp_revrepcontent_it()) }.cast()
 }
 
+#[cfg(test)]
+const _: fn() -> *mut CmpRevRepContent = OSSL_CMP_REVREPCONTENT_new;
+
 /// `OSSL_CMP_ERRORMSGCONTENT_new` — internal item allocator.
-pub(crate) unsafe fn OSSL_CMP_ERRORMSGCONTENT_new() -> *mut CmpErrorMsgContent {
-    // SAFETY: the accessor answers a static item.
+pub(crate) fn OSSL_CMP_ERRORMSGCONTENT_new() -> *mut CmpErrorMsgContent {
+    // SAFETY: `cmp_errormsgcontent_it()` is a static in-crate item descriptor, so this call has no
+    // caller precondition; the returned block is the caller's ownership transfer.
     unsafe { ASN1_item_new(cmp_errormsgcontent_it()) }.cast()
 }
 
+#[cfg(test)]
+const _: fn() -> *mut CmpErrorMsgContent = OSSL_CMP_ERRORMSGCONTENT_new;
+
 /// `OSSL_CMP_CERTIFIEDKEYPAIR_new` — internal item allocator.
-pub(crate) unsafe fn OSSL_CMP_CERTIFIEDKEYPAIR_new() -> *mut CmpCertifiedKeyPair {
-    // SAFETY: the accessor answers a static item.
+pub(crate) fn OSSL_CMP_CERTIFIEDKEYPAIR_new() -> *mut CmpCertifiedKeyPair {
+    // SAFETY: `cmp_certifiedkeypair_it()` is a static in-crate item descriptor, so this call has
+    // no caller precondition; the returned block is the caller's ownership transfer.
     unsafe { ASN1_item_new(cmp_certifiedkeypair_it()) }.cast()
 }
 
+#[cfg(test)]
+const _: fn() -> *mut CmpCertifiedKeyPair = OSSL_CMP_CERTIFIEDKEYPAIR_new;
+
 /// `OSSL_CMP_REVDETAILS_new` — internal item allocator.
-pub(crate) unsafe fn OSSL_CMP_REVDETAILS_new() -> *mut CmpRevDetails {
-    // SAFETY: the accessor answers a static item.
+pub(crate) fn OSSL_CMP_REVDETAILS_new() -> *mut CmpRevDetails {
+    // SAFETY: `cmp_revdetails_it()` is a static in-crate item descriptor, so this call has no
+    // caller precondition; the returned block is the caller's ownership transfer.
     unsafe { ASN1_item_new(cmp_revdetails_it()) }.cast()
 }
+
+#[cfg(test)]
+const _: fn() -> *mut CmpRevDetails = OSSL_CMP_REVDETAILS_new;
 
 /// `OSSL_CMP_REVDETAILS_free` — the item free.
 ///
@@ -1778,10 +1819,14 @@ pub(crate) unsafe fn OSSL_CMP_REVDETAILS_free(p: *mut CmpRevDetails) {
 }
 
 /// `OSSL_CMP_CERTSTATUS_new` — internal item allocator.
-pub(crate) unsafe fn OSSL_CMP_CERTSTATUS_new() -> *mut CmpCertStatus {
-    // SAFETY: the accessor answers a static item.
+pub(crate) fn OSSL_CMP_CERTSTATUS_new() -> *mut CmpCertStatus {
+    // SAFETY: `cmp_certstatus_it()` is a static in-crate item descriptor, so this call has no
+    // caller precondition; the returned block is the caller's ownership transfer.
     unsafe { ASN1_item_new(cmp_certstatus_it()) }.cast()
 }
+
+#[cfg(test)]
+const _: fn() -> *mut CmpCertStatus = OSSL_CMP_CERTSTATUS_new;
 
 /// `OSSL_CMP_CERTSTATUS_free` — the item free.
 ///
@@ -1793,10 +1838,14 @@ pub(crate) unsafe fn OSSL_CMP_CERTSTATUS_free(p: *mut CmpCertStatus) {
 }
 
 /// `OSSL_CMP_CERTRESPONSE_new` — internal item allocator.
-pub(crate) unsafe fn OSSL_CMP_CERTRESPONSE_new() -> *mut CmpCertResponse {
-    // SAFETY: the accessor answers a static item.
+pub(crate) fn OSSL_CMP_CERTRESPONSE_new() -> *mut CmpCertResponse {
+    // SAFETY: `cmp_certresponse_it()` is a static in-crate item descriptor, so this call has no
+    // caller precondition; the returned block is the caller's ownership transfer.
     unsafe { ASN1_item_new(cmp_certresponse_it()) }.cast()
 }
+
+#[cfg(test)]
+const _: fn() -> *mut CmpCertResponse = OSSL_CMP_CERTRESPONSE_new;
 
 /// `OSSL_CMP_CERTRESPONSE_free` — the item free.
 ///
@@ -1808,10 +1857,14 @@ pub(crate) unsafe fn OSSL_CMP_CERTRESPONSE_free(p: *mut CmpCertResponse) {
 }
 
 /// `OSSL_CMP_POLLREQ_new` — internal item allocator.
-pub(crate) unsafe fn OSSL_CMP_POLLREQ_new() -> *mut CmpPollReq {
-    // SAFETY: the accessor answers a static item.
+pub(crate) fn OSSL_CMP_POLLREQ_new() -> *mut CmpPollReq {
+    // SAFETY: `cmp_pollreq_it()` is a static in-crate item descriptor, so this call has no caller
+    // precondition; the returned block is the caller's ownership transfer.
     unsafe { ASN1_item_new(cmp_pollreq_it()) }.cast()
 }
+
+#[cfg(test)]
+const _: fn() -> *mut CmpPollReq = OSSL_CMP_POLLREQ_new;
 
 /// `OSSL_CMP_POLLREQ_free` — the item free.
 ///
@@ -1823,10 +1876,14 @@ pub(crate) unsafe fn OSSL_CMP_POLLREQ_free(p: *mut CmpPollReq) {
 }
 
 /// `OSSL_CMP_POLLREP_new` — internal item allocator.
-pub(crate) unsafe fn OSSL_CMP_POLLREP_new() -> *mut CmpPollRep {
-    // SAFETY: the accessor answers a static item.
+pub(crate) fn OSSL_CMP_POLLREP_new() -> *mut CmpPollRep {
+    // SAFETY: `cmp_pollrep_it()` is a static in-crate item descriptor, so this call has no caller
+    // precondition; the returned block is the caller's ownership transfer.
     unsafe { ASN1_item_new(cmp_pollrep_it()) }.cast()
 }
+
+#[cfg(test)]
+const _: fn() -> *mut CmpPollRep = OSSL_CMP_POLLREP_new;
 
 /// `i2d_OSSL_CMP_PROTECTEDPART` — the `IMPLEMENT_ASN1_FUNCTIONS(OSSL_CMP_PROTECTEDPART)` encoder,
 /// reached by `ossl_cmp_calc_protection` (`cmp_protect.c:67`). Crate-internal: `cmp.h` does not
@@ -1858,8 +1915,7 @@ pub unsafe extern "C" fn OSSL_CMP_ITAV_create(
     if type_.is_null() {
         return ptr::null_mut();
     }
-    // SAFETY: the accessor answers a static item.
-    let itav = unsafe { itav_new() };
+    let itav = itav_new();
     if itav.is_null() {
         return ptr::null_mut();
     }
@@ -1966,8 +2022,7 @@ pub unsafe extern "C" fn OSSL_CMP_ITAV_push0_stack_item(
 pub unsafe extern "C" fn OSSL_CMP_ITAV_new0_certProfile(
     cert_profile: *mut OpenSslStack,
 ) -> *mut CmpItav {
-    // SAFETY: the accessor answers a static item.
-    let itav = unsafe { itav_new() };
+    let itav = itav_new();
     if itav.is_null() {
         return ptr::null_mut();
     }
@@ -2023,8 +2078,7 @@ pub unsafe extern "C" fn OSSL_CMP_ITAV_get0_certProfile(
 /// `ca_certs` is NULL or a live stack; the result owns a copy.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_CMP_ITAV_new_caCerts(ca_certs: *const OpenSslStack) -> *mut CmpItav {
-    // SAFETY: the accessor answers a static item.
-    let itav = unsafe { itav_new() };
+    let itav = itav_new();
     if itav.is_null() {
         return ptr::null_mut();
     }
@@ -2095,8 +2149,7 @@ pub unsafe extern "C" fn OSSL_CMP_ITAV_get0_caCerts(
 /// `root_ca_cert` is NULL or a live `X509`.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_CMP_ITAV_new_rootCaCert(root_ca_cert: *const X509) -> *mut CmpItav {
-    // SAFETY: the accessor answers a static item.
-    let itav = unsafe { itav_new() };
+    let itav = itav_new();
     if itav.is_null() {
         return ptr::null_mut();
     }
@@ -2166,8 +2219,7 @@ pub unsafe extern "C" fn OSSL_CMP_ITAV_new_rootCaKeyUpdate(
 ) -> *mut CmpItav {
     let mut upd: *mut CmpRootCaKeyUpdate = ptr::null_mut();
     if !new_with_new.is_null() {
-        // SAFETY: the accessor answers a static item.
-        upd = unsafe { rootcakeyupdate_new() };
+        upd = rootcakeyupdate_new();
         if upd.is_null() {
             return ptr::null_mut();
         }
@@ -2203,8 +2255,7 @@ pub unsafe extern "C" fn OSSL_CMP_ITAV_new_rootCaKeyUpdate(
             unsafe { (*upd).old_with_new = d };
         }
     }
-    // SAFETY: the accessor answers a static item.
-    let itav = unsafe { itav_new() };
+    let itav = itav_new();
     if itav.is_null() {
         // SAFETY: `upd` is NULL or live.
         unsafe { rootcakeyupdate_free(upd) };
@@ -2307,8 +2358,7 @@ pub unsafe extern "C" fn OSSL_CMP_ITAV_new0_certReqTemplate(
         };
         return ptr::null_mut();
     }
-    // SAFETY: the accessor answers a static item.
-    let itav = unsafe { itav_new() };
+    let itav = itav_new();
     if itav.is_null() {
         return ptr::null_mut();
     }
@@ -2317,8 +2367,7 @@ pub unsafe extern "C" fn OSSL_CMP_ITAV_new0_certReqTemplate(
     if cert_template.is_null() {
         return itav;
     }
-    // SAFETY: the accessor answers a static item.
-    let tmpl = unsafe { certreqtemplate_new() };
+    let tmpl = certreqtemplate_new();
     if tmpl.is_null() {
         // SAFETY: `itav` is live.
         unsafe { itav_free(itav) };
@@ -2666,8 +2715,7 @@ pub unsafe extern "C" fn OSSL_CMP_ATAV_push1(
 pub unsafe extern "C" fn OSSL_CMP_ITAV_new0_crlStatusList(
     crl_status_list: *mut OpenSslStack,
 ) -> *mut CmpItav {
-    // SAFETY: the accessor answers a static item.
-    let itav = unsafe { itav_new() };
+    let itav = itav_new();
     if itav.is_null() {
         return ptr::null_mut();
     }
@@ -2743,8 +2791,7 @@ pub unsafe extern "C" fn OSSL_CMP_CRLSTATUS_new1(
         };
         return ptr::null_mut();
     }
-    // SAFETY: the accessor answers a static item.
-    let status = unsafe { crlstatus_new() };
+    let status = crlstatus_new();
     if status.is_null() {
         return ptr::null_mut();
     }
@@ -3057,8 +3104,7 @@ pub unsafe extern "C" fn OSSL_CMP_CRLSTATUS_create(
 /// `crl` is NULL or a live `X509_CRL`.
 #[no_mangle]
 pub unsafe extern "C" fn OSSL_CMP_ITAV_new_crls(crl: *const X509Crl) -> *mut CmpItav {
-    // SAFETY: the accessor answers a static item.
-    let itav = unsafe { itav_new() };
+    let itav = itav_new();
     if itav.is_null() {
         return ptr::null_mut();
     }

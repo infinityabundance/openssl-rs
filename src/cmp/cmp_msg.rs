@@ -1229,8 +1229,7 @@ pub(crate) unsafe fn ossl_cmp_certrep_new(
     }
 
     /* body */
-    // SAFETY: the accessor answers a fresh item value.
-    let resp = unsafe { OSSL_CMP_CERTRESPONSE_new() };
+    let resp = OSSL_CMP_CERTRESPONSE_new();
     if resp.is_null() {
         // SAFETY: `msg` is live and owned here.
         unsafe {
@@ -1273,8 +1272,7 @@ pub(crate) unsafe fn ossl_cmp_certrep_new(
             }
             return ptr::null_mut();
         }
-        // SAFETY: the item allocator answers a fresh item value.
-        let ckp = unsafe { OSSL_CMP_CERTIFIEDKEYPAIR_new() };
+        let ckp = OSSL_CMP_CERTIFIEDKEYPAIR_new();
         // SAFETY: `resp` is live.
         unsafe { (*resp).certified_key_pair = ckp };
         if ckp.is_null() {
@@ -1403,8 +1401,7 @@ pub(crate) unsafe fn ossl_cmp_rr_new(ctx: *mut OsslCmpCtx) -> *mut CmpMsg {
         return ptr::null_mut();
     }
 
-    // SAFETY: the accessor answers a fresh item value.
-    let mut rd = unsafe { OSSL_CMP_REVDETAILS_new() };
+    let mut rd = OSSL_CMP_REVDETAILS_new();
     if rd.is_null() {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_cmp(644, c"ossl_cmp_rr_new", 126) };
@@ -1864,8 +1861,7 @@ pub(crate) unsafe fn ossl_cmp_certConf_new(
         unsafe { raise_cmp(935, c"ossl_cmp_certConf_new", 116) };
         return ptr::null_mut();
     }
-    // SAFETY: the accessor answers a fresh item value.
-    let cert_status = unsafe { OSSL_CMP_CERTSTATUS_new() };
+    let cert_status = OSSL_CMP_CERTSTATUS_new();
     if cert_status.is_null() {
         // SAFETY: `msg` is live and owned here.
         unsafe {
@@ -1995,8 +1991,7 @@ pub(crate) unsafe fn ossl_cmp_pollReq_new(ctx: *mut OsslCmpCtx, crid: c_int) -> 
         unsafe { raise_cmp(964, c"ossl_cmp_pollReq_new", 124) };
         return ptr::null_mut();
     }
-    // SAFETY: the accessor answers a fresh item value.
-    let preq = unsafe { OSSL_CMP_POLLREQ_new() };
+    let preq = OSSL_CMP_POLLREQ_new();
     // SAFETY: `preq` is NULL or live.
     if preq.is_null()
         // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
@@ -2044,8 +2039,7 @@ pub(crate) unsafe fn ossl_cmp_pollRep_new(
         unsafe { raise_cmp(995, c"ossl_cmp_pollRep_new", 123) };
         return ptr::null_mut();
     }
-    // SAFETY: the accessor answers a fresh item value.
-    let prep = unsafe { OSSL_CMP_POLLREP_new() };
+    let prep = OSSL_CMP_POLLREP_new();
     if prep.is_null() {
         // SAFETY: `msg` is live and owned here.
         unsafe {
