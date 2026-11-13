@@ -105,14 +105,8 @@ extern "C" fn dummy_psk(
 // restoring the `unsafe` qualifier breaks this build.
 #[cfg(test)]
 #[allow(clippy::type_complexity)]
-const _: extern "C" fn(
-    *mut Ssl,
-    *const c_char,
-    *mut c_char,
-    c_uint,
-    *mut u8,
-    c_uint,
-) -> c_uint = dummy_psk;
+const _: extern "C" fn(*mut Ssl, *const c_char, *mut c_char, c_uint, *mut u8, c_uint) -> c_uint =
+    dummy_psk;
 
 /// `int ciphers_main(int argc, char **argv)` — `apps/ciphers.c:91-287`.
 #[allow(clippy::never_loop)] // every arm returns or breaks; the authority's loop never iterates

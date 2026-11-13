@@ -495,19 +495,16 @@ mod tests {
         assert_eq!(unsafe { EVP_add_cipher(cipher) }, 1);
         // SAFETY: `nid` is live in the object table.
         let (short, long) = (OBJ_nid2sn(nid), OBJ_nid2ln(nid));
-        // SAFETY: both are NUL-terminated strings owned by the object table.
-        unsafe {
-            assert_eq!(
-                OBJ_NAME_get(short, OBJ_NAME_TYPE_CIPHER_METH),
-                cipher.cast::<c_char>(),
-                "the short name answers the method"
-            );
-            assert_eq!(
-                OBJ_NAME_get(long, OBJ_NAME_TYPE_CIPHER_METH),
-                cipher.cast::<c_char>(),
-                "and so does the long name"
-            );
-        }
+        assert_eq!(
+            OBJ_NAME_get(short, OBJ_NAME_TYPE_CIPHER_METH),
+            cipher.cast::<c_char>(),
+            "the short name answers the method"
+        );
+        assert_eq!(
+            OBJ_NAME_get(long, OBJ_NAME_TYPE_CIPHER_METH),
+            cipher.cast::<c_char>(),
+            "and so does the long name"
+        );
     }
 
     /// A second add under the same names **replaces** and answers 1 again: the adder is a write, not
@@ -530,14 +527,11 @@ mod tests {
         }
         // SAFETY: `nid` is live and its short name is a static string.
         let short = OBJ_nid2sn(nid);
-        // SAFETY: `short` is NUL-terminated.
-        unsafe {
-            assert_eq!(
-                OBJ_NAME_get(short, OBJ_NAME_TYPE_CIPHER_METH),
-                second.cast::<c_char>(),
-                "the second add is the one the table holds",
-            );
-        }
+        assert_eq!(
+            OBJ_NAME_get(short, OBJ_NAME_TYPE_CIPHER_METH),
+            second.cast::<c_char>(),
+            "the second add is the one the table holds",
+        );
     }
 
     /// A digest whose `pkey_type` names a different object registers that object's short name as an
@@ -561,23 +555,20 @@ mod tests {
         // SAFETY: `md` is a leaked heap object that outlives the registry entries.
         assert_eq!(unsafe { EVP_add_digest(md) }, 1);
         let (short, pkey_short) = (OBJ_nid2sn(type_), OBJ_nid2sn(pkey_type));
-        // SAFETY: `pkey_short` is a NUL-terminated string owned by the object table.
-        unsafe {
-            /* Asked for the alias **as an alias**, the table answers the string the adder stored
-             * rather than the object it names. */
-            assert_eq!(
-                OBJ_NAME_get(pkey_short, OBJ_NAME_TYPE_MD_METH | OBJ_NAME_ALIAS),
-                short,
-                "the pkey name is an alias whose data is the digest's short name"
-            );
-            /* Asked for it plainly, `OBJ_NAME_get` follows the chain and answers the method --
-             * which is what makes the alias useful to `EVP_get_digestbyname`. */
-            assert_eq!(
-                OBJ_NAME_get(pkey_short, OBJ_NAME_TYPE_MD_METH),
-                md.cast::<c_char>(),
-                "and the plain lookup follows it to the method"
-            );
-        }
+        /* Asked for the alias **as an alias**, the table answers the string the adder stored
+         * rather than the object it names. */
+        assert_eq!(
+            OBJ_NAME_get(pkey_short, OBJ_NAME_TYPE_MD_METH | OBJ_NAME_ALIAS),
+            short,
+            "the pkey name is an alias whose data is the digest's short name"
+        );
+        /* Asked for it plainly, `OBJ_NAME_get` follows the chain and answers the method --
+         * which is what makes the alias useful to `EVP_get_digestbyname`. */
+        assert_eq!(
+            OBJ_NAME_get(pkey_short, OBJ_NAME_TYPE_MD_METH),
+            md.cast::<c_char>(),
+            "and the plain lookup follows it to the method"
+        );
     }
 
     /// A digest whose `pkey_type` is zero gets the two plain registrations and no alias.
@@ -595,12 +586,9 @@ mod tests {
         assert_eq!(unsafe { EVP_add_digest(md) }, 1);
         // SAFETY: `type_` is live and its short name is a static string.
         let short = OBJ_nid2sn(type_);
-        // SAFETY: `short` is NUL-terminated.
-        unsafe {
-            assert_eq!(
-                OBJ_NAME_get(short, OBJ_NAME_TYPE_MD_METH),
-                md.cast::<c_char>()
-            );
-        }
+        assert_eq!(
+            OBJ_NAME_get(short, OBJ_NAME_TYPE_MD_METH),
+            md.cast::<c_char>()
+        );
     }
 }

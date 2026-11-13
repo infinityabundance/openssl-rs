@@ -2917,28 +2917,24 @@ mod tests {
         let name = std::ffi::CString::new("zedtest-digest").unwrap();
         let data = std::ffi::CString::new("zedtest-data").unwrap();
         let name2 = std::ffi::CString::new("zedtest-digest2").unwrap();
-        // SAFETY: live NUL-terminated strings; entries are borrowed for the
-        // duration of the test.
-        unsafe {
-            assert_eq!(OBJ_NAME_add(name.as_ptr(), 0x01, data.as_ptr()), 1);
-            // Lookup is case-insensitive by default.
-            assert_eq!(OBJ_NAME_get(name.as_ptr(), 0x01), data.as_ptr());
-            let upper = std::ffi::CString::new("ZEDTEST-DIGEST").unwrap();
-            assert_eq!(OBJ_NAME_get(upper.as_ptr(), 0x01), data.as_ptr());
-            // A different type does not match.
-            assert!(OBJ_NAME_get(name.as_ptr(), 0x02).is_null());
-            assert_eq!(OBJ_NAME_remove(name.as_ptr(), 0x01), 1);
-            assert_eq!(OBJ_NAME_remove(name.as_ptr(), 0x01), 0);
-            assert!(OBJ_NAME_get(name.as_ptr(), 0x01).is_null());
+        assert_eq!(OBJ_NAME_add(name.as_ptr(), 0x01, data.as_ptr()), 1);
+        // Lookup is case-insensitive by default.
+        assert_eq!(OBJ_NAME_get(name.as_ptr(), 0x01), data.as_ptr());
+        let upper = std::ffi::CString::new("ZEDTEST-DIGEST").unwrap();
+        assert_eq!(OBJ_NAME_get(upper.as_ptr(), 0x01), data.as_ptr());
+        // A different type does not match.
+        assert!(OBJ_NAME_get(name.as_ptr(), 0x02).is_null());
+        assert_eq!(OBJ_NAME_remove(name.as_ptr(), 0x01), 1);
+        assert_eq!(OBJ_NAME_remove(name.as_ptr(), 0x01), 0);
+        assert!(OBJ_NAME_get(name.as_ptr(), 0x01).is_null());
 
-            // A fresh dynamic name type index starts at OBJ_NAME_TYPE_NUM.
-            let idx = OBJ_NAME_new_index(None, None, None);
-            assert!(idx >= 0x07);
-            assert_eq!(OBJ_NAME_add(name2.as_ptr(), idx, data.as_ptr()), 1);
-            assert_eq!(OBJ_NAME_get(name2.as_ptr(), idx), data.as_ptr());
-            OBJ_NAME_cleanup(idx);
-            assert!(OBJ_NAME_get(name2.as_ptr(), idx).is_null());
-        }
+        // A fresh dynamic name type index starts at OBJ_NAME_TYPE_NUM.
+        let idx = OBJ_NAME_new_index(None, None, None);
+        assert!(idx >= 0x07);
+        assert_eq!(OBJ_NAME_add(name2.as_ptr(), idx, data.as_ptr()), 1);
+        assert_eq!(OBJ_NAME_get(name2.as_ptr(), idx), data.as_ptr());
+        OBJ_NAME_cleanup(idx);
+        assert!(OBJ_NAME_get(name2.as_ptr(), idx).is_null());
     }
 
     #[test]
@@ -3086,9 +3082,7 @@ mod tests {
             // re-entry is exercised only when the control proves the lock is
             // released, so a regression fails the assertion instead of hanging.
             if unlocked && !name.is_null() {
-                // SAFETY: `name` is the destructor's captured NUL-terminated name and was just
-                // checked non-null; `type_` is the recorded name index.
-                let _ = unsafe { OBJ_NAME_get(name, type_) };
+                let _ = OBJ_NAME_get(name, type_);
                 QUERIES.fetch_add(1, Ordering::SeqCst);
             }
         }
@@ -3097,11 +3091,8 @@ mod tests {
         let idx = OBJ_NAME_new_index(None, None, Some(observing_free));
         let name = std::ffi::CString::new("zedtest-destructor").unwrap();
         let data = std::ffi::CString::new("zedtest-destructor-data").unwrap();
-        // SAFETY: live strings; the destructor observes rather than frees them.
-        unsafe {
-            assert_eq!(OBJ_NAME_add(name.as_ptr(), idx, data.as_ptr()), 1);
-            assert_eq!(OBJ_NAME_remove(name.as_ptr(), idx), 1);
-        }
+        assert_eq!(OBJ_NAME_add(name.as_ptr(), idx, data.as_ptr()), 1);
+        assert_eq!(OBJ_NAME_remove(name.as_ptr(), idx), 1);
         assert!(
             UNLOCKED.load(Ordering::SeqCst),
             "the destructor ran with the registry lock held"

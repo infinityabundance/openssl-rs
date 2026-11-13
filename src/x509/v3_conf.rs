@@ -2408,9 +2408,11 @@ mod tests {
             b54_conf_row(bad_nid, ASN1_INTEGER_it, true),
             b54_conf_row(s2i_nid, ASN1_OCTET_STRING_it, false),
         ] {
-            // SAFETY: `row` is a live leaked row.
             assert_eq!(
-                unsafe { X509V3_EXT_add(row) },
+                unsafe {
+                    // SAFETY: `row` is a live leaked row.
+                    X509V3_EXT_add(row)
+                },
                 1,
                 "the probe row must register"
             );
@@ -2484,8 +2486,7 @@ mod tests {
     /// with an error rather than faulting.
     #[test]
     fn a_null_config_context_is_refused_on_the_section_path() {
-        // SAFETY: no live object is required to clear the thread's error queue.
-        unsafe { ERR_clear_error() };
+        ERR_clear_error();
         // SAFETY: every pointer argument is NULL or a NUL-terminated literal, which
         // is exactly the input under test.
         let ext = unsafe {
@@ -2500,8 +2501,7 @@ mod tests {
             ext.is_null(),
             "a NULL ctx must not produce an extension on the section path"
         );
-        // SAFETY: reads and pops the current thread's error queue.
-        let err = unsafe { ERR_get_error() };
+        let err = ERR_get_error();
         assert_ne!(err, 0, "the refusal must be reported on the error stack");
     }
 
@@ -2513,8 +2513,7 @@ mod tests {
     /// and must be refused with an error rather than dereferenced.
     #[test]
     fn a_null_extension_value_is_refused_before_the_prefix_scan() {
-        // SAFETY: no live object is required to clear the thread's error queue.
-        unsafe { ERR_clear_error() };
+        ERR_clear_error();
         // SAFETY: every pointer argument is NULL or a NUL-terminated literal, which
         // is exactly the input under test.
         let ext = unsafe {
@@ -2526,12 +2525,10 @@ mod tests {
             )
         };
         assert!(ext.is_null(), "a NULL value must not produce an extension");
-        // SAFETY: reads and pops the current thread's error queue.
-        let err = unsafe { ERR_get_error() };
+        let err = ERR_get_error();
         assert_ne!(err, 0, "the refusal must be reported on the error stack");
 
-        // SAFETY: no live object is required to clear the thread's error queue.
-        unsafe { ERR_clear_error() };
+        ERR_clear_error();
         // SAFETY: every pointer argument is NULL or a constant NID, which is
         // exactly the input under test.
         let ext = unsafe {
@@ -2546,14 +2543,14 @@ mod tests {
             ext.is_null(),
             "a NULL value must not produce an extension on the NID path"
         );
-        // SAFETY: reads and pops the current thread's error queue.
-        let err = unsafe { ERR_get_error() };
+        let err = ERR_get_error();
         assert_ne!(err, 0, "the refusal must be reported on the error stack");
     }
 }
 
 #[cfg(test)]
 mod b55_tests {
+    #![allow(clippy::expect_used)]
     use super::*;
 
     use crate::asn1::layout::Asn1Item;

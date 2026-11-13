@@ -494,6 +494,7 @@ pub unsafe extern "C" fn X509V3_EXT_print_fp(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::expect_used)]
     use super::*;
     use crate::asn1::layout::Asn1String;
     use crate::asn1::string::{
@@ -812,10 +813,6 @@ mod tests {
             X509V3_EXT_cleanup();
         }
     }
-
-    /// Serialises the tests that mutate the process-global extension registry. The registry's own
-    /// read/write lock protects memory safety; this test-only mutex keeps one test's
-    /// `X509V3_EXT_cleanup` from removing another test's alias between its add and its print.
 
     /// Register a fresh object and answer its NID. A fresh NID has no `STANDARD_EXTS` row, so a
     /// dynamic alias registered for it is reached only through the dynamic `EXT_LIST` fallback.
@@ -1183,9 +1180,11 @@ mod tests {
             // SAFETY: the boxed row is leaked so it outlives the registry borrow; the call takes
             // the write hold.
             let leaked: &'static mut X509V3ExtMethod = Box::leak(Box::new(row));
-            // SAFETY: `leaked` is a live row that outlives the registry entry.
             assert_eq!(
-                unsafe { X509V3_EXT_add(leaked) },
+                unsafe {
+                    // SAFETY: `leaked` is a live row that outlives the registry entry.
+                    X509V3_EXT_add(leaked)
+                },
                 1,
                 "the probe row must register"
             );
@@ -1264,9 +1263,11 @@ mod tests {
             // SAFETY: leaked so the row outlives the registry borrow; the call takes the write
             // hold.
             let leaked: &'static mut X509V3ExtMethod = Box::leak(Box::new(row));
-            // SAFETY: `leaked` is a live row that outlives the registry entry.
             assert_eq!(
-                unsafe { X509V3_EXT_add(leaked) },
+                unsafe {
+                    // SAFETY: `leaked` is a live row that outlives the registry entry.
+                    X509V3_EXT_add(leaked)
+                },
                 1,
                 "the probe row must register"
             );
