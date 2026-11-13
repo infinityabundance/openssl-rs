@@ -2841,6 +2841,23 @@
     "Miri/ASan",
     "SAFE_COMPATIBLE"
    ]
+  },
+  "p25_vestigial_elimination": {
+   "date": "2026-11-13",
+   "receipt": "atlas-refresh/p25-vestigial-elimination-sites.json",
+   "historical": [
+    "P25-VESTIGIAL-MARKER-001",
+    "P25-VESTIGIAL-MARKER-003",
+    "P25-VESTIGIAL-MARKER-004"
+   ],
+   "state": "ELIMINATED_STRUCTURALLY",
+   "source": "src/ml_kem/key.rs:293 (control :287) and src/provider/eddsa_sig.rs:942/:955 (controls :1674/:1676) are safe declarations at S; spans da7e11ee / b6adb404 / a73a99a1",
+   "effect": "three retained-marker BLOCKED rows are no longer unsafe-fn obligations; no OpenSSH closure count changes because none is reachable in that closure",
+   "does_not_prove": [
+    "Miri/ASan",
+    "the table contents",
+    "SAFE_COMPATIBLE"
+   ]
   }
  },
  "closure": {

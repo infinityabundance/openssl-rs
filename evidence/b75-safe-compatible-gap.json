@@ -39,6 +39,14 @@
     "atlas-refresh/b48-rc2-elimination-sites.json"
    ],
    "result": "ELIMINATED_STRUCTURALLY; no consumer closure count changes"
+  },
+  {
+   "what": "P25-VESTIGIAL-MARKER-001/003/004 structural elimination",
+   "how": "read the source at S; all three are safe declarations with compile-time coercion controls",
+   "evidence": [
+    "atlas-refresh/p25-vestigial-elimination-sites.json"
+   ],
+   "result": "ELIMINATED_STRUCTURALLY; no OpenSSH closure count changes"
   }
  ],
  "blockers": [
@@ -711,7 +719,7 @@
   "evidence/closure-ssh-b74.json": "87f1dd9ac062d60da6a07c06abc4eec626254217dfd84861c7b495e59357c8ff",
   "evidence/closure-sshd-b73-r2.json": "d0addc72f94904b03e63b2bd1d92dc5506c1ea67f6732b5a51a124f943f5cee5",
   "evidence/sshd-artifact-ledger.json": "34ff5e2eec66d7c522951c9ef639d0e97c1a61501a232b0f579a4fe5fd7dc36e",
-  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "78714126fd39700a58d1bcd5a0971023cb7416faeca7f6b5185c09a51b51a282",
+  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "626f2cd59b34c730f90eed2a37e49a43bd3a2db501f9b502f4991aa201145cf8",
   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json": "225275e35179c7f475c1031e6a783a9ee4630529127a715da67a1cecab51863e"
  },
  "non_claims": [
