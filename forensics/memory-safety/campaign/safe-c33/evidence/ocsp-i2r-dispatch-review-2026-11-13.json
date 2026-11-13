@@ -123,9 +123,9 @@
  ],
  "probe": {
   "path": "forensics/memory-safety/campaign/safe-c33/evidence/b75_readjudicate.py",
-  "sha256": "5f91a9e7b9a05ef1642278b813ed5d08b1446ca157690dff2e7c55ecf68c5089",
-  "exit": "0",
-  "result": "323 DISCHARGED / 0 BLOCKED / 0 UNKNOWN; both conflicts superseded"
+  "sha256": "71cc8af70e86e1b949070e9b83db83d8c1de1e8b02d36b7a5ee60eb1a4a14200",
+  "exit": 0,
+  "result": "both frozen queues 323 DISCHARGED / 0 BLOCKED; sshd artefact binding verified"
  },
  "runtime_probe": {
   "path": "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json",
