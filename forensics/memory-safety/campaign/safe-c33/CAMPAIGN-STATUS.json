@@ -2590,8 +2590,8 @@
     "receipt": "evidence/closure-sshd-b73-r2.json",
     "measured_census": "court/freeze-b73/census-b73.json",
     "inventory_source_head": "15bebabc9",
-    "note": "Operative after B75: the two OCSP conflicts that B67-G1 left NEEDS_DECISION are resolved by evidence/ocsp-i2r-dispatch-review-2026-11-13.json and the per-obligation supersedes entries appended to r13-coordinate-rebind-sites.json. The shipping adjudicator re-run over the frozen b74 obligation queue reports 323 DISCHARGED / 0 BLOCKED / 0 UNKNOWN under the enforced conflict gate. The immutable b74 receipt still states 321/2 (ssh) because no fresh closure run has been made in this checkout.",
-    "counts_note": "Receipt as written (immutable): evidence/closure-ssh-b73-r2.json 320/3, evidence/closure-ssh-b74.json 321/2. Operative evidence-level result after B75: 323/0/0, re-adjudicated with tool edadf43b over the b74 obligation queue (court/tmp_b75_repro.py; the b67-g1 probe method, not a rebuild). A fresh closure run is still required to carry 323/0/0 in a receipt.",
+    "note": "Operative after B75: the b73-r2 sshd queue re-adjudicates to 323 DISCHARGED / 0 BLOCKED / 0 UNKNOWN with the current boundaries, and the per-artefact ledger join (evidence/sshd-artifact-ledger.json, verified by forensics/tools/rebind_consumer_artifact.py against FREEZE-b73) passes all eight checks. The immutable b73-r2 receipt still states 320/3 and artifact_matches_this_build false because no fresh closure run has applied the join.",
+    "counts_note": "Receipt as written (immutable): evidence/closure-sshd-b73-r2.json 320/3, artifact_matches_this_build false. Operative evidence-level result after B75: 323/0/0; all eight per-artefact binding checks pass. A fresh sshd closure run is still required to carry both in a receipt.",
     "libcrypto_so_3_sha256": "e8a90ba4"
    }
   },
@@ -2712,12 +2712,18 @@
    "BLOCKED": 0,
    "UNKNOWN": 0,
    "disposition_conflicts_unresolved": 0,
-   "note": "The tool-level evidence result at S = 15bebabc9 is now 323 DISCHARGED / 0 BLOCKED / 0 UNKNOWN under the enforced conflict gate after B75 resolved the two OCSP conflicts. Applying the campaign's own review standard subtracts the 98 discharges whose receipts carry no adjudication of the required grade, leaving 225 supportable / 98 REVIEW_REQUIRED / 0 BLOCKED / 0 UNKNOWN. SAFE_COMPATIBLE remains false for: (a) the 98 unadjudicated discharges (B45 9, openssh-v1i 74, openssh-v1l 15), which need an independent adversarial review or withdrawal; (b) no mechanism is discharged mechanism-wide; (c) the BOUNDARY review of the OCSP pair is an agent-based source review, not external human review, and no sanitizer/rebuild/L7 ran; (d) sshd's artifact_matches_this_build is structurally false because one family row cannot bind two artefacts, and build_provenance is null for both; (e) no fresh closure run carries 323/0/0 in a receipt; (f) no L7 workload has been replayed against bff896e3 / 64e0a4cc and every BOUNDARY/SEAL gate is NOT_RUN. Closed since the last revision: the 2 OCSP obligations, by obtaining the independent BOUNDARY review their CONTRACTED dispositions named as their only blocker.",
+   "note": "The tool-level evidence result at S = 15bebabc9 is now 323 DISCHARGED / 0 BLOCKED / 0 UNKNOWN under the enforced conflict gate after B75 resolved the two OCSP conflicts. Applying the campaign's own review standard subtracts the 98 discharges whose receipts carry no adjudication of the required grade, leaving 225 supportable / 98 REVIEW_REQUIRED / 0 BLOCKED / 0 UNKNOWN. SAFE_COMPATIBLE remains false for: (a) the 98 unadjudicated discharges (B45 9, openssh-v1i 74, openssh-v1l 15), which need an independent adversarial review or withdrawal; (b) no mechanism is discharged mechanism-wide; (c) the BOUNDARY review of the OCSP pair is an agent-based source review, not external human review, and no sanitizer/rebuild/L7 ran; (d) sshd's receipt still records artifact_matches_this_build false because no fresh run has applied the per-artefact join, and build_provenance is null for both; the join itself is implemented and verified; (e) no fresh closure run carries 323/0/0 in a receipt; (f) no L7 workload has been replayed against bff896e3 / 64e0a4cc and every BOUNDARY/SEAL gate is NOT_RUN. Closed since the last revision: the 2 OCSP obligations, by obtaining the independent BOUNDARY review their CONTRACTED dispositions named as their only blocker.",
    "review_grade_gap": {
     "what": "98 live discharges whose receipts do not carry an adjudication of the grade the campaign requires, so they cannot support SAFE_COMPATIBLE even though the tool counts them.",
     "boundary-sweep-B45": {
      "obligations": 9,
-     "why": "the receipt carries no review block at all; the separate review is APPROVE_WITH_CONDITIONS with disposition NOT_APPLIED, and its condition C5 is still OPEN at HEAD. Commit dcddae209 claims five conditions closed in prose, but no archived review entry records the closure."
+     "why": "the receipt carries no review block at all; the separate review is APPROVE_WITH_CONDITIONS with disposition NOT_APPLIED, and its condition C5 is still OPEN at HEAD. Commit dcddae209 claims five conditions closed in prose, but no archived review entry records the closure.",
+     "c5_review_2026_11_13": {
+      "review": "b45-c5-review-2026-11-13.json",
+      "verdict": "C5 OPEN \u2014 do not apply",
+      "why": "the clean commit exists and the nine source files are unchanged, but FREEZE-b73 self-declares non-finality (dirty tree, changed instrument, REFUSED closures) and the receipt names a different candidate/library",
+      "required_resolution": "re-run C1 at a committed candidate, re-bind or re-measure the receipt, generate a clean ACCEPTED freeze, then obtain a fresh independent C5 adjudication"
+     }
     },
     "openssh-v1i": {
      "obligations": 74,
@@ -2739,7 +2745,7 @@
    "next": "Re-run both closures on a clean tree with tool edadf43b so a receipt, not only the B75 probe, carries 323 DISCHARGED / 0 BLOCKED. This checkout has no git object store, no Rust toolchain, no court container and no ssh/sshd binaries, so the run cannot be made here.",
    "then": [
     "Obtain independent adversarial review of boundary-sweep-B45 (9), openssh-v1i (74) and openssh-v1l (15), or withdraw those 98 discharges. B45's C5 (evidence commit and freeze) also remains open.",
-    "Resolve the sshd artefact binding: per-artefact ledger join or a separate family id for sshd.",
+    "Re-run the sshd closure at the exact candidate and apply the per-artefact join (evidence/sshd-artifact-ledger.json) to the new receipt; the join tool and sidecar are implemented and self-tested, but the receipt itself is still pending.",
     "Replay the L7 workloads against ssh bff896e3 and sshd 64e0a4cc.",
     "Run the deferred BATCH/BOUNDARY/SEAL gates: full library suite serial and parallel, clippy --all-targets, Miri, ASan, TSan, the authority differential, and the second reproducible rebuild.",
     "Restore the exact git history (the checkout has a broken .git with no objects) so freeze/evidence commits can name the same source identity the receipts use."
@@ -2795,6 +2801,29 @@
     "any BOUNDARY/SEAL runtime instrument",
     "anything about the other 21 i2r printers",
     "SAFE_COMPATIBLE for any consumer"
+   ]
+  },
+  "b75_sshd_binding": {
+   "date": "2026-11-13",
+   "tool": "forensics/tools/rebind_consumer_artifact.py",
+   "sidecar": "evidence/sshd-artifact-ledger.json",
+   "freeze": "court/freeze-b73/FREEZE-b73.json",
+   "artifact": "sshd 64e0a4cc",
+   "checks": "8/8 pass",
+   "queue_before": {
+    "DISCHARGED": 320,
+    "BLOCKED": 3
+   },
+   "queue_after": {
+    "DISCHARGED": 323,
+    "BLOCKED": 0
+   },
+   "verdict": "structural binding defect removed; fresh sshd closure run still required",
+   "does_not_prove": [
+    "a fresh closure run",
+    "a rebuilt sshd",
+    "L7",
+    "SAFE_COMPATIBLE"
    ]
   }
  },

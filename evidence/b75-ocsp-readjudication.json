@@ -14,8 +14,9 @@
  },
  "probe": {
   "path": "forensics/memory-safety/campaign/safe-c33/evidence/b75_readjudicate.py",
-  "sha256": "5f91a9e7b9a05ef1642278b813ed5d08b1446ca157690dff2e7c55ecf68c5089",
-  "exit": 0
+  "sha256": "71cc8af70e86e1b949070e9b83db83d8c1de1e8b02d36b7a5ee60eb1a4a14200",
+  "exit": 0,
+  "result": "both frozen queues 323 DISCHARGED / 0 BLOCKED; sshd artefact binding verified"
  },
  "inputs": {
   "evidence/closure-ssh-b74.json": "87f1dd9ac062d60da6a07c06abc4eec626254217dfd84861c7b495e59357c8ff",
@@ -23,7 +24,7 @@
   "forensics/memory-safety/campaign/safe-c33/state.json": "508095bcb91f439fc126cf964d31a4f0f656f997587234d5bfbb07ec0cbc8273",
   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json": "225275e35179c7f475c1031e6a783a9ee4630529127a715da67a1cecab51863e",
   "forensics/memory-safety/campaign/safe-c33/evidence/ocsp-i2r-dispatch-review-2026-11-13.json": "acf9d8cdec1a973b96a717955b986471fba987c4b4c81c475a7872074f00e860",
-  "forensics/memory-safety/campaign/safe-c33/evidence/b75_readjudicate.py": "5f91a9e7b9a05ef1642278b813ed5d08b1446ca157690dff2e7c55ecf68c5089"
+  "forensics/memory-safety/campaign/safe-c33/evidence/b75_readjudicate.py": "71cc8af70e86e1b949070e9b83db83d8c1de1e8b02d36b7a5ee60eb1a4a14200"
  },
  "method": "import the shipping tool's load_obligation_mechanisms, discharge_plane, load_boundaries and adjudicate; run every obligation in the frozen b74 receipt with enforce_conflicts=True, repo=worktree, allow_worktree_span=True. No rebuild and no binary analysis.",
  "before": {
