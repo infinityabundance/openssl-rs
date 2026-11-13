@@ -1,0 +1,106 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/runtime-probe/v1",
+ "kind": "runtime-functional-probe",
+ "receipt": "b75-ocsp-runtime-probe",
+ "date": "2026-11-13",
+ "candidate": {
+  "openssl": "/home/user/openssl-rs/artifacts/phase2/install/bin/openssl",
+  "openssl_sha256": "45bdbfd15b1f31cc13aac7159a708e7b36eae8d027f9199351bfd63858897872",
+  "libcrypto_sha256": "e8a90ba4bd1e597ed22adbfef56c7336b80a65477393ba5a74afbbe428b985cb"
+ },
+ "method": "the candidate CLI-only x509 print path with LD_LIBRARY_PATH pointing at the frozen install; certificates were generated once by the system authority (/usr/bin/openssl 4.1.0) because the candidate CLI does not implement req generation. Generation is not part of the claim; the print path is.",
+ "extensions": {
+  "1.3.6.1.5.5.7.48.1.3": "OCSP CrlID, DER 302da0181616687474703a2f2f6578616d706c652e636f6d2f63726ca211180f32303236303130313030303030305a (crlUrl + crlTime)",
+  "1.3.6.1.5.5.7.48.1.7": "OCSP Service Locator, DER 3037300e310c300a06035504030c036237353025302306082b060105050730018617687474703a2f2f6f6373702e6578616d706c652e636f6d (issuer CN=b75, locator URI)"
+ },
+ "cases": [
+  {
+   "id": "crlid-valid",
+   "cert": "cert-crlid-valid.pem",
+   "expected": "crlUrl and crlTime lines",
+   "observed": "OCSP CRL ID: / crlUrl: http://example.com/crl / crlTime: Jan  1 00:00:00 2026 GMT",
+   "authority_match": true,
+   "exit": 0
+  },
+  {
+   "id": "crlid-invalid",
+   "cert": "cert-crlid-invalid.pem",
+   "expected": "decode refusal, no callback output, no crash",
+   "observed": "OCSP CRL ID: / .. (unknown-extension fallback); empty stderr",
+   "authority_match": true,
+   "exit": 0
+  },
+  {
+   "id": "serviceloc-valid",
+   "cert": "cert-serviceloc-valid.pem",
+   "expected": "Issuer and one LOCATOR line",
+   "observed": "OCSP Service Locator: / Issuer: CN = b75 / OCSP - URI:http://ocsp.example.com",
+   "authority_match": true,
+   "exit": 0
+  },
+  {
+   "id": "serviceloc-invalid",
+   "cert": "cert-serviceloc-invalid.pem",
+   "expected": "decode refusal, no callback output, no crash",
+   "observed": "OCSP Service Locator: / .. (unknown-extension fallback); empty stderr",
+   "authority_match": true,
+   "exit": 0
+  }
+ ],
+ "files": {
+  "cert-crlid-invalid.pem": "1b3f6f7cde55e01b2926bdac05d3c51c19381d5938e95f8992fae020f046ffd3",
+  "cert-crlid-invalid.pem.authority.out": "cddefa35e7b3329512a65f86532ea230eb6dfbff99184e36e86d77cfef9a7e66",
+  "cert-crlid-invalid.pem.candidate.err": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "cert-crlid-invalid.pem.candidate.out": "c2a2d640b70624981e52bce7a386f4c5a6b16b1fa553271f346032f2711c8f96",
+  "cert-crlid-valid.pem": "2d83d194b930b3ae970a6a1828291d89c08f6439c408e1fab31c25d2de46efe8",
+  "cert-crlid-valid.pem.authority.out": "48ba1eb88b96f7f3f606c847a9980784ea67b0f5ebb17bcf3a98acd679c1b2ef",
+  "cert-crlid-valid.pem.candidate.err": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "cert-crlid-valid.pem.candidate.out": "e0c42b18f35ef1ec6edc0c488cf9a2be8b30f0012c0f4035e5076b0ab2483812",
+  "cert-serviceloc-invalid.pem": "8682a5001fa9d84a5c7ce5276ebacbda15ff56b5a9dae84c4968f0761b67baac",
+  "cert-serviceloc-invalid.pem.authority.out": "f5d7d35078f1b1081835173aa4e3be191efe37422ee4db7b3d4f6dd0c59678e1",
+  "cert-serviceloc-invalid.pem.candidate.err": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "cert-serviceloc-invalid.pem.candidate.out": "d612b649d5fc1cdbf055fed06aa0958a1ac7ad57cc46c9626f28280b52bbe3cf",
+  "cert-serviceloc-valid.pem": "d0d19facce02c12f2287f45b99598e2b03b038a12a3391b6dd6f172b4ebc6a13",
+  "cert-serviceloc-valid.pem.authority.out": "13152f3a9c6e2f0645db84f7c32e42e01c5dfcb88fd61efc766dc5ba03d494ca",
+  "cert-serviceloc-valid.pem.candidate.err": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "cert-serviceloc-valid.pem.candidate.out": "edbb5ebed67aadf257b1e00e0906476e8cd8364e1ce0d9296fe97c46be613de3"
+ },
+ "observation": {
+  "cert-crlid-valid.pem": {
+   "exit": 0,
+   "stdout_sha256": "e0c42b18f35ef1ec6edc0c488cf9a2be8b30f0012c0f4035e5076b0ab2483812",
+   "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "stderr_bytes": 0
+  },
+  "cert-crlid-invalid.pem": {
+   "exit": 0,
+   "stdout_sha256": "c2a2d640b70624981e52bce7a386f4c5a6b16b1fa553271f346032f2711c8f96",
+   "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "stderr_bytes": 0
+  },
+  "cert-serviceloc-valid.pem": {
+   "exit": 0,
+   "stdout_sha256": "edbb5ebed67aadf257b1e00e0906476e8cd8364e1ce0d9296fe97c46be613de3",
+   "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "stderr_bytes": 0
+  },
+  "cert-serviceloc-invalid.pem": {
+   "exit": 0,
+   "stdout_sha256": "d612b649d5fc1cdbf055fed06aa0958a1ac7ad57cc46c9626f28280b52bbe3cf",
+   "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "stderr_bytes": 0
+  }
+ },
+ "does_not_prove": [
+  "memory safety (no ASan/Miri)",
+  "the direct C-getter path beyond the CLI print path",
+  "any other i2r printer",
+  "secret handling or constant time",
+  "a rebuild or a fresh closure",
+  "SAFE_COMPATIBLE"
+ ],
+ "non_claims": [
+  "The positive cases establish reachability and output compatibility at the frozen artifact.",
+  "The negative cases establish the decode-refusal fallback and the absence of a crash for these inputs; they are not a sanitizer result."
+ ]
+}
