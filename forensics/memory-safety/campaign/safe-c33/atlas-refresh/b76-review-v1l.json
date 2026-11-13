@@ -1,0 +1,418 @@
+{
+ "schema": "safe-c33/atlas-refresh/b76-review-v1l/v1",
+ "kind": "independent-adversarial-review",
+ "subphase": "safe-c33/b76-review/openssh-v1l",
+ "generated_utc": "2026-11-13T19:20:00Z",
+ "review": {
+  "role": "independent adversarial reviewer (AGENTS.md §15)",
+  "independence": "The reviewer did not write, design or adjudicate any of the nine conversions reviewed here, nor the v1l boundary receipt, the b76c closure receipts or the closure instrument. Verdicts rest only on source read during this review and on controls executed during this review; no author-supplied result is accepted as evidence. No tracked file was modified; no commit or push was made.",
+  "instructions_read": ["AGENTS.md §0-§7", "§9", "§15", "§16", "§21", "§22"],
+  "review_inputs": {
+   "closure_ssh": "evidence/closure-ssh-b76c.json",
+   "closure_sshd": "evidence/closure-sshd-b76c.json",
+   "boundary_receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1l-sites.json",
+   "freeze": "court/freeze-b76/FREEZE-b76.json",
+   "inventory": "court/freeze-b76/review/review-65-inventory.json",
+   "witness_check": "court/freeze-b76/review/v1l-witness-check.json"
+  }
+ },
+ "candidate_identity": {
+  "source_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+  "head_at_review": "4f8d9cb64ddc35410943bf94e75a6d322c32d728",
+  "src_content_sha256": "66c1e9ae6fcc3292b697e06febc0a20289c6d897779bf79f7f6f8015cef3f532",
+  "src_content_hash_rederived": true,
+  "src_content_hash_rule": "sha256('openssl-rs/src-rs/v1\\0' + sorted relpath\\0bytes\\0); relpaths relative to the repository root; 878 .rs files",
+  "instrument_sha256": "74e3953b36233b1071b9b720e1a0551e866801fa41db5e31b5f878fdabd46161",
+  "image_libcrypto_sha256": "8f18871713a80cc58babcd2f539f273fe9a88807acfa15bb165fb4c8fc1f4aef",
+  "image_sha256_reverified": true,
+  "verification_note": "The 16,894,632-byte artifacts/phase2/install/lib/libcrypto.so.3 on disk hashes to the recorded image value; the src-content digest was re-derived independently from the tree."
+ },
+ "method": {
+  "task1": "Extracted every obligation whose discharge_receipt is openssh-v1l (9) or openssh-v1i (56); boundary-sweep-B45 occurs zero times. Checked each obligation's recorded line and span start against the current item.",
+  "task2": "For each of the nine v1l obligations: read the current body at its recorded span, quoted the unsafe operation and its SAFETY text, enumerated every registration/call site, and answered the four questions.",
+  "controls": "Source-level contract audit with nine canary mutations. Compilation was not permitted: free -g reported 17 GiB available, so the §6.1 cap is min(8, 17-16)=1g, below the 2g floor. Controls are therefore static instruments, not runtime probes; see does_not_prove."
+ },
+ "obligations": [
+  {
+   "id": "V1:src/runtime/confmod/mod.rs:397:UNSAFE_FN_DEF",
+   "item": "module_free_thunk",
+   "file": "src/runtime/confmod/mod.rs",
+   "line": 397,
+   "boundary": "OSSH-V1L-006",
+   "mechanism": "C_ABI_CONTRACT",
+   "recorded_contract": "`value` is NULL or a `ConfModule` entry from the registry list being freed. The list is built only by module_add under the module-list lock, and the thunk is passed only to OPENSSL_sk_pop_free(to_delete, Some(module_free_thunk)) at :1369.",
+   "unsafe_operations_read": [
+    "confmod/mod.rs:397-401: `unsafe { module_free(value.cast()) };`",
+    "confmod/mod.rs:373-394 module_free: `DSO_free((*md).dso)`, `OwnedBuf::adopt_plain_nullable((*md).name...)`, `OwnedBuf::adopt_plain_nullable(md...)`"
+   ],
+   "safety_comment_quoted": "// SAFETY: the stack's entries are `ConfModule *` and it is handing each one over for release.",
+   "callers_enumerated": [
+    "confmod/mod.rs:1369 — `OPENSSL_sk_pop_free(to_delete, Some(module_free_thunk))` (the only registration; name occurs twice in the file: definition + registration)",
+    "confmod/mod.rs:1354 — `OPENSSL_sk_push(to_delete, md.cast())`, md from `OPENSSL_sk_value(new_modules, i)`; new_modules from `OPENSSL_sk_dup(old_modules)`; old_modules from `supported_modules()`",
+    "confmod/mod.rs:1331/940 — every registry entry is created only by module_add: `OwnedBuf::new_zeroed(size_of::<ConfModule>(), FILE_SEAM, L_MODULE_NEW)` and `(*tmod).name = CRYPTO_strdup(name, FILE, L_MODULE_NAME)`"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. The thunk is a private `unsafe extern \"C\" fn`; its name occurs only at its definition and at the one registration site, and the registration takes its address, so no safe-Rust call exists.",
+    "b_all_unsafe_covered": "Yes. `module_free`'s own `# Safety` (unreachable entry, this thread owns its fields) is established by sk_delete-before-push and by the RCU write lock, and the two seam frees match the CRYPTO_zalloc/CRYPTO_strdup allocation sites.",
+    "c_hidden_obligation": "None found. Failure of `OPENSSL_sk_push(to_delete, ...)` on a NULL to_delete leaks the entry; that is a leak, not UB, and matches the authority's unchecked push. `module_lists_free` uses OPENSSL_sk_free (structural) exactly as the authority's `sk_CONF_MODULE_free` at conf_mod.c:93.",
+    "d_load_bearing_control": "Yes. Control C06 (audit check plus the `double-release` and `registry-provenance` canaries) fails if the entry is handed over without first being deleted from the published copy, or if a non-registry pointer reaches the thunk."
+   },
+   "control": {
+    "id": "C06",
+    "path": "court/freeze-b76/review/controls/v1l_contract_audit.py",
+    "canaries": ["registry-provenance", "double-release"],
+    "result": "PASS on the frozen source; both canaries FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Precondition (each element is a live registry ConfModule with one owner) is established by the construction code, not by documentation; no safe caller; control is load-bearing at source level. The recorded registration line :1369 is still exact."
+  },
+  {
+   "id": "V1:src/ui/ui_util.rs:197:UNSAFE_FN_DEF",
+   "item": "ui_free_method_data",
+   "file": "src/ui/ui_util.rs",
+   "line": 197,
+   "boundary": "OSSH-V1L-007",
+   "mechanism": "C_ABI_CONTRACT",
+   "recorded_contract": "`data` is NULL or the `PemPasswordCbData` block stored at the private UI_METHOD_DATA_INDEX ex-data slot. The index is a private static (:133); both writers are in this crate: UI_UTIL_wrap_read_pem_callback (:447) and ui_dup_method_data (:183). `data` is released exactly once here.",
+   "unsafe_operations_read": [
+    "ui_util.rs:197-209: `drop(unsafe { OwnedPwData::adopt(data.cast::<PemPasswordCbData>()) });`",
+    "ui_util.rs:119-125 OwnedPwData::drop: `CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), ptr::null(), 0)`"
+   ],
+   "safety_comment_quoted": "// SAFETY: `data` is the slot's data, allocated by `ui_dup_method_data` or the wrapper; it is NULL or this unit's own block and no other owner releases it -- the handle's `Drop` is its single release.",
+   "callers_enumerated": [
+    "ui_util.rs:218-225 — registered via `CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_UI_METHOD, 0, NULL, Some(ui_new_method_data), Some(ui_dup_method_data), Some(ui_free_method_data))`",
+    "ui_util.rs:434 — writer 1: `OwnedPwData::zalloc()` (CRYPTO_zalloc) then :450 `UI_method_set_ex_data(ui_method, UI_METHOD_DATA_INDEX, data.as_ptr().cast())`, followed by :469 `data.into_raw()` on the success path only",
+    "ui_util.rs:181-185 — writer 2 (dup callback): `CRYPTO_memdup(*pptr, size_of::<PemPasswordCbData>(), NULL, 0)` then `*pptr = copy`",
+    "ui_util.rs:133 — index is a module-private `static`; the index-load sites are now :282, :452, :503, :528 (receipt cites :277, :447, :500, :525)"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`, reached only as an ex-data free callback; external C code cannot obtain the private index and cannot name the thunk.",
+    "b_all_unsafe_covered": "Yes. The block is allocated by the crate's own seam in both writers, and the wrapper's failure and success paths are exclusive: the success path calls into_raw exactly once, every failure arm destroys the method without the slot attached and lets Drop release the block.",
+    "c_hidden_obligation": "None in-crate. A C caller that writes an arbitrary pointer into this index through UI_method_set_ex_data would violate the ABI; that retained external obligation is already listed in the receipt's does_not_prove.",
+    "d_load_bearing_control": "Yes. Control C07 plus the `owner-identity` and `owner-double-free` canaries fail if the slot is written from a non-OwnedPwData block or if the success path leaves the handle owning the block as well as the slot."
+   },
+   "control": {
+    "id": "C07",
+    "path": "court/freeze-b76/review/controls/v1l_contract_audit.py",
+    "canaries": ["owner-identity", "owner-double-free"],
+    "result": "PASS on the frozen source; both canaries FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Ownership is established by the two in-crate writers and a private index; the single-release invariant is visible and controlled. Evidence-record caveat: the receipt's index-load citations are stale (see findings E3), and ui_util.rs changed by 11 lines after the receipt was written; the property itself is unaffected and was re-established from current source."
+  },
+  {
+   "id": "V1:src/engine/eng_fat.rs:197:UNSAFE_FN_DEF",
+   "item": "push_cstr_or_null",
+   "file": "src/engine/eng_fat.rs",
+   "line": 197,
+   "boundary": "OSSH-V1L-009",
+   "mechanism": "C_ABI_CONTRACT",
+   "recorded_contract": "`p` is NULL or NUL-terminated. The two call sites pass `def_list`, whose ENGINE_set_default_string # Safety states exactly that, or the static literal `word`.",
+   "unsafe_operations_read": [
+    "eng_fat.rs:197-204: `unsafe { core::ffi::CStr::from_ptr(p) }.to_bytes()` (guarded only by `p.is_null()`)"
+   ],
+   "safety_comment_quoted": "// SAFETY: `p` is NUL-terminated per the contract.",
+   "callers_enumerated": [
+    "eng_fat.rs:235 — `unsafe { push_cstr_or_null(&mut msg, def_list) }`; this is the ONLY call site (the instrument counts exactly one)",
+    "eng_fat.rs:212-214 — ENGINE_set_default_string `# Safety`: `def_list` must be NULL or NUL-terminated",
+    "eng_cnf.rs:174 `let mut ctrlvalue = unsafe { (*ecmd).value };` and eng_cnf.rs:244 `ENGINE_set_default_string(e, ctrlvalue)`: the in-crate caller passes a CONF_VALUE value, which the config parser produces as a NUL-terminated C string"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No on the paths read: the fn is private and unsafe, and its single caller passes either NULL or a CONF_VALUE value. But nothing at the interface requires that.",
+    "b_all_unsafe_covered": "NO. The function has no `# Safety` fn contract at all (contract_basis records 'no # Safety fn contract'); the block comment says 'per the contract', and the only place that contract is written is the boundary receipt. Under §7(1) and §9 a reusable unsafe helper must state its own contract, because the obligation it transfers to future callers is otherwise invisible.",
+    "c_hidden_obligation": "YES, and the evidence overclaims in the other direction: the receipt's established_by names 'the `word` literal path' as a second call site, but the instrument finds exactly one call site (eng_fat.rs:235); `word(...)` at :185 is a macro in int_def_cb and does not call this function.",
+    "d_load_bearing_control": "Only partially. The receipt's NC-10 exercises a NULL list, which tests the `p.is_null()` branch, not the NUL-termination precondition. Control C09 (with the `c-string` canary) is load-bearing for argument provenance but is static and cannot prove NUL-termination of a runtime pointer."
+   },
+   "control": {
+    "id": "C09",
+    "path": "court/freeze-b76/review/controls/v1l_contract_audit.py",
+    "canaries": ["c-string"],
+    "result": "PASS on the frozen source (one call site, def_list); the c-string canary FIRED; FINDING F09 raised for the missing # Safety"
+   },
+   "verdict": "REJECT",
+   "verdict_reason": "Precise defect: the unsafe fn transfers a NUL-termination obligation with no `# Safety` contract on the interface, the discharge receipt cites a call path that does not exist, and its control does not exercise the actual precondition. Discharge requires: (1) add a `# Safety` section stating NULL-or-NUL-terminated to push_cstr_or_null; (2) correct established_by to the single call site; (3) add a control that exercises a non-NUL-terminated argument (or records the helper's contract at the interface). The current call is believed safe on the evidence read, but `REJECT` is required because the precondition is not established by the interface."
+  },
+  {
+   "id": "V1:src/decoder_lib.rs:1080:UNSAFE_FN_DEF",
+   "item": "decoder_free_thunk",
+   "file": "src/decoder_lib.rs",
+   "line": 1080,
+   "boundary": "OSSH-V1L-010",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "recorded_contract": "`p` is NULL or an `OsslDecoder` owned by the stack passed to `OPENSSL_sk_pop_free(skdecoders, Some(decoder_free_thunk))` at src/decoder_lib.rs:1402.",
+   "unsafe_operations_read": [
+    "decoder_lib.rs:1080-1083: `unsafe { OSSL_DECODER_free(p.cast::<OsslDecoder>()) };`"
+   ],
+   "safety_comment_quoted": "// SAFETY: the stack's element is an `OsslDecoder` whose reference the stack owns.",
+   "callers_enumerated": [
+    "decoder_lib.rs:1402 — `OPENSSL_sk_pop_free(skdecoders, Some(decoder_free_thunk))` (only registration; name occurs twice: definition + registration)",
+    "decoder_lib.rs:1312/1319 — `skdecoders` is a fresh `OPENSSL_sk_new_null()` filled only by `OSSL_DECODER_do_all_provided(libctx, collect_all_decoders, skdecoders.cast())`",
+    "decoder_lib.rs:1116-1125 — collect_all_decoders up-refs each decoder (`OSSL_DECODER_up_ref(decoder) != 0`) before `OPENSSL_sk_push(skdecoders, decoder.cast::<c_void>())`, and down-refs on push failure"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`, reached only through this registration; the stack is a local whose only visitor is this unit's own.",
+    "b_all_unsafe_covered": "Yes. The up-ref/push pair makes the stack the owner of exactly one reference per element, and the visitor is the only writer into the stack.",
+    "c_hidden_obligation": "None found. `collect_extra_decoder` only reads the stack; the local is not published.",
+    "d_load_bearing_control": "Yes. Control C10 with the `release-path` canary fails if the push is made without the reference the free will release, or if a foreign push enters skdecoders."
+   },
+   "control": {
+    "id": "C10",
+    "path": "court/freeze-b76/review/controls/v1l_contract_audit.py",
+    "canaries": ["release-path"],
+    "result": "PASS on the frozen source; the release-path canary FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "The stack's ownership of each element is established by the up-ref-then-push pair in the same unit and the sole registration at :1402, which is still the exact line the receipt records. decoder_lib.rs is unchanged between the receipt's candidate and S."
+  },
+  {
+   "id": "V1:src/x509/v3_akid.rs:182:UNSAFE_FN_DEF",
+   "item": "akid_i2v",
+   "file": "src/x509/v3_akid.rs",
+   "line": 182,
+   "boundary": "OSSH-V1L-011",
+   "mechanism": "X509_VERIFY_POLICY",
+   "recorded_contract": "`meth` is the live X509V3_EXT_METHOD row; `value` is the `AuthorityKeyid` decoded by the in-repo print path from this row's `it` (AUTHORITY_KEYID_it); `out` is the caller's live stack or NULL.",
+   "unsafe_operations_read": [
+    "v3_akid.rs:182-190: `unsafe { i2v_AUTHORITY_KEYID(meth.cast_mut(), value.cast::<AuthorityKeyid>(), out) }`"
+   ],
+   "safety_comment_quoted": "// SAFETY: `meth` is the table's live row (the implementation only reads it), and `value` is the `AuthorityKeyid` the caller stored in the slot.",
+   "callers_enumerated": [
+    "v3_akid.rs:207-222 — `ossl_v3_akey_id` declares `it: Some(AUTHORITY_KEYID_it)`, `i2v: Some(akid_i2v)`, `v2i: Some(akid_v2i)`",
+    "v3_prn.rs:308 — decode: `ASN1_item_d2i(NULL, &p, extlen, item)` with `item` = the same row's `(*method).it`",
+    "v3_prn.rs:323-331/355 — the i2v slot is read from that row and called as `f(method, ext_str, NULL)` with the value just decoded from that row's item",
+    "No public `X509V3_EXT_i2v` exists in the crate or in the pinned authority: the i2v slot is reachable only through X509V3_EXT_print's decode-then-call; v3_prn.rs:308 and :355 are the current lines (receipt cites :226-246/:279, which is now different code)"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn` whose address appears only in the immutable row; the only i2v dispatch decodes with the row's own `it`.",
+    "b_all_unsafe_covered": "Yes. The cast target matches the row's `it`: AUTHORITY_KEYID_it -> AuthorityKeyid, a #[repr(C)] mirror.",
+    "c_hidden_obligation": "`meth.cast_mut()` turns the table's `*const` into `*mut`; the callee takes the parameter as `_method` and never writes through it (the instrument finds no write pattern), so a read-only static is not written. This is stated in the contract ('only reads it') and is not hidden.",
+    "d_load_bearing_control": "Yes. Control C11 with the `cast-type`, `row-pairing` and `write-through-row` canaries fails on a mismatched cast, a wrong row pairing, or a write through the row."
+   },
+   "control": {
+    "id": "C11",
+    "path": "court/freeze-b76/review/controls/v1l_contract_audit.py",
+    "canaries": ["cast-type", "row-pairing", "write-through-row"],
+    "result": "PASS on the frozen source; all three canaries FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Precondition established by current code I read: the row's `it` is AUTHORITY_KEYID_it, the printer decodes with that same row's item, and the cast target is its #[repr(C)] mirror. Evidence-record caveat: the receipt's dispatch citations are stale by a 2,493-line rewrite (findings E2/E3); the ACCEPT does not rest on them."
+  },
+  {
+   "id": "V1:src/x509/v3_akid.rs:193:UNSAFE_FN_DEF",
+   "item": "akid_v2i",
+   "file": "src/x509/v3_akid.rs",
+   "line": 193,
+   "boundary": "OSSH-V1L-012",
+   "mechanism": "X509_VERIFY_POLICY",
+   "recorded_contract": "`meth` is the live method row; `ctx` is the `X509V3Ctx` the in-repo configuration parser passes under `void *` (src/x509/v3_conf.rs:1059); `out` is the parsed CONF_VALUE stack.",
+   "unsafe_operations_read": [
+    "v3_akid.rs:193-201: `unsafe { v2i_AUTHORITY_KEYID(meth.cast_mut(), ctx.cast::<X509V3Ctx>(), out).cast::<c_void>() }`"
+   ],
+   "safety_comment_quoted": "// SAFETY: as `akid_i2v`; `ctx` is the `X509V3_CTX` the machinery passes under its `void *` spelling, and the answer is a freshly built `AuthorityKeyid`.",
+   "callers_enumerated": [
+    "v3_akid.rs:207-222 — row declares `v2i: Some(akid_v2i)`",
+    "v3_conf.rs:1111 — `ext_struc = unsafe { cb(method, ctx.cast::<c_void>(), nval) }` where `ctx` is the caller's X509V3Ctx (NULL or live) and `nval` is the stack parsed by `X509V3_parse_list` (:1091). The receipt cites :1029-1059; current line is :1111.",
+    "v2i_AUTHORITY_KEYID (:359) refuses NULL ctx at its declared V3_AKID_152 site"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private unsafe fn; the public C entry X509V3_EXT_nconf is `pub unsafe extern \"C\"`, so no safe-Rust caller can reach it with an unchecked ctx.",
+    "b_all_unsafe_covered": "Yes. The cast target is the #[repr(C)] X509V3Ctx mirror, NULL is accepted per the callee's contract, and the value stack is the parser's own CONF_VALUE stack.",
+    "c_hidden_obligation": "None in-crate. An external C caller may pass any ctx pointer; the obligation 'ctx is NULL or live' is the authority's own and is listed in the receipt's does_not_prove.",
+    "d_load_bearing_control": "Yes. Control C12 plus the `cast-type` and `write-through-row` canaries."
+   },
+   "control": {
+    "id": "C12",
+    "path": "court/freeze-b76/review/controls/v1l_contract_audit.py",
+    "canaries": ["cast-type", "write-through-row"],
+    "result": "PASS on the frozen source; the canaries FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "The parser passes its own X509V3Ctx under void* and its own parsed stack; the cast mirror and the NULL-ctx refusal are both in current code. Evidence-record caveat: v3_conf dispatch citation is stale (E3)."
+  },
+  {
+   "id": "V1:src/x509/v3_san.rs:1176:UNSAFE_FN_DEF",
+   "item": "san_i2v",
+   "file": "src/x509/v3_san.rs",
+   "line": 1176,
+   "boundary": "OSSH-V1L-013",
+   "mechanism": "X509_VERIFY_POLICY",
+   "recorded_contract": "`meth` is the live method row; `value` is the `GENERAL_NAMES` decoded by the in-repo print path from this row's `it` (GENERAL_NAMES_it); `out` is the caller's live stack or NULL.",
+   "unsafe_operations_read": [
+    "v3_san.rs:1176-1184: `unsafe { i2v_GENERAL_NAMES(meth.cast_mut(), value.cast::<OpenSslStack>(), out) }`"
+   ],
+   "safety_comment_quoted": "// SAFETY: `meth` is the table's live row (read only); `value` is the GENERAL_NAMES stack the slot holds.",
+   "callers_enumerated": [
+    "v3_san.rs:1207-1224 — `alt_row` sets `it: Some(GENERAL_NAMES_it)` and `i2v: Some(san_i2v)`; rows at :1232-1236 are subjectAltName, issuerAltName and certificateIssuer",
+    "v3_prn.rs:308/:355 — decode with the row's own item, then call the row's i2v with that value",
+    "No other caller: the slot is not exported and is reached only through X509V3_EXT_print"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private unsafe fn; the only dispatch decodes with the same row's GENERAL_NAMES_it.",
+    "b_all_unsafe_covered": "Yes. GENERAL_NAMES_it produces a stack, and the crate represents stacks as OpenSslStack.",
+    "c_hidden_obligation": "None found. The cast to *mut does not write (no `(*method)` write pattern).",
+    "d_load_bearing_control": "Yes. Control C13 plus `cast-type`, `row-pairing`, `write-through-row`."
+   },
+   "control": {
+    "id": "C13",
+    "path": "court/freeze-b76/review/controls/v1l_contract_audit.py",
+    "canaries": ["cast-type", "row-pairing", "write-through-row"],
+    "result": "PASS on the frozen source; canaries FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Row/type/dispatch agreement is established by current code. Evidence-record defect: the boundary receipt declares this item at :1163, which now holds different code; the obligation itself is at :1176 and the closure recorded covers_site=false yet DISCHARGED (findings E3/E4)."
+  },
+  {
+   "id": "V1:src/x509/v3_san.rs:1187:UNSAFE_FN_DEF",
+   "item": "san_v2i",
+   "file": "src/x509/v3_san.rs",
+   "line": 1187,
+   "boundary": "OSSH-V1L-014",
+   "mechanism": "X509_VERIFY_POLICY",
+   "recorded_contract": "`meth` is the live method row; `ctx` is the `X509V3Ctx` the in-repo parser passes (src/x509/v3_conf.rs:1059); `out` is the parsed CONF_VALUE stack.",
+   "unsafe_operations_read": [
+    "v3_san.rs:1187-1194: `unsafe { v2i_subject_alt(meth.cast_mut(), ctx.cast::<X509V3Ctx>(), out).cast::<c_void>() }`"
+   ],
+   "safety_comment_quoted": "// SAFETY: as `san_i2v`; `ctx` is the `X509V3Ctx` under the slot's `void *` spelling.",
+   "callers_enumerated": [
+    "v3_san.rs:1233 — `alt_row(NID_subject_alt_name, Some(san_v2i))`",
+    "v3_conf.rs:1111 — v2i dispatch with the parser's ctx and CONF_VALUE stack",
+    "v2i_subject_alt (:1372) handles NULL ctx through do_dirname/X509V3_get_section (which refuses NULL at v3_conf.rs:439 instead of dereferencing) and ASN1_generate_v3 (NULL cnf guarded at asn1_gen.rs:1098)"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private unsafe fn; X509V3_EXT_nconf is an unsafe public C entry.",
+    "b_all_unsafe_covered": "Yes. The NULL-ctx path is refused before any dereference; I followed it through X509V3_get_section, X509V3_section_free and ASN1_generate_v3.",
+    "c_hidden_obligation": "The contract says 'ctx is NULL or live'; the NULL arm is a deliberate improvement over the authority (which dereferences ctx in X509V3_get_section) and is recorded in code. Not hidden.",
+    "d_load_bearing_control": "Yes. Control C14 plus the row-pairing canary (which swaps the subject/issuer builders and fires)."
+   },
+   "control": {
+    "id": "C14",
+    "path": "court/freeze-b76/review/controls/v1l_contract_audit.py",
+    "canaries": ["row-pairing", "cast-type"],
+    "result": "PASS on the frozen source; canaries FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "The subject row pairs with the subject builder, and the ctx/stack preconditions are established by the parser. Evidence-record defect: receipt declares :1174 (currently different code); closure recorded covers_site=false (E3/E4)."
+  },
+  {
+   "id": "V1:src/x509/v3_san.rs:1197:UNSAFE_FN_DEF",
+   "item": "san_v2i_issuer",
+   "file": "src/x509/v3_san.rs",
+   "line": 1197,
+   "boundary": "OSSH-V1L-015",
+   "mechanism": "X509_VERIFY_POLICY",
+   "recorded_contract": "As OSSH-V1L-014, for the issuer-alt row; `ctx`/`out` carry the same in-repo parser types.",
+   "unsafe_operations_read": [
+    "v3_san.rs:1197-1204: `unsafe { v2i_issuer_alt(meth.cast_mut(), ctx.cast::<X509V3Ctx>(), out).cast::<c_void>() }`"
+   ],
+   "safety_comment_quoted": "// SAFETY: as `san_v2i`, with the issuer arm's constructor.",
+   "callers_enumerated": [
+    "v3_san.rs:1234 — `alt_row(NID_issuer_alt_name, Some(san_v2i_issuer))`",
+    "v3_conf.rs:1111 — v2i dispatch",
+    "v2i_issuer_alt (:1246) shares the NULL-ctx-safe helpers with the subject arm"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private unsafe fn; unsafe public C entry only.",
+    "b_all_unsafe_covered": "Yes.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Yes. Control C15 plus the row-pairing canary."
+   },
+   "control": {
+    "id": "C15",
+    "path": "court/freeze-b76/review/controls/v1l_contract_audit.py",
+    "canaries": ["row-pairing"],
+    "result": "PASS on the frozen source; canary FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Issuer row pairs with the issuer builder and the ctx/stack preconditions are established by the parser. Evidence-record defect: receipt declares :1184 (currently different code); closure recorded covers_site=false (E3/E4)."
+  }
+ ],
+ "controls_executed": [
+  {
+   "id": "CTRL-SPAN",
+   "path": "court/freeze-b76/review/controls/verify_spans.py",
+   "purpose": "re-derive the operation-span content address outside the closure tool",
+   "result": "65/65 span hashes recomputed and matched; rule is sha256('\\n'.join(lines[start-1:end]))"
+  },
+  {
+   "id": "CTRL-AUDIT",
+   "path": "court/freeze-b76/review/controls/v1l_contract_audit.py",
+   "purpose": "33 structural checks over the nine contracts, anchored with exact occurrence counts",
+   "result": "33/33 PASS on the frozen source; 1 FINDING (F09, missing # Safety on push_cstr_or_null)"
+  },
+  {
+   "id": "CTRL-CANARY",
+   "path": "court/freeze-b76/review/controls/run_canaries.py",
+   "purpose": "nine violation-class canaries over private mutated copies, plus a pristine fixture",
+   "result": "pristine fixture exit 0; 9/9 canaries fired (release-path, registry-provenance, double-release, owner-identity, owner-double-free, c-string, cast-type, row-pairing, write-through-row)"
+  },
+  {
+   "id": "CTRL-WITNESS",
+   "path": "court/freeze-b76/review/controls/check_boundary_receipt.py",
+   "purpose": "compare the v1l receipt's coordinates and establishing citations against the frozen source",
+   "result": "receipt bound to 8a54aba58 (not S); 3 stale coordinates; 5 stale establishing citations; exactly 1 push_cstr_or_null call site"
+  },
+  {
+   "id": "CTRL-INVENTORY",
+   "path": "court/freeze-b76/review/controls/build_inventory.py",
+   "purpose": "Task-1 extraction and per-obligation coordinate check",
+   "result": "9 v1l + 56 v1i + 0 boundary-sweep-B45 = 65 distinct; 0 obligations whose recorded line/span start fails to hold the item"
+  }
+ ],
+ "findings": [
+  {
+   "id": "E1",
+   "severity": "evidence-integrity",
+   "statement": "All nine obligation records carry contract='uncontracted' and contract_basis='block-level SAFETY present but no # Safety fn contract'. The contract exists only in the boundary receipt, not at the interface or in the obligation record."
+  },
+  {
+   "id": "E2",
+   "severity": "evidence-identity",
+   "statement": "The boundary receipt openssh-v1l-sites.json is bound to candidate 8a54aba58f35dd62af5c78551169d0e8a9276469 (v1k, 2026-10-28), not to S=0238c6e4adbc7ed85a42be68b6fb965e139bd93e. The b76c closures accept it only through the operation-span content hash, which re-checks the operation text but not the callers the discharge cites."
+  },
+  {
+   "id": "E3",
+   "severity": "evidence-integrity",
+   "statement": "The receipt's establishing witnesses no longer point at the code that establishes the preconditions: v3_prn i2v dispatch cited at 226-246/:279 is now at 308/:355; v3_conf v2i dispatch cited at 1029-1059 is now at 1111 (v3_prn.rs +907, v3_conf.rs +1236, v3_lib.rs +424 between the receipt's candidate and S); ui index loads cited at 277/447/500/525 are now at 282/452/503/528; the v3_san row table cited at 1211-1214 is now at 1232. The v3_akid row citation 203-218 still contains the row at 207, and the v3_san alt_row citation 1193-1217 still contains alt_row at 1207."
+  },
+  {
+   "id": "E4",
+   "severity": "acceptance-defect",
+   "statement": "For OSSH-V1L-013/014/015 the boundary receipt declares :1163/:1174/:1184 while the reviewed items are at :1176/:1187/:1197. The closure's own scoped_discharge_attempt records covers_site=false for all three, yet sets DISCHARGED on the strength of span_hash==span_current_hash. Content binding is sound, but the recorded coordinate does not identify the site."
+  },
+  {
+   "id": "F09",
+   "severity": "contract-defect",
+   "statement": "push_cstr_or_null (OSSH-V1L-009) has no `# Safety` fn contract; its block comment refers to a contract stated elsewhere. The receipt's established_by also names a second call path ('the `word` literal path') that does not exist: there is exactly one call site (eng_fat.rs:235)."
+  }
+ ],
+ "receipt_identity": {
+  "closure_ssh_source_head": "ab075cdc36a589e6c3fa335e86e26cce1a75ad58",
+  "closure_sshd_source_head": "55b1aeaec906ba60d302f2f08d0b1f3c8c87ea83",
+  "closure_span_source_commit": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+  "note": "The closure receipts analyse the correct span source (0238c6e4a) but are generated from worktrees at later heads; the v1l boundary receipt predates S. Only the operation bodies are content-rebound. Regenerating the v1l receipt at S with current witnesses and re-running NC-04..NC-15 against the S binaries is required before any of these nine is cited as final evidence at S."
+ },
+ "summary": {
+  "obligations_reviewed": 9,
+  "accept": 8,
+  "reject": 1,
+  "accept_list": ["OSSH-V1L-006", "OSSH-V1L-007", "OSSH-V1L-010", "OSSH-V1L-011", "OSSH-V1L-012", "OSSH-V1L-013", "OSSH-V1L-014", "OSSH-V1L-015"],
+  "reject_list": ["OSSH-V1L-009"],
+  "safe_rust_ub_found": false,
+  "hidden_obligations_found": 1,
+  "hidden_obligations": ["F09: push_cstr_or_null transfers a NUL-termination obligation to callers with no `# Safety` contract; the obligation is reported in contract_basis but not at the interface"],
+  "new_obligations_introduced": 0,
+  "accepts_resting_on_unobserved_evidence": 0,
+  "evidence_record_defects": ["E1", "E2", "E3", "E4", "F09"],
+  "controls_run": 5,
+  "canaries_fired": "9/9",
+  "runtime_controls_run": 0
+ },
+ "does_not_prove": [
+  "No runtime execution of the nine code paths was observed in this review. Compilation was forbidden by the §6.1 OOM gate (free -g: 17 GiB available; cap min(8, 17-16)=1g < 2g floor), and the receipt's NC-04..NC-15 binaries were not retained, so their recorded v1k results are NOT evidence for this review.",
+  "The controls are source-level structural instruments. They prove call-site/provenance/cast/row pairing and would fail on the seven mutated violation classes, but they cannot prove absence of aliasing UB, double release or a bad generic-evaluation path at run time.",
+  "No Miri, ASan, TSan or Tree Borrows run. No cryptographic or compatibility court was run; this is a safety/contract review only.",
+  "The external C ABI obligations (X509V3_EXT_print callers, X509V3_EXT_nconf ctx, UI_method_set_ex_data index writers, ENGINE_set_default_string def_list) are unchanged from the authority and are retained, not discharged, by this review.",
+  "The 56 openssh-v1i obligations were inventoried only, not reviewed; their contracts are also recorded as 'uncontracted' and the same evidence-identity questions apply to them.",
+  "The witnesses cited in the v1l boundary receipt are stale; ACCEPT verdicts here rest on source read during this review, not on that receipt."
+ ]
+}
