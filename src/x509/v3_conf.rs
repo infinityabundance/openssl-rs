@@ -1202,7 +1202,8 @@ unsafe fn delete_ext(sk: *mut OpenSslStack, dext: *mut X509Extension) {
 ///
 /// `conf` NULL or live; `ctx` NULL or live; `section`/`name`/`value` NULL or NUL-terminated.
 /// A NULL `ctx` is refused by the `r2i` arm or by the first section read with an error, not
-/// dereferenced.
+/// dereferenced. A NULL `value` is refused with an error before the prefix scan, instead of
+/// being dereferenced as the authority does (divergence `D-V3-CONF-NULL-VALUE-1`).
 unsafe fn X509V3_EXT_nconf_int(
     conf: *mut Conf,
     ctx: *mut X509V3Ctx,
@@ -1210,6 +1211,28 @@ unsafe fn X509V3_EXT_nconf_int(
     name: *const c_char,
     value: *const c_char,
 ) -> *mut X509Extension {
+    if value.is_null() {
+        let mut msg: Vec<u8> = Vec::new();
+        if !section.is_null() {
+            msg.extend_from_slice(b"section=");
+            // SAFETY: `section` is NUL-terminated.
+            unsafe { push_cstr(&mut msg, section) };
+            msg.extend_from_slice(b", ");
+        }
+        msg.extend_from_slice(b"name=");
+        // SAFETY: `name` is NULL or NUL-terminated; `push_cstr` writes `(null)` for NULL.
+        unsafe { push_cstr(&mut msg, name) };
+        msg.extend_from_slice(b", value=(null)");
+        msg.push(0);
+        let site = if section.is_null() {
+            &V3_CONF_52
+        } else {
+            &V3_CONF_48
+        };
+        // SAFETY: the site is a declared constant; `msg` is NUL-terminated.
+        unsafe { raise_site_data(site, msg.as_ptr().cast()) };
+        return ptr::null_mut();
+    }
     let mut p = value;
     // SAFETY: `&mut p` is this frame's own slot; `p` is NUL-terminated.
     let crit = unsafe { v3_check_critical(&raw mut p) };
@@ -1256,7 +1279,8 @@ unsafe fn X509V3_EXT_nconf_int(
 ///
 /// `conf` NULL or live; `ctx` NULL or live; `name`/`value` NULL or NUL-terminated. A NULL
 /// `ctx` is refused by the `r2i` arm or by the first section read with an error, not
-/// dereferenced.
+/// dereferenced. A NULL `value` is refused with an error before the prefix scan, instead of
+/// being dereferenced as the authority does (divergence `D-V3-CONF-NULL-VALUE-1`).
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_EXT_nconf(
     conf: *mut Conf,
@@ -1274,7 +1298,9 @@ pub unsafe extern "C" fn X509V3_EXT_nconf(
 /// # Safety
 ///
 /// `conf` NULL or live; `ctx` NULL or live; `value` NULL or NUL-terminated. A NULL `ctx` is
-/// refused by the `r2i` arm or by the first section read with an error, not dereferenced.
+/// refused by the `r2i` arm or by the first section read with an error, not dereferenced. A NULL
+/// `value` is refused with an error before the prefix scan, instead of being dereferenced as the
+/// authority does (divergence `D-V3-CONF-NULL-VALUE-1`).
 #[no_mangle]
 pub unsafe extern "C" fn X509V3_EXT_nconf_nid(
     conf: *mut Conf,
@@ -1282,6 +1308,13 @@ pub unsafe extern "C" fn X509V3_EXT_nconf_nid(
     ext_nid: c_int,
     value: *const c_char,
 ) -> *mut X509Extension {
+    if value.is_null() {
+        let mut msg = b"value=(null)".to_vec();
+        msg.push(0);
+        // SAFETY: the site is a declared constant; `msg` is NUL-terminated.
+        unsafe { raise_site_data(&V3_CONF_52, msg.as_ptr().cast()) };
+        return ptr::null_mut();
+    }
     let mut p = value;
     // SAFETY: `&mut p` is this frame's own slot; `p` is NUL-terminated.
     let crit = unsafe { v3_check_critical(&raw mut p) };
@@ -2466,6 +2499,52 @@ mod tests {
         assert!(
             ext.is_null(),
             "a NULL ctx must not produce an extension on the section path"
+        );
+        // SAFETY: reads and pops the current thread's error queue.
+        let err = unsafe { ERR_get_error() };
+        assert_ne!(err, 0, "the refusal must be reported on the error stack");
+    }
+
+    /// B54-F2: a NULL `value` used to be handed to the prefix scan.
+    ///
+    /// `X509V3_EXT_nconf*` document `value` as NULL-or-NUL-terminated, but the
+    /// authority passes it straight to `v3_check_critical`, which scans it with
+    /// `strncmp`. The input below is reachable through the documented contract
+    /// and must be refused with an error rather than dereferenced.
+    #[test]
+    fn a_null_extension_value_is_refused_before_the_prefix_scan() {
+        // SAFETY: no live object is required to clear the thread's error queue.
+        unsafe { ERR_clear_error() };
+        // SAFETY: every pointer argument is NULL or a NUL-terminated literal, which
+        // is exactly the input under test.
+        let ext = unsafe {
+            X509V3_EXT_nconf(
+                ptr::null_mut(),
+                ptr::null_mut(),
+                c"basicConstraints".as_ptr(),
+                ptr::null(),
+            )
+        };
+        assert!(ext.is_null(), "a NULL value must not produce an extension");
+        // SAFETY: reads and pops the current thread's error queue.
+        let err = unsafe { ERR_get_error() };
+        assert_ne!(err, 0, "the refusal must be reported on the error stack");
+
+        // SAFETY: no live object is required to clear the thread's error queue.
+        unsafe { ERR_clear_error() };
+        // SAFETY: every pointer argument is NULL or a constant NID, which is
+        // exactly the input under test.
+        let ext = unsafe {
+            X509V3_EXT_nconf_nid(
+                ptr::null_mut(),
+                ptr::null_mut(),
+                NID_basic_constraints,
+                ptr::null(),
+            )
+        };
+        assert!(
+            ext.is_null(),
+            "a NULL value must not produce an extension on the NID path"
         );
         // SAFETY: reads and pops the current thread's error queue.
         let err = unsafe { ERR_get_error() };

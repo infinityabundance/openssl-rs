@@ -219,7 +219,7 @@
       "name": "divergence-register",
       "note": "the prose register this table transcribes",
       "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-      "sha256": "a3f0f6c10593e0f63ba80ab72f184bc55a08c9841655dcde59f4de50ef4c0aa9"
+      "sha256": "ed95db1e81dd5bc020c72bbf60b3f702242dcf6710ca0f96e319c8f317f84aa9"
     },
     {
       "name": "phase-8-seal",
