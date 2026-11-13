@@ -728,12 +728,12 @@
    "why": "the NULL-value contract defect is in src/x509/v3_conf.rs, which is not in the OpenSSH reachable obligation set. It remains an open finding for the wider library and is not fixed here because a source edit would invalidate the frozen candidate without a rebuild; it must be repaired and re-measured at the next source batch."
   }
  ],
- "verdict": "SAFE_COMPATIBLE NOT ESTABLISHED for ssh or sshd. The last measured S = 15bebabc9 has 225 supportable / 98 REVIEW_REQUIRED / 0 BLOCKED / 0 UNKNOWN and element 7 PASS 153/0/153. The current source S4 = ba60ad76a adds the B54-F2 fix, 13 CMP constructor eliminations, six v1l helper eliminations and nine B45 cleanup-thunk eliminations, but is unbuilt and unmeasured; the projected review-required count is 70, not applied.",
+ "verdict": "SAFE_COMPATIBLE NOT ESTABLISHED for ssh or sshd. The last measured S = 15bebabc9 has 225 supportable / 98 REVIEW_REQUIRED / 0 BLOCKED / 0 UNKNOWN and element 7 PASS 153/0/153. The current source S5 = 69d43bb8d adds the B54-F2 fix and 33 structural eliminations, but is unbuilt and unmeasured; the projected review-required count is 65, not applied.",
  "input_hashes": {
   "evidence/closure-ssh-b74.json": "87f1dd9ac062d60da6a07c06abc4eec626254217dfd84861c7b495e59357c8ff",
   "evidence/closure-sshd-b73-r2.json": "d0addc72f94904b03e63b2bd1d92dc5506c1ea67f6732b5a51a124f943f5cee5",
   "evidence/sshd-artifact-ledger.json": "34ff5e2eec66d7c522951c9ef639d0e97c1a61501a232b0f579a4fe5fd7dc36e",
-  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "33d162ea4790cac84cbf7eb17149d1c07df5ff701d36ffa6e7cfbf52eb6b3253",
+  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "65fe71bb3d9d18f69034a2b176d96ac429a90e7cd0853f10d1ee17f6fc70b009",
   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json": "225275e35179c7f475c1031e6a783a9ee4630529127a715da67a1cecab51863e"
  },
  "non_claims": [
@@ -830,6 +830,17 @@
    "evidence_bound_to": "S=15bebabc9 (all closure/census/artefact evidence)",
    "projected_effect": "review-required 98 -> 70 after rebuild and re-census (not applied); the B45 C5 refusal is preserved but blocks no live obligation",
    "required_resolution": "build, test, rebuild consumers, re-census, re-run both closures and L7 at S4"
+  },
+  {
+   "id": "CMP-CTX-DEAD-5",
+   "commit": "69d43bb8d8d4b4641f939c7283eb57d92ca5b89c",
+   "previous_S": "ba60ad76a423c9e8d36cba24535fb578a02dbce3",
+   "src_content_sha256": "65aa47536dc88532da20880dcfe922bc5b3170177ea68f925e734c92f90670f1",
+   "what": "five unreferenced module-local free thunks deleted from cmp_ctx.rs",
+   "state": "ELIMINATED IN SOURCE, NOT_BUILT",
+   "evidence_bound_to": "S=15bebabc9 (all closure/census/artefact evidence)",
+   "projected_effect": "review-required 70 -> 65 after rebuild and re-census (not applied)",
+   "required_resolution": "build, test, rebuild consumers, re-census, re-run both closures and L7 at S5"
   }
  ]
 }
