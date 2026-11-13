@@ -243,6 +243,24 @@ This is a context-preservation rule, not a preference.
   commits the verified change on a `stage/p25/sweepN` branch, merges it into
   `integrate/safe-c33`, pushes, and updates the ledger.
 
+### Transport-only orchestrator (mandatory — 2026-11-13)
+
+**Outside a subagent, the orchestrator may run nothing but publishing transport:**
+`git commit`, `git push` (GitHub) and a crates.io/release publish step. The commit
+is part of the push path and is permitted only for that purpose.
+
+Everything else is **forbidden in the orchestrator**, including `git status`,
+`git log`, `git diff`, `grep`, `ls`, `cat`, `find`, `python3`, `docker`, `cargo`,
+`rustc`, tests, and any script — read-only or not, large output or small. Anything
+that observes, measures, builds, tests or changes project state MUST run inside
+exactly **one** subagent at a time; the subagent returns a short report, and the
+orchestrator commits and pushes what it reports.
+
+This supersedes every earlier permission for the orchestrator to run project
+commands directly, to read large files itself, or to run "small" commands: there
+is no size exemption. Context is the scarce resource this rule protects, so
+reconnaissance belongs in the subagent that will act on it.
+
 ### Verification scheduling: FAST / BATCH / BOUNDARY / SEAL (additive, 2026-10-18)
 
 This subsection governs **how often** evidence is generated. It changes scheduling, not
