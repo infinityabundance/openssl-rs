@@ -695,14 +695,24 @@ pub unsafe extern "C" fn NCONF_get_string(
 /// `static int default_is_number(const CONF *conf, char c)`
 ///
 /// The method-independent fallback: `ossl_isdigit`, i.e. ASCII only.
-unsafe extern "C" fn default_is_number(_conf: *const Conf, c: c_char) -> c_int {
+extern "C" fn default_is_number(_conf: *const Conf, c: c_char) -> c_int {
     c_int::from((b'0' as c_char..=b'9' as c_char).contains(&c))
 }
 
+// Compile-time control: the converted predicate keeps its exact C signature, and
+// restoring the `unsafe` qualifier breaks this build.
+#[cfg(test)]
+const _: extern "C" fn(*const Conf, c_char) -> c_int = default_is_number;
+
 /// `static int default_to_int(const CONF *conf, char c)`
-unsafe extern "C" fn default_to_int(_conf: *const Conf, c: c_char) -> c_int {
+extern "C" fn default_to_int(_conf: *const Conf, c: c_char) -> c_int {
     c_int::from(c) - c_int::from(b'0' as c_char)
 }
+
+// Compile-time control: the converted digit conversion keeps its exact C signature,
+// and restoring the `unsafe` qualifier breaks this build.
+#[cfg(test)]
+const _: extern "C" fn(*const Conf, c_char) -> c_int = default_to_int;
 
 /// `int NCONF_get_number_e(const CONF *conf, const char *group, const char *name, long *result)`
 ///

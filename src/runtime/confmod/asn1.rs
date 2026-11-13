@@ -252,10 +252,15 @@ unsafe fn do_create(value: *const c_char, name: *const c_char) -> bool {
 }
 
 /// `static void oid_module_finish(CONF_IMODULE *md)` — empty, and deliberately still passed.
-unsafe extern "C" fn oid_module_finish(_md: *mut ConfImodule) {
+extern "C" fn oid_module_finish(_md: *mut ConfImodule) {
     // The authority's body is `{}`: an OID section needs no teardown, because the objects it
     // created belong to the object database and `OBJ_cleanup` is that database's own business.
 }
+
+// Compile-time control: the converted finish callback keeps its exact C signature,
+// and restoring the `unsafe` qualifier breaks this build.
+#[cfg(test)]
+const _: extern "C" fn(*mut ConfImodule) = oid_module_finish;
 
 /// `static int oid_module_init(CONF_IMODULE *md, const CONF *cnf)`.
 ///
