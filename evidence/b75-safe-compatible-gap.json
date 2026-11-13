@@ -671,7 +671,8 @@
        "item": "san_v2i_issuer",
        "status": "DISCHARGED"
       }
-     ]
+     ],
+     "c_class_review": "9 C-class sites: caller contracts established, APPROVE_WITH_CONDITIONS, NOT_APPLIED (six controls missing; no build/Miri/ASan)"
     }
    ],
    "required_resolution": "an independent adversarial review at BOUNDARY level of each receipt group, by a reviewer that is not the author, recorded as an adjudication entry; or withdraw the discharges. Adding an \"adjudicated\" flag without the review is a weakened instrument and is refused.",
@@ -732,7 +733,7 @@
   "evidence/closure-ssh-b74.json": "87f1dd9ac062d60da6a07c06abc4eec626254217dfd84861c7b495e59357c8ff",
   "evidence/closure-sshd-b73-r2.json": "d0addc72f94904b03e63b2bd1d92dc5506c1ea67f6732b5a51a124f943f5cee5",
   "evidence/sshd-artifact-ledger.json": "34ff5e2eec66d7c522951c9ef639d0e97c1a61501a232b0f579a4fe5fd7dc36e",
-  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "1d4c5ca91ab736992d66d6914b95b7426abc6d43f7a90034b96bbb8861c394c1",
+  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "33d162ea4790cac84cbf7eb17149d1c07df5ff701d36ffa6e7cfbf52eb6b3253",
   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json": "225275e35179c7f475c1031e6a783a9ee4630529127a715da67a1cecab51863e"
  },
  "non_claims": [
@@ -779,6 +780,11 @@
    "tool": "systematic blocked-row audit",
    "result": "31 stale rows found: 4 already recorded (RC2 + 3 vestigial), 26 recorded here, 1 excluded (s2i_poison, already B54-discharged)",
    "state": "RECORDED"
+  },
+  {
+   "tool": "independent v1l C-class review",
+   "result": "all 9 caller contracts established; six lack load-bearing controls; disposition NOT_APPLIED",
+   "state": "CONDITIONAL"
   }
  ],
  "source_changes": [
