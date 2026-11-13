@@ -703,12 +703,48 @@
   "evidence/closure-ssh-b74.json": "87f1dd9ac062d60da6a07c06abc4eec626254217dfd84861c7b495e59357c8ff",
   "evidence/closure-sshd-b73-r2.json": "d0addc72f94904b03e63b2bd1d92dc5506c1ea67f6732b5a51a124f943f5cee5",
   "evidence/sshd-artifact-ledger.json": "34ff5e2eec66d7c522951c9ef639d0e97c1a61501a232b0f579a4fe5fd7dc36e",
-  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "97b3c41ea09b9c05c6725e790413aa5a472e4dc8904a2474cbcb7e8f0e470411",
+  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "072d2b22982e346cf4f71b21a62297c8720dbef322710a2c347363eaf5c7b15d",
   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json": "225275e35179c7f475c1031e6a783a9ee4630529127a715da67a1cecab51863e"
  },
  "non_claims": [
   "This report is not a progress substitute for implementation; it is the precise blocker report required when the venue cannot run the gates.",
   "No blocker is reclassified as PASS.",
   "No safe Rust interface is claimed sound for the wider library by this report."
+ ],
+ "pipeline_findings": [
+  {
+   "tool": "forensics/tools/docs_consistency.py",
+   "before": "FAIL: README claimed 14 scoped boundary discharges, the ledger applies 19",
+   "fix": "render_docs.py now derives the applied set from CAMPAIGN-STATUS; README 14 -> 19; B54-B57 rows-only receipts and the B60 freeze are counted, B73 is no longer double-counted under another label",
+   "after": "ok: 20 hand-written claims agree",
+   "state": "FIXED"
+  },
+  {
+   "tool": "forensics/tools/check_forbidden_dependencies.py",
+   "result": "clean",
+   "state": "PASS"
+  },
+  {
+   "tool": "forensics/tools/callback_enumeration_gate.py",
+   "result": "exit 0, unresolved 0, but the regeneration rewrote 15 committed evidence files and changed REACHABLE_BOUND 135 -> 109 and enrolment 66 -> 64",
+   "action": "reverted; not committed. The gate also rewrites the closure enrolment input, so accepting the change without a build and a closure re-run would silently alter the adjudication",
+   "state": "UNRESOLVED \u2014 regeneration not accepted"
+  },
+  {
+   "tool": "forensics/tools/check_evidence_portability.py",
+   "result": "FAIL: implemented_surface.py needs target/release/libopenssl_rs.a, which does not exist in this venue",
+   "state": "BLOCKED \u2014 no build"
+  },
+  {
+   "tool": "forensics/tools/probe_hygiene.py",
+   "result": "no built distribution shell at artifacts/phase2 (the tool expects a different layout than artifacts/phase2/install)",
+   "state": "BLOCKED \u2014 venue"
+  },
+  {
+   "tool": "forensics/tools/divergence_obligations.py",
+   "result": "the committed table recorded a stale docs/SECURITY_DIVERGENCE_POLICY.md digest 7fa882ab; the current digest is a3f0f6c1",
+   "fix": "re-pinned; 10 rows, 0 blocking, dispositions unchanged",
+   "state": "FIXED"
+  }
  ]
 }
