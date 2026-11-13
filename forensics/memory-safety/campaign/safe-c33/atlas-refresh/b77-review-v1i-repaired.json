@@ -1,0 +1,1217 @@
+{
+ "schema": "openssl-rs/safe-c33/atlas-refresh/b77-review-v1i-repaired/v1",
+ "kind": "independent-adversarial-review",
+ "subphase": "b77 v1i repair re-review (ada7df257)",
+ "generated_utc": "2026-11-13T23:40:00Z",
+ "reviewer": {
+  "role": "INDEPENDENT ADVERSARIAL REVIEWER (AGENTS.md 15)",
+  "independence": "This reviewer did not write the repair under review. Every verdict below was re-derived from source text, git objects and the recorded batch receipts; nothing is taken from the repair's commit message or its test report. The agent that wrote the repair is the author of the source under review.",
+  "author_is_not_adjudicator": true
+ },
+ "candidate_identity": {
+  "source_head": "ada7df257e157964f3baade5ec40b66e9a9cbf35",
+  "source_head_note": "src/, Cargo.toml, Cargo.lock and build.rs are identical between ada7df257 and the review HEAD (git diff --stat empty).",
+  "review_head": "123ae39dd79f95bc484b49c807eeb268fd768f26",
+  "src_content_sha256": "88cd806799dd0866bcd4f05970b813157be200eb0316292e07f39572e8745757",
+  "src_content_hash_rule": "sha256('openssl-rs/src-rs/v1\\0' + sorted relpath\\0bytes\\0); 878 .rs files",
+  "image_path": "artifacts/phase2/install/lib/libcrypto.so.3",
+  "image_libcrypto_sha256": "b9cfb9e5de325c1ffb6bb5fb678122a05b0eb8be21619a251ee3254d92e4b1c1",
+  "closure_tool_sha256": "74e3953b36233b1071b9b720e1a0551e866801fa41db5e31b5f878fdabd46161",
+  "closure_tool_is_the_evidence_tool": true,
+  "working_tree_tool_sha256": "facb2a97586493a8cf8fb6a073266046dfc1dd8138110f6c18c575b613e45426",
+  "working_tree_tool_note": "forensics/tools/consumer_closure.py is modified in the working tree (uncommitted) and does NOT match the tool that produced evidence/closure-ssh-b77.json. Per AGENTS.md 22 a change to an evidence-deriving tool is build-relevant: committing it without regenerating the closure would invalidate the b77 evidence. It is excluded from this reviewed identity."
+ },
+ "venue": {
+  "free_g_available_gib": 10,
+  "compilation": "NOT RUN",
+  "refusal": "AGENTS.md 6.1 rule 2: available (10 GiB) < 24 GiB, and min(8, available-16) is negative (floor 2g not met), so no build/test command may run. All controls are source-level (python3 over git objects and source text)."
+ },
+ "method": {
+  "task1": "Read the repair diff and the current bodies; judged pointer identity per arm, other entry points, the SHA3 bound on every arm including outlen==0, valid-input behaviour, and whether each new `# Safety` is true of the code.",
+  "task2": "Load-bearingness by construction. Compilation was not permitted (see venue); for each guard the exact assertion that fails with the defect present is recorded in load_bearingness_by_construction.",
+  "task3": "Cohort accounting and span identity: the 37 ACCEPT rows were re-hashed at HEAD from the b77 closure's content-addressed coordinates; the 8 invalidated operation spans were extracted from ada7df257^ and searched for verbatim at HEAD.",
+  "controls": "court/freeze-b77/review/v1i_repair_controls.py -> v1i-repair-controls-result.json (7/7 pass, including three negative canaries)."
+ },
+ "cohort": {
+  "note": "The brief's '57 reviewed sites' / '65 reviewed' / '8 repaired' does not match the recorded cohort. The three earlier batches (d2fe349bc, a5da6689d, a59f0e0f7) reviewed 56 obligations: 37 ACCEPT / 19 REJECT. The b77 closure reports 8 BLOCKED: the 5 digest.rs copyctx rows, keccak_final, and the 2 legacyprov.rs copyctx rows. All 8 were REJECTs, so no ACCEPT verdict is disturbed.",
+  "reviewed": 56,
+  "accept": 37,
+  "reject": 19,
+  "blocked_at_repair_head": [
+   {
+    "file": "src/provider/digest.rs",
+    "line": 658,
+    "item": "copyctx"
+   },
+   {
+    "file": "src/provider/digest.rs",
+    "line": 970,
+    "item": "copyctx"
+   },
+   {
+    "file": "src/provider/digest.rs",
+    "line": 1165,
+    "item": "copyctx"
+   },
+   {
+    "file": "src/provider/digest.rs",
+    "line": 1348,
+    "item": "copyctx"
+   },
+   {
+    "file": "src/provider/digest.rs",
+    "line": 1415,
+    "item": "keccak_final"
+   },
+   {
+    "file": "src/provider/digest.rs",
+    "line": 1898,
+    "item": "copyctx"
+   },
+   {
+    "file": "src/provider/legacyprov.rs",
+    "line": 336,
+    "item": "copyctx"
+   },
+   {
+    "file": "src/provider/legacyprov.rs",
+    "line": 544,
+    "item": "copyctx"
+   }
+  ],
+  "blocked_are_all_earlier_rejects": true,
+  "rejects_still_discharged_elsewhere": [
+   {
+    "file": "src/provider/digest.rs",
+    "item": "internal_final",
+    "reviewed_line": 1189,
+    "closure_receipt": "openssh-v1i"
+   },
+   {
+    "file": "src/provider/digest.rs",
+    "item": "internal_final",
+    "reviewed_line": 682,
+    "closure_receipt": "openssh-v1i"
+   },
+   {
+    "file": "src/provider/digest.rs",
+    "item": "shake_squeeze",
+    "reviewed_line": 1403,
+    "closure_receipt": "openssh-v1i"
+   },
+   {
+    "file": "src/provider/digest.rs",
+    "item": "update",
+    "reviewed_line": 1207,
+    "closure_receipt": "openssh-v1i"
+   },
+   {
+    "file": "src/provider/digest.rs",
+    "item": "update",
+    "reviewed_line": 1371,
+    "closure_receipt": "openssh-v1i"
+   },
+   {
+    "file": "src/provider/digest.rs",
+    "item": "update",
+    "reviewed_line": 2000,
+    "closure_receipt": "openssh-v1i"
+   },
+   {
+    "file": "src/provider/digest.rs",
+    "item": "update",
+    "reviewed_line": 700,
+    "closure_receipt": "openssh-v1i"
+   },
+   {
+    "file": "src/provider/legacyprov.rs",
+    "item": "internal_final",
+    "reviewed_line": 360,
+    "closure_receipt": "openssh-v1i"
+   },
+   {
+    "file": "src/provider/legacyprov.rs",
+    "item": "internal_final",
+    "reviewed_line": 564,
+    "closure_receipt": "openssh-v1i"
+   },
+   {
+    "file": "src/provider/legacyprov.rs",
+    "item": "update",
+    "reviewed_line": 378,
+    "closure_receipt": "openssh-v1i"
+   },
+   {
+    "file": "src/provider/legacyprov.rs",
+    "item": "update",
+    "reviewed_line": 582,
+    "closure_receipt": "openssh-v1i"
+   }
+  ]
+ },
+ "repaired_sites": [
+  {
+   "id": "V1:src/provider/digest.rs:658:UNSAFE_FN_DEF",
+   "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::copyctx",
+   "qualified_identity": "sha1::copyctx",
+   "file": "src/provider/digest.rs",
+   "reviewed_line": 658,
+   "reviewed_span": [
+    658,
+    668
+   ],
+   "boundary": "OSSH-V1I-002",
+   "closure_status_at_repair_head": "BLOCKED",
+   "span_sha256_reviewed": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+   "operation_body_unchanged_at_head": true,
+   "invalidation_basis": "contract text above an unchanged operation body",
+   "verdict": "ACCEPT",
+   "evidence": [
+    "the repair adds a `# Safety` contract to this callback stating both pointers are whole, aligned, non-NULL blocks produced by this row's newctx/dupctx, and alias only by being the same block (the self-copy call copyctx(algctx, algctx)).",
+    "the contract is true of the core: EVP_MD_CTX_copy_ex guards the source algctx at :3095 and a same-method destination algctx at :3149 before the copyctx call, and the self-copy arm is covered by the :3095 source guard (out == in).",
+    "no other caller of (*digest).copyctx exists in src/ (grep: only EVP_MD_CTX_copy_ex and the test).",
+    "the body is an unchanged ptr::copy of size_of::<Ctx>() bytes; the operation span is byte-identical to the one batch 1-3 reviewed (see span_identity below)."
+   ],
+   "scenario_tested": "core-to-provider call graph: in-place self-copy (out == in == algctx), same-method distinct destinations (guarded both sides), re-acquiring arm (copyctx not called), legacy/no_init source (early legacy arm, algctx unused).",
+   "retained_obligations": [
+    "the destination guarantee rests on G6 (evp/digest.rs:3149), which no added test exercises; a later removal would reopen the NULL-destination write silently."
+   ],
+   "control": {
+    "id": "C-SPAN8",
+    "path": "court/freeze-b77/review/v1i_repair_controls.py",
+    "result": "old span hash reproduced and body presence re-derived at HEAD"
+   }
+  },
+  {
+   "id": "V1:src/provider/digest.rs:970:UNSAFE_FN_DEF",
+   "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::copyctx",
+   "qualified_identity": "nullmd::copyctx",
+   "file": "src/provider/digest.rs",
+   "reviewed_line": 970,
+   "reviewed_span": [
+    970,
+    980
+   ],
+   "boundary": "OSSH-V1I-008",
+   "closure_status_at_repair_head": "BLOCKED",
+   "span_sha256_reviewed": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+   "operation_body_unchanged_at_head": true,
+   "invalidation_basis": "contract text above an unchanged operation body",
+   "verdict": "ACCEPT",
+   "evidence": [
+    "the repair adds a `# Safety` contract to this callback stating both pointers are whole, aligned, non-NULL blocks produced by this row's newctx/dupctx, and alias only by being the same block (the self-copy call copyctx(algctx, algctx)).",
+    "the contract is true of the core: EVP_MD_CTX_copy_ex guards the source algctx at :3095 and a same-method destination algctx at :3149 before the copyctx call, and the self-copy arm is covered by the :3095 source guard (out == in).",
+    "no other caller of (*digest).copyctx exists in src/ (grep: only EVP_MD_CTX_copy_ex and the test).",
+    "the body is an unchanged ptr::copy of size_of::<Ctx>() bytes; the operation span is byte-identical to the one batch 1-3 reviewed (see span_identity below)."
+   ],
+   "scenario_tested": "core-to-provider call graph: in-place self-copy (out == in == algctx), same-method distinct destinations (guarded both sides), re-acquiring arm (copyctx not called), legacy/no_init source (early legacy arm, algctx unused).",
+   "retained_obligations": [
+    "the destination guarantee rests on G6 (evp/digest.rs:3149), which no added test exercises; a later removal would reopen the NULL-destination write silently."
+   ],
+   "control": {
+    "id": "C-SPAN8",
+    "path": "court/freeze-b77/review/v1i_repair_controls.py",
+    "result": "old span hash reproduced and body presence re-derived at HEAD"
+   }
+  },
+  {
+   "id": "V1:src/provider/digest.rs:1165:UNSAFE_FN_DEF",
+   "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::copyctx",
+   "qualified_identity": "md5_sha1::copyctx",
+   "file": "src/provider/digest.rs",
+   "reviewed_line": 1165,
+   "reviewed_span": [
+    1165,
+    1175
+   ],
+   "boundary": "OSSH-V1I-011",
+   "closure_status_at_repair_head": "BLOCKED",
+   "span_sha256_reviewed": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+   "operation_body_unchanged_at_head": true,
+   "invalidation_basis": "contract text above an unchanged operation body",
+   "verdict": "ACCEPT",
+   "evidence": [
+    "the repair adds a `# Safety` contract to this callback stating both pointers are whole, aligned, non-NULL blocks produced by this row's newctx/dupctx, and alias only by being the same block (the self-copy call copyctx(algctx, algctx)).",
+    "the contract is true of the core: EVP_MD_CTX_copy_ex guards the source algctx at :3095 and a same-method destination algctx at :3149 before the copyctx call, and the self-copy arm is covered by the :3095 source guard (out == in).",
+    "no other caller of (*digest).copyctx exists in src/ (grep: only EVP_MD_CTX_copy_ex and the test).",
+    "the body is an unchanged ptr::copy of size_of::<Ctx>() bytes; the operation span is byte-identical to the one batch 1-3 reviewed (see span_identity below)."
+   ],
+   "scenario_tested": "core-to-provider call graph: in-place self-copy (out == in == algctx), same-method distinct destinations (guarded both sides), re-acquiring arm (copyctx not called), legacy/no_init source (early legacy arm, algctx unused).",
+   "retained_obligations": [
+    "the destination guarantee rests on G6 (evp/digest.rs:3149), which no added test exercises; a later removal would reopen the NULL-destination write silently."
+   ],
+   "control": {
+    "id": "C-SPAN8",
+    "path": "court/freeze-b77/review/v1i_repair_controls.py",
+    "result": "old span hash reproduced and body presence re-derived at HEAD"
+   }
+  },
+  {
+   "id": "V1:src/provider/digest.rs:1348:UNSAFE_FN_DEF",
+   "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::copyctx",
+   "qualified_identity": "sha3::copyctx",
+   "file": "src/provider/digest.rs",
+   "reviewed_line": 1348,
+   "reviewed_span": [
+    1348,
+    1358
+   ],
+   "boundary": "OSSH-V1I-017",
+   "closure_status_at_repair_head": "BLOCKED",
+   "span_sha256_reviewed": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+   "operation_body_unchanged_at_head": true,
+   "invalidation_basis": "contract text above an unchanged operation body",
+   "verdict": "ACCEPT",
+   "evidence": [
+    "the repair adds a `# Safety` contract to this callback stating both pointers are whole, aligned, non-NULL blocks produced by this row's newctx/dupctx, and alias only by being the same block (the self-copy call copyctx(algctx, algctx)).",
+    "the contract is true of the core: EVP_MD_CTX_copy_ex guards the source algctx at :3095 and a same-method destination algctx at :3149 before the copyctx call, and the self-copy arm is covered by the :3095 source guard (out == in).",
+    "no other caller of (*digest).copyctx exists in src/ (grep: only EVP_MD_CTX_copy_ex and the test).",
+    "the body is an unchanged ptr::copy of size_of::<Ctx>() bytes; the operation span is byte-identical to the one batch 1-3 reviewed (see span_identity below)."
+   ],
+   "scenario_tested": "core-to-provider call graph: in-place self-copy (out == in == algctx), same-method distinct destinations (guarded both sides), re-acquiring arm (copyctx not called), legacy/no_init source (early legacy arm, algctx unused).",
+   "retained_obligations": [
+    "the destination guarantee rests on G6 (evp/digest.rs:3149), which no added test exercises; a later removal would reopen the NULL-destination write silently."
+   ],
+   "control": {
+    "id": "C-SPAN8",
+    "path": "court/freeze-b77/review/v1i_repair_controls.py",
+    "result": "old span hash reproduced and body presence re-derived at HEAD"
+   }
+  },
+  {
+   "id": "V1:src/provider/digest.rs:1377:UNSAFE_FN_DEF",
+   "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::keccak_final",
+   "qualified_identity": "sha3::keccak_final",
+   "file": "src/provider/digest.rs",
+   "reviewed_line": 1377,
+   "reviewed_span": [
+    1377,
+    1400
+   ],
+   "boundary": "OSSH-V1I-020",
+   "closure_status_at_repair_head": "BLOCKED",
+   "span_sha256_reviewed": "dd7adaeecec1cd4cc5e2c5d7c06e337da6968c1bdd83a3afcc847b1591b48813",
+   "operation_body_unchanged_at_head": false,
+   "invalidation_basis": "operation body changed (bound added)",
+   "verdict": "ACCEPT",
+   "evidence": [
+    "provider/digest.rs:1437 refuses when outlen > 0 && md_size > outlen; ossl_sha3_final (src/digest/sha3.rs:413) writes exactly the outlen it is passed, and the caller passes md_size, so md_size > outlen is precisely the over-write.",
+    "outlen == 0 arm unchanged: writes nothing and still sets *outl = md_size (authority metadata behaviour).",
+    "md_size >= outlen and outlen > 0: writes md_size <= outlen bytes, *outl = md_size; identical to pre-repair for every valid call.",
+    "fixed SHA3 rows install no set_ctx_params (sha3_fixed_row, 10-entry table), so xoflen cannot rewrite md_size before dfinal; a SHAKE/KMAC xoflen sets md_size = outlen, so valid XOF use never trips the bound.",
+    "the refusal is failure-atomic in the provider: it returns before pad_and_absorb/xof_state changes."
+   ],
+   "scenario_tested": "OSSL_FUNC_DIGEST_FINAL(SHA3-256) with md_size=32, outlen=16; and outlen=0, outlen=32, outlen=64, md_size=SIZE_MAX by inspection.",
+   "retained_obligations": [
+    "the divergence is a deliberate \u00a717 deviation: the authority writes 32 bytes past a 16-byte declared extent; recorded as D-SHA3-FINAL-OUTLEN-1.",
+    "EVP_DigestFinalXOF sets FINALISED after a refused dfinal (authority ordering), so a refused final cannot be retried on the same context; authority-compatible."
+   ],
+   "control": {
+    "id": "C-SPAN8",
+    "path": "court/freeze-b77/review/v1i_repair_controls.py",
+    "result": "old span hash reproduced and body presence re-derived at HEAD"
+   }
+  },
+  {
+   "id": "V1:src/provider/digest.rs:1898:UNSAFE_FN_DEF",
+   "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::copyctx",
+   "qualified_identity": "blake2::blake_row::copyctx",
+   "file": "src/provider/digest.rs",
+   "reviewed_line": 1898,
+   "reviewed_span": [
+    1898,
+    1908
+   ],
+   "boundary": "OSSH-V1I-024",
+   "closure_status_at_repair_head": "BLOCKED",
+   "span_sha256_reviewed": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+   "operation_body_unchanged_at_head": true,
+   "invalidation_basis": "contract text above an unchanged operation body",
+   "verdict": "ACCEPT",
+   "evidence": [
+    "the repair adds a `# Safety` contract to this callback stating both pointers are whole, aligned, non-NULL blocks produced by this row's newctx/dupctx, and alias only by being the same block (the self-copy call copyctx(algctx, algctx)).",
+    "the contract is true of the core: EVP_MD_CTX_copy_ex guards the source algctx at :3095 and a same-method destination algctx at :3149 before the copyctx call, and the self-copy arm is covered by the :3095 source guard (out == in).",
+    "no other caller of (*digest).copyctx exists in src/ (grep: only EVP_MD_CTX_copy_ex and the test).",
+    "the body is an unchanged ptr::copy of size_of::<Ctx>() bytes; the operation span is byte-identical to the one batch 1-3 reviewed (see span_identity below)."
+   ],
+   "scenario_tested": "core-to-provider call graph: in-place self-copy (out == in == algctx), same-method distinct destinations (guarded both sides), re-acquiring arm (copyctx not called), legacy/no_init source (early legacy arm, algctx unused).",
+   "retained_obligations": [
+    "the destination guarantee rests on G6 (evp/digest.rs:3149), which no added test exercises; a later removal would reopen the NULL-destination write silently."
+   ],
+   "control": {
+    "id": "C-SPAN8",
+    "path": "court/freeze-b77/review/v1i_repair_controls.py",
+    "result": "old span hash reproduced and body presence re-derived at HEAD"
+   }
+  },
+  {
+   "id": "V1:src/provider/legacyprov.rs:336:UNSAFE_FN_DEF",
+   "stable_id": "src/provider/legacyprov.rs::UNSAFE_FN_DEF::copyctx",
+   "qualified_identity": "legacy_digest_impl::copyctx",
+   "file": "src/provider/legacyprov.rs",
+   "reviewed_line": 336,
+   "reviewed_span": [
+    336,
+    347
+   ],
+   "boundary": "OSSH-V1I-082",
+   "closure_status_at_repair_head": "BLOCKED",
+   "span_sha256_reviewed": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+   "operation_body_unchanged_at_head": true,
+   "invalidation_basis": "contract text above an unchanged operation body",
+   "verdict": "ACCEPT",
+   "evidence": [
+    "the repair adds a `# Safety` contract to this callback stating both pointers are whole, aligned, non-NULL blocks produced by this row's newctx/dupctx, and alias only by being the same block (the self-copy call copyctx(algctx, algctx)).",
+    "the contract is true of the core: EVP_MD_CTX_copy_ex guards the source algctx at :3095 and a same-method destination algctx at :3149 before the copyctx call, and the self-copy arm is covered by the :3095 source guard (out == in).",
+    "no other caller of (*digest).copyctx exists in src/ (grep: only EVP_MD_CTX_copy_ex and the test).",
+    "the body is an unchanged ptr::copy of size_of::<Ctx>() bytes; the operation span is byte-identical to the one batch 1-3 reviewed (see span_identity below)."
+   ],
+   "scenario_tested": "core-to-provider call graph: in-place self-copy (out == in == algctx), same-method distinct destinations (guarded both sides), re-acquiring arm (copyctx not called), legacy/no_init source (early legacy arm, algctx unused).",
+   "retained_obligations": [
+    "the destination guarantee rests on G6 (evp/digest.rs:3149), which no added test exercises; a later removal would reopen the NULL-destination write silently."
+   ],
+   "control": {
+    "id": "C-SPAN8",
+    "path": "court/freeze-b77/review/v1i_repair_controls.py",
+    "result": "old span hash reproduced and body presence re-derived at HEAD"
+   }
+  },
+  {
+   "id": "V1:src/provider/legacyprov.rs:544:UNSAFE_FN_DEF",
+   "stable_id": "src/provider/legacyprov.rs::UNSAFE_FN_DEF::copyctx",
+   "qualified_identity": "mdc2::copyctx",
+   "file": "src/provider/legacyprov.rs",
+   "reviewed_line": 544,
+   "reviewed_span": [
+    544,
+    554
+   ],
+   "boundary": "OSSH-V1I-088",
+   "closure_status_at_repair_head": "BLOCKED",
+   "span_sha256_reviewed": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+   "operation_body_unchanged_at_head": true,
+   "invalidation_basis": "contract text above an unchanged operation body",
+   "verdict": "ACCEPT",
+   "evidence": [
+    "the repair adds a `# Safety` contract to this callback stating both pointers are whole, aligned, non-NULL blocks produced by this row's newctx/dupctx, and alias only by being the same block (the self-copy call copyctx(algctx, algctx)).",
+    "the contract is true of the core: EVP_MD_CTX_copy_ex guards the source algctx at :3095 and a same-method destination algctx at :3149 before the copyctx call, and the self-copy arm is covered by the :3095 source guard (out == in).",
+    "no other caller of (*digest).copyctx exists in src/ (grep: only EVP_MD_CTX_copy_ex and the test).",
+    "the body is an unchanged ptr::copy of size_of::<Ctx>() bytes; the operation span is byte-identical to the one batch 1-3 reviewed (see span_identity below)."
+   ],
+   "scenario_tested": "core-to-provider call graph: in-place self-copy (out == in == algctx), same-method distinct destinations (guarded both sides), re-acquiring arm (copyctx not called), legacy/no_init source (early legacy arm, algctx unused).",
+   "retained_obligations": [
+    "the destination guarantee rests on G6 (evp/digest.rs:3149), which no added test exercises; a later removal would reopen the NULL-destination write silently."
+   ],
+   "control": {
+    "id": "C-SPAN8",
+    "path": "court/freeze-b77/review/v1i_repair_controls.py",
+    "result": "old span hash reproduced and body presence re-derived at HEAD"
+   }
+  }
+ ],
+ "core_entry_point_guards": [
+  {
+   "id": "G1 EVP_DigestUpdate:2568",
+   "verdict": "ACCEPT",
+   "evidence": "provider-arm only (the legacy/NO_INIT branch returns first); the guard is after the dupdate NULL check; NULL algctx -> 0 with no callback."
+  },
+  {
+   "id": "G2 EVP_DigestFinal_ex:2663",
+   "verdict": "ACCEPT",
+   "evidence": "provider-arm only, after the FINALISED test so the authority's error ordering (DIGEST_464) is preserved; refusal leaves FINALISED unset. Retained: get_size_ex:2630 runs before the guard and can reach provider gettable/get params with NULL (in-tree providers null-check; see R-PARAMS)."
+  },
+  {
+   "id": "G3 EVP_DigestFinalXOF:2799",
+   "verdict": "ACCEPT",
+   "evidence": "placed before EVP_MD_CTX_set_params and before dfinal, so neither sees NULL; refusal leaves FINALISED unset."
+  },
+  {
+   "id": "G4 EVP_DigestSqueeze:2935",
+   "verdict": "ACCEPT",
+   "evidence": "provider-arm only; before dsqueeze. Necessary: shake_squeeze has no NULL test and ossl_sha3_squeeze dereferences ctx."
+  },
+  {
+   "id": "G5 EVP_MD_CTX_copy_ex source:3095",
+   "verdict": "ACCEPT",
+   "evidence": "after the dupctx-presence refusal (authority's DIGEST_616 order) and after the legacy/no_init early return, so legacy sources with NULL algctx are unaffected; covers both in-place and re-acquiring arms."
+  },
+  {
+   "id": "G6 EVP_MD_CTX_copy_ex destination:3149",
+   "verdict": "ACCEPT-WITH-DEFECT",
+   "evidence": "refuses a same-method destination whose algctx is NULL before copyctx, which is correct when copyctx will run. DEFECT D1: the guard sits before `if let Some(copyctx)`, so when the method has dupctx but NOT copyctx it refuses a copy the authority completes via the re-acquiring arm (reset + struct copy + dupctx). In-tree every digest row installs copyctx, so this is unreachable in this tree and only affects third-party providers; it is not recorded in D-DIGEST-NULL-ALGCTX-1. DEFECT D2: no added test exercises G6 (see load_bearingness G6)."
+  }
+ ],
+ "entry_point_sweep": {
+  "question": "can a guarded path still reach a provider body with NULL algctx?",
+  "in_tree_with_ub": false,
+  "forwarding_sites": [
+   {
+    "site": "EVP_MD_CTX_set_params:3537",
+    "passes": "set_ctx_params((*ctx).algctx, params)"
+   },
+   {
+    "site": "EVP_MD_CTX_settable_params:3587",
+    "passes": "settable((*ctx).algctx, provctx)"
+   },
+   {
+    "site": "EVP_MD_CTX_get_params:3631",
+    "passes": "get_ctx_params((*ctx).algctx, params)"
+   },
+   {
+    "site": "EVP_MD_CTX_gettable_params:3679",
+    "passes": "gettable((*ctx).algctx, provctx)"
+   },
+   {
+    "site": "EVP_MD_CTX_get_size_ex:3985 -> get_params",
+    "passes": "reached from EVP_DigestFinal_ex:2630 before G2"
+   }
+  ],
+  "observed": "All five forward a NULL algctx from a failed-init context with no core test. Every in-tree digest param callback either NULL-checks vctx (sha1, md5_sha1, sha3, blake2) or ignores it (settable/gettable), so no in-tree body dereferences it. The core's own `// SAFETY:` claim that algctx is 'the context its newctx handed back' is false on this path, and a third-party provider transcribed from the authority's own sha1_set_ctx_params (which dereferences vctx whenever a key is located) would receive NULL.",
+  "conclusion": "partial and layered, not 'every entry point'. Recorded as R-PARAMS; it blocks a boundary-level SAFETY_DISCHARGED claim for D-DIGEST-NULL-ALGCTX-1 but not the eight span verdicts."
+ },
+ "load_bearingness_by_construction": {
+  "method": "NOT executed (venue refusal). Each entry names the assertion in the added test that fails with the guard removed.",
+  "G1": "EVP_DigestUpdate returns 1 and CALLS becomes 1; assert_eq!(..., 0) fails.",
+  "G2": "final_ runs (CALLS=1) and EVP_DigestFinal_ex returns 1; assert_eq!(..., 0) fails.",
+  "G3": "set_params answers 0 without a callback, so dfinal(NULL,..) runs and returns 1; assert fails.",
+  "G4": "squeeze(NULL,..) runs and returns 1; assert_eq!(..., 0) fails.",
+  "G5": "copy_ex(dst, ctx): dst->digest is NULL so G6 is not on the path; the re-acquiring arm returns 1; assert_eq!(copy_ex(dst,ctx), 0) fails.",
+  "G6": "NOT load-bearing: with G5 present, copy_ex(dst,ctx) and copy_ex(ctx,ctx) both refuse at G5, CALLS stays 0 and no byte is written, so the test passes with G6 reverted. No test constructs a distinct destination whose digest equals the source's and whose algctx is NULL.",
+  "G7": "keccak_final writes md_size=32 bytes into the 32-byte canary buffer and returns 1; both assert_eq!(ret,0) and assert_eq!(buf,[0xA5;32]) fail. The 16 guard bytes make the fail-before observable without UB in the test."
+ },
+ "accept_identity": {
+  "count": 37,
+  "coordinate_moved": 22,
+  "verdict_transfer": "All 37 ACCEPT spans re-hash to the recorded span_sha256 at the b77 closure's HEAD coordinates. The earlier substantive ACCEPT verdicts therefore still apply to byte-identical content; this receipt confirms identity only and does not re-review their substance.",
+  "rows": [
+   {
+    "stable_id": "src/cmp/cmp_asn.rs::UNSAFE_FN_DEF::itav_free",
+    "file": "src/cmp/cmp_asn.rs",
+    "item": "itav_free",
+    "reviewed_line": 1706,
+    "head_span": [
+     1706,
+     1709
+    ],
+    "coordinate_moved": false,
+    "span_sha256": "5b0450b583d888ad1fa516a1db92cfd5493f24343bb7f8ac4e98943f7a46dfd5",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/cmp/cmp_asn.rs::UNSAFE_FN_DEF::rootcakeyupdate_free",
+    "file": "src/cmp/cmp_asn.rs",
+    "item": "rootcakeyupdate_free",
+    "reviewed_line": 1722,
+    "head_span": [
+     1722,
+     1725
+    ],
+    "coordinate_moved": false,
+    "span_sha256": "ab84f3d5975c0d0dde5598293da723073efe4e6cba97b983cd2c52483fa236ed",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::x509_name_dup_void",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "x509_name_dup_void",
+    "reviewed_line": 350,
+    "head_span": [
+     350,
+     353
+    ],
+    "coordinate_moved": false,
+    "span_sha256": "13028da9d8492f824d5761e48a7c2f0c44392f914ac4cd0227e8d6bec0048488",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::x509_name_free_void",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "x509_name_free_void",
+    "reviewed_line": 354,
+    "head_span": [
+     354,
+     357
+    ],
+    "coordinate_moved": false,
+    "span_sha256": "fbb8bfad2d75d2799d95893538c24c5ffa1359fd25eef77ae77f91a81cca6ef3",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::asn1_integer_dup_void",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "asn1_integer_dup_void",
+    "reviewed_line": 358,
+    "head_span": [
+     358,
+     361
+    ],
+    "coordinate_moved": false,
+    "span_sha256": "879ea7d76ffb4d0fd368a9c5a3056ed4184537401d6d6511515d16d0e22ea8df",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::asn1_integer_free_void",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "asn1_integer_free_void",
+    "reviewed_line": 362,
+    "head_span": [
+     362,
+     365
+    ],
+    "coordinate_moved": false,
+    "span_sha256": "09ce335f71b364fa86cc7d60748551ff5226e2f5d2b5bb9b6a9efcfb1f7e0d68",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::x509_req_dup_void",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "x509_req_dup_void",
+    "reviewed_line": 366,
+    "head_span": [
+     366,
+     369
+    ],
+    "coordinate_moved": false,
+    "span_sha256": "ef04cda1695dd610a3eddd0ac37dec5ce3367663a427207648483393923e6cce",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::x509_req_free_void",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "x509_req_free_void",
+    "reviewed_line": 370,
+    "head_span": [
+     370,
+     373
+    ],
+    "coordinate_moved": false,
+    "span_sha256": "31048346d3df8aa9a52bc4b18fd813722a65de998b0fb6819f7858fd82c8ecd1",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::general_name_free_void",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "general_name_free_void",
+    "reviewed_line": 376,
+    "head_span": [
+     376,
+     379
+    ],
+    "coordinate_moved": false,
+    "span_sha256": "f2c430ef6d2510ea8fb9bb46892deea51afcac75eefbe5a03d3883541845911b",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::x509_extension_free_void",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "x509_extension_free_void",
+    "reviewed_line": 380,
+    "head_span": [
+     380,
+     383
+    ],
+    "coordinate_moved": false,
+    "span_sha256": "c55cd1b80bb171807ebc723f6a3a8b0faab9a0c8a24c3400c8b5e89e27bfd8e8",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::utf8_string_free_void",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "utf8_string_free_void",
+    "reviewed_line": 384,
+    "head_span": [
+     384,
+     387
+    ],
+    "coordinate_moved": false,
+    "span_sha256": "78aab3c63127b04993c0447596fe2b4167e5e8b683967ff17420b540718870ba",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::itav_free_void",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "itav_free_void",
+    "reviewed_line": 388,
+    "head_span": [
+     388,
+     391
+    ],
+    "coordinate_moved": false,
+    "span_sha256": "716df8e4158a82f709333ef8f8e10d11b49a3640c3b50cb83e87c063093a024e",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::policy_free_void",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "policy_free_void",
+    "reviewed_line": 392,
+    "head_span": [
+     392,
+     395
+    ],
+    "coordinate_moved": false,
+    "span_sha256": "462670b49e5deac6bb89a6bde03865bb4962f69860b469eda9889301e6e74b42",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::cmp_ctx_set_md",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "cmp_ctx_set_md",
+    "reviewed_line": 407,
+    "head_span": [
+     407,
+     421
+    ],
+    "coordinate_moved": false,
+    "span_sha256": "cd466dc13eee90d9e36e0601ccf6308e32c096b476d0982caf893b37c6f37ef8",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::dupctx",
+    "file": "src/provider/digest.rs",
+    "item": "dupctx",
+    "reviewed_line": 647,
+    "head_span": [
+     653,
+     662
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "47267c002ee9f12d6c20efa3c2e1648e60243868c4ae4caa72d8de04e7a4ed4b",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::internal_init",
+    "file": "src/provider/digest.rs",
+    "item": "internal_init",
+    "reviewed_line": 670,
+    "head_span": [
+     684,
+     694
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "c7b85a166cc4e3bff7d13ced64679b7e203bc262469d6d90875f1635dae22db2",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::get_params",
+    "file": "src/provider/digest.rs",
+    "item": "get_params",
+    "reviewed_line": 705,
+    "head_span": [
+     719,
+     722
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "c38a239cac91d9e03c6cb408054b92f07c6dd3e46e35acfaba4fed39aff389a4",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::dupctx",
+    "file": "src/provider/digest.rs",
+    "item": "dupctx",
+    "reviewed_line": 959,
+    "head_span": [
+     973,
+     982
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "efa8d5556346e659c5c3ec2b40667be32a4ab8af95db8fc0978652e4fe1bcf76",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::get_params",
+    "file": "src/provider/digest.rs",
+    "item": "get_params",
+    "reviewed_line": 1019,
+    "head_span": [
+     1041,
+     1044
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "2199cf3f0f33b514c39a501341adc229123f07f09938086d69498e11b2e1cd67",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::dupctx",
+    "file": "src/provider/digest.rs",
+    "item": "dupctx",
+    "reviewed_line": 1154,
+    "head_span": [
+     1176,
+     1185
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "b231a39825d54dbcbf3929591232d8ecec78eb3af835e81648961b56fda9ae56",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::internal_init",
+    "file": "src/provider/digest.rs",
+    "item": "internal_init",
+    "reviewed_line": 1177,
+    "head_span": [
+     1207,
+     1217
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "e4aa2d6a01d52aa3a29570f0aedbacffee391cbd6b31101759ed0c95f2944ef6",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::get_params",
+    "file": "src/provider/digest.rs",
+    "item": "get_params",
+    "reviewed_line": 1214,
+    "head_span": [
+     1244,
+     1249
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "d3ae32259e9e51e3d73c311e547c5283a21db88e69975bcef8bf8889a02e72c9",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::dupctx",
+    "file": "src/provider/digest.rs",
+    "item": "dupctx",
+    "reviewed_line": 1337,
+    "head_span": [
+     1367,
+     1376
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "940d10c6f3f0e190d607f5cd93d4cd114526d28004462ac668b5ec5344716e91",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::init",
+    "file": "src/provider/digest.rs",
+    "item": "init",
+    "reviewed_line": 1360,
+    "head_span": [
+     1398,
+     1407
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "0080323c6082771dc21b3350d885ebf8bbd551ebbaaff0e95abf8cf6c120735a",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::shake_get_ctx_params",
+    "file": "src/provider/digest.rs",
+    "item": "shake_get_ctx_params",
+    "reviewed_line": 1481,
+    "head_span": [
+     1530,
+     1558
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "e09736f8f56e5df114a14c6150d105193ba970d4db06170296a6f005b5d4acc8",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::dupctx",
+    "file": "src/provider/digest.rs",
+    "item": "dupctx",
+    "reviewed_line": 1885,
+    "head_span": [
+     1934,
+     1945
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "861f2634e5e0f84a5ec54bbe1cdb51518e75fd9a67cd689fa7cdf47f93ffe528",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::set_ctx_params",
+    "file": "src/provider/digest.rs",
+    "item": "set_ctx_params",
+    "reviewed_line": 1912,
+    "head_span": [
+     1970,
+     2003
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "d84cc9a808b86bd3d0e619cce378beba49795dd037ba8a364fa09c7240ed0b26",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::get_ctx_params",
+    "file": "src/provider/digest.rs",
+    "item": "get_ctx_params",
+    "reviewed_line": 1948,
+    "head_span": [
+     2006,
+     2029
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "40d977b16e4c560fc744074a5e4c15134777f98d0f7e4756b245cf09fdf37608",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::internal_init",
+    "file": "src/provider/digest.rs",
+    "item": "internal_init",
+    "reviewed_line": 1975,
+    "head_span": [
+     2033,
+     2056
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "20f58a3a5891c863475da16bd61d04ac19dc62a6ff16e261e10d60fee711e391",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::internal_final",
+    "file": "src/provider/digest.rs",
+    "item": "internal_final",
+    "reviewed_line": 2013,
+    "head_span": [
+     2071,
+     2095
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "5170938e1038eef4d3d4ecaeb914ff1ebafbbd6ebee937e95828c8bbf22c5334",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::get_params",
+    "file": "src/provider/digest.rs",
+    "item": "get_params",
+    "reviewed_line": 2039,
+    "head_span": [
+     2097,
+     2100
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "16841d3c3a78ac3729dd2d4304cebe2118363a960c194e69e30b047100b48437",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/legacyprov.rs::UNSAFE_FN_DEF::dupctx",
+    "file": "src/provider/legacyprov.rs",
+    "item": "dupctx",
+    "reviewed_line": 323,
+    "head_span": [
+     323,
+     334
+    ],
+    "coordinate_moved": false,
+    "span_sha256": "9ef8e6d4c1a012f2c0d7fd75a274970080e36b74d915370f47d9876445f96e00",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/legacyprov.rs::UNSAFE_FN_DEF::internal_init",
+    "file": "src/provider/legacyprov.rs",
+    "item": "internal_init",
+    "reviewed_line": 349,
+    "head_span": [
+     358,
+     367
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "74cf175e7a97e56fb5549878470a8921e59d504e5b23a8492fc5abc91eeda37c",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/legacyprov.rs::UNSAFE_FN_DEF::get_params",
+    "file": "src/provider/legacyprov.rs",
+    "item": "get_params",
+    "reviewed_line": 387,
+    "head_span": [
+     396,
+     399
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "60741d24cb50535f7dae2865b4c85204eb7a5e2bbbcc72791949cb16e52fb0bf",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/legacyprov.rs::UNSAFE_FN_DEF::dupctx",
+    "file": "src/provider/legacyprov.rs",
+    "item": "dupctx",
+    "reviewed_line": 531,
+    "head_span": [
+     540,
+     551
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "53914997e52cd69c0d3439049d1fb36d2adb8412167764c00008bd55c11c460d",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/legacyprov.rs::UNSAFE_FN_DEF::internal_init",
+    "file": "src/provider/legacyprov.rs",
+    "item": "internal_init",
+    "reviewed_line": 556,
+    "head_span": [
+     573,
+     579
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "45d0d3fadf62b85b1414683847040529b0bd4a06afe87fa7b818ad234a357325",
+    "rehashed_at_head": true
+   },
+   {
+    "stable_id": "src/provider/legacyprov.rs::UNSAFE_FN_DEF::get_params",
+    "file": "src/provider/legacyprov.rs",
+    "item": "get_params",
+    "reviewed_line": 587,
+    "head_span": [
+     604,
+     607
+    ],
+    "coordinate_moved": true,
+    "span_sha256": "1cec3bc72bf7542388aa512f39a1046a5e65e3a2f13db27cbb3cbe4eb0e4371d",
+    "rehashed_at_head": true
+   }
+  ]
+ },
+ "findings": [
+  {
+   "id": "D1",
+   "severity": "divergence-record",
+   "statement": "G6 (:3149) is placed before `if let Some(copyctx)`, so a same-method destination in failed-init state is refused even when the method has no copyctx, where the authority's re-acquiring arm would succeed (reset, struct copy, dupctx). In-tree unreachable (all rows install copyctx); third-party providers only. D-DIGEST-NULL-ALGCTX-1 does not record this arm."
+  },
+  {
+   "id": "D2",
+   "severity": "test-gap",
+   "statement": "G6 has no test: reverting it alone leaves both added tests green, so its removal would be silent."
+  },
+  {
+   "id": "D3",
+   "severity": "doc-accuracy",
+   "statement": "D-DIGEST-NULL-ALGCTX-1 says the crate answers 0 'before any provider callback or set_params is reached'. For EVP_DigestFinal_ex this is false: EVP_MD_CTX_get_size_ex (:2630) calls the provider's gettable/get ctx-param callbacks with NULL before G2. In-tree they refuse safely; the claim should be narrowed to `dfinal`."
+  },
+  {
+   "id": "D4",
+   "severity": "evidence-identity",
+   "statement": "The 8 BLOCKED spans are not all 'content-addressed invalidated'. Seven copyctx operation bodies are byte-identical at HEAD; their closure status_reason is a coordinate refusal ('census line 658 is neither a definition ... nor inside the boundary's resolved span 672-682') against a carry-forward enrolment from evidence/closure-ssh-b76c.json. Only keccak_final changed content. BLOCKED is the safe outcome, but the recorded basis is stale-coordinate carry-forward, not a content-hash mismatch."
+  },
+  {
+   "id": "D5",
+   "severity": "evidence-identity",
+   "statement": "11 of the 19 earlier REJECTs (4 digest update, 2 digest internal_final, 1 shake_squeeze, 2 legacyprov internal_final, 2 legacyprov update) are still DISCHARGED in the b77 closure because the repair was applied at their caller (src/evp/digest.rs) and their content-addressed spans did not move. The repair changed a precondition those receipts rely on, so per AGENTS.md 4/22 they require re-adjudication, not only the 8 coordinate-refused spans. They are now safe in-tree (the guards establish the precondition), but the DISCHARGED basis is stale."
+  },
+  {
+   "id": "D6",
+   "severity": "candidate-identity",
+   "statement": "The uncommitted working-tree change to forensics/tools/consumer_closure.py is a change to an evidence-deriving tool (AGENTS.md 22). It must not be committed without regenerating the closure and re-freezing; the b77 evidence is bound to the HEAD tool 74e3953b..., which this review used."
+  },
+  {
+   "id": "R-PARAMS",
+   "severity": "boundary-residual",
+   "statement": "set_params/settable_params/get_params/gettable_params and get_size_ex still forward a NULL algctx to provider callbacks with no core test. No in-tree UB (the callbacks null-check or ignore vctx), but the core's comment is inaccurate and a third-party provider would be handed NULL. This blocks a boundary-level SAFETY_DISCHARGED for D-DIGEST-NULL-ALGCTX-1 while leaving the eight span verdicts intact."
+  }
+ ],
+ "controls_executed": [
+  {
+   "id": "C-ID",
+   "description": "src content and image identity re-derived",
+   "expected": "88cd8067..., b9cfb9e5..., closure tool == HEAD tool",
+   "observed": "src=88cd806799dd0866(878 files) image=b9cfb9e5de325c1f tool=head:74e3953b3623 tree:facb2a975864",
+   "pass": true,
+   "detail": {
+    "tool_working_tree_is_not_the_evidence_tool": true
+   }
+  },
+  {
+   "id": "C-ACC",
+   "description": "37 ACCEPT spans re-hash identically at the reviewed candidate",
+   "expected": "37/37 identical",
+   "observed": "37/37 identical, 22 coordinate(s) moved",
+   "pass": true,
+   "detail": {
+    "mismatch": []
+   }
+  },
+  {
+   "id": "C-SPAN8",
+   "description": "the 8 invalidated spans: body text vs HEAD",
+   "expected": "7 copyctx bodies identical; keccak_final body changed",
+   "observed": "7/8 bodies identical; keccak_final changed=True",
+   "pass": true,
+   "detail": {
+    "rows": [
+     {
+      "qualified_identity": "md5_sha1::copyctx",
+      "old_span": [
+       1165,
+       1175
+      ],
+      "old_hash_reproduced": true,
+      "content_unchanged_at_head": true,
+      "kind": "contract-above-body"
+     },
+     {
+      "qualified_identity": "sha3::copyctx",
+      "old_span": [
+       1348,
+       1358
+      ],
+      "old_hash_reproduced": true,
+      "content_unchanged_at_head": true,
+      "kind": "contract-above-body"
+     },
+     {
+      "qualified_identity": "sha3::keccak_final",
+      "old_span": [
+       1377,
+       1400
+      ],
+      "old_hash_reproduced": true,
+      "content_unchanged_at_head": false,
+      "kind": "bound-added-to-body"
+     },
+     {
+      "qualified_identity": "blake2::blake_row::copyctx",
+      "old_span": [
+       1898,
+       1908
+      ],
+      "old_hash_reproduced": true,
+      "content_unchanged_at_head": true,
+      "kind": "contract-above-body"
+     },
+     {
+      "qualified_identity": "sha1::copyctx",
+      "old_span": [
+       658,
+       668
+      ],
+      "old_hash_reproduced": true,
+      "content_unchanged_at_head": true,
+      "kind": "contract-above-body"
+     },
+     {
+      "qualified_identity": "nullmd::copyctx",
+      "old_span": [
+       970,
+       980
+      ],
+      "old_hash_reproduced": true,
+      "content_unchanged_at_head": true,
+      "kind": "contract-above-body"
+     },
+     {
+      "qualified_identity": "legacy_digest_impl::copyctx",
+      "old_span": [
+       336,
+       347
+      ],
+      "old_hash_reproduced": true,
+      "content_unchanged_at_head": true,
+      "kind": "contract-above-body"
+     },
+     {
+      "qualified_identity": "mdc2::copyctx",
+      "old_span": [
+       544,
+       554
+      ],
+      "old_hash_reproduced": true,
+      "content_unchanged_at_head": true,
+      "kind": "contract-above-body"
+     }
+    ]
+   }
+  },
+  {
+   "id": "C-GUARD",
+   "description": "six algctx guards and the SHA3 bound present (structural)",
+   "expected": "G1-G6 present, bound present",
+   "observed": "6/6 guards, bound=True",
+   "pass": true,
+   "detail": {
+    "guards": [
+     {
+      "id": "G1 EVP_DigestUpdate",
+      "count": 1,
+      "need": 1,
+      "pass": true
+     },
+     {
+      "id": "G2 EVP_DigestFinal_ex",
+      "count": 1,
+      "need": 1,
+      "pass": true
+     },
+     {
+      "id": "G3 EVP_DigestFinalXOF",
+      "count": 1,
+      "need": 1,
+      "pass": true
+     },
+     {
+      "id": "G4 EVP_DigestSqueeze",
+      "count": 1,
+      "need": 1,
+      "pass": true
+     },
+     {
+      "id": "G5 copy_ex source",
+      "count": 2,
+      "need": 1,
+      "pass": true
+     },
+     {
+      "id": "G6 copy_ex dest",
+      "count": 2,
+      "need": 2,
+      "pass": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "C-NEG-SPAN",
+   "description": "canary: a one-line mutation changes the span hash",
+   "expected": "hash differs",
+   "observed": "clean=70d5d6d4320d mutated=09757dd0ec36",
+   "pass": true,
+   "detail": null
+  },
+  {
+   "id": "C-NEG-GUARD",
+   "description": "canary: removing the Update guard makes the detector report absence",
+   "expected": "before>=1, after==0",
+   "observed": "before=1 after=0",
+   "pass": true,
+   "detail": null
+  },
+  {
+   "id": "C-NEG-BOUND",
+   "description": "canary: removing the SHA3 bound makes the detector report absence",
+   "expected": "present, then absent",
+   "observed": "present=True removed=True",
+   "pass": true,
+   "detail": null
+  }
+ ],
+ "does_not_prove": [
+  "that the repair compiles or that the two added tests pass: no build was permitted (available 10 GiB < 24 GiB per AGENTS.md 6.1).",
+  "that the guards are load-bearing by measurement: load-bearingness is by construction, naming the assertion that fails.",
+  "that the eight span verdicts discharge D-DIGEST-NULL-ALGCTX-1 as a boundary: R-PARAMS is open.",
+  "that G6 is exercised: it is not, by any added test.",
+  "that the existing runtime markers for the authority fault were re-measured: the divergence entry is source-derived, and this review did not run an authority fault probe.",
+  "that the 37 ACCEPT sites are safe: their content is identical, so this transfers the earlier verdicts rather than re-establishing them.",
+  "that a discharge at these spans says anything about the consumer families (curl, nginx, ssh): no downstream replay was run."
+ ],
+ "summary": {
+  "repaired_sites_accept": 8,
+  "repaired_sites_reject": 0,
+  "core_guards_accept": 5,
+  "core_guards_accept_with_defect": 1,
+  "accept_identity_confirmations": 37,
+  "findings": {
+   "divergence_record": 1,
+   "test_gap": 1,
+   "doc_accuracy": 1,
+   "evidence_identity": 2,
+   "candidate_identity": 1,
+   "boundary_residual": 1
+  },
+  "what_a_discharge_here_would_mean": "The seven copyctx callbacks would be SAFETY_DISCHARGED in scope: their contract is now true and the core guarantees a non-NULL source (G5) and, for the copyctx arm, a non-NULL destination (G6). keccak_final would be SAFETY_DISCHARGED in scope: the provider never writes past the declared extent and every valid call is unchanged. It would NOT discharge D-DIGEST-NULL-ALGCTX-1 as a boundary because the params entry points still forward NULL, and it would not establish SAFE_COMPATIBLE for any consumer family.",
+  "verdict": "ACCEPT the eight repaired spans; boundary not SAFETY_DISCHARGED (R-PARAMS); two evidence-identity defects (D4, D5) for the orchestrator to resolve before any promotion."
+ }
+}

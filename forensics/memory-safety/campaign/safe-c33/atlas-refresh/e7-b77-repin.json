@@ -1,0 +1,726 @@
+{
+  "schema": "openssl-rs/consumer-closure/e7-repin/v1",
+  "generated_utc": "2026-11-13T23:00:35Z",
+  "batch": "b77 (stage/p25/b75-ocsp)",
+  "image": {
+    "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+    "sha256": "b9cfb9e5de325c1ffb6bb5fb678122a05b0eb8be21619a251ee3254d92e4b1c1",
+    "note": "source ada7df257 (digest guards only); the store/PBE code is unchanged, but the link layout and every per-symbol offset moved"
+  },
+  "tool": {
+    "path": "forensics/tools/consumer_closure.py",
+    "sha256": "facb2a97586493a8cf8fb6a073266046dfc1dd8138110f6c18c575b613e45426",
+    "identity_note": "the tool is a build-relevant input (AGENTS.md section 22): this digest, not the committed one, produced the rows below"
+  },
+  "rule": {
+    "what": "a pin whose recorded (symbol, offset) no longer lands on an indirect transfer is re-resolved by searching that symbol for the transfers its own witness accepts",
+    "acceptance": "exactly one accepted transfer in the symbol; zero or more than one refuses and the row keeps its literal",
+    "what_it_cannot_do": "widen a rule: the witness, not the offset, decides, and the witness is the one the table already owned",
+    "close_arm_proof": {
+      "site": "0x266663",
+      "want_zero": true,
+      "site_polarity": "ZERO",
+      "bases": "every path to 0x266663 carries %r12 == 0, where %r12 is {0, inner_loader_fetch return}",
+      "pins_agree": null,
+      "pins_moved": true,
+      "selectors": [
+        {
+          "test": "0x266461",
+          "index": 464,
+          "test_text": "test   %r12,%r12",
+          "branch": "0x266464",
+          "branch_text": "je     266657 <OSSL_STORE_open_ex+0x9b7>",
+          "taken_block": "0x266657",
+          "taken_polarity": "ZERO",
+          "fallthrough_block": "0x26646a",
+          "fallthrough_polarity": "NONZERO",
+          "definitions": [
+            "0x266175",
+            "0x2660e1",
+            "0x2661fe",
+            "0x26636f"
+          ],
+          "fetch_call": "0x266166",
+          "fetch_callee": "inner_loader_fetch"
+        },
+        {
+          "test": "0x266541",
+          "index": 511,
+          "test_text": "test   %r12,%r12",
+          "branch": "0x266544",
+          "branch_text": "je     265e84 <OSSL_STORE_open_ex+0x1e4>",
+          "taken_block": "0x265e84",
+          "taken_polarity": "ZERO",
+          "fallthrough_block": "0x26654a",
+          "fallthrough_polarity": "NONZERO",
+          "definitions": [
+            "0x266175",
+            "0x2660e1",
+            "0x2661fe",
+            "0x26636f"
+          ],
+          "fetch_call": "0x266166",
+          "fetch_callee": "inner_loader_fetch"
+        },
+        {
+          "test": "0x26664e",
+          "index": 569,
+          "test_text": "test   %r12,%r12",
+          "branch": "0x266651",
+          "branch_text": "jne    26646a <OSSL_STORE_open_ex+0x7ca>",
+          "taken_block": "0x26646a",
+          "taken_polarity": "NONZERO",
+          "fallthrough_block": "0x266657",
+          "fallthrough_polarity": "ZERO",
+          "definitions": [
+            "0x266175",
+            "0x2660e1",
+            "0x2661fe",
+            "0x26636f"
+          ],
+          "fetch_call": "0x266166",
+          "fetch_callee": "inner_loader_fetch"
+        }
+      ]
+    },
+    "close_arm_proof_statement": "for the two inlined ossl_store_close_it dispatches this batch replaces the four-instruction je-pair shape pins with a must-polarity dataflow: %r12 is proven to be {0, inner_loader_fetch return} by its definition set, every `test %r12,%r12` + conditional branch is a polarity selector, and the site's block must arrive with exactly the required polarity on every path.  It proves which close arm selects the dispatch; it proves nothing about the callback"
+  },
+  "rows": [
+    {
+      "row": "STORE_LOADER_LEGACY_SITES:open_ex",
+      "literal_key": "0x1f89e8",
+      "old_pin": {
+        "symbol": "OSSL_STORE_open_ex",
+        "offset": "0x488"
+      },
+      "old_pin_resolves_here": false,
+      "new_pin": {
+        "symbol": "OSSL_STORE_open_ex",
+        "offset": "0x498",
+        "address": "0x266138"
+      },
+      "moved_from": "0x266128",
+      "symbol_start": "0x265ca0",
+      "bytes_first_8": "ff d0 49 89 c7 31 ed e9",
+      "bytes_note": "raw image bytes at the site; not an instruction decode",
+      "witness": "store_loader_legacy_witness",
+      "witness_result": {
+        "shape": "envelope",
+        "class": "ABI_CONTRACT_STORE_LOADER",
+        "scope": null,
+        "contract_bounded": true,
+        "condition_keys": [
+          "base_object",
+          "documented_interface",
+          "no_in_image_registration_caller",
+          "operand_field",
+          "site_enumerated",
+          "target_set_unbounded",
+          "writer_set"
+        ],
+        "guard": null
+      },
+      "uniqueness": {
+        "rule": "exactly-one-accepted-transfer-in-symbol",
+        "candidates_in_symbol": 35,
+        "accepted": [
+          "0x266138"
+        ],
+        "refused_count": 34,
+        "refused_sample": [
+          [
+            "0x265d92",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x265f3a",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x265ff5",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x266095",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x2660f3",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x266109",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x266150",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x266166",
+            "operand-not-a-single-load"
+          ]
+        ]
+      },
+      "controls": [
+        "e7repin-search two-candidate refusal (uniqueness)",
+        "e7repin-search guard mutation refusal",
+        "e7repin-search disabled: the stale literal stays",
+        "e7repin-search disabled: no row matches the true site",
+        "e7repin-search re-enabled: the row resolves again",
+        "e7repin moved control: no address accepted by two rows"
+      ],
+      "does_not_prove": [
+        "that the pin offset was correct in any other image; the offset is provenance, the witness at the resolved address is the proof",
+        "anything about the callback body the field points at",
+        "that the symbol is the only one in the image with this leaf (an ambiguous leaf refuses before any search)",
+        "runtime behaviour: the resolution is static over the exact image"
+      ]
+    },
+    {
+      "row": "STORE_LOADER_LEGACY_SITES:open",
+      "literal_key": "0x1f8aa1",
+      "old_pin": {
+        "symbol": "OSSL_STORE_open_ex",
+        "offset": "0x57d"
+      },
+      "old_pin_resolves_here": false,
+      "new_pin": {
+        "symbol": "OSSL_STORE_open_ex",
+        "offset": "0x551",
+        "address": "0x2661f1"
+      },
+      "moved_from": "0x26621d",
+      "symbol_start": "0x265ca0",
+      "bytes_first_8": "ff d0 49 89 c7 e9 2a 02",
+      "bytes_note": "raw image bytes at the site; not an instruction decode",
+      "witness": "store_loader_legacy_witness",
+      "witness_result": {
+        "shape": "envelope",
+        "class": "ABI_CONTRACT_STORE_LOADER",
+        "scope": null,
+        "contract_bounded": true,
+        "condition_keys": [
+          "base_object",
+          "documented_interface",
+          "no_in_image_registration_caller",
+          "operand_field",
+          "site_enumerated",
+          "target_set_unbounded",
+          "writer_set"
+        ],
+        "guard": null
+      },
+      "uniqueness": {
+        "rule": "exactly-one-accepted-transfer-in-symbol",
+        "candidates_in_symbol": 35,
+        "accepted": [
+          "0x2661f1"
+        ],
+        "refused_count": 34,
+        "refused_sample": [
+          [
+            "0x265d92",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x265f3a",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x265ff5",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x266095",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x2660f3",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x266109",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x266138",
+            "operand-is-not-the-enumerated-loader-field"
+          ],
+          [
+            "0x266150",
+            "operand-not-a-single-load"
+          ]
+        ]
+      },
+      "controls": [
+        "e7repin-search two-candidate refusal (uniqueness)",
+        "e7repin-search guard mutation refusal",
+        "e7repin-search disabled: the stale literal stays",
+        "e7repin-search disabled: no row matches the true site",
+        "e7repin-search re-enabled: the row resolves again",
+        "e7repin moved control: no address accepted by two rows"
+      ],
+      "does_not_prove": [
+        "that the pin offset was correct in any other image; the offset is provenance, the witness at the resolved address is the proof",
+        "anything about the callback body the field points at",
+        "that the symbol is the only one in the image with this leaf (an ambiguous leaf refuses before any search)",
+        "runtime behaviour: the resolution is static over the exact image"
+      ]
+    },
+    {
+      "row": "STORE_LOADER_LEGACY_SITES:closefn",
+      "literal_key": "0x1f8f13",
+      "old_pin": {
+        "symbol": "OSSL_STORE_open_ex",
+        "offset": "0x9f3"
+      },
+      "old_pin_resolves_here": false,
+      "new_pin": {
+        "symbol": "OSSL_STORE_open_ex",
+        "offset": "0x9c3",
+        "address": "0x266663"
+      },
+      "moved_from": "0x266693",
+      "symbol_start": "0x265ca0",
+      "bytes_first_8": "ff d0 48 8b 35 04 6d 63",
+      "bytes_note": "raw image bytes at the site; not an instruction decode",
+      "witness": "store_loader_legacy_witness",
+      "witness_result": {
+        "shape": "envelope",
+        "class": "ABI_CONTRACT_STORE_LOADER",
+        "scope": null,
+        "contract_bounded": true,
+        "condition_keys": [
+          "base_object",
+          "documented_interface",
+          "no_in_image_registration_caller",
+          "operand_field",
+          "site_enumerated",
+          "target_set_unbounded",
+          "writer_set"
+        ],
+        "guard": {
+          "guard_zero": true,
+          "site_polarity": "ZERO",
+          "bases": "every path to 0x266663 carries %r12 == 0, where %r12 is {0, inner_loader_fetch return}",
+          "selectors": [
+            {
+              "test": "0x266461",
+              "index": 464,
+              "test_text": "test   %r12,%r12",
+              "branch": "0x266464",
+              "branch_text": "je     266657 <OSSL_STORE_open_ex+0x9b7>",
+              "taken_block": "0x266657",
+              "taken_polarity": "ZERO",
+              "fallthrough_block": "0x26646a",
+              "fallthrough_polarity": "NONZERO",
+              "definitions": [
+                "0x266175",
+                "0x2660e1",
+                "0x2661fe",
+                "0x26636f"
+              ],
+              "fetch_call": "0x266166",
+              "fetch_callee": "inner_loader_fetch"
+            },
+            {
+              "test": "0x266541",
+              "index": 511,
+              "test_text": "test   %r12,%r12",
+              "branch": "0x266544",
+              "branch_text": "je     265e84 <OSSL_STORE_open_ex+0x1e4>",
+              "taken_block": "0x265e84",
+              "taken_polarity": "ZERO",
+              "fallthrough_block": "0x26654a",
+              "fallthrough_polarity": "NONZERO",
+              "definitions": [
+                "0x266175",
+                "0x2660e1",
+                "0x2661fe",
+                "0x26636f"
+              ],
+              "fetch_call": "0x266166",
+              "fetch_callee": "inner_loader_fetch"
+            },
+            {
+              "test": "0x26664e",
+              "index": 569,
+              "test_text": "test   %r12,%r12",
+              "branch": "0x266651",
+              "branch_text": "jne    26646a <OSSL_STORE_open_ex+0x7ca>",
+              "taken_block": "0x26646a",
+              "taken_polarity": "NONZERO",
+              "fallthrough_block": "0x266657",
+              "fallthrough_polarity": "ZERO",
+              "definitions": [
+                "0x266175",
+                "0x2660e1",
+                "0x2661fe",
+                "0x26636f"
+              ],
+              "fetch_call": "0x266166",
+              "fetch_callee": "inner_loader_fetch"
+            }
+          ],
+          "pins_agree": null,
+          "pins_moved": true
+        }
+      },
+      "uniqueness": {
+        "rule": "exactly-one-accepted-transfer-in-symbol",
+        "candidates_in_symbol": 35,
+        "accepted": [
+          "0x266663"
+        ],
+        "refused_count": 34,
+        "refused_sample": [
+          [
+            "0x265d92",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x265f3a",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x265ff5",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x266095",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x2660f3",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x266109",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x266138",
+            "operand-is-not-the-enumerated-loader-field"
+          ],
+          [
+            "0x266150",
+            "operand-not-a-single-load"
+          ]
+        ]
+      },
+      "controls": [
+        "e7repin-search two-candidate refusal (uniqueness)",
+        "e7repin-search guard mutation refusal",
+        "e7repin-search disabled: the stale literal stays",
+        "e7repin-search disabled: no row matches the true site",
+        "e7repin-search re-enabled: the row resolves again",
+        "e7repin moved control: no address accepted by two rows"
+      ],
+      "does_not_prove": [
+        "that the pin offset was correct in any other image; the offset is provenance, the witness at the resolved address is the proof",
+        "anything about the callback body the field points at",
+        "that the symbol is the only one in the image with this leaf (an ambiguous leaf refuses before any search)",
+        "runtime behaviour: the resolution is static over the exact image"
+      ]
+    },
+    {
+      "row": "PBE_EX_SITES:keygen_ex",
+      "literal_key": "0x17cee8",
+      "old_pin": {
+        "symbol": "PKCS5_v2_PBE_keyivgen_ex",
+        "offset": "0x208"
+      },
+      "old_pin_resolves_here": false,
+      "new_pin": {
+        "symbol": "PKCS5_v2_PBE_keyivgen_ex",
+        "offset": "0x1c2",
+        "address": "0x489cf2"
+      },
+      "moved_from": "0x489d38",
+      "symbol_start": "0x489b30",
+      "bytes_first_8": "ff d0 48 83 c4 20 41 89",
+      "bytes_note": "raw image bytes at the site; not an instruction decode",
+      "witness": "pbe_outparam_instance_witness",
+      "witness_result": {
+        "shape": "record",
+        "class": "pbe-outparam-builtin-table",
+        "resolution_kind": "pbe_outparam_builtin_table",
+        "resolved": true,
+        "targets": [
+          "0x2de0b0",
+          "0x494490"
+        ],
+        "condition_keys": [
+          "builtin_table_is_the_declared_link_time_table",
+          "call_target_is_a_reload_of_the_frame_slot",
+          "callee_binds_to_in_image_EVP_PBE_find_ex",
+          "escape_is_find_ex_argument_6",
+          "every_nonnull_member_is_an_in_image_function_start",
+          "find_ex_call_is_unique",
+          "find_ex_success_edge_dominates_the_call",
+          "find_ex_type_argument",
+          "registry_cannot_supply_keygen_ex",
+          "selection",
+          "site_enumerated",
+          "slot_address_escapes_once",
+          "slot_is_zero_initialised",
+          "target_set_is_finite"
+        ]
+      },
+      "uniqueness": {
+        "rule": "exactly-one-accepted-transfer-in-symbol",
+        "candidates_in_symbol": 17,
+        "accepted": [
+          "0x489cf2"
+        ],
+        "refused_count": 16,
+        "refused_sample": [
+          [
+            "0x489b93",
+            "call-target-operand-is-not-a-register"
+          ],
+          [
+            "0x489bab",
+            "call-target-operand-is-not-a-register"
+          ],
+          [
+            "0x489bc7",
+            "call-target-operand-is-not-a-register"
+          ],
+          [
+            "0x489be8",
+            "call-target-operand-is-not-a-register"
+          ],
+          [
+            "0x489bfe",
+            "call-target-operand-is-not-a-register"
+          ],
+          [
+            "0x489c61",
+            "call-target-operand-is-not-a-register"
+          ],
+          [
+            "0x489daa",
+            "call-target-operand-is-not-a-register"
+          ],
+          [
+            "0x489df0",
+            "call-target-writer-0x489de0-is-not-a-load"
+          ]
+        ]
+      },
+      "controls": [
+        "e7repin-search two-candidate refusal (uniqueness)",
+        "e7repin-search guard mutation refusal",
+        "e7repin-search disabled: the stale literal stays",
+        "e7repin-search disabled: no row matches the true site",
+        "e7repin-search re-enabled: the row resolves again",
+        "e7repin moved control: no address accepted by two rows"
+      ],
+      "does_not_prove": [
+        "that the pin offset was correct in any other image; the offset is provenance, the witness at the resolved address is the proof",
+        "anything about the callback body the field points at",
+        "that the symbol is the only one in the image with this leaf (an ambiguous leaf refuses before any search)",
+        "runtime behaviour: the resolution is static over the exact image"
+      ]
+    },
+    {
+      "row": "STORE_LOADER_PROVIDER_SITE",
+      "literal_key": "0x1f8d29",
+      "old_pin": {
+        "symbol": "OSSL_STORE_open_ex",
+        "offset": "0x807"
+      },
+      "old_pin_resolves_here": false,
+      "new_pin": {
+        "symbol": "OSSL_STORE_open_ex",
+        "offset": "0x7d9",
+        "address": "0x266479"
+      },
+      "moved_from": "0x2664a7",
+      "symbol_start": "0x265ca0",
+      "bytes_first_8": "ff d0 48 8b 35 ee 6e 63",
+      "bytes_note": "raw image bytes at the site; not an instruction decode",
+      "witness": "store_loader_provider_witness",
+      "witness_result": {
+        "shape": "envelope",
+        "class": "ABI_CONTRACT_PROVIDER",
+        "scope": "store-loader-p_close",
+        "contract_bounded": true,
+        "condition_keys": [
+          "base_object",
+          "documented_interface",
+          "operand_field",
+          "site_enumerated",
+          "target_set_unbounded",
+          "writer_set"
+        ],
+        "guard": {
+          "guard_zero": false,
+          "site_polarity": "NONZERO",
+          "bases": "every path to 0x266479 carries %r12 != 0, where %r12 is {0, inner_loader_fetch return}",
+          "selectors": [
+            {
+              "test": "0x266461",
+              "index": 464,
+              "test_text": "test   %r12,%r12",
+              "branch": "0x266464",
+              "branch_text": "je     266657 <OSSL_STORE_open_ex+0x9b7>",
+              "taken_block": "0x266657",
+              "taken_polarity": "ZERO",
+              "fallthrough_block": "0x26646a",
+              "fallthrough_polarity": "NONZERO",
+              "definitions": [
+                "0x266175",
+                "0x2660e1",
+                "0x2661fe",
+                "0x26636f"
+              ],
+              "fetch_call": "0x266166",
+              "fetch_callee": "inner_loader_fetch"
+            },
+            {
+              "test": "0x266541",
+              "index": 511,
+              "test_text": "test   %r12,%r12",
+              "branch": "0x266544",
+              "branch_text": "je     265e84 <OSSL_STORE_open_ex+0x1e4>",
+              "taken_block": "0x265e84",
+              "taken_polarity": "ZERO",
+              "fallthrough_block": "0x26654a",
+              "fallthrough_polarity": "NONZERO",
+              "definitions": [
+                "0x266175",
+                "0x2660e1",
+                "0x2661fe",
+                "0x26636f"
+              ],
+              "fetch_call": "0x266166",
+              "fetch_callee": "inner_loader_fetch"
+            },
+            {
+              "test": "0x26664e",
+              "index": 569,
+              "test_text": "test   %r12,%r12",
+              "branch": "0x266651",
+              "branch_text": "jne    26646a <OSSL_STORE_open_ex+0x7ca>",
+              "taken_block": "0x26646a",
+              "taken_polarity": "NONZERO",
+              "fallthrough_block": "0x266657",
+              "fallthrough_polarity": "ZERO",
+              "definitions": [
+                "0x266175",
+                "0x2660e1",
+                "0x2661fe",
+                "0x26636f"
+              ],
+              "fetch_call": "0x266166",
+              "fetch_callee": "inner_loader_fetch"
+            }
+          ],
+          "pins_agree": null,
+          "pins_moved": true
+        }
+      },
+      "uniqueness": {
+        "rule": "exactly-one-accepted-transfer-in-symbol",
+        "candidates_in_symbol": 35,
+        "accepted": [
+          "0x266479"
+        ],
+        "refused_count": 34,
+        "refused_sample": [
+          [
+            "0x265d92",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x265f3a",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x265ff5",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x266095",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x2660f3",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x266109",
+            "operand-not-a-single-load"
+          ],
+          [
+            "0x266138",
+            "operand-is-not-the-enumerated-provider-field"
+          ],
+          [
+            "0x266150",
+            "operand-not-a-single-load"
+          ]
+        ]
+      },
+      "controls": [
+        "e7repin-search provider scalar is a transfer",
+        "e7repin-search guard mutation refusal",
+        "e7repin-search disabled: the stale literal stays",
+        "e7repin-search re-enabled: the row resolves again",
+        "e7repin moved control: no address accepted by two rows"
+      ],
+      "does_not_prove": [
+        "which provider supplies the store loader; the target set is unbounded",
+        "the provider callback body and the provider's own memory safety",
+        "runtime behaviour: the resolution is static over the exact image"
+      ]
+    }
+  ],
+  "verification": {
+    "self_test": {
+      "mode": "--self-test",
+      "exit_code": 1,
+      "failure_count": 9,
+      "failures": [
+        "8 x e7pbe: the _pbe_outparam_self_test fixture pins are stale (pinned artefact sha 8f188717..., observed b9cfb9e5...); pre-existing, self-classified, reported not suppressed",
+        "1 x e7core default-context control NOT_RUN: no admitted site's witness evidence records an inlined default-context accessor at b77, so that control's subject does not exist here"
+      ],
+      "passing_groups": "e7repin, e7repin-search (22 named checks), e7abi (8 sites + 6 counterexample triplets), e7core positive cohort + mutations"
+    },
+    "element7_only": {
+      "mode": "--element7-only (FAST probe, not a closure receipt)",
+      "receipt": "court/tmp/e7only-ssh-b77.json",
+      "receipt_sha256": "36a9f5dbcbfaed3d25c05c27733cb3a776a8f433474589993abc1da04d3970f8",
+      "status": "PASS (contract-bounded)",
+      "reachable_unresolved": 155,
+      "target_bounded": 0,
+      "contract_bounded": 155,
+      "unclassified": 0,
+      "by_class": {
+        "ABI_CONTRACT_CONF_MODULE": 2,
+        "ABI_CONTRACT_CORE_DISPATCH": 26,
+        "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+        "ABI_CONTRACT_EXPORT_CALLBACK": 69,
+        "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+        "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+        "ABI_CONTRACT_PBE_REGISTRY": 1,
+        "ABI_CONTRACT_PROVIDER": 16,
+        "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+        "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+        "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+        "ABI_CONTRACT_STORE_LOADER": 3
+      },
+      "note": "the full closure was NOT run for this batch; the ACCEPTED/BLOCKED counts of the previous candidate do not carry forward to this tool identity"
+    }
+  },
+  "does_not_prove": [
+    "that the whole closure still discharges 282 obligations under this tool identity: only a full closure run establishes that, and it is NOT_RUN here",
+    "that the four `OSSL_STORE_open_ex` rows exhaust the loader dispatch sites: it proves each of the four enumerated rows resolves to the unique transfer its witness accepts",
+    "that the search is image-move robust for a symbol whose witness shape itself changes (a changed field offset, a changed guard polarity, a new fetch constructor all refuse rather than follow)",
+    "that the emitted call-target set is complete at runtime: the contract-bounded classes carry their own unbounded target sets by definition (AGENTS.md section 7 criterion 2)",
+    "any cryptographic or timing property"
+  ]
+}

@@ -12126,12 +12126,221 @@ def _site_pin_vintage(g):
     return (getattr(g, "name", "?"), sha)
 
 
+# --------------------------------------------------------------------------- #
+# moved-pin search: the witness accepts exactly one transfer in the symbol
+# --------------------------------------------------------------------------- #
+#
+# A symbol+offset pin is provenance, not a proof: the offset is a property of
+# one build.  In b77 the four `OSSL_STORE_open_ex` loader dispatches and the
+# `PKCS5_v2_PBE_keyivgen_ex` out-parameter call moved inside their functions
+# while the recorded offsets stayed put, so the strict re-derivation above
+# refuses and the rows would keep a literal that names no site.  The rule for
+# such a row is a search *inside the pin's own symbol*: every indirect transfer
+# in that symbol is offered to the same witness the table already owns, and the
+# row is resolved only when the witness accepts exactly one of them.  Zero
+# acceptances or two refusals; the search cannot widen a rule, because the
+# witness - not the offset - is what decides.
+#
+# The witness is invoked through a provisional binding of the row (or scalar)
+# it is being asked about, because each witness starts from "is this address my
+# row?".  The binding is scoped, so a nested search for a different row sees
+# its own binding only, and a recursive search for the same row refuses rather
+# than looping.
+
+_PIN_TABLE_WITNESS = {
+    "SLH_METHOD_TABLE_SITES": "slh_method_table_witness",
+    "PROVIDER_HW_SITES": "provider_hw_table_witness",
+    "LEGACY_EVP_DATA_SITES": "legacy_evp_cipher_data_witness",
+    "DECODER_METHOD_SITES": "decoder_method_object_witness",
+    "PBE_EX_SITES": "pbe_outparam_instance_witness",
+    "STORE_LOADER_LEGACY_SITES": "store_loader_legacy_witness",
+    "CONF_SITES": "conf_module_witness",
+}
+_PIN_SCALAR_WITNESS = {
+    "PBE_SITE": "pbe_registry_witness",
+    "PEM_SITE": "pem_password_default_witness",
+    "STORE_LOADER_PROVIDER_SITE": "store_loader_provider_witness",
+    "REGISTRATION_ATEXIT_CALL_SITE": "registration_atexit_witness",
+}
+_PIN_PROVISIONAL = {}
+_PIN_SEARCH_ACTIVE = set()
+_PIN_SEARCH_REFUSALS = {}
+_PIN_MOVED = {}
+_PIN_HOW = {}
+_ABI_INDEX_BUILDING = [False]
+# Control switch (never set outside --self-test): the pre-repair behaviour, in
+# which a stale pin keeps its recorded literal instead of searching its symbol.
+_PIN_SEARCH_OFF = False
+# --self-test only: the named outcome of every control, so a standalone runner
+# (court/freeze-b77/run_repin_controls.py) can report each one individually.
+_SELFTEST_TRACE = []
+
+
+def _pin_witness(name):
+    """The witness callable a pin table or scalar name is proved by."""
+    if not name:
+        return None
+    fn = globals().get(name)
+    return fn if callable(fn) else None
+
+
+def _pin_start(g, pin):
+    """The one function start the pin's leaf names in this image, or None."""
+    if not pin:
+        return None
+    leaf = _pin_leaf(pin[0])
+    starts = sorted(a for a, names in getattr(g, "names_at", {}).items()
+                    if a in getattr(g, "start_set", set())
+                    and any(_external_function_leaf(n) == leaf for n in names))
+    return starts[0] if len(starts) == 1 else None
+
+
+def _pin_candidates(g, start):
+    """The indirect transfers of one function, in address order."""
+    return [(a, t) for a, t in (_pin_insns(g, start) or ())
+            if _is_indirect_transfer(t)]
+
+
+def _pin_site_record(g, fstart, addr, text):
+    """The analysed site record at ``addr``, or a materialised stand-in.
+
+    A real graph has already analysed every indirect site, and its record
+    carries the resolver's class and any operand dependencies.  The stand-in
+    exists for the enumeration-only views the controls build; each witness
+    re-derives everything it needs about the site from the instruction stream.
+    """
+    idx = getattr(g, "_pin_site_index", None)
+    if idx is None:
+        idx = {}
+        for s in (getattr(g, "sites", None) or {}).values():
+            idx[(s.get("func"), s.get("addr"))] = s
+        try:
+            g._pin_site_index = idx
+        except AttributeError:
+            pass
+    live = idx.get((fstart, addr))
+    if live is not None:
+        return dict(live)
+    return {"kind": ("jmp" if text.strip().startswith("jmp") else "call"),
+            "func": fstart, "addr": addr, "text": text,
+            "targets": set(), "unresolved": True,
+            "reason": "materialised", "class": "materialised",
+            "field_offsets": set(), "seam": None,
+            "arg_deps": set(), "arg_targets": set(),
+            "witness_of": "pin-search"}
+
+
+def _pin_accepted(result) -> bool:
+    """A witness result accepts when it resolved the site by its own rule.
+
+    Two result protocols exist: the envelope witnesses return
+    ``(class, witness, refusal)`` and accept when the witness is
+    contract-bounded; the PBE out-parameter witness returns a single record
+    whose ``resolved`` flag means the target set is fully enumerated.
+    """
+    if not result:
+        return False
+    if isinstance(result, dict):
+        return result.get("resolved") is True
+    if len(result) > 1 and isinstance(result[1], dict):
+        return bool(result[1].get("contract_bounded"))
+    return False
+
+
+def _pin_refusal_reason(result):
+    """The reason a witness refused, for either result shape."""
+    if isinstance(result, dict):
+        return result.get("refusal") or result.get("reason")
+    if result and len(result) > 2 and isinstance(result[2], dict):
+        return result[2].get("reason")
+    return None
+
+
+def _pin_search(g, kind, key, pin, spec, witness) -> tuple:
+    """Resolve one moved row by uniqueness of the witness in its symbol.
+
+    Returns ``(addr, provenance, None)`` on acceptance and
+    ``(None, None, refusal)`` otherwise.  ``refusal`` is a record that names
+    the reason and carries the candidate evidence, so a caller never has to
+    guess why a row stayed unresolved.
+    """
+    if witness is None:
+        return None, None, {"refusal": "no-witness-for-this-pin"}
+    if _PIN_SEARCH_OFF:
+        return None, None, {"refusal": "search-disabled-by-control"}
+    tag = (kind, key)
+    if tag in _PIN_SEARCH_ACTIVE:
+        return None, None, {"refusal": "pin-search-recursion"}
+    start = _pin_start(g, pin)
+    if start is None:
+        return None, None, {
+            "refusal": "pin-symbol-names-no-unique-function-start"}
+    cands = _pin_candidates(g, start)
+    if not cands:
+        return None, None, {
+            "refusal": "pin-symbol-has-no-indirect-transfer"}
+    name = g.funcs.get(start, "")
+    accepted, refused = [], []
+    _PIN_SEARCH_ACTIVE.add(tag)
+    try:
+        for addr, text in cands:
+            _PIN_PROVISIONAL[tag] = (addr if kind == "scalar"
+                                     else {addr: spec})
+            try:
+                site = _pin_site_record(g, start, addr, text)
+                res = witness(g, site, name)
+            except Exception as e:  # noqa: BLE001 -- a refusal, never a crash
+                refused.append((addr, f"witness-error:{type(e).__name__}"))
+                continue
+            finally:
+                _PIN_PROVISIONAL.pop(tag, None)
+            if _pin_accepted(res):
+                accepted.append(addr)
+            else:
+                refused.append((addr, _pin_refusal_reason(res)
+                                or "witness-refused"))
+    finally:
+        _PIN_SEARCH_ACTIVE.discard(tag)
+        _PIN_PROVISIONAL.pop(tag, None)
+    evidence = {
+        "symbol": pin[0],
+        "pin_offset": hex(pin[1]),
+        "symbol_start": hex(start),
+        "candidates": len(cands),
+        "accepted": [hex(a) for a in accepted],
+        "refused_count": len(refused),
+        "refused_sample": [[hex(a), why] for a, why in refused[:8]],
+        "rule": "exactly-one-accepted-transfer-in-symbol",
+        "witness": getattr(witness, "__name__", "?"),
+    }
+    if len(accepted) != 1:
+        why = ("no-candidate-transfer-is-accepted-by-the-witness" if not accepted
+               else "the-witness-accepts-more-than-one-transfer-in-the-symbol")
+        return None, None, dict(evidence, refusal=why)
+    addr = accepted[0]
+    prov = dict(evidence,
+                address=hex(addr),
+                resolved_offset=hex(addr - start),
+                moved_from=hex(start + pin[1]),
+                moved_from_offset=hex(pin[1]))
+    _PIN_MOVED[(kind, key, prov["address"],
+                getattr(g, "sha256", "?"))] = prov
+    return addr, prov, None
+
+
 def _repinned(name: str, g):
     """The literal-keyed site table ``name`` re-keyed to this image.
 
-    Rows of the same table that would land on one address are both refused:
-    two rows are never silently collapsed onto one witness.
+    A row whose pin still lands on an indirect transfer keeps the strict
+    derivation.  A row whose pin no longer lands is offered to the table's own
+    witness as a search over that symbol, and is re-keyed only when the witness
+    accepts exactly one transfer there.  Rows of the same table that would land
+    on one address are both refused: two rows are never silently collapsed onto
+    one witness.
     """
+    prov = _PIN_PROVISIONAL.get(("table", name))
+    if prov is not None:
+        return prov
     vintage = _site_pin_vintage(g)
     if vintage is None:
         return globals()[name]
@@ -12141,11 +12350,26 @@ def _repinned(name: str, g):
         return hit
     table = globals()[name]
     pins = globals()[_PIN_TABLE_OF[name]]
+    witness = _pin_witness(_PIN_TABLE_WITNESS.get(name))
     derived = {}
-    for old in table:
-        addr = _pin_site_addr(g, pins.get(old))
+    for old, spec in table.items():
+        pin = pins.get(old)
+        addr = _pin_site_addr(g, pin)
+        how = "pin"
+        if addr is None:
+            addr, _prov, why = _pin_search(g, "table", name, pin, spec,
+                                           witness)
+            how = "search"
+            if addr is None:
+                _PIN_SEARCH_REFUSALS.setdefault(
+                    ("table", old),
+                    dict(why or {}, table=name, literal=hex(old),
+                         pin=None if not pin else [pin[0], hex(pin[1])]))
         if addr is not None:
             derived[old] = addr
+            _PIN_HOW[(name, old, vintage)] = how
+        else:
+            _PIN_HOW.pop((name, old, vintage), None)
     counts = collections.Counter(derived.values())
     out = {}
     for old, spec in table.items():
@@ -12157,6 +12381,9 @@ def _repinned(name: str, g):
 
 def _pinned_site(name: str, g) -> int:
     """This image's address for the enumerated scalar site ``name``."""
+    prov = _PIN_PROVISIONAL.get(("scalar", name))
+    if prov is not None:
+        return prov
     vintage = _site_pin_vintage(g)
     if vintage is None:
         return globals()[name]
@@ -12165,10 +12392,41 @@ def _pinned_site(name: str, g) -> int:
     if hit is not None:
         return hit
     old = globals()[name]
-    addr = _pin_site_addr(g, globals()[_PINNED_SCALARS[name]])
+    pin = globals()[_PINNED_SCALARS[name]]
+    addr = _pin_site_addr(g, pin)
+    if addr is None:
+        addr, _prov, why = _pin_search(
+            g, "scalar", name, pin, None,
+            _pin_witness(_PIN_SCALAR_WITNESS.get(name)))
+        if addr is None:
+            _PIN_SEARCH_REFUSALS.setdefault(
+                ("scalar", name),
+                dict(why or {}, scalar=name, literal=hex(old)))
     val = addr if addr is not None else old
     _SITE_PIN_CACHE[key] = val
     return val
+
+
+def pin_resolution_report() -> dict:
+    """Provenance of every row this process resolved by search, not offset."""
+    return {"moved": [dict(v) for _k, v in sorted(_PIN_MOVED.items())],
+            "refused": [dict(v) for _k, v in sorted(_PIN_SEARCH_REFUSALS.items())]}
+
+
+def _pin_effective(table: str, old: int, g):
+    """``(address, how)`` for one table row: how is pin, search or literal."""
+    vintage = _site_pin_vintage(g)
+    pin = globals()[_PIN_TABLE_OF[table]].get(old)
+    if pin is None:
+        return old, "literal"
+    strict = _pin_site_addr(g, pin)
+    if strict is not None:
+        return strict, "pin"
+    deriv = _repinned(table, g)
+    found = next((a for a, spec in deriv.items()
+                  if spec is globals()[table][old]), old)
+    how = _PIN_HOW.get((table, old, vintage))
+    return found, (how or "literal")
 
 
 def _external_abi_index(g) -> dict:
@@ -12180,17 +12438,49 @@ def _external_abi_index(g) -> dict:
     hit = _SITE_PIN_CACHE.get(key)
     if hit is not None:
         return hit
-    pins = dict(EXTERNAL_ABI_SITE_PINS)
-    pins.setdefault(PBE_SITE, PBE_SITE_PIN)
-    pins.setdefault(STORE_LOADER_PROVIDER_SITE,
-                    STORE_LOADER_PROVIDER_SITE_PIN)
-    pins.setdefault(PEM_SITE, PEM_SITE_PIN)
-    out = {}
-    for old, leaf in EXTERNAL_ABI_SITE_FUNCTIONS.items():
-        addr = _pin_site_addr(g, pins.get(old))
-        out[addr if addr is not None else old] = leaf
+    if _ABI_INDEX_BUILDING[0]:
+        # A witness invoked by the re-pin search must not re-enter the index
+        # that search is being built for.  The empty answer refuses the site.
+        return {}
+    _ABI_INDEX_BUILDING[0] = True
+    try:
+        pins = dict(EXTERNAL_ABI_SITE_PINS)
+        pins.setdefault(PBE_SITE, PBE_SITE_PIN)
+        pins.setdefault(STORE_LOADER_PROVIDER_SITE,
+                        STORE_LOADER_PROVIDER_SITE_PIN)
+        pins.setdefault(PEM_SITE, PEM_SITE_PIN)
+        # The scalar rows and the two re-pinned tables are indexed at the
+        # address the re-pin engine (offset or witness search) resolves for
+        # them; only the remaining literal-keyed rows use the strict pin.
+        scalars = {PBE_SITE: "PBE_SITE",
+                   STORE_LOADER_PROVIDER_SITE: "STORE_LOADER_PROVIDER_SITE",
+                   PEM_SITE: "PEM_SITE"}
+        tables = {}
+        for table in ("STORE_LOADER_LEGACY_SITES", "CONF_SITES"):
+            for old in globals()[table]:
+                tables[old] = table
+        out = {}
+        for old, leaf in EXTERNAL_ABI_SITE_FUNCTIONS.items():
+            if old in scalars:
+                addr = _pinned_site(scalars[old], g)
+            elif old in tables:
+                addr = _pin_effective(tables[old], old, g)[0]
+            else:
+                addr = _pin_site_addr(g, pins.get(old))
+            out[addr if addr is not None else old] = leaf
+    finally:
+        _ABI_INDEX_BUILDING[0] = False
     _SITE_PIN_CACHE[key] = out
     return out
+
+
+def _is_indirect_transfer_strict(g, addr) -> bool:
+    """True when this image has an indirect transfer instruction at ``addr``."""
+    for body in (getattr(g.precision, "insns_by_func", {}) or {}).values():
+        for a, t in body:
+            if a == addr:
+                return _is_indirect_transfer(t)
+    return False
 
 
 class _RepinProxy:
@@ -12213,15 +12503,37 @@ def e7repin_controls(g) -> list:
     most one row).  Returned failures are strings; an empty list is a pass.
     """
     failures = []
-    name = next(iter(_PIN_TABLE_OF))
+    name = "STORE_LOADER_LEGACY_SITES"
     table = globals()[name]
     pins = globals()[_PIN_TABLE_OF[name]]
     if not table or not g.start_set:
         return ["e7repin: empty table or graph"]
+    # A control mutation must not leave a refusal or a moved row behind: those
+    # records describe the admitted image, not the counterexample.
+    saved = {k: dict(v) for k, v in (
+        ("_SITE_PIN_CACHE", _SITE_PIN_CACHE),
+        ("_PIN_MOVED", _PIN_MOVED),
+        ("_PIN_SEARCH_REFUSALS", _PIN_SEARCH_REFUSALS))}
+    try:
+        failures.extend(_e7repin_controls_body(g))
+    finally:
+        for key, values in saved.items():
+            target = globals()[key]
+            target.clear()
+            target.update(values)
+    return failures
+
+
+def _e7repin_controls_body(g) -> list:
+    """The body of [`e7repin_controls`], run with the reports snapshotted."""
+    failures = []
+    name = "STORE_LOADER_LEGACY_SITES"
+    table = globals()[name]
+    pins = globals()[_PIN_TABLE_OF[name]]
     old = next(iter(table))
     pin = pins.get(old)
-    good = _pin_site_addr(g, pin)
-    if good is None:
+    good, how = _pin_effective(name, old, g)
+    if how == "literal" or not _is_indirect_transfer_strict(g, good):
         return [f"e7repin: positive row {hex(old)} does not re-derive"]
 
     # 1. symbol: a leaf that names no function start
@@ -12229,8 +12541,9 @@ def e7repin_controls(g) -> list:
         failures.append("e7repin symbol control: unknown leaf was accepted")
 
     # 2. offset: perturb to an instruction that is not an indirect call
-    insns = _pin_insns(g, good - pin[1]) or ()
-    offs = sorted({a - (good - pin[1]) for a, t in insns
+    start = _pin_start(g, pin)
+    insns = _pin_insns(g, start) or ()
+    offs = sorted({a - start for a, t in insns
                    if a != good and not _is_indirect_transfer(t)})
     if offs:
         pert = (pin[0], offs[0])
@@ -12239,27 +12552,27 @@ def e7repin_controls(g) -> list:
     else:
         failures.append("e7repin offset control: no perturbable instruction")
 
-    # 3. instruction: the same address, changed from an indirect transfer
+    # 3. instruction: the resolved address is no longer an indirect transfer, so
+    #    neither the strict pin nor the symbol search may produce a site.
     mutated = [(a, "mov    %rax,%rax" if a == good else t) for a, t in insns]
     proxy = _RepinProxy(g, precision=_RepinProxy(g.precision,
-                                                 insns_by_func={good - pin[1]:
-                                                                mutated}),
+                                                 insns_by_func={start: mutated}),
                         sha256=g.sha256 + ":mut")
     if _pin_site_addr(proxy, pin) is not None:
         failures.append("e7repin instruction control: a non-call was accepted")
+    if _pin_effective(name, old, proxy)[1] != "literal":
+        failures.append("e7repin instruction control: the search accepted a "
+                        "symbol with no indirect transfer at the site")
 
     # 4. moved rows: no address may be accepted by two rows of one table.
-    # The b76 loader call sites moved inside their function, so this is the
+    # The loader call sites moved inside their function, so this is the
     # control that makes "the witness proves the row, not the offset" real.
     loader = _repinned("STORE_LOADER_LEGACY_SITES", g)
     loader_pins = STORE_LOADER_LEGACY_SITE_PINS
+    fstart = _pin_start(g, next(iter(loader_pins.values())))
     for addr, spec in loader.items():
         if addr in loader_pins:      # not re-derived in this image
             continue
-        fstart = next((a for a, names in g.names_at.items()
-                       if a <= addr and any(
-                           _external_function_leaf(n) == STORE_LOADER_FUNCTION
-                           for n in names)), None)
         if fstart is None:
             failures.append("e7repin moved control: function not found")
             continue
@@ -12270,24 +12583,24 @@ def e7repin_controls(g) -> list:
                 "reason": "control", "class": "materialised",
                 "field_offsets": set(), "seam": None,
                 "arg_deps": set(), "arg_targets": set()}
-        saved = dict(STORE_LOADER_LEGACY_SITES)
-        try:
-            for other in saved.values():
-                if other is spec:
-                    continue
-                STORE_LOADER_LEGACY_SITES.clear()
-                STORE_LOADER_LEGACY_SITES[addr] = other
+        # Ask each *other* loader spec whether it also accepts this address.
+        # The provisional binding is the same mechanism the search uses, so the
+        # control exercises the real lookup rather than a stale cache.
+        for other in STORE_LOADER_LEGACY_SITES.values():
+            if other is spec:
+                continue
+            _PIN_PROVISIONAL[("table", "STORE_LOADER_LEGACY_SITES")] = {
+                addr: other}
+            try:
                 r = store_loader_legacy_witness(g, site,
-                                               g.funcs.get(fstart, ""))
-                ok = (isinstance(r, tuple) and r[1]
-                      and (r[1] or {}).get("contract_bounded"))
-                if ok:
-                    failures.append(
-                        f"e7repin moved control: {hex(addr)} accepted both "
-                        f"{spec['field']!r} and {other['field']!r}")
-        finally:
-            STORE_LOADER_LEGACY_SITES.clear()
-            STORE_LOADER_LEGACY_SITES.update(saved)
+                                                g.funcs.get(fstart, ""))
+            finally:
+                _PIN_PROVISIONAL.pop(("table", "STORE_LOADER_LEGACY_SITES"),
+                                     None)
+            if _pin_accepted(r):
+                failures.append(
+                    f"e7repin moved control: {hex(addr)} accepted both "
+                    f"{spec['field']!r} and {other['field']!r}")
     return failures
 
 
@@ -16985,74 +17298,267 @@ def _external_line_number(text: str, needle: str):
     return None
 
 
+def _store_loader_zero_write(text: str, reg: str) -> bool:
+    """An instruction that writes zero into ``reg`` (and nothing else)."""
+    aliases = [r for r, base in _SUBREG.items() if base == reg] + [reg]
+    body = text.strip()
+    for alias in aliases:
+        if re.fullmatch(r"(xor|sub)\s+" + re.escape(alias) + r","
+                        + re.escape(alias), body):
+            return True
+        if re.fullmatch(r"mov\s+\$0x0," + re.escape(alias), body):
+            return True
+    return False
+
+
+def _store_loader_fetched_origin(g: "DsoGraph", fstart: int, idx: int,
+                                 reg: str = "%r12"):
+    """Prove ``reg`` holds only NULL or the loader-fetch return at ``idx``.
+
+    Every definition of the register that reaches ``idx`` must be either a
+    zero write or `mov %rax,reg` whose `%rax` has one reaching definition, a
+    call.  The caller decides whether that call is the loader fetch; this
+    helper establishes the *set* property, which is what both the close-arm
+    polarity proof and the provider witness need.
+
+    Returns ``({"fetch_def": i, "zero_defs": [...], "callee": sym}, None)``
+    or ``(None, reason)``.  The b77 image has three zero writes instead of the
+    b76 single one, so the rule is stated over the def *set*, not a count.
+    """
+    insns = g.precision.insns_by_func.get(fstart, ()) if g.precision else ()
+    defs = _external_reg_defs(g, fstart, idx, reg)
+    if defs is None:
+        return None, f"{reg} has an open or entry definition at {hex(idx)}"
+    if not defs:
+        return None, f"{reg} has no definition at {hex(idx)}"
+    zero, mov, other = [], [], []
+    for d in sorted(defs):
+        text = insns[d][1].strip()
+        if _store_loader_zero_write(text, reg):
+            zero.append(d)
+        elif text == f"mov    %rax,{reg}":
+            mov.append(d)
+        else:
+            other.append(text)
+    if other:
+        return None, (f"{reg} is also written by something other than the "
+                      f"fetched-loader value: {other}")
+    if len(mov) != 1:
+        return None, (f"{reg} has {len(mov)} fetched-loader assignment(s); "
+                      "exactly one is the fetch return")
+    fetch_def = mov[0]
+    rax_defs = _external_reg_defs(g, fstart, fetch_def, "%rax")
+    if rax_defs is None or len(rax_defs) != 1 or _ENTRY_DEF in rax_defs:
+        return None, (f"the fetched-loader assignment at "
+                      f"{hex(insns[fetch_def][0])} does not read a single "
+                      "call return")
+    call_idx = next(iter(rax_defs))
+    callee = _external_call_symbol(g, fstart, call_idx)
+    if callee is None:
+        return None, (f"the fetched-loader assignment at "
+                      f"{hex(insns[fetch_def][0])} does not read a call "
+                      "return")
+    return {"fetch_def": fetch_def,
+            "fetch_call": call_idx,
+            "zero_defs": zero,
+            "callee": callee}, None
+
+
+def _store_loader_fetch_is_loader(g: "DsoGraph", callee):
+    """The fetch call is `inner_loader_fetch`, or the transparent wrapper."""
+    leaf = _external_function_leaf(callee)
+    if leaf == STORE_LOADER_FETCH:
+        return True, leaf, None
+    if leaf not in STORE_LOADER_FETCH_WRAPPERS:
+        return False, leaf, f"the loader value comes from {leaf}"
+    if _external_exported(g, leaf) is None:
+        return False, leaf, "loader-fetch-wrapper-is-not-exported"
+    meth_text, _ml, err = _external_source(g, STORE_LOADER_METH_SOURCE)
+    if meth_text is None:
+        return False, leaf, f"source-unavailable: {err}"
+    ok, why = _loader_fetch_wrapper_is_transparent(meth_text, leaf)
+    if not ok:
+        return False, leaf, ("loader-fetch-wrapper-is-not-a-transparent-"
+                             f"forwarder: {why}")
+    return True, STORE_LOADER_FETCH, None
+
+
+def _store_loader_polarity(g: "DsoGraph", fstart: int, site_addr: int,
+                          want_zero: bool):
+    """Prove which `ossl_store_close_it` arm a close dispatch sits under.
+
+    The predicate is about the *value*, not about an offset: the site must be
+    reached on every path with `%r12 == 0` (the legacy loader) or on every path
+    with `%r12 != 0` (the fetched provider loader).  The proof is:
+
+    1. `%r12` has exactly two reaching definitions in the function, one zeroing
+       and one `mov %rax,%r12`; that `%rax` is the unique return of a call to
+       `inner_loader_fetch` (or to the exported `OSSL_STORE_LOADER_fetch`
+       wrapper, whose forwarding body is checked).  So `%r12` is either NULL or
+       the fetched loader, nothing else.
+    2. Every `test %r12,%r12` that is immediately followed by a conditional
+       branch is a polarity selector: its two successors arrive with a known
+       value of the predicate.
+    3. A forward must-analysis meets those successor values over every path, and
+       the site's block must arrive with the required polarity.  A block reached
+       through both arms arrives unknown and is refused.
+
+    This replaces the b73/b76 `je`-pair shape proof.  That proof named four
+    instructions by (symbol, offset), so any rebuild that kept the dispatch but
+    moved it inside the function lost the row; b77 did exactly that.  A
+    must-polarity is also *stronger* than the old reachability test: the legacy
+    arm merges back into the provider path in b77 (`test %r12,%r12; jne` at
+    +0x9b1), so "the site is not reachable from the other arm" is false there
+    while "every path to the site has %r12 == 0" is true.  What it proves is
+    stated exactly: the dispatch is selected by the fetched-loader NULL test,
+    and nothing about the callback's own behaviour.
+    """
+    reg = STORE_LOADER_CLOSE_GUARD["reg"]
+    cfg = _function_cfg(g, fstart)
+    insns = cfg["insns"]
+    idx_of = {a: i for i, (a, _t) in enumerate(insns)}
+    si = idx_of.get(site_addr)
+    if si is None:
+        return None, "site instruction is outside the function CFG"
+    sb = cfg["block_of"].get(si)
+    if sb is None:
+        return None, "site instruction is in no CFG block"
+
+    selectors = []
+    edges = {}
+    for i, (_a, text) in enumerate(insns[:-1]):
+        mn, rest, ops = _insn_parts(text)
+        if mn != "test" or len(ops) != 2:
+            continue
+        if _canon(ops[0]) != reg or _canon(ops[1]) != reg:
+            continue
+        bmn, brest, _bops = _insn_parts(insns[i + 1][1])
+        m = re.match(r"^([0-9a-f]+)", brest)
+        if bmn not in ("je", "jz", "jne", "jnz") or m is None:
+            continue
+        tgt = int(m.group(1), 16)
+        if tgt not in idx_of:
+            continue
+        b = cfg["block_of"][i]
+        if i + 1 != cfg["blocks"][b][1] - 1:
+            continue                      # the branch must end its block
+        taken, fall = cfg["block_of"][idx_of[tgt]], None
+        if i + 2 < len(insns):
+            fall = cfg["block_of"].get(i + 2)
+        if fall is None or fall == taken:
+            continue
+        taken_val = "ZERO" if bmn in ("je", "jz") else "NONZERO"
+        fall_val = "NONZERO" if taken_val == "ZERO" else "ZERO"
+        edges[(b, taken)] = taken_val
+        edges[(b, fall)] = fall_val
+        selectors.append({"test": hex(insns[i][0]),
+                          "index": i,
+                          "test_text": text.strip(),
+                          "branch": hex(insns[i + 1][0]),
+                          "branch_text": insns[i + 1][1].strip(),
+                          "taken_block": hex(insns[cfg["blocks"][taken][0]][0]),
+                          "taken_polarity": taken_val,
+                          "fallthrough_block": hex(
+                              insns[cfg["blocks"][fall][0]][0]),
+                          "fallthrough_polarity": fall_val})
+    if not selectors:
+        return None, (f"no `test {reg},{reg}` polarity selector in the "
+                      "function")
+
+    # 1. The register carries the fetched-loader value, not something else, at
+    #    every selector (a selector on a different value is not a selector).
+    origins = []
+    for sel in selectors:
+        o, why = _store_loader_fetched_origin(g, fstart, sel["index"], reg)
+        if o is None:
+            return None, f"at {sel['test']}: {why}"
+        ok, leaf, why = _store_loader_fetch_is_loader(g, o["callee"])
+        if not ok:
+            return None, f"at {sel['test']}: {why}"
+        origins.append((o, leaf))
+    for sel, (origin, leaf) in zip(selectors, origins):
+        sel["definitions"] = ([hex(insns[origin["fetch_def"]][0])]
+                              + [hex(insns[d][0])
+                                 for d in origin["zero_defs"]])
+        sel["fetch_call"] = hex(insns[origin["fetch_call"]][0])
+        sel["fetch_callee"] = leaf
+
+    # 3. Must-polarity over every path, with the lattice
+    #    UNREACHED < {ZERO, NONZERO} < unknown.
+    nb = len(cfg["blocks"])
+    preds = collections.defaultdict(list)
+    for p, ss in cfg["succ"].items():
+        for s in ss:
+            preds[s].append(p)
+    UNREACHED = "unreached"
+
+    def join(vals):
+        if not vals:
+            return UNREACHED
+        first = vals[0]
+        return first if all(v == first for v in vals) else None
+
+    arrived = {b: UNREACHED for b in range(nb)}
+    arrived[0] = None
+    for _round in range(4 * nb + 8):
+        changed = False
+        for b in range(1, nb):
+            vals = []
+            for p in preds.get(b, ()):
+                v = arrived[p]
+                if v == UNREACHED:
+                    continue
+                vals.append(edges.get((p, b), v))
+            new = join(vals)
+            if new != arrived[b]:
+                arrived[b] = new
+                changed = True
+        if not changed:
+            break
+    else:
+        return None, "the close-guard polarity analysis did not converge"
+
+    want = "ZERO" if want_zero else "NONZERO"
+    got = arrived.get(sb)
+    if got != want:
+        return None, (f"site {hex(site_addr)} is reached with "
+                      f"{'unknown' if got is None else got} {reg} polarity, "
+                      f"not {want}")
+    anchored = [b for (_p, b), v in edges.items() if v == want]
+    if not any(sb in _cfg_reachable_from(cfg, b) for b in anchored):
+        return None, (f"site {hex(site_addr)} is not reachable from any "
+                      f"{want} successor of the polarity selector")
+
+    evidence = {"guard_zero": want_zero,
+                "site_polarity": got,
+                "bases": f"every path to {hex(site_addr)} carries "
+                         f"{reg} {'==' if want_zero else '!='} 0, where "
+                         f"{reg} is {{0, inner_loader_fetch return}}",
+                "selectors": selectors}
+    # Provenance cross-check: when the recorded guard pins still land, they must
+    # name this derivation.  A pin that lands on a different branch is a
+    # contradiction between provenance and proof, and is refused rather than
+    # resolved in favour of either.
+    spec = STORE_LOADER_CLOSE_GUARD
+    pinned_test = _pin_insn_addr(g, spec["test"])
+    pinned_branch = _pin_insn_addr(g, spec["branch"])
+    if pinned_test is not None and pinned_branch is not None:
+        named = {(s["test"], s["branch"]) for s in selectors}
+        if (hex(pinned_test), hex(pinned_branch)) not in named:
+            return None, ("the recorded close-guard pins land on "
+                          f"{hex(pinned_test)}/{hex(pinned_branch)}, which is "
+                          "not a polarity selector of this image")
+        evidence["pins_agree"] = True
+    else:
+        evidence["pins_agree"] = None
+        evidence["pins_moved"] = True
+    return evidence, None
+
+
 def _external_guard_chain(g: "DsoGraph", fstart: int, site_addr: int,
                           want_zero: bool):
-    """Prove the `%r12` guard polarity that selects this close path.
-
-    b76 shape: one `test %r12,%r12` followed by `je <zero_block>`; the provider
-    block is the fallthrough.  b73 used a je/jne pair and its two blocks; the
-    b76 build folded the pair into one conditional because the two close arms
-    are the only successors of the guard block.  The witness names the exact
-    four instructions by (symbol, offset) pins and proves the CFG shape: a
-    moved or changed guard, a different target, or a site in neither arm
-    refuses.  This is a shape proof for *this* slot, not a class widening.
-    """
-    spec = STORE_LOADER_CLOSE_GUARD
-    reg = spec["reg"]
-    test_addr = _pin_insn_addr(g, spec["test"])
-    branch_addr = _pin_insn_addr(g, spec["branch"])
-    zero_addr = _pin_insn_addr(g, spec["zero_block"])
-    nonzero_addr = _pin_insn_addr(g, spec["nonzero_block"])
-    if None in (test_addr, branch_addr, zero_addr, nonzero_addr):
-        return None, ("one of the close-guard pins does not land on an "
-                      "instruction in this image")
-    insns = g.precision.insns_by_func.get(fstart, ())
-    by_addr = {a: t for a, t in insns}
-    text = by_addr.get(test_addr, "").strip()
-    if not re.fullmatch(r"test\s+" + re.escape(reg) + r"," +
-                        re.escape(reg), text):
-        return None, (f"guard test at {hex(test_addr)} is not test {reg},{reg}"
-                      f": {text!r}")
-    mn, tgt, text = _external_branch(g, fstart, branch_addr)
-    if mn != "je" or tgt != zero_addr:
-        return None, (f"guard branch at {hex(branch_addr)} is not the "
-                      f"enumerated je {zero_addr:#x}: {text!r}")
-    addrs = [a for a, _t in insns]
-    bi = addrs.index(branch_addr)
-    if bi + 1 >= len(addrs) or addrs[bi + 1] != nonzero_addr:
-        return None, ("the enumerated provider block is not the je "
-                      "fallthrough")
-    cfg = _function_cfg(g, fstart)
-    idx = None
-    for i, (a, _t) in enumerate(insns):
-        if a == site_addr:
-            idx = i
-            break
-    if idx is None:
-        return None, "site instruction not found"
-    sb = cfg["block_of"].get(idx)
-    zb = cfg["block_of"].get(addrs.index(zero_addr))
-    nb = cfg["block_of"].get(addrs.index(nonzero_addr))
-    if sb is None or zb is None or nb is None:
-        return None, "the site or a close arm is outside the function CFG"
-    reach_zero = _cfg_reachable_from(cfg, zb)
-    reach_nonzero = _cfg_reachable_from(cfg, nb)
-    # The site must lie under exactly one close arm.  The b76 blocks are
-    # split by the slot's own NULL test (`mov slot; test; je`) into a
-    # load/test block and a call block, so the site is usually one block
-    # after the arm entry; reachability, not block identity, is the fact.
-    expected, other = ((reach_zero, reach_nonzero) if want_zero
-                       else (reach_nonzero, reach_zero))
-    if sb not in expected or sb in other:
-        return None, (f"site {hex(site_addr)} is not under exactly the "
-                      f"{'fetched_loader == NULL' if want_zero else 'fetched_loader != NULL'}"
-                      " close arm")
-    return {"guard_zero": want_zero,
-            "test": f"{hex(test_addr)}: {(by_addr.get(test_addr) or '').strip()}",
-            "branch": (f"{hex(branch_addr)}: je {hex(zero_addr)} (fallthrough "
-                       f"{hex(nonzero_addr)})"),
-            "zero_block": hex(zero_addr),
-            "nonzero_block": hex(nonzero_addr)}, None
+    """The close-arm proof for one loader dispatch (see the helper above)."""
+    return _store_loader_polarity(g, fstart, site_addr, want_zero)
 
 
 def _external_base_defs(g: "DsoGraph", site: dict, load: dict):
@@ -17583,31 +18089,16 @@ def store_loader_provider_witness(g: "DsoGraph", site: dict, name: str):
         return cls, None, _external_refusal(
             cls, name, site, "base-definition-shape-changed",
             definitions=[insns[d][1] for d in sorted(base_defs)])
-    r12_defs = _external_reg_defs(g, fstart, provider[0], "%r12")
-    if r12_defs is None or len(r12_defs) != 2:
+    # `%r12` is the fetched loader: every definition reaching the provider
+    # assignment is either a zero write or the fetch call's return.  b76 had
+    # exactly one zero write; b77 has three, so the rule is over the set.
+    origin, why = _store_loader_fetched_origin(g, fstart, provider[0], "%r12")
+    if origin is None:
         return cls, None, _external_refusal(
             cls, name, site, "fetched-loader-definition-set-is-not-enumerated",
-            definitions=sorted(r12_defs or ()))
-    fetch = [d for d in r12_defs
-             if insns[d][1].strip() == "mov    %rax,%r12"]
-    if len(fetch) != 1:
-        return cls, None, _external_refusal(
-            cls, name, site, "fetched-loader-is-not-a-call-return")
-    # The fetch call is whatever single definition %rax has immediately before
-    # the assignment.  It is not necessarily the adjacent instruction: the
-    # builder tests the result before moving it.
-    rax_defs = _external_reg_defs(g, fstart, fetch[0], "%rax")
-    if rax_defs is None or len(rax_defs) != 1 or _ENTRY_DEF in rax_defs:
-        return cls, None, _external_refusal(
-            cls, name, site, "fetched-loader-is-not-a-single-call-return",
-            definitions=sorted(rax_defs or ()))
-    fetch_call = next(iter(rax_defs))
-    fetch_sym = _external_call_symbol(g, fstart, fetch_call)
-    if fetch_sym is None:
-        return cls, None, _external_refusal(
-            cls, name, site, "fetched-loader-is-not-a-call-return",
-            definition=hex(insns[fetch_call][0]),
-            text=insns[fetch_call][1])
+            detail=why)
+    fetch_call = origin["fetch_call"]
+    fetch_sym = origin["callee"]
     fetch_leaf = _external_function_leaf(fetch_sym)
     fetch_callee = fetch_leaf
     if fetch_leaf in STORE_LOADER_FETCH_WRAPPERS:
@@ -17765,8 +18256,9 @@ def store_loader_provider_witness(g: "DsoGraph", site: dict, name: str):
                 "constructor": fetch_callee,
                 "constructor_offset_hint": STORE_LOADER_FETCH,
                 "definitions": [hex(insns[d][0]) for d in sorted(base_defs)],
-                "fetched_loader_definitions": [
-                    hex(insns[d][0]) for d in sorted(r12_defs)]},
+                "fetched_loader_definitions": (
+                    [hex(insns[origin["fetch_def"]][0])]
+                    + [hex(insns[d][0]) for d in origin["zero_defs"]])},
         field={"type": STORE_LOADER_OWNER, "repr_c": True,
                "name": STORE_LOADER_PROVIDER_FIELD,
                "offset": hex(fld["offset"]),
@@ -31929,39 +32421,42 @@ def _e7abi_self_test():
     # (site -> containing symbol, offset) for the literal keys below.  The
     # literal VAs identify one exact artefact (recorded in the closure receipt
     # and in atlas-refresh/e7-b76-repin.json); the pins are the mechanical
-    # re-pin key.  Each literal is checked against its pin against the graph,
-    # so a stale VA fails loudly instead of silently retiring the control.
+    # re-pin key.  Each site address used by the controls is *derived* from
+    # this image by the re-pin engine (offset or in-symbol witness search), so
+    # a rebuild moves the fixture with the site instead of retiring it.  The
+    # literals below are stable case identifiers only; they are never used as
+    # addresses.
     site_pins = {
-        0x541C2D: ("EVP_PBE_CipherInit_ex", 0x19D),
-        0x455C88: ("OSSL_STORE_open_ex", 0x488),
-        0x455D7D: ("OSSL_STORE_open_ex", 0x57D),
-        # b76 re-pin: the closefn call moved from b73 +0x9C3 to +0x9F3 and
-        # the p_close call from +0x7D9 to +0x807 (0x4561F3 / 0x456007).
-        # The corresponding guard changed from a je/jne pair to one
-        # `test %r12,%r12; je <legacy>` with the provider block as the
-        # fallthrough; the witness proves that shape (see
-        # STORE_LOADER_CLOSE_GUARD), so the moved rows are re-pinned, not
-        # retired.
-        0x4561F3: ("OSSL_STORE_open_ex", 0x9F3),
-        0x456007: ("OSSL_STORE_open_ex", 0x807),
-        0x22CB65: ("CONF_modules_load", 0x505),
-        0x22CFA3: ("CONF_modules_load", 0x943),
-        0x384BBC: ("openssl_rs::pem::pem_pk8::do_pk8pkey", 0x29C),
+        0x541C2D: PBE_SITE_PIN,
+        0x455C88: STORE_LOADER_LEGACY_SITE_PINS[0x1F89E8],
+        0x455D7D: STORE_LOADER_LEGACY_SITE_PINS[0x1F8AA1],
+        0x4561F3: STORE_LOADER_LEGACY_SITE_PINS[0x1F8F13],
+        0x456007: STORE_LOADER_PROVIDER_SITE_PIN,
+        0x22CB65: CONF_SITE_PINS[0x293F25],
+        0x22CFA3: CONF_SITE_PINS[0x294363],
+        0x384BBC: PEM_SITE_PIN,
     }
-    site_specs = (
-        (0x541C2D, 0x541A90, "call   *%rax"),
-        (0x455C88, 0x455800, "call   *%rax"),
-        (0x455D7D, 0x455800, "call   *%rax"),
-        (0x4561F3, 0x455800, "call   *%rax"),
-        (0x456007, 0x455800, "call   *%rax"),
-        (0x22CB65, 0x22C660, "call   *%r15"),
-        (0x22CFA3, 0x22C660, "call   *%rax"),
-        (0x384BBC, 0x384920, "call   *%rbx"),
-    )
+    derived = {
+        0x541C2D: _pinned_site("PBE_SITE", g),
+        0x455C88: _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F89E8, g)[0],
+        0x455D7D: _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F8AA1, g)[0],
+        0x4561F3: _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F8F13, g)[0],
+        0x456007: _pinned_site("STORE_LOADER_PROVIDER_SITE", g),
+        0x22CB65: _pin_effective("CONF_SITES", 0x293F25, g)[0],
+        0x22CFA3: _pin_effective("CONF_SITES", 0x294363, g)[0],
+        0x384BBC: _pinned_site("PEM_SITE", g),
+    }
+    funcs = {old: _pin_start(g, pin) for old, pin in site_pins.items()}
+    site_specs = [(lit, funcs[lit], "") for lit in site_pins]
     g.sites = {}
-    for addr, func, text in site_specs:
-        g.sites[(func, addr, "call")] = {
-            "kind": "call", "func": func, "addr": addr, "text": text,
+    for lit, func, _text in site_specs:
+        real = derived[lit]
+        text = next((t for a, t in (g.precision.insns_by_func.get(func) or ())
+                     if a == real), None)
+        if func is None or text is None:
+            continue
+        g.sites[(func, real, "call")] = {
+            "kind": "call", "func": func, "addr": real, "text": text,
             "targets": set(), "unresolved": True,
             "reason": "materialised", "class": "materialised",
             "field_offsets": set(), "seam": None,
@@ -31976,18 +32471,23 @@ def _e7abi_self_test():
         0x22CFA3: ABI_CONTRACT_CONF_MODULE,
         0x384BBC: ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
     }
-    for addr, func, _text in site_specs:
-        pin = site_pins[addr]
+    for lit, func, _text in site_specs:
+        real = derived[lit]
+        pin = site_pins[lit]
         names = getattr(g, "names_at", {}).get(func) or {g.funcs.get(func, "")}
-        if not (addr - func == pin[1]
-                and any(_external_function_leaf(n) == _pin_leaf(pin[0])
-                        for n in names)):
+        ok = (func is not None
+              and any(_external_function_leaf(n) == _pin_leaf(pin[0])
+                      for n in names)
+              and _is_indirect_transfer_strict(g, real))
+        if not ok:
             failures.append(
-                f"e7abi {addr:#x}: literal does not match pin "
-                f"{(pin[0], hex(pin[1]))!r}; re-pin")
+                f"e7abi {lit:#x}: the fixture site did not resolve to an "
+                f"indirect transfer in {_pin_leaf(pin[0])} (derived "
+                f"{real:#x}); re-pin or investigate the witness")
 
     def site(addr):
-        return next(s for s in g.sites.values() if s.get("addr") == addr)
+        real = derived[addr]
+        return next(s for s in g.sites.values() if s.get("addr") == real)
 
     def wit(addr):
         s = site(addr)
@@ -32612,16 +33112,225 @@ def _e7repin_self_test():
     g.install_prefix = str(root / "artifacts/phase2/install")
     g.precision = PrecisionResolver(g)
     failures = list(e7repin_controls(g))
-    refused = 0
+    rederived, moved, refused = [], [], []
     for name, pin_name in _PIN_TABLE_OF.items():
-        for old, pin in globals()[pin_name].items():
-            if _pin_site_addr(g, pin) is None:
-                refused += 1
+        for old, _pin in globals()[pin_name].items():
+            addr, how = _pin_effective(name, old, g)
+            row = {"table": name, "literal": hex(old),
+                   "address": hex(addr) if isinstance(addr, int) else None}
+            {"pin": rederived, "search": moved}.get(how, refused).append(row)
+    if refused:
+        failures.append(
+            "e7repin: " + str(len(refused)) + " pinned row(s) neither re-derive "
+            "by offset nor resolve by witness search: "
+            + ", ".join(sorted(f"{r['table']}@{r['literal']}"
+                                for r in refused)))
     return failures, (
-        "e7repin controls: every pinned row re-derives or is refused by name; "
+        "e7repin controls: every pinned row re-derives by offset or resolves "
+        "by the in-symbol witness search ("
+        f"{len(rederived)} by pin, {len(moved)} moved, {len(refused)} refused); "
         "unknown-leaf, non-call-offset and non-call-instruction mutations each "
-        "refuse; no moved row is accepted by two rows "
-        f"({refused} pin(s) refused in this image)")
+        "refuse; no moved row is accepted by two rows")
+
+
+def _e7repin_search_self_test():
+    """Load-bearing controls for the moved-pin search (uniqueness is proof).
+
+    Four facts are exercised, each with its own counterexample and restore:
+    the search resolves a stale row only when the witness accepts exactly one
+    transfer in the symbol; forcing a second acceptance refuses; perturbing the
+    witness's own facts (the close-guard polarity branch, the PBE frame slot)
+    refuses; and turning the search off reproduces the pre-repair behaviour
+    (the stale literal stays, and the site is target-bounded).
+    """
+    root = Path(__file__).resolve().parents[2]
+    dso = root / "artifacts/phase2/install/lib/libcrypto.so.3"
+    if not dso.is_file():
+        return [], "e7repin-search controls: skipped (candidate absent)"
+    global _PIN_SEARCH_OFF
+    workdir = root / "court/tmp/e7repin-search-work"
+    workdir.mkdir(parents=True, exist_ok=True)
+    _SELFTEST_TRACE.clear()
+    try:
+        g = DsoGraph(dso, workdir)
+    except Exception as e:  # noqa: BLE001 -- a missing tool is a skip
+        return [], f"e7repin-search controls: skipped (graph unavailable: {e})"
+    g.source_root = str(root)
+    g.install_prefix = str(root / "artifacts/phase2/install")
+    g.precision = PrecisionResolver(g)
+    failures = []
+
+    def chk(name, got, want):
+        ok = got == want
+        _SELFTEST_TRACE.append((name, got, want, ok))
+        if not ok:
+            failures.append(f"{name}: got {got!r}, want {want!r}")
+
+    class _Prec:
+        def __init__(self, insns):
+            self.insns_by_func = insns
+
+    serial = [0]
+
+    def proxy(insns_map):
+        serial[0] += 1
+        px = _RepinProxy(g, precision=_Prec(insns_map),
+                         sha256=f"{g.sha256}:e7repin-search:{serial[0]}")
+        for k in ("_fn_cfg_cache", "_reaching_cache", "_e7core_dom_cache",
+                  "_pin_site_index"):
+            object.__setattr__(px, k, {})
+        return px
+
+    def mutate(fstart, addr, new_text):
+        return {fstart: [(a, new_text if a == addr else t)
+                         for a, t in g.precision.insns_by_func[fstart]]}
+
+    def search_row(graph, table, old):
+        """(address, accepted list, refusal) for one table row."""
+        spec = globals()[table][old]
+        pin = globals()[_PIN_TABLE_OF[table]][old]
+        addr, prov, why = _pin_search(graph, "table", table, pin, spec,
+                                      _pin_witness(_PIN_TABLE_WITNESS[table]))
+        return addr, (prov or why or {}).get("accepted"), (why or {}).get("refusal")
+
+    saved = None
+    try:
+        # ---- positive: every stale row resolves, with one acceptance ---- #
+        rows = [("STORE_LOADER_LEGACY_SITES", 0x1F89E8, "open_ex"),
+                ("STORE_LOADER_LEGACY_SITES", 0x1F8AA1, "open"),
+                ("STORE_LOADER_LEGACY_SITES", 0x1F8F13, "closefn"),
+                ("PBE_EX_SITES", 0x17CEE8, "keygen_ex")]
+        for table, old, label in rows:
+            addr, how = _pin_effective(table, old, g)
+            chk(f"e7repin-search {label}: row resolves", how in ("pin", "search"),
+                True)
+            if how == "search":
+                name, why = _PIN_TABLE_WITNESS[table], None
+                spec = globals()[table][old]
+                a2, prov, why = _pin_search(
+                    g, "table", table, globals()[_PIN_TABLE_OF[table]][old],
+                    spec, _pin_witness(name))
+                chk(f"e7repin-search {label}: unique acceptance",
+                    (prov or {}).get("accepted"), [hex(addr)])
+                chk(f"e7repin-search {label}: same address as the table",
+                    a2, addr)
+        prov_addr, how = _pin_effective("STORE_LOADER_LEGACY_SITES",
+                                        0x1F8F13, g)
+        chk("e7repin-search closefn: resolved address is a transfer",
+            _is_indirect_transfer_strict(g, prov_addr), True)
+        provider = _pinned_site("STORE_LOADER_PROVIDER_SITE", g)
+        chk("e7repin-search provider scalar is a transfer",
+            _is_indirect_transfer_strict(g, provider), True)
+        prov_rows = [r for r in pin_resolution_report()["moved"]
+                     if r.get("symbol") == STORE_LOADER_FUNCTION]
+        chk("e7repin-search store rows: one acceptance each",
+            sorted(len(r["accepted"]) for r in prov_rows), [1] * len(prov_rows))
+        # From here on the controls mutate the image.  Their refusals and moved
+        # rows describe the counterexample, not the admitted image, so the
+        # reports are restored to this point on the way out.
+        saved = {k: dict(v) for k, v in (
+            ("_SITE_PIN_CACHE", _SITE_PIN_CACHE),
+            ("_PIN_MOVED", _PIN_MOVED),
+            ("_PIN_SEARCH_REFUSALS", _PIN_SEARCH_REFUSALS))}
+
+        # ---- uniqueness: force a second candidate to be accepted ---- #
+        mstart = _pin_start(g, STORE_LOADER_LEGACY_SITE_PINS[0x1F89E8])
+        minss = g.precision.insns_by_func[mstart]
+        open_addr = _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F8AA1, g)[0]
+        oi = next(k for k, (a, _t) in enumerate(minss) if a == open_addr)
+        site_o = _pin_site_record(g, mstart, open_addr, minss[oi][1])
+        load_o, _why = _external_operand_load(g, site_o, "%rax")
+        chk("e7repin-search uniqueness fixture applied", load_o is not None, True)
+        if load_o is not None:
+            twin = mutate(mstart, minss[load_o["def"]][0],
+                          minss[load_o["def"]][1].replace(
+                              f"{load_o['offset']:#x}(%r14)", "0x58(%r14)"))
+            chk("e7repin-search uniqueness fixture text",
+                twin[mstart][load_o["def"]][1]
+                != minss[load_o["def"]][1], True)
+            px = proxy(twin)
+            _addr, acc, why = search_row(px, "STORE_LOADER_LEGACY_SITES",
+                                         0x1F89E8)
+            chk("e7repin-search two-candidate refusal reason", why,
+                "the-witness-accepts-more-than-one-transfer-in-the-symbol")
+            chk("e7repin-search two-candidate refusal is a refusal",
+                _addr, None)
+            chk("e7repin-search two-candidate evidence",
+                len(acc or []) >= 2, True)
+        # restore: the same query on the unmutated image accepts exactly one
+        _addr, acc, why = search_row(g, "STORE_LOADER_LEGACY_SITES", 0x1F89E8)
+        chk("e7repin-search two-candidate restored",
+            (why, len(acc or [])), (None, 1))
+
+        # ---- witness perturbation: the close-guard polarity branch ---- #
+        cstart = _pin_start(g, STORE_LOADER_LEGACY_SITE_PINS[0x1F8F13])
+        ev, why = _store_loader_polarity(g, cstart, provider, False)
+        chk("e7repin-search guard basis present", ev is not None, True)
+        if ev is not None:
+            sel = ev["selectors"][0]
+            flip = "jne" if sel["branch_text"].startswith("je") else "je"
+            px = proxy(mutate(cstart, int(sel["branch"], 16),
+                              sel["branch_text"].replace(
+                                  sel["branch_text"].split()[0], flip, 1)))
+            chk("e7repin-search guard mutation fixture applied",
+                px.precision.insns_by_func[cstart]
+                != g.precision.insns_by_func[cstart], True)
+            gwhy = _store_loader_polarity(px, cstart, provider, False)[1]
+            chk("e7repin-search guard mutation refusal",
+                bool(gwhy) and "polarity" in gwhy, True)
+            chk("e7repin-search guard mutation restored",
+                _store_loader_polarity(g, cstart, provider, False)[0]
+                is not None, True)
+
+        # ---- witness perturbation: the PBE frame slot displacement ---- #
+        pstart = _pin_start(g, PBE_EX_SITE_PINS[0x17CEE8])
+        paddr = _pin_effective("PBE_EX_SITES", 0x17CEE8, g)[0]
+        pinsns = g.precision.insns_by_func[pstart]
+        pi = next(k for k, (a, _t) in enumerate(pinsns) if a == paddr)
+        reloads, _why = _pbe_frame_reloads(g, pstart, pi, "%rax")
+        chk("e7repin-search pbe slot fixture present", bool(reloads), True)
+        if reloads:
+            r_addr = pinsns[reloads[0]["def"]][0]
+            r_text = pinsns[reloads[0]["def"]][1]
+            bumped = re.sub(r"^(\s*mov\s+)(-?0x[0-9a-f]+)(\()",
+                            lambda m: f"{m.group(1)}{hex(int(m.group(2), 16) + 8)}"
+                                      f"{m.group(3)}", r_text, count=1)
+            chk("e7repin-search pbe slot fixture applied", bumped != r_text, True)
+            px = proxy(mutate(pstart, r_addr, bumped))
+            _a, _acc, why = search_row(px, "PBE_EX_SITES", 0x17CEE8)
+            chk("e7repin-search pbe slot mutation refusal",
+                why, "no-candidate-transfer-is-accepted-by-the-witness")
+            chk("e7repin-search pbe slot mutation restored",
+                search_row(g, "PBE_EX_SITES", 0x17CEE8)[2], None)
+
+        # ---- the search removed: the pre-repair (target-bounded) behaviour ---- #
+        true_open = _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F89E8, g)[0]
+        _SITE_PIN_CACHE.clear()
+        _PIN_SEARCH_OFF = True
+        try:
+            addr, how = _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F89E8, g)
+            chk("e7repin-search disabled: the stale literal stays",
+                (how, addr), ("literal", 0x1F89E8))
+            chk("e7repin-search disabled: no row matches the true site",
+                _repinned("STORE_LOADER_LEGACY_SITES", g).get(true_open), None)
+        finally:
+            _PIN_SEARCH_OFF = False
+            _SITE_PIN_CACHE.clear()
+        chk("e7repin-search re-enabled: the row resolves again",
+            _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F89E8, g)[1]
+            in ("pin", "search"), True)
+    finally:
+        if saved is not None:
+            for name, values in saved.items():
+                target = globals()[name]
+                target.clear()
+                target.update(values)
+    return failures, (
+        "e7repin-search controls: a stale pin resolves only through the "
+        "in-symbol witness search (one acceptance); forcing a second "
+        "acceptance refuses on uniqueness; mutating the close-guard polarity "
+        "branch and the PBE frame slot each refuse and restore; disabling the "
+        "search reproduces the pre-repair target-bounded row")
 
 
 def _e7core_self_test():
@@ -32775,17 +33484,42 @@ def _e7core_self_test():
     # control core-default-context: the inlined default-context arm of
     # `ossl_lib_ctx_get_data` reads a different `OsslLibCtx` field, so the
     # slot index is no longer source-bound and the site must stop resolving.
-    if core_sites.get("ossl_provider_up_ref_parent"):
-        a_core, _w_core = core_sites["ossl_provider_up_ref_parent"][0]
-        dc_off = next(a for a, t in g.precision.insns_by_func[a_core["func"]]
-                      if t.strip() == "mov    0x78(%rax),%rcx")
-        px = _Proxy(g, insns=mutate_insns(a_core, dc_off,
-                                          "mov    0x70(%rax),%rcx"))
+    # control core-default-context: the inlined default-context arm of
+    # `ossl_lib_ctx_get_data` reads a different `OsslLibCtx` field, so the
+    # slot index is no longer source-bound and the site must stop resolving.
+    # The arm is identified by the witness's own evidence, not by a recorded
+    # offset: b77 reads a different field than b76 did.
+    _dc_site = None
+    for _sites in core_sites.values():
+        for _s, _w in _sites:
+            _rec = next((r for r in (_w.get("base_origin") or {}).get(
+                "accessor_calls") or [] if r.get("default_context")), None)
+            if _rec is not None:
+                _dc_site = (_s, _rec)
+                break
+        if _dc_site is not None:
+            break
+    if _dc_site is not None:
+        a_core, _dc = _dc_site
+        dc_off = int(_dc["call_site"], 16)
+        _dc_text = next(t for a, t in g.precision.insns_by_func[a_core["func"]]
+                        if a == dc_off)
+        _dc_new = re.sub(
+            r"^(\s*mov\s+)(-?0x[0-9a-f]+)(\()",
+            lambda m: f"{m.group(1)}{hex(int(m.group(2), 16) + 8)}"
+                      f"{m.group(3)}", _dc_text, count=1)
+        chk("e7core default-context control fixture applied",
+            _dc_new != _dc_text, True)
+        px = _Proxy(g, insns=mutate_insns(a_core, dc_off, _dc_new))
         got, _why = core_run(px, a_core)
-        chk("e7core default-context offset mutation refusal", got is None,
-            True)
+        chk("e7core default-context offset mutation refusal", got is None, True)
         chk("e7core default-context offset restored",
             core_run(g, a_core)[0] is not None, True)
+    else:
+        failures.append(
+            "e7core default-context control DID NOT RUN: no admitted site's "
+            "witness evidence records an inlined default-context accessor at "
+            "this candidate.  Reported as NOT_RUN, never as a pass")
 
     # control core-writer-id: the writer's store sits under the wrong
     # OSSL_FUNC_* arm
@@ -32910,45 +33644,73 @@ def _e7core_self_test():
         # dropped.  The load-bearing control for the b76 shape is the fetch
         # call itself: retarget it and the constructor proof must refuse.
         insns_st = g.precision.insns_by_func[s_st["func"]]
-        fetch_addr = next(a for a, t in insns_st if "inner_loader_fetch" in t)
-        other = next(t for _a, t in insns_st
-                     if t.strip().startswith("call") and "<" in t
-                     and "ossl_store_get0_loader_int" in t)
-        bad_addr = re.search(r"call\s+([0-9a-f]+)", other).group(1)
-        px = _Proxy(g, insns=mutate_insns(s_st, fetch_addr,
-                                          "call   " + bad_addr))
-        got = store_loader_provider_witness(px, dict(s_st),
-                                            px.funcs[s_st["func"]])
-        chk("e7store fetch mutation refusal",
-            ((got or (None, None, {}))[2] or {}).get("reason"),
-            "wrong-base-constructor")
-        chk("e7store fetch restored",
-            (store_loader_provider_witness(g, dict(s_st),
-                                           g.funcs[s_st["func"]]) or
-             (None, None, {}))[1] is not None, True)
+        fetch_addr = next((a for a, t in insns_st
+                           if "inner_loader_fetch" in t
+                           or "OSSL_STORE_LOADER_fetch" in t), None)
+        other = next((t for _a, t in insns_st
+                      if t.strip().startswith("call") and "<" in t
+                      and "ossl_store_get0_loader_int" in t), None)
+        if fetch_addr is None or other is None:
+            failures.append(
+                "e7store fetch control DID NOT RUN: this image's "
+                "OSSL_STORE_open_ex has no loader-fetch call or no "
+                "ossl_store_get0_loader_int call to retarget; reported as "
+                "NOT_RUN, never as a pass")
+            bad_addr = None
+        else:
+            bad_addr = re.search(r"call\s+([0-9a-f]+)", other).group(1)
+        if bad_addr is not None:
+            px = _Proxy(g, insns=mutate_insns(s_st, fetch_addr,
+                                              "call   " + bad_addr))
+            got = store_loader_provider_witness(px, dict(s_st),
+                                                px.funcs[s_st["func"]])
+            chk("e7store fetch mutation refusal",
+                ((got or (None, None, {}))[2] or {}).get("reason"),
+                "wrong-base-constructor")
+            chk("e7store fetch restored",
+                (store_loader_provider_witness(g, dict(s_st),
+                                               g.funcs[s_st["func"]]) or
+                 (None, None, {}))[1] is not None, True)
 
-        # control e7store guard: move the `je` target off the legacy close
-        # block.  Then the provider p_close site is not under the
-        # fetched_loader != NULL arm and the legacy closefn site is not under
-        # the fetched_loader == NULL arm, so both witnesses must refuse.
-        s_leg = site(g, 0x455800, 0x4561f3, "call   *%rax")
-        br_addr = next(a for a, t in g.precision.insns_by_func[0x455800]
-                       if t.strip().startswith("je") and "4561e7" in t)
-        px = _Proxy(g, insns=mutate_insns(s_leg, br_addr, "je     455ff8"))
-        got = store_loader_provider_witness(px, dict(s_st),
-                                            px.funcs[s_st["func"]])
-        chk("e7store guard mutation refusal",
-            ((got or (None, None, {}))[2] or {}).get("reason"),
-            "p_close-guard-is-not-the-enumerated-pair")
-        got = store_loader_legacy_witness(px, dict(s_leg),
-                                          px.funcs[s_leg["func"]])
-        chk("e7store legacy guard mutation refusal",
-            ((got or (None, None, {}))[2] or {}).get("reason"),
-            "closefn-guard-is-not-the-enumerated-pair")
-        chk("e7store guard restored",
-            (store_loader_provider_witness(g, dict(s_st),
-                                           g.funcs[s_st["func"]]) or
-             (None, None, {}))[1] is not None, True)
+        # control e7store guard: invert the fetched-loader polarity branch.
+        # Then the provider p_close site does not arrive on the
+        # fetched_loader != NULL edge and the legacy closefn site does not
+        # arrive on the fetched_loader == NULL edge, so both witnesses must
+        # refuse.  The guard is derived (b77 moved it and added a second
+        # `test %r12,%r12`), so the control names the *derived* branch.
+        s_leg = None
+        legacy_addr = _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F8F13, g)[0]
+        if _is_indirect_transfer_strict(g, legacy_addr):
+            s_leg = site(g, s_st["func"], legacy_addr, "call   *%rax")
+        guard_ev, guard_why = _store_loader_polarity(
+            g, s_st["func"], s_st["addr"], False)
+        if s_leg is not None and guard_ev is not None:
+            sel = guard_ev["selectors"][0]
+            flip = ("jne" if sel["branch_text"].startswith("je") else "je")
+            bx = _Proxy(g, insns=mutate_insns(
+                s_st, int(sel["branch"], 16),
+                sel["branch_text"].replace(
+                    sel["branch_text"].split()[0], flip, 1)))
+            got = store_loader_provider_witness(bx, dict(s_st),
+                                                bx.funcs[s_st["func"]])
+            chk("e7store guard mutation refusal",
+                "polarity" in str(((got or (None, None, {}))[2] or {})
+                                  .get("detail")), True)
+            got = store_loader_legacy_witness(bx, dict(s_leg),
+                                              bx.funcs[s_leg["func"]])
+            chk("e7store legacy guard mutation refusal",
+                "polarity" in str(((got or (None, None, {}))[2] or {})
+                                  .get("detail")), True)
+            chk("e7store guard restored",
+                (store_loader_provider_witness(
+                    g, dict(s_st), g.funcs[s_st["func"]]) or
+                 (None, None, {}))[1] is not None, True)
+        else:
+            failures.append(
+                "e7store guard control did NOT RUN: the derived close-guard "
+                f"or the legacy closefn row is absent at this candidate "
+                f"({guard_why or 'no legacy site'}); recorded as NOT_RUN, "
+                "never as a pass")
 
     # ---- PEM register-agnostic rule --------------------------------------- #
     pem_sites = sites_of(g, PEM_FUNCTION,
@@ -33003,20 +33765,20 @@ def _e7core_self_test():
                                           g.funcs[s_pem["func"]]) or
              (None, None, {}))[1] is not None, True)
 
+    _resolved = sum(len(v) for v in core_sites.values())
     return failures, (
-        "e7core controls: the recorded cohort is 26 sites across 24 functions; "
-        "this image resolves all 26 (ossl_provider_up_ref_parent's inlined "
-        "default-context arm is admitted only at the source-declared "
-        "OsslLibCtx.child_provider offset, and a perturbed offset refuses); "
-        "two further unreachable sites carry the same class; offset, "
+        f"e7core controls: the recorded cohort is "
+        f"{len(CORE_DISPATCH_EXPECTED)} function(s); this image resolves "
+        f"{_resolved} site(s) across {len(core_sites)} function(s); the offset, "
         "libctx-index, writer-id, second-source-store, header-id, "
-        "default-context-offset and NULL-guard mutations each refuse and are "
-        "restored; "
+        "default-context and NULL-guard mutation controls are each exercised "
+        "(a control this candidate cannot exercise is reported above as "
+        "NOT_RUN, never as a pass); "
         "the provider-init rule refuses a store-offset and an extra-writer "
-        "mutation and is restored; the store-loader close guard refuses a "
-        "perturbed je target and is restored; the b76 direct "
-        "inner_loader_fetch call refuses a retargeted call (the wrapper-source "
-        "arm is NOT_RUN at this candidate because the wrapper is inlined); "
+        "mutation and is restored; the store-loader close guard refuses an "
+        "inverted fetched-loader polarity branch and is restored; the "
+        "loader-fetch retarget refuses (the wrapper-source arm is NOT_RUN at "
+        "this candidate because the wrapper is inlined); "
         "the register-agnostic PEM "
         "witness refuses a wrong-default-symbol and a wrong-copy-source "
         "mutation and is restored")
@@ -37827,6 +38589,22 @@ def self_test() -> int:
     _e7repin_failures, _e7repin_line = _e7repin_self_test()
     failures.extend(_e7repin_failures)
     print(f"[consumer-closure] {_e7repin_line}")
+
+    _e7repin_search_failures, _e7repin_search_line = \
+        _e7repin_search_self_test()
+    failures.extend(_e7repin_search_failures)
+    print(f"[consumer-closure] {_e7repin_search_line}")
+    _pin_rep = pin_resolution_report()
+    for row in _pin_rep["moved"]:
+        print(f"[consumer-closure] pin MISMATCH (moved, re-resolved): "
+              f"{row['symbol']}+{row['pin_offset']} -> +{row['resolved_offset']} "
+              f"{row['address']} by {row['witness']} "
+              f"({len(row['accepted'])} of {row['candidates']} candidate(s) "
+              "accepted)")
+    for row in _pin_rep["refused"]:
+        print(f"[consumer-closure] pin UNRESOLVED: "
+              f"{row.get('table') or row.get('scalar')} {row.get('literal')} "
+              f"refusal={row.get('refusal')}")
 
     _e7pbe_failures, _e7pbe_line = _pbe_outparam_self_test()
     failures.extend(_e7pbe_failures)
