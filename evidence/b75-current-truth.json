@@ -1,0 +1,103 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/current-truth/v1",
+ "kind": "candidate-identity-and-venue-receipt",
+ "receipt": "b75-current-truth",
+ "date": "2026-11-13",
+ "campaign": "safe-c33",
+ "purpose": "establish the exact source, library, consumer and venue identity this session measured, and what it could not measure",
+ "source": {
+  "candidate_commit": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+  "candidate_commit_subject": "Ledger: 223 supported / 98 review-required / 2 blocked; candidate moved to 0d39697ae",
+  "workspace_commit": "258c2a9b9d407011d218b32553cf212cbc320e75",
+  "workspace_commit_subject": "Discharge the repaired eng_list body at its content address; enforced gate 320/3 -> 321/2",
+  "src_tree": "96306dffad0e9509e1eb0357103b8c23dacc5ca4",
+  "src_tree_identical_between_candidate_and_workspace": true,
+  "src_content_sha256": "8ee037be6789bd8e2731d5081b787dda2ebfa190a873c1366f1aac01f7ba7374",
+  "src_content_hash_rule": "sha256('openssl-rs/src-rs/v1\\0' + sorted relpath\\0bytes\\0)",
+  "src_rs_files": 878,
+  "identity_note": "the census, the b73 freeze and the b74 closure bind 15bebabc9's source bytes (8ee037be). 258c2a9b9 is an evidence/docs descendant whose src tree is byte-identical (tree 96306dff). The checkout was reconstructed from the interrupted clone's pack plus a blobless fetch; the working tree was then restored from the supplied archive so every tracked path matches 258c2a9b9 except this batch's evidence edits."
+ },
+ "history": {
+  "origin_main_at_measurement": "bb3f7efe75f1b8b0c6cbf41a5dab8bbf74f447e9",
+  "merge_base_with_workspace": "bb3f7efe75f1b8b0c6cbf41a5dab8bbf74f447e9",
+  "relationship": "the workspace commit 258c2a9b9 is a descendant of origin/main bb3f7efe (2026-11-11); remote main has not advanced past the earlier lineage, so the measured snapshot is the newest implementation available",
+  "referenced_commits_present": {
+   "15bebabc9": "candidate",
+   "258c2a9b9": "workspace",
+   "afcfdc47e": "S-prime engine lock repair",
+   "b6f38f134": "b61 closure candidate",
+   "0d39697ae": "eng_list TOCTOU repair",
+   "cdaf16816": "B48 discharge source",
+   "fadca9328": "build-0.0.46 receipt identity"
+  }
+ },
+ "artifacts": {
+  "install_prefix": "artifacts/phase2/install",
+  "libcrypto.so.3": {
+   "sha256": "e8a90ba4bd1e597ed22adbfef56c7336b80a65477393ba5a74afbbe428b985cb",
+   "matches_b73_freeze": true,
+   "matches_b74_closure_candidate_identity": true
+  },
+  "libssl.so.3": {
+   "sha256": "f7b4975225b59306e507b8e2ec14071748700f7f56f99c9a7d9fdcaf3a43ac2f",
+   "matches_b73_freeze": true
+  },
+  "legacy.so": {
+   "sha256": "93f9a117f5fe957f80470f04ecfed096902ec0392aa5392f1623e7e0bdad8500",
+   "matches_b73_freeze": true
+  },
+  "openssl": {
+   "sha256": "45bdbfd15b1f31cc13aac7159a708e7b36eae8d027f9199351bfd63858897872",
+   "matches_b73_freeze": true
+  }
+ },
+ "consumers": {
+  "ssh": {
+   "expected_sha256": "bff896e3f8511be1f81f33deae4b62052ba40cb803be7ddff9f332c815f78c35",
+   "present_in_venue": false,
+   "closure_receipt": "evidence/closure-ssh-b74.json",
+   "closure_counts": {"DISCHARGED": 321, "BLOCKED": 2, "UNKNOWN": 0, "safe_compatible": false},
+   "closure_source_identity": "15bebabc9"
+  },
+  "sshd": {
+   "expected_sha256": "64e0a4cc190fc3897aabcd2f95cdc630d25b3dc11b2a9635973449fe84164f92",
+   "present_in_venue": false,
+   "closure_receipt": "evidence/closure-sshd-b73-r2.json",
+   "closure_counts": {"DISCHARGED": 320, "BLOCKED": 3, "UNKNOWN": 0, "safe_compatible": false},
+   "closure_source_identity": "15bebabc9",
+   "note": "no sshd b74 receipt exists; the b73-r2 sshd receipt is the latest sshd closure and is bound to the same S"
+  }
+ },
+ "venue": {
+  "git_object_store": "reconstructed: 60,433 objects recovered from the interrupted pack plus a 5.95 MiB blobless fetch of the remaining commit/tree history; all referenced commit ids resolve",
+  "rust_toolchain": {"cargo": false, "rustc": false},
+  "court_container": {"docker": false},
+  "court_install_tree": {"court/freeze-b73/install": false},
+  "consequence": [
+   "no cargo fmt/check/clippy/test can run in this venue",
+   "no library or consumer rebuild can run",
+   "no fresh consumer closure run can run (the ssh/sshd binaries are absent)",
+   "no L7 workload replay and no BOUNDARY/SEAL sanitizer gate can run"
+  ]
+ },
+ "what_was_run": [
+  "src content digest recomputation (878 files) -> 8ee037be, matching the census",
+  "per-file Git blob comparison against 258c2a9b9 -> the working tree matched exactly except this batch's evidence edits",
+  "consumer_closure.py --self-test -> exit 0",
+  "the shipping adjudicator over the frozen b74 queue -> 323 DISCHARGED / 0 BLOCKED / 0 UNKNOWN (evidence/b75-ocsp-readjudication.json)",
+  "render_docs.py --check -> clean after --write"
+ ],
+ "what_was_not_run": [
+  "cargo fmt/check/clippy",
+  "the full library suite",
+  "a clean rebuild of libcrypto/libssl",
+  "a fresh ssh and sshd closure run",
+  "Miri/ASan/TSan/Loom, dudect/ctgrind, the authority differential",
+  "OpenSSH L7 workloads"
+ ],
+ "non_claims": [
+  "The venue cannot produce the BATCH/BOUNDARY/SEAL evidence the mission requires; absence of those runs is NOT_RUN, not PASS.",
+  "No count in this receipt is a SAFE_COMPATIBLE claim.",
+  "The reconstructed git object store contains commit and tree objects, and blobs were fetched on demand only where the archive supplied them; it is sufficient to verify commit identity, not to re-sign the historical evidence."
+ ]
+}
