@@ -31,12 +31,12 @@ python3 forensics/tools/consumer_closure.py --family openssh \
   --carry-forward-closure "$carry" \
   --enforce-disposition-conflicts \
   --workdir "court/tmp/closure-b73-$which" \
-  --output "evidence/closure-$which-b73.json" --summary > "/tmp/closure-$which-b73.log" 2>&1
+  --output "evidence/closure-$which-b73-r2.json" --summary > "/tmp/closure-$which-b73-r2.log" 2>&1
 rc=$?
 end=$SECONDS
 echo "CONSUMER=$which"
 echo "CARRY_FORWARD_SOURCE=$carry"
 echo "RC=$rc"
 echo "WALL_SECONDS=$((end - start))"
-tail -n 40 "/tmp/closure-$which-b73.log"
+tail -n 40 "/tmp/closure-$which-b73-r2.log"
 exit "$rc"
