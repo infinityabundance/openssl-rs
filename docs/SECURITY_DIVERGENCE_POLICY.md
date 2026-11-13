@@ -576,6 +576,29 @@ because the hand-typed trigger state it replaces is exactly what let `D-DECODER-
 - **Claim removed:** not claimed compatible. The probe does not exercise these, because a
   probe cannot compare a crash.
 
+### D-V3-CONF-NULL-VALUE-1 — `X509V3_EXT_nconf*` dereferences a NULL `value`
+
+- **Obligation:** `X509V3_EXT_nconf(conf, ctx, name, NULL)` and
+  `X509V3_EXT_nconf_nid(conf, ctx, nid, NULL)`, the inputs the interfaces document
+  (`value` is NULL or NUL-terminated) and that the `# Safety` contracts accept.
+- **Authority:** `crypto/x509/v3_conf.c:34-75` assigns `value` to `p` and calls
+  `v3_check_critical(&p)`, whose first act is `strncmp(p, "critical", 8)`; there is no
+  NULL test before the scan, so the documented call reads through NULL and faults.
+  `X509V3_EXT_nconf_nid` has the same scan before `v3_check_generic`/`do_ext_nconf`.
+- **Candidate:** refuses a NULL `value` at the entry point, before the prefix scan.
+  `X509V3_EXT_nconf_int` builds the same `section=…, name=…, value=(null)` message its
+  other failure path uses and raises `X509V3_R_ERROR_IN_EXTENSION` at `V3_CONF_48`
+  when the section is named and `V3_CONF_52` otherwise; `X509V3_EXT_nconf_nid` raises
+  `V3_CONF_52` with `value=(null)`. Both return NULL without touching the pointer.
+- **Reason:** `docs/UNSAFE.md` §5 — a crash in the authority is not reproduced merely
+  because the documented interface admits the input. The extension-error the caller
+  already handles is observable and testable; a fault is neither.
+- **Claim removed:** a NULL `value` is not claimed to be scanned, nor to produce an
+  extension. The unit control `a_null_extension_value_is_refused_before_the_prefix_scan`
+  asserts that both entry points return NULL and leave an error on the stack; no
+  compatibility probe asks what the authority does here, because it cannot compare a
+  crash.
+
 ### D-BIOCORE-1 — `BIO_new_from_core_bio` calls a NULL `BIO_up_ref`
 
 - **Obligation:** `BIO_new_from_core_bio(libctx, corebio)` where the context's dispatch
