@@ -90,7 +90,7 @@ fn bio_out() -> *mut Bio {
 }
 
 /// `static unsigned int dummy_psk(...)` — `apps/ciphers.c:82-88`.
-unsafe extern "C" fn dummy_psk(
+extern "C" fn dummy_psk(
     _ssl: *mut Ssl,
     _hint: *const c_char,
     _identity: *mut c_char,
@@ -100,6 +100,19 @@ unsafe extern "C" fn dummy_psk(
 ) -> c_uint {
     0
 }
+
+// Compile-time control: the converted callback keeps its exact C signature, and
+// restoring the `unsafe` qualifier breaks this build.
+#[cfg(test)]
+#[allow(clippy::type_complexity)]
+const _: extern "C" fn(
+    *mut Ssl,
+    *const c_char,
+    *mut c_char,
+    c_uint,
+    *mut u8,
+    c_uint,
+) -> c_uint = dummy_psk;
 
 /// `int ciphers_main(int argc, char **argv)` — `apps/ciphers.c:91-287`.
 #[allow(clippy::never_loop)] // every arm returns or breaks; the authority's loop never iterates
