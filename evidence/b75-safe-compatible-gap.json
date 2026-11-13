@@ -47,6 +47,14 @@
     "atlas-refresh/p25-vestigial-elimination-sites.json"
    ],
    "result": "ELIMINATED_STRUCTURALLY; no OpenSSH closure count changes"
+  },
+  {
+   "what": "26 safe-declaration eliminations from stale BLOCKED rows",
+   "how": "systematic audit of every BLOCKED UNSAFE_FN_DEF row against the current declaration; only rows with no `unsafe` qualifier were accepted",
+   "evidence": [
+    "atlas-refresh/p25-safe-declaration-elimination-sites.json"
+   ],
+   "result": "26 ELIMINATED_STRUCTURALLY; 8 with compile-time controls, 18 without; no OpenSSH count change"
   }
  ],
  "blockers": [
@@ -719,7 +727,7 @@
   "evidence/closure-ssh-b74.json": "87f1dd9ac062d60da6a07c06abc4eec626254217dfd84861c7b495e59357c8ff",
   "evidence/closure-sshd-b73-r2.json": "d0addc72f94904b03e63b2bd1d92dc5506c1ea67f6732b5a51a124f943f5cee5",
   "evidence/sshd-artifact-ledger.json": "34ff5e2eec66d7c522951c9ef639d0e97c1a61501a232b0f579a4fe5fd7dc36e",
-  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "626f2cd59b34c730f90eed2a37e49a43bd3a2db501f9b502f4991aa201145cf8",
+  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "3ad26a833331d26cae0e24e8d12da9a74528da9d701eed44253f3c11db8fc47f",
   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json": "225275e35179c7f475c1031e6a783a9ee4630529127a715da67a1cecab51863e"
  },
  "non_claims": [
@@ -761,6 +769,11 @@
    "result": "the committed table recorded a stale docs/SECURITY_DIVERGENCE_POLICY.md digest 7fa882ab; the current digest is a3f0f6c1",
    "fix": "re-pinned; 10 rows, 0 blocking, dispositions unchanged",
    "state": "FIXED"
+  },
+  {
+   "tool": "systematic blocked-row audit",
+   "result": "31 stale rows found: 4 already recorded (RC2 + 3 vestigial), 26 recorded here, 1 excluded (s2i_poison, already B54-discharged)",
+   "state": "RECORDED"
   }
  ]
 }
