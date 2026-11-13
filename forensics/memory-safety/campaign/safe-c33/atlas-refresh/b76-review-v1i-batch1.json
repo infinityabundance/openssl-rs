@@ -1,0 +1,1112 @@
+{
+ "schema": "safe-c33/atlas-refresh/b76-review-v1i-batch1/v1",
+ "kind": "independent-adversarial-review",
+ "subphase": "safe-c33/b76-review/openssh-v1i (batch 1 of 3, 19 lowest stable_id)",
+ "generated_utc": "2026-11-13T20:05:00Z",
+ "review": {
+  "role": "independent adversarial reviewer (AGENTS.md \u00a715)",
+  "independence": "The reviewer did not write, design or adjudicate any of the 19 conversions, the openssh-v1i receipt, the b76c closures or the closure instrument, and did not author AGENTS.md. Verdicts rest only on source read during this review and on controls executed during this review. No author-supplied result (receipt contract, established_by, negative_controls, tests) is accepted as evidence unless re-derived here. No tracked file was modified; no commit or push was made.",
+  "instructions_read": [
+   "AGENTS.md \u00a70-\u00a77",
+   "\u00a79",
+   "\u00a715",
+   "\u00a716",
+   "\u00a721",
+   "\u00a722"
+  ],
+  "review_inputs": {
+   "inventory": "court/freeze-b76/review/review-65-inventory.json",
+   "group_receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-sites.json",
+   "closure_ssh": "evidence/closure-ssh-b76c.json",
+   "closure_sshd": "evidence/closure-sshd-b76c.json",
+   "freeze": "court/freeze-b76/FREEZE-b76.json",
+   "precedent": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b76-review-v1l.json"
+  }
+ },
+ "candidate_identity": {
+  "source_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+  "head_at_review": "990b3e5f78bfb4bf4d70c9ec2d7a8124ea3d7c89",
+  "src_content_sha256": "66c1e9ae6fcc3292b697e06febc0a20289c6d897779bf79f7f6f8015cef3f532",
+  "src_content_hash_rederived": true,
+  "src_content_hash_rule": "sha256('openssl-rs/src-rs/v1\\0' + sorted relpath\\0bytes\\0); relpaths relative to the repository root; 878 .rs files",
+  "src_unchanged_between_S_and_review_head": true,
+  "src_unchanged_witness": "the re-derived digest equals the freeze value, so the tree read at HEAD 990b3e5f7 is S's src content",
+  "instrument_sha256": "74e3953b36233b1071b9b720e1a0551e866801fa41db5e31b5f878fdabd46161",
+  "image_libcrypto_sha256": "8f18871713a80cc58babcd2f539f273fe9a88807acfa15bb165fb4c8fc1f4aef",
+  "image_sha256_reverified": true,
+  "verification_note": "The 16,894,632-byte artifacts/phase2/install/lib/libcrypto.so.3 hashes to the recorded image value; the src-content digest was re-derived independently from the tree (878 files). The group receipt's own source identity (876900e47 / 8d746bc7...) is NOT the frozen candidate (E2)."
+ },
+ "method": {
+  "task1": "Extracted the 56 obligations whose discharge_receipt is openssh-v1i and took the 19 lexicographically lowest stable_id. This is batch 1 of 3; 37 remain unreviewed.",
+  "task2": "For each of the 19: read the body at the recorded span, quoted the unsafe operation and the SAFETY text, enumerated every caller (grep plus wrapper/macro follow), and answered the four questions with the caller code, not the receipt's claims.",
+  "task3": "Re-derived every recorded span hash (19/19) and checked each recorded line against the current item; compared the receipt's coordinates, caller citations, file blobs and source identity against S; re-checked the known b75 defects (stale identity, stale coordinates, covers_site=false yet discharged).",
+  "controls": "Source-level structural instruments plus mutation canaries over private copies. Compilation was not permitted: free -g reported 12 GiB available, so the \u00a76.1 cap is min(8, 12-16) < 2g floor. No runtime probe was run; see does_not_prove."
+ },
+ "obligations": [
+  {
+   "boundary": "OSSH-V1I-067",
+   "item": "itav_free",
+   "file": "src/cmp/cmp_asn.rs",
+   "line": 1706,
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "contract_location": "the contract exists only in openssl-v1i-sites.json boundary OSSH-V1I-067 (recorded_contract below) and in the two-line block SAFETY at the definition; there is NO `# Safety` fn contract at the interface",
+   "unsafe_operations_read": [
+    "cmp_asn.rs:1706-1708: `unsafe { ASN1_item_free(itav.cast(), cmp_itav_it()) };`",
+    "src/asn1/fre.rs item_embed_free: `if (*pval).is_null() { return }` establishes the NULL no-op"
+   ],
+   "safety_comment_quoted": "// SAFETY: `itav` is NULL or a live item value.",
+   "callers_enumerated": [
+    "cmp_asn.rs:2093,2161,2373,3116,3125,3135 - `unsafe { itav_free(itav) };` where `itav` is the local returned by `itav_new()` in the same function (CALLERS check); every site is a failure path of an in-crate constructor that still owns the item",
+    "cmp_asn.rs:1696 itav_new: `unsafe { ASN1_item_new(cmp_itav_it()) }.cast()` - the paired allocator and the same static item descriptor",
+    "no call site outside these six; name occurs only at definition + call sites"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. It is a private `unsafe fn`; its name appears only at the definition and at six in-crate call sites, none of which is a safe-Rust entry point.",
+    "b_all_unsafe_covered": "Yes for the operation: provenance, extent, type identity and single release are all fixed by `itav_new` + the same `cmp_itav_it()` descriptor. The contract is complete in the receipt but absent at the interface (E1).",
+    "c_hidden_obligation": "None found. NULL is a no-op in the item layer, and each caller either still owns the item or has just allocated it.",
+    "d_load_bearing_control": "Yes: CTRL-AUDIT-I CALLERS verifies every argument has its constructor in the same function; canaries K9 and K12 make SPAN19 and CALLERS fail."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "SPAN19",
+     "CALLERS"
+    ],
+    "canaries": [
+     "K9-break-span-hash",
+     "K12-break-stray-item-free",
+     "K1-pristine"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "CALLERS PASS (6 sites, allocation in-fn); SPAN19 PASS; K9 and K12 both FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "The precondition (live, exclusively owned item from the paired allocator) is established by construction at all six callers, not by documentation. Defects are presentational/evidential: no `# Safety` at the interface (E1), receipt coordinate 1697 instead of 1706 and stale file blob (E3/E2).",
+   "stable_id": "src/cmp/cmp_asn.rs::UNSAFE_FN_DEF::itav_free",
+   "id": "V1:src/cmp/cmp_asn.rs:1706:UNSAFE_FN_DEF",
+   "recorded_contract": "`p` is NULL or a live item of the declared type allocated by the paired `*_new` or by the item layer, exclusively owned by this call. The function releases it exactly once through the matching item descriptor; NULL is a no-op.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-067 (field `contract`)",
+   "receipt_boundary_line": 1697,
+   "span_sha256": "5b0450b583d888ad1fa516a1db92cfd5493f24343bb7f8ac4e98943f7a46dfd5",
+   "span_hash_rederived": true
+  },
+  {
+   "boundary": "OSSH-V1I-069",
+   "item": "rootcakeyupdate_free",
+   "file": "src/cmp/cmp_asn.rs",
+   "line": 1722,
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "contract_location": "the contract exists only in openssl-v1i-sites.json boundary OSSH-V1I-069 (recorded_contract below) and in the two-line block SAFETY at the definition; there is NO `# Safety` fn contract at the interface",
+   "unsafe_operations_read": [
+    "cmp_asn.rs:1722-1724: `unsafe { ASN1_item_free(p.cast(), cmp_rootcakeyupdate_it()) };`",
+    "NULL is accepted: item_embed_free returns before reading a non-primitive slot"
+   ],
+   "safety_comment_quoted": "// SAFETY: `p` is NULL or a live item value.",
+   "callers_enumerated": [
+    "cmp_asn.rs:2230,2240,2251 - failure arms after `rootcakeyupdate_new()` and a failed `X509_dup`, argument `upd` still owned here",
+    "cmp_asn.rs:2261 - `upd` may be NULL because the `new_with_new == NULL` path never allocates; NULL no-op makes this defined",
+    "CALLERS check: `rootcakeyupdate_new()` appears in the same function for every call site"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe fn`, four in-crate call sites, no safe entry point.",
+    "b_all_unsafe_covered": "Yes for the operation; the receipt contract covers the NULL and the single-release cases. Absent at the interface (E1).",
+    "c_hidden_obligation": "None found. The deliberate NULL pass at 2261 is within the contract and matches the authority's `OSSL_CMP_ROOTCAKEYUPDATE_free(NULL)`.",
+    "d_load_bearing_control": "Yes: CTRL-AUDIT-I CALLERS plus canary K12."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "SPAN19",
+     "CALLERS"
+    ],
+    "canaries": [
+     "K9-break-span-hash",
+     "K12-break-stray-item-free"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "CALLERS PASS (4 sites, allocation in-fn, NULL-tolerant); K9/K12 FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Precondition established in code at all four callers, with the NULL pass at 2261 explicitly within the recorded contract. Receipt coordinate 1709 instead of 1722 and stale file blob are evidence defects (E2/E3), not safety defects.",
+   "stable_id": "src/cmp/cmp_asn.rs::UNSAFE_FN_DEF::rootcakeyupdate_free",
+   "id": "V1:src/cmp/cmp_asn.rs:1722:UNSAFE_FN_DEF",
+   "recorded_contract": "`p` is NULL or a live item of the declared type allocated by the paired `*_new` or by the item layer, exclusively owned by this call. The function releases it exactly once through the matching item descriptor; NULL is a no-op.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-069 (field `contract`)",
+   "receipt_boundary_line": 1709,
+   "span_sha256": "ab84f3d5975c0d0dde5598293da723073efe4e6cba97b983cd2c52483fa236ed",
+   "span_hash_rederived": true
+  },
+  {
+   "boundary": "OSSH-V1I-049",
+   "item": "x509_name_dup_void",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": 350,
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "contract_location": "the contract exists only in openssl-v1i-sites.json boundary OSSH-V1I-049; the in-source comment is circular ('per this function's contract') and names no contract",
+   "unsafe_operations_read": [
+    "cmp_ctx.rs:350-352: `unsafe { X509_NAME_dup(p.cast()) }.cast()`"
+   ],
+   "safety_comment_quoted": "// SAFETY: per this function's contract.",
+   "callers_enumerated": [
+    "cmp_ctx.rs:736-771 - the six `ctx_set1_dup!` invocations pass this thunk as `$dup`",
+    "macro body cmp_ctx.rs:329-337: `unsafe { $dup(val) }` fails closed when `val` is NULL; the caller is the public setter whose `# Safety` is '`ctx` is NULL or live; `val` is NULL or live'"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`; the only non-definition occurrences are macro arguments (CALLERS check).",
+    "b_all_unsafe_covered": "Yes for the operation: `p` is the caller's live X509_NAME and the duplicate is newly allocated and owned by the context. The interface contract is missing (E1/F3).",
+    "c_hidden_obligation": "None found; the sibling `X509_name_dup` precondition is the one the public setter already documents.",
+    "d_load_bearing_control": "Yes: CALLERS (all uses are fn-pointer arguments) and FAMILY; K11/K12 fire."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "SPAN19",
+     "CALLERS"
+    ],
+    "canaries": [
+     "K11-break-direct-thunk-call",
+     "K12-break-stray-item-free"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "CALLERS PASS; SPAN19 PASS; K11/K12 FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Ownership is established by the macro's exclusive-storage pattern and the public setter's `# Safety`; the circular SAFETY comment is an E1 defect, not a caller-establishment gap.",
+   "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::x509_name_dup_void",
+   "id": "V1:src/cmp/cmp_ctx.rs:350:UNSAFE_FN_DEF",
+   "recorded_contract": "`p` is NULL or a live object of the thunk's declared C type, borrowed for the duration of the call. On success the function returns a newly allocated deep copy that the caller exclusively owns; on failure it returns NULL. It neither consumes nor modifies `p`.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-049 (field `contract`)",
+   "receipt_boundary_line": 350,
+   "span_sha256": "13028da9d8492f824d5761e48a7c2f0c44392f914ac4cd0227e8d6bec0048488",
+   "span_hash_rederived": true
+  },
+  {
+   "boundary": "OSSH-V1I-050",
+   "item": "x509_name_free_void",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": 354,
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "contract_location": "the contract exists only in openssl-v1i-sites.json boundary OSSH-V1I-050; the in-source comment is circular ('per this function's contract') and names no contract",
+   "unsafe_operations_read": [
+    "cmp_ctx.rs:354-356: `unsafe { X509_NAME_free(p.cast()) };`"
+   ],
+   "safety_comment_quoted": "// SAFETY: per this function's contract.",
+   "callers_enumerated": [
+    "cmp_ctx.rs:736-771 - the same macro passes this thunk as `$free`",
+    "macro body cmp_ctx.rs:338-342: `$free((*ctx).$field.cast())` where the field is NULL (fresh zeroed context) or the previous duplicate, exclusively owned by the context",
+    "cmp_ctx.rs:470-505 destroy_body releases the same fields exactly once"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`, used only as the macro's `$free` argument.",
+    "b_all_unsafe_covered": "Yes: ownership is transferred by the macro's replacement/destruction of an exclusively owned field. Interface contract missing (E1).",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Yes: CALLERS; K11 (a direct call on a borrowed pointer) and K12 fire."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "SPAN19",
+     "CALLERS"
+    ],
+    "canaries": [
+     "K11-break-direct-thunk-call",
+     "K1-pristine"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "CALLERS PASS; K11 FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "The macro is the only user and it always passes a field this context owns; release happens exactly once because the field is overwritten or destroyed.",
+   "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::x509_name_free_void",
+   "id": "V1:src/cmp/cmp_ctx.rs:354:UNSAFE_FN_DEF",
+   "recorded_contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-050 (field `contract`)",
+   "receipt_boundary_line": 354,
+   "span_sha256": "fbb8bfad2d75d2799d95893538c24c5ffa1359fd25eef77ae77f91a81cca6ef3",
+   "span_hash_rederived": true
+  },
+  {
+   "boundary": "OSSH-V1I-051",
+   "item": "asn1_integer_dup_void",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": 358,
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "contract_location": "the contract exists only in openssl-v1i-sites.json boundary OSSH-V1I-051; the in-source comment is circular ('per this function's contract') and names no contract",
+   "unsafe_operations_read": [
+    "cmp_ctx.rs:358-360: `unsafe { ASN1_item_dup(ASN1_INTEGER_it(), p) }.cast()`"
+   ],
+   "safety_comment_quoted": "// SAFETY: per this function's contract.",
+   "callers_enumerated": [
+    "cmp_ctx.rs:736-771 - the six `ctx_set1_dup!` invocations pass this thunk as `$dup`",
+    "macro body cmp_ctx.rs:329-337: `unsafe { $dup(val) }` fails closed when `val` is NULL; the caller is the public setter whose `# Safety` is '`ctx` is NULL or live; `val` is NULL or live'"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private thunk, macro-only use.",
+    "b_all_unsafe_covered": "Yes for the operation; `p` is the caller's live ASN1_INTEGER and the copy is owned by the context.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Yes: CALLERS; K11/K12 fire."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "SPAN19",
+     "CALLERS"
+    ],
+    "canaries": [
+     "K11-break-direct-thunk-call",
+     "K12-break-stray-item-free"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "CALLERS PASS; K11/K12 FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Same pattern as 049 with the same static item descriptor used for dup and free.",
+   "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::asn1_integer_dup_void",
+   "id": "V1:src/cmp/cmp_ctx.rs:358:UNSAFE_FN_DEF",
+   "recorded_contract": "`p` is NULL or a live object of the thunk's declared C type, borrowed for the duration of the call. On success the function returns a newly allocated deep copy that the caller exclusively owns; on failure it returns NULL. It neither consumes nor modifies `p`.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-051 (field `contract`)",
+   "receipt_boundary_line": 358,
+   "span_sha256": "879ea7d76ffb4d0fd368a9c5a3056ed4184537401d6d6511515d16d0e22ea8df",
+   "span_hash_rederived": true
+  },
+  {
+   "boundary": "OSSH-V1I-052",
+   "item": "asn1_integer_free_void",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": 362,
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "contract_location": "the contract exists only in openssl-v1i-sites.json boundary OSSH-V1I-052; the in-source comment is circular ('per this function's contract') and names no contract",
+   "unsafe_operations_read": [
+    "cmp_ctx.rs:362-364: `unsafe { ASN1_INTEGER_free(p.cast()) };`"
+   ],
+   "safety_comment_quoted": "// SAFETY: per this function's contract.",
+   "callers_enumerated": [
+    "cmp_ctx.rs:736-771 - the same macro passes this thunk as `$free`",
+    "macro body cmp_ctx.rs:338-342: `$free((*ctx).$field.cast())` where the field is NULL (fresh zeroed context) or the previous duplicate, exclusively owned by the context",
+    "cmp_ctx.rs:470-505 destroy_body releases the same fields exactly once"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private thunk, macro-only use.",
+    "b_all_unsafe_covered": "Yes; single owner via the context field.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Yes: CALLERS; K11 fires."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "SPAN19",
+     "CALLERS"
+    ],
+    "canaries": [
+     "K11-break-direct-thunk-call"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "CALLERS PASS; K11 FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Ownership established by the macro; NULL field is accepted by the item free.",
+   "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::asn1_integer_free_void",
+   "id": "V1:src/cmp/cmp_ctx.rs:362:UNSAFE_FN_DEF",
+   "recorded_contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-052 (field `contract`)",
+   "receipt_boundary_line": 362,
+   "span_sha256": "09ce335f71b364fa86cc7d60748551ff5226e2f5d2b5bb9b6a9efcfb1f7e0d68",
+   "span_hash_rederived": true
+  },
+  {
+   "boundary": "OSSH-V1I-053",
+   "item": "x509_req_dup_void",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": 366,
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "contract_location": "the contract exists only in openssl-v1i-sites.json boundary OSSH-V1I-053; the in-source comment is circular ('per this function's contract') and names no contract",
+   "unsafe_operations_read": [
+    "cmp_ctx.rs:366-368: `unsafe { X509_REQ_dup(p.cast()) }.cast()`"
+   ],
+   "safety_comment_quoted": "// SAFETY: per this function's contract.",
+   "callers_enumerated": [
+    "cmp_ctx.rs:736-771 - the six `ctx_set1_dup!` invocations pass this thunk as `$dup`",
+    "macro body cmp_ctx.rs:329-337: `unsafe { $dup(val) }` fails closed when `val` is NULL; the caller is the public setter whose `# Safety` is '`ctx` is NULL or live; `val` is NULL or live'"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private thunk, macro-only use.",
+    "b_all_unsafe_covered": "Yes; deep copy owned by the context.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Yes: CALLERS; K11/K12 fire."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "SPAN19",
+     "CALLERS"
+    ],
+    "canaries": [
+     "K11-break-direct-thunk-call",
+     "K12-break-stray-item-free"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "CALLERS PASS; K11/K12 FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Same established pattern; the paired free uses the same X509_REQ item.",
+   "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::x509_req_dup_void",
+   "id": "V1:src/cmp/cmp_ctx.rs:366:UNSAFE_FN_DEF",
+   "recorded_contract": "`p` is NULL or a live object of the thunk's declared C type, borrowed for the duration of the call. On success the function returns a newly allocated deep copy that the caller exclusively owns; on failure it returns NULL. It neither consumes nor modifies `p`.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-053 (field `contract`)",
+   "receipt_boundary_line": 366,
+   "span_sha256": "ef04cda1695dd610a3eddd0ac37dec5ce3367663a427207648483393923e6cce",
+   "span_hash_rederived": true
+  },
+  {
+   "boundary": "OSSH-V1I-054",
+   "item": "x509_req_free_void",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": 370,
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "contract_location": "the contract exists only in openssl-v1i-sites.json boundary OSSH-V1I-054; the in-source comment is circular ('per this function's contract') and names no contract",
+   "unsafe_operations_read": [
+    "cmp_ctx.rs:370-372: `unsafe { X509_REQ_free(p.cast()) };`"
+   ],
+   "safety_comment_quoted": "// SAFETY: per this function's contract.",
+   "callers_enumerated": [
+    "cmp_ctx.rs:736-771 - the same macro passes this thunk as `$free`",
+    "macro body cmp_ctx.rs:338-342: `$free((*ctx).$field.cast())` where the field is NULL (fresh zeroed context) or the previous duplicate, exclusively owned by the context",
+    "cmp_ctx.rs:470-505 destroy_body releases the same fields exactly once"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private thunk, macro-only use.",
+    "b_all_unsafe_covered": "Yes; single owner via the context field.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Yes: CALLERS; K11 fires."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "SPAN19",
+     "CALLERS"
+    ],
+    "canaries": [
+     "K11-break-direct-thunk-call"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "CALLERS PASS; K11 FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Ownership established by the macro and by destroy_body's single release.",
+   "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::x509_req_free_void",
+   "id": "V1:src/cmp/cmp_ctx.rs:370:UNSAFE_FN_DEF",
+   "recorded_contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-054 (field `contract`)",
+   "receipt_boundary_line": 370,
+   "span_sha256": "31048346d3df8aa9a52bc4b18fd813722a65de998b0fb6819f7858fd82c8ecd1",
+   "span_hash_rederived": true
+  },
+  {
+   "boundary": "OSSH-V1I-059",
+   "item": "general_name_free_void",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": 376,
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "contract_location": "the contract exists only in openssl-v1i-sites.json boundary OSSH-V1I-059; the in-source comment is circular ('per this function's contract') and names no contract",
+   "unsafe_operations_read": [
+    "cmp_ctx.rs:376-378: `unsafe { GENERAL_NAME_free(p.cast()) }`"
+   ],
+   "safety_comment_quoted": "// SAFETY: per this function's contract.",
+   "callers_enumerated": [
+    "cmp_ctx.rs:1235-1247 OSSL_CMP_CTX_push1_subjectAltName: `GENERAL_NAME_dup(name.cast())` then `OPENSSL_sk_push((*ctx).subject_alt_names, dup.cast())`",
+    "the SAN stack is created at cmp_ctx.rs:1233 and owned by the context",
+    "cmp_ctx.rs:495-503 destroy_body - `OPENSSL_sk_pop_free(field, Some(thunk))`; the context exclusively owns the stack and the stack owns each element",
+    "no other use: CALLERS reports this thunk only as a `Some(<thunk>)` fn-pointer argument"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`, reached only as a pop_free freefunc.",
+    "b_all_unsafe_covered": "Yes for the operation: each element is owned by a stack the context owns; release happens once because the stack is popped and freed. Interface contract missing (E1).",
+    "c_hidden_obligation": "None in-crate. A C caller that hands over a stack it still owns through a set0 setter would violate that setter's `# Safety`; that external obligation is retained, not discharged.",
+    "d_load_bearing_control": "Yes: CALLERS + FAMILY; K11 fires."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "SPAN19",
+     "CALLERS",
+     "FAMILY"
+    ],
+    "canaries": [
+     "K7-real-call-site-witness",
+     "K11-break-direct-thunk-call"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "CALLERS PASS; K11 FIRED; FAMILY FAILED on the receipt witness for this row (F3), and K7 repaired it"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "The ownership chain is established in code (writer -> stack -> pop_free), which I verified directly. The receipt's witness for this row is nevertheless WRONG: it cites ctx_set1_dup!, which never takes this thunk (\u00a722 generic-class defect, F3). Evidence defect, not a safety defect.",
+   "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::general_name_free_void",
+   "id": "V1:src/cmp/cmp_ctx.rs:376:UNSAFE_FN_DEF",
+   "recorded_contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-059 (field `contract`)",
+   "receipt_boundary_line": 392,
+   "span_sha256": "f2c430ef6d2510ea8fb9bb46892deea51afcac75eefbe5a03d3883541845911b",
+   "span_hash_rederived": true
+  },
+  {
+   "boundary": "OSSH-V1I-060",
+   "item": "x509_extension_free_void",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": 380,
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "contract_location": "the contract exists only in openssl-v1i-sites.json boundary OSSH-V1I-060; the in-source comment is circular ('per this function's contract') and names no contract",
+   "unsafe_operations_read": [
+    "cmp_ctx.rs:380-382: `unsafe { X509_EXTENSION_free(p.cast()) }`"
+   ],
+   "safety_comment_quoted": "// SAFETY: per this function's contract.",
+   "callers_enumerated": [
+    "cmp_ctx.rs:1183-1184 OSSL_CMP_CTX_set0_reqExtensions: `OPENSSL_sk_pop_free((*ctx).req_extensions, ...)` then `(*ctx).req_extensions = exts` - the setter's `# Safety` is 'exts is NULL or transfers ownership'",
+    "cmp_ctx.rs:1201 uses the same field, so the stack identity is the context's",
+    "cmp_ctx.rs:495-503 destroy_body - `OPENSSL_sk_pop_free(field, Some(thunk))`; the context exclusively owns the stack and the stack owns each element",
+    "no other use: CALLERS reports this thunk only as a `Some(<thunk>)` fn-pointer argument"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`, reached only as a pop_free freefunc.",
+    "b_all_unsafe_covered": "Yes for the operation: each element is owned by a stack the context owns; release happens once because the stack is popped and freed. Interface contract missing (E1).",
+    "c_hidden_obligation": "None in-crate. A C caller that hands over a stack it still owns through a set0 setter would violate that setter's `# Safety`; that external obligation is retained, not discharged.",
+    "d_load_bearing_control": "Yes: CALLERS + FAMILY; K11 fires."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "SPAN19",
+     "CALLERS",
+     "FAMILY"
+    ],
+    "canaries": [
+     "K7-real-call-site-witness",
+     "K11-break-direct-thunk-call"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "CALLERS PASS; K11 FIRED; FAMILY FAILED on the receipt witness for this row (F3), and K7 repaired it"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "The ownership chain is established in code (writer -> stack -> pop_free), which I verified directly. The receipt's witness for this row is nevertheless WRONG: it cites ctx_set1_dup!, which never takes this thunk (\u00a722 generic-class defect, F3). Evidence defect, not a safety defect.",
+   "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::x509_extension_free_void",
+   "id": "V1:src/cmp/cmp_ctx.rs:380:UNSAFE_FN_DEF",
+   "recorded_contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-060 (field `contract`)",
+   "receipt_boundary_line": 396,
+   "span_sha256": "c55cd1b80bb171807ebc723f6a3a8b0faab9a0c8a24c3400c8b5e89e27bfd8e8",
+   "span_hash_rederived": true
+  },
+  {
+   "boundary": "OSSH-V1I-061",
+   "item": "utf8_string_free_void",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": 384,
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "contract_location": "the contract exists only in openssl-v1i-sites.json boundary OSSH-V1I-061; the in-source comment is circular ('per this function's contract') and names no contract",
+   "unsafe_operations_read": [
+    "cmp_ctx.rs:384-386: `unsafe { ASN1_UTF8STRING_free(p.cast()) }`"
+   ],
+   "safety_comment_quoted": "// SAFETY: per this function's contract.",
+   "callers_enumerated": [
+    "cmp_ctx.rs:811-812 OSSL_CMP_CTX_set0_statusString: pop_free of the incumbent then `(*ctx).status_string = val.cast()` with the setter's transfer-of-ownership `# Safety`",
+    "cmp_ctx.rs:503 destroy_body releases the same field once",
+    "cmp_ctx.rs:495-503 destroy_body - `OPENSSL_sk_pop_free(field, Some(thunk))`; the context exclusively owns the stack and the stack owns each element",
+    "no other use: CALLERS reports this thunk only as a `Some(<thunk>)` fn-pointer argument"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`, reached only as a pop_free freefunc.",
+    "b_all_unsafe_covered": "Yes for the operation: each element is owned by a stack the context owns; release happens once because the stack is popped and freed. Interface contract missing (E1).",
+    "c_hidden_obligation": "None in-crate. A C caller that hands over a stack it still owns through a set0 setter would violate that setter's `# Safety`; that external obligation is retained, not discharged.",
+    "d_load_bearing_control": "Yes: CALLERS + FAMILY; K11 fires."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "SPAN19",
+     "CALLERS",
+     "FAMILY"
+    ],
+    "canaries": [
+     "K7-real-call-site-witness",
+     "K11-break-direct-thunk-call"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "CALLERS PASS; K11 FIRED; FAMILY FAILED on the receipt witness for this row (F3), and K7 repaired it"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "The ownership chain is established in code (writer -> stack -> pop_free), which I verified directly. The receipt's witness for this row is nevertheless WRONG: it cites ctx_set1_dup!, which never takes this thunk (\u00a722 generic-class defect, F3). Evidence defect, not a safety defect.",
+   "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::utf8_string_free_void",
+   "id": "V1:src/cmp/cmp_ctx.rs:384:UNSAFE_FN_DEF",
+   "recorded_contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-061 (field `contract`)",
+   "receipt_boundary_line": 400,
+   "span_sha256": "78aab3c63127b04993c0447596fe2b4167e5e8b683967ff17420b540718870ba",
+   "span_hash_rederived": true
+  },
+  {
+   "boundary": "OSSH-V1I-063",
+   "item": "itav_free_void",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": 388,
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "contract_location": "the contract exists only in openssl-v1i-sites.json boundary OSSH-V1I-063; the in-source comment is circular ('per this function's contract') and names no contract",
+   "unsafe_operations_read": [
+    "cmp_ctx.rs:388-390: `unsafe { OSSL_CMP_ITAV_free(p.cast()) }`"
+   ],
+   "safety_comment_quoted": "// SAFETY: per this function's contract.",
+   "callers_enumerated": [
+    "cmp_ctx.rs:403 itavs_free: `OPENSSL_sk_pop_free(sk, Some(itav_free_void))`, reached from destroy_body and from OSSL_CMP_CTX_reset_geninfo_ITAVs (cmp_ctx.rs:1101)",
+    "elements are pushed only by OSSL_CMP_ITAV_push0_stack_item (cmp_ctx.rs:1122-1126) which takes ownership",
+    "cmp_ctx.rs:495-503 destroy_body - `OPENSSL_sk_pop_free(field, Some(thunk))`; the context exclusively owns the stack and the stack owns each element",
+    "no other use: CALLERS reports this thunk only as a `Some(<thunk>)` fn-pointer argument"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`, reached only as a pop_free freefunc.",
+    "b_all_unsafe_covered": "Yes for the operation: each element is owned by a stack the context owns; release happens once because the stack is popped and freed. Interface contract missing (E1).",
+    "c_hidden_obligation": "None in-crate. A C caller that hands over a stack it still owns through a set0 setter would violate that setter's `# Safety`; that external obligation is retained, not discharged.",
+    "d_load_bearing_control": "Yes: CALLERS + FAMILY; K11 fires."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "SPAN19",
+     "CALLERS",
+     "FAMILY"
+    ],
+    "canaries": [
+     "K7-real-call-site-witness",
+     "K11-break-direct-thunk-call"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "CALLERS PASS; K11 FIRED; FAMILY FAILED on the receipt witness for this row (F3), and K7 repaired it"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "The ownership chain is established in code (writer -> stack -> pop_free), which I verified directly. The receipt's witness for this row is nevertheless WRONG: it cites ctx_set1_dup!, which never takes this thunk (\u00a722 generic-class defect, F3). Evidence defect, not a safety defect.",
+   "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::itav_free_void",
+   "id": "V1:src/cmp/cmp_ctx.rs:388:UNSAFE_FN_DEF",
+   "recorded_contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-063 (field `contract`)",
+   "receipt_boundary_line": 408,
+   "span_sha256": "716df8e4158a82f709333ef8f8e10d11b49a3640c3b50cb83e87c063093a024e",
+   "span_hash_rederived": true
+  },
+  {
+   "boundary": "OSSH-V1I-064",
+   "item": "policy_free_void",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": 392,
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "contract_location": "the contract exists only in openssl-v1i-sites.json boundary OSSH-V1I-064; the in-source comment is circular ('per this function's contract') and names no contract",
+   "unsafe_operations_read": [
+    "cmp_ctx.rs:392-394: `unsafe { POLICYINFO_free(p.cast()) }`"
+   ],
+   "safety_comment_quoted": "// SAFETY: per this function's contract.",
+   "callers_enumerated": [
+    "cmp_ctx.rs:497 destroy_body: `OPENSSL_sk_pop_free((*ctx).policies, Some(policy_free_void))` - the ONLY use",
+    "cmp_ctx.rs:1145-1154 OSSL_CMP_CTX_push0_policy: stack created here and `OPENSSL_sk_push((*ctx).policies, pinfo.cast())` with the setter's 'pinfo ... transfers ownership' `# Safety`",
+    "cmp_ctx.rs:495-503 destroy_body - `OPENSSL_sk_pop_free(field, Some(thunk))`; the context exclusively owns the stack and the stack owns each element",
+    "no other use: CALLERS reports this thunk only as a `Some(<thunk>)` fn-pointer argument"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`, reached only as a pop_free freefunc.",
+    "b_all_unsafe_covered": "Yes for the operation: each element is owned by a stack the context owns; release happens once because the stack is popped and freed. Interface contract missing (E1).",
+    "c_hidden_obligation": "None in-crate. A C caller that hands over a stack it still owns through a set0 setter would violate that setter's `# Safety`; that external obligation is retained, not discharged.",
+    "d_load_bearing_control": "Yes: CALLERS + FAMILY; K11 fires."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "SPAN19",
+     "CALLERS",
+     "FAMILY"
+    ],
+    "canaries": [
+     "K7-real-call-site-witness",
+     "K11-break-direct-thunk-call"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "CALLERS PASS; K11 FIRED; FAMILY FAILED on the receipt witness for this row (F3), and K7 repaired it"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "The ownership chain is established in code (writer -> stack -> pop_free), which I verified directly. The receipt's witness for this row is nevertheless WRONG: it cites ctx_set1_dup!, which never takes this thunk (\u00a722 generic-class defect, F3). Evidence defect, not a safety defect.",
+   "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::policy_free_void",
+   "id": "V1:src/cmp/cmp_ctx.rs:392:UNSAFE_FN_DEF",
+   "recorded_contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-064 (field `contract`)",
+   "receipt_boundary_line": 412,
+   "span_sha256": "462670b49e5deac6bb89a6bde03865bb4962f69860b469eda9889301e6e74b42",
+   "span_hash_rederived": true
+  },
+  {
+   "boundary": "OSSH-V1I-065",
+   "item": "cmp_ctx_set_md",
+   "file": "src/cmp/cmp_ctx.rs",
+   "line": 407,
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "contract_location": "the contract exists only in openssl-v1i-sites.json boundary OSSH-V1I-065; the function has no `# Safety` and its block comments cover only the individual reads",
+   "unsafe_operations_read": [
+    "cmp_ctx.rs:407-421: `EVP_MD_fetch((*ctx).libctx, OBJ_nid2sn(nid), (*ctx).propq.cast_const())`",
+    "cmp_ctx.rs:416-419: `EVP_MD_free(*pmd); *pmd = md;`",
+    "cmp_ctx.rs:410-414: on a NULL fetch, `raise_ctx(136); return 0;` leaves `*pmd` untouched"
+   ],
+   "safety_comment_quoted": "// SAFETY: `ctx` is live; the object table answers a name for a known NID. (and at :415 `pmd` is a live out-pointer)",
+   "callers_enumerated": [
+    "cmp_ctx.rs:558,567 OSSL_CMP_CTX_new: `ptr::addr_of_mut!((*p).pbm_owf)` / `((*p).digest)` on a zeroed context, so the slot holds NULL",
+    "cmp_ctx.rs:1568,1573 OSSL_CMP_CTX_set_option: `ptr::addr_of_mut!((*ctx).digest)` / `pbm_owf`, slots that only this function writes and destroy_body releases",
+    "callers are exactly four (CALLERS check); the receipt cites 578/587/1588/1593, stale by 20 lines"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe fn`; four in-crate call sites.",
+    "b_all_unsafe_covered": "Yes for the unsafe operations. Caveat: the contract's clause 'nid names a digest resolvable' is stronger than the callers establish, because :1568/:1573 forward an arbitrary public `int val`. That does not reach UB: OBJ_nid2sn answers NULL and inner_evp_generic_fetch treats a NULL name as name_id 0 (src/evp/fetch.rs:963), so the result is a clean failure.",
+    "c_hidden_obligation": "None found. The incumbent-release/new-value ordering is single-owner and the failure arm is failure-atomic for `*pmd`.",
+    "d_load_bearing_control": "Yes: CALLERS (all four sites pass an owned out-pointer) + COORD; K6 rebinds the stale citation and K12 breaks CALLERS."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "SPAN19",
+     "CALLERS",
+     "COORD19"
+    ],
+    "canaries": [
+     "K6-rebind-coordinates",
+     "K12-break-stray-item-free"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "CALLERS PASS (4 sites); K6 FIRED; K12 FIRED"
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Both preconditions are established in code: a zeroed/owned field slot, and a NULL-safe resolution path. The overly strong 'resolvable' clause and the 20-line-stale caller citations are contract/precision defects (E3, F4), not soundness gaps.",
+   "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::cmp_ctx_set_md",
+   "id": "V1:src/cmp/cmp_ctx.rs:407:UNSAFE_FN_DEF",
+   "recorded_contract": "`ctx` is a live `OSSL_CMP_CTX`; `pmd` is a live writable slot holding NULL or an `EVP_MD` owned by `ctx`; `nid` names a digest resolvable in `ctx->libctx` under `ctx->propq`. On success `*pmd` is a newly fetched owned `EVP_MD`, the incumbent, if any, has been released, and 1 is returned; on failure `*pmd` is unchanged and 0 is returned.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-065 (field `contract`)",
+   "receipt_boundary_line": 427,
+   "span_sha256": "cd466dc13eee90d9e36e0601ccf6308e32c096b476d0982caf893b37c6f37ef8",
+   "span_hash_rederived": true
+  },
+  {
+   "boundary": "OSSH-V1I-002",
+   "item": "copyctx",
+   "file": "src/provider/digest.rs",
+   "line": 658,
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "contract_location": "the contract exists in openssh-v1i-sites.json boundary OSSH-V1I-002 (contract field), but the five hand-written `copyctx` definitions carry only a block SAFETY comment; the sibling macro copyctx (src/provider/digest.rs:447-449) does carry `# Safety`",
+   "unsafe_operations_read": [
+    "src/provider/digest.rs:658-670: `ptr::copy(inctx.cast::<u8>(), outctx.cast::<u8>(), core::mem::size_of::<ShaCtx>())`",
+    "dispatcher: src/evp/digest.rs:3042 (self-copy arm) and :3079 (same-method arm) - both `unsafe { copyctx((*out).algctx, (*in_).algctx) }`, neither tests for NULL",
+    "src/evp/digest.rs:3131 `if !in_algctx.is_null()` - the re-acquiring arm of the SAME function proves a NULL algctx is a state the crate expects to tolerate"
+   ],
+   "safety_comment_quoted": "// SAFETY: both regions are valid for `size_of::<ShaCtx>()` bytes and may be the same block: the provider self-copy arm calls `copyctx(algctx, algctx)`.",
+   "callers_enumerated": [
+    "src/evp/digest.rs:3042 and :3079 - the only two call sites; both pass raw `algctx` fields",
+    "registration: src/provider/digest.rs `function: copyctx as *mut c_void` in the digests dispatch table (5 rows)",
+    "definition: no caller other than the two dispatcher sites; the type comes from this row's newctx/dupctx",
+    "test: provider::digest::sha1::tests::copyctx_tolerates_a_self_copy covers ONLY the self-copy byte identity"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Module-private `unsafe extern \"C\" fn`; no safe-Rust call exists. (A `pub unsafe extern \"C\"` caller can still reach it through EVP_MD_CTX_copy_ex, which is the C ABI.)",
+    "b_all_unsafe_covered": "NO. The unsafe operation needs both pointers non-NULL and live; the contract exists only as a block comment (no `# Safety`), and the in-crate dispatcher does not establish non-NULL. The `# Safety` text exists in the sibling macro at :447-449 and names the same requirement, which shows the omission is local.",
+    "c_hidden_obligation": "YES. `EVP_DigestInit_ex` sets `(*ctx).digest = type_` at src/evp/digest.rs:2311 and only then calls the fallible `newctx` (:2328); when newctx answers NULL the failure return at :2332 leaves digest!=NULL with algctx==NULL (:2335 sets algctx only on success). EVP_MD_CTX_copy_ex classifies on `in->digest != NULL` (:2981) and so runs the copyctx arm, passing that NULL at :3042/:3079. A legitimate C sequence (failed init, then copy of/onto a same-method context) therefore calls `ptr::copy` of size_of::<ShaCtx>() >= 1 through NULL. The authority has the same unchecked call, but AGENTS.md \u00a717 forbids reproducing authority UB without recording it, and no copyctx entry exists in docs/SECURITY_DIVERGENCE_POLICY.md.",
+    "d_load_bearing_control": "NO. Only the per-row self-copy test exists; nothing fails if the NULL guard is lost. I built CTRL-AUDIT-I NULLCTX/NULREACH/REACQ and canaries K3/K4/K5 for it."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "NULLCTX",
+     "NULREACH",
+     "REACQ",
+     "MACROCTX"
+    ],
+    "canaries": [
+     "K3-null-algctx-guard",
+     "K4-break-reachability",
+     "K5-break-reacq-guard",
+     "K2-copyctx-safety-doc"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "NULLCTX FAIL (sites 3042/3079 unguarded), NULREACH PASS, REACQ PASS, MACROCTX FAIL (5/5 missing `# Safety`); K2, K3, K4, K5 all FIRED"
+   },
+   "verdict": "REJECT",
+   "verdict_reason": "The recorded discharge (SAFETY_DISCHARGED) is not established. (1) The unsafe op has no `# Safety` fn contract at the definition; the block comment alone is a documentation-only discharge. (2) The precondition 'both regions are live' is not established by the caller: 3042 forwards `algctx` without a NULL test while :3131 proves NULL is expected. (3) The failed-init state at :2311/:2328/:2332 is a hidden obligation. Discharge requires: add `# Safety` to all five hand-written copyctx (reuse the :447-449 text, including non-NULL); make the two copyctx arms refuse or tolerate a NULL algctx exactly as :3131 does (a documented \u00a717 divergence from the authority's fault); and a control that fails if a copyctx call site loses its guard. Self-copy arm.",
+   "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::copyctx",
+   "id": "V1:src/provider/digest.rs:658:UNSAFE_FN_DEF",
+   "recorded_contract": "`outctx` and `inctx` are each live regions of at least `size_of::<ShaCtx>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<ShaCtx>()` bytes and reads or writes nothing outside those regions.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-002 (field `contract`)",
+   "receipt_boundary_line": 658,
+   "span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+   "span_hash_rederived": true,
+   "operation_qualified": "sha1::copyctx"
+  },
+  {
+   "boundary": "OSSH-V1I-008",
+   "item": "copyctx",
+   "file": "src/provider/digest.rs",
+   "line": 970,
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "contract_location": "the contract exists in openssh-v1i-sites.json boundary OSSH-V1I-008 (contract field), but the five hand-written `copyctx` definitions carry only a block SAFETY comment; the sibling macro copyctx (src/provider/digest.rs:447-449) does carry `# Safety`",
+   "unsafe_operations_read": [
+    "src/provider/digest.rs:970-982: `ptr::copy(inctx.cast::<u8>(), outctx.cast::<u8>(), core::mem::size_of::<NullMdCtx>())`",
+    "dispatcher: src/evp/digest.rs:3042 (self-copy arm) and :3079 (same-method arm) - both `unsafe { copyctx((*out).algctx, (*in_).algctx) }`, neither tests for NULL",
+    "src/evp/digest.rs:3131 `if !in_algctx.is_null()` - the re-acquiring arm of the SAME function proves a NULL algctx is a state the crate expects to tolerate"
+   ],
+   "safety_comment_quoted": "// SAFETY: both regions are valid for `size_of::<NullMdCtx>()` bytes and may be the same block: the provider self-copy arm calls `copyctx(algctx, algctx)`.",
+   "callers_enumerated": [
+    "src/evp/digest.rs:3042 and :3079 - the only two call sites; both pass raw `algctx` fields",
+    "registration: src/provider/digest.rs `function: copyctx as *mut c_void` in the digests dispatch table (5 rows)",
+    "definition: no caller other than the two dispatcher sites; the type comes from this row's newctx/dupctx",
+    "test: provider::digest::sha1::tests::copyctx_tolerates_a_self_copy covers ONLY the self-copy byte identity"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Module-private `unsafe extern \"C\" fn`; no safe-Rust call exists. (A `pub unsafe extern \"C\"` caller can still reach it through EVP_MD_CTX_copy_ex, which is the C ABI.)",
+    "b_all_unsafe_covered": "NO. The unsafe operation needs both pointers non-NULL and live; the contract exists only as a block comment (no `# Safety`), and the in-crate dispatcher does not establish non-NULL. The `# Safety` text exists in the sibling macro at :447-449 and names the same requirement, which shows the omission is local.",
+    "c_hidden_obligation": "YES. `EVP_DigestInit_ex` sets `(*ctx).digest = type_` at src/evp/digest.rs:2311 and only then calls the fallible `newctx` (:2328); when newctx answers NULL the failure return at :2332 leaves digest!=NULL with algctx==NULL (:2335 sets algctx only on success). EVP_MD_CTX_copy_ex classifies on `in->digest != NULL` (:2981) and so runs the copyctx arm, passing that NULL at :3042/:3079. A legitimate C sequence (failed init, then copy of/onto a same-method context) therefore calls `ptr::copy` of size_of::<NullMdCtx>() >= 1 through NULL. The authority has the same unchecked call, but AGENTS.md \u00a717 forbids reproducing authority UB without recording it, and no copyctx entry exists in docs/SECURITY_DIVERGENCE_POLICY.md.",
+    "d_load_bearing_control": "NO. Only the per-row self-copy test exists; nothing fails if the NULL guard is lost. I built CTRL-AUDIT-I NULLCTX/NULREACH/REACQ and canaries K3/K4/K5 for it."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "NULLCTX",
+     "NULREACH",
+     "REACQ",
+     "MACROCTX"
+    ],
+    "canaries": [
+     "K3-null-algctx-guard",
+     "K4-break-reachability",
+     "K5-break-reacq-guard",
+     "K2-copyctx-safety-doc"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "NULLCTX FAIL (sites 3042/3079 unguarded), NULREACH PASS, REACQ PASS, MACROCTX FAIL (5/5 missing `# Safety`); K2, K3, K4, K5 all FIRED"
+   },
+   "verdict": "REJECT",
+   "verdict_reason": "The recorded discharge (SAFETY_DISCHARGED) is not established. (1) The unsafe op has no `# Safety` fn contract at the definition; the block comment alone is a documentation-only discharge. (2) The precondition 'both regions are live' is not established by the caller: 3042 forwards `algctx` without a NULL test while :3131 proves NULL is expected. (3) The failed-init state at :2311/:2328/:2332 is a hidden obligation. Discharge requires: add `# Safety` to all five hand-written copyctx (reuse the :447-449 text, including non-NULL); make the two copyctx arms refuse or tolerate a NULL algctx exactly as :3131 does (a documented \u00a717 divergence from the authority's fault); and a control that fails if a copyctx call site loses its guard. Self-copy arm.",
+   "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::copyctx",
+   "id": "V1:src/provider/digest.rs:970:UNSAFE_FN_DEF",
+   "recorded_contract": "`outctx` and `inctx` are each live regions of at least `size_of::<NullMdCtx>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<NullMdCtx>()` bytes and reads or writes nothing outside those regions.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-008 (field `contract`)",
+   "receipt_boundary_line": 970,
+   "span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+   "span_hash_rederived": true,
+   "operation_qualified": "nullmd::copyctx"
+  },
+  {
+   "boundary": "OSSH-V1I-011",
+   "item": "copyctx",
+   "file": "src/provider/digest.rs",
+   "line": 1165,
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "contract_location": "the contract exists in openssh-v1i-sites.json boundary OSSH-V1I-011 (contract field), but the five hand-written `copyctx` definitions carry only a block SAFETY comment; the sibling macro copyctx (src/provider/digest.rs:447-449) does carry `# Safety`",
+   "unsafe_operations_read": [
+    "src/provider/digest.rs:1165-1174: `ptr::copy(inctx.cast::<u8>(), outctx.cast::<u8>(), core::mem::size_of::<Md5Sha1Ctx>())`",
+    "dispatcher: src/evp/digest.rs:3042 (self-copy arm) and :3079 (same-method arm) - both `unsafe { copyctx((*out).algctx, (*in_).algctx) }`, neither tests for NULL",
+    "src/evp/digest.rs:3131 `if !in_algctx.is_null()` - the re-acquiring arm of the SAME function proves a NULL algctx is a state the crate expects to tolerate"
+   ],
+   "safety_comment_quoted": "// SAFETY: both regions are valid for `size_of::<Md5Sha1Ctx>()` bytes and may be the same block: the provider self-copy arm calls `copyctx(algctx, algctx)`.",
+   "callers_enumerated": [
+    "src/evp/digest.rs:3042 and :3079 - the only two call sites; both pass raw `algctx` fields",
+    "registration: src/provider/digest.rs `function: copyctx as *mut c_void` in the digests dispatch table (5 rows)",
+    "definition: no caller other than the two dispatcher sites; the type comes from this row's newctx/dupctx",
+    "test: provider::digest::sha1::tests::copyctx_tolerates_a_self_copy covers ONLY the self-copy byte identity"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Module-private `unsafe extern \"C\" fn`; no safe-Rust call exists. (A `pub unsafe extern \"C\"` caller can still reach it through EVP_MD_CTX_copy_ex, which is the C ABI.)",
+    "b_all_unsafe_covered": "NO. The unsafe operation needs both pointers non-NULL and live; the contract exists only as a block comment (no `# Safety`), and the in-crate dispatcher does not establish non-NULL. The `# Safety` text exists in the sibling macro at :447-449 and names the same requirement, which shows the omission is local.",
+    "c_hidden_obligation": "YES. `EVP_DigestInit_ex` sets `(*ctx).digest = type_` at src/evp/digest.rs:2311 and only then calls the fallible `newctx` (:2328); when newctx answers NULL the failure return at :2332 leaves digest!=NULL with algctx==NULL (:2335 sets algctx only on success). EVP_MD_CTX_copy_ex classifies on `in->digest != NULL` (:2981) and so runs the copyctx arm, passing that NULL at :3042/:3079. A legitimate C sequence (failed init, then copy of/onto a same-method context) therefore calls `ptr::copy` of size_of::<Md5Sha1Ctx>() >= 1 through NULL. The authority has the same unchecked call, but AGENTS.md \u00a717 forbids reproducing authority UB without recording it, and no copyctx entry exists in docs/SECURITY_DIVERGENCE_POLICY.md.",
+    "d_load_bearing_control": "NO. Only the per-row self-copy test exists; nothing fails if the NULL guard is lost. I built CTRL-AUDIT-I NULLCTX/NULREACH/REACQ and canaries K3/K4/K5 for it."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "NULLCTX",
+     "NULREACH",
+     "REACQ",
+     "MACROCTX"
+    ],
+    "canaries": [
+     "K3-null-algctx-guard",
+     "K4-break-reachability",
+     "K5-break-reacq-guard",
+     "K2-copyctx-safety-doc"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "NULLCTX FAIL (sites 3042/3079 unguarded), NULREACH PASS, REACQ PASS, MACROCTX FAIL (5/5 missing `# Safety`); K2, K3, K4, K5 all FIRED"
+   },
+   "verdict": "REJECT",
+   "verdict_reason": "The recorded discharge (SAFETY_DISCHARGED) is not established. (1) The unsafe op has no `# Safety` fn contract at the definition; the block comment alone is a documentation-only discharge. (2) The precondition 'both regions are live' is not established by the caller: 3042 forwards `algctx` without a NULL test while :3131 proves NULL is expected. (3) The failed-init state at :2311/:2328/:2332 is a hidden obligation. Discharge requires: add `# Safety` to all five hand-written copyctx (reuse the :447-449 text, including non-NULL); make the two copyctx arms refuse or tolerate a NULL algctx exactly as :3131 does (a documented \u00a717 divergence from the authority's fault); and a control that fails if a copyctx call site loses its guard. Self-copy arm.",
+   "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::copyctx",
+   "id": "V1:src/provider/digest.rs:1165:UNSAFE_FN_DEF",
+   "recorded_contract": "`outctx` and `inctx` are each live regions of at least `size_of::<Md5Sha1Ctx>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<Md5Sha1Ctx>()` bytes and reads or writes nothing outside those regions.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-011 (field `contract`)",
+   "receipt_boundary_line": 1165,
+   "span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+   "span_hash_rederived": true,
+   "operation_qualified": "md5_sha1::copyctx"
+  },
+  {
+   "boundary": "OSSH-V1I-017",
+   "item": "copyctx",
+   "file": "src/provider/digest.rs",
+   "line": 1348,
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "contract_location": "the contract exists in openssh-v1i-sites.json boundary OSSH-V1I-017 (contract field), but the five hand-written `copyctx` definitions carry only a block SAFETY comment; the sibling macro copyctx (src/provider/digest.rs:447-449) does carry `# Safety`",
+   "unsafe_operations_read": [
+    "src/provider/digest.rs:1348-1357: `ptr::copy(inctx.cast::<u8>(), outctx.cast::<u8>(), core::mem::size_of::<KeccakCtx>())`",
+    "dispatcher: src/evp/digest.rs:3042 (self-copy arm) and :3079 (same-method arm) - both `unsafe { copyctx((*out).algctx, (*in_).algctx) }`, neither tests for NULL",
+    "src/evp/digest.rs:3131 `if !in_algctx.is_null()` - the re-acquiring arm of the SAME function proves a NULL algctx is a state the crate expects to tolerate"
+   ],
+   "safety_comment_quoted": "// SAFETY: both regions are valid for `size_of::<KeccakCtx>()` bytes and may be the same block: the provider self-copy arm calls `copyctx(algctx, algctx)`.",
+   "callers_enumerated": [
+    "src/evp/digest.rs:3042 and :3079 - the only two call sites; both pass raw `algctx` fields",
+    "registration: src/provider/digest.rs `function: copyctx as *mut c_void` in the digests dispatch table (5 rows)",
+    "definition: no caller other than the two dispatcher sites; the type comes from this row's newctx/dupctx",
+    "test: provider::digest::sha1::tests::copyctx_tolerates_a_self_copy covers ONLY the self-copy byte identity"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Module-private `unsafe extern \"C\" fn`; no safe-Rust call exists. (A `pub unsafe extern \"C\"` caller can still reach it through EVP_MD_CTX_copy_ex, which is the C ABI.)",
+    "b_all_unsafe_covered": "NO. The unsafe operation needs both pointers non-NULL and live; the contract exists only as a block comment (no `# Safety`), and the in-crate dispatcher does not establish non-NULL. The `# Safety` text exists in the sibling macro at :447-449 and names the same requirement, which shows the omission is local.",
+    "c_hidden_obligation": "YES. `EVP_DigestInit_ex` sets `(*ctx).digest = type_` at src/evp/digest.rs:2311 and only then calls the fallible `newctx` (:2328); when newctx answers NULL the failure return at :2332 leaves digest!=NULL with algctx==NULL (:2335 sets algctx only on success). EVP_MD_CTX_copy_ex classifies on `in->digest != NULL` (:2981) and so runs the copyctx arm, passing that NULL at :3042/:3079. A legitimate C sequence (failed init, then copy of/onto a same-method context) therefore calls `ptr::copy` of size_of::<KeccakCtx>() >= 1 through NULL. The authority has the same unchecked call, but AGENTS.md \u00a717 forbids reproducing authority UB without recording it, and no copyctx entry exists in docs/SECURITY_DIVERGENCE_POLICY.md.",
+    "d_load_bearing_control": "NO. Only the per-row self-copy test exists; nothing fails if the NULL guard is lost. I built CTRL-AUDIT-I NULLCTX/NULREACH/REACQ and canaries K3/K4/K5 for it."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "NULLCTX",
+     "NULREACH",
+     "REACQ",
+     "MACROCTX"
+    ],
+    "canaries": [
+     "K3-null-algctx-guard",
+     "K4-break-reachability",
+     "K5-break-reacq-guard",
+     "K2-copyctx-safety-doc"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "NULLCTX FAIL (sites 3042/3079 unguarded), NULREACH PASS, REACQ PASS, MACROCTX FAIL (5/5 missing `# Safety`); K2, K3, K4, K5 all FIRED"
+   },
+   "verdict": "REJECT",
+   "verdict_reason": "The recorded discharge (SAFETY_DISCHARGED) is not established. (1) The unsafe op has no `# Safety` fn contract at the definition; the block comment alone is a documentation-only discharge. (2) The precondition 'both regions are live' is not established by the caller: 3079 forwards `algctx` without a NULL test while :3131 proves NULL is expected. (3) The failed-init state at :2311/:2328/:2332 is a hidden obligation. Discharge requires: add `# Safety` to all five hand-written copyctx (reuse the :447-449 text, including non-NULL); make the two copyctx arms refuse or tolerate a NULL algctx exactly as :3131 does (a documented \u00a717 divergence from the authority's fault); and a control that fails if a copyctx call site loses its guard. Same-method arm.",
+   "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::copyctx",
+   "id": "V1:src/provider/digest.rs:1348:UNSAFE_FN_DEF",
+   "recorded_contract": "`outctx` and `inctx` are each live regions of at least `size_of::<KeccakCtx>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<KeccakCtx>()` bytes and reads or writes nothing outside those regions.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-017 (field `contract`)",
+   "receipt_boundary_line": 1348,
+   "span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+   "span_hash_rederived": true,
+   "operation_qualified": "sha3::copyctx"
+  },
+  {
+   "boundary": "OSSH-V1I-024",
+   "item": "copyctx",
+   "file": "src/provider/digest.rs",
+   "line": 1898,
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "contract_location": "the contract exists in openssh-v1i-sites.json boundary OSSH-V1I-024 (contract field), but the five hand-written `copyctx` definitions carry only a block SAFETY comment; the sibling macro copyctx (src/provider/digest.rs:447-449) does carry `# Safety`",
+   "unsafe_operations_read": [
+    "src/provider/digest.rs:1898-1907: `ptr::copy(inctx.cast::<u8>(), outctx.cast::<u8>(), core::mem::size_of::<the row's ctx>())`",
+    "dispatcher: src/evp/digest.rs:3042 (self-copy arm) and :3079 (same-method arm) - both `unsafe { copyctx((*out).algctx, (*in_).algctx) }`, neither tests for NULL",
+    "src/evp/digest.rs:3131 `if !in_algctx.is_null()` - the re-acquiring arm of the SAME function proves a NULL algctx is a state the crate expects to tolerate"
+   ],
+   "safety_comment_quoted": "// SAFETY: both regions are valid for `size_of::<the row's ctx>()` bytes and may be the same block: the provider self-copy arm calls `copyctx(algctx, algctx)`.",
+   "callers_enumerated": [
+    "src/evp/digest.rs:3042 and :3079 - the only two call sites; both pass raw `algctx` fields",
+    "registration: src/provider/digest.rs `function: copyctx as *mut c_void` in the digests dispatch table (5 rows)",
+    "definition: no caller other than the two dispatcher sites; the type comes from this row's newctx/dupctx",
+    "test: provider::digest::sha1::tests::copyctx_tolerates_a_self_copy covers ONLY the self-copy byte identity"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Module-private `unsafe extern \"C\" fn`; no safe-Rust call exists. (A `pub unsafe extern \"C\"` caller can still reach it through EVP_MD_CTX_copy_ex, which is the C ABI.)",
+    "b_all_unsafe_covered": "NO. The unsafe operation needs both pointers non-NULL and live; the contract exists only as a block comment (no `# Safety`), and the in-crate dispatcher does not establish non-NULL. The `# Safety` text exists in the sibling macro at :447-449 and names the same requirement, which shows the omission is local.",
+    "c_hidden_obligation": "YES. `EVP_DigestInit_ex` sets `(*ctx).digest = type_` at src/evp/digest.rs:2311 and only then calls the fallible `newctx` (:2328); when newctx answers NULL the failure return at :2332 leaves digest!=NULL with algctx==NULL (:2335 sets algctx only on success). EVP_MD_CTX_copy_ex classifies on `in->digest != NULL` (:2981) and so runs the copyctx arm, passing that NULL at :3042/:3079. A legitimate C sequence (failed init, then copy of/onto a same-method context) therefore calls `ptr::copy` of size_of::<the row's ctx>() >= 1 through NULL. The authority has the same unchecked call, but AGENTS.md \u00a717 forbids reproducing authority UB without recording it, and no copyctx entry exists in docs/SECURITY_DIVERGENCE_POLICY.md.",
+    "d_load_bearing_control": "NO. Only the per-row self-copy test exists; nothing fails if the NULL guard is lost. I built CTRL-AUDIT-I NULLCTX/NULREACH/REACQ and canaries K3/K4/K5 for it."
+   },
+   "control": {
+    "id": "CTRL-AUDIT-I",
+    "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+    "checks": [
+     "NULLCTX",
+     "NULREACH",
+     "REACQ",
+     "MACROCTX"
+    ],
+    "canaries": [
+     "K3-null-algctx-guard",
+     "K4-break-reachability",
+     "K5-break-reacq-guard",
+     "K2-copyctx-safety-doc"
+    ],
+    "canary_harness": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+    "result": "NULLCTX FAIL (sites 3042/3079 unguarded), NULREACH PASS, REACQ PASS, MACROCTX FAIL (5/5 missing `# Safety`); K2, K3, K4, K5 all FIRED"
+   },
+   "verdict": "REJECT",
+   "verdict_reason": "The recorded discharge (SAFETY_DISCHARGED) is not established. (1) The unsafe op has no `# Safety` fn contract at the definition; the block comment alone is a documentation-only discharge. (2) The precondition 'both regions are live' is not established by the caller: 3079 forwards `algctx` without a NULL test while :3131 proves NULL is expected. (3) The failed-init state at :2311/:2328/:2332 is a hidden obligation. Discharge requires: add `# Safety` to all five hand-written copyctx (reuse the :447-449 text, including non-NULL); make the two copyctx arms refuse or tolerate a NULL algctx exactly as :3131 does (a documented \u00a717 divergence from the authority's fault); and a control that fails if a copyctx call site loses its guard. Same-method arm.",
+   "stable_id": "src/provider/digest.rs::UNSAFE_FN_DEF::copyctx",
+   "id": "V1:src/provider/digest.rs:1898:UNSAFE_FN_DEF",
+   "recorded_contract": "`outctx` and `inctx` are each live regions of at least `size_of::<MdData>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<MdData>()` bytes and reads or writes nothing outside those regions.",
+   "recorded_contract_source": "openssh-v1i-sites.json boundary OSSH-V1I-024 (field `contract`)",
+   "receipt_boundary_line": 1898,
+   "span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+   "span_hash_rederived": true,
+   "operation_qualified": "blake2b/blake2s::copyctx"
+  }
+ ],
+ "controls_executed": [
+  {
+   "id": "CTRL-AUDIT-I",
+   "path": "court/freeze-b76/review/controls/v1i_contract_audit.py",
+   "purpose": "10 structural checks over the 19: span hashes, receipt coordinates, citation resolution, `# Safety` presence, per-call-site witness reality, macro-vs-hand-written copyctx contract, the NULL-algctx dispatcher gate, the failed-init reachability witness, the re-acquiring arm's own NULL tolerance, and per-call-site ownership forms",
+   "result": "SPAN19 PASS 19/19; COORD19 FAIL 8 stale; CLOC19 FAIL 8 unresolvable citations; SAFETYFN FAIL 0/19 contracted; FAMILY FAIL 4 false witnesses; MACROCTX FAIL 5 missing; NULLCTX FAIL both sites unguarded; NULREACH PASS (defect state reachable); REACQ PASS; CALLERS PASS (6+4 item-free sites, 11 thunks, 4 helper sites, 5 dispatch registrations, 0 problems)"
+  },
+  {
+   "id": "CTRL-CANARY-I",
+   "path": "court/freeze-b76/review/controls/run_canaries_v1i.py",
+   "purpose": "12 mutation canaries on private copies under /tmp, asserting each detector flips exactly when the targeted property is repaired or broken",
+   "result": "12/12 behaved as required: K1 pristine matches the audited state; K2 adds `# Safety` -> MACROCTX flips to PASS; K3 guards the call sites -> NULLCTX flips to PASS; K4 removes `digest = type_` -> NULREACH flips to FAIL; K5 removes the :3131 guard -> REACQ flips to FAIL; K6 rebinds the 8 stale coordinates -> COORD19 flips to PASS; K7 replaces the false witness with the pop_free caller -> FAMILY flips to PASS; K8 repoints unresolvable citations -> CLOC19 flips to PASS; K9 corrupts a span byte -> SPAN19 flips to FAIL; K10 adds `# Safety` to all 19 -> SAFETYFN flips to PASS; K11 direct-calls a free thunk -> CALLERS flips to FAIL; K12 frees a stray item -> CALLERS flips to FAIL"
+  }
+ ],
+ "findings": [
+  {
+   "id": "F1",
+   "severity": "safety-defect (reject-causing)",
+   "statement": "src/evp/digest.rs:3042 and :3079 call the provider `copyctx` with `(*out).algctx` / `(*in_).algctx` untested for NULL. The state is reachable: :2311 sets `digest = type_`, :2328 calls the fallible newctx, :2332 returns on failure leaving algctx NULL (:2335 sets it only on success). The same function's re-acquiring arm guards exactly this at :3131, which is the crate's own evidence that NULL is possible. `ptr::copy` of size_of::<T>() through NULL is UB. Not reachable from safe Rust (the entry point is `pub unsafe extern \"C\"`), but it is a C-valid sequence; \u00a717/\u00a721.1 require the fault not be reproduced undocumented. No copyctx divergence entry exists."
+  },
+  {
+   "id": "F2",
+   "severity": "contract-defect (reject-causing)",
+   "statement": "The five hand-written `copyctx` definitions (digest.rs:658, 970, 1165, 1348, 1898) have no `# Safety` fn contract, while the sibling macro copyctx at :447-449 does. The v1i receipt records a contract for the site, but the interface carries none: a documentation-only discharge for an operation whose precondition the caller does not establish."
+  },
+  {
+   "id": "F3",
+   "severity": "evidence-integrity (\u00a722)",
+   "statement": "For OSSH-V1I-059/060/061/064 the receipt's `established_by` says 'caller: ctx_set1_dup! passes the owned incumbent member to this thunk'. These four thunks are never passed to ctx_set1_dup!; they are used only as `Some(<thunk>)` arguments to OPENSSL_sk_pop_free at cmp_ctx.rs:495/496/497/503. The generic contract class absorbed unrelated callbacks; the real per-call-site witness (stack ownership, written by a different function) is absent."
+  },
+  {
+   "id": "E1",
+   "severity": "evidence-integrity",
+   "statement": "0 of 19 reviewed definitions carries a `# Safety` fn contract; the receipt's contract field is the only contract. For 12 of 19 the in-source comment is circular ('per this function's contract')."
+  },
+  {
+   "id": "E2",
+   "severity": "evidence-identity",
+   "statement": "The v1i receipt is bound to S'=876900e47b25c01899a2aca97004a77ab60d597f (2026-10-27), an ANCESTOR of the frozen candidate S=0238c6e4adbc7ed85a42be68b6fb965e139bd93e; its declared src_content 8d746bc7... differs from S's 66c1e9ae.... The per-file blobs are stale for exactly the moved files: src/cmp/cmp_ctx.rs (receipt 0b59b0cb..., current c4429e7e...) and src/cmp/cmp_asn.rs (4883b656... vs 8d54b311...); src/provider/digest.rs matches (2affef41...). The 19 operation spans nevertheless hash-match at S (SPAN19 19/19), so only the operation text is content-bound."
+  },
+  {
+   "id": "E3",
+   "severity": "evidence-integrity",
+   "statement": "8 of the 19 receipt boundary coordinates are stale: itav_free 1697->1706 (+9), rootcakeyupdate_free 1709->1722 (+13), general_name_free_void 392->376 (-16), x509_extension_free_void 396->380 (-16), utf8_string_free_void 400->384 (-16), itav_free_void 408->388 (-20), policy_free_void 412->392 (-20), cmp_ctx_set_md 427->407 (-20). cmp_ctx_set_md's caller citations are stale by 20 (578/587/1588/1593 vs 558/567/1568/1573)."
+  },
+  {
+   "id": "E4",
+   "severity": "acceptance-defect",
+   "statement": "8 of the 19 closure rows have covers_site=false yet content_address_accepts=true and are carried as discharged (e.g. OSSH-V1I-067: declared 1697, current 1706, covers_current_coordinate=false). Content binding is sound, but the declared coordinate does not identify the site; this is the known b75 defect class recurring in v1i."
+  },
+  {
+   "id": "E5",
+   "severity": "evidence-integrity",
+   "statement": "Disposition citations that cannot resolve to a site or a contract: for this batch OSSH-V1I-060 cites cmp_ctx.rs:396 (blank) and OSSH-V1I-069 cites cmp_asn.rs:1709 (the closing brace of itav_free); receipt-wide CLOC19 reports 8 such rows (060,062,069,072,074,077,079,080)."
+  },
+  {
+   "id": "E6",
+   "severity": "inventory-record",
+   "statement": "The inventory records `actual_definition_line: 449` for all five `copyctx` obligations, which is the macro copyctx at provider/digest.rs:449, not the reviewed item at 658/970/1165/1348/1898; the `resolution: qualified` binding is therefore mis-resolved even though the recorded line does hold the item."
+  },
+  {
+   "id": "E7",
+   "severity": "evidence-identity",
+   "statement": "evidence/closure-ssh-b76c.json records ledger level L4-linked, outcome 'reached', but artifact_matches_this_build=false and source repository_head=ab075cdc3 with a dirty tracked tree. Its L4 result is not evidence for S and is not used here."
+  },
+  {
+   "id": "F4",
+   "severity": "contract-precision",
+   "statement": "cmp_ctx_set_md's recorded contract requires 'nid names a digest resolvable in ctx->libctx', but two call sites forward an arbitrary public `int val`. The code is safe because a NULL name is handled at src/evp/fetch.rs:963; the contract over-states the requirement and therefore is not established by its callers as written."
+  }
+ ],
+ "receipt_identity": {
+  "reviewed_group_receipt": "openssh-v1i-sites.json bound to 876900e47 (S' ancestor of S)",
+  "reviewed_closure_receipts": "closure-{ssh,sshd}-b76c.json analyse span source 0238c6e4a but were generated from head ab075cdc3 with artifact_matches_this_build=false",
+  "note": "Regenerating the v1i receipt at S with current witnesses, and re-running its negative controls against the S binaries, remains required before any of these 14 ACCEPTs is cited as final evidence at S. The 5 REJECTs stand on current source read and must be repaired in source."
+ },
+ "summary": {
+  "obligations_reviewed": 19,
+  "selection_rule": "the 19 lexicographically lowest stable_id among the 56 openssh-v1i obligations in court/freeze-b76/review/review-65-inventory.json",
+  "accept": 14,
+  "reject": 5,
+  "accept_list": [
+   "OSSH-V1I-067",
+   "OSSH-V1I-069",
+   "OSSH-V1I-049",
+   "OSSH-V1I-050",
+   "OSSH-V1I-051",
+   "OSSH-V1I-052",
+   "OSSH-V1I-053",
+   "OSSH-V1I-054",
+   "OSSH-V1I-059",
+   "OSSH-V1I-060",
+   "OSSH-V1I-061",
+   "OSSH-V1I-063",
+   "OSSH-V1I-064",
+   "OSSH-V1I-065"
+  ],
+  "reject_list": [
+   "OSSH-V1I-002",
+   "OSSH-V1I-008",
+   "OSSH-V1I-011",
+   "OSSH-V1I-017",
+   "OSSH-V1I-024"
+  ],
+  "safe_rust_ub_found": false,
+  "c_valid_abi_ub_path_found": true,
+  "hidden_obligations_found": 1,
+  "hidden_obligations": [
+   "F1: a failed EVP_DigestInit_ex leaves digest!=NULL with algctx==NULL, and EVP_MD_CTX_copy_ex dereferences it through copyctx at :3042/:3079; the obligation is unreported at the interface"
+  ],
+  "new_obligations_introduced": 0,
+  "accepts_resting_on_unobserved_evidence": 0,
+  "evidence_record_defects": [
+   "E1",
+   "E2",
+   "E3",
+   "E4",
+   "E5",
+   "E6",
+   "E7",
+   "F3",
+   "F4"
+  ],
+  "controls_run": 2,
+  "audit_checks": 10,
+  "canaries_fired": "12/12",
+  "runtime_controls_run": 0,
+  "remaining_unreviewed_v1i": 37,
+  "unique_inventory_ids": 19,
+  "stable_id_collisions": "the five provider/digest.rs copyctx rows share one stable_id by construction; each has a distinct inventory id (line-qualified)"
+ },
+ "does_not_prove": [
+  "No runtime execution of any of the 19 code paths was observed. Compilation and the crate's tests were forbidden by the \u00a76.1 OOM gate (free -g: 12 GiB available; floor 24 GiB not met). The v1i receipt's negative controls and the copyctx self-copy test are recorded results, not evidence for this review.",
+  "F1 is a source-level reachability argument, not an observed fault. I did not execute the failed-init-then-copy sequence; I show the code chain (:2311 -> :2328 -> :2332 -> :2335 -> :2981 -> :3042/:3079) and the crate's own NULL tolerance at :3131.",
+  "The controls are static text/structural instruments. They prove call-site forms, span content, coordinate reality and the presence/absence of guards; they cannot prove the absence of aliasing UB at run time.",
+  "No Miri, ASan, TSan, Tree Borrows or dudect run; no cryptographic or compatibility court was run. This is a safety/contract review only.",
+  "The external C ABI obligations (the ctx_set1_* setters' 'val is NULL or live', the set0 stacks' transfer of ownership, EVP_MD_CTX_copy_ex's caller obligation that both contexts be initialized) are unchanged from the authority and are retained, not discharged, by this review.",
+  "The other 37 openssh-v1i obligations were inventoried only, not reviewed; their contracts are also recorded as 'uncontracted' and the same identity/coordinate questions apply.",
+  "I did not verify the five copyctx `size_of::<T>()` extents against the corresponding `newctx` allocations at run time; the newctx/dupctx allocation sites are consistent by source read only."
+ ]
+}

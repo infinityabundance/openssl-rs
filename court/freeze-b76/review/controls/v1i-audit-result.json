@@ -1,0 +1,456 @@
+{
+ "checks": [
+  {
+   "id": "SPAN19",
+   "description": "recorded operation-span content hash re-derived",
+   "expected": "19/19 match",
+   "observed": "19/19 match",
+   "pass": true,
+   "detail": {
+    "mismatch": []
+   }
+  },
+  {
+   "id": "COORD19",
+   "description": "receipt boundary line equals the current definition line",
+   "expected": "0 stale",
+   "observed": "8 stale",
+   "pass": false,
+   "detail": {
+    "stale": [
+     {
+      "item": "itav_free",
+      "receipt_line": 1697,
+      "current_line": 1706,
+      "delta": 9
+     },
+     {
+      "item": "rootcakeyupdate_free",
+      "receipt_line": 1709,
+      "current_line": 1722,
+      "delta": 13
+     },
+     {
+      "item": "cmp_ctx_set_md",
+      "receipt_line": 427,
+      "current_line": 407,
+      "delta": -20
+     },
+     {
+      "item": "general_name_free_void",
+      "receipt_line": 392,
+      "current_line": 376,
+      "delta": -16
+     },
+     {
+      "item": "itav_free_void",
+      "receipt_line": 408,
+      "current_line": 388,
+      "delta": -20
+     },
+     {
+      "item": "policy_free_void",
+      "receipt_line": 412,
+      "current_line": 392,
+      "delta": -20
+     },
+     {
+      "item": "utf8_string_free_void",
+      "receipt_line": 400,
+      "current_line": 384,
+      "delta": -16
+     },
+     {
+      "item": "x509_extension_free_void",
+      "receipt_line": 396,
+      "current_line": 380,
+      "delta": -16
+     }
+    ],
+    "rows": [
+     {
+      "item": "itav_free",
+      "receipt_line": 1697,
+      "current_line": 1706
+     },
+     {
+      "item": "rootcakeyupdate_free",
+      "receipt_line": 1709,
+      "current_line": 1722
+     },
+     {
+      "item": "asn1_integer_dup_void",
+      "receipt_line": 358,
+      "current_line": 358
+     },
+     {
+      "item": "asn1_integer_free_void",
+      "receipt_line": 362,
+      "current_line": 362
+     },
+     {
+      "item": "cmp_ctx_set_md",
+      "receipt_line": 427,
+      "current_line": 407
+     },
+     {
+      "item": "general_name_free_void",
+      "receipt_line": 392,
+      "current_line": 376
+     },
+     {
+      "item": "itav_free_void",
+      "receipt_line": 408,
+      "current_line": 388
+     },
+     {
+      "item": "policy_free_void",
+      "receipt_line": 412,
+      "current_line": 392
+     },
+     {
+      "item": "utf8_string_free_void",
+      "receipt_line": 400,
+      "current_line": 384
+     },
+     {
+      "item": "x509_extension_free_void",
+      "receipt_line": 396,
+      "current_line": 380
+     },
+     {
+      "item": "x509_name_dup_void",
+      "receipt_line": 350,
+      "current_line": 350
+     },
+     {
+      "item": "x509_name_free_void",
+      "receipt_line": 354,
+      "current_line": 354
+     },
+     {
+      "item": "x509_req_dup_void",
+      "receipt_line": 366,
+      "current_line": 366
+     },
+     {
+      "item": "x509_req_free_void",
+      "receipt_line": 370,
+      "current_line": 370
+     }
+    ]
+   }
+  },
+  {
+   "id": "CLOC19",
+   "description": "receipt's cited file:line witness resolves to a site or a contract",
+   "expected": "every cited coordinate holds code or prose",
+   "observed": "8 bogus",
+   "pass": false,
+   "detail": {
+    "bogus": [
+     {
+      "id": "OSSH-V1I-060",
+      "at": "src/cmp/cmp_ctx.rs:396",
+      "text": ""
+     },
+     {
+      "id": "OSSH-V1I-062",
+      "at": "src/cmp/cmp_ctx.rs:404",
+      "text": "}"
+     },
+     {
+      "id": "OSSH-V1I-069",
+      "at": "src/cmp/cmp_asn.rs:1709",
+      "text": "}"
+     },
+     {
+      "id": "OSSH-V1I-072",
+      "at": "src/cmp/cmp_asn.rs:1742",
+      "text": "}"
+     },
+     {
+      "id": "OSSH-V1I-074",
+      "at": "src/cmp/cmp_asn.rs:1754",
+      "text": "}"
+     },
+     {
+      "id": "OSSH-V1I-077",
+      "at": "src/cmp/cmp_asn.rs:1781",
+      "text": ""
+     },
+     {
+      "id": "OSSH-V1I-079",
+      "at": "src/cmp/cmp_asn.rs:1811",
+      "text": ""
+     },
+     {
+      "id": "OSSH-V1I-080",
+      "at": "src/cmp/cmp_asn.rs:1826",
+      "text": "}"
+     }
+    ]
+   }
+  },
+  {
+   "id": "SAFETYFN",
+   "description": "each unsafe definition carries a `# Safety` fn contract",
+   "expected": "19/19 contracted",
+   "observed": "0/19 contracted",
+   "pass": false,
+   "detail": {
+    "missing": [
+     "src/cmp/cmp_asn.rs:1706 itav_free",
+     "src/cmp/cmp_asn.rs:1722 rootcakeyupdate_free",
+     "src/cmp/cmp_ctx.rs:358 asn1_integer_dup_void",
+     "src/cmp/cmp_ctx.rs:362 asn1_integer_free_void",
+     "src/cmp/cmp_ctx.rs:407 cmp_ctx_set_md",
+     "src/cmp/cmp_ctx.rs:376 general_name_free_void",
+     "src/cmp/cmp_ctx.rs:388 itav_free_void",
+     "src/cmp/cmp_ctx.rs:392 policy_free_void",
+     "src/cmp/cmp_ctx.rs:384 utf8_string_free_void",
+     "src/cmp/cmp_ctx.rs:380 x509_extension_free_void",
+     "src/cmp/cmp_ctx.rs:350 x509_name_dup_void",
+     "src/cmp/cmp_ctx.rs:354 x509_name_free_void",
+     "src/cmp/cmp_ctx.rs:366 x509_req_dup_void",
+     "src/cmp/cmp_ctx.rs:370 x509_req_free_void",
+     "src/provider/digest.rs:1165 copyctx",
+     "src/provider/digest.rs:1348 copyctx",
+     "src/provider/digest.rs:1898 copyctx",
+     "src/provider/digest.rs:658 copyctx",
+     "src/provider/digest.rs:970 copyctx"
+    ]
+   }
+  },
+  {
+   "id": "FAMILY",
+   "description": "receipt's established_by names a caller that really reaches the thunk",
+   "expected": "0 false per-call-site witnesses",
+   "observed": "4 false",
+   "pass": false,
+   "detail": {
+    "false": [
+     "OSSH-V1I-059",
+     "OSSH-V1I-060",
+     "OSSH-V1I-061",
+     "OSSH-V1I-064"
+    ],
+    "rows": [
+     {
+      "id": "OSSH-V1I-059",
+      "op": "general_name_free_void",
+      "claims_ctx_set1_dup": true,
+      "actually_used_by_ctx_set1_dup": false
+     },
+     {
+      "id": "OSSH-V1I-060",
+      "op": "x509_extension_free_void",
+      "claims_ctx_set1_dup": true,
+      "actually_used_by_ctx_set1_dup": false
+     },
+     {
+      "id": "OSSH-V1I-061",
+      "op": "utf8_string_free_void",
+      "claims_ctx_set1_dup": true,
+      "actually_used_by_ctx_set1_dup": false
+     },
+     {
+      "id": "OSSH-V1I-064",
+      "op": "policy_free_void",
+      "claims_ctx_set1_dup": true,
+      "actually_used_by_ctx_set1_dup": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "MACROCTX",
+   "description": "hand-written copyctx carries the contract the macro copyctx carries",
+   "expected": "0 missing (macro has one)",
+   "observed": "macro_has_safety=True, missing=[658, 970, 1165, 1348, 1898]",
+   "pass": false,
+   "detail": {
+    "macro_has_safety": true,
+    "missing": [
+     658,
+     970,
+     1165,
+     1348,
+     1898
+    ]
+   }
+  },
+  {
+   "id": "NULLCTX",
+   "description": "EVP_MD_CTX_copy_ex calls the provider copyctx on both algctx pointers without a NULL test, although the same function's re-acquiring arm guards exactly that",
+   "expected": "every copyctx call site guarded",
+   "observed": "copyctx_sites=[3042, 3079], guarded=[False, False], reacquire_null_guard=3131",
+   "pass": false,
+   "detail": {
+    "copyctx_call_sites": [
+     3042,
+     3079
+    ],
+    "guarded": [
+     false,
+     false
+    ],
+    "reacquire_guard_line": 3131
+   }
+  },
+  {
+   "id": "NULREACH",
+   "description": "a failed EVP_DigestInit_ex leaves digest!=NULL with algctx==NULL",
+   "expected": "chain digest_set < newctx < failed return < algctx_set",
+   "observed": "digest_set=2311, newctx=2328, fail_return=2332, algctx_set=2335",
+   "pass": true,
+   "detail": {
+    "digest_set_line": 2311,
+    "newctx_line": 2328,
+    "fail_return_line": 2332,
+    "algctx_set_line": 2335
+   }
+  },
+  {
+   "id": "REACQ",
+   "description": "the re-acquiring arm tests in_algctx for NULL before dupctx",
+   "expected": "in_algctx.is_null() test present in the re-acquiring arm",
+   "observed": "guard_line=3131",
+   "pass": true,
+   "detail": {
+    "guard_line": 3131
+   }
+  },
+  {
+   "id": "CALLERS",
+   "description": "every use of an item free / thunk / helper is a form whose ownership is established (constructor in the same fn, fn-pointer argument, owned out-pointer)",
+   "expected": "0 unclassified call sites",
+   "observed": "0 problems",
+   "pass": true,
+   "detail": {
+    "problems": [],
+    "rows": [
+     {
+      "item": "itav_free",
+      "call_sites": [
+       2093,
+       2161,
+       2373,
+       3116,
+       3125,
+       3135
+      ]
+     },
+     {
+      "item": "rootcakeyupdate_free",
+      "call_sites": [
+       2230,
+       2240,
+       2251,
+       2261
+      ]
+     },
+     {
+      "item": "x509_name_dup_void",
+      "call_sites": [
+       739,
+       745,
+       751,
+       757
+      ],
+      "unclassified": []
+     },
+     {
+      "item": "x509_name_free_void",
+      "call_sites": [
+       740,
+       746,
+       752,
+       758
+      ],
+      "unclassified": []
+     },
+     {
+      "item": "asn1_integer_dup_void",
+      "call_sites": [
+       763
+      ],
+      "unclassified": []
+     },
+     {
+      "item": "asn1_integer_free_void",
+      "call_sites": [
+       764
+      ],
+      "unclassified": []
+     },
+     {
+      "item": "x509_req_dup_void",
+      "call_sites": [
+       769
+      ],
+      "unclassified": []
+     },
+     {
+      "item": "x509_req_free_void",
+      "call_sites": [
+       770
+      ],
+      "unclassified": []
+     },
+     {
+      "item": "general_name_free_void",
+      "call_sites": [
+       495
+      ],
+      "unclassified": []
+     },
+     {
+      "item": "x509_extension_free_void",
+      "call_sites": [
+       496,
+       1183
+      ],
+      "unclassified": []
+     },
+     {
+      "item": "utf8_string_free_void",
+      "call_sites": [
+       503,
+       811
+      ],
+      "unclassified": []
+     },
+     {
+      "item": "itav_free_void",
+      "call_sites": [
+       403
+      ],
+      "unclassified": []
+     },
+     {
+      "item": "policy_free_void",
+      "call_sites": [
+       497
+      ],
+      "unclassified": []
+     },
+     {
+      "item": "cmp_ctx_set_md",
+      "call_sites": [
+       558,
+       567,
+       1568,
+       1573
+      ],
+      "unclassified": []
+     },
+     {
+      "item": "copyctx",
+      "dispatch_registrations": 5
+     }
+    ]
+   }
+  }
+ ]
+}
