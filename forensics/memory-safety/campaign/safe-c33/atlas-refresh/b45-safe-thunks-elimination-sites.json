@@ -1,0 +1,430 @@
+{
+ "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "b45-safe-thunks-elimination",
+ "subphase": "B45 structural resolution: the nine zero-argument cleanup thunks are safe",
+ "date": "2026-11-13",
+ "candidate": {
+  "source_head": "ba60ad76a423c9e8d36cba24535fb578a02dbce3",
+  "previous_S": "df0201be3bf1474bac07463371bf62c491b8f847",
+  "src_content_sha256": "e2d945af520d5b54dd033a5bb2eee05f916fc98c740e2d8353b8c6adc129075f",
+  "files_sha256": {
+   "src/engine/tb_asnmth.rs": "3494d26b717f41385e932a744ad8d1a93d1fbe44535aa396ad2d3a2fd28ea3cd",
+   "src/engine/tb_cipher.rs": "89d28ee59b1f06bfb323ffc48e3e0ad63762a013ed497f0a557ef2395f43b73b",
+   "src/engine/tb_dh.rs": "91f8eb40eb91a6117d57455b2c7b874220298a236d48e87c046b585881ea4772",
+   "src/engine/tb_digest.rs": "966f38d7c7e11695a917dcd04ebeca7440bd2c7f1adf19cf3b35f4f5eec0d96e",
+   "src/engine/tb_dsa.rs": "c496d9d6f6b72e1cee82c9fb943fbe8bb5741752740f658f78fe39c46e2af591",
+   "src/engine/tb_eckey.rs": "d21d0320517f0f8a93761a628ab4b263e3fae079d0f6a6af036439cdeb961d51",
+   "src/engine/tb_pkmeth.rs": "c92b39c8b5423128bb315cd38982706d322b7dc78a15e625c1a635adc8451ade",
+   "src/engine/tb_rand.rs": "36d7063ad877de9e92619078e9933aa820f1186e2076ed1c8226fea75e59b65c",
+   "src/engine/tb_rsa.rs": "e1384cac8beff2be124f38012630edf6e0790e964c03d7f5f1f67c05ae5c52c8"
+  }
+ },
+ "summary": {
+  "historical_obligations": 9,
+  "state": "ELIMINATED_STRUCTURALLY",
+  "statement": "The nine B45 cleanup thunks take no arguments and only call engine_table_cleanup over static slots. They are safe extern fns at S4 with compile-time controls. The C5 refusal recorded in b45-c5-review-2026-11-13.json is preserved, but it now blocks no live unsafe-fn obligation. A re-census is required before the applied review-required count drops from 98 to a projected 70."
+ },
+ "boundaries": [
+  {
+   "id": "B45-ENG-CB-001-ELIMINATED",
+   "file": "src/engine/tb_asnmth.rs",
+   "line": 79,
+   "line_current": 79,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_pkey_asn1_meths",
+   "historical_ids": [
+    "B45-ENG-CB-001"
+   ],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument cleanup thunk: calls engine_table_cleanup over this module's static slot inside an unsafe block; no caller pointer or lifetime precondition; a held lock makes the cleanup refuse, not fault",
+   "evidence": {
+    "span_sha256": "c3ae6d2503d44324f53894197778c6a757dff2e215b91173e36bccfa05afb6b2",
+    "span_lines": [
+     79,
+     82
+    ],
+    "qualified_identity": "engine_unregister_all_pkey_asn1_meths",
+    "compile_time_control": "src/engine/tb_asnmth.rs:85"
+   },
+   "prior_state": "BLOCKED under boundary-sweep-B45; the independent C5 review refused to apply the discharge because FREEZE-b73 self-declares non-finality",
+   "residuals": [
+    "no build/test at S4",
+    "engine_table_cleanup itself remains a CONTRACTED callee (B20-TBL-3)"
+   ]
+  },
+  {
+   "id": "B45-ENG-CB-002-ELIMINATED",
+   "file": "src/engine/tb_cipher.rs",
+   "line": 62,
+   "line_current": 62,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_ciphers",
+   "historical_ids": [
+    "B45-ENG-CB-002"
+   ],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument cleanup thunk: calls engine_table_cleanup over this module's static slot inside an unsafe block; no caller pointer or lifetime precondition; a held lock makes the cleanup refuse, not fault",
+   "evidence": {
+    "span_sha256": "3c97b73dfc4b102d227c20991dab405fd120bed66668c082904ada5810ca70c4",
+    "span_lines": [
+     62,
+     65
+    ],
+    "qualified_identity": "engine_unregister_all_ciphers",
+    "compile_time_control": "src/engine/tb_cipher.rs:68"
+   },
+   "prior_state": "BLOCKED under boundary-sweep-B45; the independent C5 review refused to apply the discharge because FREEZE-b73 self-declares non-finality",
+   "residuals": [
+    "no build/test at S4",
+    "engine_table_cleanup itself remains a CONTRACTED callee (B20-TBL-3)"
+   ]
+  },
+  {
+   "id": "B45-ENG-CB-003-ELIMINATED",
+   "file": "src/engine/tb_dh.rs",
+   "line": 58,
+   "line_current": 58,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_dh",
+   "historical_ids": [
+    "B45-ENG-CB-003"
+   ],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument cleanup thunk: calls engine_table_cleanup over this module's static slot inside an unsafe block; no caller pointer or lifetime precondition; a held lock makes the cleanup refuse, not fault",
+   "evidence": {
+    "span_sha256": "603470f3c559a4e06b4a2bb7abcdee0c61ab13a5e25674e90d364da4f1fc793e",
+    "span_lines": [
+     58,
+     61
+    ],
+    "qualified_identity": "engine_unregister_all_dh",
+    "compile_time_control": "src/engine/tb_dh.rs:64"
+   },
+   "prior_state": "BLOCKED under boundary-sweep-B45; the independent C5 review refused to apply the discharge because FREEZE-b73 self-declares non-finality",
+   "residuals": [
+    "no build/test at S4",
+    "engine_table_cleanup itself remains a CONTRACTED callee (B20-TBL-3)"
+   ]
+  },
+  {
+   "id": "B45-ENG-CB-004-ELIMINATED",
+   "file": "src/engine/tb_digest.rs",
+   "line": 73,
+   "line_current": 73,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_digests",
+   "historical_ids": [
+    "B45-ENG-CB-004"
+   ],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument cleanup thunk: calls engine_table_cleanup over this module's static slot inside an unsafe block; no caller pointer or lifetime precondition; a held lock makes the cleanup refuse, not fault",
+   "evidence": {
+    "span_sha256": "bd4d5f73402840b9eab8c138bd2e4e3045ecc5d11890a6a7dd9ab128a5e6fefe",
+    "span_lines": [
+     73,
+     76
+    ],
+    "qualified_identity": "engine_unregister_all_digests",
+    "compile_time_control": "src/engine/tb_digest.rs:79"
+   },
+   "prior_state": "BLOCKED under boundary-sweep-B45; the independent C5 review refused to apply the discharge because FREEZE-b73 self-declares non-finality",
+   "residuals": [
+    "no build/test at S4",
+    "engine_table_cleanup itself remains a CONTRACTED callee (B20-TBL-3)"
+   ]
+  },
+  {
+   "id": "B45-ENG-CB-005-ELIMINATED",
+   "file": "src/engine/tb_dsa.rs",
+   "line": 58,
+   "line_current": 58,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_dsa",
+   "historical_ids": [
+    "B45-ENG-CB-005"
+   ],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument cleanup thunk: calls engine_table_cleanup over this module's static slot inside an unsafe block; no caller pointer or lifetime precondition; a held lock makes the cleanup refuse, not fault",
+   "evidence": {
+    "span_sha256": "a161be59ab4321578a295c8eaa510d2a0b6047088f68a39d4257b57861068465",
+    "span_lines": [
+     58,
+     61
+    ],
+    "qualified_identity": "engine_unregister_all_dsa",
+    "compile_time_control": "src/engine/tb_dsa.rs:64"
+   },
+   "prior_state": "BLOCKED under boundary-sweep-B45; the independent C5 review refused to apply the discharge because FREEZE-b73 self-declares non-finality",
+   "residuals": [
+    "no build/test at S4",
+    "engine_table_cleanup itself remains a CONTRACTED callee (B20-TBL-3)"
+   ]
+  },
+  {
+   "id": "B45-ENG-CB-006-ELIMINATED",
+   "file": "src/engine/tb_eckey.rs",
+   "line": 58,
+   "line_current": 58,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_ec",
+   "historical_ids": [
+    "B45-ENG-CB-006"
+   ],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument cleanup thunk: calls engine_table_cleanup over this module's static slot inside an unsafe block; no caller pointer or lifetime precondition; a held lock makes the cleanup refuse, not fault",
+   "evidence": {
+    "span_sha256": "d33b4237220d1f6cb967d3d384ecb4da02e329b93f16cca242cb2745f8f66954",
+    "span_lines": [
+     58,
+     61
+    ],
+    "qualified_identity": "engine_unregister_all_ec",
+    "compile_time_control": "src/engine/tb_eckey.rs:64"
+   },
+   "prior_state": "BLOCKED under boundary-sweep-B45; the independent C5 review refused to apply the discharge because FREEZE-b73 self-declares non-finality",
+   "residuals": [
+    "no build/test at S4",
+    "engine_table_cleanup itself remains a CONTRACTED callee (B20-TBL-3)"
+   ]
+  },
+  {
+   "id": "B45-ENG-CB-007-ELIMINATED",
+   "file": "src/engine/tb_pkmeth.rs",
+   "line": 60,
+   "line_current": 60,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_pkey_meths",
+   "historical_ids": [
+    "B45-ENG-CB-007"
+   ],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument cleanup thunk: calls engine_table_cleanup over this module's static slot inside an unsafe block; no caller pointer or lifetime precondition; a held lock makes the cleanup refuse, not fault",
+   "evidence": {
+    "span_sha256": "822d498b20998499a68e89f3a1f48e3e5079d1349a9f395f613c2919dc9e46a4",
+    "span_lines": [
+     60,
+     63
+    ],
+    "qualified_identity": "engine_unregister_all_pkey_meths",
+    "compile_time_control": "src/engine/tb_pkmeth.rs:66"
+   },
+   "prior_state": "BLOCKED under boundary-sweep-B45; the independent C5 review refused to apply the discharge because FREEZE-b73 self-declares non-finality",
+   "residuals": [
+    "no build/test at S4",
+    "engine_table_cleanup itself remains a CONTRACTED callee (B20-TBL-3)"
+   ]
+  },
+  {
+   "id": "B45-ENG-CB-008-ELIMINATED",
+   "file": "src/engine/tb_rand.rs",
+   "line": 58,
+   "line_current": 58,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_rand",
+   "historical_ids": [
+    "B45-ENG-CB-008"
+   ],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument cleanup thunk: calls engine_table_cleanup over this module's static slot inside an unsafe block; no caller pointer or lifetime precondition; a held lock makes the cleanup refuse, not fault",
+   "evidence": {
+    "span_sha256": "7ea7ba39463d8ee46508abae8d3e4252b51f7961f7db701e08b1086aae12cda8",
+    "span_lines": [
+     58,
+     61
+    ],
+    "qualified_identity": "engine_unregister_all_rand",
+    "compile_time_control": "src/engine/tb_rand.rs:64"
+   },
+   "prior_state": "BLOCKED under boundary-sweep-B45; the independent C5 review refused to apply the discharge because FREEZE-b73 self-declares non-finality",
+   "residuals": [
+    "no build/test at S4",
+    "engine_table_cleanup itself remains a CONTRACTED callee (B20-TBL-3)"
+   ]
+  },
+  {
+   "id": "B45-ENG-CB-009-ELIMINATED",
+   "file": "src/engine/tb_rsa.rs",
+   "line": 59,
+   "line_current": 59,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_rsa",
+   "historical_ids": [
+    "B45-ENG-CB-009"
+   ],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument cleanup thunk: calls engine_table_cleanup over this module's static slot inside an unsafe block; no caller pointer or lifetime precondition; a held lock makes the cleanup refuse, not fault",
+   "evidence": {
+    "span_sha256": "daa8ab286533b0f1ba85a09e792b46e1d3e29bde51679abee5d7efccc6af5943",
+    "span_lines": [
+     59,
+     62
+    ],
+    "qualified_identity": "engine_unregister_all_rsa",
+    "compile_time_control": "src/engine/tb_rsa.rs:65"
+   },
+   "prior_state": "BLOCKED under boundary-sweep-B45; the independent C5 review refused to apply the discharge because FREEZE-b73 self-declares non-finality",
+   "residuals": [
+    "no build/test at S4",
+    "engine_table_cleanup itself remains a CONTRACTED callee (B20-TBL-3)"
+   ]
+  }
+ ],
+ "supersedes": [
+  {
+   "receipt": "boundary-sweep-B45",
+   "ids": [
+    "B45-ENG-CB-001"
+   ],
+   "file": "src/engine/tb_asnmth.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_pkey_asn1_meths",
+   "discharging_boundary": "B45-ENG-CB-001-ELIMINATED",
+   "discharging_receipt": "b45-safe-thunks-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "engine_unregister_all_pkey_asn1_meths is a safe extern fn at src/engine/tb_asnmth.rs:79 (span 79-82 sha256 c3ae6d2503d44324); the control at src/engine/tb_asnmth.rs:85 rejects a restored unsafe qualifier",
+   "reason": "the B45 unsafe-fn obligation no longer exists at S4, so the refused C5 application is moot for these nine sites"
+  },
+  {
+   "receipt": "boundary-sweep-B45",
+   "ids": [
+    "B45-ENG-CB-002"
+   ],
+   "file": "src/engine/tb_cipher.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_ciphers",
+   "discharging_boundary": "B45-ENG-CB-002-ELIMINATED",
+   "discharging_receipt": "b45-safe-thunks-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "engine_unregister_all_ciphers is a safe extern fn at src/engine/tb_cipher.rs:62 (span 62-65 sha256 3c97b73dfc4b102d); the control at src/engine/tb_cipher.rs:68 rejects a restored unsafe qualifier",
+   "reason": "the B45 unsafe-fn obligation no longer exists at S4, so the refused C5 application is moot for these nine sites"
+  },
+  {
+   "receipt": "boundary-sweep-B45",
+   "ids": [
+    "B45-ENG-CB-003"
+   ],
+   "file": "src/engine/tb_dh.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_dh",
+   "discharging_boundary": "B45-ENG-CB-003-ELIMINATED",
+   "discharging_receipt": "b45-safe-thunks-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "engine_unregister_all_dh is a safe extern fn at src/engine/tb_dh.rs:58 (span 58-61 sha256 603470f3c559a4e0); the control at src/engine/tb_dh.rs:64 rejects a restored unsafe qualifier",
+   "reason": "the B45 unsafe-fn obligation no longer exists at S4, so the refused C5 application is moot for these nine sites"
+  },
+  {
+   "receipt": "boundary-sweep-B45",
+   "ids": [
+    "B45-ENG-CB-004"
+   ],
+   "file": "src/engine/tb_digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_digests",
+   "discharging_boundary": "B45-ENG-CB-004-ELIMINATED",
+   "discharging_receipt": "b45-safe-thunks-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "engine_unregister_all_digests is a safe extern fn at src/engine/tb_digest.rs:73 (span 73-76 sha256 bd4d5f73402840b9); the control at src/engine/tb_digest.rs:79 rejects a restored unsafe qualifier",
+   "reason": "the B45 unsafe-fn obligation no longer exists at S4, so the refused C5 application is moot for these nine sites"
+  },
+  {
+   "receipt": "boundary-sweep-B45",
+   "ids": [
+    "B45-ENG-CB-005"
+   ],
+   "file": "src/engine/tb_dsa.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_dsa",
+   "discharging_boundary": "B45-ENG-CB-005-ELIMINATED",
+   "discharging_receipt": "b45-safe-thunks-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "engine_unregister_all_dsa is a safe extern fn at src/engine/tb_dsa.rs:58 (span 58-61 sha256 a161be59ab432157); the control at src/engine/tb_dsa.rs:64 rejects a restored unsafe qualifier",
+   "reason": "the B45 unsafe-fn obligation no longer exists at S4, so the refused C5 application is moot for these nine sites"
+  },
+  {
+   "receipt": "boundary-sweep-B45",
+   "ids": [
+    "B45-ENG-CB-006"
+   ],
+   "file": "src/engine/tb_eckey.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_ec",
+   "discharging_boundary": "B45-ENG-CB-006-ELIMINATED",
+   "discharging_receipt": "b45-safe-thunks-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "engine_unregister_all_ec is a safe extern fn at src/engine/tb_eckey.rs:58 (span 58-61 sha256 d33b4237220d1f6c); the control at src/engine/tb_eckey.rs:64 rejects a restored unsafe qualifier",
+   "reason": "the B45 unsafe-fn obligation no longer exists at S4, so the refused C5 application is moot for these nine sites"
+  },
+  {
+   "receipt": "boundary-sweep-B45",
+   "ids": [
+    "B45-ENG-CB-007"
+   ],
+   "file": "src/engine/tb_pkmeth.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_pkey_meths",
+   "discharging_boundary": "B45-ENG-CB-007-ELIMINATED",
+   "discharging_receipt": "b45-safe-thunks-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "engine_unregister_all_pkey_meths is a safe extern fn at src/engine/tb_pkmeth.rs:60 (span 60-63 sha256 822d498b20998499); the control at src/engine/tb_pkmeth.rs:66 rejects a restored unsafe qualifier",
+   "reason": "the B45 unsafe-fn obligation no longer exists at S4, so the refused C5 application is moot for these nine sites"
+  },
+  {
+   "receipt": "boundary-sweep-B45",
+   "ids": [
+    "B45-ENG-CB-008"
+   ],
+   "file": "src/engine/tb_rand.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_rand",
+   "discharging_boundary": "B45-ENG-CB-008-ELIMINATED",
+   "discharging_receipt": "b45-safe-thunks-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "engine_unregister_all_rand is a safe extern fn at src/engine/tb_rand.rs:58 (span 58-61 sha256 7ea7ba39463d8ee4); the control at src/engine/tb_rand.rs:64 rejects a restored unsafe qualifier",
+   "reason": "the B45 unsafe-fn obligation no longer exists at S4, so the refused C5 application is moot for these nine sites"
+  },
+  {
+   "receipt": "boundary-sweep-B45",
+   "ids": [
+    "B45-ENG-CB-009"
+   ],
+   "file": "src/engine/tb_rsa.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_unregister_all_rsa",
+   "discharging_boundary": "B45-ENG-CB-009-ELIMINATED",
+   "discharging_receipt": "b45-safe-thunks-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "engine_unregister_all_rsa is a safe extern fn at src/engine/tb_rsa.rs:59 (span 59-62 sha256 daa8ab286533b0f1); the control at src/engine/tb_rsa.rs:65 rejects a restored unsafe qualifier",
+   "reason": "the B45 unsafe-fn obligation no longer exists at S4, so the refused C5 application is moot for these nine sites"
+  }
+ ],
+ "negative_control": {
+  "id": "B45-SAFE-ELIM-1",
+  "kind": "compile-time coercion",
+  "observation": "each control const requires a safe extern fn; restoring unsafe fails to type-check"
+ },
+ "non_claims": [
+  "Structural elimination, not SAFETY_DISCHARGED.",
+  "The applied 98 count is unchanged until a rebuild, re-census and fresh closure run.",
+  "engine_table_cleanup (B20-TBL-3) remains CONTRACTED; this does not discharge it.",
+  "No Miri/ASan/test run at S4."
+ ]
+}
