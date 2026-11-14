@@ -1,0 +1,59 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/venue-refusal/v1",
+  "kind": "venue-refusal",
+  "receipt": "b79-venue-refusal",
+  "date": "2026-11-14",
+  "candidate": {
+    "source_head": "97a1240e7cec86d1ffeea2404917273bd769dd8a",
+    "branch": "stage/p25/b75-ocsp",
+    "tracked_tree_clean": true,
+    "status": "source changes committed and gated locally, but NOT rebuilt, NOT censused and NOT closed"
+  },
+  "last_frozen_candidate": {
+    "tag": "b78",
+    "production_source_head": "bb7d5206a",
+    "src_content_sha256": "c0bd61c94f5a8da2e08c105724d14750403fbfd53aa8d4b722672f9b11b0bd38",
+    "libcrypto_so_3_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+    "freeze": "court/freeze-b78/FREEZE-b78.json",
+    "freeze_sha256": "56d7903aa684c15cdc4d050502237191aeb5a7d97b71f359325e1b2951880ff5",
+    "closures": {
+      "ssh": "evidence/closure-ssh-b78c.json",
+      "sshd": "evidence/closure-sshd-b78c.json",
+      "counts": "290 DISCHARGED / 0 BLOCKED / 0 UNKNOWN, ACCEPTED, element 7 PASS"
+    }
+  },
+  "refusal": {
+    "rule": "AGENTS.md section 6.1 rules 2 and 6: the cap is computed from live availability, and if a cap cannot be established the command does not run",
+    "observed": {
+      "free_g": "total 31, used 23, free 5, buff/cache 2, available 7 GiB",
+      "free_m_available_kib": 7841,
+      "swap": "32003 / 32016 MiB used (13 MiB free)",
+      "cap_formula": "min(8g, available - 16g) is negative, below the 2g floor",
+      "court_container": "openssl-rs-court up and idle at 25 MiB of an 8 GiB cap; not the pressure source",
+      "host_pressure": "zed-editor about 12.8 GB RSS and rust-analyzer about 1.5 GB RSS against an exhausted swap"
+    },
+    "commands_not_run": [
+      "forensics/tools/build_phase2.sh (install rebuild)",
+      "forensics/tools/build_openssh_closure.sh client-b79 and server-b79",
+      "cargo clippy census input and v1_census.py for b79",
+      "consumer_closure.py for ssh and sshd at b79"
+    ],
+    "commands_that_did_run": [],
+    "note": "No heavy command was executed, so this is a refusal under section 6.1.6 rather than a recorded deviation. The coverage of the two committed source batches is pending, not silently dropped."
+  },
+  "pending_work": [
+    "Rebuild the install and both OpenSSH consumers at 97a1240e7 and record exact artefact identity.",
+    "Regenerate the census and both closures; the converted functions are expected to add UNSAFE_FN_DEF operations that need discharges, and the 57 fn-level contracts may move span hashes.",
+    "Re-run the per-artefact rebinds and regenerate the freeze for the new candidate.",
+    "Re-run the section 7 criterion-3 argument against the enlarged safe-interface surface."
+  ],
+  "required_resolution": [
+    "Free host memory until free -g reports at least 18 GiB available with swap not exhausted (the section 6.1 cap floor), or provide a machine with at least 64 GiB so the 24 GiB build floor is satisfiable.",
+    "Then run one heavy command at a time under the court, CARGO_BUILD_JOBS=4, tests with --test-threads=4."
+  ],
+  "non_claims": [
+    "This receipt is not a measurement of the current source.",
+    "It does not discharge, weaken or withdraw any obligation.",
+    "The b78 freeze remains the last measured candidate and is unchanged by this refusal."
+  ]
+}
