@@ -12495,6 +12495,110 @@ class _RepinProxy:
         return getattr(object.__getattribute__(self, "_base"), name)
 
 
+def _e7decoder_cursor_controls_body(g) -> list:
+    """Controls for the decoder table-cursor argument proof (b78 repair).
+
+    The repaired rule replaces an exact-base register closure with a bounded
+    table-cursor derivation.  Each control removes exactly one of its
+    conditions and requires a refusal; the restore check then requires the
+    admitted image to accept all three rows again.
+    """
+    failures = []
+    fstart = _external_function_address(g, "file_load")
+    table = _phw_symbol_addr(g, DECODER_METHOD_TABLE)
+    extent = (getattr(g, "sym_sizes", None) or {}).get(DECODER_METHOD_TABLE)
+    if not fstart or table is None or not extent or not g.start_set:
+        return []
+    insns = g.precision.insns_by_func.get(fstart, ())
+    ctor = _phw_function_addresses(g, DECODER_METHOD_CONSTRUCTOR)
+    call_idx = next((i for i, (a, t) in enumerate(insns)
+                     if t.startswith("call ")
+                     and not t.split(None, 1)[1].startswith("*")
+                     and int(t.split()[1].split()[0], 16) in ctor), None)
+    if call_idx is None:
+        return []
+
+    def sites():
+        out = []
+        for old, spec in DECODER_METHOD_SITES.items():
+            addr, how = _pin_effective("DECODER_METHOD_SITES", old, g)
+            if how == "literal":
+                continue
+            text = next((t for a, t in insns if a == addr), None)
+            if text is None:
+                continue
+            out.append((old, spec, {
+                "kind": "call", "func": fstart, "addr": addr, "text": text,
+                "targets": set(), "unresolved": True,
+                "reason": "materialised", "class": "materialised",
+                "field_offsets": set(), "seam": None,
+                "arg_deps": set(), "arg_targets": set()}))
+        return out
+
+    def accepts(site):
+        got = decoder_method_object_witness(g, site, "file_load")
+        return isinstance(got, dict) and got.get("contract_bounded")
+
+    # positive: the admitted image's cursor derives from the named table
+    roots, cursor = _led_table_cursor(g, fstart, call_idx, "%rsi", table, extent)
+    if not roots or roots != {table}:
+        failures.append("e7dec: the constructor argument does not derive "
+                        "from the enumerated table")
+    if not cursor.get("row_stride"):
+        failures.append("e7dec: no whole-row advance was recognised")
+    else:
+        guard = _led_table_terminator_guard(g, fstart, cursor["cursor_reg"],
+                                            cursor["row_stride"], extent)
+        if guard is None:
+            failures.append("e7dec: no terminator guard was recognised")
+
+    # 1. an advance that is not a whole row can leave the table: refuse
+    bad, _meta = _led_table_cursor(g, fstart, call_idx, "%rsi", table,
+                                   extent + 5)
+    if bad:
+        failures.append("e7dec stride control: a non-whole-row advance was accepted")
+
+    # 2. the answer follows the code, not the pin: move the table root in the
+    #    instruction stream and require the derivation to stop matching it
+    moved = [(a, t.replace(hex(table)[2:], "8a0000") if f"# {table:x}" in t or
+              f"<{DECODER_METHOD_TABLE}>" in t else t) for a, t in insns]
+    proxy = _RepinProxy(g, precision=_RepinProxy(g.precision,
+                                                insns_by_func={fstart: moved}),
+                        _fn_cfg_cache={}, _reaching_cache={})
+    roots2, _m2 = _led_table_cursor(proxy, fstart, call_idx, "%rsi", table,
+                                    extent)
+    if roots2 and roots2 == {table} and moved != insns:
+        failures.append("e7dec root control: a moved table root still matched")
+
+    # 3. wrong constructor: the witness must refuse to attribute the object
+    saved_ctor = globals()["DECODER_METHOD_CONSTRUCTOR"]
+    try:
+        globals()["DECODER_METHOD_CONSTRUCTOR"] = "e7dec_no_such_constructor"
+        if any(accepts(s) for _o, _p, s in sites()):
+            failures.append("e7dec constructor control: a wrong constructor was accepted")
+    finally:
+        globals()["DECODER_METHOD_CONSTRUCTOR"] = saved_ctor
+
+    # 4. a perturbed slot offset must refuse (the read-field condition)
+    rows = sites()
+    if rows:
+        old, spec, site = rows[0]
+        saved = dict(spec)
+        try:
+            spec["read"] = spec["read"] + 8
+            if accepts(site):
+                failures.append("e7dec slot control: a perturbed slot offset was accepted")
+        finally:
+            spec.clear()
+            spec.update(saved)
+
+    # 5. restore: every row accepted again after the mutations
+    for old, spec, site in rows:
+        if not accepts(site):
+            failures.append(f"e7dec restore: {hex(old)} no longer accepts")
+    return failures
+
+
 def e7repin_controls(g) -> list:
     """Load-bearing controls for the re-pin rule.
 
@@ -12516,6 +12620,7 @@ def e7repin_controls(g) -> list:
         ("_PIN_SEARCH_REFUSALS", _PIN_SEARCH_REFUSALS))}
     try:
         failures.extend(_e7repin_controls_body(g))
+        failures.extend(_e7decoder_cursor_controls_body(g))
     finally:
         for key, values in saved.items():
             target = globals()[key]
@@ -15645,6 +15750,220 @@ def _led_dispatch_entry(g: "DsoGraph", table: int, function_id: int,
     return found[0], None
 
 
+def _slot_reaching_stores(g: "DsoGraph", fstart: int, slot: int,
+                          idx: int):
+    """The stores that can reach frame ``slot`` at instruction ``idx``.
+
+    Frames reuse a slot for several values, so "the slot's only writer" is too
+    strong and "any writer" is unsound.  This is the reaching-definition
+    question asked of one frame slot: the last store in the block before
+    ``idx``, or else the union over the block's predecessors.  An unknown
+    predecessor (a block reached from an indirect jump) or a path that reaches
+    the function entry with no store refuses, because the value would then be
+    whatever the frame held.
+
+    Returns a list of store records (``index``/``source``/``text``) or None.
+    """
+    cfg = _function_cfg(g, fstart)
+    bi = cfg["block_of"].get(idx)
+    if bi is None:
+        return None
+    writes = _stack_slot_writes(g, fstart, slot)
+    stores = {w["index"]: w for w in writes if w["kind"] == "store"}
+    if any(w["kind"] == "address" for w in writes):
+        return None
+    lo, _hi = cfg["blocks"][bi]
+    local = [i for i in stores if lo <= i < idx]
+    if local:
+        return [stores[max(local)]]
+    preds = collections.defaultdict(list)
+    for b, succ in cfg["succ"].items():
+        for s in succ:
+            preds[s].append(b)
+    found = {}
+    seen = set()
+    frontier = [bi]
+    while frontier:
+        b = frontier.pop()
+        if b in seen:
+            continue
+        seen.add(b)
+        if b != bi:
+            blo, bhi = cfg["blocks"][b]
+            here = [i for i in stores if blo <= i < bhi]
+            if here:
+                i = max(here)
+                found[i] = stores[i]
+                continue
+        if b in cfg["open_reach"]:
+            return None
+        parents = preds.get(b, ())
+        if not parents:
+            if b == 0:
+                # a real path from the entry with no store: the frame value is
+                # whatever the caller left there
+                return None
+            # A block with no predecessor that is not the entry block is
+            # unreachable code (padding between a `jmp` and the next symbol).
+            # It cannot execute, so it contributes no value.  A block reachable
+            # from an indirect jump is already refused above by open_reach.
+            continue
+        frontier.extend(p for p in parents if p not in seen)
+    return list(found.values())
+
+
+def _led_table_cursor(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                      table_addr: int, extent: int, max_depth: int = 12):
+    """Roots of ``reg`` at ``idx`` when it is a cursor over one closed table.
+
+    The b77 witness required the constructor's argument register to close to
+    *exactly* the table base address.  That is a property of one build's
+    register allocation, not of the operation: as soon as the compiler spills
+    the row pointer and advances it by one row per iteration, the argument is
+    ``base + k*stride`` and the exact-base closure fails even though the only
+    possible origin is still the named table.
+
+    This derivation proves the actual invariant, and nothing wider:
+
+    * a definition may be a register copy, a ``lea <table>(%rip)`` of the named
+      table, a *whole-row* self-advance (``lea K(%r),%r`` / ``add $K,%r`` with
+      ``0 < K <= extent`` and ``extent % K == 0``), or a reload from a frame
+      slot whose only writer stores this same register (no address escapes);
+    * any other definition refuses, so the register cannot also carry a load,
+      a call result or an incoming argument;
+    * revisiting a definition on the same path is a loop cut, not a failure.
+
+    Returns ``(roots, meta)``.  ``meta`` records the cursor register, the
+    observed row stride and the derivation steps so the witness states what it
+    checked rather than only its verdict.
+    """
+    insns = g.precision.insns_by_func.get(fstart, ())
+    seen = set()
+    meta = {"cursor_reg": None, "row_stride": None, "steps": [],
+            "spill_slots": []}
+
+    def walk(i, r, depth):
+        if (i, r) in seen:
+            meta["steps"].append({"kind": "loop-cut", "reg": r})
+            return set()
+        if depth > max_depth:
+            return None
+        seen.add((i, r))
+        defs = _reaching_defs(g, fstart, i, r)
+        if defs is None or not defs:
+            return None
+        roots = set()
+        for d in sorted(defs):
+            if d < 0 or d >= len(insns):
+                return None
+            text = insns[d][1]
+            mn, _rest, ops = _insn_parts(text.split("#", 1)[0].strip())
+            if mn == "lea" and len(ops) == 2:
+                m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                                 ops[0].strip())
+                if m and _canon(m.group(2)) != "%rip":
+                    base = _canon(m.group(2))
+                    imm = int(m.group(1), 16) if m.group(1) else 0
+                    if base == r:
+                        if not (0 < imm <= extent and extent % imm == 0):
+                            meta["steps"].append(
+                                {"kind": "unbounded-advance", "text": text})
+                            return None
+                        sub = walk(d, r, depth + 1)
+                        meta["row_stride"] = imm
+                        meta["cursor_reg"] = r
+                        meta["steps"].append({"kind": "advance",
+                                              "address": hex(insns[d][0]),
+                                              "stride": hex(imm)})
+                    else:
+                        sub = walk(d, base, depth + 1)
+                        meta["steps"].append({"kind": "copy",
+                                              "address": hex(insns[d][0]),
+                                              "from": base})
+                    if sub is None:
+                        return None
+                    roots |= sub
+                    continue
+                if m:
+                    addr = _insn_comment_addr(text)
+                    if addr is None:
+                        return None
+                    meta["steps"].append({"kind": "table",
+                                          "address": hex(insns[d][0]),
+                                          "root": hex(addr)})
+                    roots.add(addr)
+                    continue
+                return None
+            if mn in ("mov", "movq") and len(ops) == 2:
+                src = ops[0].strip()
+                if _canon(src) in _REGS:
+                    sub = walk(d, _canon(src), depth + 1)
+                    meta["steps"].append({"kind": "copy",
+                                          "address": hex(insns[d][0]),
+                                          "from": _canon(src)})
+                    if sub is None:
+                        return None
+                    roots |= sub
+                    continue
+                slot = _stack_slot_abs(g, fstart, d, src)
+                if slot is not None:
+                    reaching = _slot_reaching_stores(g, fstart, slot, d)
+                    if not reaching or len(reaching) != 1:
+                        meta["steps"].append(
+                            {"kind": "ambiguous-slot", "slot": slot,
+                             "reaching_stores": len(reaching or ())})
+                        return None
+                    store = reaching[0]
+                    if _canon(store["source"]) not in _REGS:
+                        return None
+                    sub = walk(store["index"], _canon(store["source"]),
+                               depth + 1)
+                    meta["spill_slots"].append(slot)
+                    meta["steps"].append(
+                        {"kind": "reload", "address": hex(insns[d][0]),
+                         "slot": slot,
+                         "store_address": hex(insns[store["index"]][0])})
+                    if sub is None:
+                        return None
+                    roots |= sub
+                    continue
+                return None
+            return None
+        return roots
+
+    return walk(idx, reg, 0), meta
+
+
+def _led_table_terminator_guard(g: "DsoGraph", fstart: int, reg: str,
+                                stride: int, extent: int):
+    """The loop's continuation test: a zero compare of a row field of ``reg``.
+
+    A cursor that advances by a whole row is only bounded because the walk is
+    conditional on the table's own terminator.  Requiring the test makes the
+    claim "iterates the closed table's rows" rather than "adds a constant to a
+    pointer".
+    """
+    insns = g.precision.insns_by_func.get(fstart, ())
+    for i, (a, text) in enumerate(insns):
+        mn, _rest, ops = _insn_parts(text.split("#", 1)[0].strip())
+        if mn not in ("cmp", "cmpq") or len(ops) != 2:
+            continue
+        if ops[0].strip() not in ("$0x0", "$0"):
+            continue
+        m = re.fullmatch(r"(0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[1].strip())
+        if not m or _canon(m.group(2)) != reg:
+            continue
+        off = int(m.group(1), 16) if m.group(1) else 0
+        if off % stride or off >= extent:
+            continue
+        for k in range(i + 1, min(i + 3, len(insns))):
+            mnk, _rk, _ok = _insn_parts(insns[k][1].split("#", 1)[0].strip())
+            if mnk.startswith("j") and mnk != "jmp":
+                return {"test": hex(a), "field_offset": hex(off),
+                        "branch": hex(insns[k][0]), "conditional": mnk}
+    return None
+
+
 def decoder_method_object_witness(g: "DsoGraph", site: dict, name: str):
     """Prove (or refuse) an enumerated `OsslDecoder` method-slot dispatch."""
     if site.get("kind") != "call" or not _has_insns(g):
@@ -15699,17 +16018,44 @@ def decoder_method_object_witness(g: "DsoGraph", site: dict, name: str):
                             call_site=hex(site["addr"]),
                             callee=hex(obj.get("callee_addr") or 0))
     call_at = obj["call_site"]
-    roots = _led_reg_roots(g, fstart, call_at, "%rsi")
     table_addr = _phw_symbol_addr(g, DECODER_METHOD_TABLE)
     if table_addr is None:
         return _led_refusal(rule, klass, "algorithm-table-not-in-image",
                             call_site=hex(site["addr"]),
                             table=DECODER_METHOD_TABLE)
+    extent = (getattr(g, "sym_sizes", None) or {}).get(DECODER_METHOD_TABLE)
+    if not extent:
+        return _led_refusal(rule, klass, "algorithm-table-extent-unknown",
+                            call_site=hex(site["addr"]),
+                            table=DECODER_METHOD_TABLE)
+    roots, cursor = _led_table_cursor(g, fstart, call_at, "%rsi", table_addr,
+                                      extent)
     if not roots or roots != {table_addr}:
         return _led_refusal(rule, klass, "constructor-argument-not-closed-table",
                             call_site=hex(site["addr"]),
                             expected=hex(table_addr),
-                            roots=sorted(hex(r) for r in (roots or ())))
+                            roots=sorted(hex(r) for r in (roots or ())),
+                            derivation=cursor)
+    argument = {
+        "table": DECODER_METHOD_TABLE,
+        "table_address": hex(table_addr),
+        "table_extent": hex(extent),
+        "row_stride": (hex(cursor["row_stride"])
+                       if cursor.get("row_stride") else None),
+        "cursor_reg": cursor.get("cursor_reg"),
+        "derivation": cursor.get("steps"),
+        "terminator_guard": None,
+    }
+    if cursor.get("row_stride"):
+        guard = _led_table_terminator_guard(
+            g, fstart, cursor["cursor_reg"], cursor["row_stride"], extent)
+        if guard is None:
+            return _led_refusal(rule, klass, "table-cursor-has-no-terminator-guard",
+                                call_site=hex(site["addr"]),
+                                cursor_reg=cursor["cursor_reg"],
+                                row_stride=hex(cursor["row_stride"]),
+                                table=hex(table_addr), extent=hex(extent))
+        argument["terminator_guard"] = guard
 
     owners = _led_source_gate(g)
     if owners["types"]["OsslDecoder"]["status"] != "PASS":
@@ -15774,6 +16120,7 @@ def decoder_method_object_witness(g: "DsoGraph", site: dict, name: str):
             "construction_call_site": hex(insns[call_at][0]),
             "argument_table": DECODER_METHOD_TABLE,
             "argument_table_address": hex(table_addr),
+            "argument": argument,
             "null_guarded": True,
         },
         "field": {
@@ -29991,6 +30338,258 @@ def resolve_operation_at_line(repo, file, item, line, source_text=None,
     return dict(result)
 
 
+# --------------------------------------------------------------------------- #
+# carry-forward coordinate migration (content-addressed identity)
+# --------------------------------------------------------------------------- #
+#
+# A carried-forward obligation's `line` is the coordinate the *previous* applied
+# closure enumerated.  It is provenance, not identity: an edit anywhere above a
+# definition moves that definition without changing it, and the recorded
+# coordinate then names no definition of the item at the candidate -- or, worse,
+# names a *different* operation whose body inherited the line.
+#
+# Binding such a row must prove that the recorded coordinate and the boundary's
+# declared span denote the *same bytes*, never that two numbers agree.  The
+# proof is the recorded evidence chain itself: each hop names the closure
+# receipt it was carried from (digest-pinned) and that receipt records its own
+# inventory source head.  At that head the carried coordinate must be the
+# definition line of the operation, and that definition's normalised text must
+# hash to the boundary's declared span hash -- which the same adjudication
+# independently requires to equal the candidate's live span hash.  Coordinates
+# are therefore only locators inside a revision named by committed evidence;
+# content is the identity.  The rule cannot be satisfied by widening a span,
+# and no head can be chosen by hand: every hop is reachable only through the
+# obligation's own recorded `carried_forward_from` links.
+
+MIGRATION_CHAIN_LIMIT = 12
+
+
+_EVIDENCE_JSON_CACHE: dict = {}
+
+
+def _digest_pinned_json(repo, rel_path, expected_sha):
+    key = (str(repo), str(rel_path), str(expected_sha))
+    cached = _EVIDENCE_JSON_CACHE.get(key)
+    if cached is not None:
+        return cached
+    doc = _digest_pinned_json_uncached(repo, rel_path, expected_sha)
+    _EVIDENCE_JSON_CACHE[key] = doc
+    return doc
+
+
+_EVIDENCE_JSON_CACHE = {}
+
+
+def _digest_pinned_json_uncached(repo, rel_path, expected_sha):
+    if not rel_path or not expected_sha:
+        return None
+    root = Path(repo)
+    path = Path(rel_path)
+    if not path.is_absolute():
+        path = root / path
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return None
+    if hashlib.sha256(raw).hexdigest() != expected_sha:
+        return None
+    try:
+        return json.loads(raw)
+    except Exception:  # noqa: BLE001 -- an unreadable receipt establishes nothing
+        return None
+
+
+def _carried_forward_coordinates(repo, obligation):
+    """``(head, line, receipt)`` coordinates the carry-forward chain records.
+
+    Each hop yields the *ancestor* receipt's own inventory source head and the
+    coordinate that receipt carried for this operation.  Both are read from
+    evidence, not inferred: the receipt path is digest-pinned by the hop that
+    names it, and the head is the head that receipt declares for its own
+    inventory.  A hop whose receipt is missing or whose digest does not match
+    ends the walk -- an unverifiable link establishes nothing.
+    """
+    out = []
+    seen = set()
+    record = obligation.get("carried_forward_from") or {}
+    depth = 0
+    while record and depth < MIGRATION_CHAIN_LIMIT:
+        receipt = record.get("receipt")
+        if not receipt or receipt in seen:
+            break
+        seen.add(receipt)
+        doc = _digest_pinned_json(repo, receipt, record.get("receipt_sha256"))
+        if doc is None:
+            break
+        ident = doc.get("source_identity") or {}
+        head = ident.get("span_source_commit") or ident.get("inventory_source_head")
+        line = record.get("previous_line")
+        if head and isinstance(line, int) and not isinstance(line, bool):
+            out.append({"receipt": receipt, "head": head, "line": line})
+        previous_id = record.get("previous_id")
+        row = next((o for o in doc.get("obligations") or []
+                    if o.get("id") == previous_id), None)
+        if row is None:
+            row = next((o for o in doc.get("obligations") or []
+                        if (o.get("file"), o.get("kind"), o.get("item"),
+                            o.get("line")) == (obligation.get("file"),
+                                               obligation.get("kind"),
+                                               obligation.get("item"),
+                                               line)), None)
+        record = (row or {}).get("carried_forward_from")
+        depth += 1
+    return out
+
+
+def _census_operation_index(contracts):
+    """(file, kind, item) -> set(line) for this inventory's own enumerations.
+
+    Both the contracted-operation records and the production blockers are the
+    inventory's per-site enumeration of a source unsafe operation, so both are
+    admissible: what this index answers is "does *this* inventory attribute an
+    operation of this kind to this line", which is a fact about the candidate,
+    not about the boundary.
+    """
+    index = collections.defaultdict(set)
+    if not isinstance(contracts, dict):
+        return index
+    for table in (contracts.get("contracted_operations") or [],
+                  contracts.get("blockers") or []):
+        for rec in table:
+            if rec.get("partition") not in (None, V1_PARTITION_PRODUCTION):
+                continue
+            key = (rec.get("file"), rec.get("kind"), rec.get("item"))
+            if key[0] and key[1] and key[2] and isinstance(rec.get("line"), int):
+                index[key].add(rec["line"])
+    return index
+
+
+def migration_witness(repo, obligation, boundary, source_commit,
+                      allow_worktree=False, census_ops=None):
+    """Prove the boundary's declared span *is* the recorded coordinate's body.
+
+    Returns a witness dict or None.  Every condition is required:
+
+    1. the boundary's recorded span hash is a valid digest (a boundary with no
+       recorded hash can never migrate: a coordinate cannot establish a
+       content identity);
+    2. the current inventory attributes an operation of the obligation's
+       (file, kind, item) to the boundary's resolved definition line -- the
+       boundary must declare a span the census itself attributes the operation
+       to, not merely a span of the same item;
+    3. some ancestor coordinate in the digest-pinned carry-forward chain is the
+       *definition line* of the item at that ancestor's own inventory head, and
+       the normalised text there hashes to the boundary's recorded span hash.
+
+    Two coordinates that resolve to different bodies are inconsistent evidence:
+    the stronger witness is refused, never picked between.
+    """
+    recorded = boundary.get("span_sha256")
+    if not isinstance(recorded, str) or not re.fullmatch(r"[0-9a-f]{64}", recorded):
+        return None
+    if census_ops is None:
+        return None
+    item = obligation.get("item")
+    if not item:
+        return None
+    chain = _carried_forward_coordinates(repo, obligation)
+    if not chain:
+        return None
+    # The row's own recorded coordinate must be one the chain names; a row that
+    # claims a coordinate its evidence never carried is inconsistent, and an
+    # inconsistent provenance cannot establish a content identity.
+    row_line = obligation.get("line")
+    if isinstance(row_line, int) and row_line not in {h["line"] for h in chain}:
+        return None
+    hits = []
+    for hop in chain:
+        head = hop["head"]
+        if source_commit and head == source_commit:
+            continue
+        root = Path(repo)
+        if not _git_commit_exists(root, head):
+            continue
+        try:
+            span = resolve_operation_at_line(
+                root, obligation["file"], item, hop["line"],
+                source_commit=head, allow_worktree=allow_worktree)
+        except SpanResolutionError:
+            continue
+        # The coordinate must be this operation's *definition line* at that
+        # head -- not merely a line inside some definition of the same item
+        # (which is what makes a stale coordinate bind to the wrong function).
+        if span.get("def_line") != hop["line"]:
+            continue
+        hits.append({
+            "receipt": hop["receipt"], "head": head, "line": hop["line"],
+            "def_line": span["def_line"],
+            "resolution": span.get("resolution"),
+            "span_sha256": span["sha256"],
+            "span_lines": [span["start_line"], span["end_line"]],
+        })
+    matching = [h for h in hits if h["span_sha256"] == recorded]
+    if len({h["span_sha256"] for h in hits}) > 1:
+        return None
+    if not matching:
+        return None
+
+    # (2) the candidate must attribute the operation to exactly the line the
+    # boundary resolves.  ``census_ops`` is this inventory's enumeration.
+    try:
+        resolved = resolve_operation_span(
+            Path(repo), obligation["file"], boundary.get("operation"), item,
+            source_commit=source_commit, allow_worktree=allow_worktree)
+    except SpanResolutionError:
+        return None
+    attributed = census_ops.get(
+        (obligation["file"], obligation.get("kind"), item), set())
+    if resolved["def_line"] not in attributed:
+        return None
+
+    return {
+        "rule": "content-migrated-coordinate",
+        "recorded_span_sha256": recorded,
+        "candidate_def_line": resolved["def_line"],
+        "candidate_span_lines": [resolved["start_line"], resolved["end_line"]],
+        "candidate_census_attributed": True,
+        "ancestor": matching[0],
+        "ancestor_candidates": hits,
+        "basis": (
+            "the obligation's recorded coordinate is not a definition line at "
+            "the candidate, but it was the definition line of the same "
+            "operation at the inventory head the carry-forward chain names, and "
+            "that definition's normalised text hashes to the span the boundary "
+            "declares; the candidate inventory attributes the operation to the "
+            "boundary's resolved definition line"),
+    }
+
+
+def migration_bindings(repo, obligation, boundaries, source_commit,
+                       allow_worktree=False, census_ops=None):
+    """The migration witnesses for this obligation, keyed by boundary id.
+
+    Uniqueness is part of the proof: the caller binds only when this map has
+    exactly one entry.  Two boundaries whose declared hashes both match the
+    recorded coordinate's body are indistinguishable and must be refused.
+    """
+    out = {}
+    for b in boundaries:
+        if b.get("file") != obligation["file"]:
+            continue
+        if b.get("kind") != obligation.get("kind"):
+            continue
+        if scope_item(b.get("operation")) != obligation.get("item"):
+            continue
+        if b.get("declared_spans"):
+            continue
+        witness = migration_witness(
+            repo, obligation, b, source_commit,
+            allow_worktree=allow_worktree, census_ops=census_ops)
+        if witness is not None:
+            out[b["id"]] = witness
+    return out
+
+
 NON_DISCHARGING_DISPOSITIONS = ("BLOCKED", "ELIMINATED", "CONTRACTED",
                                "RETAINED")
 
@@ -30101,7 +30700,7 @@ def boundary_operation_key(boundary: dict) -> tuple:
 
 def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                plane: dict, repo=None, allow_worktree_span=False,
-               enforce_conflicts=None) -> dict:
+               enforce_conflicts=None, census_ops=None) -> dict:
     if enforce_conflicts is None:
         enforce_conflicts = ENFORCE_DISPOSITION_CONFLICTS
     repo = repo if repo is not None else _repo_root()
@@ -30153,6 +30752,7 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
     span_rejections = []
     disposition_rejections = []
     conflict_rejections = []
+    migration_map = None
     current_line = (obligation.get("current_census_line")
                     if isinstance(obligation.get("current_census_line"), int)
                     else obligation["line"])
@@ -30175,6 +30775,7 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
         boundary_span = None
         obligation_span = None
         binding = None
+        migration = None
         span_classification = None
         span_detail = None
         span_info = {}
@@ -30257,15 +30858,37 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                           <= boundary_span["end_line"]):
                         binding = "census-line-inside-boundary-span"
                     else:
-                        span_classification = exc.classification
-                        span_detail = (
-                            "the obligation's census line "
-                            f"{current_line} is neither a definition of "
-                            f"{obligation.get('item')!r} nor inside the "
-                            f"boundary's resolved span "
-                            f"{boundary_span['start_line']}-"
-                            f"{boundary_span['end_line']}: {exc.detail}")
-                        span_info = dict(exc.info)
+                        # A carry-forward coordinate is provenance, not identity.
+                        # When it names no definition at the candidate, the row
+                        # may still be the boundary's operation -- but only on a
+                        # content proof that the two coordinates are the same
+                        # bytes (see migration_witness), and only when exactly
+                        # one boundary in this file satisfies it.
+                        if migration_map is None:
+                            migration_map = migration_bindings(
+                                repo, obligation, boundaries, source_commit,
+                                allow_worktree=allow_worktree_span,
+                                census_ops=census_ops)
+                        witness = migration_map.get(b["id"])
+                        if witness is not None and len(migration_map) == 1:
+                            binding = "content-migrated-coordinate"
+                            migration = witness
+                        else:
+                            span_classification = exc.classification
+                            span_detail = (
+                                "the obligation's census line "
+                                f"{current_line} is neither a definition of "
+                                f"{obligation.get('item')!r} nor inside the "
+                                f"boundary's resolved span "
+                                f"{boundary_span['start_line']}-"
+                                f"{boundary_span['end_line']}: {exc.detail}")
+                            if migration_map:
+                                span_detail += (
+                                    "; the content-migration check matched "
+                                    f"{len(migration_map)} boundaries "
+                                    f"({', '.join(sorted(migration_map))}), so "
+                                    "it establishes no unique owner")
+                            span_info = dict(exc.info)
                 if (binding is not None and span_classification is None
                         and not declared_spans):
                     recorded = b.get("span_sha256")
@@ -30313,6 +30936,7 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
             "span_resolution": (span or {}).get("resolution"),
             "span_classification": span_classification,
             "span_collision": span_info.get("collision"),
+            "migration": migration,
             "content_address_accepts": content_accepts,
         })
         if content_accepts:
@@ -30406,6 +31030,16 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                         f"{boundary_span['end_line']}) and {content_clause}; the "
                         f"declared coordinate {current_line} is not part of "
                         f"acceptance")
+                    if migration is not None:
+                        anc = migration["ancestor"]
+                        obligation["status_reason"] += (
+                            f". The recorded coordinate {current_line} is the "
+                            f"definition line of {obligation.get('item')!r} at "
+                            f"the inventory head {anc['head'][:12]} named by "
+                            f"{anc['receipt']}, where its normalised text hashes "
+                            f"to the same declared span "
+                            f"{migration['recorded_span_sha256'][:16]}")
+                        obligation["migration"] = migration
                     obligation["span_discharge"] = {
                         "sha256": boundary_span["sha256"],
                         "start_line": boundary_span["start_line"],
@@ -30420,6 +31054,8 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                         "claim_scope": SPAN_CLAIM_SCOPE,
                         "schema": SPAN_HASH_SCHEMA,
                     }
+                    if migration is not None:
+                        obligation["span_discharge"]["migration"] = migration
                     if declared_spans:
                         obligation["span_discharge"].update({
                             "schema": SPAN_SET_SCHEMA,
@@ -31295,6 +31931,7 @@ def build_receipt(args) -> dict:
 
     # ---- 4. obligations --------------------------------------------------- #
     contracts = inventory.get("contracts") or {}
+    censused = _census_operation_index(contracts)
     blockers = contracts.get("blockers") or []
     production = [b for b in blockers if b.get("partition") == V1_PARTITION_PRODUCTION]
     carry_forward, carry_refusals = resolve_carry_forward(
@@ -31326,7 +31963,8 @@ def build_receipt(args) -> dict:
         o["status_reason"] = None
     for o in obligations:
         adjudicate(o, mechanisms, boundaries_by_file.get(o["file"], []), plane,
-                   repo=repo, enforce_conflicts=enforce_conflicts)
+                   repo=repo, enforce_conflicts=enforce_conflicts,
+                   census_ops=censused)
         if o.get("contract") == "contracted":
             if o.get("status") == "DISCHARGED":
                 # The queue note explains why a documented operation stayed
@@ -34406,6 +35044,152 @@ def self_test() -> int:
                        _plane("D-IDENTITY", "sweep-f"), repo=span_repo,
                        allow_worktree_span=True)
     check("f: an identity mismatch still refuses", f_res["status"], "BLOCKED")
+
+    # ---- carry-forward coordinate migration (blocker 1, b78) ---------------- #
+    # A carried-forward row's `line` is the coordinate the previous closure
+    # enumerated.  An edit above the definition moves it, and the recorded
+    # coordinate then names no definition -- or names a *different* operation
+    # whose body inherited the line.  The binding may not use containment (that
+    # is the b78 defect) and may not pick a boundary by hand: it must prove, from
+    # the digest-pinned carry-forward chain, that the recorded coordinate was the
+    # definition line of this operation at a head the evidence itself names and
+    # that the body there is byte-identical to the span the boundary declares.
+    import subprocess
+
+    def _git(d, *args):
+        subprocess.run(["git", "-C", str(d), "-c", "user.email=t@t",
+                        "-c", "user.name=t"] + list(args), check=True,
+                       capture_output=True)
+
+    def _mig_fixture(candidate_body, *, boundary_operation="m1::copyctx",
+                     census_lines=(5, 10), boundary_hash=None,
+                     two_boundaries=False, tamper_receipt=False,
+                     row_line=2, recorded_from_ancestor=False):
+        """A two-commit repo: `m1::copyctx` / `m2::copyctx`, moved by an edit."""
+        td = tempfile.TemporaryDirectory()
+        fixture_dirs.append(td)
+        d = Path(td.name)
+        (d / "src/ssl").mkdir(parents=True)
+        (d / "evidence").mkdir()
+        _git(d, "init", "-q")
+        ancestor = (
+            "mod m1 {\n"
+            "    pub unsafe fn copyctx(a: *mut u8) {\n"
+            "        // one\n"
+            "        core::ptr::read_volatile(a);\n"
+            "    }\n"
+            "}\n"
+            "mod m2 {\n"
+            "    pub unsafe fn copyctx(a: *mut u8) {\n"
+            "        // two\n"
+            "        core::ptr::read_volatile(a);\n"
+            "    }\n"
+            "}\n")
+        (d / "src/ssl/mig.rs").write_text(ancestor)
+        _git(d, "add", "-A")
+        _git(d, "commit", "-qm", "ancestor")
+        head = subprocess.check_output(
+            ["git", "-C", str(d), "rev-parse", "HEAD"], text=True).strip()
+        # the candidate inserts documentation above m1, which moves both
+        # definitions without editing either body
+        (d / "src/ssl/mig.rs").write_text(
+            "//! a module doc line that did not exist at the ancestor head\n"
+            "//! second line\n"
+            "\n" + candidate_body)
+        evidence = {
+            "source_identity": {"span_source_commit": head},
+            "obligations": [{
+                "id": "V1:src/ssl/mig.rs:2:UNSAFE_FN_DEF",
+                "file": "src/ssl/mig.rs", "kind": "UNSAFE_FN_DEF",
+                "item": "copyctx", "line": 2,
+                "carried_forward_from": None}],
+        }
+        ev_rel = "evidence/closure-test-anc.json"
+        (d / ev_rel).write_text(json.dumps(evidence))
+        digest = hashlib.sha256((d / ev_rel).read_bytes()).hexdigest()
+        if tamper_receipt:
+            digest = "0" * 64
+        clear_span_cache()
+        if recorded_from_ancestor:
+            # the receipt recorded the body it reviewed, at the head it read
+            recorded = resolve_operation_at_line(
+                d, "src/ssl/mig.rs", "copyctx", 2, source_commit=head)["sha256"]
+        else:
+            recorded = boundary_hash or resolve_operation_span(
+                d, "src/ssl/mig.rs", boundary_operation, "copyctx",
+                allow_worktree=True)["sha256"]
+        bounds = [{
+            "id": "D-MIG", "receipt": "sweep-mig", "file": "src/ssl/mig.rs",
+            "kind": "UNSAFE_FN_DEF", "operation": boundary_operation,
+            "disposition": "SAFETY_DISCHARGED (scope: src/ssl/mig.rs:1-20)",
+            "disposition_discharges": True, "superseded_ids": [],
+            "span_sha256": recorded, "line": 5, "inventory_line": 2}]
+        if two_boundaries:
+            bounds.append(dict(bounds[0], id="D-MIG-2"))
+        obn = {
+            "file": "src/ssl/mig.rs", "line": row_line,
+            "kind": "UNSAFE_FN_DEF", "item": "copyctx",
+            "mechanism": "SSL_SESSION", "status": None,
+            "discharge_receipt": None, "status_reason": None,
+            "carried_forward_from": {
+                "receipt": ev_rel, "receipt_sha256": digest,
+                "previous_id": "V1:src/ssl/mig.rs:2:UNSAFE_FN_DEF",
+                "previous_line": 2},
+        }
+        census = {("src/ssl/mig.rs", "UNSAFE_FN_DEF", "copyctx"):
+                  set(census_lines)}
+        plane = {"mechanism_discharges": {},
+                 "scoped_boundary_discharges": {
+                     b["id"]: {"receipt": "sweep-mig"} for b in bounds},
+                 "err_scope": {}}
+        return adjudicate(obn, mechs, bounds, plane, repo=d,
+                          allow_worktree_span=True, census_ops=census)
+
+    cand = ("mod m1 {\n"
+            "    pub unsafe fn copyctx(a: *mut u8) {\n"
+            "        // one\n"
+            "        core::ptr::read_volatile(a);\n"
+            "    }\n"
+            "}\n"
+            "mod m2 {\n"
+            "    pub unsafe fn copyctx(a: *mut u8) {\n"
+            "        // two\n"
+            "        core::ptr::read_volatile(a);\n"
+            "    }\n"
+            "}\n")
+    mig_ok = _mig_fixture(cand)
+    check("migration binds a stale coordinate on a content proof",
+          (mig_ok["status"],
+           ((mig_ok.get("span_discharge") or {}).get("binding"))),
+          ("DISCHARGED", "content-migrated-coordinate"))
+    check("migration names the ancestor head and coordinate",
+          bool(((mig_ok.get("migration") or {}).get("ancestor") or {}).get("head")),
+          True)
+    check("migration is not reachable without the census attribution",
+          _mig_fixture(cand, census_lines=(999,))["status"], "BLOCKED")
+    # a *stale boundary hash* must still refuse: the recorded hash equals the
+    # ancestor coordinate's body, but the candidate body was edited, so the
+    # content-addressed check refuses even though the migration matched.
+    edited = _mig_fixture(
+        cand.replace("// one", "// one, edited at the candidate"),
+        recorded_from_ancestor=True)
+    check("migration does not repair a stale boundary hash",
+          (edited["status"],
+           ((edited.get("span_discharge_rejections") or
+             [{}])[0].get("classification"))),
+          ("BLOCKED", "span-hash-mismatch"))
+    check("migration refuses a sibling operation's boundary",
+          _mig_fixture(cand, boundary_operation="m2::copyctx")["status"],
+          "BLOCKED")
+    check("two boundaries with the same body are not a unique owner",
+          _mig_fixture(cand, two_boundaries=True)["status"], "BLOCKED")
+    check("a tampered carry-forward receipt establishes nothing",
+          _mig_fixture(cand, tamper_receipt=True)["status"], "BLOCKED")
+    check("a row coordinate the chain does not name establishes nothing",
+          _mig_fixture(cand, row_line=99)["status"], "BLOCKED")
+    # restore control: the unmutated fixture still binds after the refusals
+    check("restore: the base fixture still binds",
+          _mig_fixture(cand)["status"], "DISCHARGED")
 
     # (g) structured disposition prefix.  A substring mention and the
     # SAFETY_DISCHARGED_* suffix must not discharge; the documented ":" and
