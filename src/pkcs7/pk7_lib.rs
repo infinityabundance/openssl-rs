@@ -69,31 +69,46 @@ pub(crate) const PKCS7_S_HEADER: c_int = 0;
 // ---------------------------------------------------------------------------------------------
 
 /// `PKCS7_type_is_data(a)` — `pkcs7.h.in:194`.
-pub(crate) fn pkcs7_type_is_data(p7: *const Pkcs7) -> bool {
+///
+/// # Safety
+/// `p7` is NULL (which answers `false`) or a live `PKCS7`.
+pub(crate) unsafe fn pkcs7_type_is_data(p7: *const Pkcs7) -> bool {
     // SAFETY: `p7` is null or live per the caller's contract.
     unsafe { obj_nid_of(p7) == NID_pkcs7_data }
 }
 
 /// `PKCS7_type_is_signed(a)` — `pkcs7.h.in:189`.
-pub(crate) fn pkcs7_type_is_signed(p7: *const Pkcs7) -> bool {
+///
+/// # Safety
+/// `p7` is NULL (which answers `false`) or a live `PKCS7`.
+pub(crate) unsafe fn pkcs7_type_is_signed(p7: *const Pkcs7) -> bool {
     // SAFETY: `p7` is null or live per the caller's contract.
     unsafe { obj_nid_of(p7) == NID_pkcs7_signed }
 }
 
 /// `PKCS7_type_is_enveloped(a)` — `pkcs7.h.in:191`.
-pub(crate) fn pkcs7_type_is_enveloped(p7: *const Pkcs7) -> bool {
+///
+/// # Safety
+/// `p7` is NULL (which answers `false`) or a live `PKCS7`.
+pub(crate) unsafe fn pkcs7_type_is_enveloped(p7: *const Pkcs7) -> bool {
     // SAFETY: `p7` is null or live per the caller's contract.
     unsafe { obj_nid_of(p7) == NID_pkcs7_enveloped }
 }
 
 /// `PKCS7_type_is_signedAndEnveloped(a)` — `pkcs7.h.in:192`.
-pub(crate) fn pkcs7_type_is_signed_and_enveloped(p7: *const Pkcs7) -> bool {
+///
+/// # Safety
+/// `p7` is NULL (which answers `false`) or a live `PKCS7`.
+pub(crate) unsafe fn pkcs7_type_is_signed_and_enveloped(p7: *const Pkcs7) -> bool {
     // SAFETY: `p7` is null or live per the caller's contract.
     unsafe { obj_nid_of(p7) == NID_pkcs7_signedAndEnveloped }
 }
 
 /// `PKCS7_type_is_digest(a)` — `pkcs7.h.in:195`.
-pub(crate) fn pkcs7_type_is_digest(p7: *const Pkcs7) -> bool {
+///
+/// # Safety
+/// `p7` is NULL (which answers `false`) or a live `PKCS7`.
+pub(crate) unsafe fn pkcs7_type_is_digest(p7: *const Pkcs7) -> bool {
     // SAFETY: `p7` is null or live per the caller's contract.
     unsafe { obj_nid_of(p7) == NID_pkcs7_digest }
 }
@@ -114,7 +129,7 @@ pub(crate) unsafe fn obj_nid_of(p7: *const Pkcs7) -> c_int {
 ///
 /// # Safety
 /// `p7` is live.
-pub(crate) fn pkcs7_get_detached(p7: *mut Pkcs7) -> bool {
+pub(crate) unsafe fn pkcs7_get_detached(p7: *mut Pkcs7) -> bool {
     // SAFETY: `p7` is live per the contract.
     unsafe { PKCS7_ctrl(p7, 2, 0, ptr::null_mut()) != 0 }
 }
@@ -123,8 +138,9 @@ pub(crate) fn pkcs7_get_detached(p7: *mut Pkcs7) -> bool {
 ///
 /// # Safety
 /// `p7` is live.
-pub(crate) fn pkcs7_is_detached(p7: *mut Pkcs7) -> bool {
-    pkcs7_type_is_signed(p7) && pkcs7_get_detached(p7)
+pub(crate) unsafe fn pkcs7_is_detached(p7: *mut Pkcs7) -> bool {
+    // SAFETY: `p7` is live per the contract.
+    unsafe { pkcs7_type_is_signed(p7) && pkcs7_get_detached(p7) }
 }
 
 /// `long PKCS7_ctrl(PKCS7 *p7, int cmd, long larg, char *parg)` — `pk7_lib.c:20-70`.
@@ -157,8 +173,8 @@ pub unsafe extern "C" fn PKCS7_ctrl(
                 // SAFETY: `p7` is live and its `d.sign` is non-null on this arm.
                 unsafe { (*p7).detached = larg as c_int };
                 ret = larg;
-                // SAFETY: as above.
-                if ret != 0 && pkcs7_type_is_data(unsafe { (*(*p7).d.sign).contents }) {
+                // SAFETY: as above; the nested `contents` is live on this arm too.
+                if ret != 0 && unsafe { pkcs7_type_is_data((*(*p7).d.sign).contents) } {
                     // SAFETY: `contents` is a live `PKCS7` of type `data`.
                     let os = unsafe { (*(*p7).d.sign).contents };
                     let _ = os;
@@ -805,11 +821,13 @@ pub(crate) unsafe fn pkcs7_get0_certificates(p7: *const Pkcs7) -> *mut OpenSslSt
     if unsafe { (*p7).d.ptr }.is_null() {
         return ptr::null_mut();
     }
-    if pkcs7_type_is_signed(p7) {
+    // SAFETY: `p7` is live, which is the predicate's precondition.
+    if unsafe { pkcs7_type_is_signed(p7) } {
         // SAFETY: `p7` is a live signed structure.
         return unsafe { (*(*p7).d.sign).cert };
     }
-    if pkcs7_type_is_signed_and_enveloped(p7) {
+    // SAFETY: `p7` is live.
+    if unsafe { pkcs7_type_is_signed_and_enveloped(p7) } {
         // SAFETY: `p7` is a live signed-and-enveloped structure.
         return unsafe { (*(*p7).d.signed_and_enveloped).cert };
     }
@@ -825,11 +843,13 @@ unsafe fn pkcs7_get_recipient_info(p7: *const Pkcs7) -> *mut OpenSslStack {
     if unsafe { (*p7).d.ptr }.is_null() {
         return ptr::null_mut();
     }
-    if pkcs7_type_is_signed_and_enveloped(p7) {
+    // SAFETY: `p7` is live.
+    if unsafe { pkcs7_type_is_signed_and_enveloped(p7) } {
         // SAFETY: `p7` is live.
         return unsafe { (*(*p7).d.signed_and_enveloped).recipientinfo };
     }
-    if pkcs7_type_is_enveloped(p7) {
+    // SAFETY: `p7` is live.
+    if unsafe { pkcs7_type_is_enveloped(p7) } {
         // SAFETY: `p7` is live.
         return unsafe { (*(*p7).d.enveloped).recipientinfo };
     }
@@ -1003,7 +1023,8 @@ pub unsafe extern "C" fn PKCS7_set_digest(
     p7: *mut Pkcs7,
     md: *const crate::evp::digest::EvpMd,
 ) -> c_int {
-    if pkcs7_type_is_digest(p7) {
+    // SAFETY: `p7` is live per the caller's contract.
+    if unsafe { pkcs7_type_is_digest(p7) } {
         // SAFETY: `p7` is a live digest structure.
         unsafe {
             let digest = (*p7).d.digest;
@@ -1034,11 +1055,13 @@ pub unsafe extern "C" fn PKCS7_get_signer_info(p7: *mut Pkcs7) -> *mut OpenSslSt
     if p7.is_null() || unsafe { (*p7).d.ptr }.is_null() {
         return ptr::null_mut();
     }
-    if pkcs7_type_is_signed(p7) {
+    // SAFETY: `p7` is live.
+    if unsafe { pkcs7_type_is_signed(p7) } {
         // SAFETY: `p7` is a live signed structure.
         return unsafe { (*(*p7).d.sign).signer_info };
     }
-    if pkcs7_type_is_signed_and_enveloped(p7) {
+    // SAFETY: `p7` is live.
+    if unsafe { pkcs7_type_is_signed_and_enveloped(p7) } {
         // SAFETY: `p7` is a live signed-and-enveloped structure.
         return unsafe { (*(*p7).d.signed_and_enveloped).signer_info };
     }
@@ -1251,7 +1274,8 @@ pub unsafe extern "C" fn PKCS7_cert_from_signer_info(
     p7: *mut Pkcs7,
     si: *mut Pkcs7SignerInfo,
 ) -> *mut X509 {
-    if pkcs7_type_is_signed(p7) {
+    // SAFETY: `p7` is live per the caller's contract.
+    if unsafe { pkcs7_type_is_signed(p7) } {
         // SAFETY: `p7`/`si` are live.
         return unsafe {
             X509_find_by_issuer_and_serial(
@@ -1383,4 +1407,29 @@ pub unsafe extern "C" fn PKCS7_stream(boundary: *mut *mut *mut u8, p7: *mut Pkcs
         *boundary = ptr::addr_of_mut!((*os).data);
     }
     1
+}
+
+#[cfg(test)]
+mod tests {
+    /// Qualifier control: the `PKCS7_type_is_*` predicates and the detached
+    /// queries dereference the caller's `PKCS7`, so they must not be callable
+    /// from safe Rust with an unchecked pointer. A type-level "is an unsafe fn"
+    /// assertion is not expressible on stable Rust (a safe fn item coerces to an
+    /// `unsafe fn` pointer), so the declarations are pinned in the source text.
+    #[test]
+    fn the_type_predicates_and_detached_queries_are_unsafe_fns() {
+        let src = include_str!("pk7_lib.rs");
+        for name in [
+            "pkcs7_type_is_data",
+            "pkcs7_type_is_signed",
+            "pkcs7_type_is_enveloped",
+            "pkcs7_type_is_signed_and_enveloped",
+            "pkcs7_type_is_digest",
+            "pkcs7_get_detached",
+            "pkcs7_is_detached",
+        ] {
+            let needle = format!("pub(crate) unsafe fn {name}(");
+            assert!(src.contains(&needle), "missing {needle}");
+        }
+    }
 }

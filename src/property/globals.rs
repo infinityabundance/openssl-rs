@@ -153,8 +153,11 @@ pub(crate) unsafe fn ossl_ctx_global_properties(
     libctx: *mut c_void,
     loadconfig: c_int,
 ) -> *mut *mut crate::property::list::OsslPropertyList {
-    if loadconfig != 0 && OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, core::ptr::null()) == 0 {
-        return core::ptr::null_mut();
+    if loadconfig != 0 {
+        // SAFETY: NULL settings, so the initialiser reads no caller memory.
+        if unsafe { OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, core::ptr::null()) } == 0 {
+            return core::ptr::null_mut();
+        }
     }
     // `lib_ctx_get_data` is a SAFE function in this crate (D113), so the slot read needs no block
     // even though this function is `unsafe`.

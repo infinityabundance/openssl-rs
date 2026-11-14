@@ -165,7 +165,8 @@ pub(crate) fn err_state_ptr() -> *mut ErrState {
 pub(crate) fn openssl_init_crypto(opts: u64) -> c_int {
     let p = OPENSSL_INIT_CRYPTO.resolve(c"OPENSSL_init_crypto");
     if p.is_null() {
-        crate::runtime::init::OPENSSL_init_crypto(opts, ptr::null())
+        // SAFETY: NULL settings, so the initialiser reads no caller memory.
+        unsafe { crate::runtime::init::OPENSSL_init_crypto(opts, ptr::null()) }
     } else {
         // SAFETY: the symbol is the authority's `OPENSSL_init_crypto`; the settings pointer is a
         // NULL this function accepts.

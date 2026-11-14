@@ -279,7 +279,11 @@ fn do_compressed_cert(s: *mut Ssl) -> bool {
 }
 
 /// `int send_certificate_request(SSL_CONNECTION *s)` — `statem_srvr.c:416-456`.
-pub(crate) fn send_certificate_request(s: *mut Ssl) -> bool {
+///
+/// # Safety
+/// `s` is a live connection and is exclusively borrowed by the caller for this
+/// call; its `pending_cipher` field is NULL or a live cipher table.
+pub(crate) unsafe fn send_certificate_request(s: *mut Ssl) -> bool {
     // SAFETY: the caller passes a live connection.
     unsafe {
         let c = (*s).pending_cipher;
@@ -307,7 +311,11 @@ pub(crate) fn send_certificate_request(s: *mut Ssl) -> bool {
 /// `static int send_server_key_exchange(SSL_CONNECTION *s)` — `statem_srvr.c:353-386`,
 /// the plain-PSK identity-hint arm reduced (module header). `pub(crate)` so the client driver can
 /// use the same predicate to know whether a `ServerKeyExchange` follows the Certificate.
-pub(crate) fn send_server_key_exchange(s: *mut Ssl) -> bool {
+///
+/// # Safety
+/// `s` is a live connection; its `pending_cipher` field is NULL or a live cipher
+/// table.
+pub(crate) unsafe fn send_server_key_exchange(s: *mut Ssl) -> bool {
     // SAFETY: the caller passes a live connection.
     unsafe {
         let c = (*s).pending_cipher;
@@ -3452,8 +3460,8 @@ unsafe fn tls13_server_post_server_hello(s: *mut Ssl) -> c_int {
     if unsafe { (*s).hit } == 0 {
         // The TLS1.3 write transition's `SW_ENCRYPTED_EXTENSIONS` arm
         // (`statem_srvr.c:664-674`): an in-handshake CertificateRequest precedes the server Certificate.
-        // SAFETY: `s` is live.
-        if send_certificate_request(s) {
+        // SAFETY: `s` is live per this function's caller contract.
+        if unsafe { send_certificate_request(s) } {
             // In-handshake requests carry an empty `certificate_request_context`
             // (`statem_srvr.c:3049-3054`).
             // SAFETY: `s` is live.
@@ -10204,5 +10212,19 @@ mod client_hello_parse_tests {
             }
             SSL_CTX_free(ctx);
         }
+    }
+}
+
+#[cfg(test)]
+mod unsafe_contract_controls {
+    /// Qualifier control: both server predicates dereference the caller's
+    /// connection, so they must not be callable from safe Rust with an unchecked
+    /// pointer. A type-level "is an unsafe fn" assertion is not expressible on
+    /// stable Rust, so the declarations are pinned in the source text.
+    #[test]
+    fn the_server_predicates_are_unsafe_fns() {
+        let src = include_str!("statem_srvr.rs");
+        assert!(src.contains("pub(crate) unsafe fn send_certificate_request("));
+        assert!(src.contains("pub(crate) unsafe fn send_server_key_exchange("));
     }
 }

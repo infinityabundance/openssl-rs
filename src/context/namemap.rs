@@ -234,7 +234,9 @@ pub(crate) fn ossl_namemap_stored(libctx: *mut c_void) -> *mut OsslNamemap {
     // SAFETY: `namemap` is a live stored map and the pre-population is the authority's own
     // first-use step; the map's own lock guards each insertion (*not* the block as a whole,
     // which matches the authority, whose pre-population runs outside the map's lock).
-    let nms = ossl_namemap_empty(namemap);
+    // SAFETY: `namemap` is NULL or the live map `lib_ctx_get_data` just resolved from a
+    // liveness-checked context.
+    let nms = unsafe { ossl_namemap_empty(namemap) };
     if nms < 0 {
         // The authority's "could not get lock to make the count, so maybe internal objects
         // weren't added. This seems safest." -- it answers NULL rather than a map whose
@@ -538,8 +540,12 @@ unsafe extern "C" fn names_stack_free(n: *mut c_void) {
 /// (supported concurrent use) must not read the counter beside a writer that stores it
 /// under the write lock in [`namemap_add_name`]. Answering the counter without the lock
 /// was the data race TSan's parallel gate found (finding `tf-tsan-parallel-gate-parallel`).
+///
+/// # Safety
+/// `namemap` is NULL (which answers 1) or a live `OSSL_NAMEMAP` that is not
+/// concurrently freed; its lock was created by the map's constructor.
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
-pub(crate) fn ossl_namemap_empty(namemap: *mut OsslNamemap) -> c_int {
+pub(crate) unsafe fn ossl_namemap_empty(namemap: *mut OsslNamemap) -> c_int {
     if namemap.is_null() {
         return 1;
     }
@@ -1406,5 +1412,18 @@ mod tests {
             // The context's releaser clears the flag and then releases.
             ossl_stored_namemap_free(nm);
         }
+    }
+}
+
+#[cfg(test)]
+mod unsafe_contract_controls {
+    /// Qualifier control: `ossl_namemap_empty` dereferences the caller's map, so
+    /// it must not be callable from safe Rust with an unchecked pointer. A
+    /// type-level "is an unsafe fn" assertion is not expressible on stable Rust,
+    /// so the declaration is pinned in the source text.
+    #[test]
+    fn namemap_empty_is_an_unsafe_fn() {
+        let src = include_str!("namemap.rs");
+        assert!(src.contains("pub(crate) unsafe fn ossl_namemap_empty("));
     }
 }

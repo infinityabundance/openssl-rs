@@ -58,6 +58,7 @@ pub unsafe extern "C" fn ENGINE_load_builtin_engines() {
     guard_ffi((), || {
         // The settings pointer is NULL, which the authority's own call passes and which
         // `OPENSSL_init_crypto` accepts as "default settings".
-        OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_ALL_BUILTIN, ptr::null());
+        // SAFETY: NULL settings, so no caller memory is read.
+        unsafe { OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_ALL_BUILTIN, ptr::null()) };
     })
 }
