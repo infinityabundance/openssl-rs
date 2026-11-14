@@ -1,0 +1,1751 @@
+{
+ "schema": "openssl-rs/safe-c33/atlas-refresh/b78-review-final/v1",
+ "kind": "independent-adversarial-review-and-receipt-regeneration",
+ "subphase": "safe-c33/b78 review of the 65 openssh-v1i/openssh-v1l discharge obligations and regeneration of both site receipts",
+ "generated_utc": "2026-11-13T00:00:00Z",
+ "reviewer": {
+  "role": "independent adversarial reviewer (AGENTS.md \u00a715)",
+  "independence": "I did not write or design any of the conversions, either site receipt, the b76/b77 reviews, the closure tool, or AGENTS.md. Every verdict below is mine, from source read at bb7d5206a and from controls run in this session.  A mechanical transcription of an earlier verdict is used only for spans whose content hash is identical at the earlier review head and at b78, and each such row says so.",
+  "author_is_not_adjudicator": true
+ },
+ "candidate_identity": {
+  "source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "src_content_sha256": "c0bd61c94f5a8da2e08c105724d14750403fbfd53aa8d4b722672f9b11b0bd38",
+  "image_libcrypto_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+  "head_at_review": "75add65c11b175bc53569dc0f24c4d767126d85b",
+  "census": "court/freeze-b78/census-b78.json",
+  "closure_at_review": "evidence/closure-ssh-b77.json (the last measured closure; not regenerated here)",
+  "closure_tool_sha256": "facb2a97586493a8cf8fb6a073266046dfc1dd8138110f6c18c575b613e45426",
+  "working_tree_tool_matches": true
+ },
+ "venue": {
+  "free_g_available_gib": 12,
+  "memory_cap": "8 GiB court cgroup, per \u00a76.1",
+  "compilation": "refused: available 12 GiB < the 24 GiB build floor, so the \u00a76.1 cap would be below its 2 GiB floor.  No build, no test run, no runtime probe.",
+  "work_done": "source reading, git-blob span resolution, JSON analysis, and in-memory/negative controls"
+ },
+ "method": {
+  "task1": "Cohort rebuilt from the earlier review receipts (56 openssh-v1i + 9 openssh-v1l), not from the b77 closure's receipt field, because the b77 closure refused 8 of the 56 and recorded no receipt for them.  Each obligation's current coordinate is resolved from census-b78 by (file, kind, item) and from the closure tool's span resolver by (file, qualified operation).  No recorded line is used for identity.  Output: court/freeze-b78/obligations-65.json.",
+  "task2": "Span hashes recomputed at three heads with the tool's own rule: b76 0238c6e4, b77 ada7df257, b78 bb7d5206a.  All 65 spans are byte-identical to the head at which the earlier review read them.  Because a span hash covers the operation's own text only, identity cannot establish a *caller* precondition, which is the b77 finding D5; the 58 identity rows are recorded as identity, and the 12 sites whose acceptance rests on a changed caller/contract were re-read and re-adjudicated here.",
+  "task3": "Both receipts re-resolved every boundary (not only the cohort) with the tool's resolver at S, rewrote every span_sha256, set every disposition range to the current definition line, and made disposition a function of this review's verdict only.  Verified with the tool's own load_boundaries/adjudicate path.",
+  "controls": "C1-C8 in court/freeze-b78/run_controls_b78.py; C9 end-to-end adjudication in court/freeze-b78/run_adjudicate_control_b78.py."
+ },
+ "task1_obligation_set": {
+  "cohort": 65,
+  "by_boundary_receipt": {
+   "openssh-v1i": 56,
+   "openssh-v1l": 9
+  },
+  "current_coordinate_resolution": "65/65 unique; every resolved definition line is also the census line for that (file, kind, item)",
+  "absent_items": [],
+  "file_or_kind_changed": [],
+  "receipt_boundaries_whose_item_no_longer_exists": [
+   "OSSH-V1I-055 x509_free_void",
+   "OSSH-V1I-056 evp_pkey_free_void",
+   "OSSH-V1I-057 evp_md_free_void",
+   "OSSH-V1I-058 octet_string_free_void",
+   "OSSH-V1I-062 x509_store_free_void"
+  ],
+  "note": "Those five are not obligations in either closure (they are not in the 65); they are retired thunks and the regenerated receipt records them as ABSENT / non-discharging."
+ },
+ "task2_verdicts": {
+  "tally": {
+   "ACCEPT": 65,
+   "REJECT": 0,
+   "ABSENT": 0
+  },
+  "by_class": {
+   "identity45": 45,
+   "identity8": 8,
+   "rereview11": 11,
+   "rereview1": 1
+  },
+  "identity_rule": "ACCEPT (identity) is used only where the span hash at the earlier review head equals the span hash at b78; this held for 65/65 sites.  It does not by itself establish a caller precondition, and is not used where the caller changed.",
+  "by_class_explanation": {
+   "identity45": "Identity transcription.  The operation span at the b78 source head is byte-identical to the span at the head the earlier review read, and that earlier receipt is the establishing review.  No new judgement is made about the site.",
+   "identity8": "Identity transcription for the repaired body, plus a caller re-read. The body is byte-identical to the repair head that b77 accepted; the only b78 source change (src/evp/digest.rs) moved the same-method-destination guard inside the `copyctx` arm.  I re-read the current EVP_MD_CTX_copy_ex and confirmed the destination is still non-NULL whenever `copyctx` is invoked (and that the self-copy arm's `out == in_` makes the checked source `algctx` the destination), so the accepted precondition is preserved, not widened.",
+   "rereview11": "Re-rejected at b76 because the provider callback could receive a NULL `algctx` from a failed provider initialise.  Re-reviewed here: the required discharge (a caller guard) is present at every dispatch site, each provider callback has exactly one invocation site, and NO_INIT contexts take the legacy arm and never reach a provider callback.  The site body itself is unchanged from the review that rejected it, so the extent/aliasing analysis of that review still applies.",
+   "rereview1": "Re-reviewed here.  The b76 rejection required a `# Safety` fn contract on the helper; the fn now carries one, the single caller forwards the same pointer under its own `# Safety`, and the receipt no longer claims a second call site.  Documentation is outside the span, so the operation hash is unchanged."
+  },
+  "re_reviewed_sites": [
+   {
+    "boundary": "OSSH-V1I-002",
+    "qualified_identity": "sha1::copyctx",
+    "file": "src/provider/digest.rs",
+    "span": [
+     672,
+     682
+    ],
+    "span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No: private `unsafe extern \"C\"` callback, reachable only through the method table.",
+    "b_all_unsafe_covered": "Yes: `# Safety` at the fn; core checks the source `algctx` and, inside the `copyctx` arm, the destination.",
+    "c_hidden_obligation": "None found: the self-copy arm passes the checked non-NULL source as both pointers; `ptr::copy` is defined for overlap.",
+    "d_load_bearing_control": "CTRL C7/C8 + adjudicator C9; the b78 test `a_same_method_destination_without_an_algctx_is_refused_when_copyctx_would_run` pins the destination side.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-008",
+    "qualified_identity": "nullmd::copyctx",
+    "file": "src/provider/digest.rs",
+    "span": [
+     992,
+     1002
+    ],
+    "span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No.",
+    "b_all_unsafe_covered": "Yes, same construction.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Same caller control; NULL row copies `NullMdCtx`.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-011",
+    "qualified_identity": "md5_sha1::copyctx",
+    "file": "src/provider/digest.rs",
+    "span": [
+     1195,
+     1205
+    ],
+    "span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No.",
+    "b_all_unsafe_covered": "Yes, same construction.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Same caller control; `Md5Sha1Ctx` is a plain block.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-017",
+    "qualified_identity": "sha3::copyctx",
+    "file": "src/provider/digest.rs",
+    "span": [
+     1386,
+     1396
+    ],
+    "span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No.",
+    "b_all_unsafe_covered": "Yes, same construction.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Same caller control; `KeccakCtx` is a plain block.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-024",
+    "qualified_identity": "blake2::blake_row::copyctx",
+    "file": "src/provider/digest.rs",
+    "span": [
+     1956,
+     1966
+    ],
+    "span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No.",
+    "b_all_unsafe_covered": "Yes, same construction.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Same caller control; the macro row expands to the same body.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-020",
+    "qualified_identity": "sha3::keccak_final",
+    "file": "src/provider/digest.rs",
+    "span": [
+     1415,
+     1449
+    ],
+    "span_sha256": "4dbe9bbde6e9ad0867b7bdb0dd0a7518ae00189ff07aa0407b7bcb5f72c112b2",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No: callback only.",
+    "b_all_unsafe_covered": "Yes: the `md_size > outlen` bound refuses the caller-declared-extent overflow; `outl` is written with `md_size`; the caller guard closes the NULL context.",
+    "c_hidden_obligation": "None beyond the recorded \u00a717 divergence D-SHA3-FINAL-OUTLEN-1.",
+    "d_load_bearing_control": "C8 reproduces the accepted body hash 4dbe9bbd\u2026; the bound and the `outlen == 0` arm were read at b78.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-082",
+    "qualified_identity": "legacy_digest_impl::copyctx",
+    "file": "src/provider/legacyprov.rs",
+    "span": [
+     345,
+     356
+    ],
+    "span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No.",
+    "b_all_unsafe_covered": "Yes: `# Safety` + core guard.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Same caller control; `size_of::<$ctx>()` is the whole block.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-088",
+    "qualified_identity": "mdc2::copyctx",
+    "file": "src/provider/legacyprov.rs",
+    "span": [
+     561,
+     571
+    ],
+    "span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No.",
+    "b_all_unsafe_covered": "Yes: `# Safety` + core guard.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Same caller control; `Mdc2Ctx` is a plain block.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-014",
+    "qualified_identity": "md5_sha1::update",
+    "file": "src/provider/digest.rs",
+    "span": [
+     1237,
+     1242
+    ],
+    "span_sha256": "7b4f8b48a05be1501edacfb34ac83e9d84f3f9118ae26e51fd774f480d00063e",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No: the only caller is EVP_DigestUpdate, which now refuses a NULL `algctx` before the dispatch.",
+    "b_all_unsafe_covered": "Yes: the caller guard and the single dispatch site establish the context precondition; `in_` extent is the caller's declaration.",
+    "c_hidden_obligation": "None found at b78.",
+    "d_load_bearing_control": "C9 adjudication; `dupdate` has exactly one invocation (digest.rs:2573).",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-019",
+    "qualified_identity": "sha3::update",
+    "file": "src/provider/digest.rs",
+    "span": [
+     1409,
+     1412
+    ],
+    "span_sha256": "043324d93993c9aed5be3f4eb57a53a7d0ff3b9fc3c096c4bca4f91df739059d",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No (same guard).",
+    "b_all_unsafe_covered": "Yes.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Same.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-028",
+    "qualified_identity": "blake2::blake_row::update",
+    "file": "src/provider/digest.rs",
+    "span": [
+     2058,
+     2068
+    ],
+    "span_sha256": "48c2be05cf5cf82b15fec5d0215cad8b4ca2f060a7420c8cefcc9d36b22241dd",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No (same guard).",
+    "b_all_unsafe_covered": "Yes.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Same.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-005",
+    "qualified_identity": "sha1::update",
+    "file": "src/provider/digest.rs",
+    "span": [
+     714,
+     717
+    ],
+    "span_sha256": "ca9ddbfb4c86d18614a55dcce33d1a6dcfb9afe9bd258d0dd710854aaadf52a9",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No (same guard).",
+    "b_all_unsafe_covered": "Yes.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Same.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-013",
+    "qualified_identity": "md5_sha1::internal_final",
+    "file": "src/provider/digest.rs",
+    "span": [
+     1219,
+     1235
+    ],
+    "span_sha256": "b6bd52cc12ae7b9162932a23105ca375bcd8379af47d529661cfe7080c1f1c6e",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No: EVP_DigestFinal_ex/FinalXOF refuse a NULL `algctx` before `dfinal`.",
+    "b_all_unsafe_covered": "Yes: `outsz` bound checked before the write; `*outl` set to the fixed digest length.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "C9; `dfinal` has one guarded invocation per entry point.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-004",
+    "qualified_identity": "sha1::internal_final",
+    "file": "src/provider/digest.rs",
+    "span": [
+     696,
+     712
+    ],
+    "span_sha256": "706d55a5f726daa1f0a36024e15b79ceca8f8cfc39fbf0d2346e25df17c70810",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No (same guard).",
+    "b_all_unsafe_covered": "Yes.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Same.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-021",
+    "qualified_identity": "sha3::shake_squeeze",
+    "file": "src/provider/digest.rs",
+    "span": [
+     1452,
+     1470
+    ],
+    "span_sha256": "dbdba48f28b197d6a6693746d95497e2a8579f88687d906dd807c935fb8ed4ba",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No: EVP_DigestSqueeze refuses a NULL `algctx` before `dsqueeze`.",
+    "b_all_unsafe_covered": "Yes: writes exactly `outlen` (the caller's declared extent) when `outlen > 0`, nothing otherwise.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "C9; guard at digest.rs:2935, one `dsqueeze` invocation.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-084",
+    "qualified_identity": "legacy_digest_impl::internal_final",
+    "file": "src/provider/legacyprov.rs",
+    "span": [
+     369,
+     385
+    ],
+    "span_sha256": "76998f9e1ef14b7e47aeb3be9e2535ebaedd5020f4d92a0d3b1852401ac72434",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No (same guard).",
+    "b_all_unsafe_covered": "Yes.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Same.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-090",
+    "qualified_identity": "mdc2::internal_final",
+    "file": "src/provider/legacyprov.rs",
+    "span": [
+     581,
+     597
+    ],
+    "span_sha256": "1620b0c9aff1ffa574db1c8ec58f0f8ba6269aa7d05adb4a698b369c79df71e1",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No (same guard).",
+    "b_all_unsafe_covered": "Yes.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Same.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-085",
+    "qualified_identity": "legacy_digest_impl::update",
+    "file": "src/provider/legacyprov.rs",
+    "span": [
+     387,
+     394
+    ],
+    "span_sha256": "55723f2723d0a7302746d4abaf85ec8e9598b5e7df2a71a3128cbabd2ad41d3b",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No (same guard).",
+    "b_all_unsafe_covered": "Yes.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Same.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1I-091",
+    "qualified_identity": "mdc2::update",
+    "file": "src/provider/legacyprov.rs",
+    "span": [
+     599,
+     602
+    ],
+    "span_sha256": "834f662737d593c62ef6cbae4f9c7bd3d806bfcf7dd84ff8aca5ca633c378f90",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No (same guard).",
+    "b_all_unsafe_covered": "Yes.",
+    "c_hidden_obligation": "None found.",
+    "d_load_bearing_control": "Same.",
+    "verdict": "ACCEPT"
+   },
+   {
+    "boundary": "OSSH-V1L-009",
+    "qualified_identity": "push_cstr_or_null",
+    "file": "src/engine/eng_fat.rs",
+    "span": [
+     201,
+     208
+    ],
+    "span_sha256": "3809a13b0285ce51cb28a2a84f1b2ebbc40b9e5e1adaab112b6b2ce1b0f861e6",
+    "earlier_verdict": "REJECT",
+    "a_safe_rust_can_cause_ub": "No: a private `unsafe fn`; the only caller is ENGINE_set_default_string, which forwards the same pointer it received.",
+    "b_all_unsafe_covered": "Yes: `# Safety` states NULL-or-NUL-terminated; the caller's own `# Safety` is the external C ABI contract (config parser produces a NUL-terminated value).",
+    "c_hidden_obligation": "None hidden: the NUL-termination precondition is now written at the interface; it remains an ABI obligation for external C callers and cannot be machine-checked without a length.",
+    "d_load_bearing_control": "CTRL-AUDIT (single call site re-read at b78); no runtime control exists for NUL-termination.",
+    "verdict": "ACCEPT"
+   }
+  ],
+  "previously_rejected_sites": {
+   "count": 20,
+   "repaired_at_b77_repair_head": 8,
+   "repaired_at_the_caller_entry_points": 11,
+   "repaired_by_adding_a_fn_contract": 1,
+   "still_reject": 0
+  },
+  "obligations": [
+   {
+    "boundary": "OSSH-V1I-067",
+    "file": "src/cmp/cmp_asn.rs",
+    "item": "itav_free",
+    "qualified_identity": "itav_free",
+    "span": [
+     1706,
+     1709
+    ],
+    "span_sha256": "5b0450b583d888ad1fa516a1db92cfd5493f24343bb7f8ac4e98943f7a46dfd5",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (5b0450b583d888ad); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-069",
+    "file": "src/cmp/cmp_asn.rs",
+    "item": "rootcakeyupdate_free",
+    "qualified_identity": "rootcakeyupdate_free",
+    "span": [
+     1722,
+     1725
+    ],
+    "span_sha256": "ab84f3d5975c0d0dde5598293da723073efe4e6cba97b983cd2c52483fa236ed",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (ab84f3d5975c0d0d); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-051",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "asn1_integer_dup_void",
+    "qualified_identity": "asn1_integer_dup_void",
+    "span": [
+     358,
+     361
+    ],
+    "span_sha256": "879ea7d76ffb4d0fd368a9c5a3056ed4184537401d6d6511515d16d0e22ea8df",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (879ea7d76ffb4d0f); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-052",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "asn1_integer_free_void",
+    "qualified_identity": "asn1_integer_free_void",
+    "span": [
+     362,
+     365
+    ],
+    "span_sha256": "09ce335f71b364fa86cc7d60748551ff5226e2f5d2b5bb9b6a9efcfb1f7e0d68",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (09ce335f71b364fa); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-065",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "cmp_ctx_set_md",
+    "qualified_identity": "cmp_ctx_set_md",
+    "span": [
+     407,
+     421
+    ],
+    "span_sha256": "cd466dc13eee90d9e36e0601ccf6308e32c096b476d0982caf893b37c6f37ef8",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (cd466dc13eee90d9); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-059",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "general_name_free_void",
+    "qualified_identity": "general_name_free_void",
+    "span": [
+     376,
+     379
+    ],
+    "span_sha256": "f2c430ef6d2510ea8fb9bb46892deea51afcac75eefbe5a03d3883541845911b",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (f2c430ef6d2510ea); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-063",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "itav_free_void",
+    "qualified_identity": "itav_free_void",
+    "span": [
+     388,
+     391
+    ],
+    "span_sha256": "716df8e4158a82f709333ef8f8e10d11b49a3640c3b50cb83e87c063093a024e",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (716df8e4158a82f7); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-064",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "policy_free_void",
+    "qualified_identity": "policy_free_void",
+    "span": [
+     392,
+     395
+    ],
+    "span_sha256": "462670b49e5deac6bb89a6bde03865bb4962f69860b469eda9889301e6e74b42",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (462670b49e5deac6); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-061",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "utf8_string_free_void",
+    "qualified_identity": "utf8_string_free_void",
+    "span": [
+     384,
+     387
+    ],
+    "span_sha256": "78aab3c63127b04993c0447596fe2b4167e5e8b683967ff17420b540718870ba",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (78aab3c63127b049); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-060",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "x509_extension_free_void",
+    "qualified_identity": "x509_extension_free_void",
+    "span": [
+     380,
+     383
+    ],
+    "span_sha256": "c55cd1b80bb171807ebc723f6a3a8b0faab9a0c8a24c3400c8b5e89e27bfd8e8",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (c55cd1b80bb17180); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-049",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "x509_name_dup_void",
+    "qualified_identity": "x509_name_dup_void",
+    "span": [
+     350,
+     353
+    ],
+    "span_sha256": "13028da9d8492f824d5761e48a7c2f0c44392f914ac4cd0227e8d6bec0048488",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (13028da9d8492f82); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-050",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "x509_name_free_void",
+    "qualified_identity": "x509_name_free_void",
+    "span": [
+     354,
+     357
+    ],
+    "span_sha256": "fbb8bfad2d75d2799d95893538c24c5ffa1359fd25eef77ae77f91a81cca6ef3",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (fbb8bfad2d75d279); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-053",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "x509_req_dup_void",
+    "qualified_identity": "x509_req_dup_void",
+    "span": [
+     366,
+     369
+    ],
+    "span_sha256": "ef04cda1695dd610a3eddd0ac37dec5ce3367663a427207648483393923e6cce",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (ef04cda1695dd610); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-054",
+    "file": "src/cmp/cmp_ctx.rs",
+    "item": "x509_req_free_void",
+    "qualified_identity": "x509_req_free_void",
+    "span": [
+     370,
+     373
+    ],
+    "span_sha256": "31048346d3df8aa9a52bc4b18fd813722a65de998b0fb6819f7858fd82c8ecd1",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (31048346d3df8aa9); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1L-010",
+    "file": "src/decoder_lib.rs",
+    "item": "decoder_free_thunk",
+    "qualified_identity": "decoder_free_thunk",
+    "span": [
+     1080,
+     1083
+    ],
+    "span_sha256": "ae3aa2602055af8784dc853c1737cb09bc0cd6ad5d9ccbc53da8cea97a94610c",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1l",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1l) \u2014 the span bytes are identical to the source head that review read (ae3aa2602055af87); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1L-009",
+    "file": "src/engine/eng_fat.rs",
+    "item": "push_cstr_or_null",
+    "qualified_identity": "push_cstr_or_null",
+    "span": [
+     201,
+     208
+    ],
+    "span_sha256": "3809a13b0285ce51cb28a2a84f1b2ebbc40b9e5e1adaab112b6b2ce1b0f861e6",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1l",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "rereview1",
+    "basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for transferring a NUL-termination obligation with no fn contract; the fn now carries `# Safety` (docs are outside the span, so the byte hash 3809a13b0285ce51 is unchanged), its single caller forwards the same pointer under ENGINE_set_default_string's own `# Safety`, and the external C ABI contract is the retained obligation."
+   },
+   {
+    "boundary": "OSSH-V1I-002",
+    "file": "src/provider/digest.rs",
+    "item": "copyctx",
+    "qualified_identity": "sha1::copyctx",
+    "span": [
+     672,
+     682
+    ],
+    "span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity8",
+    "basis": "ACCEPT (identity; reviewed at b77-review-v1i-repaired) \u2014 the repaired body is byte-identical to the repair head ada7df257 (c639719ffc5bdf36); the b78 edit to EVP_MD_CTX_copy_ex was re-read and preserves the copyctx destination precondition."
+   },
+   {
+    "boundary": "OSSH-V1I-008",
+    "file": "src/provider/digest.rs",
+    "item": "copyctx",
+    "qualified_identity": "nullmd::copyctx",
+    "span": [
+     992,
+     1002
+    ],
+    "span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity8",
+    "basis": "ACCEPT (identity; reviewed at b77-review-v1i-repaired) \u2014 the repaired body is byte-identical to the repair head ada7df257 (eb7c56b35b421449); the b78 edit to EVP_MD_CTX_copy_ex was re-read and preserves the copyctx destination precondition."
+   },
+   {
+    "boundary": "OSSH-V1I-011",
+    "file": "src/provider/digest.rs",
+    "item": "copyctx",
+    "qualified_identity": "md5_sha1::copyctx",
+    "span": [
+     1195,
+     1205
+    ],
+    "span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity8",
+    "basis": "ACCEPT (identity; reviewed at b77-review-v1i-repaired) \u2014 the repaired body is byte-identical to the repair head ada7df257 (83c63a8466b002da); the b78 edit to EVP_MD_CTX_copy_ex was re-read and preserves the copyctx destination precondition."
+   },
+   {
+    "boundary": "OSSH-V1I-017",
+    "file": "src/provider/digest.rs",
+    "item": "copyctx",
+    "qualified_identity": "sha3::copyctx",
+    "span": [
+     1386,
+     1396
+    ],
+    "span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity8",
+    "basis": "ACCEPT (identity; reviewed at b77-review-v1i-repaired) \u2014 the repaired body is byte-identical to the repair head ada7df257 (5ee519b92ebadba0); the b78 edit to EVP_MD_CTX_copy_ex was re-read and preserves the copyctx destination precondition."
+   },
+   {
+    "boundary": "OSSH-V1I-024",
+    "file": "src/provider/digest.rs",
+    "item": "copyctx",
+    "qualified_identity": "blake2::blake_row::copyctx",
+    "span": [
+     1956,
+     1966
+    ],
+    "span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch1",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity8",
+    "basis": "ACCEPT (identity; reviewed at b77-review-v1i-repaired) \u2014 the repaired body is byte-identical to the repair head ada7df257 (24a520793ee135f3); the b78 edit to EVP_MD_CTX_copy_ex was re-read and preserves the copyctx destination precondition."
+   },
+   {
+    "boundary": "OSSH-V1I-001",
+    "file": "src/provider/digest.rs",
+    "item": "dupctx",
+    "qualified_identity": "sha1::dupctx",
+    "span": [
+     653,
+     662
+    ],
+    "span_sha256": "47267c002ee9f12d6c20efa3c2e1648e60243868c4ae4caa72d8de04e7a4ed4b",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (47267c002ee9f12d); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-007",
+    "file": "src/provider/digest.rs",
+    "item": "dupctx",
+    "qualified_identity": "nullmd::dupctx",
+    "span": [
+     973,
+     982
+    ],
+    "span_sha256": "efa8d5556346e659c5c3ec2b40667be32a4ab8af95db8fc0978652e4fe1bcf76",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (efa8d5556346e659); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-010",
+    "file": "src/provider/digest.rs",
+    "item": "dupctx",
+    "qualified_identity": "md5_sha1::dupctx",
+    "span": [
+     1176,
+     1185
+    ],
+    "span_sha256": "b231a39825d54dbcbf3929591232d8ecec78eb3af835e81648961b56fda9ae56",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (b231a39825d54dbc); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-016",
+    "file": "src/provider/digest.rs",
+    "item": "dupctx",
+    "qualified_identity": "sha3::dupctx",
+    "span": [
+     1367,
+     1376
+    ],
+    "span_sha256": "940d10c6f3f0e190d607f5cd93d4cd114526d28004462ac668b5ec5344716e91",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (940d10c6f3f0e190); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-023",
+    "file": "src/provider/digest.rs",
+    "item": "dupctx",
+    "qualified_identity": "blake2::blake_row::dupctx",
+    "span": [
+     1934,
+     1945
+    ],
+    "span_sha256": "861f2634e5e0f84a5ec54bbe1cdb51518e75fd9a67cd689fa7cdf47f93ffe528",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (861f2634e5e0f84a); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-026",
+    "file": "src/provider/digest.rs",
+    "item": "get_ctx_params",
+    "qualified_identity": "blake2::blake_row::get_ctx_params",
+    "span": [
+     2006,
+     2029
+    ],
+    "span_sha256": "40d977b16e4c560fc744074a5e4c15134777f98d0f7e4756b245cf09fdf37608",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (40d977b16e4c560f); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-006",
+    "file": "src/provider/digest.rs",
+    "item": "get_params",
+    "qualified_identity": "sha1::get_params",
+    "span": [
+     719,
+     722
+    ],
+    "span_sha256": "c38a239cac91d9e03c6cb408054b92f07c6dd3e46e35acfaba4fed39aff389a4",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (c38a239cac91d9e0); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-009",
+    "file": "src/provider/digest.rs",
+    "item": "get_params",
+    "qualified_identity": "nullmd::get_params",
+    "span": [
+     1041,
+     1044
+    ],
+    "span_sha256": "2199cf3f0f33b514c39a501341adc229123f07f09938086d69498e11b2e1cd67",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (2199cf3f0f33b514); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-015",
+    "file": "src/provider/digest.rs",
+    "item": "get_params",
+    "qualified_identity": "md5_sha1::get_params",
+    "span": [
+     1244,
+     1249
+    ],
+    "span_sha256": "d3ae32259e9e51e3d73c311e547c5283a21db88e69975bcef8bf8889a02e72c9",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (d3ae32259e9e51e3); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-030",
+    "file": "src/provider/digest.rs",
+    "item": "get_params",
+    "qualified_identity": "blake2::blake_row::get_params",
+    "span": [
+     2097,
+     2100
+    ],
+    "span_sha256": "16841d3c3a78ac3729dd2d4304cebe2118363a960c194e69e30b047100b48437",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (16841d3c3a78ac37); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-018",
+    "file": "src/provider/digest.rs",
+    "item": "init",
+    "qualified_identity": "sha3::init",
+    "span": [
+     1398,
+     1407
+    ],
+    "span_sha256": "0080323c6082771dc21b3350d885ebf8bbd551ebbaaff0e95abf8cf6c120735a",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (0080323c6082771d); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-004",
+    "file": "src/provider/digest.rs",
+    "item": "internal_final",
+    "qualified_identity": "sha1::internal_final",
+    "span": [
+     696,
+     712
+    ],
+    "span_sha256": "706d55a5f726daa1f0a36024e15b79ceca8f8cfc39fbf0d2346e25df17c70810",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "rereview11",
+    "basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (706d55a5f726daa1)."
+   },
+   {
+    "boundary": "OSSH-V1I-013",
+    "file": "src/provider/digest.rs",
+    "item": "internal_final",
+    "qualified_identity": "md5_sha1::internal_final",
+    "span": [
+     1219,
+     1235
+    ],
+    "span_sha256": "b6bd52cc12ae7b9162932a23105ca375bcd8379af47d529661cfe7080c1f1c6e",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "rereview11",
+    "basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (b6bd52cc12ae7b91)."
+   },
+   {
+    "boundary": "OSSH-V1I-029",
+    "file": "src/provider/digest.rs",
+    "item": "internal_final",
+    "qualified_identity": "blake2::blake_row::internal_final",
+    "span": [
+     2071,
+     2095
+    ],
+    "span_sha256": "5170938e1038eef4d3d4ecaeb914ff1ebafbbd6ebee937e95828c8bbf22c5334",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (5170938e1038eef4); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-003",
+    "file": "src/provider/digest.rs",
+    "item": "internal_init",
+    "qualified_identity": "sha1::internal_init",
+    "span": [
+     684,
+     694
+    ],
+    "span_sha256": "c7b85a166cc4e3bff7d13ced64679b7e203bc262469d6d90875f1635dae22db2",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (c7b85a166cc4e3bf); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-012",
+    "file": "src/provider/digest.rs",
+    "item": "internal_init",
+    "qualified_identity": "md5_sha1::internal_init",
+    "span": [
+     1207,
+     1217
+    ],
+    "span_sha256": "e4aa2d6a01d52aa3a29570f0aedbacffee391cbd6b31101759ed0c95f2944ef6",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (e4aa2d6a01d52aa3); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-027",
+    "file": "src/provider/digest.rs",
+    "item": "internal_init",
+    "qualified_identity": "blake2::blake_row::internal_init",
+    "span": [
+     2033,
+     2056
+    ],
+    "span_sha256": "20f58a3a5891c863475da16bd61d04ac19dc62a6ff16e261e10d60fee711e391",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (20f58a3a5891c863); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-020",
+    "file": "src/provider/digest.rs",
+    "item": "keccak_final",
+    "qualified_identity": "sha3::keccak_final",
+    "span": [
+     1415,
+     1449
+    ],
+    "span_sha256": "4dbe9bbde6e9ad0867b7bdb0dd0a7518ae00189ff07aa0407b7bcb5f72c112b2",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity8",
+    "basis": "ACCEPT (identity; reviewed at b77-review-v1i-repaired) \u2014 the repaired body is byte-identical to the repair head ada7df257 (4dbe9bbde6e9ad08); the b78 edit to EVP_MD_CTX_copy_ex was re-read and preserves the copyctx destination precondition."
+   },
+   {
+    "boundary": "OSSH-V1I-025",
+    "file": "src/provider/digest.rs",
+    "item": "set_ctx_params",
+    "qualified_identity": "blake2::blake_row::set_ctx_params",
+    "span": [
+     1970,
+     2003
+    ],
+    "span_sha256": "d84cc9a808b86bd3d0e619cce378beba49795dd037ba8a364fa09c7240ed0b26",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch2",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (d84cc9a808b86bd3); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-022",
+    "file": "src/provider/digest.rs",
+    "item": "shake_get_ctx_params",
+    "qualified_identity": "sha3::shake_get_ctx_params",
+    "span": [
+     1530,
+     1558
+    ],
+    "span_sha256": "e09736f8f56e5df114a14c6150d105193ba970d4db06170296a6f005b5d4acc8",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch3) \u2014 the span bytes are identical to the source head that review read (e09736f8f56e5df1); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-021",
+    "file": "src/provider/digest.rs",
+    "item": "shake_squeeze",
+    "qualified_identity": "sha3::shake_squeeze",
+    "span": [
+     1452,
+     1470
+    ],
+    "span_sha256": "dbdba48f28b197d6a6693746d95497e2a8579f88687d906dd807c935fb8ed4ba",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "rereview11",
+    "basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (dbdba48f28b197d6)."
+   },
+   {
+    "boundary": "OSSH-V1I-005",
+    "file": "src/provider/digest.rs",
+    "item": "update",
+    "qualified_identity": "sha1::update",
+    "span": [
+     714,
+     717
+    ],
+    "span_sha256": "ca9ddbfb4c86d18614a55dcce33d1a6dcfb9afe9bd258d0dd710854aaadf52a9",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "rereview11",
+    "basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (ca9ddbfb4c86d186)."
+   },
+   {
+    "boundary": "OSSH-V1I-014",
+    "file": "src/provider/digest.rs",
+    "item": "update",
+    "qualified_identity": "md5_sha1::update",
+    "span": [
+     1237,
+     1242
+    ],
+    "span_sha256": "7b4f8b48a05be1501edacfb34ac83e9d84f3f9118ae26e51fd774f480d00063e",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "rereview11",
+    "basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (7b4f8b48a05be150)."
+   },
+   {
+    "boundary": "OSSH-V1I-019",
+    "file": "src/provider/digest.rs",
+    "item": "update",
+    "qualified_identity": "sha3::update",
+    "span": [
+     1409,
+     1412
+    ],
+    "span_sha256": "043324d93993c9aed5be3f4eb57a53a7d0ff3b9fc3c096c4bca4f91df739059d",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "rereview11",
+    "basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (043324d93993c9ae)."
+   },
+   {
+    "boundary": "OSSH-V1I-028",
+    "file": "src/provider/digest.rs",
+    "item": "update",
+    "qualified_identity": "blake2::blake_row::update",
+    "span": [
+     2058,
+     2068
+    ],
+    "span_sha256": "48c2be05cf5cf82b15fec5d0215cad8b4ca2f060a7420c8cefcc9d36b22241dd",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "rereview11",
+    "basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (48c2be05cf5cf82b)."
+   },
+   {
+    "boundary": "OSSH-V1I-082",
+    "file": "src/provider/legacyprov.rs",
+    "item": "copyctx",
+    "qualified_identity": "legacy_digest_impl::copyctx",
+    "span": [
+     345,
+     356
+    ],
+    "span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity8",
+    "basis": "ACCEPT (identity; reviewed at b77-review-v1i-repaired) \u2014 the repaired body is byte-identical to the repair head ada7df257 (ed889f926c379313); the b78 edit to EVP_MD_CTX_copy_ex was re-read and preserves the copyctx destination precondition."
+   },
+   {
+    "boundary": "OSSH-V1I-088",
+    "file": "src/provider/legacyprov.rs",
+    "item": "copyctx",
+    "qualified_identity": "mdc2::copyctx",
+    "span": [
+     561,
+     571
+    ],
+    "span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity8",
+    "basis": "ACCEPT (identity; reviewed at b77-review-v1i-repaired) \u2014 the repaired body is byte-identical to the repair head ada7df257 (88b18bf1a3f3666f); the b78 edit to EVP_MD_CTX_copy_ex was re-read and preserves the copyctx destination precondition."
+   },
+   {
+    "boundary": "OSSH-V1I-081",
+    "file": "src/provider/legacyprov.rs",
+    "item": "dupctx",
+    "qualified_identity": "legacy_digest_impl::dupctx",
+    "span": [
+     323,
+     334
+    ],
+    "span_sha256": "9ef8e6d4c1a012f2c0d7fd75a274970080e36b74d915370f47d9876445f96e00",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch3) \u2014 the span bytes are identical to the source head that review read (9ef8e6d4c1a012f2); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-087",
+    "file": "src/provider/legacyprov.rs",
+    "item": "dupctx",
+    "qualified_identity": "mdc2::dupctx",
+    "span": [
+     540,
+     551
+    ],
+    "span_sha256": "53914997e52cd69c0d3439049d1fb36d2adb8412167764c00008bd55c11c460d",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch3) \u2014 the span bytes are identical to the source head that review read (53914997e52cd69c); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-086",
+    "file": "src/provider/legacyprov.rs",
+    "item": "get_params",
+    "qualified_identity": "legacy_digest_impl::get_params",
+    "span": [
+     396,
+     399
+    ],
+    "span_sha256": "60741d24cb50535f7dae2865b4c85204eb7a5e2bbbcc72791949cb16e52fb0bf",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch3) \u2014 the span bytes are identical to the source head that review read (60741d24cb50535f); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-092",
+    "file": "src/provider/legacyprov.rs",
+    "item": "get_params",
+    "qualified_identity": "mdc2::get_params",
+    "span": [
+     604,
+     607
+    ],
+    "span_sha256": "1cec3bc72bf7542388aa512f39a1046a5e65e3a2f13db27cbb3cbe4eb0e4371d",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch3) \u2014 the span bytes are identical to the source head that review read (1cec3bc72bf75423); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-084",
+    "file": "src/provider/legacyprov.rs",
+    "item": "internal_final",
+    "qualified_identity": "legacy_digest_impl::internal_final",
+    "span": [
+     369,
+     385
+    ],
+    "span_sha256": "76998f9e1ef14b7e47aeb3be9e2535ebaedd5020f4d92a0d3b1852401ac72434",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "rereview11",
+    "basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (76998f9e1ef14b7e)."
+   },
+   {
+    "boundary": "OSSH-V1I-090",
+    "file": "src/provider/legacyprov.rs",
+    "item": "internal_final",
+    "qualified_identity": "mdc2::internal_final",
+    "span": [
+     581,
+     597
+    ],
+    "span_sha256": "1620b0c9aff1ffa574db1c8ec58f0f8ba6269aa7d05adb4a698b369c79df71e1",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "rereview11",
+    "basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (1620b0c9aff1ffa5)."
+   },
+   {
+    "boundary": "OSSH-V1I-083",
+    "file": "src/provider/legacyprov.rs",
+    "item": "internal_init",
+    "qualified_identity": "legacy_digest_impl::internal_init",
+    "span": [
+     358,
+     367
+    ],
+    "span_sha256": "74cf175e7a97e56fb5549878470a8921e59d504e5b23a8492fc5abc91eeda37c",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch3) \u2014 the span bytes are identical to the source head that review read (74cf175e7a97e56f); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-089",
+    "file": "src/provider/legacyprov.rs",
+    "item": "internal_init",
+    "qualified_identity": "mdc2::internal_init",
+    "span": [
+     573,
+     579
+    ],
+    "span_sha256": "45d0d3fadf62b85b1414683847040529b0bd4a06afe87fa7b818ad234a357325",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch3) \u2014 the span bytes are identical to the source head that review read (45d0d3fadf62b85b); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1I-085",
+    "file": "src/provider/legacyprov.rs",
+    "item": "update",
+    "qualified_identity": "legacy_digest_impl::update",
+    "span": [
+     387,
+     394
+    ],
+    "span_sha256": "55723f2723d0a7302746d4abaf85ec8e9598b5e7df2a71a3128cbabd2ad41d3b",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "rereview11",
+    "basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (55723f2723d0a730)."
+   },
+   {
+    "boundary": "OSSH-V1I-091",
+    "file": "src/provider/legacyprov.rs",
+    "item": "update",
+    "qualified_identity": "mdc2::update",
+    "span": [
+     599,
+     602
+    ],
+    "span_sha256": "834f662737d593c62ef6cbae4f9c7bd3d806bfcf7dd84ff8aca5ca633c378f90",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1i-batch3",
+    "earlier_verdict": "REJECT",
+    "verdict": "ACCEPT",
+    "verdict_class": "rereview11",
+    "basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (834f662737d593c6)."
+   },
+   {
+    "boundary": "OSSH-V1L-006",
+    "file": "src/runtime/confmod/mod.rs",
+    "item": "module_free_thunk",
+    "qualified_identity": "module_free_thunk",
+    "span": [
+     397,
+     401
+    ],
+    "span_sha256": "a5b60056c9ddbcf6bd883eecd26fbb5a0eccc600eab2245ce5689a4ab0ebbaae",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1l",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1l) \u2014 the span bytes are identical to the source head that review read (a5b60056c9ddbcf6); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1L-007",
+    "file": "src/ui/ui_util.rs",
+    "item": "ui_free_method_data",
+    "qualified_identity": "ui_free_method_data",
+    "span": [
+     197,
+     209
+    ],
+    "span_sha256": "9da4f85c2504a0b7baebbd33c8b6fb7e9b58f5ce2ae0c2abd95a6161cb1ac3fd",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1l",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1l) \u2014 the span bytes are identical to the source head that review read (9da4f85c2504a0b7); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1L-011",
+    "file": "src/x509/v3_akid.rs",
+    "item": "akid_i2v",
+    "qualified_identity": "akid_i2v",
+    "span": [
+     182,
+     190
+    ],
+    "span_sha256": "6f51a4906e3cf43beb25bbdfc03dbe93ff93a2a097b7d1a49622af20502c4fc4",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1l",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1l) \u2014 the span bytes are identical to the source head that review read (6f51a4906e3cf43b); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1L-012",
+    "file": "src/x509/v3_akid.rs",
+    "item": "akid_v2i",
+    "qualified_identity": "akid_v2i",
+    "span": [
+     193,
+     201
+    ],
+    "span_sha256": "59082f4cd416d5a12fd09babe46787b33ca10fec66e677bdb3de88b2940a0ea1",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1l",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1l) \u2014 the span bytes are identical to the source head that review read (59082f4cd416d5a1); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1L-013",
+    "file": "src/x509/v3_san.rs",
+    "item": "san_i2v",
+    "qualified_identity": "san_i2v",
+    "span": [
+     1176,
+     1184
+    ],
+    "span_sha256": "f81a3cfcc6695c7396e2c60945d7b3ad5c67408e3f9f5c5d59fd42317753ce42",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1l",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1l) \u2014 the span bytes are identical to the source head that review read (f81a3cfcc6695c73); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1L-014",
+    "file": "src/x509/v3_san.rs",
+    "item": "san_v2i",
+    "qualified_identity": "san_v2i",
+    "span": [
+     1187,
+     1194
+    ],
+    "span_sha256": "c52f72419f84dcb95253bd7eec68f54e9f472ba7e0a3bebf4f1eda6470634ce7",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1l",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1l) \u2014 the span bytes are identical to the source head that review read (c52f72419f84dcb9); no re-review."
+   },
+   {
+    "boundary": "OSSH-V1L-015",
+    "file": "src/x509/v3_san.rs",
+    "item": "san_v2i_issuer",
+    "qualified_identity": "san_v2i_issuer",
+    "span": [
+     1197,
+     1204
+    ],
+    "span_sha256": "d46b6cbd67b40adc15b2334b7b4b9226697413a7fbe301fd967de73902aa3bf6",
+    "span_identical_to_review_head": true,
+    "earlier_receipt": "b76-review-v1l",
+    "earlier_verdict": "ACCEPT",
+    "verdict": "ACCEPT",
+    "verdict_class": "identity45",
+    "basis": "ACCEPT (identity; reviewed at b76-review-v1l) \u2014 the span bytes are identical to the source head that review read (d46b6cbd67b40adc); no re-review."
+   }
+  ]
+ },
+ "controls": {
+  "span_rule": [
+   {
+    "id": "C1-pristine-span",
+    "purpose": "resolve sha1::copyctx in the candidate blob",
+    "expected": "672-682",
+    "observed": "672-682",
+    "pass": true
+   },
+   {
+    "id": "C2-doc-only-edit",
+    "purpose": "a /// line above the fn must not move the span hash",
+    "expected": "identical hash",
+    "observed": "identical",
+    "pass": true
+   },
+   {
+    "id": "C3-code-edit",
+    "purpose": "a code line inside the span must change the hash",
+    "expected": "different hash",
+    "observed": "different",
+    "pass": true
+   },
+   {
+    "id": "C4-unqualified-identity",
+    "purpose": "bare `copyctx` must not select a definition",
+    "expected": "ambiguous-identity",
+    "observed": "ambiguous-identity",
+    "pass": true
+   },
+   {
+    "id": "C5-absent-item",
+    "purpose": "the retired x509_free_void thunk must not resolve",
+    "expected": "span-unparsable",
+    "observed": "span-unparsable",
+    "pass": true
+   },
+   {
+    "id": "C6-disposition-gate",
+    "purpose": "only a SAFETY_DISCHARGED prefix discharges",
+    "expected": "accept / reject / reject",
+    "observed": "matched",
+    "pass": true
+   },
+   {
+    "id": "C7-covers-site",
+    "purpose": "every accepted row's declared range covers its current census line, and the superseded line is outside it",
+    "expected": "0 uncovered, 0 stale-covered",
+    "observed": "0 uncovered [], 0 stale",
+    "pass": true
+   },
+   {
+    "id": "C7b-exact-range",
+    "purpose": "an accepted row declares the current line and no other range (no digit in the note is parsed as coverage)",
+    "expected": "0 inexact",
+    "observed": "0 inexact []",
+    "pass": true
+   },
+   {
+    "id": "C8-hash-binding",
+    "purpose": "each accepted row's span_sha256 reproduces at S",
+    "expected": "0 mismatches",
+    "observed": "0 mismatches []",
+    "pass": true
+   }
+  ],
+  "end_to_end_adjudication": {
+   "input": "the closure's own load_boundaries + adjudicate, with a synthetic plane that lists EVERY boundary id as scoped-discharged (the strongest possible input)",
+   "cohort_discharged": 65,
+   "cohort_not_discharged": [],
+   "withdrawn_boundaries_refused": [
+    {
+     "boundary": "OSSH-V1I-066",
+     "status": "BLOCKED",
+     "reason": "scoped discharge refused: boundary OSSH-V1I-066 is listed in a scoped discharge row, but its disposition 'RETAINED (BLOC"
+    },
+    {
+     "boundary": "OSSH-V1I-080",
+     "status": "BLOCKED",
+     "reason": "scoped discharge refused: boundary OSSH-V1I-080 is listed in a scoped discharge row, but its disposition 'RETAINED (BLOC"
+    },
+    {
+     "boundary": "OSSH-V1L-001",
+     "status": "BLOCKED",
+     "reason": "scoped discharge refused: boundary OSSH-V1L-001 is listed in a scoped discharge row, but its disposition 'RETAINED (BLOC"
+    },
+    {
+     "boundary": "OSSH-V1L-008",
+     "status": "BLOCKED",
+     "reason": "scoped discharge refused: boundary OSSH-V1L-008 is listed in a scoped discharge row, but its disposition 'RETAINED (BLOC"
+    }
+   ],
+   "absent_boundaries": [
+    {
+     "boundary": "OSSH-V1I-055",
+     "disposition": "RETAINED (BLOCKED) \u2014 the item no longer exists at this candidate; a retired definition dis",
+     "declared_span_hash_present": false,
+     "verdict": "ABSENT"
+    },
+    {
+     "boundary": "OSSH-V1I-062",
+     "disposition": "RETAINED (BLOCKED) \u2014 the item no longer exists at this candidate; a retired definition dis",
+     "declared_span_hash_present": false,
+     "verdict": "ABSENT"
+    }
+   ],
+   "pass": true
+  },
+  "not_run": [
+   "any compilation, library test, clippy or fmt (\u00a76.1 memory floor)",
+   "any runtime negative-control binary",
+   "a fresh b78 consumer closure (the receipts are inputs to it; the closure must be re-measured by the orchestrator)"
+  ]
+ },
+ "regenerated_receipts": {
+  "openssh-v1i-sites.json": {
+   "receipt": "openssh-v1i",
+   "boundaries": 92,
+   "counts": {
+    "ACCEPT": 56,
+    "NOT_REVIEWED_IN_B78": 31,
+    "ABSENT": 5,
+    "already-retained": 0
+   },
+   "sha256": "6c6449a7bb2ba2b8c32a15cf8d5f0eab618672fa160ae54beb092fdec980649a",
+   "bytes": 310566
+  },
+  "openssh-v1l-sites.json": {
+   "receipt": "openssh-v1l-sites",
+   "boundaries": 24,
+   "counts": {
+    "ACCEPT": 9,
+    "NOT_REVIEWED_IN_B78": 15,
+    "ABSENT": 0,
+    "already-retained": 0
+   },
+   "sha256": "5abcfb9ec5cee1044e0cf64e812ec4ba553278ff26036d8aeba036b1acb8b9e3",
+   "bytes": 66549
+  }
+ },
+ "residuals": [
+  {
+   "id": "R-PARAMS",
+   "state": "CLOSED-AT-SOURCE-NOT-RUNTIME",
+   "statement": "The b77 review's R-PARAMS (set_params / settable_params / get_params / gettable_params / get_size_ex forwarding a NULL algctx to provider callbacks) is closed at this candidate: all four parameter entry points now test `evp_md_ctx_algctx_is_missing` before the provider call and `EVP_MD_CTX_get_size_ex` refuses (-1) before either callback, and the divergence record and tests were extended.  Not re-measured at runtime here (no build)."
+  },
+  {
+   "id": "R-BLOCKLEVEL-CONTRACT",
+   "state": "OPEN-DOCUMENTATION",
+   "statement": "57 of the 65 sites have an explicit validity contract only as an operation-level `// SAFETY:` block comment plus the OSSL_FUNC callback ABI; they carry no `# Safety` section on the `unsafe extern \"C\" fn` interface.  This is the same class the b76 review accepted for its provider-callback sites, and it is not reclassified as a discharge; it is recorded so a future caller audit knows the contract is at the body, not the signature.",
+   "sites": [
+    "OSSH-V1I-067",
+    "OSSH-V1I-069",
+    "OSSH-V1I-051",
+    "OSSH-V1I-052",
+    "OSSH-V1I-065",
+    "OSSH-V1I-059",
+    "OSSH-V1I-063",
+    "OSSH-V1I-064",
+    "OSSH-V1I-061",
+    "OSSH-V1I-060",
+    "OSSH-V1I-049",
+    "OSSH-V1I-050",
+    "OSSH-V1I-053",
+    "OSSH-V1I-054",
+    "OSSH-V1L-010",
+    "OSSH-V1I-001",
+    "OSSH-V1I-007",
+    "OSSH-V1I-010",
+    "OSSH-V1I-016",
+    "OSSH-V1I-023",
+    "OSSH-V1I-026",
+    "OSSH-V1I-006",
+    "OSSH-V1I-009",
+    "OSSH-V1I-015",
+    "OSSH-V1I-030",
+    "OSSH-V1I-018",
+    "OSSH-V1I-004",
+    "OSSH-V1I-013",
+    "OSSH-V1I-029",
+    "OSSH-V1I-003",
+    "OSSH-V1I-012",
+    "OSSH-V1I-027",
+    "OSSH-V1I-020",
+    "OSSH-V1I-025",
+    "OSSH-V1I-022",
+    "OSSH-V1I-021",
+    "OSSH-V1I-005",
+    "OSSH-V1I-014",
+    "OSSH-V1I-019",
+    "OSSH-V1I-028",
+    "OSSH-V1I-081",
+    "OSSH-V1I-087",
+    "OSSH-V1I-086",
+    "OSSH-V1I-092",
+    "OSSH-V1I-084",
+    "OSSH-V1I-090",
+    "OSSH-V1I-083",
+    "OSSH-V1I-089",
+    "OSSH-V1I-085",
+    "OSSH-V1I-091",
+    "OSSH-V1L-006",
+    "OSSH-V1L-007",
+    "OSSH-V1L-011",
+    "OSSH-V1L-012",
+    "OSSH-V1L-013",
+    "OSSH-V1L-014",
+    "OSSH-V1L-015"
+   ]
+  },
+  {
+   "id": "R-REPAIR-RECEIPT-FIELD",
+   "state": "OPEN-EVIDENCE-SHAPE",
+   "statement": "b77-review-v1i-repaired.json records `span_sha256_reviewed` for sha3::keccak_final as dd7adaee\u2026 (the pre-repair body) while the body it accepted at the repair head hashes to 4dbe9bbd\u2026.  The verdict is sound (its `evidence` quotes the repaired body), but the field name does not mean what a reader would assume.  I re-read the body rather than rely on the field."
+  },
+  {
+   "id": "R-WITHDRAWN-NONCOHORT",
+   "state": "OPEN-STATUS-DOC",
+   "statement": "13 v1i and 6 v1l boundaries that were SAFETY_DISCHARGED in the prior receipts are outside this review's 65-site cohort; none was re-established at this candidate, so the regenerated receipts mark them RETAINED and they cannot discharge.  A further 5 v1i boundaries name items that no longer exist (retired thunks) and are recorded ABSENT.  The remaining 18 v1i and 9 v1l non-cohort boundaries were already non-discharging and keep their original text.  CAMPAIGN-STATUS.json still lists the 19 withdrawn boundaries in scoped_boundary_discharges; that status document was not edited in this batch and must be updated by the orchestrator, or the conflict is detect-only.  No obligation in either b77 closure depended on any of them."
+  },
+  {
+   "id": "R-CARRYFORWARD-COORDINATE",
+   "state": "OPEN-CLOSURE-INPUT",
+   "statement": "The b78 closure will carry obligations from closure-ssh-b77.json at their old lines (e.g. digest.rs copyctx 658).  The regenerated receipt declares 672.  The receipt's boundaries are also enrolled by the ledger path only where state.json carries a matching obligation_mechanisms record; where they are not, the carried old coordinate remains and must be re-resolved by the closure's current-census-line path.  This is a closure-run property, not a receipt defect, and it is why C9 supplies the resolved line."
+  },
+  {
+   "id": "R-NO-RUNTIME",
+   "state": "OPEN",
+   "statement": "No build, test, sanitizer, Miri or timing run was permitted at 12 GiB available (\u00a76.1).  Every verdict is a source-and-static-control verdict."
+  }
+ ],
+ "does_not_prove": [
+  "It does not establish SAFE_COMPATIBLE for any consumer family; a site receipt is not a family graduation.",
+  "It does not establish a boundary-level SAFETY_DISCHARGED for D-DIGEST-NULL-ALGCTX-1 or D-SHA3-FINAL-OUTLEN-1.",
+  "It does not prove that the b78 consumer closure discharges anything: the closure was not re-measured here.",
+  "It does not prove absence of UB at runtime; no dynamic instrument ran.",
+  "It does not establish the NUL-termination of an arbitrary external C caller's ENGINE default-algorithm string."
+ ],
+ "final_tally": {
+  "cohort": 65,
+  "ACCEPT": 65,
+  "REJECT": 0,
+  "ABSENT": 0
+ }
+}

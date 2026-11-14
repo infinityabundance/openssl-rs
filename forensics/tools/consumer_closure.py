@@ -32713,64 +32713,117 @@ def _pbe_outparam_self_test():
                 "field_offsets": set(), "seam": None,
                 "arg_deps": set(), "arg_targets": set()}
 
-    # (site -> containing symbol, offset) and target symbols for this exact
-    # artefact (the admitted candidate's digest is recorded in the re-pin
-    # record and in the closure receipt).
-    # Site 2's offset is 0x208 in this build: the previous fixture recorded
-    # 0x1C2 for an older image whose inlined cipher-fetch region differed, so
-    # the pin records the window-verified offset for the current candidate.  A
-    # literal that stops matching its pin is reported, never silently accepted.
-    site_pins = {
-        0x541EA5: ("EVP_PBE_CipherInit_ex", 0x415),
-        0x544D28: ("PKCS5_v2_PBE_keyivgen_ex", 0x208),
-    }
-    target_pins = {
-        0x1E1830: ("PKCS12_PBE_keyivgen_ex", 0),
-        0x544B20: ("PKCS5_v2_PBE_keyivgen_ex", 0),
-        0x55F050: ("openssl_rs::evp::p5_crpt2::PKCS5_v2_PBKDF2_keyivgen_ex", 0),
-        0x23C5A0: ("PKCS5_PBE_keyivgen_ex", 0),
-        0x364800: ("PKCS5_v2_scrypt_keyivgen_ex", 0),
-    }
-    site_func = {0x541EA5: 0x541A90, 0x544D28: 0x544B20}
-    for addr, func in site_func.items():
-        pin = site_pins[addr]
-        names = getattr(g, "names_at", {}).get(func) or {g.funcs.get(func, "")}
-        if not (addr - func == pin[1]
-                and any(_external_function_leaf(n) == _pin_leaf(pin[0])
-                        for n in names)):
-            failures.append(
-                f"e7pbe {addr:#x}: literal does not match pin "
-                f"{(pin[0], hex(pin[1]))!r}; re-pin")
-    for addr, (leaf, _off) in target_pins.items():
-        names = getattr(g, "names_at", {}).get(addr) or {g.funcs.get(addr, "")}
-        if not any(_external_function_leaf(n) == _pin_leaf(leaf) for n in names):
-            failures.append(
-                f"e7pbe target {addr:#x}: does not match pin {leaf!r}; re-pin")
+    # Stable case identifiers: the literal keys of PBE_EX_SITES name the two
+    # documented sites and are *never* used as addresses.  This image's sites
+    # are derived from the (symbol leaf, offset) pins by the re-pin engine --
+    # by offset where the pin still lands, by the in-symbol witness search
+    # (uniqueness of the acceptance) where it moved -- exactly as the e7abi
+    # fixture does.  A rebuild therefore moves the fixture with the site
+    # instead of retiring it.  The b78 PKCS5_v2_PBE_keyivgen_ex transfer sits
+    # at +0x1c2 (the pin records +0x208): the search accepts exactly one of
+    # the symbol's 17 transfers, which is what makes the re-pin a proof rather
+    # than a guess.
+    MAIN = "EVP_PBE_CipherInit_ex"
+    KDF = "PKCS5_v2_PBE_keyivgen_ex"
+    TARGET_LEAVES = ("PKCS12_PBE_keyivgen_ex", "PKCS5_v2_PBE_keyivgen_ex",
+                     "PKCS5_v2_PBKDF2_keyivgen_ex", "PKCS5_PBE_keyivgen_ex",
+                     "PKCS5_v2_scrypt_keyivgen_ex")
+    KDF_LEAVES = ("PKCS5_v2_PBKDF2_keyivgen_ex", "PKCS5_v2_scrypt_keyivgen_ex")
+    if sorted(spec["function"] for spec in PBE_EX_SITES.values()) != sorted(
+            (MAIN, KDF)):
+        return (["e7pbe controls: PBE_EX_SITES is no longer exactly the two "
+                 "documented sites"],
+                "e7pbe controls: REFUSED (the enumerated site table changed)")
 
+    derived = {}
+    for literal, spec in PBE_EX_SITES.items():
+        func = spec["function"]
+        pin = PBE_EX_SITE_PINS.get(literal)
+        addr, how = _pin_effective("PBE_EX_SITES", literal, g)
+        start = _pin_start(g, pin) if pin else None
+        text = next((t for a, t in (_pin_insns(g, start) or ())
+                     if a == addr), None) if start is not None else None
+        derived[func] = {"literal": literal, "pin": pin, "addr": addr,
+                         "how": how, "start": start, "text": text}
+        if pin is None or how == "literal" or addr is None:
+            failures.append(
+                f"e7pbe {func}: the recorded pin {pin!r} does not establish a "
+                "site in this image, so the fixture cannot test the witness "
+                "(re-pin needed)")
+        elif start is None:
+            failures.append(
+                f"e7pbe {func}: the pin leaf {pin[0]!r} names no unique "
+                "function start in this image")
+        elif text is None:
+            failures.append(
+                f"e7pbe {func}: the derived site {addr:#x} is not an "
+                f"instruction of {pin[0]!r}")
+        elif not _is_indirect_transfer_strict(g, addr):
+            failures.append(
+                f"e7pbe {func}: the site's shape changed ({text.strip()!r} is "
+                "not an indirect transfer); re-pin")
     if failures:
-        # The pins are absolute addresses.  When one no longer resolves, the
-        # fixture is describing a different libcrypto, and every later control
-        # (instruction windows, GOT slot, builtin table, non-widening sites)
-        # is off by the same drift.  Report that fact and stop, instead of
-        # raising KeyError from the first window lookup.  This is a *failure*,
-        # never a skip: the PBE refusal controls did not run.
-        pinned_sha = "8f18871713a80cc58babcd2f539f273fe9a88807acfa15bb165fb4c8fc1f4aef"
-        observed_sha = sha256_file(dso)
-        failures.append(
-            "e7pbe controls: the fixture pins are stale for this candidate "
-            f"(pinned artefact sha {pinned_sha[:16]}..., observed {observed_sha[:16]}...); "
-            "the site, target, GOT-slot, table and instruction-window "
-            "addresses all moved, so no PBE refusal control was executed.  "
-            "Re-pin against the admitted install (this is a fixture defect, "
-            "not a witness failure)")
-        return failures, ("e7pbe controls: REFUSED (stale fixture pins; "
-                          "witness not exercised at this candidate)")
+        return failures, ("e7pbe controls: REFUSED (the fixture could not "
+                          "derive both sites in this image; the witness was "
+                          "not exercised)")
 
-    def wit(addr, graph=None):
+    # A moved site is accepted only together with its uniqueness witness: the
+    # pin's own symbol offered exactly one transfer that the witness accepted.
+    moved = {m.get("address"): m
+             for m in (pin_resolution_report().get("moved") or [])}
+    for func, rec in derived.items():
+        pin = rec["pin"]
+        if rec["how"] == "pin":
+            chk(f"e7pbe {func} resolves at the pinned offset",
+                rec["addr"] - rec["start"], pin[1])
+        else:
+            ev = moved.get(hex(rec["addr"])) or {}
+            chk(f"e7pbe {func} moved-pin acceptance is unique",
+                len(ev.get("accepted") or []), 1)
+            chk(f"e7pbe {func} moved-pin candidate count is non-zero",
+                (ev.get("candidates") or 0) > 0, True)
+
+    # The five target leaves, resolved as symbols in this image.  A leaf that
+    # disappears or becomes ambiguous is a fixture failure, never a skip: the
+    # fixture exists to prove this exact target set.
+    leaf_start = {}
+    for leaf in TARGET_LEAVES:
+        starts = sorted(a for a, names in g.names_at.items()
+                        if a in g.start_set
+                        and any(_external_function_leaf(n) == leaf
+                                for n in names))
+        if len(starts) != 1:
+            failures.append(
+                f"e7pbe target leaf {leaf}: "
+                f"{'disappeared from' if not starts else 'is ambiguous in'} "
+                f"this image ({len(starts)} function start(s)); the target "
+                "set is no longer established")
+            continue
+        leaf_start[leaf] = starts[0]
+    if failures:
+        return failures, ("e7pbe controls: REFUSED (the target leaf set did "
+                          "not resolve uniquely in this image)")
+    addr_leaf = {a: leaf for leaf, a in leaf_start.items()}
+
+    def leaves_of(rec):
+        got, unknown = [], []
+        for t in (rec or {}).get("targets") or []:
+            a = int(str(t), 16)
+            if a in addr_leaf:
+                got.append(addr_leaf[a])
+            else:
+                unknown.append(str(t))
+        return sorted(got), sorted(unknown)
+
+    want_all = sorted(TARGET_LEAVES)
+    want_kdf = sorted(KDF_LEAVES)
+
+    def wit(func, graph=None, text=None):
+        rec = derived[func]
         gr = graph or g
-        func = site_func[addr]
         return pbe_outparam_instance_witness(
-            gr, site(addr, func), gr.funcs.get(func, ""))
+            gr, site(rec["addr"], rec["start"], text or rec["text"]),
+            gr.funcs.get(rec["start"], ""))
 
     def _mut(name, fn):
         _MUTED.add(name)
@@ -32832,14 +32885,18 @@ def _pbe_outparam_self_test():
                 out.append((r[0], r[1], r[2], r[3], value))
         return out
 
-    w1 = wit(0x541EA5)
-    w2 = wit(0x544D28)
-    want1 = ["0x1e1830", "0x23c5a0", "0x364800", "0x544b20", "0x55f050"]
-    want2 = ["0x364800", "0x55f050"]
+    w1 = wit(MAIN)
+    w2 = wit(KDF)
     chk("e7pbe site 1 resolved", (w1 or {}).get("resolved"), True)
-    chk("e7pbe site 1 targets", (w1 or {}).get("targets"), want1)
     chk("e7pbe site 2 resolved", (w2 or {}).get("resolved"), True)
-    chk("e7pbe site 2 targets", (w2 or {}).get("targets"), want2)
+    got1, unknown1 = leaves_of(w1)
+    got2, unknown2 = leaves_of(w2)
+    chk("e7pbe site 1 target leaves", got1, want_all)
+    chk("e7pbe site 1 target set is exactly the five leaves", unknown1, [])
+    chk("e7pbe site 2 target leaves", got2, want_kdf)
+    chk("e7pbe site 2 target set is exactly the two KDF leaves", unknown2, [])
+    chk("e7pbe site 1 target count", len((w1 or {}).get("targets") or []), 5)
+    chk("e7pbe site 2 target count", len((w2 or {}).get("targets") or []), 2)
     chk("e7pbe schema", (w1 or {}).get("schema"), PBE_EX_SCHEMA)
     chk("e7pbe resolution kind", (w1 or {}).get("resolution_kind"),
         PBE_EX_RESOLUTION_KIND)
@@ -32859,31 +32916,84 @@ def _pbe_outparam_self_test():
     chk("e7pbe site 2 selected rows", (w2 or {}).get("selected_rows"),
         [32, 33])
 
-    # Wrong callee: the GOT relocation names another in-image function while
-    # the disassembly annotation still names EVP_PBE_find_ex.
-    # The GOT slot is pinned by its relocation symbol (EVP_PBE_find_ex); the
-    # 0x89db78 literal is the slot the candidate's site-1 load names.
-    wrong = _PbeProxy(g, relocs=_relocs_with_symbol(
-        0x89DB78, "EVP_PBE_alg_add_type@@OPENSSL_3.0.0", 0x5422C0))
-    rec = wit(0x541EA5, graph=wrong)
-    chk("e7pbe wrong callee refusal", (rec or {}).get("refusal"),
-        "pbe-find-ex-callee-is-not-the-documented-symbol")
-    acc = _mut("e7pbe-outparam-callee", lambda: wit(0x541EA5, graph=wrong))
-    chk("e7pbe wrong callee control is load-bearing",
-        (acc or {}).get("resolved"), True)
-    chk("e7pbe wrong callee restored", (wit(0x541EA5) or {}).get("targets"),
-        want1)
+    # Shape anchors, taken from the witness itself: the frame slot's zero
+    # initialiser and its single address escape must still be the PBE shapes,
+    # and the mutation switches below must anchor at this image's instructions.
+    zero_addr = int(((w1 or {}).get("zero_initialisation") or {}).get(
+        "store") or "0x0", 16)
+    zero_text = (((w1 or {}).get("zero_initialisation") or {}).get("text")
+                 or "").strip()
+    esc_addr = int(((w1 or {}).get("address_escape") or {}).get("address")
+                   or "0x0", 16)
+    esc_text = (((w1 or {}).get("address_escape") or {}).get("text")
+                or "").strip()
+    m_zero = re.fullmatch(r"movq\s+\$0x0,(-?0x[0-9a-f]+)\(%rsp\)", zero_text)
+    m_esc = re.fullmatch(r"lea\s+(-?0x[0-9a-f]+)\(%rsp\),(%r\w+)", esc_text)
+    chk("e7pbe slot initialiser shape", bool(m_zero), True)
+    chk("e7pbe slot escape shape", bool(m_esc), True)
+    slot_mem = f"{m_zero.group(1)}(%rsp)" if m_zero else None
+    if m_zero and m_esc:
+        chk("e7pbe zero store and escape name the same slot",
+            m_zero.group(1), m_esc.group(1))
+        chk("e7pbe escape register is argument 6", m_esc.group(2), "%r9")
+    site1_insns = _pin_insns(g, derived[MAIN]["start"]) or ()
+    site1_addrs = {a for a, _t in site1_insns}
+    chk("e7pbe zero store belongs to the site symbol",
+        zero_addr in site1_addrs, True)
+    chk("e7pbe escape belongs to the site symbol",
+        esc_addr in site1_addrs, True)
+    reload_rows = [r for r in ((w1 or {}).get("operand") or {}).get("reloads")
+                   or []
+                   if slot_mem and re.fullmatch(
+                       r"mov\s+" + re.escape(slot_mem) + r",%r\w+",
+                       (r.get("text") or "").strip())]
+    chk("e7pbe call-target reload shape", bool(reload_rows), True)
+    if not (m_zero and m_esc and reload_rows):
+        return failures, ("e7pbe controls: REFUSED (a shape anchor moved; "
+                          "the mutation controls were not exercised)")
+    # A synthetic instruction address strictly between the zero store and the
+    # next real instruction, so the inserted counterexample keeps the stream
+    # ordered in every image.
+    next_addr = min((a for a in site1_addrs if a > zero_addr),
+                    default=zero_addr + 8)
+    synth_addr = zero_addr + max(1, (next_addr - zero_addr) // 2)
 
-    # Wrong argument index: the same slot escapes in %r8 (the plain keygen
-    # argument) instead of %r9 (pkeygen_ex).
-    arg_insns = _replace_insn(_insns_copy(0x541A90), 0x541B05,
-                              "lea    0xa0(%rsp),%r8")
-    wrong_arg = _PbeProxy(g, precision=_PbePrecision({0x541A90: arg_insns}))
-    rec = wit(0x541EA5, graph=wrong_arg)
+    # Wrong callee: the GOT relocation names another in-image function while
+    # the disassembly annotation still names EVP_PBE_find_ex.  The slot is
+    # derived from its own relocation symbol (EVP_PBE_find_ex), never from a
+    # literal address.
+    got_slots = sorted({r[0] for r in g.relocs
+                        if (r[2] or "").split("@")[0] == PBE_FIND})
+    registry_addr = _external_exported(g, PBE_REGISTRY)
+    if len(got_slots) != 1 or registry_addr is None:
+        failures.append(
+            "e7pbe wrong-callee control: the EVP_PBE_find_ex GOT slot or the "
+            f"registry address is not unique/available ({len(got_slots)} "
+            "slot(s)); the control did not run")
+    else:
+        wrong = _PbeProxy(g, relocs=_relocs_with_symbol(
+            got_slots[0], PBE_REGISTRY + "@@OPENSSL_3.0.0", registry_addr))
+        rec = wit(MAIN, graph=wrong)
+        chk("e7pbe wrong callee refusal", (rec or {}).get("refusal"),
+            "pbe-find-ex-callee-is-not-the-documented-symbol")
+        acc = _mut("e7pbe-outparam-callee", lambda: wit(MAIN, graph=wrong))
+        chk("e7pbe wrong callee control is load-bearing",
+            (acc or {}).get("resolved"), True)
+        chk("e7pbe wrong callee restored", leaves_of(wit(MAIN))[0], want_all)
+
+    # Wrong argument index: the same slot escapes in the plain-keygen argument
+    # register instead of the pkeygen_ex one.
+    other_reg = "%r8" if m_esc.group(2) != "%r8" else "%r10"
+    bad_esc = re.sub(r",%r\w+$", "," + other_reg, esc_text)
+    arg_insns = _replace_insn(_insns_copy(derived[MAIN]["start"]), esc_addr,
+                              bad_esc)
+    wrong_arg = _PbeProxy(
+        g, precision=_PbePrecision({derived[MAIN]["start"]: arg_insns}))
+    rec = wit(MAIN, graph=wrong_arg)
     chk("e7pbe wrong argument refusal", (rec or {}).get("refusal"),
         "escaped-slot-is-not-the-pkeygen-ex-argument")
     acc = _mut("e7pbe-outparam-arg-index",
-               lambda: wit(0x541EA5, graph=wrong_arg))
+               lambda: wit(MAIN, graph=wrong_arg))
     chk("e7pbe wrong argument control is load-bearing",
         (acc or {}).get("resolved"), True)
 
@@ -32901,158 +33011,208 @@ def _pbe_outparam_self_test():
             failures.append("e7pbe registry fixture: store not found")
         (fixture / PBE_SOURCE).write_text(mutated)
         bad_registry = _PbeProxy(g, source_root=str(fixture))
-        rec = wit(0x541EA5, graph=bad_registry)
+        rec = wit(MAIN, graph=bad_registry)
         chk("e7pbe registry non-null refusal", (rec or {}).get("refusal"),
             "pbe-registry-writes-a-non-null-keygen-ex")
         acc = _mut("e7pbe-outparam-registry",
-                   lambda: wit(0x541EA5, graph=bad_registry))
+                   lambda: wit(MAIN, graph=bad_registry))
         chk("e7pbe registry non-null control is load-bearing",
             (acc or {}).get("resolved"), True)
         chk("e7pbe registry non-null restored",
-            (wit(0x541EA5) or {}).get("targets"), want1)
+            leaves_of(wit(MAIN))[0], want_all)
     finally:
         shutil.rmtree(fixture, ignore_errors=True)
 
-    # One selected row member is a data address, not a function start.
-    # 0x894990 is BUILTIN_PBE + 0x418 (row 32, member 0x18); 0x894578 is the
-    # BUILTIN_PBE data object, which is not an in-image function start.
-    bad_row = _PbeProxy(g, relocs=_relocs_with_value(0x894990, 0x894578))
-    rec = wit(0x544D28, graph=bad_row)
-    chk("e7pbe row data target refusal", (rec or {}).get("refusal"),
-        "row-member-not-a-function-start")
-    acc = _mut("e7pbe-outparam-row-target",
-               lambda: wit(0x544D28, graph=bad_row))
-    chk("e7pbe row data target control is load-bearing",
-        (acc or {}).get("resolved"), True)
-    chk("e7pbe row data target restored",
-        (wit(0x544D28) or {}).get("targets"), want2)
+    # One selected row member is a data address, not a function start.  The
+    # member slot is derived from the witness's table metadata (the first
+    # selected row's `keygen_ex` member); the substituted value is the table
+    # object itself, which is not an in-image function start.
+    table = (w2 or {}).get("table") or {}
+    selected = (w2 or {}).get("selected_rows") or []
+    if not table or not selected:
+        failures.append(
+            "e7pbe row data target control: the selected row set is absent "
+            "from the witness result; the control did not run")
+    else:
+        table_addr = (table["address"] if isinstance(table["address"], int)
+                      else int(table["address"], 16))
+        row_slot = (table_addr
+                    + selected[0] * table["stride"] + table["member_offset"])
+        bad_row = _PbeProxy(g, relocs=_relocs_with_value(
+            row_slot, table_addr))
+        rec = wit(KDF, graph=bad_row)
+        chk("e7pbe row data target refusal", (rec or {}).get("refusal"),
+            "row-member-not-a-function-start")
+        acc = _mut("e7pbe-outparam-row-target",
+                   lambda: wit(KDF, graph=bad_row))
+        chk("e7pbe row data target control is load-bearing",
+            (acc or {}).get("resolved"), True)
+        chk("e7pbe row data target restored",
+            leaves_of(wit(KDF))[0], want_kdf)
 
     # A second writer of the same frame slot.
-    second_insns = _insert_insn(_insns_copy(0x541A90), 0x541AD8, 0x541ADC,
-                                "movq   $0x0,0xa0(%rsp)")
-    second = _PbeProxy(g, precision=_PbePrecision({0x541A90: second_insns}))
-    rec = wit(0x541EA5, graph=second)
+    second_insns = _insert_insn(_insns_copy(derived[MAIN]["start"]),
+                                zero_addr, synth_addr,
+                                f"movq   $0x0,{slot_mem}")
+    second = _PbeProxy(
+        g, precision=_PbePrecision({derived[MAIN]["start"]: second_insns}))
+    rec = wit(MAIN, graph=second)
     chk("e7pbe second writer refusal", (rec or {}).get("refusal"),
         "slot-has-a-second-writer")
     acc = _mut("e7pbe-outparam-second-writer",
-               lambda: wit(0x541EA5, graph=second))
+               lambda: wit(MAIN, graph=second))
     chk("e7pbe second writer control is load-bearing",
         (acc or {}).get("resolved"), True)
-    chk("e7pbe second writer restored", (wit(0x541EA5) or {}).get("targets"),
-        want1)
+    chk("e7pbe second writer restored", leaves_of(wit(MAIN))[0], want_all)
 
     # A 4-byte zero store leaves the upper half of the pointer slot stale.
-    zero_width_insns = _replace_insn(_insns_copy(0x541A90), 0x541AD8,
-                                     "movl   $0x0,0xa0(%rsp)")
+    zero_width_insns = _replace_insn(_insns_copy(derived[MAIN]["start"]),
+                                     zero_addr, f"movl   $0x0,{slot_mem}")
     zero_width = _PbeProxy(
-        g, precision=_PbePrecision({0x541A90: zero_width_insns}))
-    rec = wit(0x541EA5, graph=zero_width)
+        g, precision=_PbePrecision({derived[MAIN]["start"]: zero_width_insns}))
+    rec = wit(MAIN, graph=zero_width)
     chk("e7pbe zero store width refusal", (rec or {}).get("refusal"),
         "slot-width-is-not-64-bit")
     acc = _mut("e7pbe-outparam-zero-width",
-               lambda: wit(0x541EA5, graph=zero_width))
+               lambda: wit(MAIN, graph=zero_width))
     chk("e7pbe zero store width control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe zero store width restored",
-        (wit(0x541EA5) or {}).get("targets"), want1)
+        leaves_of(wit(MAIN))[0], want_all)
 
-    # A 4-byte reload truncates the pointer in the call-target register.
-    reload_width_insns = _replace_insn(_insns_copy(0x541A90), 0x541BDB,
-                                       "mov    0xa0(%rsp),%eax")
+    # Every 64-bit reload of the slot is narrowed to a 32-bit one: any reaching
+    # load that truncates the pointer must refuse the site.
+    reload_addrs = {int(r["address"], 16) for r in reload_rows}
+    rw_insns, rewritten = [], set()
+    for a, t in _insns_copy(derived[MAIN]["start"]):
+        if a in reload_addrs:
+            dest = t.strip().rsplit(",", 1)[-1].strip()
+            narrow = ("%e" + dest[2:]) if dest.startswith("%r") else dest
+            rw_insns.append((a, f"mov    {slot_mem},{narrow}"))
+            rewritten.add(a)
+        else:
+            rw_insns.append((a, t))
+    chk("e7pbe reload-width control rewrote every reaching reload",
+        rewritten == reload_addrs, True)
     reload_width = _PbeProxy(
-        g, precision=_PbePrecision({0x541A90: reload_width_insns}))
-    rec = wit(0x541EA5, graph=reload_width)
+        g, precision=_PbePrecision({derived[MAIN]["start"]: rw_insns}))
+    rec = wit(MAIN, graph=reload_width)
     chk("e7pbe reload width refusal", (rec or {}).get("refusal"),
         "slot-width-is-not-64-bit")
     acc = _mut("e7pbe-outparam-reload-width",
-               lambda: wit(0x541EA5, graph=reload_width))
+               lambda: wit(MAIN, graph=reload_width))
     chk("e7pbe reload width control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe reload width restored",
-        (wit(0x541EA5) or {}).get("targets"), want1)
+        leaves_of(wit(MAIN))[0], want_all)
 
     # A partial 4-byte write at slot+4 leaves the upper half of the pointer
     # stale even though the exact-offset scan sees only the zero store.
-    overlap_insns = _insert_insn(_insns_copy(0x541A90), 0x541AD8, 0x541ADC,
-                                 "movl   $0xdead,0xa4(%rsp)")
+    mem4 = f"{hex(int(m_zero.group(1), 16) + 4)}(%rsp)"
+    overlap_insns = _insert_insn(_insns_copy(derived[MAIN]["start"]),
+                                 zero_addr, synth_addr,
+                                 f"movl   $0xdead,{mem4}")
     overlap = _PbeProxy(
-        g, precision=_PbePrecision({0x541A90: overlap_insns}))
-    rec = wit(0x541EA5, graph=overlap)
+        g, precision=_PbePrecision({derived[MAIN]["start"]: overlap_insns}))
+    rec = wit(MAIN, graph=overlap)
     chk("e7pbe overlap store refusal", (rec or {}).get("refusal"),
         "slot-overlap-store")
     acc = _mut("e7pbe-outparam-overlap",
-               lambda: wit(0x541EA5, graph=overlap))
+               lambda: wit(MAIN, graph=overlap))
     chk("e7pbe overlap store control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe overlap store restored",
-        (wit(0x541EA5) or {}).get("targets"), want1)
+        leaves_of(wit(MAIN))[0], want_all)
 
     # The GOT binding is not in this image.
     dyn = dict(g.dynamic_defs)
     dyn.pop("EVP_PBE_find_ex", None)
     bad_got = _PbeProxy(g, dynamic_defs=dyn)
-    rec = wit(0x541EA5, graph=bad_got)
+    rec = wit(MAIN, graph=bad_got)
     chk("e7pbe got not in image refusal", (rec or {}).get("refusal"),
         "pbe-find-ex-callee-is-not-in-image")
     acc = _mut("e7pbe-outparam-got-not-in-image",
-               lambda: wit(0x541EA5, graph=bad_got))
+               lambda: wit(MAIN, graph=bad_got))
     chk("e7pbe got not in image control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe got not in image restored",
-        (wit(0x541EA5) or {}).get("targets"), want1)
+        leaves_of(wit(MAIN))[0], want_all)
 
     # The site-2 KDF selection is load-bearing: all rows gives 5, not 2.
-    all_rows = _mut("e7pbe-outparam-all-rows", lambda: wit(0x544D28))
-    chk("e7pbe site 2 all-row control count",
-        len((all_rows or {}).get("targets") or []), 5)
-    chk("e7pbe site 2 all-row control set",
-        set((all_rows or {}).get("targets") or []), set(want1))
+    all_rows = _mut("e7pbe-outparam-all-rows", lambda: wit(KDF))
+    all_leaves, all_unknown = leaves_of(all_rows)
+    chk("e7pbe site 2 all-row control leaves", all_leaves, want_all)
+    chk("e7pbe site 2 all-row control has no unknown target",
+        all_unknown, [])
     chk("e7pbe site 2 KDF set is a proper subset",
-        set((w2 or {}).get("targets") or [])
-        < set((all_rows or {}).get("targets") or []), True)
+        set(got2) < set(all_leaves), True)
 
     # Non-widening: the plain keygen site and the eight b65 ABI sites keep
     # their contract class and unbounded target set; the new witness does not
-    # absorb any of them.
-    abi_specs = (
-        (0x541C2D, 0x541A90, "call   *%rax", ABI_CONTRACT_PBE_REGISTRY),
-        (0x455C88, 0x455800, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
-        (0x455D7D, 0x455800, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
-        (0x4561F3, 0x455800, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
-        (0x456007, 0x455800, "call   *%rax", ABI_CONTRACT_PROVIDER),
-        (0x22CB65, 0x22C660, "call   *%r15", ABI_CONTRACT_CONF_MODULE),
-        (0x22CFA3, 0x22C660, "call   *%rax", ABI_CONTRACT_CONF_MODULE),
-        (0x384BBC, 0x384920, "call   *%rbx",
-         ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT),
+    # absorb any of them.  Their addresses are derived from each site's own
+    # pin, so the control is exercised at this image rather than at a
+    # recorded VA.
+    abi_cases = (
+        ("plain " + MAIN, PBE_SITE_PIN, ABI_CONTRACT_PBE_REGISTRY,
+         _pinned_site("PBE_SITE", g)),
+        ("STORE_LOADER open_ex", STORE_LOADER_LEGACY_SITE_PINS[0x1F89E8],
+         ABI_CONTRACT_STORE_LOADER,
+         _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F89E8, g)[0]),
+        ("STORE_LOADER open", STORE_LOADER_LEGACY_SITE_PINS[0x1F8AA1],
+         ABI_CONTRACT_STORE_LOADER,
+         _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F8AA1, g)[0]),
+        ("STORE_LOADER closefn", STORE_LOADER_LEGACY_SITE_PINS[0x1F8F13],
+         ABI_CONTRACT_STORE_LOADER,
+         _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F8F13, g)[0]),
+        ("STORE_LOADER provider close", STORE_LOADER_PROVIDER_SITE_PIN,
+         ABI_CONTRACT_PROVIDER, _pinned_site("STORE_LOADER_PROVIDER_SITE", g)),
+        ("CONF init", CONF_SITE_PINS[0x293F25], ABI_CONTRACT_CONF_MODULE,
+         _pin_effective("CONF_SITES", 0x293F25, g)[0]),
+        ("CONF finish", CONF_SITE_PINS[0x294363], ABI_CONTRACT_CONF_MODULE,
+         _pin_effective("CONF_SITES", 0x294363, g)[0]),
+        ("PEM default callback", PEM_SITE_PIN,
+         ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
+         _pinned_site("PEM_SITE", g)),
     )
-    for addr, func, text, cls in abi_specs:
+    for label, pin, cls, addr in abi_cases:
+        func = _pin_start(g, pin)
+        text = next((t for a, t in (_pin_insns(g, func) or ()) if a == addr),
+                    None) if func is not None else None
+        if func is None or text is None:
+            failures.append(f"e7pbe non-widening {label}: the fixture site did "
+                            "not resolve to an instruction of its pinned "
+                            "symbol; the control did not run")
+            continue
         s = site(addr, func, text)
         res = external_abi_contract_witness(g, s, g.funcs.get(func, ""))
         if res is None:
-            failures.append(f"e7pbe non-widening {addr:#x}: no ABI witness")
+            failures.append(f"e7pbe non-widening {label}: no ABI witness")
             continue
         got_cls, abi_w, abi_ref = res
-        chk(f"e7pbe non-widening {addr:#x} class", got_cls, cls)
+        chk(f"e7pbe non-widening {label} class", got_cls, cls)
         if abi_w is None:
-            failures.append(f"e7pbe non-widening {addr:#x}: refused: "
+            failures.append(f"e7pbe non-widening {label}: refused: "
                             f"{(abi_ref or {}).get('reason')}")
             continue
-        chk(f"e7pbe non-widening {addr:#x} contract_bounded",
+        chk(f"e7pbe non-widening {label} contract_bounded",
             abi_w.get("contract_bounded"), True)
-        chk(f"e7pbe non-widening {addr:#x} target set",
+        chk(f"e7pbe non-widening {label} target set",
             abi_w.get("target_set"), [])
-        chk(f"e7pbe does not absorb {addr:#x}",
+        chk(f"e7pbe does not absorb {label}",
             pbe_outparam_instance_witness(g, s, g.funcs.get(func, "")), None)
 
     return failures, (
-        "e7pbe controls: both sites resolve to the builtin table sets "
-        "(5 / 2); wrong callee, wrong argument index, non-null registry "
-        "keygen_ex, data row target, second slot writer, 4-byte zero "
-        "store, 4-byte reload, partial overlap store and non-in-image GOT "
-        "binding each refuse with slot-width-is-not-64-bit or "
-        "slot-overlap-store as applicable and each mutation flips it to "
-        "accepted; the KDF selection control distinguishes 5 from 2; the "
-        "plain keygen site and all eight b65 ABI sites are unchanged")
+        "e7pbe controls: both sites resolve by symbol ("
+        + ", ".join(f"{f}+{derived[f]['addr'] - derived[f]['start']:#x}"
+                    for f in (MAIN, KDF))
+        + ") to the five target leaves (5 / 2), compared as symbols; a "
+        "disappeared or ambiguous target leaf and a changed site shape each "
+        "refuse; wrong callee, wrong argument index, non-null registry "
+        "keygen_ex, data row target, second slot writer, 4-byte zero store, "
+        "32-bit reload, partial overlap store and non-in-image GOT binding "
+        "each refuse and each mutation flips it to accepted; the KDF "
+        "selection control distinguishes 5 from 2; the plain keygen site and "
+        "all eight b65 ABI sites are unchanged")
 
 
 # --------------------------------------------------------------------------- #
