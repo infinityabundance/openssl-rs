@@ -2594,14 +2594,26 @@ mod tests {
     /// string or opaque value and must not be callable from safe Rust with an
     /// unchecked pointer. A type-level "is an unsafe fn" assertion is not expressible
     /// on stable Rust (a safe fn item coerces to an `unsafe fn` pointer), so the
-    /// signature is pinned in the source text and this test fails if either
-    /// `unsafe` is dropped.
+    /// signature is pinned in the production source text, which is read from disk and
+    /// truncated at the first `#[cfg(test)]` module. This test's own assertion text is
+    /// therefore never searched, and each needle is assembled from fragments, so this
+    /// test fails if either `unsafe` is dropped.
     #[test]
+    #[allow(clippy::expect_used)]
     fn the_three_registry_entry_points_are_unsafe_fns() {
-        let src = include_str!("obj.rs");
-        assert!(src.contains("pub unsafe extern \"C\" fn OBJ_NAME_get("));
-        assert!(src.contains("pub unsafe extern \"C\" fn OBJ_NAME_add("));
-        assert!(src.contains("pub unsafe extern \"C\" fn OBJ_NAME_remove("));
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/runtime/obj.rs");
+        let src = std::fs::read_to_string(path)
+            .expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        for needle in [
+            concat!("pub unsafe extern ", "\"C\" fn OBJ_NAME_get("),
+            concat!("pub unsafe extern ", "\"C\" fn OBJ_NAME_add("),
+            concat!("pub unsafe extern ", "\"C\" fn OBJ_NAME_remove("),
+        ] {
+            assert!(prod.contains(needle), "missing {needle}");
+        }
     }
 
     /// Takes the crate-wide global-state lock. These tests touch the

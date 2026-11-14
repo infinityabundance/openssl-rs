@@ -231,11 +231,8 @@ pub(crate) fn ossl_namemap_stored(libctx: *mut c_void) -> *mut OsslNamemap {
     if namemap.is_null() {
         return namemap;
     }
-    // SAFETY: `namemap` is a live stored map and the pre-population is the authority's own
-    // first-use step; the map's own lock guards each insertion (*not* the block as a whole,
-    // which matches the authority, whose pre-population runs outside the map's lock).
     // SAFETY: `namemap` is NULL or the live map `lib_ctx_get_data` just resolved from a
-    // liveness-checked context.
+    // liveness-checked context, which is `ossl_namemap_empty`'s contract.
     let nms = unsafe { ossl_namemap_empty(namemap) };
     if nms < 0 {
         // The authority's "could not get lock to make the count, so maybe internal objects
@@ -1420,10 +1417,20 @@ mod unsafe_contract_controls {
     /// Qualifier control: `ossl_namemap_empty` dereferences the caller's map, so
     /// it must not be callable from safe Rust with an unchecked pointer. A
     /// type-level "is an unsafe fn" assertion is not expressible on stable Rust,
-    /// so the declaration is pinned in the source text.
+    /// so the declaration is pinned in the production source text, which is read
+    /// from disk and truncated at the first `#[cfg(test)]` module. This test's own
+    /// assertion text is therefore never searched, and the needle is assembled from
+    /// fragments, so only removing the `unsafe` qualifier can make it fail.
     #[test]
+    #[allow(clippy::expect_used)]
     fn namemap_empty_is_an_unsafe_fn() {
-        let src = include_str!("namemap.rs");
-        assert!(src.contains("pub(crate) unsafe fn ossl_namemap_empty("));
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/context/namemap.rs");
+        let src = std::fs::read_to_string(path)
+            .expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        let needle = concat!("pub(crate) unsafe fn ", "ossl_namemap_empty(");
+        assert!(prod.contains(needle), "missing {needle}");
     }
 }

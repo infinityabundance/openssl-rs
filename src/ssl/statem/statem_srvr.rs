@@ -281,10 +281,14 @@ fn do_compressed_cert(s: *mut Ssl) -> bool {
 /// `int send_certificate_request(SSL_CONNECTION *s)` — `statem_srvr.c:416-456`.
 ///
 /// # Safety
-/// `s` is a live connection and is exclusively borrowed by the caller for this
-/// call; its `pending_cipher` field is NULL or a live cipher table.
+/// `s` is a live connection. A live connection's `pending_cipher` field is then
+/// NULL or a published static cipher-table row, because the field is only ever
+/// assigned a NULL default or a row returned by `ssl3_choose_cipher` /
+/// `ssl3_get_cipher_by_char`. That read-only invariant is all this predicate
+/// needs, so no exclusive borrow is required.
 pub(crate) unsafe fn send_certificate_request(s: *mut Ssl) -> bool {
-    // SAFETY: the caller passes a live connection.
+    // SAFETY: the caller passes a live connection, so `pending_cipher` is NULL or a
+    // static table row and every field read below is live.
     unsafe {
         let c = (*s).pending_cipher;
         let auth = if c.is_null() {
@@ -10220,11 +10224,25 @@ mod unsafe_contract_controls {
     /// Qualifier control: both server predicates dereference the caller's
     /// connection, so they must not be callable from safe Rust with an unchecked
     /// pointer. A type-level "is an unsafe fn" assertion is not expressible on
-    /// stable Rust, so the declarations are pinned in the source text.
+    /// stable Rust, so the declarations are pinned in the production source text,
+    /// which is read from disk and truncated at the first `#[cfg(test)]` module.
+    /// This test's own assertion text is therefore never searched, and each needle is
+    /// assembled from fragments, so only removing an `unsafe` qualifier can make it
+    /// fail.
     #[test]
+    #[allow(clippy::expect_used)]
     fn the_server_predicates_are_unsafe_fns() {
-        let src = include_str!("statem_srvr.rs");
-        assert!(src.contains("pub(crate) unsafe fn send_certificate_request("));
-        assert!(src.contains("pub(crate) unsafe fn send_server_key_exchange("));
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/ssl/statem/statem_srvr.rs");
+        let src = std::fs::read_to_string(path)
+            .expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        for needle in [
+            concat!("pub(crate) unsafe fn ", "send_certificate_request("),
+            concat!("pub(crate) unsafe fn ", "send_server_key_exchange("),
+        ] {
+            assert!(prod.contains(needle), "missing {needle}");
+        }
     }
 }

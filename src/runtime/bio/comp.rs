@@ -451,13 +451,26 @@ mod comp_api_tests {
     /// Qualifier control for the six-defect repair: safe Rust must not be able to call
     /// these two with an unchecked pointer. A type-level assertion cannot express
     /// "this item is an `unsafe fn`" on stable Rust (a safe fn item coerces to an
-    /// `unsafe fn` pointer), so the signature is pinned in the source text; removing
-    /// either `unsafe` makes this test fail in the `cargo test --lib` gate.
+    /// `unsafe fn` pointer), so the signature is pinned in the production source text,
+    /// which is read from disk and truncated at the first `#[cfg(test)]` module. This
+    /// test's own assertion text is therefore never searched, and each needle is
+    /// assembled from fragments, so removing either `unsafe` makes this test fail in
+    /// the `cargo test --lib` gate.
     #[test]
+    #[allow(clippy::expect_used)]
     fn the_two_exported_accessors_are_unsafe_fns() {
-        let src = include_str!("comp.rs");
-        assert!(src.contains("pub unsafe extern \"C\" fn COMP_get_type("));
-        assert!(src.contains("pub unsafe extern \"C\" fn COMP_get_name("));
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/runtime/bio/comp.rs");
+        let src = std::fs::read_to_string(path)
+            .expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        for needle in [
+            concat!("pub unsafe extern ", "\"C\" fn COMP_get_type("),
+            concat!("pub unsafe extern ", "\"C\" fn COMP_get_name("),
+        ] {
+            assert!(prod.contains(needle), "missing {needle}");
+        }
     }
 
     /// Negative control for the `finish` hook: the successful-free path must run it.

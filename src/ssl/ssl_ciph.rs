@@ -1831,8 +1831,10 @@ pub unsafe extern "C" fn SSL_COMP_get_name(comp: *const CompMethod) -> *const c_
     })
 }
 
-// Compile-time control: a safe `extern "C" fn` item does not coerce to an
-// `unsafe extern "C" fn` pointer, so removing the qualifier stops this compiling.
+// ABI-shape control: the parameter/return types are pinned, so an ABI change stops
+// this file compiling. (It does not pin the `unsafe` qualifier: a safe `extern "C"
+// fn` item also coerces to an `unsafe extern "C" fn` pointer. The qualifier is
+// controlled by `ssl_comp_get_name_is_an_unsafe_fn` below.)
 const _: unsafe extern "C" fn(*const CompMethod) -> *const c_char = SSL_COMP_get_name;
 
 /// `const char *SSL_COMP_get0_name(const SSL_COMP *comp)` — `ssl/ssl_ciph.c:2066-2073`.
@@ -1867,10 +1869,20 @@ mod tests {
     /// Qualifier control for F-SSL-3: `SSL_COMP_get_name` forwards to a callee that
     /// dereferences the method, so it must not be callable from safe Rust. A safe fn
     /// item coerces to an `unsafe fn` pointer, so a const type assertion cannot detect
-    /// a dropped qualifier; this source-text test fails if `unsafe` is removed.
+    /// a dropped qualifier; this test instead reads the production source from disk,
+    /// truncates it at the first `#[cfg(test)]` module and assembles the needle from
+    /// fragments, so this test's own assertion text is never searched and it fails
+    /// only if `unsafe` is removed.
     #[test]
+    #[allow(clippy::expect_used)]
     fn ssl_comp_get_name_is_an_unsafe_fn() {
-        let src = include_str!("ssl_ciph.rs");
-        assert!(src.contains("pub unsafe extern \"C\" fn SSL_COMP_get_name("));
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/ssl/ssl_ciph.rs");
+        let src = std::fs::read_to_string(path)
+            .expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        let needle = concat!("pub unsafe extern ", "\"C\" fn SSL_COMP_get_name(");
+        assert!(prod.contains(needle), "missing {needle}");
     }
 }
